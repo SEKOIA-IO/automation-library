@@ -1,0 +1,416 @@
+{
+  "name": "Get SignIns",
+  "description": "Get the last sign ins of an Azure AD user. Requires the AuditLog.Read.All and Directory.Read.All permissions.",
+  "uuid": "02d6dbc8-6622-5718-9925-ae032dfa5208",
+  "slug": "GetSignInsAction",
+  "arguments": {
+    "title": "SingleUserArguments",
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Id",
+        "description": "ID of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      },
+      "userPrincipalName": {
+        "title": "Userprincipalname",
+        "description": "Principal Name of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      }
+    }
+  },
+  "results": {
+    "title": "GetSignInsResults",
+    "type": "object",
+    "properties": {
+      "signIns": {
+        "title": "Signins",
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/SignIn"
+        }
+      }
+    },
+    "required": [
+      "signIns"
+    ],
+    "definitions": {
+      "DeviceDetail": {
+        "title": "DeviceDetail",
+        "type": "object",
+        "properties": {
+          "browser": {
+            "title": "Browser",
+            "type": "string"
+          },
+          "deviceId": {
+            "title": "Deviceid",
+            "type": "string"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "isCompliant": {
+            "title": "Iscompliant",
+            "type": "boolean"
+          },
+          "isManaged": {
+            "title": "Ismanaged",
+            "type": "boolean"
+          },
+          "operatingSystem": {
+            "title": "Operatingsystem",
+            "type": "string"
+          },
+          "trustType": {
+            "title": "Trusttype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "isCompliant",
+          "isManaged"
+        ]
+      },
+      "GeoCoordinates": {
+        "title": "GeoCoordinates",
+        "type": "object",
+        "properties": {
+          "altitude": {
+            "title": "Altitude",
+            "type": "number"
+          },
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ]
+      },
+      "SignInLocation": {
+        "title": "SignInLocation",
+        "type": "object",
+        "properties": {
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "countryOrRegion": {
+            "title": "Countryorregion",
+            "type": "string"
+          },
+          "geoCoordinates": {
+            "$ref": "#/definitions/GeoCoordinates"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        }
+      },
+      "SignInStatus": {
+        "title": "SignInStatus",
+        "type": "object",
+        "properties": {
+          "additionalDetails": {
+            "title": "Additionaldetails",
+            "type": "string"
+          },
+          "errorCode": {
+            "title": "Errorcode",
+            "type": "integer"
+          },
+          "failureReason": {
+            "title": "Failurereason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "errorCode"
+        ]
+      },
+      "SignIn": {
+        "title": "SignIn",
+        "type": "object",
+        "properties": {
+          "appDisplayName": {
+            "title": "Appdisplayname",
+            "type": "string"
+          },
+          "appId": {
+            "title": "Appid",
+            "type": "string"
+          },
+          "appliedConditionalAccessPolicies": {
+            "title": "Appliedconditionalaccesspolicies",
+            "type": "array",
+            "items": {}
+          },
+          "authenticationContextClassReferences": {
+            "title": "Authenticationcontextclassreferences",
+            "type": "array",
+            "items": {}
+          },
+          "authenticationDetails": {
+            "title": "Authenticationdetails",
+            "type": "array",
+            "items": {}
+          },
+          "authenticationMethodsUsed": {
+            "title": "Authenticationmethodsused",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authenticationProcessingDetails": {
+            "title": "Authenticationprocessingdetails",
+            "type": "array",
+            "items": {}
+          },
+          "authenticationProtocol": {
+            "title": "Authenticationprotocol",
+            "type": "string"
+          },
+          "authenticationRequirement": {
+            "title": "Authenticationrequirement",
+            "type": "string"
+          },
+          "authenticationRequirementPolicies": {
+            "title": "Authenticationrequirementpolicies",
+            "type": "array",
+            "items": {}
+          },
+          "autonomousSystemNumber": {
+            "title": "Autonomoussystemnumber",
+            "type": "integer"
+          },
+          "clientAppUsed": {
+            "title": "Clientappused",
+            "type": "string"
+          },
+          "clientCredentialType": {
+            "title": "Clientcredentialtype",
+            "type": "string"
+          },
+          "conditionalAccessStatus": {
+            "title": "Conditionalaccessstatus",
+            "type": "string"
+          },
+          "correlationId": {
+            "title": "Correlationid",
+            "type": "string"
+          },
+          "createdDateTime": {
+            "title": "Createddatetime",
+            "type": "string"
+          },
+          "crossTenantAccessType": {
+            "title": "Crosstenantaccesstype",
+            "type": "string"
+          },
+          "deviceDetail": {
+            "$ref": "#/definitions/DeviceDetail"
+          },
+          "federatedCredentialId": {
+            "title": "Federatedcredentialid",
+            "type": "string"
+          },
+          "flaggedForReview": {
+            "title": "Flaggedforreview",
+            "type": "boolean"
+          },
+          "homeTenantId": {
+            "title": "Hometenantid",
+            "type": "string"
+          },
+          "homeTenantName": {
+            "title": "Hometenantname",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "incomingTokenType": {
+            "title": "Incomingtokentype",
+            "type": "string"
+          },
+          "ipAddress": {
+            "title": "Ipaddress",
+            "type": "string"
+          },
+          "ipAddressFromResourceProvider": {
+            "title": "Ipaddressfromresourceprovider",
+            "type": "string"
+          },
+          "isInteractive": {
+            "title": "Isinteractive",
+            "type": "boolean"
+          },
+          "isTenantRestricted": {
+            "title": "Istenantrestricted",
+            "type": "boolean"
+          },
+          "location": {
+            "$ref": "#/definitions/SignInLocation"
+          },
+          "networkLocationDetails": {
+            "title": "Networklocationdetails",
+            "type": "array",
+            "items": {}
+          },
+          "originalRequestId": {
+            "title": "Originalrequestid",
+            "type": "string"
+          },
+          "privateLinkDetails": {
+            "title": "Privatelinkdetails",
+            "type": "object"
+          },
+          "processingTimeInMilliseconds": {
+            "title": "Processingtimeinmilliseconds",
+            "type": "integer"
+          },
+          "resourceDisplayName": {
+            "title": "Resourcedisplayname",
+            "type": "string"
+          },
+          "resourceId": {
+            "title": "Resourceid",
+            "type": "string"
+          },
+          "resourceServicePrincipalId": {
+            "title": "Resourceserviceprincipalid",
+            "type": "string"
+          },
+          "resourceTenantId": {
+            "title": "Resourcetenantid",
+            "type": "string"
+          },
+          "riskDetail": {
+            "title": "Riskdetail",
+            "type": "string"
+          },
+          "riskEventTypes_v2": {
+            "title": "Riskeventtypes V2",
+            "type": "array",
+            "items": {}
+          },
+          "riskLevelAggregated": {
+            "title": "Risklevelaggregated",
+            "type": "string"
+          },
+          "riskLevelDuringSignIn": {
+            "title": "Risklevelduringsignin",
+            "type": "string"
+          },
+          "riskState": {
+            "title": "Riskstate",
+            "type": "string"
+          },
+          "servicePrincipalCredentialKeyId": {
+            "title": "Serviceprincipalcredentialkeyid",
+            "type": "string"
+          },
+          "servicePrincipalCredentialThumbprint": {
+            "title": "Serviceprincipalcredentialthumbprint",
+            "type": "string"
+          },
+          "servicePrincipalId": {
+            "title": "Serviceprincipalid",
+            "type": "string"
+          },
+          "servicePrincipalName": {
+            "title": "Serviceprincipalname",
+            "type": "string"
+          },
+          "sessionLifetimePolicies": {
+            "title": "Sessionlifetimepolicies",
+            "type": "array",
+            "items": {}
+          },
+          "signInEventTypes": {
+            "title": "Signineventtypes",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signInIdentifier": {
+            "title": "Signinidentifier",
+            "type": "string"
+          },
+          "signInIdentifierType": {
+            "title": "Signinidentifiertype",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/definitions/SignInStatus"
+          },
+          "tokenIssuerName": {
+            "title": "Tokenissuername",
+            "type": "string"
+          },
+          "tokenIssuerType": {
+            "title": "Tokenissuertype",
+            "type": "string"
+          },
+          "uniqueTokenIdentifier": {
+            "title": "Uniquetokenidentifier",
+            "type": "string"
+          },
+          "userAgent": {
+            "title": "Useragent",
+            "type": "string"
+          },
+          "userDisplayName": {
+            "title": "Userdisplayname",
+            "type": "string"
+          },
+          "userId": {
+            "title": "Userid",
+            "type": "string"
+          },
+          "userPrincipalName": {
+            "title": "Userprincipalname",
+            "type": "string"
+          },
+          "userType": {
+            "title": "Usertype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "appliedConditionalAccessPolicies",
+          "authenticationContextClassReferences",
+          "authenticationDetails",
+          "authenticationMethodsUsed",
+          "authenticationProcessingDetails",
+          "authenticationRequirementPolicies",
+          "autonomousSystemNumber",
+          "deviceDetail",
+          "flaggedForReview",
+          "isInteractive",
+          "isTenantRestricted",
+          "location",
+          "networkLocationDetails",
+          "privateLinkDetails",
+          "processingTimeInMilliseconds",
+          "riskEventTypes_v2",
+          "sessionLifetimePolicies",
+          "signInEventTypes",
+          "status"
+        ]
+      }
+    }
+  }
+}

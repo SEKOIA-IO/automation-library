@@ -1,0 +1,85 @@
+{
+  "name": "Get User Authentication Methods",
+  "description": "Get information about an user's authentication methods (such as their MFA status). Requires the UserAuthenticationMethod.Read.All permission.",
+  "uuid": "ae7ec26b-7a57-54f1-908b-011240ffd5c7",
+  "slug": "GetUserAuthenticationMethodsAction",
+  "arguments": {
+    "title": "RequiredSingleUserArguments",
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Id",
+        "description": "ID of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      },
+      "userPrincipalName": {
+        "title": "Userprincipalname",
+        "description": "Principal Name of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      }
+    }
+  },
+  "results": {
+    "title": "GetUserAuthenticationMethodsResults",
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "userPrincipalName": {
+        "title": "Userprincipalname",
+        "type": "string"
+      },
+      "userDisplayName": {
+        "title": "Userdisplayname",
+        "type": "string"
+      },
+      "isSsprRegistered": {
+        "title": "Isssprregistered",
+        "type": "boolean"
+      },
+      "isSsprEnabled": {
+        "title": "Isssprenabled",
+        "type": "boolean"
+      },
+      "isSsprCapable": {
+        "title": "Isssprcapable",
+        "type": "boolean"
+      },
+      "isMfaRegistered": {
+        "title": "Ismfaregistered",
+        "type": "boolean"
+      },
+      "isMfaCapable": {
+        "title": "Ismfacapable",
+        "type": "boolean"
+      },
+      "isPasswordlessCapable": {
+        "title": "Ispasswordlesscapable",
+        "type": "boolean"
+      },
+      "methodsRegistered": {
+        "title": "Methodsregistered",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "defaultMfaMethod": {
+        "title": "Defaultmfamethod",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "userPrincipalName",
+      "isSsprRegistered",
+      "isSsprEnabled",
+      "isSsprCapable",
+      "isMfaRegistered",
+      "isMfaCapable",
+      "isPasswordlessCapable"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Disable User",
+  "description": "Disable an Azure Active Directory user. Requires the User.ReadWrite.All permission.",
+  "uuid": "df34b4c8-f570-5c70-a986-e1c649aedf42",
+  "slug": "DisableUserAction",
+  "arguments": {
+    "title": "RequiredSingleUserArguments",
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Id",
+        "description": "ID of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      },
+      "userPrincipalName": {
+        "title": "Userprincipalname",
+        "description": "Principal Name of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}
