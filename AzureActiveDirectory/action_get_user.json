@@ -1,0 +1,101 @@
+{
+  "name": "Get User",
+  "description": "Get information about an Azure Active Directory user. Requires the User.Read.All permission.",
+  "uuid": "edbe4896-aefd-5429-95c3-eab869e207c4",
+  "slug": "GetUserAction",
+  "arguments": {
+    "title": "RequiredSingleUserArguments",
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Id",
+        "description": "ID of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      },
+      "userPrincipalName": {
+        "title": "Userprincipalname",
+        "description": "Principal Name of the user. id or userPrincipalName should be specified.",
+        "type": "string"
+      }
+    }
+  },
+  "results": {
+    "title": "GetUserResults",
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Id",
+        "type": "string"
+      },
+      "accountEnabled": {
+        "title": "Accountenabled",
+        "type": "boolean"
+      },
+      "assignedLicenses": {
+        "title": "Assignedlicenses",
+        "type": "array",
+        "items": {}
+      },
+      "city": {
+        "title": "City",
+        "type": "string"
+      },
+      "companyName": {
+        "title": "Companyname",
+        "type": "string"
+      },
+      "country": {
+        "title": "Country",
+        "type": "string"
+      },
+      "createdDateTime": {
+        "title": "Createddatetime",
+        "type": "string"
+      },
+      "creationType": {
+        "title": "Creationtype",
+        "type": "string"
+      },
+      "deletedDateTime": {
+        "title": "Deleteddatetime",
+        "type": "string"
+      },
+      "department": {
+        "title": "Department",
+        "type": "string"
+      },
+      "displayName": {
+        "title": "Displayname",
+        "type": "string"
+      },
+      "identities": {
+        "title": "Identities",
+        "type": "array",
+        "items": {}
+      },
+      "jobTitle": {
+        "title": "Jobtitle",
+        "type": "string"
+      },
+      "lastPasswordChangeDateTime": {
+        "title": "Lastpasswordchangedatetime",
+        "type": "string"
+      },
+      "mail": {
+        "title": "Mail",
+        "type": "string"
+      },
+      "mobilePhone": {
+        "title": "Mobilephone",
+        "type": "string"
+      },
+      "userPrincipalName": {
+        "title": "Userprincipalname",
+        "type": "string"
+      }
+    },
+    "required": [
+      "accountEnabled"
+    ]
+  }
+}
