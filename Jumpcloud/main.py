@@ -5,5 +5,8 @@ from jumpcloud_modules.jumpcloud_pull_events import JumpcloudDirectoryInsightsCo
 
 if __name__ == "__main__":
     module = JumpcloudDirectoryInsightsModule()
-    module.register(JumpcloudDirectoryInsightsConnector, "JumpcloudDirectoryInsightsConnector")
+    module.register(
+        JumpcloudDirectoryInsightsConnector, 
+        "JumpcloudDirectoryInsightsConnector"
+    )
     module.run()

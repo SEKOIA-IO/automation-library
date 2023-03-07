@@ -1,4 +1,3 @@
-
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -52,7 +51,7 @@ def message1():
             "region_code": "75",
             "region_name": "Paris",
             "country_code": "FR",
-            "continent_code": "EU"
+            "continent_code": "EU",
         },
         "service": "sso",
         "@version": "1",
@@ -70,7 +69,7 @@ def message1():
             "os_name": "Windows",
             "version": "110.0.0.0",
             "os_major": "10",
-            "os_version": "10"
+            "os_version": "10",
         },
         "event_type": "sso_auth",
         "application": {
@@ -78,7 +77,7 @@ def message1():
             "name": "zoom",
             "sso_url": "https://sso.jumpcloud.com/saml2/zoom",
             "sso_type": "saml",
-            "display_label": "Zoom"
+            "display_label": "Zoom",
         },
         "auth_context": {
             "system": {
@@ -86,29 +85,18 @@ def message1():
                 "os": "Windows",
                 "version": "11 Professionnel",
                 "hostname": "JOHN-LAPTOP",
-                "displayName": "JOHN-LAPTOP"
+                "displayName": "JOHN-LAPTOP",
             },
             "auth_methods": {},
             "policies_applied": [
-                {
-                    "id": "",
-                    "name": "Global Policy",
-                    "metadata": {
-                        "action": "ALLOW",
-                        "resource_type": "APPLICATION"
-                    }
-                }
-            ]
+                {"id": "", "name": "Global Policy", "metadata": {"action": "ALLOW", "resource_type": "APPLICATION"}}
+            ],
         },
-        "initiated_by": {
-            "id": "5ee8dbcb03231715576d73cc",
-            "type": "user",
-            "username": "john.doe"
-        },
+        "initiated_by": {"id": "5ee8dbcb03231715576d73cc", "type": "user", "username": "john.doe"},
         "organization": "5bf6defbdcd8233029e0c598",
         "error_message": "",
         "idp_initiated": False,
-        "sso_token_success": True
+        "sso_token_success": True,
     }
     # flake8: qa
 
@@ -126,39 +114,30 @@ def message2():
             "region_code": "75",
             "region_name": "Paris",
             "country_code": "FR",
-            "continent_code": "EU"
+            "continent_code": "EU",
         },
-        "outer": {
-            "eap_type": None,
-            "username": "jane.doe",
-            "error_message": None
-        },
+        "outer": {"eap_type": None, "username": "jane.doe", "error_message": None},
         "service": "radius",
         "success": True,
         "@version": "1",
         "eap_type": "MSCHAPv2",
-        "mfa_meta": {
-            "type": ""
-        },
+        "mfa_meta": {"type": ""},
         "username": "jane.doe",
         "auth_meta": {
             "auth_idp": "",
             "userid_type": "USERNAME",
             "user_cert_enabled": False,
             "device_cert_enabled": False,
-            "user_password_enabled": False
+            "user_password_enabled": False,
         },
         "auth_type": "EAP",
         "client_ip": "5.6.7.8",
         "timestamp": "2023-03-07T13:03:42Z",
         "event_type": "radius_auth_attempt",
-        "initiated_by": {
-            "type": "user",
-            "username": "jane.doe"
-        },
+        "initiated_by": {"type": "user", "username": "jane.doe"},
         "organization": "5bf6defbdcd8233029e0c598",
         "error_message": None,
-        "nas_mfa_state": ""
+        "nas_mfa_state": "",
     }
     # flake8: qa
 
@@ -167,10 +146,10 @@ def test_fetch_events(trigger, message1, message2):
     messages = [message1, message2]
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
-            "https://api.jumpcloud.com/insights/directory/v1/events", 
-            status_code=200, 
-            json=messages, 
-            headers={"X-Result-Count": "2", "X-Limit": "1000"}
+            "https://api.jumpcloud.com/insights/directory/v1/events",
+            status_code=200,
+            json=messages,
+            headers={"X-Result-Count": "2", "X-Limit": "1000"},
         )
         events = trigger.fetch_events()
 
@@ -183,9 +162,17 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
         mock_requests.post(
             "https://api.jumpcloud.com/insights/directory/v1/events",
             [
-                {"status_code": 200, "json": [message1], "headers" : {"X-Result-Count": "1", "X-Limit": "1", "X-Search_after": "[1576181718000,\"DZrPyW8BNsa9iKWoOm7h\"]"}},
-                {"status_code": 200, "json": [message2], "headers": {"X-Result-Count": "1", "X-Limit": "1000"}}
-            ]
+                {
+                    "status_code": 200,
+                    "json": [message1],
+                    "headers": {
+                        "X-Result-Count": "1",
+                        "X-Limit": "1",
+                        "X-Search_after": '[1576181718000,"DZrPyW8BNsa9iKWoOm7h"]',
+                    },
+                },
+                {"status_code": 200, "json": [message2], "headers": {"X-Result-Count": "1", "X-Limit": "1000"}},
+            ],
         )
         events = trigger.fetch_events()
 
@@ -199,7 +186,7 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
             "https://api.jumpcloud.com/insights/directory/v1/events",
             status_code=200,
             json=[message1, message2],
-            headers={"X-Result-Count": "2", "X-Limit": "1000"}
+            headers={"X-Result-Count": "2", "X-Limit": "1000"},
         )
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
@@ -218,7 +205,7 @@ def test_long_next_batch_should_not_sleep(trigger, message1, message2):
             "https://api.jumpcloud.com/insights/directory/v1/events",
             status_code=200,
             json=[message1, message2],
-            headers={"X-Result-Count": "2", "X-Limit": "1000"}
+            headers={"X-Result-Count": "2", "X-Limit": "1000"},
         )
         batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
         start_time = 1666711174.0
@@ -270,4 +257,7 @@ def test_handle_response_error(data_storage):
     with pytest.raises(FetchEventsException) as m:
         trigger._handle_response_error(response)
 
-    assert str(m.value) == "Request to Jumpcloud Directory Insights API to fetch events failed with status 500 - Internal Error"
+    assert (
+        str(m.value)
+        == "Request to Jumpcloud Directory Insights API to fetch events failed with status 500 - Internal Error"
+    )

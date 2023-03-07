@@ -22,6 +22,6 @@
   "description": "Directory Insights allows you to read event logs, view activity in your directory, and monitor user authentications to the console, RADIUS, LDAP, and SSO apps. Directory Insights analyzes the audit trails that lead to critical events so you know the what, where, when, how, and who of your directory activities.",
   "name": "Jumpcloud Directory Insights",
   "uuid": "fb8568bd-8b80-4c84-bde4-2d24275ce34f",
-  "docker": "symphony-module-jumpcloud",
+  "slug": "jumpcloud-directory-insights",
   "version": "1.0"
 }

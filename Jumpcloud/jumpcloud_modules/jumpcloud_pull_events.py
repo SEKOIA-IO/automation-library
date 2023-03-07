@@ -6,6 +6,7 @@ from functools import cached_property
 from threading import Event
 from urllib.parse import urljoin
 from pydantic import Field
+from typing import Any
 
 import orjson
 import requests
@@ -24,9 +25,14 @@ logger = get_logger()
 class FetchEventsException(Exception):
     pass
 
+
 class JumpcloudDirectoryInsightsConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
-    service: str = Field("all", description="Comma separated list of Jumpcloud services logs to collect")
+    service: str = Field(
+        "all", 
+        description="Comma separated list of Jumpcloud services logs to collect"
+    )
+
 
 class JumpcloudDirectoryInsightsConnector(Connector):
     """
@@ -48,7 +54,10 @@ class JumpcloudDirectoryInsightsConnector(Connector):
         signal.signal(signal.SIGTERM, self.exit)
 
     def exit(self, _, __):
-        self.log(message="Stopping Jumpcloud Directory Insights logs connector", level="info")
+        self.log(
+            message="Stopping Jumpcloud Directory Insights logs connector", 
+            level="info"
+        )
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
@@ -75,15 +84,12 @@ class JumpcloudDirectoryInsightsConnector(Connector):
 
     @cached_property
     def client(self):
-        return ApiClient(
-            self.module.configuration.apikey
-        )
+        return ApiClient(self.module.configuration.apikey)
 
     def _handle_response_error(self, response: requests.Response):
         if not response.ok:
-            message = (
-                f"Request to Jumpcloud Directory Insights API to fetch events failed with status {response.status_code} - {response.reason}"
-            )
+            message = f"Request to Jumpcloud Directory Insights API to fetch events \
+                failed with status {response.status_code} - {response.reason}"
 
             # enrich error logs with detail from the Jumpcloud Directory Insights API
             try:
@@ -96,11 +102,19 @@ class JumpcloudDirectoryInsightsConnector(Connector):
 
     def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
         # set parameters
-        params: dict[str, Any] = {"start_time": from_date.isoformat(), "limit": self.fetch_events_limit, "sortOrder": "ASC", "service": [self.configuration.service]}
+        params: dict[str, Any] = {
+            "start_time": from_date.isoformat(),
+            "limit": self.fetch_events_limit,
+            "sortOrder": "ASC",
+            "service": [self.configuration.service],
+        }
 
         # get the first page of events
         headers = {"Accept": "application/json", "Content-type": "application/json"}
-        url = urljoin(self.module.configuration.base_url, "/insights/directory/v1/events")
+        url = urljoin(
+            self.module.configuration.base_url, 
+            "/insights/directory/v1/events"
+        )
         response = self.client.post(url, json=params, headers=headers)
 
         while not self._stop_event.is_set():
@@ -115,18 +129,20 @@ class JumpcloudDirectoryInsightsConnector(Connector):
                 yield events
             else:
                 logger.info(
-                    f"The last page of events was empty. Waiting {self.configuration.frequency}s "
+                    "The last page of events was empty. "
+                    "Waiting {self.configuration.frequency}s "
                     "before fetching next batch"
                 )
                 time.sleep(self.configuration.frequency)
 
             # checking if there are more pages to retrieve
-            if (response.headers["X-Result-Count"] == response.headers["X-Limit"]) and (response.headers["X-Search_after"] is not None):
-                params['search_after'] = response.headers["X-Search_after"]
+            if (response.headers["X-Result-Count"] == response.headers["X-Limit"]) and (
+                response.headers["X-Search_after"] is not None
+            ):
+                params["search_after"] = response.headers["X-Search_after"]
                 response = self.client.post(url, json=params, headers=headers)
             else:
                 return
-
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
@@ -190,11 +206,17 @@ class JumpcloudDirectoryInsightsConnector(Connector):
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
+            logger.debug(
+                "Next batch in the future. "
+                "Waiting {delta_sleep} seconds"
+            )
             time.sleep(delta_sleep)
 
     def run(self):
-        self.log(message="Start fetching Jumpcloud Directory Insights logs", level="info")
+        self.log(
+            message="Start fetching Jumpcloud Directory Insights logs", 
+            level="info"
+        )
 
         while not self._stop_event.is_set():
             try:
