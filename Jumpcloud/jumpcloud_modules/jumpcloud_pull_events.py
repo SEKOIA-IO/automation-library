@@ -89,7 +89,7 @@ class JumpcloudDirectoryInsightsConnector(Connector):
     def _handle_response_error(self, response: requests.Response):
         if not response.ok:
             message = f"Request to Jumpcloud Directory Insights API to fetch events \
-                failed with status {response.status_code} - {response.reason}"
+failed with status {response.status_code} - {response.reason}"
 
             # enrich error logs with detail from the Jumpcloud Directory Insights API
             try:

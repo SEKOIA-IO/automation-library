@@ -20,6 +20,7 @@ pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
+pytest-env = "*"
 
 [build-system]
 requires = ["poetry-core"]
@@ -33,3 +34,9 @@ include = '\.pyi?$'
 [tool.isort]
 profile = "black"
 line_length = 119
+
+[tool.pytest.ini_options]
+env = [
+    "JUMPCLOUD_BASE_URL = https://api.jumpcloud.com/",
+    "JUMPCLOUD_API_TOKEN = TO_REPLACE"
+]
