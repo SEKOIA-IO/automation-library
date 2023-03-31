@@ -4,10 +4,14 @@ from typing import Callable
 from urllib.parse import urljoin
 
 import requests
+from requests import HTTPError
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from withsecure.client.exceptions import AuthenticationError
-from withsecure.constants import API_AUTH_MAX_RETRY, API_BASE_URL, API_TIMEOUT
+from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_AUTH_SECONDS_BETWEEN_ATTEMPTS, API_BASE_URL, API_TIMEOUT
+
+AUTHENTICATION_URL = urljoin(API_BASE_URL, "/as/token.oauth2")
+from withsecure.helpers import human_readable_api_error
 
 
 class OAuthAuthentication(AuthBase):
@@ -18,14 +22,16 @@ class OAuthAuthentication(AuthBase):
     client_id: str
     secret: str
     grant_type: str
+    scope: str
 
     access_token_value: str | None
     access_token_valid_until: datetime | None
 
-    def __init__(self, client_id: str, secret: str, grant_type: str, log_cb: Callable[[str, str], None]):
+    def __init__(self, client_id: str, secret: str, grant_type: str, scope: str, log_cb: Callable[[str, str], None]):
         self.client_id = client_id
         self.secret = secret
         self.grant_type = grant_type
+        self.scope = scope
 
         # authentication material
         self.access_token_value = None
@@ -54,7 +60,7 @@ class OAuthAuthentication(AuthBase):
                 self.authenticate()
             except Exception:
                 self.log_cb(
-                    f"Failed to authenticate on the WithSecure API after {API_AUTH_MAX_RETRY} attempts", "critical"
+                    f"Failed to authenticate on the WithSecure API after {API_AUTH_MAX_ATTEMPT} attempts", "critical"
                 )
                 return ""
 
@@ -64,31 +70,40 @@ class OAuthAuthentication(AuthBase):
         """
         Authenticate on the API of WithSecure to obtain an access token.
 
-        A retry mechanism is implemented, if all attempts fail a critical log
-        is raised which will stop the connector.
+        A retry mechanism is implemented, if all attempts fail an AuthenticationError
+        is raised.
 
         :raises AuthenticationError if it failed to authenticate
         """
 
-        for auth_attempt in range(API_AUTH_MAX_RETRY):
+        for auth_attempt in range(API_AUTH_MAX_ATTEMPT):
             try:
                 auth_response = requests.post(
-                    url=urljoin(API_BASE_URL, "/as/token.oauth2"),
+                    url=AUTHENTICATION_URL,
                     auth=HTTPBasicAuth(self.client_id, self.secret),
                     timeout=API_TIMEOUT,
+                    data={"grant_type": self.grant_type, "scope": self.scope},
                 )
-                if auth_response.status_code == 200:
-                    payload = auth_response.json()
-                    self.access_token_value = payload["access_token"]
-                    self.access_token_valid_until = (
-                        datetime.utcnow() - timedelta(minutes=1) + timedelta(seconds=payload["expires_in"])
-                    )
-                    return None
-            except requests.exceptions.ConnectionError as error:
+                # raises exception on error
+                auth_response.raise_for_status()
+
+                # reads the server response
+                payload = auth_response.json()
+
+                self.access_token_value = payload["access_token"]
+                self.access_token_valid_until = (
+                    datetime.utcnow() - timedelta(minutes=1) + timedelta(seconds=payload["expires_in"])
+                )
+                return
+
+            except Exception as error:
                 self.log_cb(
-                    f"Authentication attempt {auth_attempt+1} failed with error '{error}'. Will retry in few seconds.",
+                    (
+                        f"Authentication attempt {auth_attempt + 1}/{API_AUTH_MAX_ATTEMPT} failed: "
+                        f"{human_readable_api_error(error)}. Will retry in {API_AUTH_SECONDS_BETWEEN_ATTEMPTS} seconds."
+                    ),
                     "warning",
                 )
-                time.sleep(5)
+                time.sleep(API_AUTH_SECONDS_BETWEEN_ATTEMPTS)
 
         raise AuthenticationError()

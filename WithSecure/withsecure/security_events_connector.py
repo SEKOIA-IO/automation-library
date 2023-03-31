@@ -1,5 +1,6 @@
 import signal
-from datetime import datetime, time, timedelta, timezone
+import time
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from threading import Event
 from typing import Generator
@@ -13,8 +14,8 @@ from sekoia_automation.storage import PersistentJSON
 
 from withsecure import WithSecureModule
 from withsecure.client import ApiClient
-from withsecure.constants import API_BASE_URL
-from withsecure.helper import get_upper_second
+from withsecure.constants import API_BASE_URL, API_FETCH_EVENTS_PAGE_SIZE
+from withsecure.helpers import get_upper_second
 from withsecure.logging import get_logger
 
 logger = get_logger()
@@ -25,7 +26,9 @@ class FetchEventsException(Exception):
 
 
 class SecurityEventsConnectorConfiguration(DefaultConnectorConfiguration):
-    organization_id: str | None = Field(..., description="UUID of the organization (if missing, default org. is used)")
+    organization_id: str | None = Field(
+        None, description="UUID of the organization (if missing, default org. is used)"
+    )
     frequency: int = 5
 
 
@@ -42,7 +45,6 @@ class SecurityEventsConnector(Connector):
         self._stop_event = Event()
         self.context = PersistentJSON("context.json", self._data_path)
         self.from_date = self.most_recent_date_seen
-        self.fetch_events_limit = 1000
 
         # Register signal to terminate thread
         signal.signal(signal.SIGINT, self.exit)
@@ -55,7 +57,7 @@ class SecurityEventsConnector(Connector):
 
     @property
     def most_recent_date_seen(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc) - timedelta(days=10)
 
         with self.context as cache:
             most_recent_date_seen_str = cache.get("most_recent_date_seen")
@@ -77,7 +79,10 @@ class SecurityEventsConnector(Connector):
     @cached_property
     def client(self):
         return ApiClient(
-            client_id=self.module.configuration.client_id, secret=self.module.configuration.secret, log_cb=self.log
+            client_id=self.module.configuration.client_id,
+            secret=self.module.configuration.secret,
+            scope="connect.api.read",
+            log_cb=self.log,
         )
 
     def _handle_response_error(self, response: requests.Response):
@@ -100,7 +105,7 @@ class SecurityEventsConnector(Connector):
         # set parameters
         params = {
             "serverTimestampStart": from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "limit": self.fetch_events_limit,
+            "limit": API_FETCH_EVENTS_PAGE_SIZE,
             "order": "asc",
             "organizationId": self.configuration.organization_id,
         }
@@ -109,7 +114,7 @@ class SecurityEventsConnector(Connector):
         headers = {"Accept": "application/json"}
         url = urljoin(API_BASE_URL, "/security-events/v1/security-events")
         response = self.client.get(url, params=params, headers=headers)
-
+        print(response.json())
         while not self._stop_event.is_set():
             # manage the last response
             self._handle_response_error(response)
@@ -140,7 +145,8 @@ class SecurityEventsConnector(Connector):
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
             if next_events:
-                last_event_date = datetime.fromisoformat(next_events[-1]["serverTimestampStart"])
+                print(next_events[-1])
+                last_event_date = datetime.fromisoformat(next_events[-1]["serverTimestamp"])
 
                 # save the greater date ever seen
                 if last_event_date > most_recent_date_seen:

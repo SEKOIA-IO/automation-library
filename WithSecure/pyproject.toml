@@ -15,6 +15,9 @@ pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
 
+[tool.poetry.group.dev.dependencies]
+pytest-mock = "^3.10.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
