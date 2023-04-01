@@ -59,9 +59,7 @@ class OAuthAuthentication(AuthBase):
             try:
                 self.authenticate()
             except Exception:
-                self.log_cb(
-                    f"Failed to authenticate on the WithSecure API after {API_AUTH_MAX_ATTEMPT} attempts", "critical"
-                )
+                self.log_cb("Failed to authenticate on the WithSecure API, stopping the connector", "critical")
                 return ""
 
         return self.access_token_value
@@ -70,13 +68,17 @@ class OAuthAuthentication(AuthBase):
         """
         Authenticate on the API of WithSecure to obtain an access token.
 
-        A retry mechanism is implemented, if all attempts fail an AuthenticationError
-        is raised.
+        An infinite retry mechanism is implemented but invalid credentials
+        error will instantly stop the process.
 
-        :raises AuthenticationError if it failed to authenticate
+        :raises AuthenticationError if it failed to authenticate due to permissions or credentials
         """
+        i_attempt = 0
+        while True:
+            i_attempt += 1
+            if 0 < API_AUTH_MAX_ATTEMPT < i_attempt:
+                break
 
-        for auth_attempt in range(API_AUTH_MAX_ATTEMPT):
             try:
                 auth_response = requests.post(
                     url=AUTHENTICATION_URL,
@@ -84,22 +86,31 @@ class OAuthAuthentication(AuthBase):
                     timeout=API_TIMEOUT,
                     data={"grant_type": self.grant_type, "scope": self.scope},
                 )
-                # raises exception on error
-                auth_response.raise_for_status()
+                if auth_response.status_code == 200:
+                    # reads the server response
+                    payload = auth_response.json()
 
-                # reads the server response
-                payload = auth_response.json()
-
-                self.access_token_value = payload["access_token"]
-                self.access_token_valid_until = (
-                    datetime.utcnow() - timedelta(minutes=1) + timedelta(seconds=payload["expires_in"])
-                )
-                return
-
+                    self.access_token_value = payload["access_token"]
+                    self.access_token_valid_until = (
+                        datetime.utcnow() - timedelta(minutes=1) + timedelta(seconds=payload["expires_in"])
+                    )
+                    return
+                elif auth_response.status_code in (400, 401):
+                    # reads the server response
+                    payload = auth_response.json()
+                    self.log_cb(
+                        f"Authentication on WithSecure API failed with error: '{payload['error_description']}'",
+                        "error",
+                    )
+                    raise AuthenticationError()
+                else:
+                    auth_response.raise_for_status()
+            except AuthenticationError:
+                raise
             except Exception as error:
                 self.log_cb(
                     (
-                        f"Authentication attempt {auth_attempt + 1}/{API_AUTH_MAX_ATTEMPT} failed: "
+                        f"Authentication attempt failed: "
                         f"{human_readable_api_error(error)}. Will retry in {API_AUTH_SECONDS_BETWEEN_ATTEMPTS} seconds."
                     ),
                     "warning",

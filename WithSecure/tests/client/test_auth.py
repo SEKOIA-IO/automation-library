@@ -57,7 +57,6 @@ def test_api_client_check_validity_before_refresh():
 
 
 def test_get_access_token_triggers_critical_log_on_auth_error(mocker):
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 1)
     mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
 
     log_mock = MagicMock()
@@ -78,14 +77,8 @@ def test_get_access_token_triggers_critical_log_on_auth_error(mocker):
         oauth_authentication(test_request)
 
         assert log_mock.mock_calls == [
-            call(
-                (
-                    "Authentication attempt 1/1 failed: WithSecure API returned 'Invalid credentials' (status=401). "
-                    "Will retry in 0 seconds."
-                ),
-                "warning",
-            ),
-            call("Failed to authenticate on the WithSecure API after 1 attempts", "critical"),
+            call("Authentication on WithSecure API failed with error: 'Invalid credentials'", "error"),
+            call("Failed to authenticate on the WithSecure API, stopping the connector", "critical"),
         ]
 
 
@@ -117,9 +110,6 @@ def test_authentication_success():
 
 
 def test_authentication_failure_invalid_credentials(mocker):
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 1)
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
-
     oauth_authentication = OAuthAuthentication(
         client_id="test-client-id",
         secret="test-secret",
@@ -144,7 +134,7 @@ def test_authentication_failure_invalid_credentials(mocker):
 
 
 def test_authentication_failure_no_json(mocker):
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 1)
+    mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 3)
     mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
 
     oauth_authentication = OAuthAuthentication(
@@ -162,7 +152,7 @@ def test_authentication_failure_no_json(mocker):
 
 
 def test_authentication_failure_invalid_json(mocker):
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 1)
+    mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 3)
     mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
 
     oauth_authentication = OAuthAuthentication(
