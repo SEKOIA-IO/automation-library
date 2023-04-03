@@ -18,6 +18,8 @@ from withsecure.constants import API_BASE_URL, API_FETCH_EVENTS_PAGE_SIZE
 from withsecure.helpers import get_upper_second
 from withsecure.logging import get_logger
 
+API_SECURITY_EVENTS_URL = urljoin(API_BASE_URL, "/security-events/v1/security-events")
+
 logger = get_logger()
 
 
@@ -112,9 +114,9 @@ class SecurityEventsConnector(Connector):
 
         # get the first page of events
         headers = {"Accept": "application/json"}
-        url = urljoin(API_BASE_URL, "/security-events/v1/security-events")
+        url = API_SECURITY_EVENTS_URL
         response = self.client.get(url, params=params, headers=headers)
-        print(response.json())
+
         while not self._stop_event.is_set():
             # manage the last response
             self._handle_response_error(response)
@@ -145,7 +147,6 @@ class SecurityEventsConnector(Connector):
 
         for next_events in self.__fetch_next_events(most_recent_date_seen):
             if next_events:
-                print(next_events[-1])
                 last_event_date = datetime.fromisoformat(next_events[-1]["serverTimestamp"])
 
                 # save the greater date ever seen
@@ -173,16 +174,16 @@ class SecurityEventsConnector(Connector):
         for events in self.fetch_events():
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
-            # if the batch is full, push it
-            if len(batch_of_events) > 0:
+            # push events
+            if batch_of_events:
                 self.log(
-                    message=f"Forwarded {len(batch_of_events)} events to the intake",
+                    message=f"{len(batch_of_events)} events collected",
                     level="info",
                 )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
-                    message="No events to forward",
+                    message="No events collected",
                     level="info",
                 )
 

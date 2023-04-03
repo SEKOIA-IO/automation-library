@@ -4,14 +4,13 @@ from typing import Callable
 from urllib.parse import urljoin
 
 import requests
-from requests import HTTPError
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from withsecure.client.exceptions import AuthenticationError
 from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_AUTH_SECONDS_BETWEEN_ATTEMPTS, API_BASE_URL, API_TIMEOUT
-
-AUTHENTICATION_URL = urljoin(API_BASE_URL, "/as/token.oauth2")
 from withsecure.helpers import human_readable_api_error
+
+API_AUTHENTICATION_URL = urljoin(API_BASE_URL, "/as/token.oauth2")
 
 
 class OAuthAuthentication(AuthBase):
@@ -81,7 +80,7 @@ class OAuthAuthentication(AuthBase):
 
             try:
                 auth_response = requests.post(
-                    url=AUTHENTICATION_URL,
+                    url=API_AUTHENTICATION_URL,
                     auth=HTTPBasicAuth(self.client_id, self.secret),
                     timeout=API_TIMEOUT,
                     data={"grant_type": self.grant_type, "scope": self.scope},
@@ -89,7 +88,6 @@ class OAuthAuthentication(AuthBase):
                 if auth_response.status_code == 200:
                     # reads the server response
                     payload = auth_response.json()
-
                     self.access_token_value = payload["access_token"]
                     self.access_token_valid_until = (
                         datetime.utcnow() - timedelta(minutes=1) + timedelta(seconds=payload["expires_in"])

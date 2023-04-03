@@ -8,7 +8,7 @@ from requests import Request
 
 import withsecure.client
 from withsecure.client import OAuthAuthentication
-from withsecure.client.auth import AUTHENTICATION_URL
+from withsecure.client.auth import API_AUTHENTICATION_URL
 from withsecure.client.exceptions import AuthenticationError
 
 
@@ -27,7 +27,7 @@ def test_get_access_token_trigger_authentication():
     )
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
-            AUTHENTICATION_URL,
+            API_AUTHENTICATION_URL,
             status_code=200,
             json={
                 "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
@@ -69,7 +69,7 @@ def test_get_access_token_triggers_critical_log_on_auth_error(mocker):
     )
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
-            AUTHENTICATION_URL,
+            API_AUTHENTICATION_URL,
             status_code=401,
             json={"error_description": "Invalid credentials", "error": "invalid_client"},
         )
@@ -95,7 +95,7 @@ def test_authentication_success():
 
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
-            AUTHENTICATION_URL,
+            API_AUTHENTICATION_URL,
             status_code=200,
             json={
                 "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
@@ -109,7 +109,7 @@ def test_authentication_success():
     assert oauth_authentication.access_token_valid_until > datetime.utcnow()
 
 
-def test_authentication_failure_invalid_credentials(mocker):
+def test_authentication_failure_invalid_credentials():
     oauth_authentication = OAuthAuthentication(
         client_id="test-client-id",
         secret="test-secret",
@@ -122,7 +122,7 @@ def test_authentication_failure_invalid_credentials(mocker):
 
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
-            AUTHENTICATION_URL,
+            API_AUTHENTICATION_URL,
             status_code=401,
             json={"error_description": "Invalid credentials", "error": "invalid_client"},
         )
@@ -146,7 +146,7 @@ def test_authentication_failure_no_json(mocker):
     )
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(AUTHENTICATION_URL, status_code=500)
+        mock_requests.post(API_AUTHENTICATION_URL, status_code=500)
         with pytest.raises(AuthenticationError):
             oauth_authentication.authenticate()
 
@@ -164,7 +164,7 @@ def test_authentication_failure_invalid_json(mocker):
     )
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(AUTHENTICATION_URL, status_code=500, json={})
+        mock_requests.post(API_AUTHENTICATION_URL, status_code=500, json={})
         with pytest.raises(AuthenticationError):
             oauth_authentication.authenticate()
 
@@ -182,7 +182,7 @@ def test_authentication_failure_connection_error(mocker):
     )
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(AUTHENTICATION_URL, exc=requests.exceptions.ConnectionError)
+        mock_requests.post(API_AUTHENTICATION_URL, exc=requests.exceptions.ConnectionError)
         with pytest.raises(AuthenticationError):
             oauth_authentication.authenticate()
 
@@ -200,6 +200,6 @@ def test_authentication_failure_unsupported_exception(mocker):
     )
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(AUTHENTICATION_URL, exc=TimeoutError)
+        mock_requests.post(API_AUTHENTICATION_URL, exc=TimeoutError)
         with pytest.raises(AuthenticationError):
             oauth_authentication.authenticate()
