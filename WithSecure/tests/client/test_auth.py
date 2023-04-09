@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from threading import Event
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -23,6 +24,7 @@ def test_get_access_token_trigger_authentication():
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read connect.api.write",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
     with requests_mock.Mocker() as mock_requests:
@@ -45,6 +47,7 @@ def test_api_client_check_validity_before_refresh():
         client_id="test-client-id",
         secret="test-secret",
         scope="connect.api.read connect.api.write",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
 
@@ -65,6 +68,7 @@ def test_get_access_token_triggers_critical_log_on_auth_error(mocker):
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read connect.api.write",
+        stop_event=Event(),
         log_cb=log_mock,
     )
     with requests_mock.Mocker() as mock_requests:
@@ -88,6 +92,7 @@ def test_authentication_success():
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read connect.api.write",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
     assert oauth_authentication.access_token_value is None
@@ -115,6 +120,7 @@ def test_authentication_failure_invalid_credentials():
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
     assert oauth_authentication.access_token_value is None
@@ -142,6 +148,7 @@ def test_authentication_failure_no_json(mocker):
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
 
@@ -160,6 +167,7 @@ def test_authentication_failure_invalid_json(mocker):
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
 
@@ -178,6 +186,7 @@ def test_authentication_failure_connection_error(mocker):
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
 
@@ -196,6 +205,7 @@ def test_authentication_failure_unsupported_exception(mocker):
         secret="test-secret",
         grant_type="client_credentials",
         scope="connect.api.read",
+        stop_event=Event(),
         log_cb=fake_log_cb,
     )
 

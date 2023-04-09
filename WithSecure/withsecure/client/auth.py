@@ -1,5 +1,6 @@
 import time
 from datetime import datetime, timedelta
+from threading import Event
 from typing import Callable
 from urllib.parse import urljoin
 
@@ -8,7 +9,7 @@ from requests.auth import AuthBase, HTTPBasicAuth
 
 from withsecure.client.exceptions import AuthenticationError
 from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_AUTH_SECONDS_BETWEEN_ATTEMPTS, API_BASE_URL, API_TIMEOUT
-from withsecure.helpers import human_readable_api_error
+from withsecure.helpers import human_readable_api_exception
 
 API_AUTHENTICATION_URL = urljoin(API_BASE_URL, "/as/token.oauth2")
 
@@ -26,7 +27,15 @@ class OAuthAuthentication(AuthBase):
     access_token_value: str | None
     access_token_valid_until: datetime | None
 
-    def __init__(self, client_id: str, secret: str, grant_type: str, scope: str, log_cb: Callable[[str, str], None]):
+    def __init__(
+        self,
+        client_id: str,
+        secret: str,
+        grant_type: str,
+        scope: str,
+        stop_event: Event,
+        log_cb: Callable[[str, str], None],
+    ):
         self.client_id = client_id
         self.secret = secret
         self.grant_type = grant_type
@@ -37,6 +46,7 @@ class OAuthAuthentication(AuthBase):
         self.access_token_valid_until = None
 
         self.log_cb = log_cb
+        self._stop_event = stop_event
 
     def __call__(self, request):
         request.headers["Authorization"] = f"Bearer {self._get_access_token()}"
@@ -67,13 +77,13 @@ class OAuthAuthentication(AuthBase):
         """
         Authenticate on the API of WithSecure to obtain an access token.
 
-        An infinite retry mechanism is implemented but invalid credentials
+        An retry mechanism is implemented but invalid credentials
         error will instantly stop the process.
 
         :raises AuthenticationError if it failed to authenticate due to permissions or credentials
         """
         i_attempt = 0
-        while True:
+        while not self._stop_event.is_set():
             i_attempt += 1
             if 0 < API_AUTH_MAX_ATTEMPT < i_attempt:
                 break
@@ -109,7 +119,7 @@ class OAuthAuthentication(AuthBase):
                 self.log_cb(
                     (
                         f"Authentication attempt failed: "
-                        f"{human_readable_api_error(error)}. Will retry in {API_AUTH_SECONDS_BETWEEN_ATTEMPTS} seconds."
+                        f"{human_readable_api_exception(error)}. Will retry in {API_AUTH_SECONDS_BETWEEN_ATTEMPTS} seconds."
                     ),
                     "warning",
                 )

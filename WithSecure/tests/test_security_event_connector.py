@@ -1,3 +1,5 @@
+import datetime
+import json
 import os
 import time
 from signal import SIGINT
@@ -5,6 +7,7 @@ from threading import Thread
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 import requests_mock
 
 from withsecure import WithSecureModule
@@ -17,7 +20,7 @@ def message1():
     return {
         "severity": "info",
         "engine": "systemEventsLog",
-        "serverTimestamp": "2023-03-30T16:52:19.739Z",
+        "serverTimestamp": (datetime.datetime.utcnow() - datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "organization": {"name": "Test", "id": "00000000-0000-0000-0000-000000000000"},
         "action": "reported",
         "details": {
@@ -54,7 +57,7 @@ def message2():
     return {
         "severity": "info",
         "engine": "edr",
-        "serverTimestamp": "2023-03-30T14:34:04.820Z",
+        "serverTimestamp": (datetime.datetime.utcnow() + datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "organization": {"name": "Test", "id": "00000000-0000-0000-0000-000000000000"},
         "action": "closed",
         "details": {
@@ -79,6 +82,25 @@ def message2():
 def trigger(data_storage):
     def fake_log_cb(message: str, level: str):
         print(message)
+        return None
+
+    module = WithSecureModule()
+    trigger = SecurityEventsConnector(module=module, data_path=data_storage)
+    # mock the log function of trigger that requires network access to the api for reporting
+    trigger.log = fake_log_cb
+    trigger.log_exception = MagicMock()
+    trigger.push_events_to_intakes = MagicMock()
+    trigger.module.configuration = {
+        "client_id": "my-test-client-id",
+        "secret": "my-secret",
+    }
+    trigger.configuration = {"intake_key": "test-intake-key", "frequency": 2}
+    return trigger
+
+
+@pytest.fixture
+def trigger_with_preloaded_date(data_storage):
+    def fake_log_cb(message: str, level: str):
         return None
 
     module = WithSecureModule()
@@ -138,6 +160,58 @@ def test_next_batch_is_empty(trigger):
         assert len(trigger.push_events_to_intakes.mock_calls) == 0
 
 
+def test_next_batch_with_anchor(trigger, message1, message2):
+    def custom_matcher(request: requests.Request):
+        if request.url == API_AUTHENTICATION_URL:
+            resp = requests.Response()
+            resp._content = json.dumps(
+                {
+                    "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                    "token_type": "Bearer",
+                    "expires_in": 1799,
+                }
+            ).encode()
+            resp.status_code = 200
+
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "anchor" not in request.url:
+            resp = requests.Response()
+            resp._content = json.dumps({"items": [message1], "nextAnchor": "next-anchor1"}).encode()
+            resp.status_code = 200
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor1" in request.url:
+            resp = requests.Response()
+            resp._content = json.dumps({"items": [message2], "nextAnchor": "next-anchor2"}).encode()
+            resp.status_code = 200
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor2" in request.url:
+            resp = requests.Response()
+            resp.status_code = 409
+            return resp
+        return None
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.add_matcher(custom_matcher)
+        trigger.next_batch()
+        assert len(trigger.push_events_to_intakes.mock_calls) == 2
+
+
+def test_fetch_next_events_raises_an_exception(trigger):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post(
+            API_AUTHENTICATION_URL,
+            status_code=200,
+            json={
+                "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                "token_type": "Bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock_requests.get(API_SECURITY_EVENTS_URL, exc=requests.exceptions.ConnectTimeout)
+
+        trigger.next_batch()
+
+
 def test_run_is_interrupted_by_signal(trigger):
     pid = os.getpid()
 
@@ -162,3 +236,21 @@ def test_run_properly_handle_any_exception(trigger):
     Thread(target=set_stop_event, daemon=True).start()
     trigger.run()
     assert len(trigger.next_batch.mock_calls) > 0
+
+
+def test_load_recent_date_seen(trigger):
+    with trigger.context as c:
+        c["most_recent_date_seen"] = (
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=3)
+        ).isoformat()
+
+    assert trigger.most_recent_date_seen < datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=3)
+
+
+def test_load_old_date_seen(trigger):
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    with trigger.context as c:
+        c["most_recent_date_seen"] = (now - datetime.timedelta(days=10)).isoformat()
+
+    assert trigger.most_recent_date_seen >= now - datetime.timedelta(days=7)

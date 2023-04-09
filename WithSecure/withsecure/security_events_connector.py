@@ -6,7 +6,6 @@ from threading import Event
 from typing import Generator
 from urllib.parse import urljoin
 
-import requests
 from orjson import orjson
 from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -14,8 +13,8 @@ from sekoia_automation.storage import PersistentJSON
 
 from withsecure import WithSecureModule
 from withsecure.client import ApiClient
-from withsecure.constants import API_BASE_URL, API_FETCH_EVENTS_PAGE_SIZE
-from withsecure.helpers import get_upper_second
+from withsecure.constants import API_BASE_URL, API_FETCH_EVENTS_PAGE_SIZE, API_TIMEOUT
+from withsecure.helpers import human_readable_api_exception
 from withsecure.logging import get_logger
 
 API_SECURITY_EVENTS_URL = urljoin(API_BASE_URL, "/security-events/v1/security-events")
@@ -59,11 +58,10 @@ class SecurityEventsConnector(Connector):
 
     @property
     def most_recent_date_seen(self):
-        now = datetime.now(timezone.utc) - timedelta(days=10)
+        now = datetime.now(timezone.utc)
 
         with self.context as cache:
             most_recent_date_seen_str = cache.get("most_recent_date_seen")
-
             # if undefined, retrieve events from the last minute
             if most_recent_date_seen_str is None:
                 return now - timedelta(minutes=1)
@@ -84,21 +82,9 @@ class SecurityEventsConnector(Connector):
             client_id=self.module.configuration.client_id,
             secret=self.module.configuration.secret,
             scope="connect.api.read",
+            stop_event=self._stop_event,
             log_cb=self.log,
         )
-
-    def _handle_response_error(self, response: requests.Response):
-        if not response.ok:
-            message = f"Request on WithSecure API to fetch events failed with status {response.status_code} - {response.reason}"
-
-            # enrich error logs with detail from the WithSecure API
-            try:
-                error = response.json()
-                message = f"{message}: {error['errorCode']} - {error['errorSummary']}"
-            except Exception:
-                pass
-
-            raise FetchEventsException(message)
 
     def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
         """
@@ -115,14 +101,15 @@ class SecurityEventsConnector(Connector):
         # get the first page of events
         headers = {"Accept": "application/json"}
         url = API_SECURITY_EVENTS_URL
-        response = self.client.get(url, params=params, headers=headers)
+
+        try:
+            response = self.client.get(url, timeout=API_TIMEOUT, params=params, headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+        except Exception as any_exception:
+            raise FetchEventsException(human_readable_api_exception(any_exception))
 
         while not self._stop_event.is_set():
-            # manage the last response
-            self._handle_response_error(response)
-
-            # get events from the response
-            payload = response.json()
             events = payload.get("items", [])
 
             # yielding events if defined
@@ -139,24 +126,29 @@ class SecurityEventsConnector(Connector):
             if not anchor:
                 return
             params["anchor"] = anchor
-
-            response = self.client.get(url, params=params, headers=headers)
+            try:
+                response = self.client.get(url, timeout=API_TIMEOUT, params=params, headers=headers)
+                response.raise_for_status()
+                payload = response.json()
+            except Exception as any_exception:
+                raise FetchEventsException(human_readable_api_exception(any_exception))
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
 
-        for next_events in self.__fetch_next_events(most_recent_date_seen):
-            if next_events:
-                last_event_date = datetime.fromisoformat(next_events[-1]["serverTimestamp"])
+        try:
+            for next_events in self.__fetch_next_events(most_recent_date_seen):
+                if next_events:
+                    last_event_date = datetime.fromisoformat(next_events[-1]["serverTimestamp"])
 
-                # save the greater date ever seen
-                if last_event_date > most_recent_date_seen:
-                    most_recent_date_seen = get_upper_second(
-                        last_event_date
-                    )  # get the upper second to exclude the most recent event seen
+                    # save the greater date ever seen
+                    if last_event_date > most_recent_date_seen:
+                        most_recent_date_seen = last_event_date
 
-                # forward current events
-                yield next_events
+                    # forward current events
+                    yield next_events
+        except FetchEventsException as fetch_error:
+            self.log(human_readable_api_exception(fetch_error), level="error")
 
         # save the most recent date
         if most_recent_date_seen > self.from_date:
@@ -181,11 +173,6 @@ class SecurityEventsConnector(Connector):
                     level="info",
                 )
                 self.push_events_to_intakes(events=batch_of_events)
-            else:
-                self.log(
-                    message="No events collected",
-                    level="info",
-                )
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
