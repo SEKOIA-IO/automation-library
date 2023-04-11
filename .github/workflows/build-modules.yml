@@ -1,0 +1,102 @@
+name: Build Modules
+
+on:
+  pull_request
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX_NAME: sekoialab
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: ['AzureActiveDirectory', 'Okta']
+      fail-fast: false
+    steps:
+      - name: Check-out the repo under $GITHUB_WORKSPACE
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        id: setup-python
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: |
+          pip install poetry
+          poetry config virtualenvs.in-project true
+          poetry config installer.modern-installation false    
+
+      - name: Install Dependencies
+        id: install-dependencies
+        run: |
+          poetry install      
+        working-directory: ${{ matrix.module }}
+
+      - name: Execute Black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: ./${{ matrix.module }}
+
+      - name: Execute Mypy
+        run: |
+          poetry run pip install mypy
+          mkdir -p .mypy_cache
+          poetry run mypy  --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
+        working-directory: ${{ matrix.module }}
+
+      - name: Execute Python tests
+        id: execute-tests
+        run: |
+          poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov tests
+        working-directory: ${{ matrix.module }}
+
+      - name: Publish Python Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          files: ${{ matrix.module }}/junit.xml
+          check_name: ${{ matrix.module }} Test Results
+
+      - name: Read Module Manifest
+        id: read-module-manifest
+        run: |
+          content=`cat ${{ matrix.module }}/manifest.json`
+          # the following lines are only required for multi line json
+          content="${content//$'\n'/''}"
+          content="${content//$'\r'/''}"
+          # end of optional handling for multi line json
+          echo $content
+          echo "$content"
+          echo "manifest=$content" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{fromJson(steps.read-module-manifest.outputs.manifest).slug}}
+          flavor: |
+            latest=false
+            prefix=
+            suffix=
+          tags: |
+            type=sha,format=long
+            type=pep440,pattern={{version}},value=${{fromJson(steps.read-module-manifest.outputs.manifest).version}},suffix=--experimental
+
+      - name: Copy DockerFile
+        id: copy-dockefile
+        run: |
+          cp ../Dockerfile .
+        working-directory: ${{ matrix.module }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: ${{ matrix.Module }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
