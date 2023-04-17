@@ -19,3 +19,7 @@ And if you're feeling adventurous, try experimenting with different approaches t
 Remember, the community is always here to help. 
 Feel free to share your ideas and perspectives, and don't forget to contribute to the repository
 so that others can benefit from your work as well. Together, we can build even more exceptional solutions!
+
+## Documentation
+
+Documentation is in the [doc](doc/README.md) directory.
