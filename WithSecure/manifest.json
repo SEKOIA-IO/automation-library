@@ -1,0 +1,26 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "WithSecure",
+    "type": "object",
+    "properties": {
+      "client_id": {
+        "description": "Client identifier",
+        "type": "string"
+      },
+      "secret": {
+        "description": "API secret to authenticate",
+        "type": "string"
+      }
+    },
+    "required": [
+      "client_id",
+      "secret"
+    ]
+  },
+  "description": "WithSecure description",
+  "name": "WithSecure",
+  "uuid": "8aa9f86c-f360-4ae7-84f5-b61c6917cf01",
+  "slug": "withsecure",
+  "version": "1.0.0"
+}
