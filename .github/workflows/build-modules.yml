@@ -9,11 +9,26 @@ env:
 
 jobs:
 
+  find-modules:
+    name: Find modules in repo
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.list-modules.outputs.matrix }}
+    steps:
+      - name: Check-out the repo under $GITHUB_WORKSPACE
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - id: list-modules
+        name: List modules having changed files
+        run: echo "matrix=$(comm -12  <(cut -d "/" -f1 <<< "$(git diff --name-only -r HEAD^1 HEAD)" | sort | uniq) <(cut -d "/" -f1 <<< "$(ls -a */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+
   build:
     runs-on: ubuntu-latest
+    needs: find-modules
     strategy:
       matrix:
-        module: ['AzureActiveDirectory', 'Okta']
+        module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
       fail-fast: false
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
