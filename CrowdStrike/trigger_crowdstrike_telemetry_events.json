@@ -1,0 +1,70 @@
+{
+  "description": "Get sqs messages with files information and send events to the intake server",
+  "docker_parameters": "crowdstrike_telemetry",
+  "name": "Fetch new events from CrowdStrike with Sqs",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of max number of messages for the batch processing. Must be between 1 and 10 (default: 1)",
+        "default": 1
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds. Should be greater than 0 and lower then 20 (default: 10)",
+        "default": 10
+      },
+      "delete_consumed_messages": {
+        "type": "boolean",
+        "description": "Flag to delete consuming messages (default: true)",
+        "default": true
+      },
+      "is_fifo": {
+        "type": "boolean",
+        "description": "Flag to determine if the queue is a FIFO queue (default: false)",
+        "default": false
+      },
+      "queue_name": {
+        "type": "string",
+        "description": "The name of the SQS queue that received messages with files information"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "aws_access_key_id": {
+        "description": "The identifier of the access key",
+        "type": "string"
+      },
+      "aws_secret_access_key": {
+        "description": "The secret associated to the access key",
+        "type": "string"
+      },
+      "aws_region": {
+        "description": "The area hosting the AWS resources",
+        "type": "string"
+      }
+    },
+    "required": [
+      "queue_name",
+      "intake_key",
+      "aws_access_key_id",
+      "aws_secret_access_key",
+      "aws_region"
+    ],
+    "title": "Trigger configuration",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "The records"
+  },
+  "uuid": "2d806360-5c22-4722-b335-8eaf5ab3e4bf"
+}
