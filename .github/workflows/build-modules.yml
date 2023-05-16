@@ -39,7 +39,7 @@ jobs:
     name: Test module ${{ matrix.module }}
     runs-on: ubuntu-latest
     needs: find-modules
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && needs.find-modules.outputs.matrix != '[]'
     strategy:
       matrix:
         module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
@@ -96,6 +96,7 @@ jobs:
     name: Build ${{ matrix.module }} docker image
     runs-on: ubuntu-latest
     needs: find-modules
+    if: needs.find-modules.outputs.matrix != '[]'
     strategy:
       matrix:
         module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
