@@ -145,3 +145,18 @@ jobs:
           context: ${{ matrix.Module }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+  
+  test-gate:
+    name: Build & Test Gate
+    runs-on: ubuntu-latest
+    needs: [find-modules, test, build-docker]
+    if: always()
+
+    steps:
+    - name: Success
+      if: ${{ !(contains(needs.*.result, 'failure')) || needs.find-modules.outputs.matrix == '[]' }}
+      run: exit 0
+    - name: Failure
+      if: ${{ contains(needs.*.result, 'failure') && needs.find-modules.outputs.matrix != '[]' }}
+      run: |
+        exit 1
