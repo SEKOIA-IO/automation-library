@@ -94,6 +94,8 @@ class CrowdStrikeTelemetryConnector(Connector):
 
         logger.info("Found {0} records to process".format(len(result)))
 
+        self.push_events_to_intakes(events=result)
+
         return result
 
     def run(self) -> None:
