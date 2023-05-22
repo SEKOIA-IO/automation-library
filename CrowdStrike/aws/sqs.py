@@ -1,9 +1,8 @@
 """Aws sqs client wrapper with its config class."""
-from contextlib import contextmanager
-from functools import cached_property
-from typing import Generator
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
-import boto3
+from async_lru import alru_cache
 from loguru import logger
 from pydantic import Field
 
@@ -49,15 +48,8 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             )
         )
 
-        self._sqs = boto3.client(
-            "sqs",
-            aws_access_key_id=configuration.aws_access_key_id,
-            aws_secret_access_key=configuration.aws_secret_access_key,
-            region_name=configuration.aws_region,
-        )
-
-    @cached_property
-    def queue_url(self) -> str:
+    @alru_cache
+    async def queue_url(self) -> str:
         """
         Get SQS queue url.
 
@@ -70,12 +62,15 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         if self._configuration.is_fifo:
             queue_name = self._configuration.queue_name + ".fifo"
 
-        return str(self._sqs.get_queue_url(QueueName=queue_name)["QueueUrl"])
+        async with self.get_client("sqs") as sqs:
+            result = await sqs.get_queue_url(QueueName=queue_name)
 
-    @contextmanager
-    def receive_messages(
+            return str(result["QueueUrl"])
+
+    @asynccontextmanager
+    async def receive_messages(
         self, frequency: int | None = None, chunk_size: int | None = None, delete_consumed_messages: bool | None = None
-    ) -> Generator[list[str], None, None]:
+    ) -> AsyncGenerator[list[str], None]:
         """
         Receive SQS messages.
 
@@ -96,34 +91,38 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         frequency = frequency or self._configuration.frequency
         chunk_size = chunk_size or self._configuration.chunk_size
         delete_consumed_messages = delete_consumed_messages or self._configuration.delete_consumed_messages
+        queue_url = await self.queue_url()
 
-        try:
-            response = self._sqs.receive_message(
-                QueueUrl=self.queue_url,
-                MaxNumberOfMessages=chunk_size,
-                WaitTimeSeconds=frequency,
-                MessageAttributeNames=["All"],
-                AttributeNames=["All"],
-                VisibilityTimeout=0,
-            )
+        async with self.get_client("sqs") as sqs:
+            try:
+                response = await sqs.receive_message(
+                    QueueUrl=queue_url,
+                    MaxNumberOfMessages=chunk_size,
+                    WaitTimeSeconds=frequency,
+                    MessageAttributeNames=["All"],
+                    AttributeNames=["All"],
+                    VisibilityTimeout=0,
+                )
 
-        except Exception as e:
-            logger.error("Failed to receive messages from sqs: {0}".format(e))
+            except Exception as e:
+                logger.error("Failed to receive messages from sqs: {0}".format(e))
 
-            raise e
+                raise e
 
-        result = []
+            result = []
 
-        try:
-            for message in response.get("Messages", []):
-                result.append(message["Body"])
-
-            logger.info("Received {0} messages from sqs queue {1}".format(len(result), self._configuration.queue_name))
-
-            yield result
-        finally:
-            # We should delete messages from queue after releasing context manager if it is configured
-            if delete_consumed_messages and response.get("Messages", []):
-                logger.info("Deleting consumed messages from sqs")
+            try:
                 for message in response.get("Messages", []):
-                    self._sqs.delete_message(QueueUrl=self.queue_url, ReceiptHandle=message["ReceiptHandle"])
+                    result.append(message["Body"])
+
+                logger.info(
+                    "Received {0} messages from sqs queue {1}".format(len(result), self._configuration.queue_name)
+                )
+
+                yield result
+            finally:
+                # We should delete messages from queue after releasing context manager if it is configured
+                if delete_consumed_messages and response.get("Messages", []):
+                    logger.info("Deleting consumed messages from sqs")
+                    for message in response.get("Messages", []):
+                        await sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])

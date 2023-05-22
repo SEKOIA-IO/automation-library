@@ -9,8 +9,9 @@ python = ">=3.10,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 sekoia-automation-sdk = "^1.1.2"
-boto3 = "^1.21.3"
 loguru = "^0.7.0"
+aiobotocore = "^2.5.0"
+async-lru = "^2.0.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -25,10 +26,6 @@ isort = "^5.10.1"
 black = "^22.3.0"
 mypy = "^0.960"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 119
@@ -83,3 +80,7 @@ sequence = [
     { cmd = "poetry run mypy ." },
 ]
 help = "Make code linting and formatting."
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

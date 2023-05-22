@@ -2,7 +2,6 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-import boto3
 from loguru import logger
 from pydantic import Field
 
@@ -27,15 +26,6 @@ class S3Wrapper(AwsClient[S3Configuration]):
         """
         super().__init__(configuration)
 
-        logger.info("Initializing s3 client")
-
-        self._s3 = boto3.client(
-            "s3",
-            aws_access_key_id=configuration.aws_access_key_id,
-            aws_secret_access_key=configuration.aws_secret_access_key,
-            region_name=configuration.aws_region,
-        )
-
     @asynccontextmanager
     async def read_key(self, key: str, bucket: str | None = None) -> AsyncGenerator[bytes, None]:
         """
@@ -53,8 +43,10 @@ class S3Wrapper(AwsClient[S3Configuration]):
         logger.info("Reading object {0} from bucket {1}".format(key, bucket))
 
         try:
-            response = self._s3.get_object(Bucket=bucket, Key=key)
-            data = response["Body"].read()
+            async with self.get_client("s3") as s3:
+                response = await s3.get_object(Bucket=bucket, Key=key)
+                async with response["Body"] as stream:
+                    data = await stream.read()
 
             yield data
         finally:

@@ -1,5 +1,5 @@
 """Test the SqsWrapper class."""
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -50,18 +50,25 @@ async def test_queue_url(sqs_wrapper, sqs_wrapper_configuration, session_faker):
     Test queue_url property.
 
     Args:
-        sqs_wrapper: SqssWrapper
+        sqs_wrapper: SqsWrapper
         sqs_wrapper_configuration: SqsConfiguration
         session_faker: Faker
     """
     queue_url = session_faker.url()
-    with patch.object(sqs_wrapper._sqs, "get_queue_url") as mock_get_queue_url:
-        mock_get_queue_url.return_value = {"QueueUrl": queue_url}
 
-        queue_url = sqs_wrapper.queue_url
+    with patch("aws.sqs.SqsWrapper.get_client") as mock_client:
+        mock_sqs = MagicMock()
+        mock_sqs.get_queue_url = AsyncMock()
+        mock_sqs.get_queue_url.return_value = {"QueueUrl": queue_url}
 
-        assert queue_url == queue_url
-        mock_get_queue_url.assert_called_once_with(QueueName=sqs_wrapper_configuration.queue_name)
+        mock_client.return_value.__aenter__.return_value = mock_sqs
+
+        result_url = await sqs_wrapper.queue_url()
+
+        assert queue_url == result_url
+
+        mock_client.assert_called_once_with("sqs")
+        mock_sqs.get_queue_url.assert_called_once_with(QueueName=sqs_wrapper_configuration.queue_name)
 
 
 @pytest.mark.asyncio
@@ -74,7 +81,6 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
         sqs_wrapper_configuration: SqsConfiguration
         session_faker: Faker
     """
-    # Prepare the mocked response
     first_message = session_faker.sentence()
     second_message = session_faker.sentence()
 
@@ -84,23 +90,32 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
     queue_url = session_faker.url()
 
     expected_messages = [first_message, second_message]
-    mocked_response = {
+    expected_response = {
         "Messages": [
             {"Body": first_message, "ReceiptHandle": receipt_handle_1},
             {"Body": second_message, "ReceiptHandle": receipt_handle_2},
         ]
     }
 
-    with patch.object(sqs_wrapper._sqs, "receive_message") as mock_receive_message, patch.object(
-        sqs_wrapper._sqs, "delete_message"
-    ) as mock_delete_message, patch.object(sqs_wrapper._sqs, "get_queue_url") as mock_get_queue_url:
-        mock_get_queue_url.return_value = {"QueueUrl": queue_url}
-        mock_receive_message.return_value = mocked_response
+    with patch("aws.sqs.SqsWrapper.get_client") as mock_client:
+        mock_sqs = MagicMock()
 
-        with sqs_wrapper.receive_messages() as messages:
+        mock_sqs.receive_message = AsyncMock()
+        mock_sqs.receive_message.return_value = expected_response
+
+        mock_sqs.delete_message = AsyncMock()
+        mock_sqs.delete_message.return_value = {}
+
+        mock_sqs.get_queue_url = AsyncMock()
+        mock_sqs.get_queue_url.return_value = {"QueueUrl": queue_url}
+
+        mock_client.return_value.__aenter__.return_value = mock_sqs
+
+        async with sqs_wrapper.receive_messages() as messages:
             assert messages == expected_messages
 
-        mock_receive_message.assert_called_once_with(
+        mock_client.assert_has_calls([call("sqs")])
+        mock_sqs.receive_message.assert_called_once_with(
             QueueUrl=queue_url,
             MaxNumberOfMessages=sqs_wrapper_configuration.chunk_size,
             WaitTimeSeconds=sqs_wrapper_configuration.frequency,
@@ -109,5 +124,5 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
             VisibilityTimeout=0,
         )
 
-        mock_delete_message.assert_any_call(QueueUrl=queue_url, ReceiptHandle=receipt_handle_1)
-        mock_delete_message.assert_any_call(QueueUrl=queue_url, ReceiptHandle=receipt_handle_2)
+        mock_sqs.delete_message.assert_any_call(QueueUrl=queue_url, ReceiptHandle=receipt_handle_1)
+        mock_sqs.delete_message.assert_any_call(QueueUrl=queue_url, ReceiptHandle=receipt_handle_2)

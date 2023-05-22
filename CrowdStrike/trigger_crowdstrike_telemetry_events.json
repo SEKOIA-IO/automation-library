@@ -1,7 +1,7 @@
 {
   "description": "Get sqs messages with files information and send events to the intake server",
   "docker_parameters": "crowdstrike_telemetry",
-  "name": "Fetch new events from CrowdStrike with Sqs",
+  "name": "Fetch new events from CrowdStrike Data replication",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -66,5 +66,5 @@
     "properties": {},
     "title": "The records"
   },
-  "uuid": "2d806360-5c22-4722-b335-8eaf5ab3e4bf"
+  "uuid": "10999b99-9a8d-4b92-9fbd-01e3fac01cd5"
 }

@@ -2,7 +2,7 @@
 import pytest
 from pydantic import ValidationError
 
-from crowdstrike_telemetry.schemas import CrowdStrikeEventSchema, FileInfoSchema
+from crowdstrike_telemetry.schemas import CrowdStrikeNotificationSchema, FileInfoSchema
 
 
 @pytest.mark.asyncio
@@ -27,9 +27,9 @@ async def test_file_info_schema_invalid():
 
 
 @pytest.mark.asyncio
-async def test_crowdstrike_event_schema_valid(session_faker):
+async def test_crowdstrike_notification_schema_valid(session_faker):
     """
-    Test create valid CrowdStrikeEventSchema object.
+    Test create valid CrowdStrikeNotificationSchema object.
 
     Args:
         session_faker: Faker
@@ -38,7 +38,7 @@ async def test_crowdstrike_event_schema_valid(session_faker):
     bucket = session_faker.word()
 
     event_data = {"bucket": bucket, "files": [{"path": file_path}]}
-    event = CrowdStrikeEventSchema(**event_data)
+    event = CrowdStrikeNotificationSchema(**event_data)
 
     assert event.bucket == bucket
     assert len(event.files) == 1
@@ -46,7 +46,7 @@ async def test_crowdstrike_event_schema_valid(session_faker):
 
 
 @pytest.mark.asyncio
-async def test_crowdstrike_event_schema_invalid():
-    """Test create invalid CrowdStrikeEventSchema object."""
+async def test_crowdstrike_notification_schema_invalid():
+    """Test create invalid CrowdStrikeNotificationSchema object."""
     with pytest.raises(ValidationError):
-        CrowdStrikeEventSchema()
+        CrowdStrikeNotificationSchema()

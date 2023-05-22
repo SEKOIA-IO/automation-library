@@ -1,5 +1,5 @@
 """Test S3 wrapper."""
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,29 +16,32 @@ async def test_read_key(session_faker):
     """
     key = session_faker.file_path(depth=2, extension="txt")
     bucket = session_faker.word()
+    text = session_faker.sentence()
 
-    # Prepare the mocked response
-    expected_data = session_faker.sentence().encode("utf-8")
-    mocked_response = {"Body": AsyncMock(read=AsyncMock(return_value=expected_data))}
+    configuration = S3Configuration(
+        aws_access_key_id=session_faker.word(),
+        aws_secret_access_key=session_faker.word(),
+        aws_region=session_faker.word(),
+        bucket=bucket,
+    )
 
-    with patch("aws.s3.boto3.client") as mock_client:
-        # Mock the get_object method of the client
-        mock_s3 = mock_client.return_value
-        mock_s3.get_object.return_value = mocked_response
+    s3 = S3Wrapper(configuration)
 
-        # Create the S3Wrapper instance
-        configuration = S3Configuration(
-            aws_access_key_id=session_faker.word(),
-            aws_secret_access_key=session_faker.word(),
-            aws_region=session_faker.word(),
-        )
+    with patch("aws.s3.S3Wrapper.get_client") as mock_client:
+        mock_s3 = MagicMock()
+        mock_s3.get_object = AsyncMock()
 
-        wrapper = S3Wrapper(configuration)
+        mock_client.return_value.__aenter__.return_value = mock_s3
 
-        # Call the read_key method
-        async with wrapper.read_key(key, bucket) as file_data:
-            # Assert the data returned matches the expected content
-            assert await file_data == expected_data
+        s3_response = {"Body": AsyncMock()}
+        s3_response["Body"].__aenter__.return_value = s3_response["Body"]
+        s3_response["Body"].read = AsyncMock(return_value=text.encode("utf-8"))
 
-        # Assert that the get_object method was called with the correct arguments
+        mock_s3.get_object.return_value = s3_response
+
+        async with s3.read_key(key) as content:
+            assert content == text.encode("utf-8")
+
+        # Assert that the S3 client methods were called with the correct arguments
+        mock_client.assert_called_once_with("s3")
         mock_s3.get_object.assert_called_once_with(Bucket=bucket, Key=key)

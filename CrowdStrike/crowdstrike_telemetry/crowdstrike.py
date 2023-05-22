@@ -12,7 +12,7 @@ from sekoia_automation.module import Module
 from aws.s3 import S3Configuration, S3Wrapper
 from aws.sqs import SqsConfiguration, SqsWrapper
 
-from .schemas import CrowdStrikeEventSchema
+from .schemas import CrowdStrikeNotificationSchema
 
 
 class CrowdStrikeTelemetryConfig(DefaultConnectorConfiguration):
@@ -72,8 +72,8 @@ class CrowdStrikeTelemetryConnector(Connector):
         Returns:
             list[dict]:
         """
-        with self.sqs_wrapper.receive_messages(delete_consumed_messages=True) as messages:
-            validated_sqs_messages = [CrowdStrikeEventSchema.parse_raw(content) for content in messages]
+        async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True) as messages:
+            validated_sqs_messages = [CrowdStrikeNotificationSchema.parse_raw(content) for content in messages]
 
             s3_data_list = await asyncio.gather(
                 *[
@@ -92,9 +92,9 @@ class CrowdStrikeTelemetryConnector(Connector):
                 else:
                     result.append(record)
 
-            logger.info("Found {0} records to process".format(len(result)))
+        logger.info("Found {0} records to process".format(len(result)))
 
-            return result
+        return result
 
     def run(self) -> None:
         """Runs CrowdStrikeTelemetry."""

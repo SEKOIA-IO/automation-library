@@ -8,7 +8,7 @@ class FileInfoSchema(BaseModel):
     path: str
 
 
-class CrowdStrikeEventSchema(BaseModel):
+class CrowdStrikeNotificationSchema(BaseModel):
     """
     Main sqs message schema.
 
