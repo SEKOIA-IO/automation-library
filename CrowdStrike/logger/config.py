@@ -73,20 +73,6 @@ def init_logging(log_conf: LoggingConfig = LoggingConfig()) -> None:
 
     logger.configure(
         handlers=[
-            # TODO: check if we want to store logs in a file with rotation
-            # {
-            #     'sink': Path(log_conf.log_file),
-            #     'serialize': log_conf.json_logs,
-            #     'rotation': log_conf.log_rotation,
-            #     'retention': log_conf.log_retention,
-            #     'compression': log_conf.log_compression,
-            #     'enqueue': log_conf.log_queue,
-            #     'format': lambda values: format_record(
-            #         values,
-            #         log_conf.loguru_format,
-            #     ),
-            #     'catch': True,
-            # },
             {
                 "sink": sys.stdout,
                 "serialize": log_conf.json_logs,

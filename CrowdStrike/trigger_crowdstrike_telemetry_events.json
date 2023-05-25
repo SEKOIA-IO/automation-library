@@ -1,5 +1,5 @@
 {
-  "description": "Get sqs messages with files information and send events to the intake server",
+  "description": "Forward Crowdstrike Falcon Data Replication events to SEKOIA.IO",
   "docker_parameters": "crowdstrike_telemetry",
   "name": "Fetch new events from CrowdStrike Data replication",
   "arguments": {

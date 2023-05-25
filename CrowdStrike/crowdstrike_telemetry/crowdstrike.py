@@ -87,14 +87,18 @@ class CrowdStrikeTelemetryConnector(Connector):
             result = []
             for record in s3_data_list:
                 if isinstance(record, list):
-                    for item in record:
-                        result.append(item)
+                    result.extend(record)
                 else:
                     result.append(record)
 
         logger.info("Found {0} records to process".format(len(result)))
 
-        self.push_events_to_intakes(events=result)
+        if result:
+            await asyncio.to_thread(
+                self.push_events_to_intakes,
+                events=[orjson.dumps(event).decode("utf-8") for event in result],
+                sync=True,
+            )
 
         return result
 
@@ -102,7 +106,7 @@ class CrowdStrikeTelemetryConnector(Connector):
         """Runs CrowdStrikeTelemetry."""
         loop = asyncio.get_event_loop()
 
-        while True:
+        while self.running:
             loop.run_until_complete(self.get_crowdstrike_events())
 
     async def process_s3_file(self, key: str, bucket: str | None = None) -> List[Dict[Any, Any]]:

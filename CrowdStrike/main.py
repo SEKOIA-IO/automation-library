@@ -13,7 +13,6 @@ from sekoia_automation import config
 from crowdstrike_telemetry.crowdstrike import CrowdStrikeTelemetryConnector, CrowdStrikeTelemetryModule
 from logger.config import init_logging
 
-
 if __name__ == "__main__":
     init_logging()
 
