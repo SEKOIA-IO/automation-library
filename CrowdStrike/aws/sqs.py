@@ -39,13 +39,12 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                     chunk_size = {chunk_size}
                     delete_consumed_messages = {delete_consumed_messages}
                     is_fifo = {is_fifo}
-            """.format(
-                queue_name=configuration.queue_name,
-                frequency=configuration.frequency,
-                chunk_size=configuration.chunk_size,
-                delete_consumed_messages=configuration.delete_consumed_messages,
-                is_fifo=configuration.is_fifo,
-            )
+            """,
+            queue_name=configuration.queue_name,
+            frequency=configuration.frequency,
+            chunk_size=configuration.chunk_size,
+            delete_consumed_messages=configuration.delete_consumed_messages,
+            is_fifo=configuration.is_fifo,
         )
 
     @alru_cache

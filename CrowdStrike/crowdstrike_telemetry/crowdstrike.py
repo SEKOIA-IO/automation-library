@@ -105,9 +105,13 @@ class CrowdStrikeTelemetryConnector(Connector):
     def run(self) -> None:
         """Runs CrowdStrikeTelemetry."""
         loop = asyncio.get_event_loop()
-
-        while self.running:
-            loop.run_until_complete(self.get_crowdstrike_events())
+        try:
+            while self.running:
+                loop.run_until_complete(self.get_crowdstrike_events())
+        except Exception as e:
+            logger.error("Error while running CrowdStrikeTelemetry: {error}", error=e)
+        finally:
+            loop.close()
 
     async def process_s3_file(self, key: str, bucket: str | None = None) -> List[Dict[Any, Any]]:
         """
