@@ -70,26 +70,26 @@ jobs:
         uses: psf/black@stable
         with:
           options: "--check --verbose"
-          src: ./${{ matrix.module }}
+          src: ./"${{ matrix.module }}"
 
       - name: Execute Mypy
         run: |
           poetry run pip install mypy
           mkdir -p .mypy_cache
           poetry run mypy  --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
-        working-directory: ${{ matrix.module }}
+        working-directory: "${{ matrix.module }}"
 
       - name: Execute Python tests
         id: execute-tests
         run: |
           poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov tests
-        working-directory: ${{ matrix.module }}
+        working-directory: "${{ matrix.module }}"
 
       - name: Publish Python Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: ${{ always() && github.event_name == 'pull_request' }}
         with:
-          files: ${{ matrix.module }}/junit.xml
+          files: "${{ matrix.module }}/junit.xml"
           check_name: ${{ matrix.module }} Test Results
 
   build-docker:
@@ -108,7 +108,7 @@ jobs:
       - name: Read Module Manifest
         id: read-module-manifest
         run: |
-          content=`cat ${{ matrix.module }}/manifest.json`
+          content=`cat "${{ matrix.module }}/manifest.json"`
           # the following lines are only required for multi line json
           content="${content//$'\n'/''}"
           content="${content//$'\r'/''}"
