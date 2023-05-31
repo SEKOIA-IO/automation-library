@@ -1,0 +1,74 @@
+---
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+jobs:
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install Poetry
+        run: |
+          pip install poetry
+          poetry config virtualenvs.in-project true
+      - name: Run Ruff
+        run: |
+          poetry run pip install ruff
+          poetry run ruff check --format=github .
+      - uses: psf/black@stable
+      - name: Execute Mypy
+        run: >
+          poetry run pip install mypy
+
+          mkdir -p .mypy_cache
+
+          poetry run mypy  --install-types --non-interactive --hide-error-context sekoia_automation
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install Poetry
+        run: |
+          pip install poetry
+          poetry config virtualenvs.in-project true
+      - name: Install dependencies
+        id: install-dependencies
+        run: poetry install
+      - name: Execute Python tests
+        id: execute-tests
+        run: >
+          poetry run python -m pytest --junit-xml=junit.xml --cov-report term
+          --cov-report xml:coverage.xml --cov=sekoia_automation tests
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: Unit Test Results
+          path: junit.xml
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  EventFile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: Event File
+          path: ${{ github.event_path }}
