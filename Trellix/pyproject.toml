@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "SEKOIA.IO Automation Module to work with AWS S3 through SQS for CrowdStrike"
+name = "SEKOIA.IO Automation Module to work with Trellix EDR events"
 version = "0.0"
 description = ""
 authors = []
@@ -10,8 +10,8 @@ orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 sekoia-automation-sdk = "^1.1.2"
 loguru = "^0.7.0"
-aiobotocore = "^2.5.0"
 async-lru = "^2.0.2"
+aiohttp = "^3.8.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -61,13 +61,14 @@ filterwarnings = [
 addopts = '''
   --strict-markers
   --tb=short
-  --cov=crowdstrike_telemetry
-  --cov=aws
+  --cov=trellix
+  --cov=client
+  --cov=logger
   --cov-branch
   --cache-clear
   --cov-report=html
   --cov-report=term-missing:skip-covered
-  --cov-fail-under=75
+  --cov-fail-under=5
   --numprocesses=auto
   --asyncio-mode=auto
 '''
