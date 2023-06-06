@@ -23,8 +23,8 @@
       ]
   },
   "description": "[CrowdStrike] CrowdStrike provides cloud workload and endpoint security, threat intelligence, and cyberattack response services and products.\n This module provides triggers to collect events from CrowdStrike",
-  "name": "CrowdStrike",
+  "name": "CrowdStrike Telemetry",
+  "slug": "crowdstrike-telemetry",
   "uuid": "10999b99-9a8d-4b92-9fbd-01e3fac01cd5",
-  "docker": "symphony-module-crowstrike-telemetry",
   "version": "2.0.0"
 }

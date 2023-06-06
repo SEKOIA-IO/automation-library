@@ -2,7 +2,7 @@
   "name": "Get User Authentication Methods",
   "description": "Get information about an user's authentication methods (such as their MFA status). Requires the UserAuthenticationMethod.Read.All permission.",
   "uuid": "ae7ec26b-7a57-54f1-908b-011240ffd5c7",
-  "slug": "GetUserAuthenticationMethodsAction",
+  "docker_parameters": "GetUserAuthenticationMethodsAction",
   "arguments": {
     "title": "RequiredSingleUserArguments",
     "type": "object",
