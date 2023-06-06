@@ -2,7 +2,7 @@
   "name": "Enable User",
   "description": "Enable an Azure Active Directory user. Requires the User.ReadWrite.All permission.",
   "uuid": "b0722afd-470c-5963-a111-b30804965b37",
-  "slug": "EnableUserAction",
+  "docker_parameters": "EnableUserAction",
   "arguments": {
     "title": "RequiredSingleUserArguments",
     "type": "object",
