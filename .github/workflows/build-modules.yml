@@ -82,7 +82,7 @@ jobs:
       - name: Execute Python tests
         id: execute-tests
         run: |
-          poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov tests
+          poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov .
         working-directory: "${{ matrix.module }}"
 
       - name: Publish Python Test Results
@@ -91,6 +91,13 @@ jobs:
         with:
           files: "${{ matrix.module }}/junit.xml"
           check_name: ${{ matrix.module }} Test Results
+
+      - name: Code Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ${{ matrix.module }}/coverage.xml
+          flags: ${{ matrix.module }}
+          fail_ci_if_error: true
 
   build-docker:
     name: Build ${{ matrix.module }} docker image
