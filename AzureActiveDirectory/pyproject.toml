@@ -39,3 +39,9 @@ addopts = "-ra"
 testpaths = [
     "tests",
 ]
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
