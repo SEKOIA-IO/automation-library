@@ -175,3 +175,28 @@ jobs:
       if: ${{ contains(needs.*.result, 'failure') && needs.find-modules.outputs.matrix != '[]' }}
       run: |
         exit 1
+
+  deploy-module:
+    name: Deploy modules
+    runs-on: ubuntu-latest
+    needs: [find-modules, build-docker]
+    if: ${{ github.event_name == 'push' && needs.find-modules.outputs.matrix != '[]' }}
+    strategy:
+      matrix:
+        module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
+
+    steps:
+      - name: my-app-install token
+        id: my-app
+        uses: getsentry/action-github-app-token@v1
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ steps.my-app.outputs.token }}
+          event-type: publish-automation-modules
+          repository: SekoiaLab/platform
+          client-payload: '{"module": ${{ matrix.module }}}'
