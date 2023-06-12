@@ -1,0 +1,40 @@
+{
+    "uuid": "c8ebac98-7b2b-4885-b873-451615bee8cf",
+    "name": "Reverse Whois (nameserver)",
+    "docker_parameters": "whois_nameserver",
+    "description": "Get WHOIS records associated with a name server",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "nameserver": {
+                "in": "query",
+                "type": "string"
+            },
+            "exact": {
+                "in": "query",
+                "type": "string"
+            },
+            "maxResults": {
+                "in": "query",
+                "type": "string"
+            }
+        },
+        "required": ["nameserver"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "results": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "domains": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

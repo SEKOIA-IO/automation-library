@@ -1,0 +1,57 @@
+{
+    "uuid": "7c6e0ce8-39d2-45ac-8312-aa2a7d1ba77b",
+    "name": "SSL Certificates by Serial Number",
+    "docker_parameters": "ssl_cert_serial_number",
+    "description": "None",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "serial": {
+                "in": "query",
+                "type": "string"
+            }
+        },
+        "required": ["serial"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "content": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            },
+            "first": {
+                "type": "boolean"
+            },
+            "last": {
+                "type": "boolean"
+            },
+            "number": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "numberOfElements": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "size": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "sort": {
+                "type": "string"
+            },
+            "totalElements": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "totalPages": {
+                "type": "integer",
+                "format": "int32"
+            }
+        }
+    }
+}
