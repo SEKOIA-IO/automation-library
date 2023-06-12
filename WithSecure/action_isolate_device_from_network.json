@@ -1,0 +1,26 @@
+{
+  "name": "Isolate Device From Network",
+  "description": "Isolate a device from network connections.",
+  "uuid": "2c15e5f5-35a1-42aa-9ea1-445a75c7d0fa",
+  "docker_parameters": "isolate_device_from_network",
+  "arguments": {
+    "title": "TargetAndOptionalMessage",
+    "type": "object",
+    "properties": {
+      "target": {
+        "title": "Target",
+        "description": "Device identifier of the computer to isolate.",
+        "type": "string"
+      },
+      "message": {
+        "title": "message",
+        "description": "Optional message that is displayed on isolated device.",
+        "type": "string"
+      }
+    },
+    "required": [
+        "target"
+    ]
+  },
+  "results": {}
+}
