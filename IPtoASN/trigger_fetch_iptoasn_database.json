@@ -1,0 +1,45 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "chunk_size": {
+                "description": "Number of items to include in each chunk. Defaults to 10 000.",
+                "type": "integer"
+            },
+            "interval": {
+                "description": "Interval in hours to wait between each trigger call. Defaults to 24.",
+                "type": "integer"
+            }
+        },
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Download the IPtoASN database recurrently",
+    "docker_parameters": "fetch_iptoasn_database",
+    "name": "Fetch Database",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "file_path": {
+                "description": "Database file path",
+                "type": "string"
+            },
+            "chunk_offset": {
+                "description": "Offset of the chunk in the full database",
+                "type": "integer"
+            },
+            "chunk_size": {
+                "description": "Size of the chunk",
+                "type": "integer"
+            }
+        },
+        "required": [
+            "file_path",
+            "chunk_offset",
+            "chunk_size"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "a4092a70-3ead-459b-bdde-705a8b2f1f58"
+}
