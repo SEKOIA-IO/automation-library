@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Symphony Module for IPtoASN"
+name = "Automation Module for IPtoASN"
 description = ""
 version = "0.0"
 authors = []
