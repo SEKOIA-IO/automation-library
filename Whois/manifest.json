@@ -13,6 +13,6 @@
     "description": "Provides data enrichment for domains and IP addresses.",
     "name": "Whois",
     "uuid": "a55461dd-cd8b-9e05-f87a-607b574804fd",
-    "docker": "symphony-module-whois",
+    "slug": "whois",
     "version": "1.18"
 }
