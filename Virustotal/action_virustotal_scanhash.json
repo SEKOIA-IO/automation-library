@@ -1,0 +1,80 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "hash": {
+                "description": "The hash to check",
+                "type": "string"
+            }
+        },
+        "required": [
+            "hash"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Scan hash with Virus Total",
+    "docker_parameters": "virustotal_scan_hash",
+    "name": "Scan Hash",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "response_code": {
+                "type": "integer",
+                "description": "Response Code"
+            },
+            "verbose_msg": {
+                "type": "string",
+                "description": "Textual description of the response code"
+            },
+            "resource": {
+                "type": "string",
+                "description": "Resource Identifier"
+            },
+            "scan_id": {
+                "type": "string",
+                "description": "Scan Identifier"
+            },
+            "scan_date": {
+                "type": "string",
+                "description": "Date of last scan"
+            },
+            "md5": {
+                "type": "string",
+                "description": "MD5 hash of the sample"
+            },
+            "sha1": {
+                "type": "string",
+                "description": "SHA-1 hash of the sample"
+            },
+            "sha256": {
+                "type": "string",
+                "description": "SHA-256 hash of the sample"
+            },
+            "permalink": {
+                "type": "string",
+                "description": "Permalink to the scan report"
+            },
+            "positives": {
+                "type": "integer",
+                "description": "Number of antivirus detecting this sample as malicious"
+            },
+            "total": {
+                "type": "integer",
+                "description": "Number of antivirus that scanned the sample"
+            },
+            "scans": {
+                "type": "object",
+                "description": "Scan results (one scan result per key)"
+            }
+        },
+        "title": "Results",
+        "type": "object"
+    },
+    "outputs": {
+        "detected": "The hash is detected by antivirus vendors",
+        "not detected": "The hash is not detected by antivirus vendors",
+        "unknown": "The hash is unknown"
+    },
+    "uuid": "beb9ba43-2eca-43b5-b9ea-c092a1a19ed1"
+}
