@@ -199,4 +199,4 @@ jobs:
           token: ${{ steps.my-app.outputs.token }}
           event-type: publish-automation-modules
           repository: SekoiaLab/platform
-          client-payload: '{"module": ${{ matrix.module }}}'
+          client-payload: '{"module": "${{ matrix.module }}"}'
