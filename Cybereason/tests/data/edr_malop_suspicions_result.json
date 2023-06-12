@@ -1,0 +1,186 @@
+{
+  "data": {
+    "resultIdToElementDataMap": {
+      "11.1882697476172655933": {
+        "simpleValues": {
+          "hasRansomwareSuspendedProcesses": {
+            "totalValues": 1,
+            "values": [
+              "false"
+            ]
+          },
+          "closerName": {
+            "totalValues": 1,
+            "values": [
+              "suraj@metronlabs.com"
+            ]
+          },
+          "comments": {
+            "totalValues": 2,
+            "values": [
+              {
+                "commentId": "ae271860-d068-4907-8d29-b01440a1611a",
+                "username": "john.doe@example.org",
+                "message": "My message",
+                "timestamp": 1661864271408,
+                "empty": false
+              },
+              {
+                "commentId": "766fdee1-9956-45f8-88fc-a4d77f7ea85f",
+                "username": "jane.doe@example.org",
+                "message": "My comment",
+                "timestamp": 1661864272077,
+                "empty": false
+              }
+            ]
+          },
+          "decisionFeature": {
+            "totalValues": 1,
+            "values": [
+              "Process.blackListedFileHash(Malop decision)"
+            ]
+          },
+          "customClassification": {
+            "totalValues": 1,
+            "values": [
+              "None"
+            ]
+          },
+          "detectionType": {
+            "totalValues": 1,
+            "values": [
+              "BLACKLIST"
+            ]
+          },
+          "malopActivityTypes": {
+            "totalValues": 1,
+            "values": [
+              "MALICIOUS_INFECTION"
+            ]
+          },
+          "elementDisplayName": {
+            "totalValues": 1,
+            "values": [
+              "MALICIOUS_INFECTION"
+            ]
+          },
+          "creationTime": {
+            "totalValues": 1,
+            "values": [
+              "1661864254061"
+            ]
+          },
+          "iconBase64": {
+            "totalValues": 1,
+            "values": [
+              ""
+            ]
+          },
+          "isBlocked": {
+            "totalValues": 1,
+            "values": [
+              "true"
+            ]
+          },
+          "closeTime": {
+            "totalValues": 1,
+            "values": [
+              1661883709407
+            ]
+          },
+          "managementStatus": {
+            "totalValues": 1,
+            "values": [
+              "OPEN"
+            ]
+          },
+          "rootCauseElementTypes": {
+            "totalValues": 1,
+            "values": [
+              "File"
+            ]
+          },
+          "malopStartTime": {
+            "totalValues": 1,
+            "values": [
+              "1630521757291"
+            ]
+          },
+          "rootCauseElementNames": {
+            "totalValues": 1,
+            "values": [
+              "bdata.bin"
+            ]
+          },
+          "malopLastUpdateTime": {
+            "totalValues": 1,
+            "values": [
+              "1666677820771"
+            ]
+          },
+          "allRansomwareProcessesSuspended": {
+            "totalValues": 1,
+            "values": [
+              "false"
+            ]
+          },
+          "rootCauseElementHashes": {
+            "totalValues": 1,
+            "values": [
+              "ab26e96f3fa68953e8e36c7ec5aa8d482c3700c9"
+            ]
+          }
+        },
+        "elementValues": {},
+        "suspicions": {
+          "shellOfNonShellRunnerSuspicion": 1495442710604,
+          "mimikatzExecutionPSESuspicion": 1495442710605
+        },
+        "filterData": {
+          "sortInGroupValue": "",
+          "groupByValue": "MALICIOUS_INFECTION"
+        },
+        "isMalicious": false,
+        "suspicionCount": 0,
+        "guidString": "11.1882697476172655933",
+        "labelsIds": [],
+        "malopPriority": null,
+        "suspect": false,
+        "malicious": false
+      }
+    },
+    "suspicionsMap": {
+      "shellOfNonShellRunnerSuspicion": {
+        "firstTimestamp": 1447276254985,
+        "potentialEvidence": [
+          "manyUnresolvedRecordNotExistsEvidence",
+          "detectedInjectedEvidence",
+          "hostingInjectedThreadEvidence",
+          "highUnresolvedToResolvedRateEvidence"
+        ],
+        "totalSuspicions": 1
+      },
+      "hiddenLoadedMalformedPESuspicion": {
+        "potentialEvidence": [
+          "hiddenLoadedMalformedPEEvidence"
+        ],
+        "firstTimestamp": 1592832801154,
+        "totalSuspicions": 2
+      },
+      "mimikatzExecutionPSESuspicion": {
+        "potentialEvidence": [
+          "mimikatzExecutionPSEEvidence"
+        ],
+        "firstTimestamp": 1629438188575,
+        "totalSuspicions": 1
+      },
+      "unwantedModuleSuspicion": {
+        "potentialEvidence": [
+          "unwantedModuleEvidence"
+        ],
+        "firstTimestamp": 1585735639068,
+        "totalSuspicions": 12
+      }
+    }
+  }
+}

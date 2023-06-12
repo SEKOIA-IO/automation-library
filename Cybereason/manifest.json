@@ -1,0 +1,33 @@
+{
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Cybereason",
+        "type": "object",
+        "properties": {
+            "base_url": {
+                "description": "API base URL",
+                "type": "string",
+                "format": "uri",
+                "default": "https://<tenant>.cybereason.net"
+            },
+            "username": {
+                "description": "The username to use to authenticate against the API",
+                "type": "string"
+            },
+            "password": {
+                "description": "The password to use to authenticate against the API",
+                "type": "string"
+            }
+        },
+        "required": [
+            "base_url",
+            "username",
+            "password"
+        ]
+    },
+    "description": "[CyberReason](https://www.cybereason.com/) is a Cybersecurity company providing products to detect and prevents attacks targeting endpoints",
+    "name": "Cybereason",
+    "uuid": "b96361fb-a01b-4ae7-8927-9622b9ea0acf",
+    "docker": "cybereason",
+    "version": "1.5"
+}
