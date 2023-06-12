@@ -3,6 +3,6 @@
     "description": "This module exposes action to manipulate files. It extracts data from XML or JSON files.",
     "name": "fileutils",
     "uuid": "07cce76b-a319-40ee-a0cf-1ba433431e21",
-    "docker": "symphony-module-fileutils",
+    "slug": "fileutils",
     "version": "1.23"
 }
