@@ -150,8 +150,7 @@ jobs:
             prefix=
             suffix=
           tags: |
-            type=sha,format=long
-            type=semver,pattern={{version}},value=${{fromJson(steps.read-module-manifest.outputs.manifest).version}}
+            type=pep440,pattern={{version}},value=${{fromJson(steps.read-module-manifest.outputs.manifest).version}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
