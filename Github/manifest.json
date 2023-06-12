@@ -21,6 +21,6 @@
   "description": "Github connector for audit logs",
   "name": "Github",
   "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
-  "docker": "sekoia-automation-module-github",
+  "slug": "github",
   "version": "1.0"
 }
