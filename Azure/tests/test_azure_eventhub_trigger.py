@@ -120,3 +120,7 @@ def test_client_close():
     client.close()
     assert fake_client.close.called
     assert client._client is None
+
+
+def test_trigger_stop(trigger):
+    trigger.stop()
