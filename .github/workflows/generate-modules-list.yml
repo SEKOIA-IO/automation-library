@@ -16,7 +16,7 @@ jobs:
       - id: list-modules
         name: List modules
         run: |
-          echo "modules=$((cut -d "/" -f1 <<< "$(ls -a */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+          echo "modules=$((cut -d "/" -f1 <<< "$(ls -a */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_ENV
 
       - name: my-app-install token
         id: my-app
