@@ -1,0 +1,34 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "name": {
+                "description": "The name of the Address.",
+                "type": "string"
+            },
+            "fqdn": {
+                "description": "The FQDN to be blocked (for ex: 'example.domain.com').",
+                "type": "string"
+            },
+            "associated-interface": {
+                "description": "The associated interface of the firewall leave blank for 'Any' (default: Any).",
+                "type": "string"
+            },
+            "comment": {
+                "description": "A commentary to be displayed in the Fortigate GUI (default none).",
+                "type": "string"
+            }
+        },
+        "required": [
+            "name",
+            "fqdn"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Add a new FQDN object to a Fortigate Firewall",
+    "docker_parameters": "fortigate_add_fqdn",
+    "name": "Post Fortigate FQDN Address",
+    "results": {},
+    "uuid": "288a52f2-6994-419f-884c-d15f81a31cfc"
+}
