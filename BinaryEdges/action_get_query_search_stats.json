@@ -1,0 +1,40 @@
+{
+    "uuid": "52f83382-65bd-4b6e-884c-47a27c076e77",
+    "name": "Get statistics",
+    "docker_parameters": "get-query/search/stats",
+    "description": "Statistics of recent events for the given query. Can be used with specific parameters and/or full-text search.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Get statistics",
+        "properties": {
+            "query": {
+                "in": "query",
+                "type": "string"
+            },
+            "type": {
+                "in": "query",
+                "type": "string"
+            },
+            "order": {
+                "in": "query",
+                "type": "string"
+            }
+        },
+        "required": ["query", "type"]
+    },
+    "results": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "doc_count": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

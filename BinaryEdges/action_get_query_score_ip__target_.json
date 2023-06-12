@@ -1,0 +1,580 @@
+{
+    "uuid": "ed1eb5a5-6956-48fa-9470-9923e67446c2",
+    "name": "Get Score",
+    "docker_parameters": "get-query/score/ip/{target}",
+    "description": "IP Risk Score. Scoring is based on all information found on our databases regarding an IP and refers to the level of exposure of a target, i.e, the higher the score, the greater the risk of exposure.\n\n More details about scoring can be found on [here](https://github.com/binaryedge/ratemyip-openframework/blob/master/ip-score.md).\n\n **Note**: Available for paid subscriptions only.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Get Score",
+        "properties": {
+            "target": {
+                "in": "path",
+                "type": "string"
+            }
+        },
+        "required": ["target"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "normalized_ip_score": {
+                "type": "float"
+            },
+            "normalized_ip_score_detailed": {
+                "type": "object",
+                "properties": {
+                    "cve": {
+                        "type": "integer"
+                    },
+                    "attack_surface": {
+                        "type": "integer"
+                    },
+                    "encryption": {
+                        "type": "integer"
+                    },
+                    "rms": {
+                        "type": "integer"
+                    },
+                    "storage": {
+                        "type": "integer"
+                    },
+                    "web": {
+                        "type": "integer"
+                    },
+                    "torrents": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "ip_score_detailed": {
+                "type": "object",
+                "properties": {
+                    "cve": {
+                        "type": "integer"
+                    },
+                    "attack_surface": {
+                        "type": "integer"
+                    },
+                    "encryption": {
+                        "type": "integer"
+                    },
+                    "rms": {
+                        "type": "integer"
+                    },
+                    "storage": {
+                        "type": "integer"
+                    },
+                    "web": {
+                        "type": "integer"
+                    },
+                    "torrents": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "results_detailed": {
+                "type": "object",
+                "properties": {
+                    "ports": {
+                        "type": "object",
+                        "properties": {
+                            "open": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "cve": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "cve": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "cpe": {
+                                                        "type": "string"
+                                                    },
+                                                    "cve_list": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "cve": {
+                                                                    "type": "string"
+                                                                },
+                                                                "cvss": {
+                                                                    "type": "float"
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "score": {
+                                                        "type": "float"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "score": {
+                                            "type": "float"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "float"
+                            }
+                        }
+                    },
+                    "ssh": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "algorithms": {
+                                            "type": "object",
+                                            "properties": {
+                                                "mac": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "mac": {
+                                                                "type": "string"
+                                                            },
+                                                            "score": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "key_exchange": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "kex": {
+                                                                "type": "string"
+                                                            },
+                                                            "score": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "encryption": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "enc": {
+                                                                "type": "string"
+                                                            },
+                                                            "score": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "keys": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "fingerprint": {
+                                                        "type": "string"
+                                                    },
+                                                    "key_length": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "length": {
+                                                                "type": "integer"
+                                                            },
+                                                            "score": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
+                                                    },
+                                                    "debian_key": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "found": {
+                                                                "type": "integer"
+                                                            },
+                                                            "score": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "rms": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "rms": {
+                                            "type": "string"
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "ssl": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "heartbleed": {
+                                            "type": "object",
+                                            "properties": {
+                                                "heartbleed": {
+                                                    "type": "integer"
+                                                },
+                                                "score": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        },
+                                        "ccs": {
+                                            "type": "object",
+                                            "properties": {
+                                                "ccs": {
+                                                    "type": "integer"
+                                                },
+                                                "score": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        },
+                                        "crime": {
+                                            "type": "object",
+                                            "properties": {
+                                                "crime": {
+                                                    "type": "integer"
+                                                },
+                                                "score": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        },
+                                        "renegotiation": {
+                                            "type": "object",
+                                            "properties": {
+                                                "renegotiation": {
+                                                    "type": "integer"
+                                                },
+                                                "score": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        },
+                                        "ocsp": {
+                                            "type": "object",
+                                            "properties": {
+                                                "ocsp": {
+                                                    "type": "integer"
+                                                },
+                                                "score": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        },
+                                        "no_certificates": {
+                                            "type": "object",
+                                            "properties": {
+                                                "no_certificates": {
+                                                    "type": "integer"
+                                                },
+                                                "score": {
+                                                    "type": "integer"
+                                                }
+                                            }
+                                        },
+                                        "leaf_certificate": {
+                                            "type": "object",
+                                            "properties": {
+                                                "sha1_fingerprint": {
+                                                    "type": "string"
+                                                },
+                                                "issuer": {
+                                                    "type": "string"
+                                                },
+                                                "subject": {
+                                                    "type": "string"
+                                                },
+                                                "validity": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "date": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        },
+                                                        "score": {
+                                                            "type": "integer"
+                                                        }
+                                                    }
+                                                },
+                                                "signature": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "signature": {
+                                                            "type": "string"
+                                                        },
+                                                        "score": {
+                                                            "type": "integer"
+                                                        }
+                                                    }
+                                                },
+                                                "self_signed": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "self_signed": {
+                                                            "type": "string"
+                                                        },
+                                                        "score": {
+                                                            "type": "integer"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "other_certificates": {
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "ciphers": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "drown": {
+                                                        "type": "integer"
+                                                    },
+                                                    "score": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "wec": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "service": {
+                                            "type": "string"
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "ftp": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "service": {
+                                            "type": "string"
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "http": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "service": {
+                                            "type": "string"
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "storage": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "product": {
+                                            "type": "string"
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "web": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "port": {
+                                            "type": "integer"
+                                        },
+                                        "headers": {
+                                            "type": "integer"
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "torrents": {
+                        "type": "object",
+                        "properties": {
+                            "result": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "torrents": {
+                                            "type": "integer"
+                                        },
+                                        "score": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            },
+                            "score": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                }
+            },
+            "ip_address": {
+                "type": "string"
+            }
+        }
+    }
+}

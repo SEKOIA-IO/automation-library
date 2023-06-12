@@ -1,0 +1,62 @@
+{
+    "uuid": "7c6d79dc-48b5-4e68-bb9e-ad0d6eb807bb",
+    "name": "List CVEs",
+    "docker_parameters": "get-query/cve/ip/{target}",
+    "description": "Get list of CVEs that migh affect a specific IP.\n\n **Note**: Available for paid subscriptions only.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "List CVEs",
+        "properties": {
+            "target": {
+                "in": "path",
+                "type": "string"
+            }
+        },
+        "required": ["target"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string"
+            },
+            "events": {
+                "type": "object",
+                "properties": {
+                    "ip": {
+                        "type": "string"
+                    },
+                    "ports": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "port": {
+                                    "type": "integer"
+                                },
+                                "cpe": {
+                                    "type": "array",
+                                    "items": {}
+                                },
+                                "ts": {
+                                    "type": "integer"
+                                },
+                                "cves": {
+                                    "type": "array",
+                                    "items": {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
