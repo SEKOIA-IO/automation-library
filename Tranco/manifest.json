@@ -3,6 +3,6 @@
     "description": "[Tranco](https://tranco-list.eu/) is an top sites ranking list hardened against manipulation.",
     "name": "Tranco",
     "uuid": "081074fc-240d-437f-a214-fba49691e69e",
-    "docker": "symphony-module-tranco",
+    "slug": "tranco",
     "version": "1.19"
 }
