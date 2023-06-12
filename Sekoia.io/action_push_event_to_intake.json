@@ -1,0 +1,57 @@
+{
+  "uuid": "10314466-ac0c-4067-8e81-4093e3d1e1da",
+  "name": "Push Events to Intake",
+  "docker_parameters": "push-events-to-intake",
+  "description": "",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "push-events-to-intake",
+    "properties": {
+      "intake_key": {
+        "type": "string",
+        "description": "Intake Key"
+      },
+      "intake_server": {
+        "type": "string",
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io"
+      },
+      "event": {
+        "type": "object",
+        "description": "Event to push on Intake"
+      },
+      "event_path": {
+        "type": "string",
+        "description": "File path to the event to push on Intake"
+      },
+      "events": {
+        "type": "array",
+        "description": "Events to push on Intake"
+      },
+      "events_path": {
+        "type": "string",
+        "description": "File path to the events to push on Intake"
+      },
+      "keep_file_after_push": {
+        "type": "boolean",
+        "description": "If set and if the events are supplied through a file, this option keeps the file after the events were sent to the intake",
+        "default": false
+      }
+    },
+    "required": [
+      "intake_key"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "event_ids": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
