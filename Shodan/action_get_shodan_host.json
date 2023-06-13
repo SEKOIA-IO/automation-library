@@ -1,0 +1,167 @@
+{
+    "uuid": "44c55352-43e0-4983-80a9-9ad9e8067c2c",
+    "name": "Get Host",
+    "docker_parameters": "get-shodan/host/{ip}",
+    "description": "Returns all services that have been found for the given host IP.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "get_shodan_host",
+        "properties": {
+            "ip": {
+                "in": "path",
+                "type": "string",
+                "description": "Host IP address"
+            },
+            "history": {
+                "in": "query",
+                "type": "boolean",
+                "description": "True if all historical banners should be returned (default: False) "
+            },
+            "minify": {
+                "in": "query",
+                "type": "boolean",
+                "description": "True to only return the list of ports and the general host information, no banners. (default: False) "
+            }
+        },
+        "required": [
+            "ip"
+        ]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "region_code": {
+                "type": "string"
+            },
+            "ip": {
+                "type": "string"
+            },
+            "area_code": {
+                "type": "string"
+            },
+            "country_name": {
+                "type": "string"
+            },
+            "hostnames": {
+                "type": "array",
+                "items": {}
+            },
+            "postal_code": {
+                "type": "string"
+            },
+            "dma_code": {
+                "type": "string"
+            },
+            "country_code": {
+                "type": "string"
+            },
+            "data": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "product": {
+                            "type": "string"
+                        },
+                        "os": {
+                            "type": "string"
+                        },
+                        "timestamp": {
+                            "type": "string"
+                        },
+                        "isp": {
+                            "type": "string"
+                        },
+                        "asn": {
+                            "type": "string"
+                        },
+                        "banner": {
+                            "type": "string"
+                        },
+                        "hostnames": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "devicetype": {
+                            "type": "string"
+                        },
+                        "location": {
+                            "type": "object",
+                            "properties": {
+                                "city": {
+                                    "type": "string"
+                                },
+                                "region_code": {
+                                    "type": "string"
+                                },
+                                "area_code": {
+                                    "type": "string"
+                                },
+                                "longitude": {
+                                    "type": "float"
+                                },
+                                "country_code3": {
+                                    "type": "string"
+                                },
+                                "country_name": {
+                                    "type": "string"
+                                },
+                                "postal_code": {
+                                    "type": "string"
+                                },
+                                "dma_code": {
+                                    "type": "string"
+                                },
+                                "country_code": {
+                                    "type": "string"
+                                },
+                                "latitude": {
+                                    "type": "float"
+                                }
+                            }
+                        },
+                        "ip": {
+                            "type": "string"
+                        },
+                        "domains": {
+                            "type": "array",
+                            "items": {}
+                        },
+                        "org": {
+                            "type": "string"
+                        },
+                        "port": {
+                            "type": "integer"
+                        },
+                        "opts": {
+                            "type": "object",
+                            "properties": {}
+                        }
+                    }
+                }
+            },
+            "city": {
+                "type": "string"
+            },
+            "longitude": {
+                "type": "float"
+            },
+            "country_code3": {
+                "type": "string"
+            },
+            "latitude": {
+                "type": "float"
+            },
+            "os": {
+                "type": "string"
+            },
+            "ports": {
+                "type": "array",
+                "items": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
