@@ -97,12 +97,6 @@ class _SEKOIANotificationBaseTrigger(Trigger):
                 self.log("The websocket timed out", level="error")
 
     def on_error(self, _, error: Exception):
-        if isinstance(error, WebSocketBadStatusException) and error.status_code in [401, 403]:
-            # Critical log will make the API stop the trigger deployment
-            self.log("The credential provided are not valid anymore", level="critical")
-            self._must_stop = True
-            return
-
         # If the last failed attempt is old, reset the failed
         # attempts counter. This might be a platform issue.
         if self._last_failed_attempt is not None and time.time() - self._last_failed_attempt > 3600:
