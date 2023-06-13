@@ -1,0 +1,12 @@
+{
+    "configuration": {
+        "title": "Microsoft Azure",
+        "type": "object",
+        "properties": {}
+    },
+    "description": "Microsoft Azure is a cloud computing service operated by Microsoft",
+    "name": "Microsoft Azure",
+    "uuid": "525eecc0-9eee-484d-92bd-039117cf4dac",
+    "slug": "azure",
+    "version": "1.8"
+}
