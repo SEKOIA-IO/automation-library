@@ -12,13 +12,11 @@ from pydantic import BaseModel, Field
 
 
 class JobTarget(BaseModel):
-
     agents: List[str]
     groups: List[str]
 
 
 class JobAction(BaseModel):
-
     label: str
     value: str
     params: Optional[Dict[str, Any]]
@@ -27,7 +25,6 @@ class JobAction(BaseModel):
 
 
 class JobTriggerResult(BaseModel):
-
     id: str
     action: str
     creationtime: str

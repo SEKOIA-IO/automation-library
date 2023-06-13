@@ -13,7 +13,6 @@ class GetProcessListAction(JobExecutor):
     """
 
     def run(self, arguments) -> dict:
-
         target_agents = arguments.get("target_agents", "")
         target_groups = arguments.get("target_groups", "")
         get_connections_list = arguments.get("get_connections_list", False)

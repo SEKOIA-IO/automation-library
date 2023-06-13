@@ -13,7 +13,6 @@ from harfanglab.models import JobTarget, JobTriggerResult
 
 
 def test_with_one_target_group():
-
     instance_url = "https://test.hurukau.io"
     api_token = "117a15380a4f434c94fbe1ea7052904e"
 
@@ -21,7 +20,6 @@ def test_with_one_target_group():
     action.module.configuration = {"url": instance_url, "api_token": api_token}
 
     with requests_mock.Mocker() as mock:
-
         mocked_job_info = {
             "id": "ff3acfea-e3fb-496c-919f-d3a6afb28a24",
             "action": "getProcessList",
@@ -49,7 +47,6 @@ def test_with_one_target_group():
 
 
 def test_with_two_target_groups():
-
     instance_url = "https://test.hurukau.io"
     api_token = "117a15380a4f434c94fbe1ea7052904e"
 
@@ -84,7 +81,6 @@ def test_with_two_target_groups():
 
 
 def test_with_one_target_agent():
-
     instance_url = "https://test.hurukau.io"
     api_token = "117a15380a4f434c94fbe1ea7052904e"
 

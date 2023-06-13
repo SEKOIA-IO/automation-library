@@ -11,7 +11,6 @@ from harfanglab.models import JobTarget, JobTriggerResult
 
 
 def test_trigger_job():
-
     instance_url = "https://test.hurukau.io"
     api_token = "117a15380a4f434c94fbe1ea7052904e"
 
