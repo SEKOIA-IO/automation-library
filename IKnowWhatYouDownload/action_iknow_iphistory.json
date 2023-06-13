@@ -1,0 +1,115 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "ip": {
+                "description": "The IP address to query",
+                "type": "string"
+            }
+        },
+        "required": [
+            "ip"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Fetches the historical data of downloaded and shared content using the BitTorrent protocol of an IP",
+    "docker_parameters": "ip_history",
+    "name": "Get IP History",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "ip": {
+                "description": "ip address",
+                "type": "string"
+            },
+            "isp": {
+                "description": "Interner Service Provider if known",
+                "type": "string"
+            },
+            "hasPorno": {
+                "description": "if any content has category XXX",
+                "type": "boolean"
+            },
+            "hasChildPorno": {
+                "description": "if any content has category 'ChildPorno'",
+                "type": "boolean"
+            },
+            "geoData": {
+                "description": "geo data for ip if known",
+                "type": "object",
+                "properties": {
+                    "country": {
+                        "description": "ip country if known",
+                        "type": "string"
+                    },
+                    "city": {
+                        "description": "ip city if known",
+                        "type": "string"
+                    },
+                    "latitutde": {
+                        "description": "approximately ip latitude if known",
+                        "type": "string"
+                    },
+                    "longitude": {
+                        "description": "approximately ip longitude if known",
+                        "type": "string"
+                    }
+                }
+            },
+            "contents": {
+                "description": "list of found contents",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "category": {
+                            "description": "category of content if known",
+                            "type": "string"
+                        },
+                        "imdbId": {
+                            "description": "imdbId of movie if known",
+                            "type": "string"
+                        },
+                        "name": {
+                            "description": "name of content",
+                            "type": "string"
+                        },
+                        "startDate": {
+                            "description": "first time when content was found in UTC",
+                            "type": "string"
+                        },
+                        "endDate": {
+                            "description": "last time when content was found in UTC",
+                            "type": "string"
+                        },
+                        "torrent": {
+                            "description": "torrent file information",
+                            "type": "object",
+                            "properties": {
+                                "infoHash": {
+                                    "description": "infohash of torrent file. Not provided for demo key and child porn.",
+                                    "type": "string"
+                                },
+                                "size": {
+                                    "description": "size of torrent file. Not provided for child porn.",
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "description": "name of torrent file",
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "required": [
+            "ip", "hasPorno", "hasChildPorno", "contents"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "18329483-e6e0-4e7d-bcad-bf20d5aa8271"
+}
