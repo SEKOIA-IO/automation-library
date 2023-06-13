@@ -1,0 +1,238 @@
+{
+    "description": "Trigger playbook run on certificate of interest update",
+    "docker_parameters": "certificate-updated-trigger",
+    "name": "Certificate update",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "keywords": {
+                "type": "array",
+                "description": "The keywords you're looking for. Please consider splitting composite words into two keywords when max_distance > 0.",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "max_distance": {
+                "type": "integer",
+                "description": "The maximum Levenshtein distance acceptable. It is the number of modification you have to do to go from a word to another. E.g. sekoia -> sequoia => 2",
+                "default": 0
+            },
+            "ignoring": {
+                "type": "array",
+                "description": "Ignoring words list for faster processing.",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "required": ["keywords"],
+        "title": "Trigger Arguments",
+        "type": "object"
+    },
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "domain": {
+                "description": "The domain that matched",
+                "type": "string"
+            },
+            "matched_keyword": {
+                "description": "The keyword that matched",
+                "type": "string"
+            },
+            "certstream_object": {
+                "description": "The certstream object the domain comes from",
+                "type": "object",
+                "properties": {
+                    "message_type": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "update_type": {
+                                "type": "string"
+                            },
+                            "leaf_cert": {
+                                "type": "object",
+                                "properties": {
+                                    "subject": {
+                                        "type": "object",
+                                        "properties": {
+                                            "aggregated": {
+                                                "type": "string"
+                                            },
+                                            "C": {
+                                                "type": "string"
+                                            },
+                                            "ST": {
+                                                "type": "string"
+                                            },
+                                            "L": {
+                                                "type": "string"
+                                            },
+                                            "O": {
+                                                "type": "string"
+                                            },
+                                            "OU": {
+                                                "type": "string"
+                                            },
+                                            "CN": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "extensions": {
+                                        "type": "object",
+                                        "properties": {
+                                            "keyUsage": {
+                                                "type": "string"
+                                            },
+                                            "extendedKeyUsage": {
+                                                "type": "string"
+                                            },
+                                            "basicConstraints": {
+                                                "type": "string"
+                                            },
+                                            "subjectKeyIdentifier": {
+                                                "type": "string"
+                                            },
+                                            "authorityKeyIdentifier": {
+                                                "type": "string"
+                                            },
+                                            "authorityInfoAccess": {
+                                                "type": "string"
+                                            },
+                                            "subjectAltName": {
+                                                "type": "string"
+                                            },
+                                            "certificatePolicies": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "not_before": {
+                                        "type": "float"
+                                    },
+                                    "not_after": {
+                                        "type": "float"
+                                    },
+                                    "serial_number": {
+                                        "type": "string"
+                                    },
+                                    "fingerprint": {
+                                        "type": "string"
+                                    },
+                                    "as_der": {
+                                        "type": "string"
+                                    },
+                                    "all_domains": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "chain": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "subject": {
+                                            "type": "object",
+                                            "properties": {
+                                                "aggregated": {
+                                                    "type": "string"
+                                                },
+                                                "C": {
+                                                    "type": "string"
+                                                },
+                                                "ST": {
+                                                    "type": "string"
+                                                },
+                                                "L": {
+                                                    "type": "string"
+                                                },
+                                                "O": {
+                                                    "type": "string"
+                                                },
+                                                "OU": {
+                                                    "type": "string"
+                                                },
+                                                "CN": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "extensions": {
+                                            "type": "object",
+                                            "properties": {
+                                                "basicConstraints": {
+                                                    "type": "string"
+                                                },
+                                                "keyUsage": {
+                                                    "type": "string"
+                                                },
+                                                "authorityInfoAccess": {
+                                                    "type": "string"
+                                                },
+                                                "authorityKeyIdentifier": {
+                                                    "type": "string"
+                                                },
+                                                "certificatePolicies": {
+                                                    "type": "string"
+                                                },
+                                                "crlDistributionPoints": {
+                                                    "type": "string"
+                                                },
+                                                "subjectKeyIdentifier": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        },
+                                        "not_before": {
+                                            "type": "float"
+                                        },
+                                        "not_after": {
+                                            "type": "float"
+                                        },
+                                        "serial_number": {
+                                            "type": "string"
+                                        },
+                                        "fingerprint": {
+                                            "type": "string"
+                                        },
+                                        "as_der": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "cert_index": {
+                                "type": "integer"
+                            },
+                            "seen": {
+                                "type": "float"
+                            },
+                            "source": {
+                                "type": "object",
+                                "properties": {
+                                    "url": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "title": "Trigger results",
+        "type": "object"
+    },
+    "uuid": "0ec80075-fd37-4869-bf81-eeca0b0842ba"
+}
