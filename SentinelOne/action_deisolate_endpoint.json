@@ -1,0 +1,59 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ids": {
+        "description": "The list of Agent IDs to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "account_ids": {
+        "description": "The list of Account IDs to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "group_ids": {
+        "description": "The list of network group to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "site_ids": {
+        "description": "The list of Site IDs to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "query": {
+        "description": "Free-text search term to use",
+        "type": "string"
+      }
+    },
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Connect the endpoint back to the network",
+  "docker_parameters": "sentinelone_agents_endpoint_deisolation",
+  "name": "Deisolate an endpoint",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "affected": {
+        "description": "The number of deisolated endpoints",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "affected"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "306675e9-68a6-4fb2-bfbf-c5a624f44586"
+}

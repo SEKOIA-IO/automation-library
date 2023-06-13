@@ -1,0 +1,138 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "script_id": {
+        "description": "The identifier of the script to identify",
+        "type": "string"
+      },
+      "output_destination": {
+        "description": "The destination of the result",
+        "type": "string",
+        "default": "SentinelCloud",
+        "enum": [
+          "SentinelCloud",
+          "Local",
+          "None"
+        ]
+      },
+      "task_description": {
+        "description": "A short description of the task",
+        "type": "string"
+      },
+      "timeout": {
+        "description": "The maximum time, in seconds, the execution should be processed in (default: 300s)",
+        "type": "integer",
+        "default": 300
+      },
+      "settings": {
+        "description": "The settings to forward the remote script",
+        "type": "object",
+        "properties": {
+          "inputParams": {
+            "description": "The arguments for the remote script",
+            "type": "string"
+          },
+          "password": {
+            "description": "The password to encrypt the result (for cloud destination)",
+            "type": "string"
+          },
+          "outputDirectory": {
+            "description": "The destination directory for the result (for local destination)",
+            "type": "string"
+          },
+          "scriptRuntimeTimeoutSeconds": {
+            "description": "The maximum time, in seconds, the remote script should run (default: same value than timeout)",
+            "type": "integer"
+          }
+        }
+      },
+      "filters": {
+        "description": "Filters to select the agents that will run the remote script",
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "The list of Agent IDs to filter by",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "account_ids": {
+            "description": "The list of Account IDs to filter by",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "group_ids": {
+            "description": "The list of network group to filter by",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "site_ids": {
+            "description": "The list of Site IDs to filter by",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "query": {
+            "description": "Free-text search term to use",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "required": [
+      "script_id",
+      "output_destination",
+      "task_description",
+      "timeout"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Execute a remote script and get the results",
+  "docker_parameters": "sentinelone_rso_execute",
+  "name": "Execute a remote script",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "status": {
+        "description": "The status of the run",
+        "type": "string",
+        "enum": [
+          "succeed",
+          "canceled",
+          "failed",
+          "timeout"
+        ]
+      },
+      "status_reason": {
+        "description": "The reason of the status",
+        "type": "string"
+      },
+      "result_file": {
+        "description": "The url to download the result (for cloud destination)",
+        "type": "object",
+        "properties": {
+          "download_url": {
+            "description": "The url to download the result",
+            "type": "str"
+          }
+        }
+      }
+    },
+    "required": [
+      "status",
+      "status_reason",
+      "result_file"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "a763b09c-ceb7-41f8-aa13-58a8caac8296"
+}
