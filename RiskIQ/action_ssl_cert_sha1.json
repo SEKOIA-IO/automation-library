@@ -1,0 +1,90 @@
+{
+    "uuid": "c7b5e8b5-ea92-4ad2-a1a9-f12f6d49c43f",
+    "name": "SSL Certificats by SHA-1",
+    "docker_parameters": "ssl_cert_sha1",
+    "description": "Get SSL certificate by SHA1 hash",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "sha1": {
+                "in": "query",
+                "type": "string"
+            }
+        },
+        "required": ["sha1"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "count": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "firstSeen": {
+                "type": "string"
+            },
+            "id": {
+                "type": "string"
+            },
+            "issuer": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            },
+            "issuerAlternativeNames": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            },
+            "issuerID": {
+                "type": "string"
+            },
+            "lastSeen": {
+                "type": "string"
+            },
+            "notAfter": {
+                "type": "string"
+            },
+            "notBefore": {
+                "type": "string"
+            },
+            "publicKeyAlgorithm": {
+                "type": "string"
+            },
+            "serialNumber": {
+                "type": "string"
+            },
+            "sha1": {
+                "type": "string"
+            },
+            "signatureAlgorithm": {
+                "type": "string"
+            },
+            "signatureAlgorithmOid": {
+                "type": "string"
+            },
+            "subject": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            },
+            "subjectAlternativeNames": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            },
+            "subjectID": {
+                "type": "string"
+            },
+            "version": {
+                "type": "integer",
+                "format": "int32"
+            }
+        }
+    }
+}
