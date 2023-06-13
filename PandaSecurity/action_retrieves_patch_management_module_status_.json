@@ -1,0 +1,49 @@
+{
+  "uuid": "5f72ed0b-bd3d-496c-80d8-3e0504f92446",
+  "name": "Retrieve Patch Management Module Status",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/patchmanagementstatistics",
+  "description": "Retrieves Patch Management statistics.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Retrieve Patch Management Module Status",
+    "properties": {}
+  },
+  "results": {
+    "properties": {
+      "non_security_other_patches": {
+        "description": "Number of other currently available patches that are not related to security.",
+        "type": "integer"
+      },
+      "security_critical": {
+        "description": "Number of currently available critical security patches.",
+        "type": "integer"
+      },
+      "security_important": {
+        "description": "Number of currently available security patches classified as important.",
+        "type": "integer"
+      },
+      "security_low": {
+        "description": "Number of currently available security patches classified as low importance.",
+        "type": "integer"
+      },
+      "security_moderate": {
+        "description": "Number of currently available security patches classified as moderate importance.",
+        "type": "integer"
+      },
+      "security_not_classified": {
+        "description": "Number of security patches that do not have a severity classification.",
+        "type": "integer"
+      },
+      "service_pack": {
+        "description": "Number of currently available service packs.",
+        "type": "integer"
+      },
+      "total_supported_devices": {
+        "description": "Total number of devices that support Patch Management.",
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
+}

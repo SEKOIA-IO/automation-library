@@ -1,0 +1,195 @@
+{
+  "uuid": "80d26452-cbfb-40f0-a871-78e0b6be0d46",
+  "name": "Retrieve unmanaged devices",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/unmanageddevices",
+  "description": "Retrieves a list of unmanaged devices discovered on the network.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Retrieve unmanaged devices",
+    "properties": {
+      "$top": {
+        "description": "Specifies the number of objects to retrieve.\nExample: 5",
+        "type": "integer",
+        "in": "query"
+      },
+      "$skip": {
+        "description": "Bypasses the specified number of objects in the results returned.\nFor example, if you specify 10, the results start at object 11.\nExample: 5",
+        "type": "integer",
+        "in": "query"
+      },
+      "$search": {
+        "description": "Returns only objects that include the specified text string. For example, \"name\" returns objects that include \"hostname\" and \"username\".\nThe supported search fields depend on the endpoint:\n\t- Devices: Host name, description, IP address, logged on user\n\t- DeviceProtectionStatus: Host name\n\t- ManagedConfigurations: Name, description\nExample: name",
+        "type": "str",
+        "in": "query"
+      },
+      "$count": {
+        "description": "Indicates whether to return a counter that shows the total number of objects in the total_items response parameter.\nExample: true",
+        "type": "boolean",
+        "in": "query"
+      },
+      "$orderby": {
+        "description": "Specifies how to order results. You can order by any parameter in the response and sort results in ascending or descending order.\nSpecify a parameter name with any underscores removed, followed by a + (plus sign) and either asc (ascending) or desc (descending).\nFor example, to order results by the host_name parameter in descending order, specify hostname+desc. If you do not specify a field to order by, the API will use the order in the database.\nExample: hostname+desc",
+        "type": "str",
+        "in": "body"
+      }
+    }
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "total_items": {
+        "type": "integer",
+        "description": "Total number of devices.\nIf the count request parameter is true, total_items displays the total number of devices. If count is false, then total_items displays null.\nExample: 42"
+      },
+      "data": {
+        "type": "array",
+        "description": "Array of device data",
+        "items": {
+          "properties": {
+            "account_id": {
+              "description": "Identifier for the account.",
+              "example": "cd6c6dd6-r97o-453d-ld8o-a5976dc0596c",
+              "format": "uuid",
+              "type": "string"
+            },
+            "agent_version": {
+              "description": "Version of the agent installed in the endpoint.",
+              "example": "1.17.00.0000",
+              "type": "string"
+            },
+            "description": {
+              "description": "Description of the device.",
+              "example": "Marketing server",
+              "type": "string"
+            },
+            "device_id": {
+              "description": "Identifier for the device.",
+              "example": "287324d8-194f-4f5a-a7ad-e2480d5ad1b2",
+              "format": "uuid",
+              "type": "string"
+            },
+            "domain": {
+              "description": "Domain to which your devices belong on Microsoft networks.",
+              "example": "WORKGROUP",
+              "type": "string"
+            },
+            "encryption": {
+              "description": "Device encryption status.\n- 0: Without protection or without information\n- 1: Activated\n- 2: Deactivated\n- 3: Error\n- 4: Error installing\n- 5: Without license\n- 6: Not available\n",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "example": 6,
+              "format": "int32",
+              "type": "integer"
+            },
+            "host_name": {
+              "description": "Host name of the device.",
+              "example": "WIN_SERVER_6",
+              "type": "string"
+            },
+            "ip_address": {
+              "description": "IP address of the device.",
+              "example": "192.0.2.1",
+              "type": "string"
+            },
+            "isolation_state": {
+              "description": "Isolation state of the device.\n- 0: Not isolated\n- 1: Isolated\n- 2: Applying isolation\n- 3: Removing isolation\n",
+              "enum": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "example": 1,
+              "format": "int32",
+              "type": "integer"
+            },
+            "last_connection": {
+              "description": "Date and time of the last connection of the device.",
+              "example": "2020-09-22T11:00:00Z",
+              "format": "date-time",
+              "type": "string"
+            },
+            "license_status": {
+              "description": "Status of the device license.\n- 0: Assigned\n- 1: Not assigned\n- 2: Manual deallocation\n- 3: Auto deallocation\n",
+              "enum": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "example": 0,
+              "format": "int32",
+              "type": "integer"
+            },
+            "mac_addresses": {
+              "items": {
+                "description": "List of MAC addresses of devices.",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "operating_system": {
+              "description": "Name of the operating system installed on the device.",
+              "example": "Microsoft Windows 10",
+              "type": "string"
+            },
+            "platform_id": {
+              "description": "Device platform.\n- 1: Windows\n- 2: Linux\n- 3: macOS\n- 4: Android\n",
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "example": 1,
+              "format": "int32",
+              "type": "integer"
+            },
+            "reboot_requested": {
+              "description": "Indicates whether a device reboot is requested.",
+              "example": true,
+              "type": "boolean"
+            },
+            "reinstall_agent_requested": {
+              "description": "Indicates whether reinstallation of the agent is requested.",
+              "example": true,
+              "type": "boolean"
+            },
+            "reinstall_protection_requested": {
+              "description": "Indicates whether reinstallation of protection is requested.",
+              "example": false,
+              "type": "boolean"
+            },
+            "site_id": {
+              "description": "Identifier for the site.",
+              "example": "8b7205bc-60e0-45a0-9956-b17b6a8673f6",
+              "format": "uuid",
+              "type": "string"
+            },
+            "site_name": {
+              "description": "Name of the site the device belongs to.",
+              "example": "Aether AD360",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type of device.\n- 1: Workstation\n- 2: Laptop\n- 3: Server\n- 4: Mobile device\n",
+              "example": 3,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      }
+    }
+  }
+}

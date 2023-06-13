@@ -1,0 +1,55 @@
+{
+  "uuid": "f968397c-47f9-465c-b6bd-a983debbcfc4",
+  "name": "Retrieve Security overview",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/securityoverview/{period}",
+  "description": "Retrieves counters for security overview.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Retrieve Security overview",
+    "properties": {
+      "period": {
+        "description": "Period of time to retrieve security event counters for. Specify one of these values:\n\t- 1 - Previous 24 hours\n\t- 7 - Previous 7 days\n\t- 30 - Previous 30 days\nExample: 7",
+        "type": "integer",
+        "in": "path",
+        "enum": [1, 7, 30]
+      }
+    },
+    "required": [
+      "period"
+    ]
+  },
+  "results": {
+    "properties": {
+      "exploits": {
+        "$ref": "#/components/schemas/security_overview_aggregated_counters"
+      },
+      "indicators_of_attack_counters": {
+        "$ref": "#/components/schemas/indicators_of_attack_counters"
+      },
+      "malware": {
+        "$ref": "#/components/schemas/security_overview_aggregated_counters"
+      },
+      "programs_blocked": {
+        "$ref": "#/components/schemas/program_blocked_overview_counters"
+      },
+      "pups": {
+        "$ref": "#/components/schemas/security_overview_aggregated_counters"
+      },
+      "threats_by_av_counters": {
+        "$ref": "#/components/schemas/threats_by_av_overview_counters"
+      },
+      "total_devices": {
+        "description": "Total number of devices.",
+        "format": "int32",
+        "type": "integer"
+      },
+      "total_unmanaged_devices": {
+        "description": "Total number of unmanaged devices.",
+        "format": "int32",
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
+}
