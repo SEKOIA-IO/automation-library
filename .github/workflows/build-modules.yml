@@ -39,7 +39,7 @@ jobs:
     name: Test module ${{ matrix.module }}
     runs-on: ubuntu-latest
     needs: find-modules
-    if: github.event_name == 'pull_request' && needs.find-modules.outputs.matrix != '[]'
+    if: needs.find-modules.outputs.matrix != '[]'
     strategy:
       matrix:
         module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
