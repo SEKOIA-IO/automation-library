@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "Automation Module for Azure"
+description = ""
+version = "0.0"
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+sekoia-automation-sdk = "^1.1.2"
+orjson = "^3.7.7"
+azure-storage-blob = "^12.13.0"
+azure-eventhub = "^5.10.0"
+azure-eventhub-checkpointstoreblob = "^1.1.4"
+prometheus-client = "^0.16.0"
+confluent-kafka = "^2.0.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^0.991"
+isort = "^5.10.1"
+black = "^22.10.0"
+
+[build-system]
+requires = [ "poetry-core>=1.0.0",]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py310']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = "azure.eventhub.extensions.checkpointstoreblob.*"
+ignore_errors = true
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
