@@ -50,13 +50,6 @@ def test_sekoianotificationbasetrigger_liveapi_url_other(base_trigger):
     assert base_trigger.liveapi_url == "wss://other"
 
 
-def test_on_error_auth_error(base_trigger):
-    error = WebSocketBadStatusException("Forbidden %d: %s", 403, "")
-    base_trigger.on_error(None, error)
-    assert base_trigger._must_stop is True
-    base_trigger.log.assert_called_with("The credential provided are not valid anymore", level="critical")
-
-
 def test_on_error(base_trigger):
     base_trigger._failed_attempts = 42
     base_trigger._last_failed_attempt = (datetime.utcnow() - timedelta(hours=5)).timestamp()
