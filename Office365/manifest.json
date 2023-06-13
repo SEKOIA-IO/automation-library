@@ -1,0 +1,12 @@
+{
+    "configuration": {
+        "title": "Microsoft Office 365",
+        "type": "object",
+        "properties": {}
+    },
+    "description": "Microsoft Office 365 is an online service, providing the Microsoft Office Products.",
+    "name": "Microsoft Office365",
+    "uuid": "2dc2855e-3f9a-441c-af2a-30c64e0d0f4a",
+    "slug": "office365",
+    "version": "2.8.2"
+}
