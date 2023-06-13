@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss version="2.0" xml:base="http://www.nasa.gov/" xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+>
+    <channel>
+        <title>NASA Breaking News</title>
+        <description>A RSS news feed containing the latest NASA news articles and press releases.</description>
+        <link>http://www.nasa.gov/</link>
+        <atom:link rel="self" href="http://www.nasa.gov/rss/dyn/breaking_news.rss"/>
+        <language>en-us</language>
+        <managingEditor>jim.wilson@nasa.gov</managingEditor>
+        <webMaster>brian.dunbar@nasa.gov</webMaster>
+        <docs>http://blogs.harvard.edu/tech/rss</docs>
+        <item>
+            <title>NASA Announces Call for Next Phase of Commercial Lunar Payload Services</title>
+            <link>
+                http://www.nasa.gov/press-release/nasa-announces-call-for-next-phase-of-commercial-lunar-payload-services
+            </link>
+            <description>NASA has announced the latest opportunity for industry to participate in its Commercial Lunar
+                Payload Services (CLPS) efforts to deliver science and technology payloads to and near the Moon.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/main_image_0.jpg?itok=aONICfI_"
+                length="994262" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/nasa-announces-call-for-next-phase-of-commercial-lunar-payload-services
+            </guid>
+            <pubDate>Tue, 30 Jul 2019 16:23 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449755</dc:identifier>
+        </item>
+        <item>
+            <title>NASA Announces US Industry Partnerships to Advance Moon, Mars Technology</title>
+            <link>
+                http://www.nasa.gov/press-release/nasa-announces-us-industry-partnerships-to-advance-moon-mars-technology
+            </link>
+            <description>As NASA prepares to land humans on the Moon by 2024 with the Artemis program, commercial
+                companies are developing new technologies, working toward space ventures of their own, and looking to
+                NASA for assistance.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/industry_day_lander_scene_cropped.jpg?itok=rizl-LVt"
+                length="807454" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/nasa-announces-us-industry-partnerships-to-advance-moon-mars-technology
+            </guid>
+            <pubDate>Tue, 30 Jul 2019 14:12 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449735</dc:identifier>
+        </item>
+        <item>
+            <title>SpaceX Dragon en Route to Space Station with NASA Science, Cargo</title>
+            <link>http://www.nasa.gov/press-release/spacex-dragon-en-route-to-space-station-with-nasa-science-cargo
+            </link>
+            <description>A SpaceX Dragon cargo spacecraft is on its way to deliver the second commercial crew docking
+                port and about 5,000 pounds of science investigations and supplies for the International Space Station
+                after a 6:01 p.m. EDT Thursday launch from Florida.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/screen_shot_2019-07-25_at_6.02.34_pm.png?itok=Pl_o7q1Y"
+                length="318919" type="image/png"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/spacex-dragon-en-route-to-space-station-with-nasa-science-cargo
+            </guid>
+            <pubDate>Thu, 25 Jul 2019 18:27 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449474</dc:identifier>
+        </item>
+        <item>
+            <title>NASA TV to Air Launch, Docking of Russian Space Station Cargo Ship</title>
+            <link>http://www.nasa.gov/press-release/nasa-tv-to-air-launch-docking-of-russian-space-station-cargo-ship
+            </link>
+            <description>A Russian Progress cargo spacecraft is scheduled to launch to the International Space Station
+                Wednesday, July 31. Live coverage of the resupply craft’s launch and docking will begin at 7:45 a.m. EDT
+                on NASA Television and the agency’s website.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/48315902962_e404f12fa5_k.jpg?itok=k3NvbAa0"
+                length="477288" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/nasa-tv-to-air-launch-docking-of-russian-space-station-cargo-ship
+            </guid>
+            <pubDate>Thu, 25 Jul 2019 15:29 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449457</dc:identifier>
+        </item>
+        <item>
+            <title>Commercial Space Ride Secured for NASA’s New Air Pollution Sensor</title>
+            <link>http://www.nasa.gov/press-release/commercial-space-ride-secured-for-nasa-s-new-air-pollution-sensor
+            </link>
+            <description>NASA has secured a host satellite provider and ride into space for an instrument that will
+                dramatically advance our understanding of air quality over North America.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/tempo_cleanroom.jpeg?itok=tEmFGG-1"
+                length="285104" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/commercial-space-ride-secured-for-nasa-s-new-air-pollution-sensor
+            </guid>
+            <pubDate>Mon, 22 Jul 2019 18:34 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449265</dc:identifier>
+        </item>
+        <item>
+            <title>NASA Administrator Remembers Mission Control Pioneer Chris Kraft</title>
+            <link>http://www.nasa.gov/press-release/nasa-administrator-remembers-mission-control-pioneer-chris-kraft
+            </link>
+            <description>Statement from NASA Administrator Jim Bridenstine on the passing of Chris Kraft, who died
+                Monday in Houston at the age of 95.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/kraft1.jpg?itok=j_bxKc_T"
+                length="223500" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/nasa-administrator-remembers-mission-control-pioneer-chris-kraft
+            </guid>
+            <pubDate>Mon, 22 Jul 2019 18:05 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449262</dc:identifier>
+        </item>
+        <item>
+            <title>Eagle Scouts to Speak with NASA Astronaut Aboard Space Station</title>
+            <link>http://www.nasa.gov/press-release/eagle-scouts-to-speak-with-nasa-astronaut-aboard-space-station
+            </link>
+            <description>Fifty years after NASA astronaut and Eagle Scout Neil Armstrong sent greetings from space to
+                the 1969 Scout Jamboree, scouts will have an opportunity to talk live with an astronaut aboard the
+                International Space Station at 1:30 p.m. EDT Wednesday, July 24.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/downlink_media_advisory_picture_-_week_of_july_21.jpg?itok=xibJFb3Q"
+                length="1373902" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/eagle-scouts-to-speak-with-nasa-astronaut-aboard-space-station
+            </guid>
+            <pubDate>Mon, 22 Jul 2019 10:22 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449215</dc:identifier>
+        </item>
+        <item>
+            <title>NASA Astronaut Andrew Morgan, Crewmates Arrive at Space Station on 50th Anniversary of Moon Landing
+            </title>
+            <link>
+                http://www.nasa.gov/press-release/nasa-astronaut-andrew-morgan-crewmates-arrive-at-space-station-on-50th-anniversary-of
+            </link>
+            <description>Fifty years to the day that astronauts Neil Armstrong and Buzz Aldrin stepped on the Moon in a
+                giant leap for humanity, NASA astronaut Andrew Morgan and two fellow crew members arrived Saturday for
+                their mission aboard the International Space Station, where humans have lived and worked continuously
+                for more than 18 years.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/exp60_launch.jpg?itok=C9yKuCXP"
+                length="3012060" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/nasa-astronaut-andrew-morgan-crewmates-arrive-at-space-station-on-50th-anniversary-of
+            </guid>
+            <pubDate>Sat, 20 Jul 2019 17:56 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449123</dc:identifier>
+        </item>
+        <item>
+            <title>NASA Updates Broadcast of Next Space Station Resupply Launch, Prelaunch Activities</title>
+            <link>
+                http://www.nasa.gov/press-release/nasa-updates-broadcast-of-next-space-station-resupply-launch-prelaunch-activities
+            </link>
+            <description>NASA commercial cargo provider SpaceX now is targeting 6:24 p.m. EDT Wednesday, July 24, for
+                the launch of its 18th resupply mission to the International Space Station. Live coverage will begin on
+                NASA Television and the agency’s website with prelaunch events Tuesday, July 23.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/32829382467_cc06cec3f0_k.jpg?itok=7DxgItMS"
+                length="380395" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/nasa-updates-broadcast-of-next-space-station-resupply-launch-prelaunch-activities
+            </guid>
+            <pubDate>Sat, 20 Jul 2019 16:30 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449116</dc:identifier>
+        </item>
+        <item>
+            <title>Vice President Unveils NASA Spacecraft for Artemis 1 Lunar Mission on Moon Landing Anniversary
+            </title>
+            <link>
+                http://www.nasa.gov/press-release/vice-president-unveils-nasa-spacecraft-for-artemis-1-lunar-mission-on-moon-landing
+            </link>
+            <description>Vice President Mike Pence visited and gave remarks in the Neil Armstrong Operations and
+                Checkout Building at NASA’s Kennedy Space Center in Florida on Saturday to commemorate the 50th
+                anniversary of the agency’s Apollo 11 Moon landing and announce to America the completion of NASA’s
+                Orion crew capsule for the first Artemis lunar mission.
+            </description>
+            <enclosure
+                url="http://www.nasa.gov/sites/default/files/styles/1x1_cardfeed/public/thumbnails/image/48332441661_e55d8fdd2a_k.jpg?itok=08FzJato"
+                length="685657" type="image/jpeg"/>
+            <guid isPermaLink="false">
+                http://www.nasa.gov/press-release/vice-president-unveils-nasa-spacecraft-for-artemis-1-lunar-mission-on-moon-landing
+            </guid>
+            <pubDate>Sat, 20 Jul 2019 16:18 EDT</pubDate>
+            <source url="http://www.nasa.gov/rss/dyn/breaking_news.rss">NASA Breaking News</source>
+            <dc:identifier>449113</dc:identifier>
+        </item>
+    </channel>
+</rss>

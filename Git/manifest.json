@@ -1,0 +1,22 @@
+{
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Git",
+        "type": "object",
+        "properties": {
+            "repository_url": {
+                "type": "string",
+                "description": "Git Repository URL",
+                "format": "uri"
+            }
+        },
+        "required": [
+            "repository_url"
+        ]
+    },
+    "description": "[Git](https://git-scm.com/) is a free and open source distributed version control system designed to handle projects with speed and efficiency.",
+    "name": "Git",
+    "uuid": "0a0cdc27-5b29-41e0-9a0c-36ee065922e5",
+    "slug": "git",
+    "version": "1.7"
+}
