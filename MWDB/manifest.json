@@ -1,0 +1,20 @@
+{
+    "configuration": {
+        "title": "MWDB",
+        "type": "object",
+        "required": [
+            "api_key"
+        ],
+        "properties": {
+            "api_key": {
+                "type": "string",
+                "description": "API key"
+            }
+        }
+    },
+    "description": "[MWDB](https://mwdb.cert.pl/) is a malware repository for automated malware collection and analysis systems hosted by CERT.pl",
+    "name": "MWDB",
+    "uuid": "0b8e1ea4-f191-4486-9658-47578a67d046",
+    "slug": "mwdb",
+    "version": "1.34"
+}

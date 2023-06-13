@@ -1,0 +1,57 @@
+{
+    "uuid": "dcb631c2-7423-46fa-b8e9-f51b79c4ce6e",
+    "name": "Count Hosts",
+    "docker_parameters": "get-shodan/host/count",
+    "description": "This method behaves identical to \"/shodan/host/search\" with the only difference that this method does not return any host results, it only returns the total number of results that matched the query and any facet information that was requested. As a result this method does not consume query credits.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "get_shodan_host_count",
+        "properties": {
+            "query": {
+                "in": "query",
+                "type": "string",
+                "description": "Shodan search query. The provided string is used to search the database of banners in Shodan, with the additional option to provide filters inside the search query using a \"filter:value\" format. For example, the following search query would find Apache webservers located in Germany: \"apache country:DE\"."
+            },
+            "facets": {
+                "in": "query",
+                "type": "string",
+                "description": "A comma-separated list of properties to get summary information on. Property names can also be in the format of \"property:count\", where \"count\" is the number of facets that will be returned for a property (i.e. \"country:100\" to get the top 100 countries for a search query)."
+            }
+        },
+        "required": [
+            "query"
+        ]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "matches": {
+                "type": "array",
+                "items": {}
+            },
+            "facets": {
+                "type": "object",
+                "properties": {
+                    "org": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "count": {
+                                    "type": "integer"
+                                },
+                                "value": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "total": {
+                "type": "integer"
+            }
+        }
+    }
+}
