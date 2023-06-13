@@ -1,0 +1,50 @@
+{
+    "uuid": "380c30f0-8650-47fd-b618-8f35ef47a30b",
+    "name": "Add attribute to Asset",
+    "docker_parameters": "post-assets/{uuid}/attr",
+    "description": "Add an attribute to an asset",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "adds_an_attribute_to_the_asset",
+        "properties": {
+            "uuid": {
+                "type": "string",
+                "in": "path"
+            },
+            "name": {
+                "in": "query",
+                "type": "string"
+            },
+            "value": {
+                "in": "query",
+                "type": "string"
+            }
+        },
+        "required": [
+            "uuid",
+            "name",
+            "value"
+        ]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "value": {
+                "type": "string"
+            },
+            "uuid": {
+                "type": "string",
+                "format": "uuid"
+            },
+            "name": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "name",
+            "uuid",
+            "value"
+        ]
+    }
+}

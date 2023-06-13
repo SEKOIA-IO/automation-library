@@ -1,0 +1,65 @@
+{
+    "uuid": "e26662f6-c40d-45ae-bd3f-4f1a13684ffb",
+    "name": "Get Event Field Common Values",
+    "docker_parameters": "get-event-field-common-values",
+    "description": "Get the most common values of fields observed under a specific query",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Arguments",
+        "type": "object",
+        "properties": {
+            "query": {
+                "description": "Event search query",
+                "type": "string"
+            },
+            "earliest_time": {
+                "description": "The earliest time of the time range of the search",
+                "type": "string"
+            },
+            "latest_time": {
+                "description": "The latest time of the time range of the search",
+                "type": "string"
+            },
+            "fields": {
+                "type": "string",
+                "description": "Fields to compute the most common values (use a coma between fields)"
+            }
+        },
+        "required": [
+            "query",
+            "earliest_time",
+            "latest_time",
+            "fields"
+        ]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "fields": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "common_values": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "value": {
+                                        "type": "number"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
