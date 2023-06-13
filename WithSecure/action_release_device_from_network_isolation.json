@@ -1,0 +1,21 @@
+{
+  "name": "Release Device From Network Isolation",
+  "description": "Release a device from network isolation.",
+  "uuid": "28f661e3-7beb-48f1-97fa-845116d8864b",
+  "docker_parameters": "release_device_from_network_isolation",
+  "arguments": {
+    "title": "TargetDevice",
+    "type": "object",
+    "properties": {
+      "target": {
+        "title": "Target",
+        "description": "Device identifier of the computer to release.",
+        "type": "string"
+      }
+    },
+    "required": [
+        "target"
+    ]
+  },
+  "results": {}
+}
