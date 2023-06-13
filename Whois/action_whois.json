@@ -1,0 +1,99 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "query": {
+                "description": "URL, IP, or domain to be enriched",
+                "type": "string"
+            }
+        },
+        "required": [
+            "query"
+        ],
+        "title": "whois Arguments",
+        "type": "object"
+    },
+    "description": "Provides data enrichment for Domains, URLs, and IP addresses.",
+    "docker_parameters": "whois",
+    "name": "Whois",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "Domain": {
+                "type": "object",
+                "properties": {
+                    "Name": {
+                        "description": "Domain Name",
+                        "type": "string"
+                    },
+                    "Whois": {
+                        "properties": {
+                            "CreationDate": {
+                                "description": "Creation Date",
+                                "type": "string"
+                            },
+                            "DNSSec": {
+                                "description": "DNSSEC",
+                                "type": "string"
+                            },
+                            "Domain": {
+                                "description": "Domain",
+                                "type": "string"
+                            },
+                            "DomainStatus": {
+                                "description": "Domain Status",
+                                "type": "string"
+                            },
+                            "ExpirationDate": {
+                                "description": "Expiration Date",
+                                "type": "string"
+                            },
+                            "NameServers": {
+                                "description": "Name Servers",
+                                "type": "string"
+                            },
+                            "Raw": {
+                                "description": "Raw Output",
+                                "type": "string"
+                            },
+                            "Registrant": {
+                                "properties": {
+                                    "Email": {
+                                        "description": "Registrant's Email",
+                                        "type": "string"
+                                    },
+                                    "Name": {
+                                        "description": "Registrant's Name",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "Registrar": {
+                                "properties": {
+                                    "AbuseEmail": {
+                                        "description": "Registrar's Abuse Email",
+                                        "type": "string"
+                                    },
+                                    "Name": {
+                                        "description": "Registrar's Name",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "UpdatedDate": {
+                                "description": "Updated Date",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                }
+            }
+        },
+        "title": "whois Results",
+        "type": "object"
+    },
+    "uuid": "d9ec2c57-1421-89a8-1cae-8b04eb6a84eb"
+}
