@@ -1,0 +1,43 @@
+{
+    "uuid": "938e02ff-3ece-46db-b554-a7111cd48c76",
+    "name": "Search dataleaks by organization",
+    "docker_parameters": "get-query/dataleaks/organization/{domain}",
+    "description": "Verify how many emails are affected by dataleaks for a specific domain. We don't provide the list of affected emails.\n\n **Note:** Available for paid subscriptions only.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Search dataleaks by organization",
+        "properties": {
+            "domain": {
+                "in": "path",
+                "type": "string"
+            }
+        },
+        "required": ["domain"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "total": {
+                "type": "integer"
+            },
+            "groups": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "leak": {
+                            "type": "string"
+                        },
+                        "count": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            },
+            "query": {
+                "type": "string"
+            }
+        }
+    }
+}
