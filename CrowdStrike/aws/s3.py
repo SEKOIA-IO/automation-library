@@ -1,6 +1,6 @@
 """Aws s3 client."""
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from loguru import logger
 from pydantic import Field
@@ -40,7 +40,7 @@ class S3Wrapper(AwsClient[S3Configuration]):
         """
         bucket = bucket or self._configuration.bucket
 
-        logger.info("Reading object {0} from bucket {1}".format(key, bucket))
+        logger.info(f"Reading object {key} from bucket {bucket}")
 
         try:
             async with self.get_client("s3") as s3:

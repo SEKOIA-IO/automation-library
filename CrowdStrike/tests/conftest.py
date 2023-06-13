@@ -1,14 +1,13 @@
 """Additional programmatic configuration for pytest."""
 
 import asyncio
-from typing import List
 
 import pytest
 from faker import Faker
 
 
 @pytest.fixture(scope="session")
-def faker_locale() -> List[str]:
+def faker_locale() -> list[str]:
     """
     Configure Faker to use correct locale.
 
@@ -30,7 +29,7 @@ def faker_seed() -> int:
 
 
 @pytest.fixture(scope="session")
-def session_faker(faker_locale: List[str], faker_seed: int) -> Faker:
+def session_faker(faker_locale: list[str], faker_seed: int) -> Faker:
     """
     Configure session lvl Faker to use correct seed and locale.
 

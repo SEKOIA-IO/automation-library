@@ -1,10 +1,10 @@
 """Set of formatter functions."""
 
 from pprint import pformat
-from typing import Any, Dict
+from typing import Any
 
 
-def format_record(record: Dict[Any, Any], loguru_format: str) -> str:
+def format_record(record: dict[Any, Any], loguru_format: str) -> str:
     """
     Format loguru_format based on record.
 

@@ -62,7 +62,6 @@ filterwarnings = [
 addopts = '''
   --strict-markers
   --tb=short
-  --cache-clear
   --numprocesses=auto
   --asyncio-mode=auto
 '''
