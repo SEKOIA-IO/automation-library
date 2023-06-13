@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Symphony Module for Whois"
+name = "Automation Module for Whois"
 description = ""
 version = "0.0"
 authors = []
