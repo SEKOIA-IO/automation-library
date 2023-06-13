@@ -28,6 +28,6 @@
     "description": "[CyberReason](https://www.cybereason.com/) is a Cybersecurity company providing products to detect and prevents attacks targeting endpoints",
     "name": "Cybereason",
     "uuid": "b96361fb-a01b-4ae7-8927-9622b9ea0acf",
-    "docker": "cybereason",
+    "slug": "cybereason",
     "version": "1.5"
 }
