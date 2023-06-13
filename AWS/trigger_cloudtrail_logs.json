@@ -1,0 +1,52 @@
+{
+  "description": "Get the last records from CloudTrail (deprecated in flavor of Fetch new CloudTrail records on S3)",
+  "docker_parameters": "cloudtrail_logs_trigger",
+  "name": "Fetch CloudTrail logs (deprecated)",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "bucket_name": {
+        "type": "string",
+        "description": "The bucket that contains CloudTrail logs"
+      },
+      "prefix": {
+        "type": "string",
+        "description": "Limits the response to keys that begin with the specified prefix"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 10000
+      }
+    },
+    "required": [
+      "frequency",
+      "bucket_name"
+    ],
+    "title": "CloudTrail configuration",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "records": {
+        "description": "A list of CloudTrail log records",
+        "type": "array"
+      },
+      "records_path": {
+        "description": "The filename containing the records",
+        "type": "string"
+      }
+    },
+    "required": [
+      "records"
+    ],
+    "title": "Cloudtrail logs"
+  },
+  "uuid": "358fd883-bb17-4f28-a91a-7223f0a84f94"
+}

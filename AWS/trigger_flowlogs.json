@@ -1,0 +1,52 @@
+{
+  "description": "Get the last records from FlowLog (deprecated in flavor of Fetch new logs on S3)",
+  "docker_parameters": "flowlog_records_trigger",
+  "name": "Fetch Flowlog records (deprecated)",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "bucket_name": {
+        "type": "string",
+        "description": "The bucket that contains Flowlog records"
+      },
+      "prefix": {
+        "type": "string",
+        "description": "Limits the response to keys that begin with the specified prefix"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 10000
+      }
+    },
+    "required": [
+      "frequency",
+      "bucket_name"
+    ],
+    "title": "Flowlog configuration",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "records": {
+        "description": "A list of Flowlog records",
+        "type": "array"
+      },
+      "records_path": {
+        "description": "The filename containing the records",
+        "type": "string"
+      }
+    },
+    "required": [
+      "records"
+    ],
+    "title": "Flowlog records"
+  },
+  "uuid": "e1e721c1-0263-4763-8812-25bf24d062f4"
+}
