@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "imperva automation module"
+version = "0.1.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+requests = "*"
+sekoia-automation-sdk = "^1.1.2"
+urllib3 = "*"
+cryptography = "^41.0.1"
+tenacity = "^8.2.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra --junit-xml=junit.xml --cov-report term --cov-report html:coverage --cov=imperva"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
