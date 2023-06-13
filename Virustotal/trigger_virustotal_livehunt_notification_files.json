@@ -1,0 +1,77 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "sleep_time": {
+                "description": "frequency of the lookups (in seconds)",
+                "type": "integer",
+                "default": 300
+            },
+            "skip_history": {
+                "description": "only process new notifications",
+                "type": "boolean",
+                "default": false
+            }
+        },
+        "required": [],
+        "title": "Trigger Arguments",
+        "type": "object"
+    },
+    "description": "Get LiveHunt notifications from the files endpoint",
+    "docker_parameters": "livehunt_notification_files_trigger",
+    "name": "livehunt_notification_files",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "notification_path": {
+                "description": "Filepath of the notification",
+                "type": "string"
+            },
+            "ruleset_name": {
+                "description": "Name of the Ruleset",
+                "type": "string"
+            },
+            "rule_name": {
+                "description": "Name of the Rule",
+                "type": "string"
+            },
+            "notification_id": {
+                "description": "ID of the notification",
+                "type": "string"
+            },
+            "notification_date": {
+                "description": "Timestamp of the notification",
+                "type": "integer"
+            },
+            "md5": {
+                "description": "MD5 hash of the file that matched the Yara rule",
+                "type": "string"
+            },
+            "sha1": {
+                "description": "SHA-1 hash of the file that matched the Yara rule",
+                "type": "string"
+            },
+            "sha256": {
+                "description": "SHA-256 hash of the file that matched the Yara rule",
+                "type": "string"
+            },
+            "name": {
+                "description": "Meaningful name of the file that matched the Yara rule",
+                "type": "string"
+            }
+        },
+        "required": [
+            "notification_path",
+            "ruleset_name",
+            "rule_name",
+            "notification_id",
+            "notification_date",
+            "md5",
+            "sha1",
+            "sha256"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "851ec90c-04f1-4765-9408-1177bfcc5524"
+}
