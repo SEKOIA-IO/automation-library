@@ -1,0 +1,210 @@
+{
+  "uuid": "8ef78762-7769-48e1-9345-a98b68afca00",
+  "name": "Retrieve Device Protection Status",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/devicesprotectionstatus",
+  "description": "Retrieves a list of devices with their protection status and other device information.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Retrieve Device Protection Status",
+    "properties": {
+      "$top": {
+        "description": "Specifies the number of objects to retrieve.\nExample: 5",
+        "type": "integer",
+        "in": "query"
+      },
+      "$skip": {
+        "description": "Bypasses the specified number of objects in the results returned.\nFor example, if you specify 10, the results start at object 11.\nExample: 5",
+        "type": "integer",
+        "in": "query"
+      },
+      "$search": {
+        "description": "Returns only objects that include the specified text string. For example, \"name\" returns objects that include \"hostname\" and \"username\".\nThe supported search fields depend on the endpoint:\n\t- Devices: Host name, description, IP address, logged on user\n\t- DeviceProtectionStatus: Host name\n\t- ManagedConfigurations: Name, description\nExample: name",
+        "type": "str",
+        "in": "query"
+      },
+      "$count": {
+        "description": "Indicates whether to return a counter that shows the total number of objects in the total_items response parameter.\nExample: true",
+        "type": "boolean",
+        "in": "query"
+      },
+      "$orderby": {
+        "description": "Specifies how to order results. You can order by any parameter in the response and sort results in ascending or descending order.\nSpecify a parameter name with any underscores removed, followed by a + (plus sign) and either asc (ascending) or desc (descending).\nFor example, to order results by the host_name parameter in descending order, specify hostname+desc. If you do not specify a field to order by, the API will use the order in the database.\nExample: hostname+desc",
+        "type": "str",
+        "in": "body"
+      }
+    }
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "total_items": {
+        "type": "integer",
+        "description": "Total number of devices.\nIf the count request parameter is true, total_items displays the total number of devices. If count is false, then total_items displays null.\nExample: 42"
+      },
+      "data": {
+        "type": "array",
+        "description": "Array of device data",
+        "items": {
+          "properties": {
+            "properties": {
+              "accumulated_protection_status": {
+                "description": "General protection status.\n- 0: Without protection or without information \n- 1: Activated\n- 2: Deactivated \n- 3: Error \n- 4: Error installing \n- 5: Without license \n- 6: Not available\n",
+                "enum": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6
+                ],
+                "example": 2,
+                "type": "integer"
+              },
+              "adaptive_defense_status": {
+                "description": "Adaptive Defense status.\n- 0: Without protection or without information\n- 1: Activated \n- 2: Deactivated \n- 3: Error \n- 4: Error installing \n- 5: Without license \n- 6: Not available\n",
+                "enum": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6
+                ],
+                "example": 2,
+                "type": "integer"
+              },
+              "device_id": {
+                "description": "Identification number of the device.",
+                "example": "123456d8-910f-4f5a-a7ad-e2480d5ad1b2",
+                "format": "uuid",
+                "type": "string"
+              },
+              "device_type": {
+                "description": "Type of device. \n- 1: Workstation\n- 2: Laptop\n- 3: Server\n- 4: Mobile device\n",
+                "enum": [
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "example": 1,
+                "type": "integer"
+              },
+              "file_antivirus_status": {
+                "description": "Antivirus status.\n- 0: Without protection or without information\n- 1: Activated\n- 2: Deactivated\n- 3: Error\n- 4: Error installing\n- 5: Without license\n- 6: Not available\n",
+                "enum": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6
+                ],
+                "example": 2,
+                "type": "integer"
+              },
+              "host_name": {
+                "description": "Host name of the device.",
+                "example": "WIN_SERVER_6",
+                "type": "string"
+              },
+              "isolation_state": {
+                "description": "Isolation state of the device.\n- 0: Not isolated\n- 1: Isolated\n- 2: Applying isolation\n- 3: Removing isolation\n",
+                "enum": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "example": 1,
+                "type": "integer"
+              },
+              "knowledge_catalog_date": {
+                "description": "Date and time when the knowledge catalog installed on the device.",
+                "example": "2020-09-22T11:00:00Z",
+                "format": "date-time",
+                "type": "string"
+              },
+              "knowledge_catalog_update_status": {
+                "description": "Update status of the catalog.\n- 0: Not available\n- 1: Outdated\n- 2: Updated\n",
+                "enum": [
+                  0,
+                  1,
+                  2
+                ],
+                "example": 2,
+                "type": "integer"
+              },
+              "last_connection_date": {
+                "description": "Date and time when the device last connected.",
+                "example": "2020-09-22T11:00:00Z",
+                "format": "date-time",
+                "type": "string"
+              },
+              "license_status": {
+                "description": "Status of the license.\n- 0: Assigned\n- 1: Not assigned\n- 2: Manual deallocation\n- 3: Auto deallocation\n",
+                "enum": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "example": 0,
+                "type": "integer"
+              },
+              "platform_id": {
+                "description": "Device platform.\n- 1: Windows\n- 2: Linux\n- 3: macOS\n- 4: Android\n",
+                "enum": [
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "type": "integer"
+              },
+              "protection_engine_update_status": {
+                "description": "Adaptive Defense status. \n- 0: Undefined\n- 1: Outdated\n- 2: Updated\n- 3: Waiting for reboot\n",
+                "enum": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "example": 2,
+                "type": "integer"
+              },
+              "protection_engine_version": {
+                "description": "Protection engine version.",
+                "example": "1.17.00.0000",
+                "type": "string"
+              },
+              "reboot_requested": {
+                "description": "Indicates whether a device reboot is requested.",
+                "example": true,
+                "nullable": true,
+                "type": "boolean"
+              },
+              "reinstall_agent_requested": {
+                "description": "Indicates whether reinstallation of the agent is requested.",
+                "example": true,
+                "nullable": true,
+                "type": "boolean"
+              },
+              "reinstall_protection_requested": {
+                "description": "Indicates whether reinstallation of protection is requested.",
+                "example": true,
+                "nullable": true,
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

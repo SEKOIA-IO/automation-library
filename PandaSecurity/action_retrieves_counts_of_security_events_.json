@@ -1,0 +1,188 @@
+{
+  "uuid": "e38b577f-ee30-40c3-b328-be9b3006754f",
+  "name": "Count Security Events",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/securityeventcounters/{type}",
+  "description": "Retrieves counts of detected security events for the specified types.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Count Security Events",
+    "properties": {
+      "type": {
+        "description": "Types of security event counters to retrieve. This parameter is a mask. Add the values of the security event counter types you want to retrieve.\nFor example, if you want to retrieve only programs blocked, specify 8. If you want to retrieve both PUPs and programs blocked, specify 10 because 8 (programs blocked) + 2 (PUPs) = 10.\n\t- 1 - Malware\n\t- 2 PUPs (Potentially Unwanted Programs)\n\t- 4 - Exploits\n\t- 8 - Programs Blocked\n\t- 16 - Threats detected by AV\n\t- 255 - All counters\nExample: 10",
+        "type": "integer",
+        "in": "path"
+      },
+      "filter": {
+        "description": "Filters the security event counters by date\nSpecify the type of security event:\n\t- 33001 — Antivirus\n\t- 32001 — Other types\nSpecify the length of the time period in the format [x, y] where x is the number of units and y is the unit of time:\n\t- 1 — Years\n\t- 2 - Months\n\t- 3 - Days\n\t- 4 - Hours\nFor example, this retrieves threats detected by AV for the last 7 days: filter=33001%20AmongTheLast%20[7,3].\nThis retrieves security event counters for the other types for the last 3 months: filter=32001%20AmongTheLast%20[3,2].\nIf you do not specify a filter, the API returns all of the security events for the last 30 days.\nExample: 33001%20AmongTheLast%20[7,3]",
+        "type": "str",
+        "in": "query"
+      }
+    },
+    "required": [
+      "type"
+    ]
+  },
+  "results": {
+    "properties": {
+      "exploit_counters": {
+        "properties": {
+          "total_affected_devices": {
+            "description": "Number of affected devices.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_alerts": {
+            "description": "Number of alerts.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_data_access": {
+            "description": "Number of times malware accessed data.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_executed": {
+            "description": "Number of executed malware instances.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_external_communications": {
+            "description": "Number of external communications by malware.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "malware_counters": {
+        "properties": {
+          "total_affected_devices": {
+            "description": "Number of affected devices.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_alerts": {
+            "description": "Number of alerts.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_data_access": {
+            "description": "Number of times malware accessed data.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_executed": {
+            "description": "Number of executed malware instances.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_external_communications": {
+            "description": "Number of external communications by malware.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "program_blocked_counters": {
+        "properties": {
+          "total_programs_blocked": {
+            "description": "Number of blocked programs.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "pups_counters": {
+        "properties": {
+          "total_affected_devices": {
+            "description": "Number of affected devices.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_alerts": {
+            "description": "Number of alerts.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_data_access": {
+            "description": "Number of times malware accessed data.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_executed": {
+            "description": "Number of executed malware instances.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_external_communications": {
+            "description": "Number of external communications by malware.",
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "threats_by_av_counters": {
+        "properties": {
+          "total_dangerous_actions_blocked_by_av": {
+            "description": "Number of dangerous actions blocked by antivirus.",
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_devices_blocked_by_av": {
+            "description": "Number of devices blocked by antivirus.",
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_intrusion_attempted_blocked_by_av": {
+            "description": "Number of intrusion attempts blocked by antivirus.",
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_malware_urls_blocked_by_av": {
+            "description": "Number of malware URLs blocked by antivirus.",
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_phishing_detected_by_av": {
+            "description": "Number of phishing attempts detected by antivirus.",
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          },
+          "total_tracking_cookies_detected_by_av": {
+            "description": "Number of tracking cookies detected by antivirus.",
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "type": "object"
+  }
+}
