@@ -1,0 +1,53 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "file_path": {
+                "description": "File path to the JSON file to read.",
+                "type": "string"
+            },
+            "file": {
+                "description": "The JSON content to read.",
+                "type": "object"
+            },
+            "jsonpath": {
+                "description": "JSON path to evaluate against read file content",
+                "type": "string"
+            },
+            "return_list": {
+                "description": "Always return a list of results. Default to false.",
+                "type": "boolean",
+                "default": false
+            },
+            "to_file": {
+                "type": "boolean",
+                "description": "Whether the event should be saved in a file or sent directly",
+                "default": false
+            }
+        },
+        "oneOf": [{"required": ["file"]}, {"required": ["file_path"]}],
+        "required": [],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Read the json file and return its content evaluated against specified jsonpath",
+    "docker_parameters": "fileutils_readjsonfile",
+    "name": "Read JSON File",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "output": {
+                "description": "Content read from file",
+                "type": "object"
+            },
+            "output_path": {
+                "description": "Path to the file with the content",
+                "type": "object"
+            }
+        },
+        "required": [],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "ecedfa52-7033-4ea8-9c3b-93ad34295f87"
+}
