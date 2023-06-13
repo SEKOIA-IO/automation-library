@@ -1,0 +1,57 @@
+{
+  "@class": ".MalopInboxModel",
+  "guid": "11.1882697476172655933",
+  "displayName": "cymulateagent.exe",
+  "rootCauseElementType": "Process",
+  "primaryRootCauseName": "cymulateagent.exe",
+  "rootCauseElementNamesCount": 1,
+  "detectionEngines": [
+    "EDR"
+  ],
+  "detectionTypes": [
+    "Custom Malware"
+  ],
+  "malopDetectionType": "CUSTOM_RULE",
+  "creationTime": 1668333388300,
+  "lastUpdateTime": 1668945737625,
+  "iconBase64": "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAIISURBVFhHxdS/K8RxHMfxQxaKbrnBjwXjWW3UTSZlEMk/oAxs/gQZRdkoUmYGGSyXhVXM6m5RiiLDxZ3n+9P7XZ++vQnfj+5Vj7rh+3m9vnffuyvkTd/cpehEBSd4RhMP2Mc4wnXJo8UdWEIdLccNppD2JqwQE6jBGzfXGIKeThApg7z7HXijMXkkKwjnkkTL+nEFbzTrCPJd0YackSKUcAtvMOsU3dCGnJEi9OAC3mDWLsK5JLEyrMMbjL1hFuluQKKFg6jCGzYH6IWeTBQpVGWcoYF4+BV7GEC49sd5Kg+bIiaxgBmMoQvhOitGEfPYwiE2MQ35nvxpXEZksIoXfKCBe2yghHCtxYYg/w+/G7VYKRbxiJajiWPIp6MnE0UKMYI7eOPmHWsIZ5LEyrAMeZfecOwSfdCGnJEitQ1vMKuOUWhDzkiR+ukN1PAvN9CeRyCRMrTnSyixQrTnZyiRUvz6j2i1cm467PWfY+X49q84Gi1iHls4xCam0YN8N/NVrBhlnKGBVuQVexhA+pvQ0kFUEQ9nHaAXejJBpEytwxuNvWEW4UySaJk83wt4o1m7SH4DJdzCG8w6RTe0IWekCP24gjeYdYROaEPOSBHk974DbzDWxArCuSSxMkygBm/YXGMIejpRpBDyKSyhDm/8BlMI1yePFsuzreAEz5CP/AH7GMcX44XCJ3XZVwZHImRNAAAAAElFTkSuQmCC",
+  "priority": "HIGH",
+  "group": "",
+  "rootCauseElementHashes": "",
+  "status": "Active",
+  "severity": "High",
+  "machines": [
+    {
+      "@class": ".MachineInboxModel",
+      "guid": "-1447104131.1198775089551518743",
+      "displayName": "win-cybereason",
+      "osType": "WINDOWS",
+      "connected": true,
+      "isolated": false,
+      "lastConnected": 1669369715023,
+      "empty": true
+    }
+  ],
+  "users": [
+    {
+      "guid": "0.-3278702222586954447",
+      "displayName": "win-cybereason\\administrator",
+      "admin": true,
+      "localSystem": false,
+      "domainUser": false
+    }
+  ],
+  "containers": [],
+  "labels": [],
+  "decisionStatuses": [],
+  "malopCloseTime": null,
+  "closerName": null,
+  "malopType": "CUSTOM_RULE",
+  "escalated": false,
+  "malopPriority": "HIGH",
+  "edr": true,
+  "malopStatus": "Active",
+  "malopSeverity": "High",
+  "closed": false,
+  "empty": true
+}

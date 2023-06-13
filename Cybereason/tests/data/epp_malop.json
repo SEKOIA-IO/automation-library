@@ -1,0 +1,51 @@
+{
+  "@class": ".MalopInboxModel",
+  "guid": "11.-2600105145818681902",
+  "displayName": "kprocesshacker.sys",
+  "rootCauseElementType": "File",
+  "primaryRootCauseName": "kprocesshacker.sys",
+  "rootCauseElementNamesCount": 1,
+  "detectionEngines": [
+    "AntiVirus"
+  ],
+  "detectionTypes": [
+    "Known malware detected by Cybereason Anti-Malware"
+  ],
+  "malopDetectionType": "KNOWN_MALWARE",
+  "creationTime": 1668357472339,
+  "lastUpdateTime": 1668392385000,
+  "iconBase64": "",
+  "priority": "HIGH",
+  "group": "",
+  "rootCauseElementHashes": "a21c84c6bf2e21d69fa06daaf19b4cc34b589347",
+  "status": "Active",
+  "severity": "High",
+  "machines": [
+    {
+      "@class": ".MachineInboxModel",
+      "guid": "-1021733308.1198775089551518743",
+      "displayName": "desktop-aaaaaa",
+      "osType": "WINDOWS",
+      "connected": false,
+      "isolated": false,
+      "lastConnected": 1668439428578,
+      "empty": true
+    }
+  ],
+  "users": [],
+  "containers": [],
+  "labels": [],
+  "decisionStatuses": [
+    "Detected"
+  ],
+  "malopCloseTime": null,
+  "closerName": null,
+  "malopType": "KNOWN_MALWARE",
+  "escalated": false,
+  "malopPriority": "HIGH",
+  "edr": false,
+  "malopStatus": "Active",
+  "malopSeverity": "High",
+  "closed": false,
+  "empty": true
+}

@@ -1,0 +1,164 @@
+{
+  "@class": ".DetectionMalopDetailsModel",
+  "guid": "11.-2600105145818681902",
+  "displayName": "kprocesshacker.sys",
+  "rootCauseElementType": "File",
+  "primaryRootCauseName": "kprocesshacker.sys",
+  "rootCauseElementNamesCount": 1,
+  "detectionEngines": [
+    "AntiVirus"
+  ],
+  "detectionTypes": [
+    "Known malware detected by Cybereason Anti-Malware"
+  ],
+  "malopDetectionType": "KNOWN_MALWARE",
+  "creationTime": 1668357472339,
+  "lastUpdateTime": 1668392385000,
+  "iconBase64": "",
+  "priority": "HIGH",
+  "group": "",
+  "rootCauseElementHashes": "a21c84c6bf2e21d69fa06daaf19b4cc34b589347",
+  "status": "Active",
+  "severity": "High",
+  "machines": [
+    {
+      "@class": ".MachineDetailsModel",
+      "guid": "-1021733308.1198775089551518743",
+      "displayName": "desktop-aaaaaa",
+      "osType": "WINDOWS",
+      "connected": false,
+      "isolated": false,
+      "lastConnected": 1668439428578,
+      "adOU": null,
+      "adOrganization": null,
+      "adDisplayName": "DESKTOP-AAAAAA",
+      "adDNSHostName": "desktop-aaaaaa.example.org",
+      "adDepartment": null,
+      "adCompany": null,
+      "adLocation": null,
+      "adMachineRole": null,
+      "pylumId": "PYLUMCLIENT_INTEGRATION_DESKTOP-AAAAAA_005056B4A724",
+      "empty": true
+    }
+  ],
+  "users": [
+    {
+      "guid": "AAAAGCaB05cjndzp",
+      "displayName": "desktop-aaaaa\\system",
+      "admin": false,
+      "localSystem": false,
+      "domainUser": false
+    }
+  ],
+  "containers": [],
+  "labels": [],
+  "decisionStatuses": [
+    "Detected"
+  ],
+  "malopCloseTime": null,
+  "closerName": null,
+  "signer": null,
+  "fileClassificationType": "av_detected",
+  "filePaths": [
+    "c:\\inetpub\\wwwroot\\b.jsp"
+  ],
+  "commandLines": [],
+  "decodedCommandLines": [],
+  "detectionValues": [
+    "Generic.ASP.WebShell.AH.B7A2B560"
+  ],
+  "detectionValueTypes": [
+    "DVT_FILE"
+  ],
+  "fileHash": "680237acfd23e9ed0d03adfc8b593d0d906a0c73",
+  "scriptDetectionTypes": [],
+  "exploitDetectionTypes": [],
+  "descriptions": [
+    "Known malware with file name b.jsp was detected"
+  ],
+  "hasAnyScanEvent": false,
+  "activeProcessesCount": 0,
+  "totalProcessesCount": 0,
+  "fileSuspects": [
+    {
+      "@class": ".FileSuspectDetailsModel",
+      "firstSeen": 1657923190000,
+      "lastSeen": 1667946935000,
+      "counter": 2,
+      "wasEverDetectedInScan": false,
+      "wasEverDetectedByAccess": true,
+      "detectionDecisionStatus": "DDS_PREVENTED",
+      "guid": "HobXaA-SPsOumliy",
+      "ownerMachineName": "desktop-aaaaaa",
+      "ownerMachineGuid": "aaaaaaaaaaaaaaaa",
+      "sha1String": "adc83b19e793491b1c6ea0fd8b46cd9f32e592fc",
+      "behaviourIdString": null,
+      "correctedPath": "c:\\System\\kprocesshacker.sys",
+      "modifiedTime": null,
+      "elementDisplayName": "kprocesshacker.sys"
+    }
+  ],
+  "processSuspects": null,
+  "processes": null,
+  "files": [
+    {
+      "@class": ".FileDetailsModel",
+      "lastDetectionDecisionStatus": "DDS_UNKNOWN",
+      "guid": "HobXaA-SPsOumliy",
+      "ownerMachineName": "desktop-aaaaaa",
+      "ownerMachineGuid": "aaaaaaaaaaaaaaaa",
+      "sha1String": "adc83b19e793491b1c6ea0fd8b46cd9f32e592fc",
+      "correctedPath": "c:\\System\\kprocesshacker.sys",
+      "modifiedTime": null,
+      "elementDisplayName": "kprocesshacker.sys",
+      "behaviourIdString": null,
+      "quarantined": false
+    }
+  ],
+  "connections": null,
+  "timelineEvents": [
+    {
+      "@class": ".MalopStartTimelineEventModel",
+      "timestamp": 1657923190000,
+      "data": {
+        "detectionTypes": [
+          "Known malware detected by Cybereason Anti-Malware"
+        ],
+        "detectionEngines": [
+          "AntiVirus"
+        ]
+      },
+      "type": "malopStart"
+    },
+    {
+      "@class": ".DetectionEventFirstSeenTimelineEventModel",
+      "timestamp": 1657923190000,
+      "data": {
+        "machineName": "sthq-mimikatz",
+        "osType": "WINDOWS",
+        "connected": true,
+        "detectionsCount": 2,
+        "prevented": false
+      },
+      "type": "detectionEventFirstSeen"
+    },
+    {
+      "@class": ".SuspicionTimelineEventModel",
+      "timestamp": 1657923198032,
+      "data": {
+        "suspicion": "Malicious by Anti-Malware",
+        "activityType": "MALICIOUS_INFECTION"
+      },
+      "type": "suspicion"
+    }
+  ],
+  "payloads": [],
+  "escalated": false,
+  "edr": false,
+  "malopStatus": "Closed",
+  "malopSeverity": "Low",
+  "malopType": "KNOWN_MALWARE",
+  "malopPriority": "HIGH",
+  "closed": false,
+  "empty": true
+}
