@@ -10,10 +10,6 @@
                 "description": "Batch frequency in seconds",
                 "default": 60
             },
-            "bucket_name": {
-                "type": "string",
-                "description": "The bucket that contains Github audit logs"
-            },
             "intake_server": {
                 "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
                 "default": "https://intake.sekoia.io",
