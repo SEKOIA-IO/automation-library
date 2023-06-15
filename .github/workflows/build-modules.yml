@@ -84,13 +84,13 @@ jobs:
         run: |
           poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
         working-directory: "${{ matrix.module }}"
-
-      - name: Publish Python Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: ${{ always() && github.event_name == 'pull_request' }}
+      
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v3
         with:
-          files: "${{ matrix.module }}/junit.xml"
-          check_name: ${{ matrix.module }} Test Results
+          name: Unit Test Results
+          path: junit.xml
       
       - name: Code Coverage Flag
         run: |
