@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 import aiocsv
 import aiofiles
+from aiofiles import os as aiofiles_os
 import orjson
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
@@ -99,6 +100,31 @@ class SalesforceConnector(Connector):
 
         return self._salesforce_client
 
+    @staticmethod
+    async def _delete_file(file_name: str) -> None:
+        """
+        Delete file.
+
+        Args:
+            file_name: str
+        """
+        await aiofiles_os.remove(file_name)
+
+    async def _push_events(self, events: list[str]) -> None:
+        """
+        Push events to intakes.
+
+        Simple wrapper over `self.push_events_to_intakes` to run it async.
+
+        Args:
+            events: list[str]
+        """
+        await asyncio.to_thread(
+            self.push_events_to_intakes,
+            events=[orjson.dumps(event).decode("utf-8") for event in events],
+            sync=True,
+        )
+
     async def get_salesforce_events(self) -> datetime | None:
         """
         Process salesforce events.
@@ -119,12 +145,21 @@ class SalesforceConnector(Connector):
             )
 
             if records is not None:
-                self.push_events_to_intakes([orjson.dumps(event).decode("utf-8") for event in records])
+                await self._push_events([orjson.dumps(event).decode("utf-8") for event in records])
 
+            # Process csv file row by row to avoid memory issues
             if csv_path is not None:
                 async with aiofiles.open(csv_path, encoding="utf-8") as file:
                     async for row in aiocsv.AsyncDictReader(file, delimiter=","):
-                        self.push_events_to_intakes([orjson.dumps(row).decode("utf-8")])
+                        await self._push_events([orjson.dumps(row).decode("utf-8")])
+
+                await self._delete_file(csv_path)
+
+            if last_event_date > self.from_date:
+                self.from_date = last_event_date
+
+            with self.context as cache:
+                cache["last_event_date"] = last_event_date.isoformat()
 
         return last_event_date
 
@@ -134,13 +169,7 @@ class SalesforceConnector(Connector):
 
         try:
             while self.running:
-                last_event_date = loop.run_until_complete(self.get_salesforce_events())
-                if last_event_date is not None and last_event_date > self.from_date:
-                    self.from_date = last_event_date
-
-                    # save in context the most recent date seen in response
-                    with self.context as cache:
-                        cache["last_event_date"] = last_event_date.isoformat()
+                loop.run_until_complete(self.get_salesforce_events())
 
         except Exception as e:
             logger.error("Error while running SalesforceConnector: {error}", error=e)

@@ -1,4 +1,5 @@
 """Salesforce http client."""
+
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, Tuple
 from urllib.parse import urlencode
@@ -178,6 +179,7 @@ class SalesforceHttpClient(object):
 
     async def get_log_files(self, start_from: str | None = None) -> SalesforceEventLogFilesResponse:
         """
+        Get log files from Salesforce.
 
         Args:
             start_from: str
