@@ -1,6 +1,6 @@
 """Aws sqs client wrapper with its config class."""
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from async_lru import alru_cache
 from loguru import logger
@@ -104,7 +104,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                 )
 
             except Exception as e:
-                logger.error("Failed to receive messages from sqs: {0}".format(e))
+                logger.error(f"Failed to receive messages from sqs: {e}")
 
                 raise e
 
@@ -114,9 +114,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                 for message in response.get("Messages", []):
                     result.append(message["Body"])
 
-                logger.info(
-                    "Received {0} messages from sqs queue {1}".format(len(result), self._configuration.queue_name)
-                )
+                logger.info(f"Received {len(result)} messages from sqs queue {self._configuration.queue_name}")
 
                 yield result
             finally:

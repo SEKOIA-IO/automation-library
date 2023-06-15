@@ -1,7 +1,7 @@
 {
   "description": "Forward Crowdstrike Falcon Data Replication events to SEKOIA.IO",
   "docker_parameters": "crowdstrike_telemetry",
-  "name": "Fetch new events from CrowdStrike Data replication",
+  "name": "[ALPHA] Fetch new events from CrowdStrike Data replication",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -37,26 +37,11 @@
       "intake_key": {
         "description": "Intake key to use when sending events",
         "type": "string"
-      },
-      "aws_access_key_id": {
-        "description": "The identifier of the access key",
-        "type": "string"
-      },
-      "aws_secret_access_key": {
-        "description": "The secret associated to the access key",
-        "type": "string"
-      },
-      "aws_region": {
-        "description": "The area hosting the AWS resources",
-        "type": "string"
       }
     },
     "required": [
       "queue_name",
-      "intake_key",
-      "aws_access_key_id",
-      "aws_secret_access_key",
-      "aws_region"
+      "intake_key"
     ],
     "title": "Trigger configuration",
     "type": "object"
@@ -66,5 +51,5 @@
     "properties": {},
     "title": "The records"
   },
-  "uuid": "10999b99-9a8d-4b92-9fbd-01e3fac01cd5"
+  "uuid": "1137c3e1-a0b3-4c3c-981e-be7c3249d64f"
 }
