@@ -1,0 +1,56 @@
+name: Test Results
+
+on:
+  workflow_run:
+    workflows: ["Build Modules"]
+    types:
+      - completed
+
+jobs:
+  unit-test-results:
+    name: Unit Test Results
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'skipped'
+    steps:
+      - name: 'Download artifact'
+        uses: actions/github-script@v3.1.0
+        with:
+          script: |
+            var artifacts = await github.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: ${{github.event.workflow_run.id }},
+            });
+            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "Unit Test Results"
+            })[0];
+            var download = await github.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            var fs = require('fs');
+            fs.writeFileSync('${{github.workspace}}/Unit Test Results.zip', Buffer.from(download.data));
+            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "Event File"
+            })[0];
+            var download = await github.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            var fs = require('fs');
+            fs.writeFileSync('${{github.workspace}}/Event File.zip', Buffer.from(download.data));
+      - name: "Unzip Artifacts"
+        run: |
+          unzip 'Unit Test Results.zip'
+          unzip 'Event File.zip'
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          commit: ${{ github.event.workflow_run.head_sha }}
+          event_file: event.json
+          event_name: ${{ github.event.workflow_run.event }}
+          files: "*.xml"
