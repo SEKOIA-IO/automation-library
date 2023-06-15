@@ -1,0 +1,32 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "feed_id": {
+                "type": "string",
+                "description": "ID of the SEKOIA.IO feed to get data from",
+                "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608"
+            }
+        },
+        "type": "object",
+        "title": "Feed consumption configuration"
+    },
+    "description": "Get all valid IOCs from SEKOIA.IO Intelligence feed",
+    "docker_parameters": "feed_ioc_consumption_trigger",
+    "name": "Feed IOC Consumption",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "stix_objects": {
+                "description": "IOCs returned by the feed (STIX objects)",
+                "type": "object"
+            }
+        },
+        "required": [
+            "stix_objects"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "9859df5d-a743-41e9-ad6c-cca078b3e054"
+}

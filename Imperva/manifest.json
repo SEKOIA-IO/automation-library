@@ -1,0 +1,45 @@
+{
+    "configuration": {
+        "title": "Imperva",
+        "type": "object",
+        "properties": {
+            "base_url": {
+                "description": "Imperva API base URL",
+                "type": "string",
+                "format": "uri"
+            },
+            "api_id": {
+                "description": "Imperva API ID",
+                "type": "string"
+            },
+            "api_key": {
+                "description": "Imperva API key",
+                "type": "string"
+            },
+            "keys": {
+                "description": "Encryption keys",
+                "type": "object",
+                "properties": {
+                    "<public key id>": {
+                        "type": "object",
+                        "properties": {
+                            "private": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "required": [
+            "base_url",
+            "api_id",
+            "api_key"
+        ]
+    },
+    "description": "Imperva Module",
+    "name": "Imperva",
+    "uuid": "ee0e5c81-5410-48d4-b155-135679c5ebb8",
+    "slug": "imperva",
+    "version": "1.12"
+}

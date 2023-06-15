@@ -1,0 +1,46 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "ip": {
+                "description": "The IP address to query",
+                "type": "string"
+            }
+        },
+        "required": [
+            "ip"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Fast check if IP exists or not in the IKnowWhatYouDownload database",
+    "docker_parameters": "ip_exist",
+    "name": "Check IP existence",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "ip": {
+                "description": "ip address",
+                "type": "string"
+            },
+            "exists": {
+                "description": "does IKnowWhatYouDownload have history for this ip or not",
+                "type": "boolean"
+            },
+            "date": {
+                "description": "last seen date in UTC, optional",
+                "type": "string"
+            }
+        },
+        "required": [
+            "ip", "exists"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "outputs": {
+        "known": "the IP address is known to IKnowWhatYouDownload",
+        "unknown": "the IP address is unknown to IKnowWhatYouDownload"
+    },
+    "uuid": "f5d6d623-8e3d-4d8e-8843-19058812b8f9"
+}

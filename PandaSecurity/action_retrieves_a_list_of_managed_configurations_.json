@@ -1,0 +1,86 @@
+{
+  "uuid": "fb034867-7d29-4c58-aedb-758bb1047b22",
+  "name": "Retrieve Managed Configurations",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/managedconfigurations/{type}",
+  "description": "Retrieves a list of the specified type of managed configurations associated with your WatchGuard Cloud account.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Retrieve Managed Configurations",
+    "properties": {
+      "type": {
+        "description": "Type of configuration to return. Specify one of these values:\n\t- 1 — Deployment settings\n\t- 2 — Workstations and servers\n\t- 3 — Android\nExample: 2",
+        "type": "integer",
+        "in": "path",
+        "enum": [1, 2, 3]
+      },
+      "$top": {
+        "description": "Specifies the number of objects to retrieve.\nExample: 5",
+        "type": "integer",
+        "in": "query"
+      },
+      "$skip": {
+        "description": "Bypasses the specified number of objects in the results returned.\nFor example, if you specify 10, the results start at object 11.\nExample: 5",
+        "type": "integer",
+        "in": "query"
+      },
+      "$search": {
+        "description": "Returns only objects that include the specified text string. For example, \"name\" returns objects that include \"hostname\" and \"username\".\nThe supported search fields depend on the endpoint:\n\t- Devices: Host name, description, IP address, logged on user\n\t- DeviceProtectionStatus: Host name\n\t- ManagedConfigurations: Name, description\nExample: name",
+        "type": "str",
+        "in": "query"
+      },
+      "$count": {
+        "description": "Indicates whether to return a counter that shows the total number of objects in the total_items response parameter.\nExample: true",
+        "type": "boolean",
+        "in": "query"
+      },
+      "$orderby": {
+        "description": "Specifies how to order results. You can order by any parameter in the response and sort results in ascending or descending order.\nSpecify a parameter name with any underscores removed, followed by a + (plus sign) and either asc (ascending) or desc (descending).\nFor example, to order results by the host_name parameter in descending order, specify hostname+desc. If you do not specify a field to order by, the API will use the order in the database.\nExample: hostname+desc",
+        "type": "str",
+        "in": "body"
+      }
+    },
+    "required": [
+      "type"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "total_items": {
+        "type": "integer",
+        "description": "Total number of devices.\nIf the count request parameter is true, total_items displays the total number of devices. If count is false, then total_items displays null.\nExample: 42"
+      },
+      "data": {
+        "type": "array",
+        "description": "List of managed configurations.",
+        "items": {
+          "properties": {
+            "description": {
+              "description": "Description of the managed configuration.",
+              "example": "Workstation and server configuration pre-patch installation",
+              "type": "string"
+            },
+            "id": {
+              "description": "Unique identifier of the managed configuration.",
+              "example": "f6c469cf-d2b3-4e53-b2f3-08bb917e4d43",
+              "format": "uuid",
+              "type": "string"
+            },
+            "is_default": {
+              "description": "Indicates whether this is the default managed configuration.",
+              "example": false,
+              "type": "boolean"
+            },
+            "name": {
+              "description": "Name of the managed configuration.",
+              "example": "WorkstationAndServer Settings",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      }
+    }
+  }
+}

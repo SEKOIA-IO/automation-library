@@ -1,0 +1,32 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "feed_id": {
+                "type": "string",
+                "description": "ID of the SEKOIA.IO feed to get data from",
+                "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608"
+            }
+        },
+        "type": "object",
+        "title": "Feed consumption configuration"
+    },
+    "description": "Get all non-revoked objects from SEKOIA.IO Intelligence feed",
+    "docker_parameters": "feed_consumption_trigger",
+    "name": "Feed Consumption",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "stix_objects": {
+                "description": "STIX objects returned by the feed",
+                "type": "object"
+            }
+        },
+        "required": [
+            "stix_objects"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "ac6100ed-3fb7-4355-83ac-049c14aa44fd"
+}

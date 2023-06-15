@@ -1,0 +1,49 @@
+{
+    "uuid": "f0512f6d-6e22-459b-8030-734e1d408491",
+    "name": "Hex Passive DNS",
+    "docker_parameters": "pdns_hex",
+    "description": "Retrieve results by searching for specified hexadecimal bytes within PDNS record data field.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "type": {
+                "in": "query",
+                "type": "string"
+            },
+            "max": {
+                "in": "query",
+                "type": "string"
+            },
+            "lastSeenAfter": {
+                "in": "query",
+                "type": "string"
+            },
+            "firstSeenBefore": {
+                "in": "query",
+                "type": "string"
+            },
+            "hex": {
+                "in": "query",
+                "type": "string",
+                "description": "Hexadecimal encoding of data field bytes"
+            }
+        },
+        "required": ["hex"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "recordCount": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "records": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

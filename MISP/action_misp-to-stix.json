@@ -1,0 +1,34 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "event": {
+                "description": "MISP event to convert to STIX",
+                "type": "object"
+            }
+        },
+        "required": [
+            "event"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Convert MISP event to STIX 2",
+    "docker_parameters": "convert-misp-to-stix",
+    "name": "MISP to STIX",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "bundle": {
+                "description": "Converted STIX Bundle",
+                "type": "object"
+            }
+        },
+        "required": [
+            "bundle"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "710c46f9-9984-437e-a6a0-cd28db7978d0"
+}

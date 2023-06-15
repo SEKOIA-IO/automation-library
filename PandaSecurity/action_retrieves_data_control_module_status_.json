@@ -1,0 +1,47 @@
+{
+  "uuid": "b05112d1-1821-48b3-8f67-ddc2bfa7baed",
+  "name": "Get DataControl module status",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/datacontrolstatistics",
+  "description": "Retrieves a count of files and devices that Data Control identified with each type of Personally Identifiable Information (PII).",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get DataControl module status",
+    "properties": {}
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "properties": {
+        "counter_id": {
+          "description": "Type of data control counter.\n- 0: Files with unknown Personally Identifiable Information (PII)\n- 1: Files that contain personal ID card numbers\n- 2: Files that contain passport numbers\n- 3: Files that contain credit card numbers\n- 4: Files that contain bank account numbers\n- 5: Files that contain driver's license numbers\n- 6: Files that contain social security numbers\n- 7: Files that contain email addresses\n- 9: Files that contain IP addresses\n- 10: Files that contain first names and last names\n- 11: Files that contain postal addresses and ZIP or postal code\n- 13: Files that contain phone numbers\n- 2000: Total files with Personably Identifiable Information (PII)\n",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            9,
+            10,
+            11,
+            13,
+            2000
+          ],
+          "number_of_devices": {
+            "description": "Number of devices with personal data.",
+            "type": "integer"
+          },
+          "number_of_files": {
+            "description": "Number of files with personal data.",
+            "type": "integer"
+          },
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  }
+}

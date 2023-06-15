@@ -1,0 +1,8 @@
+{
+    "configuration": {},
+    "description": "RSS is a internet standard for web syndication. It usually used by websites to publish frequently updated information.\n\nThis module exposes triggers to subscribe to RSS feeds.",
+    "name": "RSS",
+    "uuid": "52686cd0-8636-48d3-a7d6-9c20ee47f111",
+    "slug": "rss",
+    "version": "1.22"
+}

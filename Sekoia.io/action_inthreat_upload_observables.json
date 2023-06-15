@@ -1,0 +1,23 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "observables": {
+                "description": "List of observables or bundle to upload to inThreat",
+                "type": "array"
+            },
+            "observables_path": {
+                "description": "Path of the observables file to upload inThreat",
+                "type": "string"
+            }
+        },
+        "oneOf": [{"required": ["observables"]}, {"required": ["observables_path"]}],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Upload observables to inthreat",
+    "docker_parameters": "upload_observables_inthreat",
+    "name": "Upload Observables",
+    "results": {},
+    "uuid": "ab660ed7-9160-4f91-bb1c-3d49dc8c0972"
+}

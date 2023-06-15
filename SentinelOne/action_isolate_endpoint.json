@@ -1,0 +1,59 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ids": {
+        "description": "The list of Agent IDs to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "account_ids": {
+        "description": "The list of Account IDs to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "group_ids": {
+        "description": "The list of network group to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "site_ids": {
+        "description": "The list of Site IDs to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "query": {
+        "description": "Free-text search term to use",
+        "type": "string"
+      }
+    },
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Disconnect the endpoint from the network",
+  "docker_parameters": "sentinelone_agents_endpoint_isolation",
+  "name": "Isolate an endpoint",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "affected": {
+        "description": "The number of isolated endpoints",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "affected"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "1268a50e-e31d-49f3-b473-f5f9e2e93c6e"
+}

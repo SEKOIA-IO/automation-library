@@ -1,0 +1,53 @@
+{
+  "uuid": "ea1eda07-91cb-45b3-840b-e1f8dc72a628",
+  "name": "Retrieve Full Encryption Module Status",
+  "docker_parameters": "get-api/v1/accounts/{account_id}/encryptionstatistics",
+  "description": "Retrieves Full Encryption statistics.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Retrieve Full Encryption Module Status",
+    "properties": {}
+  },
+  "results": {
+    "properties": {
+      "total_supported_devices": {
+        "description": "Total number of devices that support Full Encryption.",
+        "type": "integer"
+      },
+      "with_decrypting_drives": {
+        "description": "Number of devices with at least one disk currently in the decryption process.",
+        "type": "integer"
+      },
+      "with_encrypted_by_user_drives": {
+        "description": "Number of devices where a user encrypted some or all of the disks.",
+        "type": "integer"
+      },
+      "with_encrypted_drives": {
+        "description": "Number of devices with Full Encryption on all disks.",
+        "type": "integer"
+      },
+      "with_encrypted_partially_by_user_drives": {
+        "description": "Number of devices where a user encrypted some or all of the disks. Full Encryption encrypts or decrypts the remainder.",
+        "type": "integer"
+      },
+      "with_encrypted_partially_drives": {
+        "description": "Number of devices with at least one disk with Full Encryption complete.",
+        "type": "integer"
+      },
+      "with_encrypting_drives": {
+        "description": "Number of devices with at least one disk currently in the encryption process.",
+        "type": "integer"
+      },
+      "with_non_encrypted_drives": {
+        "description": "Number of devices with no disks encrypted by the user or Full Encryption.",
+        "type": "integer"
+      },
+      "with_unknown_encryption_status": {
+        "description": "Number of devices with disks encrypted with an authentication method that Full Encryption does not support.",
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
+}

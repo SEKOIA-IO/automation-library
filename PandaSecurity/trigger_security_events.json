@@ -1,0 +1,34 @@
+{
+  "description": "Fetch the last security events",
+  "docker_parameters": "security_events_trigger",
+  "name": "Fetch Security Events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds (default 12h)",
+        "default": 43200
+      }
+    },
+    "required": [
+      "frequency"
+    ],
+    "title": "Trigger configuration",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "events": {
+        "description": "A list of security events",
+        "type": "array"
+      }
+    },
+    "required": [
+      "records"
+    ],
+    "title": "Security events"
+  },
+  "uuid": "c69d4c31-8a75-4dea-9d51-5814ae73c54a"
+}

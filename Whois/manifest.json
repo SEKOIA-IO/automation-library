@@ -1,0 +1,18 @@
+{
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "proxy": {
+                "description": "Use system proxy settings",
+                "type": "boolean"
+            }
+        },
+        "title": "Whois Configuration",
+        "type": "object"
+    },
+    "description": "Provides data enrichment for domains and IP addresses.",
+    "name": "Whois",
+    "uuid": "a55461dd-cd8b-9e05-f87a-607b574804fd",
+    "slug": "whois",
+    "version": "1.18"
+}

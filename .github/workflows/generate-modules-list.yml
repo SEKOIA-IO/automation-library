@@ -1,0 +1,34 @@
+name: Generate modules list
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  generate-modules-list:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check-out the repo under $GITHUB_WORKSPACE
+        uses: actions/checkout@v3
+
+      - id: list-modules
+        name: List modules
+        run: |
+          echo "modules=$((cut -d "/" -f1 <<< "$(ls -a */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_ENV
+
+      - name: my-app-install token
+        id: my-app
+        uses: getsentry/action-github-app-token@v1
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ steps.my-app.outputs.token }}
+          event-type: refresh-automation-modules-list
+          repository: SekoiaLab/platform
+          client-payload: '{"modules": ${{ env.modules }}}'

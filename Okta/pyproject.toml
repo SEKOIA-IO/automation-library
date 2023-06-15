@@ -30,3 +30,9 @@ include = '\.pyi?$'
 [tool.isort]
 profile = "black"
 line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]

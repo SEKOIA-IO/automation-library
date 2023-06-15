@@ -1,0 +1,639 @@
+// [START declaration]
+syntax = "proto3";
+
+package s1.dv.export;
+
+option java_package = "s1.dv.export";
+option java_multiple_files = true;
+// [END declaration]
+
+
+message Timestamp {
+    uint64 millisecondsSinceEpoch = 1;
+}
+
+// Circumvent protobuf handling of boolean false
+// All new fields with a boolean variable n
+enum EBOOL {
+    E_UNSUPPORTED = 0; // => null (N/A)
+    E_TRUE = 1; // => true
+    E_FALSE = 2; // => false
+    E_UNKNOWN = 3;
+}
+
+message UniqueKey {
+    //bytes value = 1;
+    string value = 2; // this a global change
+}
+
+message Node {
+    UniqueKey key = 1;
+}
+
+message User {
+    string name = 1;
+    string sid = 2;
+}
+
+message FullProcessId {
+    uint32 pid = 1;
+    Timestamp startTime = 2;
+}
+
+message TrueContext {
+    UniqueKey key = 1;
+}
+
+
+message Hashes {
+    string sha1 = 1;
+    string sha256 = 2;
+    string md5 = 3;
+}
+
+// will be used to mark that signature is valid
+message ValidSignature {
+}
+
+message InvalidSignature {
+    string reason = 1;
+}
+
+message Signed {
+    string identity = 1;
+
+    oneof validity {
+        ValidSignature valid = 2;
+        InvalidSignature invalid = 3;
+    }
+}
+
+message Unsigned {
+}
+
+message Signature {
+    // either unsigned or valid/invalid signature
+    oneof status {
+        Unsigned unsigned = 1;
+        Signed signed = 2;
+    }
+}
+
+
+message File {
+    Node node = 1;
+    Timestamp creationTime = 2;
+    string path = 3;
+    oneof permissions {
+        uint64 p_unix = 4;
+        string p_windows = 5;
+    }
+    User owner = 6;
+    EBOOL isDir = 7;
+    uint64 sizeBytes = 8;
+    Signature signature = 9;
+    EBOOL isKernelModule = 10;
+    Hashes hashes = 11;
+    string fileLocation = 12;
+}
+
+message Process {
+    enum Subsystem {
+        SUBSYSTEM_UNKNOWN = 0;
+        WSL = 1;
+        SYS_WIN32 = 2;
+    }
+    enum IntegrityLevel {
+        INTEGRITY_LEVEL_UNKNOWN = 0;
+        UNTRUSTED = 1;
+        LOW = 2;
+        MEDIUM = 3;
+        HIGH = 4;
+        SYSTEM = 5;
+    }
+    Node node = 1;
+    File executable = 2;
+    string commandLine = 3;
+    FullProcessId fullPid = 4;
+    User user = 6;
+    EBOOL interactive = 7;
+    Process parent = 8; // this will be used to enrich the process with its parent (and its file)
+    EBOOL excluded = 9;
+    string name = 10; // the process name
+    EBOOL root = 13; // is group root
+    Subsystem subsystem = 14;
+    uint32 sessionId = 15;
+    IntegrityLevel integrityLevel = 16;
+    EBOOL isWow64 = 17;
+    EBOOL isRedirectedCommandProcessor = 18;
+    File activeContent = 19;
+    TrueContext trueContext = 20;
+
+    ProcessCounters counters = 25;
+}
+
+// all the counters are accumulative from process birth
+message ProcessCounters {
+    uint32 modelChildProcess = 1; // Child process count
+    uint32 osChildProcess = 2; // os child process count
+    uint32 crossProcess = 3; // CrossProcessesActionsCount
+    uint32 moduleLoad = 4; // Module load count
+    uint32 fileCreation = 5; //File creation count
+    uint32 fileDeletion = 6; //File deletion count
+    uint32 fileModification = 7; //File modification count
+    uint32 exeModification = 8; //Exe files modification count
+    uint32 netConnIn = 9; //Net connection count incoming
+    uint32 netConnOut = 10; //Net connection count outgoing
+    uint32 registryModification = 11; //Registry modification count
+    uint32 crossProcessOutOfGroup = 13; //CrossProcessOutOfGroupCount
+    uint32 crossProcessDupThreadHandle = 14; //CrossProcessDupThreadHandleCount
+    uint32 crossProcessDupProcessHandle = 15; //CrossProcessDupProcessHandleCount
+    uint32 crossProcessOpenProcess = 16; //CrossProcessOpenProcessCount
+    uint32 crossProcessRemoteThread = 17; //CrossProcessRemoteThreadCount
+    uint32 dnsLookups = 19;
+
+}
+
+message ProcessCreation {
+    enum Status {
+        UNKNOWN = 0;
+        SUCCESS = 1;
+        BLOCKED = 2;
+    }
+    TrueContext trueContext = 1;
+    Process process = 2; // child process (destination)
+    Process parent = 3; // creator process (source)
+    Hashes hashes = 4; // The hashes of the file being executed
+    Signature signature = 5;
+    Status status = 6;
+}
+
+message ProcessTermination {
+    enum Signal {
+        SIG_INVALID = 0;
+        SIG_SIGKILL = 9;
+        SIG_SIGTERM = 15;
+    }
+    TrueContext trueContext = 1;
+    Process target = 2;
+    Process source = 3;
+    uint32 exitCode = 4;
+    Signal signal = 5;
+    Process parent = 6;
+}
+
+message ProcessExit {
+    TrueContext trueContext = 1;
+    Process source = 2;
+    uint32 exitCode = 3;
+    Process parent = 4;
+}
+
+message ProcessModification {
+    TrueContext trueContext = 1;
+    Process source = 2;
+}
+
+
+message FileCreation {
+    TrueContext trueContext = 1;
+    Process source = 2; // the process creating the file (source)
+    File targetFile = 3; // the created file (destination)
+}
+
+// DV2.1
+message FileModification {
+    TrueContext trueContext = 1;
+    Process source = 2; // the process modifying the file (source)
+    File file = 3; // the modified file (destination)
+    // Timestamp modificationTime = 5;
+    uint64 sizeBytes = 6;
+    Signature signature = 7;
+    EBOOL isKernelModule = 8;
+    Hashes hashes = 9; // new hashes
+    Hashes oldHashes = 10;
+}
+
+message FileDeletion {
+    TrueContext trueContext = 1;
+    Process source = 2;
+    File targetFile = 3;
+}
+
+message FileRename {
+    TrueContext trueContext = 1;
+    Process process = 2;
+    File source = 3;
+    File destination = 4;
+}
+
+message DnsQuery {
+    enum Status {
+        UNKNOWN = 0;
+        SUCCESS = 1;
+        FAILURE = 2;
+    }
+
+    TrueContext trueContext = 1;
+    Process source = 2;
+    string query = 3;
+    string results = 4;
+    //QueryStatus status = 5;
+    Status status = 6;
+}
+
+enum ConnectionDirection {
+    INCOMING = 0;
+    OUTGOING = 1;
+}
+
+message IPv4Address {
+    string address = 1;
+    uint32 port = 2;
+}
+
+message TCPv4Connection {
+    enum Status {
+        UNKNOWN = 0;
+        SUCCESS = 1;
+        FAILURE = 2;
+        BLOCKED = 3;
+    }
+
+    TrueContext trueContext = 1;
+    Process source = 2;
+    IPv4Address sourceAddress = 3;
+    IPv4Address destinationAddress = 4;
+    ConnectionDirection direction = 5;
+    Status status = 6;
+
+}
+
+message TCPv4Listen {
+    TrueContext trueContext = 1;
+    Process source = 2;
+    IPv4Address local = 3;
+}
+
+
+
+message HttpRequest {
+    TrueContext trueContext = 1;
+    Process source = 2; // the process perfoming the HTTP/S request
+    enum SourceType {
+        UNKNOWN = 0; // When using 0, the server side doesn't include the type in the json.
+        WININET = 1;
+        CHROME = 2;
+        SAFARI = 3;
+    }
+    SourceType sourceType = 3;
+    string url = 4;
+    string method = 5;
+    //repeated Header header = 6;
+}
+
+message Persistency {
+    TrueContext trueContext = 1;
+    Process source = 2;
+    string filePath = 3;
+    Timestamp installationTime = 4;
+    string type = 5;
+    string payload = 6;
+    Timestamp payloadCreationTime = 7;
+}
+
+message LoginBase {
+    TrueContext trueContext = 1;
+    Process source = 2;
+    User user = 3;
+    string type = 4;
+    IPv4Address sourceAddress = 5;
+}
+
+message Login {
+    LoginBase base = 1;
+}
+
+message Logout {
+    LoginBase base = 1;
+}
+
+message RegistryPath {
+    UniqueKey key = 1;
+    string path = 2;
+}
+
+message RegistryKeyCreation {
+    TrueContext trueContext = 1;
+    RegistryPath regKey = 2;
+    Process source = 3;
+    User owner = 4;
+}
+
+message RegistryKeyRename {
+    TrueContext trueContext = 1;
+    RegistryPath regKey = 2;
+    Process source = 3;
+    string oldKeyName = 4;
+}
+
+message RegistryKeyDelete {
+    TrueContext trueContext = 1;
+    RegistryPath regKey = 2;
+    Process source = 3;
+
+}
+
+message RegistryKeyExport {
+    TrueContext trueContext = 1;
+    RegistryPath regKey = 2;
+    Process source = 3;
+    string exportPath = 4;
+
+}
+
+message RegistryKeySecurityChanged {
+    TrueContext trueContext = 1;
+    RegistryPath regKey = 2;
+    uint32 securityInformation = 3;
+    Process source = 4;
+
+}
+
+message RegistryValueCreation {
+    TrueContext trueContext = 1;
+    RegistryPath regValue = 2;
+    uint32 valueType = 4;
+    Process source = 5;
+}
+
+message RegistryValueModified {
+    TrueContext trueContext = 1;
+    RegistryPath regValue = 2;
+    uint32 oldValueType = 3;
+    //bytes oldValueData = 4;
+    uint32 newValueType = 5;
+    //bytes newValueData = 6;
+    Process source = 7;
+    string oldValueData = 8;
+    string newValueData = 9;
+}
+
+message RegistryValueDelete {
+    TrueContext trueContext = 1;
+    RegistryPath regValue = 2;
+    Process source = 3; // creator os process
+}
+
+message RegistryKeyImport {
+    TrueContext trueContext = 1;
+    RegistryPath regKey = 2;
+    string importPath = 3;
+    Process source = 4; // creator os process
+}
+
+message ScheduledTaskRegister {
+    TrueContext trueContext = 1;
+    string taskName = 2;
+    Process source = 3; // creator os process
+}
+
+message ScheduledTaskUpdate {
+    TrueContext trueContext = 1;
+    string taskName = 2;
+    Process source = 3; // creator os process
+}
+
+message ScheduledTaskDelete {
+    TrueContext trueContext = 1;
+    string taskName = 2;
+    Process source = 3; // creator os process
+}
+
+message ScheduledTaskStart {
+    TrueContext trueContext = 1;
+    string taskName = 2;
+    File executableFile = 3;
+    Process source = 4; // creator os process
+    File targetFile = 5;
+}
+
+message ScheduledTaskTrigger {
+    TrueContext trueContext = 1;
+    string taskName = 2;
+    uint32 triggerType = 3;
+    Process source = 4; // creator os process
+}
+
+message EventLog {
+    string providerName = 1;
+    uint32 eventID = 2;
+    string description = 3;
+    string level = 4;
+    Timestamp timeCreated = 5;
+    string channel = 6;
+    string originalXml = 7;
+}
+
+message BehavioralIndicators {
+    Process source = 1;
+    string indicator = 2;
+    string metadata = 3;
+
+    BehavioralIndicatorCategory category = 4;
+    // repeated string mitreId = 6; // this will be filled server side to be aggregated upon
+
+    // all these are enriched server side using indicator field
+    string classification = 5;
+    string description = 6;
+    string friendlyName = 7;
+
+    message Tactics {
+        string name = 1;
+        string source = 2;
+
+        message Techniques {
+            string name = 1;
+            string link = 2;
+        }
+
+        repeated Techniques techniques = 3;
+    }
+
+    repeated Tactics tactics = 8;
+
+    // this will contain the falttened data from description and tactics structure
+    string longDescription = 9;
+
+}
+
+enum BehavioralIndicatorCategory {
+    BI_UNSUPPORTED = 0;
+    BI_EVASION = 1;
+    BI_GENERAL = 2;
+    BI_POST_EXPLOITATION = 3;
+    BI_RANSOMWARE = 4;
+    BI_EXPLOITATION = 5;
+    BI_PACKER = 6;
+    BI_BOOT_CONFIGURATION_UPDATE = 7;
+    BI_RECONNAISSANCE = 8;
+    BI_MALWARE = 9;
+    BI_INFOSTEALER = 10;
+    BI_INJECTION = 11;
+    BI_PERSISTENCE = 12;
+    BI_HIDING_STEALTHINESS = 13;
+    BI_ABNORMALITIES = 14;
+    BI_PRIVILEGE_ESCALATION = 15;
+}
+
+message ModuleLoad {
+    Process source = 1;
+    string path = 2;
+    bytes sha1 = 3; // hash here is context sensitive
+    bytes md5 = 4;
+}
+
+message OpenProcess {
+    Process source = 1;
+    Process target = 2;
+    uint32 desiredAccess = 3;
+
+    ProcessRelations relations = 4; // source to target relations
+}
+
+message DuplicateThread {
+    Process source = 1;
+    Process target = 2;
+    uint32 desiredAccess = 3;
+
+    ProcessRelations relations = 4; // source to target relations
+}
+
+message DuplicateProcess {
+    Process source = 1;
+    Process target = 2;
+    uint32 desiredAccess = 3;
+
+    ProcessRelations relations = 4; // source to target relations
+}
+
+message Scripts {
+    Process source = 1;
+    File targetFile = 2;
+    bytes content = 3;
+    Hashes contentHash = 4;
+    uint64 originalSize = 5;
+    string appName = 6;
+    string decodedContent = 7;
+
+}
+
+message RemoteThread {
+    Process source = 1;
+    Process target = 2;
+
+    ProcessRelations relations = 3; // source to target relations
+}
+
+enum ProcessRelations {
+    PR_UNKNOWN = 0;
+    PR_CHILD = 1;
+    PR_IN_GROUP = 2;
+    PR_NOT_IN_GROUP = 3;
+    PR_PARENT = 4;
+    PR_ROOT = 5;
+    PR_SELF = 6;
+    PR_OS_PARENT = 7;
+    PR_OS_CHILD = 8;
+    PR_OTHER = 9;
+}
+
+message Event {
+    Timestamp timestamp = 1;
+    oneof event {
+        ProcessCreation processCreation = 2; // process.creation
+        ProcessTermination processTermination = 3; // process.termination
+        ProcessExit processExit = 4; // process.exit
+        FileCreation fileCreation = 10; // file.creation
+        FileModification fileModification = 11; // file.modification
+        FileDeletion fileDeletion = 12; // file.deletion
+        FileRename fileRename = 13; // file.rename
+
+        DnsQuery dns = 20; // dns.operation
+        TCPv4Connection tcpv4 = 21; // tcpv4.incoming, tcpv4.outgoing
+        HttpRequest http = 22; // http.operation
+        Persistency persistency = 23; // persistency.operation
+        Login login = 24; // user.loggedin
+        Logout logout = 25; // user.loggedout
+        TCPv4Listen tcpv4Listen = 26; // tcpv4.listen
+
+        RegistryKeyCreation regKeyCreate = 30;
+        RegistryKeyRename regKeyRename = 32;
+        RegistryKeyDelete regKeyDelete = 33;
+        RegistryKeyExport regKeyExport = 34;
+        RegistryKeySecurityChanged regKeySecurityChanged = 35;
+        RegistryValueCreation regValueCreate = 36;
+        RegistryValueModified regValueModified = 37;
+        RegistryValueDelete regValueDelete = 38;
+        RegistryKeyImport regKeyImport = 39;
+
+        BehavioralIndicators behavioralIndicators = 41;
+
+        ProcessModification processModification = 43;
+
+        ModuleLoad moduleLoad = 45;
+
+        ScheduledTaskRegister schedTaskRegister = 50;
+        ScheduledTaskUpdate schedTaskUpdate = 51;
+        ScheduledTaskDelete schedTaskDelete = 52;
+        ScheduledTaskStart schedTaskStart = 53;
+        ScheduledTaskTrigger schedTaskTrigger = 54;
+
+        OpenProcess openProcess = 55;
+        DuplicateThread duplicateThread = 56;
+        DuplicateProcess duplicateProcess = 57;
+        Scripts scripts = 58;
+        RemoteThread remoteThread = 59;
+
+        EventLog eventLog = 60;
+
+        //ProcessInjection processInjection = 55; //TODO: next release
+        //
+        //TCPv4SocketShared tcpv4SocketShared = 27; //TODO: next release
+        //
+        //FileModifier fileModifier = 14; //TODO: next release
+        //FileScan fileScan = 15; //TODO: next release
+        //ProcessCreation2 processCreation2 = 5; //TODO: next release
+    }
+}
+
+message Meta {
+    uint32 seq_id = 1;
+    string uuid = 2;
+    string trace_id = 4; // used to  identify this request across all components
+    string agent_version = 5;
+    string os_family = 6;
+    string os_name = 7;
+    string os_revision = 8;
+    string computer_name = 9;
+    string machine_type = 10;
+    string mgmt_url = 11;
+}
+
+message Packet {
+    Meta meta = 1;
+    repeated Event events = 2;
+
+    enum Version {
+        EXPORT_NA = 0;
+        EXPORT_10 = 1;
+        EXPORT_20 = 2;
+    }
+
+    Version version = 3;
+}
+
+message SingleEvent {
+    Meta meta = 1;
+    Event event = 2;
+}

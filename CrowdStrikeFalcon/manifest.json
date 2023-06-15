@@ -1,0 +1,33 @@
+{
+    "uuid": "4fdbae70-e9cd-492e-9a39-24ce99325e3f",
+    "name": "CrowdStrike Falcon",
+    "slug": "crowdstrike-falcon",
+    "description": "Integrates with CrowdStrike Falcon EDR",
+    "version": "1.7.2",
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "client_id": {
+                "description": "Client Identifier",
+                "type": "string"
+            },
+            "client_secret": {
+                "description": "Client Secret",
+                "type": "string"
+            },
+            "base_url": {
+                "description": "Base URL of the API",
+                "type": "string",
+                "default": "https://api.eu-1.crowdstrike.com",
+                "format": "uri"
+            }
+        },
+        "required": [
+            "client_id",
+            "client_secret",
+            "base_url"
+        ],
+        "title": "CrowdStrike Falcon Configuration",
+        "type": "object"
+    }
+}
