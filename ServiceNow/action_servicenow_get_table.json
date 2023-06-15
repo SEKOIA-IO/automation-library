@@ -1,0 +1,30 @@
+{
+    "uuid": "95c56514-9191-4284-8c22-3a8cae6999f8",
+    "name": "Get Table",
+    "docker_parameters": "servicenow_get_table",
+    "description": "Retrieve Service Now table",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "get_table",
+        "properties": {
+            "table_name": {
+                "in": "path",
+                "type": "string"
+            }
+        },
+        "required": ["table_name"]
+    },
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "result": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

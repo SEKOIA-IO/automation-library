@@ -1,0 +1,8 @@
+{
+    "configuration": {},
+    "description": "This module exposes a trigger to detect new snort rules on a repository",
+    "name": "Detection Rules",
+    "uuid": "fd4754b9-aff6-4865-92c7-bb0b1d5605c0",
+    "slug": "detection-rules",
+    "version": "1.19"
+}

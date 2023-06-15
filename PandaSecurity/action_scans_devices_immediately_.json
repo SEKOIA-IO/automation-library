@@ -1,0 +1,105 @@
+{
+  "uuid": "499de369-113c-466d-98b7-5b4e0bd4ac38",
+  "name": "Scan devices",
+  "docker_parameters": "post-api/v1/accounts/{account_id}/immediatescan",
+  "description": "Starts a task to scan the specified devices immediately.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Scan devices",
+    "properties": {
+      "device_ids": {
+        "description": "List of IDs of devices to scan.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "str"
+        }
+      },
+      "task_name": {
+        "description": "Name of the scan task.\nExample: Routine scan",
+        "type": "str",
+        "in": "body"
+      },
+      "task_description": {
+        "description": "Description of the scan task.\nExample: Windows 8 machines only",
+        "type": "str",
+        "in": "body"
+      },
+      "scan_scope": {
+        "description": "Scope of the scan task. Specify one of these values:\n\t- 0 - Whole computer\n\t- 1 - Critical areas\n\t- 2 - Specified items\nExample: 0",
+        "type": "integer",
+        "in": "body"
+      },
+      "specified_items_to_scan": {
+        "description": "List of specific locations or items to scan. All folders and files in the specified locations are scanned.\nWorks only when scan_scope is 2.\nExample: \"C:\\Downloads\", \"C:\\Documents\"",
+        "type": "str",
+        "in": "body"
+      },
+      "detect_hacking_tools": {
+        "description": "Indicates whether to detect hacking tools. This detects potentially unwanted programs, as well as programs used by hackers.\nExample: false",
+        "type": "boolean",
+        "in": "body"
+      },
+      "detect_suspicious_files": {
+        "description": "Indicates whether to detect suspicious files. In scheduled scans, the tool scans computer software but does not run it. Some types of threats have a lower chance of detection. Set this option to true to scan with heuristic algorithms and improve detection rates.\nExample: true",
+        "type": "boolean",
+        "in": "body"
+      },
+      "scan_compressed_files": {
+        "description": "Indicates whether to scan compressed files. This decompresses compressed files and scans their contents.\nExample: true",
+        "type": "boolean",
+        "in": "body"
+      },
+      "apply_exclusions_on_scan": {
+        "description": "Indicates whether to exclude items from the scan, such as specific files, files with a specific extension, or a specific directory.\nExample: false",
+        "type": "boolean",
+        "in": "body"
+      },
+      "extensions_to_exclude": {
+        "description": "List of file extensions to exclude from the scan.\nWorks only when apply_exclusions_on_scan is true.\nExample: \"exe\",\"pdf\"",
+        "type": "str",
+        "in": "body"
+      },
+      "files_to_exclude": {
+        "description": "List of file names (with their extensions) to exclude from the scan.\nWorks only when apply_exclusions_on_scan is true.\nExample: \"Chrome.exe\", \"Explorer.exe\"",
+        "type": "str",
+        "in": "body"
+      },
+      "folders_to_exclude": {
+        "description": "List of folders to exclude from the scan. You must include the full path.\nWorks only when apply_exclusions_on_scan is true.\nExample: \"D:/shared_drive/documents\"",
+        "type": "str",
+        "in": "body"
+      },
+      "execution_window_expiration": {
+        "description": "Time period in which the scan must run before it times out. The default is 7 days.\nExample: 8.07:06:05 specifies 8 days, 7 hours, 6 minutes, and 5 seconds",
+        "type": "str",
+        "in": "body"
+      }
+    },
+    "required": [
+      "device_ids",
+      "task_name"
+    ]
+  },
+  "results": {
+    "properties": {
+      "no_executed_by_not_found_device_ids": {
+        "items": {
+          "description": "If the action could not be completely executed, the list of device ids not found (not executed) will be returned here.",
+          "example": "00ab3e54-7bb7-4bd3-bd39-237a9d191a44, 287324d8-194f-4f5a-a7ad-e2480d5ad1b2",
+          "format": "uuid",
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "task_id": {
+        "description": "ID of the completed scan task.",
+        "example": "12a345a6-a789-0123-a4aa-56a7890a12a3",
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+}

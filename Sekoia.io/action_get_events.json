@@ -1,0 +1,41 @@
+{
+    "uuid": "af0b4355-a428-43d6-991c-d5ff878e17d5",
+    "name": "Get Events",
+    "docker_parameters": "get-events",
+    "description": "Query events",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Arguments",
+        "type": "object",
+        "properties": {
+            "query": {
+                "description": "Event search query",
+                "type": "string"
+            },
+            "earliest_time": {
+                "description": "The earliest time of the time range of the search",
+                "type": "string"
+            },
+            "latest_time": {
+                "description": "The latest time of the time range of the search",
+                "type": "string"
+            }
+        },
+        "required": [
+            "query",
+            "earliest_time",
+            "latest_time"
+        ]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "events": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

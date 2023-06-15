@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Cybereason</title>
+    <meta name="viewport" content="width=device-width">
+<link rel="shortcut icon" href="favicon.ico"></head>
+<body class="cbr-theme-light">
+
+<app></app>
+
+<script type="text/javascript">
+(function () {
+    var loadScript = function(uri) {
+        const myScript = document.createElement('script');
+        myScript.setAttribute('type', 'text/javascript');
+        myScript.setAttribute('src', uri);
+        myScript.async = true;
+        document.body.appendChild(myScript);
+    };
+    var loadCSS = function(uri) {
+        const head = document.getElementsByTagName('head')[0];
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = uri;
+        link.media = 'all';
+        head.appendChild(link);
+    };
+    function loadFallback() {
+        window.__isLoadShellFallback__ = true;
+        var script = document.createElement('script');
+        script.setAttribute('src', 'rest/uimodules/js/shell-sdk/latest/shell.js');
+        script.setAttribute('type', 'text/javascript');
+        script.setAttribute('data-shell-sdk-url', 'rest/uimodules/js/shell-sdk');
+        script.async = false;
+        document.body.appendChild(script)
+    
+    	// prevent chaching by adding query param
+        loadCSS('/public/common.css?22.1.168');
+        loadCSS('/public/vendors.css?22.1.168');
+        loadCSS('/public/app.css?22.1.168');
+        
+        loadScript('/public/common.js?22.1.168');
+        loadScript('/public/vendors.js?22.1.168');
+        loadScript('/app.js?22.1.168');
+        
+        loadScript('/externals/newrelic.js');
+        loadScript('/externals/pendo.js');
+    }
+    var tenant = window.location.hostname.split('.')[0];
+    var shellSrc = 'rest/dynamic/v1/ui-infra-shell/public-api/js/shell.js?pVersion=22.1.168&tenantId='+ tenant;
+
+    var myScript = document.createElement('script');
+    myScript.setAttribute('src', shellSrc);
+    myScript.setAttribute('type', 'text/javascript');
+    myScript.setAttribute('data-shell-sdk-url', 'rest/uimodules/js/shell-sdk');
+    myScript.async = false;
+    myScript.onerror = loadFallback;
+    document.body.appendChild(myScript);
+})();
+</script>
+
+</body>
+</html>

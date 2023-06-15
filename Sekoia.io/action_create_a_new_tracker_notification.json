@@ -1,0 +1,214 @@
+{
+    "uuid": "ab2305b9-abca-4fdb-b5f7-6fa39b04cef9",
+    "name": "Create Tracker Notification",
+    "docker_parameters": "post-trackers/notifications/",
+    "description": "Create a notification for a specific tracker",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "create_a_new_tracker_notification",
+        "properties": {
+            "data": {
+                "type": "object",
+                "properties": {
+                    "rule": {
+                        "type": "object",
+                        "properties": {
+                            "assigned_to": {
+                                "type": "string",
+                                "default": ""
+                            },
+                            "type": {
+                                "type": "string"
+                            },
+                            "auto_merge": {
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "indicates": {
+                                "type": "array",
+                                "default": [],
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "ruleset_name": {
+                                "type": "string"
+                            },
+                            "kill_chain_phases": {
+                                "type": "array",
+                                "default": [],
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "kill_chain_name": {
+                                            "type": "string"
+                                        },
+                                        "phase_name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "attributes": {
+                                "type": "object",
+                                "default": {}
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "id": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "ruleset_name",
+                            "type"
+                        ]
+                    },
+                    "created": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "object",
+                        "default": {}
+                    },
+                    "status": {
+                        "type": "string",
+                        "default": "pending",
+                        "enum": [
+                            "pending",
+                            "true_positive",
+                            "false_positive",
+                            "ignored"
+                        ]
+                    },
+                    "observable": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string"},
+                            "id": {"type": "string"}
+                        }
+                    },
+                    "id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "created",
+                    "observable",
+                    "rule"
+                ],
+                "in": "body"
+            }
+        },
+        "required": [
+            "data"
+        ]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "data": {
+                "type": "object",
+                "properties": {
+                    "rule": {
+                        "type": "object",
+                        "properties": {
+                            "assigned_to": {
+                                "type": "string",
+                                "default": ""
+                            },
+                            "type": {
+                                "type": "string"
+                            },
+                            "auto_merge": {
+                                "type": "boolean",
+                                "default": false
+                            },
+                            "indicates": {
+                                "type": "array",
+                                "default": [],
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "ruleset_name": {
+                                "type": "string"
+                            },
+                            "kill_chain_phases": {
+                                "type": "array",
+                                "default": [],
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "kill_chain_name": {
+                                            "type": "string"
+                                        },
+                                        "phase_name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "attributes": {
+                                "type": "object",
+                                "default": {}
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "id": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "ruleset_name",
+                            "type"
+                        ]
+                    },
+                    "created": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "object",
+                        "default": {}
+                    },
+                    "status": {
+                        "type": "string",
+                        "default": "pending",
+                        "enum": [
+                            "pending",
+                            "true_positive",
+                            "false_positive",
+                            "ignored"
+                        ]
+                    },
+                    "observable": {
+                        "type": "object",
+                        "properties": {
+                            "type": {"type": "string"},
+                            "id": {"type": "string"}
+                        }
+                    },
+                    "id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "created",
+                    "id",
+                    "observable",
+                    "rule"
+                ]
+            }
+        },
+        "required": [
+            "data"
+        ]
+    }
+}

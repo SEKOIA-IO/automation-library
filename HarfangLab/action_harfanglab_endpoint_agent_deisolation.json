@@ -1,0 +1,39 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "id": {
+                "description": "The identifier of the agent to deisolate",
+                "type": "string"
+            }
+        },
+        "required": [
+            "id"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Deisolate an agent",
+    "docker_parameters": "harfanglab_endpoint_agent_deisolation",
+    "name": "Deisolate an agent",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "requested": {
+                "description": "The list of identifiers of non-deisolated endpoints",
+                "type": "array"
+            },
+            "unrequested": {
+                "description": "The list of identifiers of deisolated endpoints",
+                "type": "array"
+            }
+        },
+        "required": [
+            "requested",
+            "unrequested"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "b2a24dfa-9662-4484-8b0a-0a21958231d1"
+}

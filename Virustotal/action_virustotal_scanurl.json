@@ -1,0 +1,73 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "url": {
+                "description": "The url to scan",
+                "type": "string",
+                "format": "uri"
+            },
+            "detect_treshold": {
+                "description": "The number of positives from VirusTotal that will be used as a treshold of detection",
+                "type": "integer"
+            }
+        },
+        "required": [
+            "url"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Scan url with Virus Total",
+    "docker_parameters": "virustotal_scan_url",
+    "name": "Scan URL",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "response_code": {
+                "type": "integer",
+                "description": "Response Code"
+            },
+            "verbose_msg": {
+                "type": "string",
+                "description": "Textual description of the response code"
+            },
+            "scan_id": {
+                "type": "string",
+                "description": "Scan Identifier"
+            },
+            "scan_date": {
+                "type": "string",
+                "description": "Date of last scan"
+            },
+            "url": {
+                "type": "string",
+                "description": "Scanned URL"
+            },
+            "permalink": {
+                "type": "string",
+                "description": "Permalink to the scan report"
+            },
+            "positives": {
+                "type": "integer",
+                "description": "Number of antivirus detecting this sample as malicious"
+            },
+            "total": {
+                "type": "integer",
+                "description": "Number of antivirus that scanned the sample"
+            },
+            "scans": {
+                "type": "object",
+                "description": "Scan results (one scan result per key)"
+            }
+        },
+        "title": "Results",
+        "type": "object"
+    },
+    "outputs": {
+        "detected": "The url is detected by antivirus vendors",
+        "not detected": "The url is not detected by antivirus vendors",
+        "unknown": "The url is unknown"
+    },
+    "uuid": "b43a7897-b92c-4fe1-8a5c-be9e023c4f1c"
+}

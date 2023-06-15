@@ -1,0 +1,37 @@
+{
+  "uuid": "97d8da42-a30e-4ece-931e-cf912aec5048",
+  "name": "Link Devices to Managed Configurations",
+  "docker_parameters": "patch-api/v1/accounts/{account_id}/managedconfigurations/{type}/{config_id}",
+  "description": "Links devices to a specified configuration.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Link Devices to Managed Configurations",
+    "properties": {
+      "config_id": {
+        "description": "Identifier of the managed configuration to associate with the devices.\nExample: 2836d89d-1e98-4377-92b7-0a76ac2a7699",
+        "type": "str",
+        "in": "path"
+      },
+      "type": {
+        "description": "Type of configuration. Currently, only option 2 is supported.\n\t- 2 — Workstations and servers.\nExample: 2",
+        "type": "integer",
+        "in": "path",
+        "enum": [2]
+      },
+      "device_ids": {
+        "description": "List of IDs of devices to link to the specified managed configuration..\nExample: cb509c17-7b88-461a-ba3b-3d43e29e6cd4,2c13685e-7d1f-4726-9ad3-5c8fa7718bab",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "str"
+        }
+      }
+    },
+    "required": [
+      "type",
+      "config_id",
+      "device_ids"
+    ]
+  }
+}

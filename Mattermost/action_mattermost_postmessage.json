@@ -1,0 +1,29 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "message": {
+                "description": "The message to post",
+                "type": "string"
+            },
+            "channel": {
+                "description": "The channel the message posts in. Use the channel’s name and not the display name, e.g. use town-square, not Town Square.",
+                "type": "string"
+            },
+            "username": {
+                "description": "Overrides the username the message posts as.",
+                "type": "string"
+            }
+        },
+        "required": [
+            "message"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Post message to Mattermost",
+    "docker_parameters": "mattermost_post_message",
+    "name": "Post Message",
+    "results": {},
+    "uuid": "e682ce5e-57aa-49b0-aace-9849448b2082"
+}

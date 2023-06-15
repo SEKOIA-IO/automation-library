@@ -1,0 +1,447 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "group_ids": {
+        "description": "The list of network group to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "site_ids": {
+        "description": "The list of Site IDs to filter by",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "query": {
+        "description": "Free-text search term to use",
+        "type": "string"
+      },
+      "from_date": {
+        "description": "Get events created after this timestamp",
+        "type": "string",
+        "format": "datetime"
+      },
+      "to_date": {
+        "description": "Get events created before or at this timestamp",
+        "type": "string",
+        "format": "datetime"
+      },
+      "timeout": {
+        "description": "The maximum time, in seconds, the query should be processed in (default 300s)",
+        "type": "integer",
+        "default": 300
+      }
+    },
+    "required": [
+      "query",
+      "to_date",
+      "from_date",
+      "timeout"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Create a query in Deep Visibility and get the events",
+  "docker_parameters": "sentinelone_deep_visibility_query",
+  "name": "Query events in Deep Visibility",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "status": {
+        "description": "The status of the query",
+        "type": "string",
+        "enum": [
+          "succeed",
+          "canceled",
+          "failed",
+          "timeout"
+        ]
+      },
+      "status_reason": {
+        "description": "The reason of the status",
+        "type": "string"
+      },
+      "events": {
+        "description": "The events got from the query",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "agentOs": {
+              "description": "agentOs",
+              "type": "string"
+            },
+            "srcIp": {
+              "description": "srcIp",
+              "type": "string"
+            },
+            "rpid": {
+              "description": "rpid",
+              "type": "string"
+            },
+            "indicatorMetadata": {
+              "description": "indicatorMetadata",
+              "type": "string"
+            },
+            "tid": {
+              "description": "tid",
+              "type": "string"
+            },
+            "oldFileName": {
+              "description": "oldFileName",
+              "type": "string"
+            },
+            "processIsMalicious": {
+              "description": "processIsMalicious",
+              "type": "boolean"
+            },
+            "processGroupId": {
+              "description": "processGroupId",
+              "type": "string"
+            },
+            "oldFileSha256": {
+              "description": "oldFileSha256",
+              "type": "string"
+            },
+            "processImagePath": {
+              "description": "processImagePath",
+              "type": "string"
+            },
+            "processUserName": {
+              "description": "processUserName",
+              "type": "string"
+            },
+            "taskName": {
+              "description": "taskName",
+              "type": "string"
+            },
+            "agentId": {
+              "description": "agentId",
+              "type": "string"
+            },
+            "isAgentVersionFullySupportedForPgMessage": {
+              "description": "isAgentVersionFullySupportedForPgMessage",
+              "type": "string"
+            },
+            "loginsBaseType": {
+              "description": "loginsBaseType",
+              "type": "string"
+            },
+            "oldFileMd5": {
+              "description": "oldFileMd5",
+              "type": "string"
+            },
+            "connectionStatus": {
+              "description": "connectionStatus",
+              "type": "string"
+            },
+            "parentPid": {
+              "description": "parentPid",
+              "type": "string"
+            },
+            "parentProcessStartTime": {
+              "description": "parentProcessStartTime",
+              "type": "string"
+            },
+            "id": {
+              "description": "id",
+              "type": "string"
+            },
+            "user": {
+              "description": "user",
+              "type": "string"
+            },
+            "agentName": {
+              "description": "agentName",
+              "type": "string"
+            },
+            "dstPort": {
+              "description": "dstPort",
+              "type": "integer"
+            },
+            "parentProcessGroupId": {
+              "description": "parentProcessGroupId",
+              "type": "string"
+            },
+            "networkSource": {
+              "description": "networkSource",
+              "type": "string"
+            },
+            "trueContext": {
+              "description": "trueContext",
+              "type": "string"
+            },
+            "fileId": {
+              "description": "fileId",
+              "type": "string"
+            },
+            "taskPath": {
+              "description": "taskPath",
+              "type": "string"
+            },
+            "networkMethod": {
+              "description": "networkMethod",
+              "type": "string"
+            },
+            "pid": {
+              "description": "pid",
+              "type": "string"
+            },
+            "agentUuid": {
+              "description": "agentUuid",
+              "type": "string"
+            },
+            "srcPort": {
+              "description": "srcPort",
+              "type": "integer"
+            },
+            "fileSha1": {
+              "description": "fileSha1",
+              "type": "string"
+            },
+            "isAgentVersionFullySupportedForPg": {
+              "description": "isAgentVersionFullySupportedForPg",
+              "type": "boolean"
+            },
+            "fileSize": {
+              "description": "fileSize",
+              "type": "string"
+            },
+            "processSessionId": {
+              "description": "processSessionId",
+              "type": "string"
+            },
+            "oldFileSha1": {
+              "description": "oldFileSha1",
+              "type": "string"
+            },
+            "parentProcessIsMalicious": {
+              "description": "parentProcessIsMalicious",
+              "type": "boolean"
+            },
+            "processSubSystem": {
+              "description": "processSubSystem",
+              "type": "string"
+            },
+            "signatureSignedInvalidReason": {
+              "description": "signatureSignedInvalidReason",
+              "type": "string"
+            },
+            "md5": {
+              "description": "md5",
+              "type": "string"
+            },
+            "processImageSha1Hash": {
+              "description": "processImageSha1Hash",
+              "type": "string"
+            },
+            "indicatorName": {
+              "description": "indicatorName",
+              "type": "string"
+            },
+            "threatStatus": {
+              "description": "threatStatus",
+              "type": "string"
+            },
+            "agentMachineType": {
+              "description": "agentMachineType",
+              "type": "string"
+            },
+            "registryId": {
+              "description": "registryId",
+              "type": "string"
+            },
+            "processDisplayName": {
+              "description": "processDisplayName",
+              "type": "string"
+            },
+            "dnsResponse": {
+              "description": "dnsResponse",
+              "type": "string"
+            },
+            "agentIsActive": {
+              "description": "agentIsActive",
+              "type": "boolean"
+            },
+            "fileFullName": {
+              "description": "fileFullName",
+              "type": "string"
+            },
+            "indicatorDescription": {
+              "description": "indicatorDescription",
+              "type": "string"
+            },
+            "indicatorCategory": {
+              "description": "indicatorCategory",
+              "type": "string"
+            },
+            "dstIp": {
+              "description": "dstIp",
+              "type": "string"
+            },
+            "signedStatus": {
+              "description": "signedStatus",
+              "type": "string"
+            },
+            "processUniqueKey": {
+              "description": "processUniqueKey",
+              "type": "string"
+            },
+            "srcProcDownloadToken": {
+              "description": "srcProcDownloadToken",
+              "type": "string"
+            },
+            "fileSha256": {
+              "description": "fileSha256",
+              "type": "string"
+            },
+            "fileType": {
+              "description": "fileType",
+              "type": "string"
+            },
+            "processIsWow64": {
+              "description": "processIsWow64",
+              "type": "string"
+            },
+            "agentVersion": {
+              "description": "agentVersion",
+              "type": "string"
+            },
+            "processName": {
+              "description": "processName",
+              "type": "string"
+            },
+            "processCmd": {
+              "description": "processCmd",
+              "type": "string"
+            },
+            "relatedToThreat": {
+              "description": "relatedToThreat",
+              "type": "string"
+            },
+            "parentProcessUniqueKey": {
+              "description": "parentProcessUniqueKey",
+              "type": "string"
+            },
+            "sha256": {
+              "description": "sha256",
+              "type": "string"
+            },
+            "agentIsDecommissioned": {
+              "description": "agentIsDecommissioned",
+              "type": "boolean"
+            },
+            "forensicUrl": {
+              "description": "forensicUrl",
+              "type": "string"
+            },
+            "eventType": {
+              "description": "eventType",
+              "type": "string"
+            },
+            "loginsUserName": {
+              "description": "loginsUserName",
+              "type": "string"
+            },
+            "processIntegrityLevel": {
+              "description": "processIntegrityLevel",
+              "type": "string"
+            },
+            "direction": {
+              "description": "direction",
+              "type": "string"
+            },
+            "agentIp": {
+              "description": "agentIp",
+              "type": "string"
+            },
+            "processIsRedirectedCommandProcessor": {
+              "description": "processIsRedirectedCommandProcessor",
+              "type": "string"
+            },
+            "objectType": {
+              "description": "objectType",
+              "type": "string"
+            },
+            "processRoot": {
+              "description": "processRoot",
+              "type": "string"
+            },
+            "agentInfected": {
+              "description": "agentInfected",
+              "type": "boolean"
+            },
+            "registryPath": {
+              "description": "registryPath",
+              "type": "string"
+            },
+            "fileMd5": {
+              "description": "fileMd5",
+              "type": "string"
+            },
+            "processStartTime": {
+              "description": "processStartTime",
+              "type": "string"
+            },
+            "siteName": {
+              "description": "siteName",
+              "type": "string"
+            },
+            "agentDomain": {
+              "description": "agentDomain",
+              "type": "string"
+            },
+            "createdAt": {
+              "description": "createdAt",
+              "type": "datetime"
+            },
+            "parentProcessName": {
+              "description": "parentProcessName",
+              "type": "string"
+            },
+            "verifiedStatus": {
+              "description": "verifiedStatus",
+              "type": "string"
+            },
+            "dnsRequest": {
+              "description": "dnsRequest",
+              "type": "string"
+            },
+            "agentGroupId": {
+              "description": "agentGroupId",
+              "type": "string"
+            },
+            "agentNetworkStatus": {
+              "description": "agentNetworkStatus",
+              "type": "string"
+            },
+            "networkUrl": {
+              "description": "networkUrl",
+              "type": "string"
+            },
+            "publisher": {
+              "description": "publisher",
+              "type": "string"
+            },
+            "sha1": {
+              "description": "sha1",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "status",
+      "status_reason",
+      "events"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "6979e852-d2c0-42aa-b713-9bae8c93b274"
+}

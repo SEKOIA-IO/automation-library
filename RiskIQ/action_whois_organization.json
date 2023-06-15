@@ -1,0 +1,40 @@
+{
+    "uuid": "192b85b6-4bed-493b-897e-41893a4d14bc",
+    "name": "Reverse Whois (organization)",
+    "docker_parameters": "whois_organization",
+    "description": "Get WHOIS records associated with an organization",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "org": {
+                "in": "query",
+                "type": "string"
+            },
+            "exact": {
+                "in": "query",
+                "type": "string"
+            },
+            "maxResults": {
+                "in": "query",
+                "type": "string"
+            }
+        },
+        "required": ["org"]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "results": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "domains": {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

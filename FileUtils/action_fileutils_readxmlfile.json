@@ -1,0 +1,57 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "file_path": {
+                "description": "File path to the XML or HTML file to read.",
+                "type": "string"
+            },
+            "file": {
+                "description": "The XML content to read.",
+                "type": "object"
+            },
+            "xpath": {
+                "description": "XML path to evaluate against read file content",
+                "type": "string"
+            },
+	    "source_type": {
+		"description": "Source type of the input, it can be XML or HTML",
+		"type": "string"
+	    },
+            "return_list": {
+                "description": "Always return a list of results. Default to false.",
+                "type": "boolean",
+                "default": false
+            },
+            "to_file": {
+                "type": "boolean",
+                "description": "Whether the event should be saved in a file or sent directly",
+                "default": false
+            }
+        },
+        "oneOf": [{"required": ["file"]}, {"required": ["file_path"]}],
+        "required": [],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Read the XML file and return its content evaluated against specified xpath",
+    "docker_parameters": "fileutils_readxmlfile",
+    "name": "Read XML File",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "output": {
+                "description": "Content read from file",
+                "type": "object"
+            },
+            "output_path": {
+                "description": "Path to the file with the content",
+                "type": "object"
+            }
+        },
+        "required": [],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "1205442a-690e-4520-bc69-cfa153cc2095"
+}

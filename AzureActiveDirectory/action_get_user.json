@@ -2,7 +2,7 @@
   "name": "Get User",
   "description": "Get information about an Azure Active Directory user. Requires the User.Read.All permission.",
   "uuid": "edbe4896-aefd-5429-95c3-eab869e207c4",
-  "slug": "GetUserAction",
+  "docker_parameters": "GetUserAction",
   "arguments": {
     "title": "RequiredSingleUserArguments",
     "type": "object",

@@ -1,0 +1,28 @@
+{
+    "uuid": "bd5ca9b2-5c9f-4ecd-8122-ad3ba09c83f5",
+    "name": "List IPs from tag",
+    "docker_parameters": "get-query/sensors/tag/{tag}",
+    "description": "Get a list of IPs that have been associated with a specific TAG.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "List IPs from tag",
+        "properties": {
+            "tag": {
+                "in": "path",
+                "type": "string"
+            },
+            "days": {
+                "in": "query",
+                "type": "integer"
+            }
+        },
+        "required": ["tag"]
+    },
+    "results": {
+        "type": "array",
+        "items": {
+            "type": "string"
+        }
+    }
+}

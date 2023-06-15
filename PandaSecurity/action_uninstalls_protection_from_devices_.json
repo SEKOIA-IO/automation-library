@@ -1,0 +1,24 @@
+{
+    "uuid": "e381b0eb-2b54-4f5a-9295-ce269cd6787a",
+    "name": "Uninstall protection from devices",
+    "docker_parameters": "post-api/v1/accounts/{account_id}/devices/uninstall",
+    "description": "Uninstalls protection from the specified devices.",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Uninstall proctection from devices",
+        "properties": {
+            "device_ids": {
+                "description": "List of IDs of devices to remove the protection.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
+                "type": "array",
+                "in": "body",
+                "items": {
+                    "type": "str"
+                }
+            }
+        },
+        "required": [
+            "device_ids"
+        ]
+    }
+}

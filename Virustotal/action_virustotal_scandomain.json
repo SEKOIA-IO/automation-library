@@ -1,0 +1,223 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "domain": {
+                "description": "The domain to scan",
+                "type": "string"
+            }
+        },
+        "required": [
+            "domain"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Scan domain with Virus Total",
+    "docker_parameters": "virustotal_scan_domain",
+    "name": "Scan Domain",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "response_code": {
+                "type": "integer",
+                "description": "Response Code"
+            },
+            "verbose_msg": {
+                "type": "string",
+                "description": "Textual description of the response code"
+            },
+            "undetected_referrer_samples": {
+                "type": "array",
+                "description": "List of undetected samples referring to this domain",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "date": {
+                            "type": "string",
+                            "description": "Date of sample submission"
+                        },
+                        "positives": {
+                            "type": "integer",
+                            "description": "Number of antivirus detecting this sample as malicious"
+                        },
+                        "total": {
+                            "type": "integer",
+                            "description": "Number of antivirus that scanned this sample"
+                        },
+                        "sha256": {
+                            "type": "string",
+                            "description": "SHA256 hash of the sample"
+                        }
+                    }
+                }
+            },
+            "undetected_downloaded_samples": {
+                "type": "array",
+                "description": "List of undetected samples downloaded from this domain",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "date": {
+                            "type": "string",
+                            "description": "Date of sample submission"
+                        },
+                        "positives": {
+                            "type": "integer",
+                            "description": "Number of antivirus detecting this sample as malicious"
+                        },
+                        "total": {
+                            "type": "integer",
+                            "description": "Number of antivirus that scanned this sample"
+                        },
+                        "sha256": {
+                            "type": "string",
+                            "description": "SHA256 hash of the sample"
+                        }
+                    }
+                }
+            },
+            "undetected_urls": {
+                "type": "array",
+                "description": "List of undetected URLs on this domain",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "scan_date": {
+                            "type": "string",
+                            "description": "Date of last scan"
+                        },
+                        "positives": {
+                            "type": "integer",
+                            "description": "Number of antivirus detecting this sample as malicious"
+                        },
+                        "total": {
+                            "type": "integer",
+                            "description": "Number of antivirus that scanned this sample"
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "URL on this domain"
+                        }
+                    }
+                }
+            },
+            "detected_referrer_samples": {
+                "type": "array",
+                "description": "List of detected samples referring to this domain",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "date": {
+                            "type": "string",
+                            "description": "Date of sample submission"
+                        },
+                        "positives": {
+                            "type": "integer",
+                            "description": "Number of antivirus detecting this sample as malicious"
+                        },
+                        "total": {
+                            "type": "integer",
+                            "description": "Number of antivirus that scanned this sample"
+                        },
+                        "sha256": {
+                            "type": "string",
+                            "description": "SHA256 hash of the sample"
+                        }
+                    }
+                }
+            },
+            "detected_downloaded_samples": {
+                "type": "array",
+                "description": "List of detected samples downloaded from this domain",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "date": {
+                            "type": "string",
+                            "description": "Date of sample submission"
+                        },
+                        "positives": {
+                            "type": "integer",
+                            "description": "Number of antivirus detecting this sample as malicious"
+                        },
+                        "total": {
+                            "type": "integer",
+                            "description": "Number of antivirus that scanned this sample"
+                        },
+                        "sha256": {
+                            "type": "string",
+                            "description": "SHA256 hash of the sample"
+                        }
+                    }
+                }
+            },
+            "detected_urls": {
+                "type": "array",
+                "description": "List of detected URLs on this domain",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "scan_date": {
+                            "type": "string",
+                            "description": "Date of last scan"
+                        },
+                        "positives": {
+                            "type": "integer",
+                            "description": "Number of antivirus detecting this sample as malicious"
+                        },
+                        "total": {
+                            "type": "integer",
+                            "description": "Number of antivirus that scanned this sample"
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "URL on this domain"
+                        }
+                    }
+                }
+            },
+            "resolutions": {
+                "type": "array",
+                "description": "List of IP addresses this domain resolved to",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "last_resolved": {
+                            "type": "string",
+                            "description": "Date of last resolution"
+                        },
+                        "ip_address": {
+                            "type": "string",
+                            "description": "IP Address the domain resolved to"
+                        }
+                    }
+                }
+            },
+            "subdomains": {
+                "type": "array",
+                "description": "List of subdomains",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "domain_siblings": {
+                "type": "array",
+                "description": "List of domain siblings",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "categories": {
+                "type": "array",
+                "description": "List of categories",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "68a93925-d0c3-40e5-98a3-836d4b2e8f5e"
+}
