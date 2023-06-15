@@ -36,14 +36,15 @@ class TrellixEdrConnector(Connector):
 
     module: TrellixModule
 
-    async def get_trellix_edr_events(self) -> List[Any]:
+    @property
+    def trellix_http_client(self) -> TrellixHttpClient:
         """
-        Process trellix edr events.
+        Get configured Trellix http client.
 
         Returns:
-            List[Any]:
+            TrellixHttpClient:
         """
-        trellix_client = TrellixHttpClient(
+        return TrellixHttpClient(
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
             api_key=self.module.configuration.api_key,
@@ -51,10 +52,21 @@ class TrellixEdrConnector(Connector):
             base_url=self.module.configuration.base_url,
         )
 
-        events = await trellix_client.get_edr_investigations()
+    async def get_trellix_edr_events(self) -> List[Any]:
+        """
+        Process trellix edr events.
+
+        Returns:
+            List[Any]:
+        """
+        events = await self.trellix_http_client.get_edr_investigations()
 
         if events:
-            self.push_events_to_intakes([orjson.dumps(event).decode("utf-8") for event in events])
+            await asyncio.to_thread(
+                self.push_events_to_intakes,
+                events=[orjson.dumps(event).decode("utf-8") for event in events],
+                sync=True,
+            )
 
         return events
 

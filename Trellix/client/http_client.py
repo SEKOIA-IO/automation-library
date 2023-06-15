@@ -1,5 +1,6 @@
 """Trellix http client."""
 import asyncio
+from datetime import datetime, timedelta
 from typing import List, Set
 
 from aiohttp import ClientSession
@@ -158,7 +159,11 @@ class TrellixHttpClient(object):
                 # In documentation it is said that we should wait 15 seconds before next request
                 await asyncio.sleep(15)
 
-    async def get_edr_historical_searches(self) -> List[TrellixEdrResponse[SearchHistoricalAttributes]]:
+    async def get_edr_historical_searches(
+        self,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None
+    ) -> List[TrellixEdrResponse[SearchHistoricalAttributes]]:
         """
         All necessary workflow to get historical searches.
 
@@ -173,11 +178,19 @@ class TrellixHttpClient(object):
 
         headers = await self._request_headers(scopes)
 
+        _start_time = (
+            start_time
+            if start_time is not None
+            else datetime.utcnow() - timedelta(days=15)
+        )
+
+        _end_time = end_time if end_time is not None else datetime.utcnow()
+
         # TODO check attributes once it have any data
         query_body = {
             "data": {
                 "type": "historicalSearches",
-                "attributes": {"startTime": "2023-06-03T09:26:22Z", "endTime": "2023-06-04T09:26:22Z"},
+                "attributes": {"startTime": _start_time.isoformat(), "endTime": _end_time.isoformat()},
             }
         }
 
@@ -226,10 +239,10 @@ class TrellixHttpClient(object):
         All necessary workflow to get realtime searches.
 
         Documentation for more details:
-            https://docs.trellix.com/fr/bundle/mvision-endpoint-detection-and-response-product-guide/page/GUID-D08D9CF3-45E5-4EB2-A155-A618730BDA46.html#GUID-D08D9CF3-45E5-4EB2-A155-A618730BDA46
+            https://docs.trellix.com/fr/bundle/mvision-endpoint-detection-and-response-product-guide/page/GUID-7C6805BA-E8C4-45E8-A5B7-C2F7BD6B06AC.html
 
         Returns:
-            List[TrellixEdrResponse[SearchRealtimeAttributes]]:
+            List[TrellixEdrResponse[InvestigationAttributes]]:
         """
         investigations_url = self._edr_investigations_url
         scopes = Scope.set_for_investigations()
