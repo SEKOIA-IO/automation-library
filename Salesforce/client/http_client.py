@@ -240,6 +240,7 @@ class SalesforceHttpClient(object):
         """
         headers = await self._request_headers()
         url = "{0}{1}".format(self.base_url, log_file_uri)
+        _tmp_dir = temp_dir if temp_dir is not None else '/tmp'
 
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:

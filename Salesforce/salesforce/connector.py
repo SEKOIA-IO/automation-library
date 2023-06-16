@@ -26,7 +26,6 @@ class SalesforceConfig(DefaultConnectorConfiguration):
     client_secret: str
     base_url: HttpUrl
     ratelimit_per_minute: int = 60
-    temp_files_dir: str = "/tmp"
 
 
 class SalesforceModule(Module):
@@ -141,7 +140,6 @@ class SalesforceConnector(Connector):
 
             records, csv_path = await self.salesforce_client.get_log_file_content(
                 log_file_uri=log_file.LogFile,
-                temp_dir=self.module.configuration.temp_files_dir,
             )
 
             if records is not None:
