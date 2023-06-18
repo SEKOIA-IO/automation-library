@@ -28,7 +28,7 @@ jobs:
         run: |
           if ${{ github.event_name == 'pull_request' }}; then
             start="HEAD^1"
-            end="HEAD"  
+            end="HEAD"
           else
             start=${{ github.event.before }}
             end=${{ github.event.after }}
@@ -58,12 +58,12 @@ jobs:
         run: |
           pip install poetry
           poetry config virtualenvs.in-project true
-          poetry config installer.modern-installation false    
+          poetry config installer.modern-installation false
 
       - name: Install Dependencies
         id: install-dependencies
         run: |
-          poetry install      
+          poetry install
         working-directory: ${{ matrix.module }}
 
       - name: Execute Black
@@ -84,14 +84,14 @@ jobs:
         run: |
           poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
         working-directory: "${{ matrix.module }}"
-      
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: Unit Test Results
-          path: junit.xml
-      
+          path: "${{ matrix.module }}/junit.xml"
+
       - name: Code Coverage Flag
         run: |
           FLAG="${{ matrix.module }}"
@@ -132,7 +132,7 @@ jobs:
           echo "manifest=$content" >> $GITHUB_OUTPUT
 
       - name: Log in to the Container registry
-        if: ${{ github.event_name == 'push' }} 
+        if: ${{ github.event_name == 'push' }}
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
@@ -140,7 +140,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
-        if: ${{ github.event_name == 'push' }} 
+        if: ${{ github.event_name == 'push' }}
         id: meta
         uses: docker/metadata-action@v4
         with:
@@ -159,7 +159,7 @@ jobs:
           context: ${{ matrix.Module }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-  
+
   test-gate:
     name: Build & Test Gate
     runs-on: ubuntu-latest
