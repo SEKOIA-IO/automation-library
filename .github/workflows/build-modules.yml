@@ -85,11 +85,17 @@ jobs:
           poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
         working-directory: "${{ matrix.module }}"
 
+      - name: Upload Event
+        uses: actions/upload-artifact@v3
+        with:
+          name: Event File
+          path: ${{ github.event_path }}
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: Unit Test Results
+          name: Unit Test Results (${{ matrix.module }})
           path: "${{ matrix.module }}/junit.xml"
 
       - name: Code Coverage Flag
