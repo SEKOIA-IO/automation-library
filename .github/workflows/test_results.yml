@@ -7,7 +7,7 @@ on:
       - completed
 
 permissions:
-  checks: write
+  pull-requests: write
 
 jobs:
   unit-test-results:
