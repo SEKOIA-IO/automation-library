@@ -1,9 +1,9 @@
 {
     "configuration": {
+        "type": "object",
+        "title": "Module configuration",
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "required": [],
-        "title": "Configuration",
-        "type": "object"
+        "properties": {}
     },
     "description": "This module exposes actions to request HTTP resources",
     "name": "HTTP",

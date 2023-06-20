@@ -1,5 +1,10 @@
 {
-    "configuration": {},
+    "configuration": {
+        "type": "object",
+        "title": "Module configuration",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {}
+    },
     "description": "This module exposes actions to process OSINT data",
     "name": "OSINT",
     "uuid": "19cf9b48-dc7a-485f-ba14-3b7b998774c1",

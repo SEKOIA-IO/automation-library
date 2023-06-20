@@ -1,5 +1,10 @@
 {
-    "arguments": {},
+    "arguments": {
+        "type": "object",
+        "title": "Trigger Arguments",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {}
+    },
     "description": "Webhook Trigger to receive specific SEKOIA.IO Alerts",
     "name": "Manual Trigger",
     "results": {
