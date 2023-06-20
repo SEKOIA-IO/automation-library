@@ -17,6 +17,7 @@ class SqsConfiguration(AwsConfiguration):
     delete_consumed_messages: bool = Field(default=True, description="Delete consumed messages from queue")
     is_fifo: bool = Field(default=False, description="Is queue fifo, might ")
     queue_name: str = Field(description="AWS SQS queue name")
+    queue_url: str | None = Field(descripton="AWS SQS queue url")
 
 
 class SqsWrapper(AwsClient[SqsConfiguration]):
@@ -52,11 +53,17 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         """
         Get SQS queue url.
 
+        If defined, returns the value in the configuration
         If it is fifo then use postfix .fifo to initialize url, based on configuration.
 
         Returns:
             str:
         """
+
+        queue_url = self._configuration.queue_url
+        if queue_url:
+            return queue_url
+
         queue_name = self._configuration.queue_name
         if self._configuration.is_fifo:
             queue_name = self._configuration.queue_name + ".fifo"

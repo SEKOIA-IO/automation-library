@@ -31,6 +31,31 @@ def sqs_wrapper_configuration(session_faker) -> SqsConfiguration:
 
 
 @pytest.fixture
+def sqs_wrapper_with_url_configuration(session_faker) -> SqsConfiguration:
+    """
+    Create SqsConfiguration instance that includes a url
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        SqsConfiguration:
+    """
+    return SqsConfiguration(
+        aws_access_key_id=session_faker.word(),
+        aws_secret_access_key=session_faker.word(),
+        queue_name=session_faker.word(),
+        queue_url=session_faker.url(),
+        aws_region=session_faker.word(),
+        intake_key=session_faker.word(),
+        chunk_size=session_faker.random.randint(1, 10),
+        frequency=session_faker.random.randint(0, 20),
+        delete_consumed_messages=True,
+        is_fifo=False,
+    )
+
+
+@pytest.fixture
 def sqs_wrapper(sqs_wrapper_configuration) -> SqsWrapper:
     """
     Create SqsWrapper instance.
@@ -42,6 +67,23 @@ def sqs_wrapper(sqs_wrapper_configuration) -> SqsWrapper:
         SqsWrapper:
     """
     return SqsWrapper(sqs_wrapper_configuration)
+
+
+async def test_defined_queue_url(sqs_wrapper_with_url_configuration, session_faker):
+    """
+    Test the queue url provided in the module configuration is considered
+
+    Args:
+        sqs_wrapper: SqsWrapper
+        sqs_wrapper_configuration: SqsConfiguration
+        session_faker: Faker
+    """
+    sqs_wrapper = SqsWrapper(sqs_wrapper_with_url_configuration)
+
+    with patch("aws.sqs.SqsWrapper.get_client") as mock_client:
+        result_url = await sqs_wrapper.queue_url()
+
+        assert sqs_wrapper_with_url_configuration.queue_url == result_url
 
 
 @pytest.mark.asyncio
