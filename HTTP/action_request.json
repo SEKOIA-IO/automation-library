@@ -39,6 +39,11 @@
         "description": "Fail when the HTTP query returns in error. Default to true.",
         "type": "boolean",
         "default": true
+      },
+      "verify_ssl": {
+        "description": "Wether the SSL certificate must be verified. Default to true.",
+        "type": "boolean",
+        "default": true
       }
     },
     "required": [
