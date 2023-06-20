@@ -10,7 +10,12 @@
             "headers": {
                 "description": "Headers to use when sending the requests. i.e. {\"authorization\": \"Bearer foo\"}",
                 "type": "object"
-            }
+            },
+            "verify_ssl": {
+                "description": "Wether the SSL certificate must be verified. Default to true.",
+                "type": "boolean",
+                "default": true
+              }
         },
         "required": [
             "url"

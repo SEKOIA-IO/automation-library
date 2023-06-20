@@ -67,6 +67,23 @@ def test_post_request(symphony_storage):
         assert mock.request_history[0].text == "att1=val1"
 
 
+def test_post_request_no_verify(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            "https://api.sekoia.io",
+            status_code=202,
+            reason="Accepted",
+        )
+
+        result = action.run({"method": "post", "url": "https://api.sekoia.io", "verify_ssl": False})
+        json.dumps(result)
+        assert result["status_code"] == 202
+        assert mock.request_history[0].verify is False
+
+
 def test_request_no_json_response(symphony_storage):
     action = RequestAction(data_path=symphony_storage)
     action.module.configuration = {}

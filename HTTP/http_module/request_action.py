@@ -22,6 +22,7 @@ class RequestAction(Action):
         params = arguments.get("params")
         url = arguments.get("url")
         headers = arguments.get("headers")
+        verify = arguments.get("verify_ssl", True)
         fail_on_http_error = arguments.get("fail_on_http_error", True)
 
         self.log(message=f"Request URL module started. Target URL: {url}", level="info")
@@ -35,6 +36,7 @@ class RequestAction(Action):
                     json=json,
                     params=params,
                     headers=headers,
+                    verify=verify,
                 )
 
         if fail_on_http_error and not response.ok:
