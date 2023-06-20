@@ -79,7 +79,6 @@ def test_post_request_no_verify(symphony_storage):
         )
 
         result = action.run({"method": "post", "url": "https://api.sekoia.io", "verify_ssl": False})
-        json.dumps(result)
         assert result["status_code"] == 202
         assert mock.request_history[0].verify is False
 
