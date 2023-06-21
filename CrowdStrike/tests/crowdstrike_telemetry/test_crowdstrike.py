@@ -173,3 +173,32 @@ async def test_get_crowdstrike_events(crowdstrike_connector, session_faker):
 
         assert crowdstrike_connector.push_events_to_intakes.called
         assert not crowdstrike_connector.log_exception.called
+
+
+@pytest.mark.asyncio
+async def test_specify_queue_url(session_faker):
+    queue_url = session_faker.url()
+
+    module = CrowdStrikeTelemetryModule()
+    module.configuration = CrowdStrikeTelemetryModuleConfig(
+        aws_access_key_id=session_faker.word(),
+        aws_secret_access_key=session_faker.word(),
+        aws_region=session_faker.word(),
+    )
+
+    connector = CrowdStrikeTelemetryConnector(module)
+    connector.configuration = CrowdStrikeTelemetryConfig(
+        queue_name=session_faker.word(),
+        queue_url=queue_url,
+        intake_key=session_faker.word(),
+        chunk_size=session_faker.random.randint(1, 10),
+        frequency=session_faker.random.randint(0, 20),
+        delete_consumed_messages=True,
+        is_fifo=False,
+    )
+    connector.push_events_to_intakes = MagicMock()
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
+
+    sqs_wrapper = connector.sqs_wrapper
+    assert await sqs_wrapper.queue_url() == queue_url
