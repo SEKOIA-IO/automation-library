@@ -29,6 +29,10 @@
         "type": "string",
         "description": "The name of the SQS queue that received messages with files information"
       },
+      "queue_url": {
+        "type": "string",
+        "description": "The URL of the SQS queue that received messages with files information"
+      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",
