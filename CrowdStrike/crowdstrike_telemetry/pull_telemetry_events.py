@@ -15,6 +15,7 @@ from .schemas import CrowdStrikeNotificationSchema
 
 class CrowdStrikeTelemetryConfig(DefaultConnectorConfiguration):
     queue_name: str
+    queue_url: str | None = None
     chunk_size: int | None = None
     frequency: int | None = None
     delete_consumed_messages: bool | None = None
