@@ -67,10 +67,7 @@ class SalesforceTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls,
-        client_id: str,
-        client_secret: str,
-        auth_url: str,
+        cls, client_id: str, client_secret: str, auth_url: str, token_ttl: int = 3600
     ) -> "SalesforceTokenRefresher":
         """
         Get singleton SalesforceTokenRefresher instance for specified set of scopes.
@@ -79,11 +76,12 @@ class SalesforceTokenRefresher(object):
             client_id: str
             client_secret: str
             auth_url: str
+            token_ttl: int
 
         Returns:
             SalesforceTokenRefresher:
         """
-        refresher_unique_key = str(frozenset({client_id, client_secret}))
+        refresher_unique_key = str(frozenset({client_id, client_secret, auth_url, token_ttl}))
         if not cls._locks.get(refresher_unique_key):
             cls._locks[refresher_unique_key] = asyncio.Lock()
 
@@ -94,6 +92,7 @@ class SalesforceTokenRefresher(object):
                         client_id,
                         client_secret,
                         auth_url,
+                        token_ttl,
                     )
 
         return cls._instances[refresher_unique_key]

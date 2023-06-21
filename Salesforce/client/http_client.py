@@ -1,15 +1,15 @@
 """Salesforce http client."""
-
+import csv
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, Tuple
 from urllib.parse import urlencode
 
-import aiocsv
-import aiofiles
 from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 from loguru import logger
 from yarl import URL
+
+from utils.file_utils import save_response_to_temp_file
 
 from .schemas.log_file import SalesforceEventLogFilesResponse
 from .token_refresher import SalesforceTokenRefresher
@@ -172,7 +172,13 @@ class SalesforceHttpClient(object):
             Exception: in case if response status is not 200
         """
         if response.status != 200:
-            error_response = await response.json()
+            try:
+                error_response = await response.json()
+            except Exception:
+                error_msg = await response.text()
+
+                raise Exception(error_msg)
+
             error_msg = ",".join(["Error {errorCode}: {message}".format(**error) for error in error_response])
 
             raise Exception(error_msg)
@@ -198,12 +204,12 @@ class SalesforceHttpClient(object):
         headers = await self._request_headers()
 
         async with self.session() as session:
-            response = await session.get(url, headers=headers, json={})
-            await self._handle_error_response(response)
+            async with session.get(url, headers=headers, json={}) as response:
+                await self._handle_error_response(response)
 
-            result = SalesforceEventLogFilesResponse(**await response.json())
-            if not result.done:
-                raise ValueError("Salesforce response is not done")
+                result = SalesforceEventLogFilesResponse(**await response.json())
+                if not result.done:
+                    raise ValueError("Salesforce response is not done")
 
         return result
 
@@ -240,28 +246,27 @@ class SalesforceHttpClient(object):
         """
         headers = await self._request_headers()
         url = "{0}{1}".format(self.base_url, log_file_uri)
-        _tmp_dir = temp_dir if temp_dir is not None else '/tmp'
+        _tmp_dir = temp_dir if temp_dir is not None else "/tmp"
+
+        logger.info("Getting log file content from Salesforce. Log file uri is {0}", url)
 
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:
+                await self._handle_error_response(response)
+
                 content_length = int(response.headers.get("Content-Length", 0))
 
                 save_to_file = persist_to_file if persist_to_file is not None else content_length > size_to_process
 
-                await self._handle_error_response(response)
-
                 if save_to_file:
-                    async with aiofiles.tempfile.NamedTemporaryFile("wb", delete=False, dir=temp_dir) as file:
-                        while True:
-                            chunk = await response.content.read(chunk_size)
-                            if not chunk:
-                                break
-                            await file.write(chunk)
+                    logger.info("Persisting log file response {0} to file", url)
 
-                        return None, file.name
+                    file_name = await save_response_to_temp_file(response, chunk_size=chunk_size, temp_dir=_tmp_dir)
+
+                    return None, file_name
                 else:
-                    result = []
-                    async for row in aiocsv.AsyncDictReader(response.content, delimiter=","):
-                        result.append(row)
+                    logger.info("Get log file response body {0}", url)
 
-                    return result, None
+                    data = await response.text()
+
+                    return list(csv.DictReader(data.splitlines(), delimiter=",")), None

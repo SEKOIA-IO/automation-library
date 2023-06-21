@@ -1,0 +1,288 @@
+"""Tests related to connector."""
+from datetime import datetime, timedelta, timezone
+from shutil import rmtree
+from tempfile import mkdtemp
+from unittest.mock import MagicMock
+
+import pytest
+from aioresponses import aioresponses
+from sekoia_automation import constants
+
+from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
+from salesforce.connector import SalesforceConnector, SalesforceModule
+
+
+@pytest.fixture
+def symphony_storage() -> str:
+    """
+    Fixture for symphony temporary storage.
+
+    Yields:
+        str:
+    """
+    original_storage = constants.DATA_STORAGE
+    constants.DATA_STORAGE = mkdtemp()
+
+    yield constants.DATA_STORAGE
+
+    rmtree(constants.DATA_STORAGE)
+    constants.SYMPHONY_STORAGE = original_storage
+
+
+@pytest.fixture
+def client_id(session_faker) -> str:
+    """
+    Generate random client_id.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        str:
+    """
+    return session_faker.word()
+
+
+@pytest.fixture
+def client_secret(session_faker) -> str:
+    """
+    Generate random client_secret.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        str:
+    """
+    return session_faker.word() + session_faker.word()
+
+
+@pytest.fixture
+def salesforce_url(session_faker) -> str:
+    """
+    Generate random uri.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        str:
+    """
+    return session_faker.uri()
+
+
+@pytest.fixture
+def pushed_events_ids(session_faker) -> list[str]:
+    """
+    Generate random list of events ids.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        list[str]:
+    """
+    return [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
+
+
+@pytest.fixture
+def connector(symphony_storage, client_id, client_secret, salesforce_url, pushed_events_ids, session_faker):
+    module = SalesforceModule()
+    trigger = SalesforceConnector(module=module, data_path=symphony_storage)
+
+    # Mock the log function of trigger that requires network access to the api for reporting
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+
+    # Mock the push_events_to_intakes function
+    trigger.push_events_to_intakes = MagicMock()
+    trigger.push_events_to_intakes.return_value = pushed_events_ids
+
+    trigger.module.configuration = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "base_url": salesforce_url,
+        "intake_key": session_faker.word(),
+    }
+
+    return trigger
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_last_event_date(connector):
+    """
+    Test `last_event_date`.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    with connector.context as cache:
+        cache["last_event_date"] = None
+
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    one_week_ago = current_date - timedelta(days=7)
+
+    assert connector.last_event_date == one_week_ago
+
+    with connector.context as cache:
+        cache["last_event_date"] = current_date.isoformat()
+
+    assert connector.last_event_date == current_date
+
+    with connector.context as cache:
+        cache["last_event_date"] = (one_week_ago - timedelta(days=1)).isoformat()
+
+    assert connector.last_event_date == one_week_ago
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_salesforce_client(connector):
+    """
+    Test salesforce client initialization.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    assert connector._salesforce_client is None
+
+    client1 = connector.salesforce_client
+    client2 = connector.salesforce_client
+
+    assert client1 is client2 is connector._salesforce_client
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_push_events_wrapper(connector, pushed_events_ids, session_faker):
+    """
+    Test salesforce connector push events.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    data = [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
+
+    assert await connector._push_events(data) == pushed_events_ids
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_get_salesforce_events(
+    connector, session_faker, http_token, csv_content, salesforce_url
+):
+    """
+    Test salesforce connector get salesforce events.
+
+    Args:
+        connector: SalesforceConnector
+        session_faker: Faker
+        http_token: HttpToken
+        csv_content: str
+        salesforce_url: str
+    """
+    log_file_date = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=1)
+
+    event_log_file = EventLogFile(
+        Id=session_faker.pystr(),
+        EventType=session_faker.pystr(),
+        LogFile=session_faker.pystr(),
+        LogDate=log_file_date.isoformat(),
+        LogFileLength=session_faker.pyfloat(),
+    )
+
+    log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
+
+    token_data = http_token.dict()
+    token_data["id"] = token_data["tid"]
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            status=200,
+            payload=token_data,
+        )
+
+        query = connector.salesforce_client._log_files_query(connector.last_event_date.isoformat())
+        get_log_files_url = connector.salesforce_client._request_url_with_query(query)
+
+        log_file_response_dict = log_files_response_success.dict()
+        log_file_response_dict["records"] = [token_data]
+
+        mocked_responses.get(
+            get_log_files_url,
+            payload=log_files_response_success.dict(),
+        )
+
+        mocked_responses.get(
+            url="{0}{1}".format(salesforce_url, event_log_file.LogFile),
+            status=200,
+            body=csv_content.encode("utf-8"),
+            headers={"Content-Length": "{0}".format(len(csv_content.encode("utf-8")))},
+        )
+
+        result = await connector.get_salesforce_events()
+
+        assert result == log_file_date
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_get_salesforce_events_1(
+    connector, session_faker, http_token, csv_content, salesforce_url
+):
+    """
+    Test salesforce connector get salesforce events.
+
+    Args:
+        connector: SalesforceConnector
+        session_faker: Faker
+        http_token: HttpToken
+        csv_content: str
+        salesforce_url: str
+    """
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    log_file_date = current_date - timedelta(days=1)
+
+    # Try to put last event date higher to be 1 day ahead of the log file date
+    with connector.context as cache:
+        cache["last_event_date"] = (current_date + timedelta(days=1)).isoformat()
+
+    event_log_file = EventLogFile(
+        Id=session_faker.pystr(),
+        EventType=session_faker.pystr(),
+        LogFile=session_faker.pystr(),
+        LogDate=log_file_date.isoformat(),
+        LogFileLength=session_faker.pyfloat(),
+    )
+
+    log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
+
+    token_data = http_token.dict()
+    token_data["id"] = token_data["tid"]
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            status=200,
+            payload=token_data,
+        )
+
+        query = connector.salesforce_client._log_files_query(connector.last_event_date.isoformat())
+        get_log_files_url = connector.salesforce_client._request_url_with_query(query)
+
+        log_file_response_dict = log_files_response_success.dict()
+        log_file_response_dict["records"] = [token_data]
+
+        mocked_responses.get(
+            get_log_files_url,
+            payload=log_files_response_success.dict(),
+        )
+
+        # We try to return too large file to process it memory at this place, putting Content-Length to 1GB
+        mocked_responses.get(
+            url="{0}{1}".format(salesforce_url, event_log_file.LogFile),
+            status=200,
+            body=csv_content.encode("utf-8"),
+            headers={"Content-Length": "{0}".format(1024 * 1024 * 1024)},
+        )
+
+        result = await connector.get_salesforce_events()
+
+        assert result == current_date + timedelta(days=1)
