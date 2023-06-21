@@ -290,3 +290,31 @@ def test_get_malware_url_without_scheme(trigger, triage_mock):
             "548233b00c607ab180084fabc9989bee74d6b45c6c9ada5a79e23bff6f0c31cd",
         ],
     }
+
+
+def test_run_error(trigger):
+    with requests_mock.Mocker() as m:
+        m.register_uri("GET", "/v0/search", status_code=500)
+        trigger._run()
+        assert trigger.log.called is True
+
+
+def test_run_wrong_json(trigger):
+    with requests_mock.Mocker() as m:
+        m.register_uri("GET", "/v0/search", text="wrong]")
+        trigger._run()
+        assert trigger.log.called is True
+
+
+def test_get_sample_iocs_error_not_found(trigger):
+    with requests_mock.Mocker() as m:
+        m.get("https://api.tria.ge/v1/samples/bar/overview.json", status_code=404)
+        trigger.get_sample_iocs("foo", "bar")
+        assert trigger.log.called is True
+
+
+def test_get_sample_iocs_wrong_json(trigger):
+    with requests_mock.Mocker() as m:
+        m.get("https://api.tria.ge/v1/samples/bar/overview.json", text="bad]")
+        trigger.get_sample_iocs("foo", "bar")
+        assert trigger.log.called is True

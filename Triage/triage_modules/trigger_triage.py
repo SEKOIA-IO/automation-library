@@ -8,6 +8,7 @@ from cached_property import cached_property
 from dateutil.relativedelta import relativedelta
 from sekoia_automation.trigger import Trigger
 from triage import Client
+from triage.client import ServerError
 
 from triage_modules.utils import IPV4_ADDRESS_REGEX, URL_REGEX
 
@@ -101,10 +102,16 @@ class TriageConfigsTrigger(TriageTrigger):
     def get_malware_samples(self, malware: str, period: int) -> list[str]:
         until = (datetime.now() - relativedelta(seconds=+period)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        res = self.client.search(query=f"family:{malware}", max=2000)
-        sample_ids = [sample["id"] for sample in res if sample["submitted"] > until]
-
-        return sample_ids
+        try:
+            res = self.client.search(query=f"family:{malware}", max=2000)
+            return [sample["id"] for sample in res if sample["submitted"] > until]
+        except ServerError as ex:
+            self.log(f"Requests to Triage failed: {str(ex)}", level="error")
+            return []
+        except Exception as ex:
+            self.log(f"Failed to search for samples (family:{malware}): {str(ex)}", level="error")
+            self.log_exception(ex)
+            return []
 
     def get_sample_iocs(self, malware: str, sample_id: str) -> dict:
         sample_iocs: dict[str, list] = dict()
@@ -112,7 +119,15 @@ class TriageConfigsTrigger(TriageTrigger):
         sample_iocs["sample_urls"] = list()
         sample_iocs["sample_hashes"] = list()
 
-        data = self.client.overview_report(sample_id=sample_id)
+        try:
+            data = self.client.overview_report(sample_id=sample_id)
+        except ServerError as ex:
+            self.log(f"Requests to Triage failed: {str(ex)}", level="error")
+            return sample_iocs
+        except Exception as ex:
+            self.log(f"Failed to get report for sample {sample_id}: {str(ex)}", level="error")
+            self.log_exception(ex)
+            return sample_iocs
         extracted = data.get("extracted", []) or []  # In case it is None
         for extract in extracted:
             self._handle_extracted(extract, sample_iocs, malware)
