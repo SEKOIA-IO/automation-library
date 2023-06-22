@@ -2,6 +2,7 @@ import time
 import traceback
 from functools import cached_property
 
+import orjson
 import requests
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -83,7 +84,7 @@ class AuditLogConnector(Connector):
             # if the response is not empty, push it
             if response != []:
                 self.last_ts = response[-1]["@timestamp"]
-                batch_of_events = response
+                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in response]
                 self.push_events_to_intakes(events=batch_of_events)
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
