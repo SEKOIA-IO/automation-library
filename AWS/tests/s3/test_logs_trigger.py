@@ -109,10 +109,11 @@ S3ObjectsNoRecords = {
 SQSNoJson = ["Not a json"]
 SQSNoJsonMock = sqs_mock(SQSNoJson)
 
-def test_batch_not_json(trigger, aws_mock, symphony_storage):
 
+def test_batch_not_json(trigger, aws_mock, symphony_storage):
     with mock.client.handler_for("s3", S3MockNoObject), mock.client.handler_for("sqs", SQSNoJsonMock):
         trigger.forward_next_batches()
+
 
 # flake8: qa
 

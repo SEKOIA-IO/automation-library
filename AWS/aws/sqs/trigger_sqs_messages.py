@@ -42,7 +42,7 @@ class AWSSQSMessagesTrigger(AWSConnector):
             receipts = []
             records = []
             for message in messages:
-                try: 
+                try:
                     decoded_messages = orjson.loads(message["Body"].encode("utf-8")).get("Records", [])
                     for record in decoded_messages:
                         try:
@@ -53,7 +53,7 @@ class AWSSQSMessagesTrigger(AWSConnector):
                         except ValueError as e:
                             self.log_exception(e, message="Invalid record")
                 except ValueError as e:
-                    self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}") 
+                    self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
             if records:
                 self.log(message=f"Forwarding {len(records)} messages", level="info")
