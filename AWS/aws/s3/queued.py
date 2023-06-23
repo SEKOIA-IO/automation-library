@@ -73,8 +73,7 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
         raise NotImplementedError()
 
     def get_next_messages(self, **kwargs) -> list[dict]:
-        response = self.sqs_client.receive_message(
-            QueueUrl=self.queue_url, **kwargs)
+        response = self.sqs_client.receive_message(QueueUrl=self.queue_url, **kwargs)
         return response.get("Messages", [])
 
     def get_next_objects(self, messages: list) -> Generator[AWSS3Object, None, None]:
@@ -82,11 +81,9 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
         for message in messages:
             decoded_messages = []
             try:
-                decoded_messages = orjson.loads(
-                    message["Body"].encode("utf-8")).get("Records", [])
+                decoded_messages = orjson.loads(message["Body"].encode("utf-8")).get("Records", [])
             except ValueError as e:
-                self.log_exception(
-                    e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+                self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
             for record in decoded_messages:
                 try:
                     yield AWSS3Object.from_record(self.s3_client, record)
@@ -96,11 +93,9 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
                 except ValueError as e:
                     self.log_exception(e, message="Invalid record")
         if self.delete_consumed_messages:
-            entries = [{"Id": f"{index:04d}", "ReceiptHandle": receipt}
-                       for index, receipt in enumerate(receipts)]
+            entries = [{"Id": f"{index:04d}", "ReceiptHandle": receipt} for index, receipt in enumerate(receipts)]
             if entries:
-                self.sqs_client.delete_message_batch(
-                    QueueUrl=self.queue_url, Entries=entries)
+                self.sqs_client.delete_message_batch(QueueUrl=self.queue_url, Entries=entries)
 
     def forward_next_batches(self):
         messages = self.get_next_messages()
@@ -112,8 +107,7 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
                     records = self._parse_content(content)
 
                     if records:
-                        self.log(
-                            message=f"Forwarding {len(records)} records", level="info")
+                        self.log(message=f"Forwarding {len(records)} records", level="info")
                         self.push_events_to_intakes(events=records)
                     else:
                         self.log(message="No records to forward", level="info")
