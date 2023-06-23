@@ -40,6 +40,18 @@ def test_fetch_events(trigger):
     assert len(trigger._fetch_next_events.call_args_list) == len(EVENT_TYPES)
 
 
+def test_fetch_events_bad_url(trigger):
+    trigger.module.configuration.api_host = "https://api-test.vadesecure.com/////"
+    trigger._get_authorization = MagicMock(return_value="Bearer 123456")
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            "https://api-test.vadesecure.com/api/v1/tenants/e49e7162-0df6-48e9-a75e-237d54871e8b/logs/emails/search",
+            json={"result": {"total": 2, "messages": [{}, {}]}},
+        )
+        trigger._fetch_next_events(last_message_id="1", last_message_date=datetime.utcnow(), event_type="emails")
+        assert mock.called_once
+
+
 def test_fetch_next_emails_events(trigger):
     url = (
         f"{trigger.module.configuration.api_host}/api/v1/tenants/"
