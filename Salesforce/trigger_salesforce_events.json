@@ -1,14 +1,50 @@
 {
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Salesforce",
+        "title": "Trigger salesforce configuration",
         "type": "object",
         "properties": {
-
-        }
+            "client_id": {
+                "description": "Client id to interact with salesforce API",
+                "type": "string"
+            },
+            "client_secret": {
+                "description": "Client secret to interact with salesforce API",
+                "type": "string"
+            },
+            "base_url": {
+                "description": "Url of salesforce instance. Consists of https://<instance>.salesforce.com",
+                "type": "string"
+            },
+            "ratelimit_per_minute": {
+                "description": "Maximum number of requests per minute",
+                "default": 60,
+                "type": "integer"
+            },
+            "intake_server": {
+                "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+                "default": "https://intake.sekoia.io",
+                "type": "string"
+            },
+            "intake_key": {
+                "description": "Intake key to use when sending events",
+                "type": "string"
+            }
+        },
+        "required": [
+            "client_id",
+            "client_secret",
+            "base_url",
+            "intake_key"
+        ]
     },
     "description": "Trigger playbook to get Salesforce information",
     "docker_parameters": "salesforce",
     "name": "Salesforce events",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {},
+        "title": "The records"
+    },
     "uuid": "626c6110-0a7a-11ee-be56-0242ac120002"
 }
