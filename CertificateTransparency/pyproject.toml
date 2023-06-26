@@ -8,7 +8,7 @@ authors = []
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.1.2"
 certstream = "^1.11"
-python_Levenshtein = "^0.12"
+numpy = "^1.25.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

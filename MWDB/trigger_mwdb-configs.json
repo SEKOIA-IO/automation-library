@@ -1,5 +1,10 @@
 {
-    "arguments": {},
+    "arguments": {
+        "type": "object",
+        "title": "Trigger Arguments",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {}
+    },
     "description": "Get Malware configs from MWDB",
     "docker_parameters": "trigger_mwdb_configs",
     "name": "Get new configs",

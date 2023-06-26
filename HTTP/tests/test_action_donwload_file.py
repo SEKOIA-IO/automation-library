@@ -60,3 +60,12 @@ def test_download_file_arguments_and_module_headers(symphony_storage, file_mock)
     assert "foo" in file_mock._adapter.last_request.headers
     assert file_mock._adapter.last_request.headers["foo"] == "baz"  # The one used is the one from arguments
     assert file_mock._adapter.last_request.headers["other"] == "set"
+
+
+def test_download_file_no_verify(symphony_storage, file_mock):
+    action = DownloadFileAction(data_path=symphony_storage)
+    action.module.configuration = {}
+    result = action.run(dict(url=URL, verify_ssl=False))
+
+    assert "file_path" in result
+    assert file_mock._adapter.last_request.verify is False

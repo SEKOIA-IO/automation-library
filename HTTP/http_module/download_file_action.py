@@ -28,8 +28,9 @@ class DownloadFileAction(Action):
         The response will be a stream so it can handle big files.
         """
         headers = self._get_headers(arguments)
+        verify = arguments.get("verify_ssl", True)
 
-        r = requests.get(arguments["url"], headers=headers, stream=True)
+        r = requests.get(arguments["url"], headers=headers, stream=True, verify=verify)
         r.raise_for_status()
         return r
 
