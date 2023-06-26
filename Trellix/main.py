@@ -5,5 +5,7 @@ from trellix.connector import TrellixEdrConnector, TrellixModule
 if __name__ == "__main__":
     init_logging()
     module = TrellixModule()
-    module.register(TrellixEdrConnector, "trellix_edr")
+
+    module.register(TrellixEdrConnector, "trellix_epo")
+
     module.run()

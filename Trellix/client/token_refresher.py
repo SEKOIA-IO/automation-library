@@ -1,5 +1,4 @@
 """Auth token refresher."""
-
 import asyncio
 import time
 from asyncio import Lock, Task
@@ -31,7 +30,7 @@ class TrellixTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, client_id: str, client_secret: str, api_key: str, auth_url: str, scopes: Set[Scope]):
+    def __init__(self, client_id: str, client_secret: str, api_key: str, base_url: str, scopes: Set[Scope]):
         """
         Initialize TrellixTokenRefresher.
 
@@ -41,13 +40,13 @@ class TrellixTokenRefresher(object):
             client_id: str
             client_secret: str
             api_key: str
-            auth_url: str
+            base_url: str
             scopes: Set[Scope]
         """
         self.client_id = client_id
         self.client_secret = client_secret
         self.api_key = api_key
-        self.auth_url = auth_url
+        self.base_url = base_url
         self.scopes = scopes
 
         self._token: TrellixToken | None = None
@@ -98,6 +97,17 @@ class TrellixTokenRefresher(object):
 
         return cls._instances[refresher_unique_key]
 
+    @property
+    def auth_url(self) -> URL:
+        params = {
+            "grant_type": "client_credentials",
+            "scope": "+".join(self.scopes),
+        }
+
+        return URL("{0}/iam/v1.1/token".format(self.base_url)).with_query(
+            urlencode(params, safe="+", encoding="utf-8")
+        )
+
     async def refresh_token(self) -> None:
         """
         Refresh token based on class configuration.
@@ -106,15 +116,8 @@ class TrellixTokenRefresher(object):
         """
         headers = {"x-api-header": self.api_key}
 
-        params = {
-            "grant_type": "client_credentials",
-            "scope": "+".join(self.scopes),
-        }
-
-        url = URL("{0}/iam/v1.1/token".format(self.auth_url)).with_query(urlencode(params, safe="+", encoding="utf-8"))
-
         async with self.session().post(
-            url, headers=headers, auth=BasicAuth(self.client_id, self.client_secret), json={}
+            self.auth_url, headers=headers, auth=BasicAuth(self.client_id, self.client_secret), json={}
         ) as response:
             logger.info(response.url)
             response_data = await response.json()
