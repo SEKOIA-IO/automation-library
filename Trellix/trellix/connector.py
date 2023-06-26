@@ -1,5 +1,6 @@
 """Contains connector, configuration and module."""
 import asyncio
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional
 
@@ -13,6 +14,8 @@ from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import TrellixHttpClient
+
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class TrellixConfig(DefaultConnectorConfiguration):
@@ -135,9 +138,33 @@ class TrellixEdrConnector(Connector):
     def run(self) -> None:
         """Runs TrellixEdr."""
         loop = asyncio.get_event_loop()
+
+        previous_processing_end = None
         try:
             while True:
-                loop.run_until_complete(self.get_trellix_edr_events())
+                processing_start = time.time()
+                if previous_processing_end is not None:
+                    EVENTS_LAG.labels(intake_key=self.module.configuration.intake_key).observe(
+                        processing_start - previous_processing_end
+                    )
+
+                message_ids: list[str] = loop.run_until_complete(self.get_trellix_edr_events())
+                processing_end = time.time()
+                OUTCOMING_EVENTS.labels(intake_key=self.module.configuration.intake_key).inc(len(message_ids))
+
+                log_message = "No records to forward"
+                if len(message_ids) > 0:
+                    log_message = "Pushed {0} records".format(len(message_ids))
+
+                logger.info(log_message)
+                self.log(message=log_message, level="info")
+
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.module.configuration.intake_key).observe(
+                    processing_end - processing_start
+                )
+
+                previous_processing_end = processing_end
+
                 loop.run_until_complete(asyncio.sleep(self.module.configuration.delay))
 
         except Exception as e:
