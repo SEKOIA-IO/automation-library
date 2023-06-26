@@ -46,6 +46,16 @@ def test_forward_next_batches(trigger, aws_mock, symphony_storage):
         assert len(calls) == 1
 
 
+SQSNonJsonMock = sqs_mock(["not a json"])
+
+
+def test_non_json_batch(trigger, aws_mock, symphony_storage):
+    with mock.client.handler_for("sqs", SQSNonJsonMock):
+        trigger.forward_next_batches()
+        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        assert len(calls) == 0
+
+
 @pytest.mark.skipif(
     "{'AWS_API_KEY', 'AWS_API_SECRET_KEY', 'AWS_QUEUE_NAME', \
             'AWS_REGION'}.issubset(os.environ.keys()) == False"

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Symphony Module for RiskIQ"
+name = "Automation Module for RiskIQ"
 description = ""
 version = "0.0"
 authors = []

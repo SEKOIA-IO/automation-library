@@ -1,0 +1,52 @@
+{
+  "description": "Forward Proofpoint TAP Events",
+  "docker_parameters": "tap_events_trigger",
+  "name": "Get Proofpoint TAP events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_host": {
+        "description": "API Url of the ProofPoint TAP",
+        "type": "string",
+        "default": "https://tap-api-v2.proofpoint.com"
+      },
+      "client_principal": {
+        "description": "The authentication principal",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "The authentication secret",
+        "type": "string"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      }
+    },
+    "required": [
+      "api_host",
+      "client_principal",
+      "client_secret",
+      "intake_key"
+    ],
+    "title": "TAP Events",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "eccb8d60-0290-48f2-b7d0-12051bb2ff42"
+}

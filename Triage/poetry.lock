@@ -93,18 +93,18 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.26.151"
+version = "1.26.157"
 description = "The AWS SDK for Python"
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.26.151-py3-none-any.whl", hash = "sha256:20b88a8145845e4923d438f5f89fdbdac5bae4011e706cd0974ac69c41f258b4"},
-    {file = "boto3-1.26.151.tar.gz", hash = "sha256:81bff32c96a6b4b203beb63826214d8cf24ca1a86e81d43bbb688a21c5d79e2a"},
+    {file = "boto3-1.26.157-py3-none-any.whl", hash = "sha256:718b236aafc3f106d17cd5c4f513fc2f40bfa995c0cb730ecc893e9c808c0385"},
+    {file = "boto3-1.26.157.tar.gz", hash = "sha256:7a8117dfe9ba1f203d73b3df32a4ebdb895813189635f126fa256e1dea37ee8d"},
 ]
 
 [package.dependencies]
-botocore = ">=1.29.151,<1.30.0"
+botocore = ">=1.29.157,<1.30.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.6.0,<0.7.0"
 
@@ -113,14 +113,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.29.151"
+version = "1.29.157"
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.29.151-py3-none-any.whl", hash = "sha256:0790bf5d25ad6f2db3450797251a78fbcb7b72cdeeb2fd0b82c2668a41d9f41c"},
-    {file = "botocore-1.29.151.tar.gz", hash = "sha256:fdaaa34ea5f09666f17d24d2f4179f7ec81dd6f831ef6b785d4552f919291cab"},
+    {file = "botocore-1.29.157-py3-none-any.whl", hash = "sha256:ccbf948c040d68b6a22570e73dd63cb3b07ce33f4032e9b1d502d2fae55c3b80"},
+    {file = "botocore-1.29.157.tar.gz", hash = "sha256:af2a7b6417bf3bbf00ab22aa61a2d7d839a8a8a62e7975c18c80c55c88dc7fcf"},
 ]
 
 [package.dependencies]
@@ -646,14 +646,14 @@ files = [
 
 [[package]]
 name = "platformdirs"
-version = "3.5.3"
+version = "3.7.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.5.3-py3-none-any.whl", hash = "sha256:0ade98a4895e87dc51d47151f7d2ec290365a585151d97b4d8d6312ed6132fed"},
-    {file = "platformdirs-3.5.3.tar.gz", hash = "sha256:e48fabd87db8f3a7df7150a4a5ea22c546ee8bc39bc2473244730d4b56d2cc4e"},
+    {file = "platformdirs-3.7.0-py3-none-any.whl", hash = "sha256:cfd065ba43133ff103ab3bd10aecb095c2a0035fcd1f07217c9376900d94ba07"},
+    {file = "platformdirs-3.7.0.tar.gz", hash = "sha256:87fbf6473e87c078d536980ba970a472422e94f17b752cfad17024c18876d481"},
 ]
 
 [package.extras]
@@ -947,14 +947,14 @@ jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
 
 [[package]]
 name = "s3path"
-version = "0.4.1"
+version = "0.4.2"
 description = ""
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "s3path-0.4.1-py3-none-any.whl", hash = "sha256:861762382c7fb2c6aa401998042bbd2ee7da57579d9f865e1012290ffdefa0e0"},
-    {file = "s3path-0.4.1.tar.gz", hash = "sha256:f4aa7c877c7f0ee62807687f4c17a6ee7a05cc53bfc1bbbf11840562d4186205"},
+    {file = "s3path-0.4.2-py3-none-any.whl", hash = "sha256:abbd723ced0567aabc10b4f7b435016d9678330365703aae7d3f905451efbaeb"},
+    {file = "s3path-0.4.2.tar.gz", hash = "sha256:04a2ba953555c0191122d87aa90cde27ac5e68253817831f17c538c96f3e58cf"},
 ]
 
 [package.dependencies]
@@ -982,14 +982,14 @@ crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.3.2"
+version = "1.3.3"
 description = "SDK to create SEKOIA.IO playbook modules"
 category = "main"
 optional = false
 python-versions = ">=3.10,<3.12"
 files = [
-    {file = "sekoia_automation_sdk-1.3.2-py3-none-any.whl", hash = "sha256:a94e473cef81d6b64dec5eb8be51efaf90704268bd266f6de0fd8a5d974ba8a4"},
-    {file = "sekoia_automation_sdk-1.3.2.tar.gz", hash = "sha256:7efcee0df0b1854812a0fbbc3c51150ca7265e136a435a37093706eecea62439"},
+    {file = "sekoia_automation_sdk-1.3.3-py3-none-any.whl", hash = "sha256:49dc998253c109da4991fa679d6e211613250196b1f47209612819af40fdb805"},
+    {file = "sekoia_automation_sdk-1.3.3.tar.gz", hash = "sha256:850a40cd2127df0964eab98bcaf7568860da21f74458b69a97e7fd4066e800eb"},
 ]
 
 [package.dependencies]
@@ -1192,4 +1192,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "f17bb44f1cc13b438c15473d1045173f782f2a9a02a43c25405ae127f79e1087"
+content-hash = "8cc70079135c8deca71b8f3aa9968e8688a9df978a9bf9e3a25b469ecc6cc085"
