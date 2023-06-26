@@ -1,6 +1,7 @@
 """Contains connector, configuration and module."""
 
 import asyncio
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -15,6 +16,8 @@ from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import SalesforceHttpClient
 from utils.file_utils import csv_file_as_rows, delete_file
+
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class SalesforceConfig(DefaultConnectorConfiguration):
@@ -110,11 +113,11 @@ class SalesforceConnector(Connector):
         """
         return await asyncio.to_thread(
             self.push_events_to_intakes,
-            events=[orjson.dumps(event).decode("utf-8") for event in events],
+            events=events,
             sync=True,
         )
 
-    async def get_salesforce_events(self) -> datetime | None:
+    async def get_salesforce_events(self) -> list[str]:
         """
         Process salesforce events.
 
@@ -130,6 +133,8 @@ class SalesforceConnector(Connector):
             date=_last_event_date.isoformat(),
         )
 
+        result = []
+
         for log_file in log_files.records:
             log_file_date = isoparse(log_file.LogDate)
             if _last_event_date < log_file_date:
@@ -140,30 +145,52 @@ class SalesforceConnector(Connector):
             )
 
             if records is not None:
-                await self._push_events([orjson.dumps(event).decode("utf-8") for event in records])
+                result.extend(await self._push_events([orjson.dumps(event).decode("utf-8") for event in records]))
 
             # Process csv file row by row to avoid memory issues
             if csv_path is not None:
                 async for row in csv_file_as_rows(csv_path):
-                    await self._push_events([orjson.dumps(row).decode("utf-8")])
+                    result.extend(await self._push_events([orjson.dumps(row).decode("utf-8")]))
 
                 await delete_file(csv_path)
 
             with self.context as cache:
                 cache["last_event_date"] = _last_event_date.isoformat()
 
-        return _last_event_date
+        return result
 
     def run(self) -> None:
-        """Runs Salesforce connector."""
+        """Runs TrellixEdr."""
         loop = asyncio.get_event_loop()
 
+        previous_processing_end = None
         try:
-            while self.running:
-                loop.run_until_complete(self.get_salesforce_events())
+            while True:
+                processing_start = time.time()
+                if previous_processing_end is not None:
+                    EVENTS_LAG.labels(intake_key=self.module.configuration.intake_key).observe(
+                        processing_start - previous_processing_end
+                    )
+
+                message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events())
+                processing_end = time.time()
+                OUTCOMING_EVENTS.labels(intake_key=self.module.configuration.intake_key).inc(len(message_ids))
+
+                log_message = "No records to forward"
+                if len(message_ids) > 0:
+                    log_message = "Pushed {0} records".format(len(message_ids))
+
+                logger.info(log_message)
+                self.log(message=log_message, level="info")
+
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.module.configuration.intake_key).observe(
+                    processing_end - processing_start
+                )
+
+                previous_processing_end = processing_end
 
         except Exception as e:
-            logger.error("Error while running SalesforceConnector: {error}", error=e)
+            logger.error("Error while running TrellixEdr: {error}", error=e)
 
         finally:
             loop.close()

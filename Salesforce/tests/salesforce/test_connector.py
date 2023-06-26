@@ -166,7 +166,7 @@ async def test_salesforce_connector_push_events_wrapper(connector, pushed_events
 
 @pytest.mark.asyncio
 async def test_salesforce_connector_get_salesforce_events(
-    connector, session_faker, http_token, csv_content, salesforce_url
+    connector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
 ):
     """
     Test salesforce connector get salesforce events.
@@ -220,12 +220,12 @@ async def test_salesforce_connector_get_salesforce_events(
 
         result = await connector.get_salesforce_events()
 
-        assert result == log_file_date
+        assert result == pushed_events_ids
 
 
 @pytest.mark.asyncio
 async def test_salesforce_connector_get_salesforce_events_1(
-    connector, session_faker, http_token, csv_content, salesforce_url
+    connector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
 ):
     """
     Test salesforce connector get salesforce events.
@@ -285,4 +285,7 @@ async def test_salesforce_connector_get_salesforce_events_1(
 
         result = await connector.get_salesforce_events()
 
-        assert result == current_date + timedelta(days=1)
+        expected_result = []
+        [expected_result.extend(pushed_events_ids) for _ in range(1, len(csv_content.splitlines()))]
+
+        assert result == expected_result
