@@ -106,6 +106,15 @@ S3ObjectsNoRecords = {
     "AWSLogs/111111111111/vpcflowlogs/eu-west-2/2022/02/21/111111111111_vpcflowlogs_eu-west-2_fl-0dcbf7c4c2483c6b6_20220221T2025Z_55a7d2af.log.gz": b"",
 }
 
+SQSNoJson = ["Not a json"]
+SQSNoJsonMock = sqs_mock(SQSNoJson)
+
+
+def test_batch_not_json(trigger, aws_mock, symphony_storage):
+    with mock.client.handler_for("s3", S3MockNoObject), mock.client.handler_for("sqs", SQSNoJsonMock):
+        trigger.forward_next_batches()
+
+
 # flake8: qa
 
 S3MockNoRecords = s3_mock(S3ObjectsNoRecords)

@@ -79,7 +79,12 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
     def get_next_objects(self, messages: list) -> Generator[AWSS3Object, None, None]:
         receipts = []
         for message in messages:
-            for record in orjson.loads(message["Body"].encode("utf-8")).get("Records", []):
+            decoded_messages = []
+            try:
+                decoded_messages = orjson.loads(message["Body"].encode("utf-8")).get("Records", [])
+            except ValueError as e:
+                self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+            for record in decoded_messages:
                 try:
                     yield AWSS3Object.from_record(self.s3_client, record)
 
@@ -87,7 +92,6 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
                         receipts.append(receipt)
                 except ValueError as e:
                     self.log_exception(e, message="Invalid record")
-
         if self.delete_consumed_messages:
             entries = [{"Id": f"{index:04d}", "ReceiptHandle": receipt} for index, receipt in enumerate(receipts)]
             if entries:
