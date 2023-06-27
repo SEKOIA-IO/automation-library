@@ -68,7 +68,7 @@ class DuoV2LogsIterator:
 
 
 class AdminLogsIterator(DuoV1LogsIterator):
-    def __init__(self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Callable = None):
+    def __init__(self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Optional[Callable] = None):
         super().__init__(func=client.get_administrator_log, min_time=min_time, limit=limit, callback=callback)
 
 
@@ -87,5 +87,5 @@ class AuthLogsIterator(DuoV2LogsIterator):
 
 
 class OfflineLogsIterator(DuoV1LogsIterator):
-    def __init__(self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Callable = None):
+    def __init__(self, client: duo_client.Admin, min_time: int, limit: int = 1000, callback: Optional[Callable] = None):
         super().__init__(func=client.get_offline_log, min_time=min_time, limit=limit, callback=callback)
