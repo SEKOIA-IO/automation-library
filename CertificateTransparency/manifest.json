@@ -3,7 +3,7 @@
     "description": "[Certificate transparency](https://certificate.transparency.dev/) is a security standard to monitor and audit certificates. This module rely on [certstream](https://certstream.calidog.io/) to get updates from the Certificate Transparency Log network.",
     "uuid": "6d6cfd48-1f93-423c-bc8d-0fe5d3029395",
     "slug": "certificate-transparency",
-    "version": "1.21",
+    "version": "1.22",
     "configuration": {
         "type": "object",
         "title": "Module configuration",
