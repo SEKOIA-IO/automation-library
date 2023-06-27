@@ -27,15 +27,6 @@ class DuoAdminLogsConnector(Connector):
         self.context_lock = Lock()
         self.consumers = {}
 
-        # Register signal to terminate thread
-        signal.signal(signal.SIGINT, self.exit)
-        signal.signal(signal.SIGTERM, self.exit)
-
-    def exit(self, _, __):
-        self.log(message="Stopping Duo Admin Logs connector", level="info")
-        # Exit signal received, asking the processor to stop
-        self._stop_event.set()
-
     def start_consumers(self):
         consumers = {}
         for log_type in self.LOGS_TO_FETCH:

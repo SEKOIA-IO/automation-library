@@ -1,0 +1,26 @@
+{
+  "configuration": {
+    "title": "Duo",
+    "type": "object",
+    "properties": {
+      "hostname": {
+        "description": "Duo Admin API hostname",
+        "type": "string"
+      },
+      "integration_key": {
+        "description": "Duo Admin API integration key",
+        "type": "string"
+      },
+      "secret_key": {
+        "description": "Duo Admin API secret key",
+        "type": "string"
+      }
+    },
+    "required": ["hostname", "integration_key", "secret_key"]
+  },
+  "description": "[Duo] Duo is a Cisco company offering solutions for strong authentication with multi-factor authentication (MFA), single sign-on (SSO), remote access or device trusting.",
+  "name": "Duo",
+  "slug": "duo",
+  "uuid": "94720767-a879-4f02-8561-1848d0b8d500",
+  "version": "1.0.0"
+}
