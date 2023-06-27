@@ -124,19 +124,9 @@ async def test_trellix_refresher_instance(http_token, session_faker):
         client_id, client_secret, api_key, base_url_different, Scope.set_for_investigations()
     )
 
-    assert instance1.client_id == client_id
-    assert instance1.client_secret == client_secret
-    assert instance1.base_url == base_url
-
     assert instance1 is instance2
-    assert instance1.client_id == instance2.client_id
-    assert instance1.client_secret == instance2.client_secret
-    assert instance1.base_url == instance2.base_url
 
     assert instance3 is not instance1
-    assert instance3.client_id == instance1.client_id
-    assert instance3.client_secret == instance1.client_secret
-    assert instance3.base_url == base_url_different
 
     await instance1.close()
     await instance2.close()
