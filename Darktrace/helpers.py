@@ -15,6 +15,6 @@ def generate_darktrace_signature(public_key: str, private_key: str, query: str, 
 
 def extract_query(request: requests.models.PreparedRequest) -> str:
     parsed_url = urlparse(request.url)
-    query = parsed_url.path + "?" + parsed_url.query
+    query = str(parsed_url.path) + "?" + str(parsed_url.query)
 
     return query
