@@ -226,6 +226,41 @@ async def test_salesforce_http_client_get_log_file_content(
 
 
 @pytest.mark.asyncio
+async def test_salesforce_http_client_handle_error_response():
+    response = MagicMock(spec=ClientResponse)
+    response.status = 200
+
+    await SalesforceHttpClient._handle_error_response(response)
+
+    assert True
+
+
+@pytest.mark.asyncio
+async def test_salesforce_http_client_error_response_with_non_200_status(session_faker):
+    """
+    Test SalesforceHttpClient._handle_error_response with a non-200 status code.
+
+    Args:
+        session_faker: Faker
+    """
+    response = MagicMock(spec=ClientResponse)
+
+    error_code = session_faker.word()
+    error_message = session_faker.sentence()
+
+    response.status = 404
+    response.json.return_value = [{"errorCode": error_code, "message": error_message}]
+
+    try:
+        # Call the function
+        await SalesforceHttpClient._handle_error_response(response)
+        # If the function didn't raise an exception, fail the test
+        pytest.fail("Exception not raised")
+    except Exception as e:
+        assert str(e) == "Error {0}: {1}".format(error_code, error_message)
+
+
+@pytest.mark.asyncio
 async def test_salesforce_http_client_get_log_file_content_1(session_faker, http_token, csv_content):
     """
     Test SalesforceHttpClient.get_log_file_content.

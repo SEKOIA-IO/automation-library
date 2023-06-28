@@ -59,7 +59,7 @@ class SalesforceConnector(Connector):
             datetime:
         """
         now = datetime.now(timezone.utc)
-        one_week_ago = (now - timedelta(days=7)).replace(microsecond=0)
+        one_week_ago = (now - timedelta(hours=1)).replace(microsecond=0)
 
         with self.context as cache:
             last_event_date_str = cache.get("last_event_date")

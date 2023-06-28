@@ -120,9 +120,9 @@ async def test_salesforce_connector_last_event_date(connector):
         cache["last_event_date"] = None
 
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
-    one_week_ago = current_date - timedelta(days=7)
+    one_hour_ago = current_date - timedelta(hours=1)
 
-    assert connector.last_event_date == one_week_ago
+    assert connector.last_event_date == one_hour_ago
 
     with connector.context as cache:
         cache["last_event_date"] = current_date.isoformat()
@@ -130,9 +130,9 @@ async def test_salesforce_connector_last_event_date(connector):
     assert connector.last_event_date == current_date
 
     with connector.context as cache:
-        cache["last_event_date"] = (one_week_ago - timedelta(days=1)).isoformat()
+        cache["last_event_date"] = (one_hour_ago - timedelta(minutes=20)).isoformat()
 
-    assert connector.last_event_date == one_week_ago
+    assert connector.last_event_date == one_hour_ago
 
 
 @pytest.mark.asyncio

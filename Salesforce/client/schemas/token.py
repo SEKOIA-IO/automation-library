@@ -30,7 +30,7 @@ class SalesforceToken(BaseModel):
         Returns:
             bool:
         """
-        return self.is_expired()
+        return not self.is_expired()
 
     def is_expired(self) -> bool:
         """
@@ -39,4 +39,4 @@ class SalesforceToken(BaseModel):
         Returns:
             bool:
         """
-        return self.created_at + self.ttl > (time() - 1)
+        return self.created_at + self.ttl < (time() - 1)
