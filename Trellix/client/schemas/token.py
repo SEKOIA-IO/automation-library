@@ -167,24 +167,6 @@ class Scope(str, Enum):
     MV_M_ADMIN = "mv:m:admin"
 
     @classmethod
-    def full_set_for_edr(cls) -> Set["Scope"]:
-        """
-        Get complete list of scopes to work with Trellix EDR.
-
-        Returns:
-            set:
-        """
-        return {
-            cls.SOC_HTS_C,
-            cls.SOC_HTS_R,
-            cls.SOC_RTS_C,
-            cls.SOC_RTS_R,
-            cls.SOC_QRY_PR,
-            cls.SOC_CFG_W,
-            cls.SOC_CFG_R,
-        }
-
-    @classmethod
     def complete_set_of_scopes(cls) -> Set["Scope"]:
         """
         Get complete list of scopes to work with all Trellix api endpoints.
@@ -335,57 +317,6 @@ class Scope(str, Enum):
             cls.UDLP_PM_V,
             cls.OPENID,
             cls.MV_M_ADMIN,
-        }
-
-    @classmethod
-    def set_for_historical_searches(cls) -> Set["Scope"]:
-        """
-        Get complete list of scopes to work with Trellix EDR.
-
-        Returns:
-            set:
-        """
-        return {
-            cls.SOC_HTS_C,
-            cls.SOC_HTS_R,
-        }
-
-    @classmethod
-    def set_for_realtime_searches(cls) -> Set["Scope"]:
-        """
-        Get complete list of scopes to work with Trellix EDR.
-
-        Returns:
-            set:
-        """
-        return {
-            cls.SOC_RTS_C,
-            cls.SOC_RTS_R,
-        }
-
-    @classmethod
-    def set_for_configuration(cls) -> Set["Scope"]:
-        """
-        Get complete list of scopes to work with Trellix EDR.
-
-        Returns:
-            set:
-        """
-        return {
-            cls.SOC_CFG_W,
-            cls.SOC_CFG_R,
-        }
-
-    @classmethod
-    def set_for_investigations(cls) -> Set["Scope"]:
-        """
-        Get complete list of scopes to work with Trellix EDR.
-
-        Returns:
-            set:
-        """
-        return {
-            cls.MI_USER_INVESTIGATE,
         }
 
 

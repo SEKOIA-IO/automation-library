@@ -121,7 +121,13 @@ async def test_trellix_refresher_instance(http_token, session_faker):
         client_id, client_secret, api_key, base_url, Scope.complete_set_of_scopes()
     )
     instance3 = await TrellixTokenRefresher.instance(
-        client_id, client_secret, api_key, base_url_different, Scope.set_for_investigations()
+        client_id,
+        client_secret,
+        api_key,
+        base_url_different,
+        {
+            Scope.MI_USER_INVESTIGATE,
+        },
     )
 
     assert instance1 is instance2
