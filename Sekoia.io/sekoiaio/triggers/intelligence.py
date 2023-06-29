@@ -34,17 +34,20 @@ class FeedConsumptionTrigger(Trigger):
         self._stop_event.set()
 
     @property
+    def feed_id(self) -> str:
+        return self.configuration.get("feed_id", "d6092c37-d8d7-45c3-8aff-c4dc26030608")
+
+    @property
     def url(self):
-        feed_id = self.configuration.get("feed_id", "d6092c37-d8d7-45c3-8aff-c4dc26030608")
         url = (
-            urljoin(self.module.configuration["base_url"], f"v2/inthreat/collections/{feed_id}/objects")
+            urljoin(self.module.configuration["base_url"], f"v2/inthreat/collections/{self.feed_id}/objects")
             + f"?limit={self.__class__.batch_size_limit}"
         )
         if len(self.__class__.API_URL_ADDITIONAL_PARAMETERS) > 0:
             url += "&" + "&".join(self.__class__.API_URL_ADDITIONAL_PARAMETERS)
 
         with self.context as cache:
-            cursor = cache.get("cursors", {}).get(self.configuration["feed_id"])
+            cursor = cache.get("cursors", {}).get(self.feed_id)
             if cursor:
                 return f"{url}&cursor={cursor}"
             else:
@@ -110,7 +113,7 @@ class FeedConsumptionTrigger(Trigger):
             with self.context as cache:
                 if "cursors" not in cache:
                     cache["cursors"] = {}
-                cache["cursors"][self.configuration["feed_id"]] = self.next_cursor
+                cache["cursors"][self.feed_id] = self.next_cursor
         else:
             self.log(
                 message="No objects fetched from the feed",
