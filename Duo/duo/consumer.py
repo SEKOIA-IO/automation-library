@@ -128,7 +128,7 @@ class DuoLogsConsumer(Thread):
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
             INCOMING_MESSAGES.labels(
                 intake_key=self.connector.configuration.intake_key, type=self._log_type.value
-            ).inc(len(events))
+            ).inc(len(batch_of_events))
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
