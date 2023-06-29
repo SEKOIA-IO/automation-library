@@ -3,8 +3,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from duo import DuoModule, LogType
-from duo.connector import DuoAdminLogsConnector
-from duo.consumer import DuoLogsConsumer
+from duo.connector import DuoAdminLogsConnector, DuoLogsConsumer
 
 
 @pytest.fixture
@@ -51,11 +50,11 @@ def test_fetch_batches(trigger, telephony_response_1, telephony_response_2):
     with patch(
         "duo_client.Admin.get_telephony_log", side_effect=[telephony_response_1, telephony_response_2]
     ) as mock_get_log, patch(
-        "duo.consumer.DuoLogsConsumer.load_checkpoint", return_value={}
+        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}
     ) as mock_load_checkpoint, patch(
-        "duo.consumer.DuoLogsConsumer.save_checkpoint"
+        "duo.connector.DuoLogsConsumer.save_checkpoint"
     ) as mock_save_checkpoint, patch(
-        "duo.consumer.time"
+        "duo.connector.time"
     ) as mock_time:
         # create a consumer
         batch_duration = 16  # the batch lasts 16 seconds
@@ -73,9 +72,9 @@ def test_fetch_batches(trigger, telephony_response_1, telephony_response_2):
 
 def test_fetch_batches_with_no_events(trigger):
     with patch("duo_client.Admin.get_telephony_log", side_effect=[]) as mock_get_log, patch(
-        "duo.consumer.DuoLogsConsumer.load_checkpoint", return_value={}
-    ) as mock_load_checkpoint, patch("duo.consumer.DuoLogsConsumer.save_checkpoint") as mock_save_checkpoint, patch(
-        "duo.consumer.time"
+        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}
+    ) as mock_load_checkpoint, patch("duo.connector.DuoLogsConsumer.save_checkpoint") as mock_save_checkpoint, patch(
+        "duo.connector.time"
     ) as mock_time:
         consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.TELEPHONY)
         consumer.fetch_batches()
@@ -85,8 +84,8 @@ def test_fetch_batches_with_no_events(trigger):
 
 
 def test_fetch_batches_with_non_existent_log_type(trigger):
-    with patch("duo.consumer.DuoLogsConsumer.load_checkpoint", return_value={}) as mock_load_checkpoint, patch(
-        "duo.consumer.DuoLogsConsumer.save_checkpoint"
+    with patch("duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}) as mock_load_checkpoint, patch(
+        "duo.connector.DuoLogsConsumer.save_checkpoint"
     ) as mock_save_checkpoint:
         consumer = DuoLogsConsumer(connector=trigger, log_type="TEST")
 
@@ -97,7 +96,7 @@ def test_fetch_batches_with_non_existent_log_type(trigger):
 
 
 def test_start_consumers(trigger):
-    with patch("duo.consumer.DuoLogsConsumer.start") as mock_start:
+    with patch("duo.connector.DuoLogsConsumer.start") as mock_start:
         consumers = trigger.start_consumers()
 
         assert consumers is not None
@@ -111,7 +110,7 @@ def test_start_consumers(trigger):
 
 
 def test_supervise_consumers(trigger):
-    with patch("duo.consumer.DuoLogsConsumer.start") as mock_start:
+    with patch("duo.connector.DuoLogsConsumer.start") as mock_start:
         consumers = {
             LogType.AUTHENTICATION: Mock(**{"is_alive.return_value": False, "running": True}),
             LogType.ADMINISTRATION: None,
