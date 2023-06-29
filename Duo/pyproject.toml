@@ -12,6 +12,7 @@ duo-client = "^5.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
+pytest-cov = "*"
 isort = "*"
 black = "*"
 mypy = "*"
