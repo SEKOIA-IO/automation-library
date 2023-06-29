@@ -71,12 +71,12 @@ def test_fetch_batches(trigger, telephony_response_1, telephony_response_2):
 
 
 def test_fetch_batches_with_no_events(trigger):
-    with patch("duo_client.Admin.get_telephony_log", side_effect=[]) as mock_get_log, patch(
+    with patch("duo_client.Admin.get_administrator_log", side_effect=[]) as mock_get_log, patch(
         "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}
     ) as mock_load_checkpoint, patch("duo.connector.DuoLogsConsumer.save_checkpoint") as mock_save_checkpoint, patch(
         "duo.connector.time"
     ) as mock_time:
-        consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.TELEPHONY)
+        consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.ADMINISTRATION)
         consumer.fetch_batches()
 
         assert trigger.push_events_to_intakes.call_count == 0
@@ -135,3 +135,12 @@ def test_stop_consumers(trigger):
     offline_consumer = consumers.get(LogType.OFFLINE)
     assert offline_consumer is not None
     assert offline_consumer.stop.called
+
+
+def test_checkpoint(trigger):
+    consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.TELEPHONY)
+
+    consumer.save_checkpoint(offset={"some_key": "some_value"})
+    result = consumer.load_checkpoint()
+
+    assert result == {"offset": {"some_key": "some_value"}}
