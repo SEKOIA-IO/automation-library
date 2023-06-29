@@ -1,0 +1,51 @@
+{
+  "name": "Ask GPT",
+  "description": "Use an OpenAI GPT model to provide an answer to any prompt",
+  "uuid": "fe93b2b9-0a0b-5700-bc20-61546d4002e1",
+  "docker_parameters": "AskGPTAction",
+  "arguments": {
+    "title": "AskGPTArguments",
+    "type": "object",
+    "properties": {
+      "prompt": {
+        "title": "Prompt",
+        "type": "string"
+      },
+      "temperature": {
+        "title": "Temperature",
+        "description": "What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.",
+        "default": 0.2,
+        "minimum": 0,
+        "maximum": 2,
+        "type": "number"
+      },
+      "model": {
+        "title": "Model",
+        "description": "ID of the model to use. See the model endpoint compatibility table (https://platform.openai.com/docs/models/model-endpoint-compatibility) for details on which models work with the Chat API.",
+        "default": "gpt-3.5-turbo",
+        "type": "string"
+      },
+      "max_tokens": {
+        "title": "Max Tokens",
+        "description": "The maximum number of tokens to generate in the chat completion. Default is no limit",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "prompt"
+    ]
+  },
+  "results": {
+    "title": "AskGPTResults",
+    "type": "object",
+    "properties": {
+      "response": {
+        "title": "Response",
+        "type": "string"
+      }
+    },
+    "required": [
+      "response"
+    ]
+  }
+}
