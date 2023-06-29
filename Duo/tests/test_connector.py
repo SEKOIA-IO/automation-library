@@ -37,7 +37,8 @@ def telephony_response_1():
                 "txid": "2f5d34d3-053f-422c-9dd4-77a5d58706b1",
                 "type": "sms",
             }
-        ]
+        ],
+        "metadata": {"next_offset": "offset_token"},
     }
 
 
@@ -46,7 +47,26 @@ def telephony_response_2():
     return {"items": []}
 
 
-def test_fetch_batches(trigger, telephony_response_1, telephony_response_2):
+@pytest.fixture
+def admin_response_1():
+    return [
+        {
+            "action": "user_update",
+            "description": '{"notes": "Joe asked for their nickname to be displayed instead of Joseph.", "realname": "Joe Smith"}',
+            "isotimestamp": "2020-01-24T15:09:42+00:00",
+            "object": "jsmith",
+            "timestamp": 1579878582,
+            "username": "admin",
+        }
+    ]
+
+
+@pytest.fixture
+def admin_response_2():
+    return []
+
+
+def test_fetch_batches_v2(trigger, telephony_response_1, telephony_response_2):
     with patch(
         "duo_client.Admin.get_telephony_log", side_effect=[telephony_response_1, telephony_response_2]
     ) as mock_get_log, patch(
@@ -68,6 +88,30 @@ def test_fetch_batches(trigger, telephony_response_1, telephony_response_2):
         assert trigger.push_events_to_intakes.call_count == 1
 
         mock_time.sleep.assert_called_once_with(44)
+
+
+def test_fetch_batches_v1(trigger, admin_response_1, admin_response_2):
+    with patch(
+        "duo_client.Admin.get_administrator_log", side_effect=[admin_response_1, admin_response_2]
+    ) as mock_get_log, patch(
+        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}
+    ) as mock_load_checkpoint, patch(
+        "duo.connector.DuoLogsConsumer.save_checkpoint"
+    ) as mock_save_checkpoint, patch(
+        "duo.connector.time"
+    ) as mock_time:
+        # create a consumer
+        batch_duration = 42  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.ADMINISTRATION)
+        consumer.fetch_batches()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+
+        mock_time.sleep.assert_called_once_with(18)
 
 
 def test_fetch_batches_with_no_events(trigger):
