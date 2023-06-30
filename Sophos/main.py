@@ -1,6 +1,6 @@
 from sophos_module.base import SophosModule
 from sophos_module.trigger_sophos_edr_events import SophosEDREventsTrigger
-from sophos_module.trigger_sophos_edr_events import SophosXDRQueryTrigger
+from sophos_module.trigger_sophos_xdr_query import SophosXDRQueryTrigger
 
 if __name__ == "__main__":
     module = SophosModule()
