@@ -10,7 +10,7 @@ from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.metrics import INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.metrics import INCOMING_EVENTS, OUTCOMING_EVENTS, FORWARD_EVENTS_DURATION
 
 
 class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
@@ -64,7 +64,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             start = time.time()
             run_query_dict = self.getting_results(self.pagination_limit)
             duration = int(time.time() - start)
-            return run_query_dict
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
         except HTTPError as ex:
             self.log_exception(ex, message="Failed to get next batch of events")
