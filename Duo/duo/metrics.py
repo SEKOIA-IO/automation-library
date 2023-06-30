@@ -1,7 +1,7 @@
 from prometheus_client import Counter, Histogram
 
 # Declare prometheus metrics
-prom_namespace = "symphony_module_netskope"
+prom_namespace = "symphony_module_duo"
 
 INCOMING_MESSAGES = Counter(
     name="collected_messages",
@@ -9,6 +9,9 @@ INCOMING_MESSAGES = Counter(
     namespace=prom_namespace,
     labelnames=["intake_key", "type"],
 )
+
+# Declare common prometheus metrics
+prom_namespace = "symphony_module_common"
 
 OUTCOMING_EVENTS = Counter(
     name="forwarded_events",
