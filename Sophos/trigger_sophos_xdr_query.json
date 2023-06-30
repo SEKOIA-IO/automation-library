@@ -1,0 +1,36 @@
+{
+    "description": "Forward Sophos XDR Data lake Events",
+    "docker_parameters": "sophos_query_events_trigger",
+    "name": "Get Sophos Data lake events",
+    "arguments": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {
+        "chunk_size": {
+          "type": "integer",
+          "description": "The max size of chunks for the batch processing",
+          "default": 1000
+        },
+        "intake_server": {
+          "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+          "default": "https://intake.sekoia.io",
+          "type": "string"
+        },
+        "intake_key": {
+          "description": "Intake key to use when sending events",
+          "type": "string"
+        },
+        "query": {
+          "description": "A query to get informations from Sophos data lake",
+          "type": "dict"
+        }
+      },
+      "required": [
+        "intake_key",
+        "query"
+      ],
+      "title": "Sophos Query Events",
+      "type": "object"
+    },
+    "results": {},
+    "uuid": "d7052d5e-0ccc-403f-928a-f63cb71b2e0c"
+  }

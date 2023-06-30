@@ -29,3 +29,24 @@ class SophosApiClient(ApiClient):
             url=(f"{self.auth.get_credentials().api_url}/siem/v1/events"),
             params=parameters,
         )
+    
+    def run_query(self, json_query: dict) -> requests.Response:
+        return self.post(
+            url=(f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs"),
+            json = json_query
+        )
+    
+    def get_query_status(self, runID: str) -> requests.Response:
+        return self.get(
+            url=(f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs/{runID}"),
+        )
+    
+    def get_query_results(self, runID: str, pageSize: str) -> requests.Response:
+        return self.get(
+            url=(f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs/{runID}/results?maxSize=1000&pageSize={pageSize}"),
+        )
+    
+    def get_query_results_next_page(self, runID: str, pageSize: str, fromKey: str) -> requests.Response:
+        return self.get(
+            url=(f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs/{runID}/results?maxSize=1000&pageSize={pageSize}&pageFromKey={fromKey}"),
+        )
