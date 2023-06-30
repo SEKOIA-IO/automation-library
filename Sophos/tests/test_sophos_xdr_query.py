@@ -165,7 +165,7 @@ def test_getting_results(trigger):
         assert len(calls[0]) == 7
 
 
-def test_getting_results(trigger):
+def test_getting_next_results(trigger):
     host = "https://api-eu01.central.sophos.com"
     url = f"{host}/xdr-query/v1/queries/runs"
     url_query_status = f"{host}/xdr-query/v1/queries/runs/7d00cf17-a987-4d07-ac88-93d4df89fa73"
