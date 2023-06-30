@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Generator, Sequence
 from datetime import datetime, timedelta
 from typing import Deque
+from urllib.parse import urljoin
 
 import orjson
 import requests
@@ -171,11 +172,13 @@ class M365EventsTrigger(Trigger):
             ],
         }
 
+        url = urljoin(
+            base=self.module.configuration.api_host,
+            url=f"/api/v1/tenants/{self.configuration.tenant_id}/logs/{event_type}/search",
+        )
+
         response = self.http_session.post(
-            url=(
-                f"{self.module.configuration.api_host}/api/v1/tenants/"
-                f"{self.configuration.tenant_id}/logs/{event_type}/search"
-            ),
+            url=url,
             json=payload_json,
             headers={"Authorization": self._get_authorization()},
         )

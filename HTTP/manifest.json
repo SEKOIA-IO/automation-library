@@ -1,13 +1,13 @@
 {
     "configuration": {
+        "type": "object",
+        "title": "Module configuration",
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "required": [],
-        "title": "Configuration",
-        "type": "object"
+        "properties": {}
     },
     "description": "This module exposes actions to request HTTP resources",
     "name": "HTTP",
     "uuid": "5894985f-91eb-46db-9306-cc5ac6463d3d",
     "slug": "http",
-    "version": "1.108"
+    "version": "1.109"
 }
