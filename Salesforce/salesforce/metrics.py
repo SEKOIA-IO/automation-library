@@ -1,7 +1,7 @@
 from prometheus_client import Counter, Histogram
 
-# Declare prometheus metrics
-prom_namespace = "symphony_module_salesforce_events"
+# Declare common prometheus metrics
+prom_namespace = "symphony_module_common"
 
 OUTCOMING_EVENTS = Counter(
     name="forwarded_events",

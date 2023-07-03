@@ -59,21 +59,21 @@ class SalesforceConnector(Connector):
             datetime:
         """
         now = datetime.now(timezone.utc)
-        one_week_ago = (now - timedelta(hours=1)).replace(microsecond=0)
+        one_hour_ago = (now - timedelta(hours=1)).replace(microsecond=0)
 
         with self.context as cache:
             last_event_date_str = cache.get("last_event_date")
 
-            # If undefined, retrieve events from the last 7 days
+            # If undefined, retrieve events from the last 1 hour
             if last_event_date_str is None:
-                return one_week_ago
+                return one_hour_ago
 
             # Parse the most recent date seen
             last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
 
-            # We don't retrieve messages older than one week
-            if last_event_date < one_week_ago:
-                return one_week_ago
+            # We don't retrieve messages older than 1 hour
+            if last_event_date < one_hour_ago:
+                return one_hour_ago
 
             return last_event_date
 
@@ -160,7 +160,7 @@ class SalesforceConnector(Connector):
         return result
 
     def run(self) -> None:
-        """Runs TrellixEdr."""
+        """Runs Salesforce."""
         loop = asyncio.get_event_loop()
 
         previous_processing_end = None
@@ -190,7 +190,7 @@ class SalesforceConnector(Connector):
                 previous_processing_end = processing_end
 
         except Exception as e:
-            logger.error("Error while running TrellixEdr: {error}", error=e)
+            logger.error("Error while running Salesforce: {error}", error=e)
 
         finally:
             loop.close()

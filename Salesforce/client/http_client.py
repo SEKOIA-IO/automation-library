@@ -64,7 +64,10 @@ class SalesforceHttpClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if cls._session is None:
-            cls._session = ClientSession()
+            cls._session = ClientSession(
+                headers={"Accept-Encoding": "gzip"},
+                auto_decompress=True
+            )
 
         if cls._rate_limiter:
             async with cls._rate_limiter:
@@ -156,6 +159,7 @@ class SalesforceHttpClient(object):
             headers = {
                 "Authorization": "Bearer {0}".format(token.token.access_token),
                 "Content-Type": "application/json",
+                "Content-Encoding": "gzip",
             }
 
         return headers

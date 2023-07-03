@@ -117,6 +117,7 @@ async def test_salesforce_http_client_request_headers(session_faker, http_token,
     assert result_headers == {
         "Authorization": "Bearer {0}".format(http_token.access_token),
         "Content-Type": "application/json",
+        "Content-Encoding": "gzip",
     }
 
 

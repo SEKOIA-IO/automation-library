@@ -30,7 +30,7 @@ class SalesforceTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, client_id: str, client_secret: str, auth_url: str, token_ttl: int = 3600):
+    def __init__(self, client_id: str, client_secret: str, auth_url: str, token_ttl: int = 300):
         """
         Initialize SalesforceTokenRefresher.
 
