@@ -62,7 +62,9 @@ class SophosXDRQueryTrigger(SophosConnector):
 
         try:
             start = time.time()
-            run_query_dict = self.getting_results(self.pagination_limit)
+
+            self.getting_results(self.pagination_limit)
+            
             duration = int(time.time() - start)
             FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
