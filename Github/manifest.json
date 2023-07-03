@@ -16,11 +16,14 @@
         "required": [
             "org_name",
             "apikey"
+        ],
+        "secrets": [
+            "apikey"
         ]
     },
     "description": "Github connector for audit logs",
     "name": "Github",
     "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
     "slug": "github",
-    "version": "1.1"
+    "version": "1.2"
 }
