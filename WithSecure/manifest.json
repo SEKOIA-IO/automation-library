@@ -16,11 +16,14 @@
         "required": [
             "client_id",
             "secret"
+        ],
+        "secrets": [
+            "secret"
         ]
     },
     "description": "Interact with WithSecure Elements",
     "name": "WithSecure",
     "uuid": "8aa9f86c-f360-4ae7-84f5-b61c6917cf01",
     "slug": "withsecure",
-    "version": "2.4"
+    "version": "2.5"
 }

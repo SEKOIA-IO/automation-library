@@ -17,11 +17,14 @@
             "base_url"
         ],
         "title": "Sekoia.io Configuration",
-        "type": "object"
+        "type": "object",
+        "secrets": [
+            "api_key"
+        ]
     },
     "description": "Sekoia.io",
     "name": "Sekoia.io",
     "uuid": "92d8bb47-7c51-445d-81de-ae04edbb6f0a",
     "slug": "sekoia.io",
-    "version": "2.40"
+    "version": "2.41"
 }
