@@ -30,19 +30,6 @@ class SophosXDRQueryTrigger(SophosConnector):
         super().__init__(*args, **kwargs)
         self._exporter = None
 
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
-
     @cached_property
     def pagination_limit(self):
         return max(self.configuration.chunk_size, 1000)
