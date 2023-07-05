@@ -1,0 +1,6 @@
+.coverage
+.idea
+htmlcov
+.mypy_cache
+.pytest_cache
+*local*

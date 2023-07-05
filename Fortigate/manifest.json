@@ -33,6 +33,9 @@
         },
         "required": [
             "firewalls"
+        ],
+        "secrets": [
+            "api_key"
         ]
     },
     "title": "Fortigate FW Configuration",
@@ -41,5 +44,5 @@
     "name": "Fortigate Firewalls",
     "uuid": "ca9a9497-bcd2-4d0c-b0c1-72699231feb2",
     "slug": "fortigate",
-    "version": "1.21"
+    "version": "1.22"
 }

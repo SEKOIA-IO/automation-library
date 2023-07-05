@@ -1,0 +1,34 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Darktrace",
+    "type": "object",
+    "properties": {
+      "api_url": {
+        "description": "The url of the Darktrace appliance",
+        "type": "string"
+      },
+      "public_key": {
+        "description": "The public key to the Darktrace API",
+        "type": "string"
+      },
+      "private_key": {
+        "description": "The private key to the Darktrace API",
+        "type": "string"
+      }
+    },
+    "required": [
+      "api_url",
+      "public_key",
+      "private_key"
+    ],
+    "secrets": [
+        "private_key"
+    ]
+  },
+  "description": "Darktrace monitors and protects all people and digital assets across your entire ecosystem.",
+  "name": "Darktrace",
+  "uuid": "0637f7c2-d68b-49cc-a1fc-ab7d0836e7ee",
+  "slug": "darktrace",
+  "version": "1.1"
+}

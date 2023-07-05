@@ -15,7 +15,8 @@
             }
         },
         "oneOf": [{"required": ["triage_raw_results"]}, {"required": ["triage_raw_results_path"]}],
-        "title": "Triage raw results"
+        "title": "Triage raw results",
+        "type": "object"
     },
     "results": {
         "$schema": "http://json-schema.org/draft-07/schema#",
