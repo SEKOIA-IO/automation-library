@@ -26,7 +26,6 @@
       },
       "required": [
         "intake_key",
-        "query"
       ],
       "title": "Sophos Query Events",
       "type": "object"
