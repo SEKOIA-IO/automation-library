@@ -1,7 +1,7 @@
 {
-    "description": "Forward Sophos XDR Data lake Events",
-    "docker_parameters": "sophos_query_events_trigger",
-    "name": "Get Sophos Data lake events",
+    "description": "Query last IoCs from the Sophos Data lake",
+    "docker_parameters": "sophos_query_ioc_trigger",
+    "name": "Query IoC from data lake",
     "arguments": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "properties": {
