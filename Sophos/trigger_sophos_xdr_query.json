@@ -18,10 +18,6 @@
         "intake_key": {
           "description": "Intake key to use when sending events",
           "type": "string"
-        },
-        "query": {
-          "description": "A query to get informations from Sophos data lake",
-          "type": "dict"
         }
       },
       "required": [
