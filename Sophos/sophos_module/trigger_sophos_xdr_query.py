@@ -1,11 +1,13 @@
-from functools import cached_property
+from datetime import datetime, timedelta, timezone
+from dateutil.parser import isoparse
 import time
-import os
+
+from functools import cached_property
 
 import orjson
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
+from sekoia_automation.storage import PersistentJSON
 
 from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
@@ -15,20 +17,45 @@ from sophos_module.metrics import INCOMING_EVENTS, OUTCOMING_EVENTS, FORWARD_EVE
 
 class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
     chunk_size: int = 1000
-    query: dict
 
 
 class SophosXDRQueryTrigger(SophosConnector):
     """
     The Sophos XDR Qyery reads the messages exposed after quering the Sophos Data Lake
     API and forward it to the playbook run.
+
+    Good to know : This's the parent class for all other query classes
     """
 
     configuration: SophosXDRQueryConfiguration
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._exporter = None
+        self.context = PersistentJSON("context.json", self._data_path)
+        self.query = ""
+        self.from_date = self.most_recent_date_seen
+        self.events_sum = 0
+
+    @property
+    def most_recent_date_seen(self):
+        now = datetime.now(timezone.utc)
+
+        with self.context as cache:
+            most_recent_date_seen_str = cache.get("most_recent_date_seen")
+
+            # if undefined, retrieve events from the last minute
+            if most_recent_date_seen_str is None:
+                return now - timedelta(days=1)
+
+            # parse the most recent date seen
+            most_recent_date_seen = isoparse(most_recent_date_seen_str)
+
+            # We don't retrieve messages older than one week
+            one_week_ago = now - timedelta(days=90)
+            if most_recent_date_seen < one_week_ago:
+                most_recent_date_seen = one_week_ago
+
+            return most_recent_date_seen
 
     @cached_property
     def pagination_limit(self):
@@ -81,7 +108,8 @@ class SophosXDRQueryTrigger(SophosConnector):
         return result, query_id
 
     def getting_results(self, pagination: str):
-        result, query_id = self.post_query(self.configuration.query)
+        now = datetime.now(timezone.utc)
+        result, query_id = self.post_query(self.query)
 
         if result != "succeeded":
             raise Exception("Sophos request is correct and sent treatment but failed!!")
@@ -94,12 +122,10 @@ class SophosXDRQueryTrigger(SophosConnector):
         if len(items) > 0:
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
             nextKey = response.get("pages").get("nextKey")
-
-            # The case where there's no pagination in the response.
-            if not nextKey:
-                self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
-                self.push_events_to_intakes(events=messages)
+            self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+            self.push_events_to_intakes(events=messages)
+            self.events_sum += len(messages)
 
             while nextKey:
                 grouped_data = []
@@ -109,7 +135,22 @@ class SophosXDRQueryTrigger(SophosConnector):
                 self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                 self.push_events_to_intakes(events=grouped_data)
+                self.events_sum += len(grouped_data)
                 nextKey = response_next_page.get("pages").get("nextKey")
+
+            most_recent_date_seen = now
+            self.from_date = most_recent_date_seen
+            with self.context as cache:
+                cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
         else:
             self.log(message="No messages to forward", level="info")
+
+
+class SophosXDRIOCQuery(SophosXDRQueryTrigger):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.query = {
+            "adHocQuery": {"template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"},
+            "from": self.from_date.isoformat(),
+        }
