@@ -24,7 +24,7 @@ class ThreatVisualizerLogConnectorConfiguration(DefaultConnectorConfiguration):
 
 class ThreatVisualizerLogConnector(Connector):
     """
-    This connector fetches audit logs from the Darktrace API
+    This connector fetches threat visualizer logs from the Darktrace API
     """
 
     module: DarktraceModule
@@ -105,7 +105,7 @@ class ThreatVisualizerLogConnector(Connector):
                 )
         else:
             self.log(
-                message=str(response),
+                message= "Response is not a list" + str(response),
                 level="warn",
             )
 
@@ -121,7 +121,7 @@ class ThreatVisualizerLogConnector(Connector):
             time.sleep(delta_sleep)
 
     def run(self):
-        self.log(message="Start fetching Darktrace audit logs", level="info")
+        self.log(message="Start fetching Darktrace threat visualizer logs", level="info")
 
         while self.running:
             try:
