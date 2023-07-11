@@ -105,7 +105,7 @@ class ThreatVisualizerLogConnector(Connector):
                 )
         else:
             self.log(
-                message= "Response is a " + type(response),
+                message= "Response is a " + type(response) + " : " + str(response),
                 level="warn",
             )
 
