@@ -100,12 +100,12 @@ class ThreatVisualizerLogConnector(Connector):
                 )
             else:
                 self.log(
-                    message="No events to forward ",
+                    message="No events to forward",
                     level="info",
                 )
         else:
             self.log(
-                message= "Response is not a list" + str(response),
+                message= "Response is a " + type(response),
                 level="warn",
             )
 
