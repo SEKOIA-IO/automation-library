@@ -1,5 +1,5 @@
 {
-  "name": "[ALPHA] Jumpcloud Directory Insights Connector",
+  "name": "[BETA] Jumpcloud Directory Insights Connector",
   "description": "",
   "uuid": "5de877fd-effb-5ebc-9358-8df26c06a140",
   "docker_parameters": "JumpcloudDirectoryInsightsConnector",
