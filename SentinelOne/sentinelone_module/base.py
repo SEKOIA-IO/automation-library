@@ -8,7 +8,7 @@ from sekoia_automation.module import Module
 
 class SentinelOneConfiguration(BaseModel):
     hostname: str = Field(..., description="The url to the SentinelOne instance")
-    api_token: str = Field(..., description="The API token to authenticate the requests")
+    api_token: str = Field(secret=True, description="The API token to authenticate the requests")
 
 
 class SentinelOneModule(Module):
