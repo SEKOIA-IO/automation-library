@@ -193,7 +193,7 @@ jobs:
     name: Deploy modules
     runs-on: ubuntu-latest
     needs: [find-modules, build-docker]
-    if: ${{ github.event_name == 'push' && needs.find-modules.outputs.matrix != '[]' }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.find-modules.outputs.matrix != '[]' }}
     strategy:
       matrix:
         module: ${{fromJSON(needs.find-modules.outputs.matrix)}}
