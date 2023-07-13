@@ -220,8 +220,7 @@ class SalesforceHttpClient(object):
     async def get_log_file_content(
         self,
         log_file: EventLogFile,
-        size_to_process: int = 1025,
-        # size_to_process: int = 1024 * 1024,
+        size_to_process: int = 1024 * 1024,
         chunk_size: int = 1024,
         temp_dir: str | None = None,
         persist_to_file: bool | None = None,
