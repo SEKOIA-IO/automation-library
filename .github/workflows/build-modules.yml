@@ -26,8 +26,11 @@ jobs:
           fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
       - id: list-modules
         name: List modules having changed files
-        if: github.event_name != 'workflow_dispatch'
         run: |
+          if ${{ github.event_name == 'workflow_dispatch' }}; then
+            echo "matrix=$(cut -d "/" -f1 <<< "$(ls -a */manifest.json)" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           if ${{ github.event_name == 'pull_request' }}; then
             start="HEAD^1"
             end="HEAD"
@@ -36,11 +39,6 @@ jobs:
             end=${{ github.event.after }}
           fi
           echo "matrix=$(comm -12  <(cut -d "/" -f1 <<< "$(git diff --name-only -r $start $end)" | sort | uniq) <(cut -d "/" -f1 <<< "$(ls -a */manifest.json)") | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
-      - id: all-modules
-        name: List all modules
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "matrix=$(cut -d "/" -f1 <<< "$(ls -a */manifest.json)" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
   test:
     name: Test module ${{ matrix.module }}
