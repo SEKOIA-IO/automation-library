@@ -17,6 +17,7 @@ async def test_event_log_file(session_faker):
         "attributes": {"type": "EventLogFile", "url": session_faker.uri()},
         "Id": session_faker.word(),
         "EventType": "Api",
+        "CreatedDate": session_faker.date_time().strftime("%Y-%m-%d"),
         "LogDate": session_faker.date_time().strftime("%Y-%m-%d"),
         "LogFile": session_faker.uri(),
         "LogFileLength": session_faker.random_int(),
@@ -33,6 +34,7 @@ async def test_event_log_file(session_faker):
         "EventType": expected_response.get("EventType"),
         "LogFile": expected_response.get("LogFile"),
         "LogDate": expected_response.get("LogDate"),
+        "CreatedDate": expected_response.get("CreatedDate"),
         "LogFileLength": expected_response.get("LogFileLength"),
     }
 
@@ -45,39 +47,22 @@ async def test_event_log_file_response(session_faker):
     Args:
         session_faker:
     """
+    records = [
+        {
+            "Id": session_faker.word(),
+            "EventType": session_faker.word(),
+            "LogFile": session_faker.uri(),
+            "LogDate": session_faker.date_time().strftime("%Y-%m-%d"),
+            "CreatedDate": session_faker.date_time().strftime("%Y-%m-%d"),
+            "LogFileLength": session_faker.pyfloat(),
+        }
+        for _ in range(session_faker.random_int(1, 10))
+    ]
+
     expected_response = {
-        "totalSize": 4,
+        "totalSize": len(records),
         "done": True,
-        "records": [
-            {
-                "Id": "0ATD000000001bROAQ",
-                "EventType": "API",
-                "LogFile": "/services/data/v57.0/sobjects/EventLogFile/0ATD000000001bROAQ/LogFile",
-                "LogDate": "2014-03-14T00:00:00.000+0000",
-                "LogFileLength": 2692.0,
-            },
-            {
-                "Id": "0ATD000000001SdOAI",
-                "EventType": "API",
-                "LogFile": "/services/data/v57.0/sobjects/EventLogFile/0ATD000000001SdOAI/LogFile",
-                "LogDate": "2014-03-13T00:00:00.000+0000",
-                "LogFileLength": 1345.0,
-            },
-            {
-                "Id": "0ATD000000003p1OAA",
-                "EventType": "API",
-                "LogFile": "/services/data/v57.0/sobjects/EventLogFile/0ATD000000003p1OAA/LogFile",
-                "LogDate": "2014-06-21T00:00:00.000+0000",
-                "LogFileLength": 605.0,
-            },
-            {
-                "Id": "0ATD0000000055eOAA",
-                "EventType": "API",
-                "LogFile": "/services/data/v57.0/sobjects/EventLogFile/0ATD0000000055eOAA/LogFile",
-                "LogDate": "2014-07-03T00:00:00.000+0000",
-                "LogFileLength": 605.0,
-            },
-        ],
+        "records": records,
     }
 
     response = SalesforceEventLogFilesResponse(**expected_response)

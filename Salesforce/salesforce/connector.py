@@ -111,6 +111,8 @@ class SalesforceConnector(Connector):
         Returns:
             list[str]:
         """
+        logger.info("Pushing {count} events to intakes", count=len(events))
+
         return await asyncio.to_thread(
             self.push_events_to_intakes,
             events=events,
@@ -125,7 +127,7 @@ class SalesforceConnector(Connector):
             datetime: last event date
         """
         _last_event_date = self.last_event_date
-        log_files = await self.salesforce_client.get_log_files(_last_event_date.isoformat())
+        log_files = await self.salesforce_client.get_log_files(_last_event_date)
 
         logger.info(
             "Found {count} log files to process since {date}",
@@ -136,25 +138,41 @@ class SalesforceConnector(Connector):
         result = []
 
         for log_file in log_files.records:
-            log_file_date = isoparse(log_file.LogDate)
+            log_file_results = []
+            log_file_date = isoparse(log_file.CreatedDate)
             if _last_event_date < log_file_date:
                 _last_event_date = log_file_date
 
             records, csv_path = await self.salesforce_client.get_log_file_content(
-                log_file_uri=log_file.LogFile,
+                log_file=log_file,
             )
 
             if records is not None:
-                result.extend(await self._push_events([orjson.dumps(event).decode("utf-8") for event in records]))
+                log_file_results.extend(
+                    await self._push_events([orjson.dumps(event).decode("utf-8") for event in records])
+                )
 
             # Process csv file row by row to avoid memory issues
             if csv_path is not None:
                 async for row in csv_file_as_rows(csv_path):
-                    result.extend(await self._push_events([orjson.dumps(row).decode("utf-8")]))
+                    log_file_results.extend(await self._push_events([orjson.dumps(row).decode("utf-8")]))
 
                 await delete_file(csv_path)
 
+            logger.info(
+                "Finished to process log file {log_file_id}. Total amount of records is {count}",
+                log_file_id=log_file.Id,
+                count=len(log_file_results),
+            )
+
+            result.extend(log_file_results)
+
             with self.context as cache:
+                logger.info(
+                    "New last event date now is {last_event_date}",
+                    last_event_date=_last_event_date.isoformat(),
+                )
+
                 cache["last_event_date"] = _last_event_date.isoformat()
 
         return result

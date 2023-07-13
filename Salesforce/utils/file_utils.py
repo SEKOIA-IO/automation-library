@@ -5,6 +5,7 @@ import aiocsv
 import aiofiles
 from aiofiles import os as aiofiles_os
 from aiohttp import ClientResponse
+from loguru import logger
 
 
 async def delete_file(file_name: str) -> None:
@@ -14,6 +15,8 @@ async def delete_file(file_name: str) -> None:
     Args:
         file_name: str
     """
+    logger.info("Delete local file {file_name}", file_name=file_name)
+
     await aiofiles_os.remove(file_name)
 
 

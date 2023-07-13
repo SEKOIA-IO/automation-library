@@ -1,5 +1,6 @@
 """Tests related to http client."""
 import csv
+import datetime
 from unittest.mock import MagicMock
 
 import aiocsv
@@ -43,7 +44,7 @@ async def test_salesforce_http_client_log_files_query():
     query = SalesforceHttpClient._log_files_query(None)
 
     expected_query = """
-        SELECT Id, EventType, LogFile, LogDate, LogFileLength
+        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
                 FROM EventLogFile WHERE Interval = \'Hourly\'
     """.strip()
 
@@ -53,10 +54,12 @@ async def test_salesforce_http_client_log_files_query():
 @pytest.mark.asyncio
 async def test_salesforce_http_client_log_files_query_1():
     """Test SalesforceHttpClient._log_files_query."""
-    query = SalesforceHttpClient._log_files_query(start_from="2023-01-01T00:00:00Z")
+    query = SalesforceHttpClient._log_files_query(
+        start_from=datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
+    )
 
     expected_query = """
-        SELECT Id, EventType, LogFile, LogDate, LogFileLength
+        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
                 FROM EventLogFile WHERE Interval = \'Hourly\' AND CreatedDate > 2023-01-01T00:00:00Z
     """.strip()
 
@@ -145,6 +148,7 @@ async def test_salesforce_http_client_get_log_files(
         EventType=session_faker.pystr(),
         LogFile=session_faker.pystr(),
         LogDate=session_faker.date_time().isoformat(),
+        CreatedDate=session_faker.date_time().isoformat(),
         LogFileLength=session_faker.pyfloat(),
     )
 
@@ -220,7 +224,16 @@ async def test_salesforce_http_client_get_log_file_content(
     http_client_session.get = MagicMock()
     http_client_session.get.return_value = response
 
-    result_content, result_file = await client.get_log_file_content(session_faker.pystr(), persist_to_file=False)
+    log_file = EventLogFile(
+        Id=session_faker.pystr(),
+        EventType=session_faker.pystr(),
+        LogFile=session_faker.pystr(),
+        LogDate=session_faker.date_time().isoformat(),
+        CreatedDate=session_faker.date_time().isoformat(),
+        LogFileLength=session_faker.pyfloat(),
+    )
+
+    result_content, result_file = await client.get_log_file_content(log_file, persist_to_file=False)
 
     assert result_content == list(csv.DictReader(csv_content.splitlines(), delimiter=","))
     assert result_file is None
@@ -273,7 +286,15 @@ async def test_salesforce_http_client_get_log_file_content_1(session_faker, http
     """
     with aioresponses() as mocked_responses:
         base_url = session_faker.uri()
-        log_file_uri = session_faker.pystr()
+
+        log_file = EventLogFile(
+            Id=session_faker.pystr(),
+            EventType=session_faker.pystr(),
+            LogFile=session_faker.pystr(),
+            LogDate=session_faker.date_time().isoformat(),
+            CreatedDate=session_faker.date_time().isoformat(),
+            LogFileLength=session_faker.pyfloat(),
+        )
 
         client = SalesforceHttpClient(
             client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=base_url
@@ -287,13 +308,13 @@ async def test_salesforce_http_client_get_log_file_content_1(session_faker, http
         )
 
         mocked_responses.get(
-            url="{0}{1}".format(base_url, log_file_uri),
+            url="{0}{1}".format(base_url, log_file.LogFile),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "1"},
         )
 
-        result_content, result_file = await client.get_log_file_content(log_file_uri, persist_to_file=False)
+        result_content, result_file = await client.get_log_file_content(log_file, persist_to_file=False)
 
         assert result_content == list(csv.DictReader(csv_content.splitlines(), delimiter=","))
         assert result_file is None
@@ -311,7 +332,15 @@ async def test_salesforce_http_client_get_log_file_content_2(session_faker, http
     """
     with aioresponses() as mocked_responses:
         base_url = session_faker.uri()
-        log_file_uri = session_faker.pystr()
+
+        log_file = EventLogFile(
+            Id=session_faker.pystr(),
+            EventType=session_faker.pystr(),
+            LogFile=session_faker.pystr(),
+            LogDate=session_faker.date_time().isoformat(),
+            CreatedDate=session_faker.date_time().isoformat(),
+            LogFileLength=session_faker.pyfloat(),
+        )
 
         client = SalesforceHttpClient(
             client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=base_url
@@ -325,13 +354,13 @@ async def test_salesforce_http_client_get_log_file_content_2(session_faker, http
         )
 
         mocked_responses.get(
-            url="{0}{1}".format(base_url, log_file_uri),
+            url="{0}{1}".format(base_url, log_file.LogFile),
             status=200,
             body=csv_content.encode("utf-8"),
             headers={"Content-Length": "1"},
         )
 
-        result_content, result_file = await client.get_log_file_content(log_file_uri, persist_to_file=True)
+        result_content, result_file = await client.get_log_file_content(log_file, persist_to_file=True)
 
         assert result_content is None
         assert result_file is not None

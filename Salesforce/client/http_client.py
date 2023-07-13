@@ -1,6 +1,7 @@
 """Salesforce http client."""
 import csv
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, Tuple
 from urllib.parse import urlencode
 
@@ -11,7 +12,7 @@ from yarl import URL
 
 from utils.file_utils import save_response_to_temp_file
 
-from .schemas.log_file import SalesforceEventLogFilesResponse
+from .schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
 from .token_refresher import SalesforceTokenRefresher
 
 
@@ -99,7 +100,7 @@ class SalesforceHttpClient(object):
         return " ".join([line.strip() for line in query.strip().splitlines()]).replace(" ", "+").replace(",", "+,")
 
     @staticmethod
-    def _log_files_query(start_from: str | None) -> str:
+    def _log_files_query(start_from: datetime | None = None) -> str:
         """
         Query to get log files.
 
@@ -109,15 +110,15 @@ class SalesforceHttpClient(object):
         Value of filter criterion for field 'CreatedDate' must be of type dateTime and should not be enclosed in quotes.
 
         Args:
-            start_from: str | None
+            start_from: datetime | None
 
         Returns:
             str:
         """
-        date_filter = "AND CreatedDate > {0}".format(start_from) if start_from else ""
+        date_filter = "AND CreatedDate > {0}".format(start_from.strftime("%Y-%m-%dT%H:%M:%SZ")) if start_from else ""
 
         return """
-            SELECT Id, EventType, LogFile, LogDate, LogFileLength
+            SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
                 FROM EventLogFile WHERE Interval = \'Hourly\' {0}
         """.format(
             date_filter
@@ -184,12 +185,12 @@ class SalesforceHttpClient(object):
 
             raise Exception(error_msg)
 
-    async def get_log_files(self, start_from: str | None = None) -> SalesforceEventLogFilesResponse:
+    async def get_log_files(self, start_from: datetime | None = None) -> SalesforceEventLogFilesResponse:
         """
         Get log files from Salesforce.
 
         Args:
-            start_from: str
+            start_from: datetime | None
 
         Raises:
             ValueError: Salesforce response cannot be processed
@@ -212,12 +213,15 @@ class SalesforceHttpClient(object):
                 if not result.done:
                     raise ValueError("Salesforce response is not done")
 
+        logger.info("Got {0} log files from Salesforce. Start date is {1}", len(result.records), start_from)
+
         return result
 
     async def get_log_file_content(
         self,
-        log_file_uri: str,
-        size_to_process: int = 1024 * 1024,
+        log_file: EventLogFile,
+        size_to_process: int = 1025,
+        # size_to_process: int = 1024 * 1024,
         chunk_size: int = 1024,
         temp_dir: str | None = None,
         persist_to_file: bool | None = None,
@@ -236,7 +240,7 @@ class SalesforceHttpClient(object):
             Left part of tuple is data as dict, right part is filepath on local machine.
 
         Args:
-            log_file_uri: str
+            log_file: EventLogFile
             size_to_process: int
             chunk_size: int
             temp_dir: str | None
@@ -246,27 +250,45 @@ class SalesforceHttpClient(object):
             Tuple[str, str]:
         """
         headers = await self._request_headers()
-        url = "{0}{1}".format(self.base_url, log_file_uri)
+        url = "{0}{1}".format(self.base_url, log_file.LogFile)
         _tmp_dir = temp_dir if temp_dir is not None else "/tmp"
 
-        logger.info("Getting log file content from Salesforce. Log file uri is {0}", url)
+        logger.info("Start to process log file from Salesforce. Log file is {0}", log_file.Id)
 
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:
                 await self._handle_error_response(response)
 
-                content_length = int(response.headers.get("Content-Length", 0))
+                content_length = int(log_file.LogFileLength)
+
+                logger.info(
+                    """
+                        Log file info:
+                         logfile Id: {file_id}
+                         logfile Url: {url}
+                         content length: {content_length}
+                         maximum log file size to process in memory: {size_to_process}
+                         chunk size: {chunk_size}
+                         always persist to file: {persist_to_file}
+                     """,
+                    file_id=log_file.Id,
+                    url=log_file.LogFile,
+                    content_length=content_length,
+                    size_to_process=size_to_process,
+                    chunk_size=chunk_size,
+                    persist_to_file=persist_to_file,
+                )
 
                 save_to_file = persist_to_file if persist_to_file is not None else content_length > size_to_process
 
                 if save_to_file:
-                    logger.info("Persisting log file response {0} to file", url)
+                    logger.info("Persist log file {0} to local file", log_file.Id)
 
                     file_name = await save_response_to_temp_file(response, chunk_size=chunk_size, temp_dir=_tmp_dir)
 
                     return None, file_name
                 else:
-                    logger.info("Get log file response body {0}", url)
+                    logger.info("Get log file content in memory {0}", log_file.Id)
 
                     data = await response.text()
 
