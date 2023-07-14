@@ -1,6 +1,7 @@
 import os
 import signal
 import time
+from datetime import datetime, timezone
 from functools import cached_property
 
 import orjson
@@ -8,7 +9,7 @@ from azure.eventhub import EventData, EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblob import BlobCheckpointStore
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
-from azure_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from azure_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS, EVENTS_LAG
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -98,12 +99,20 @@ class AzureEventsHubTrigger(Connector):
     def forward_events(self, messages: list[EventData]):
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
-        records = [
-            orjson.dumps(record).decode("utf-8")
-            for message in messages
-            for record in message.body_as_json().get("records", [])
-            if record is not None
-        ]
+        records = []
+        most_recent_datetime_seen: datetime = None
+        for message in messages:
+            # flatten and serialize the list of records
+            for record in message.body_as_json().get("records", []):
+                if record is not None:
+                    records.append(orjson.dumps(record).decode("utf-8"))
+
+            # look for the most recent
+            enqueued_time = message.enqueued_time
+            if enqueued_time is not None and (
+                most_recent_datetime_seen is None or enqueued_time > most_recent_datetime_seen
+            ):
+                most_recent_datetime_seen = enqueued_time
 
         if len(records) > 0:
             self.log(
@@ -120,6 +129,12 @@ class AzureEventsHubTrigger(Connector):
 
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
 
+        # compute the lag
+        if most_recent_datetime_seen:
+            now = datetime.now(timezone.utc)
+            current_lag = now - most_recent_datetime_seen
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
+
     def handle_exception(self, partition_context: PartitionContext, exception: Exception):
         self.log_exception(
             exception,
@@ -127,7 +142,6 @@ class AzureEventsHubTrigger(Connector):
         )
 
     def run(self):  # pragma: no cover
-
         self.log(message="Azure EventHub Trigger has started", level="info")
 
         while not self._stop_event.is_set():

@@ -20,6 +20,13 @@ OUTCOMING_EVENTS = Counter(
     labelnames=["intake_key"],
 )
 
+EVENTS_LAG = Histogram(
+    name="events_lags",
+    documentation="The delay, in seconds, from the date of the last event",
+    namespace=prom_namespace,
+    labelnames=["intake_key", "type"],
+)
+
 FORWARD_EVENTS_DURATION = Histogram(
     name="forward_events_duration",
     documentation="Duration to collect and forward events from eventhub",
