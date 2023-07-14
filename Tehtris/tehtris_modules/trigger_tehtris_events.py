@@ -10,6 +10,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from tehtris_modules import TehtrisModule
 from tehtris_modules.client import ApiClient
 from tehtris_modules.constants import EVENTS_ENDPOINT
+from tehtris_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class TehtrisEventConnectorConfiguration(DefaultConnectorConfiguration):
@@ -83,6 +84,7 @@ class TehtrisEventConnector(Connector):
         while has_more_message:
             # fetch events from the current context
             next_events = self.__fetch_next_events(self.from_date, offset)
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_events))
 
             # if the number of fetched events equals the limit, additional events are remaining
             has_more_message = len(next_events) == self.fetch_events_limit
@@ -113,6 +115,12 @@ class TehtrisEventConnector(Connector):
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
 
+        now = datetime.now(timezone.utc)
+        current_lag = now - most_recent_date_seen
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+            int(current_lag.total_seconds())
+        )
+
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
@@ -131,6 +139,7 @@ class TehtrisEventConnector(Connector):
                         message=f"Forward {len(batch_of_events)} events to the intake",
                         level="info",
                     )
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                     self.push_events_to_intakes(events=batch_of_events)
                     batch_of_events = []
 
@@ -140,6 +149,7 @@ class TehtrisEventConnector(Connector):
                 message=f"Forward {len(batch_of_events)} events to the intake",
                 level="info",
             )
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
             self.push_events_to_intakes(events=batch_of_events)
 
         # get the ending time and compute the duration to fetch the events
@@ -149,6 +159,7 @@ class TehtrisEventConnector(Connector):
             message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
             level="info",
         )
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
