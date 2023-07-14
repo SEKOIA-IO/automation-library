@@ -100,7 +100,7 @@ class AzureEventsHubTrigger(Connector):
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
         records = []
-        most_recent_datetime_seen: datetime = None
+        most_recent_datetime_seen: datetime | None = None
         for message in messages:
             # flatten and serialize the list of records
             for record in message.body_as_json().get("records", []):
