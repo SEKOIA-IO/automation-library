@@ -10,7 +10,6 @@ from azure.eventhub.extensions.checkpointstoreblob import BlobCheckpointStore
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from azure_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-from azure_module.metrics.utils import make_prometheus_exporter
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -135,22 +134,16 @@ class AzureEventsHubTrigger(Connector):
         )
 
     def run(self):  # pragma: no cover
-        # start the prometheus exporter
-        exporter = make_prometheus_exporter(int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10))
-        exporter.start()
 
         self.log(message="Azure EventHub Trigger has started", level="info")
 
-        try:
-            while not self._stop_event.is_set():
-                try:
-                    self.client.receive_batch(
-                        self.handle_messages,
-                        on_error=self.handle_exception,
-                        max_wait_time=self._consumption_max_wait_time,
-                    )
-                except Exception as ex:
-                    self.log_exception(ex, message="Failed to consume messages")
-                    raise ex
-        finally:
-            exporter.stop()
+        while not self._stop_event.is_set():
+            try:
+                self.client.receive_batch(
+                    self.handle_messages,
+                    on_error=self.handle_exception,
+                    max_wait_time=self._consumption_max_wait_time,
+                )
+            except Exception as ex:
+                self.log_exception(ex, message="Failed to consume messages")
+                raise ex
