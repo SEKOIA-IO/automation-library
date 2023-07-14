@@ -11,7 +11,6 @@ from urllib.parse import urlencode
 import orjson
 from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from websocket import WebSocketApp, WebSocketTimeoutException
 
 from proofpoint_modules.helpers import format_datetime, normalize_since_time, split_message
@@ -195,24 +194,10 @@ class PoDEventsTrigger(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._exporter = None
 
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Proofpoint PoD connector", level="info")
         super().stop(*args, **kwargs)
-
-    def start_monitoring(self):  # pragma: nocover
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):  # pragma: nocover
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def run(self):  # pragma: no cover
         self.log(message="ProofPoint PoD Events Trigger has started", level="info")
