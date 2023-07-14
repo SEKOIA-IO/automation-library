@@ -17,7 +17,7 @@ from netskope_modules.helpers import (
     get_iterator_name,
     get_tenant_hostname,
 )
-from netskope_modules.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from netskope_modules.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, EVENTS_LAG
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 
@@ -76,7 +76,14 @@ class NetskopeEventConsumer(Thread):
             )
 
         content = response.json() if response.status_code == 200 else {}
-        batch_of_events = [orjson.dumps(event).decode("utf-8") for event in content.get("result", [])]
+
+        # Serialize events and extract the most recent timestamp
+        batch_of_events = []
+        most_recent_timestamp = 0
+        for event in content.get("result", []):
+            batch_of_events.append(orjson.dumps(event).decode("utf-8"))
+            if event.get("timestamp", 0) > most_recent_timestamp:
+                most_recent_timestamp = event["timestamp"]
         OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
             len(batch_of_events)
         )
@@ -94,6 +101,12 @@ class NetskopeEventConsumer(Thread):
         FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
             batch_end_time
         )
+
+        # compute the lag
+        if most_recent_timestamp > 0:
+            now = time.time()
+            current_lag = now - most_recent_timestamp
+            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(int(current_lag))
 
         # get the sleeping time from the response. Otherwise, compute the remaining sleeping time.
         delta_sleep = content.get("wait_time", 30 - batch_duration)
