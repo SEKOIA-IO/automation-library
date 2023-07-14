@@ -2,7 +2,6 @@ import os
 import signal
 import time
 from functools import cached_property
-from threading import Event
 
 import orjson
 from azure.eventhub import EventData, EventHubConsumerClient, PartitionContext
@@ -62,17 +61,11 @@ class AzureEventsHubTrigger(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._stop_event = Event()
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
-
-        # Register signal to terminate thread
-        signal.signal(signal.SIGINT, self.stop)
-        signal.signal(signal.SIGTERM, self.stop)
 
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Azure EventHub connector", level="info")
-        # Exit signal received, asking the processor to stop
-        self._stop_event.set()
+        super().stop(*args, **kwargs)
 
         # Close the azure EventHub client
         self.client.close()
