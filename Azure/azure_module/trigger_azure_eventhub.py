@@ -9,7 +9,6 @@ from azure.eventhub import EventData, EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblob import BlobCheckpointStore
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
-from azure_module.kafka import KafkaForwarder
 from azure_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from azure_module.metrics.utils import make_prometheus_exporter
 
@@ -83,10 +82,6 @@ class AzureEventsHubTrigger(Connector):
     def client(self) -> Client:
         return Client(self.configuration)
 
-    @cached_property
-    def kafka_producer(self) -> KafkaForwarder:
-        return KafkaForwarder()
-
     def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]):
         """
         Handle new messages
@@ -124,7 +119,6 @@ class AzureEventsHubTrigger(Connector):
                 level="info",
             )
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(records))
-            self.kafka_producer.produce(records)
             self.push_events_to_intakes(events=records)
         else:
             self.log(
