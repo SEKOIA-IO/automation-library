@@ -9,7 +9,6 @@ from netskope_api.iterator.const import Const
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
 from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 
 from netskope_modules import NetskopeModule
 from netskope_modules.constants import MESSAGE_CANNOT_CONSUME_SERVICE
@@ -268,20 +267,6 @@ class NetskopeEventConnector(Connector):
             if consumer is not None and consumer.is_alive():
                 self.log(message=f"Stop {name} consumer", level="info")
                 consumers[name].stop()
-
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread,
-            int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10),
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def run(self):
         try:
