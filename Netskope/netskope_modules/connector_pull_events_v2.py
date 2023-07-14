@@ -138,7 +138,6 @@ class NetskopeEventConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._exporter = None
 
     @cached_property
     def tenant_hostname(self):
