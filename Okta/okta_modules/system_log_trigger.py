@@ -16,6 +16,7 @@ from okta_modules import OktaModule
 from okta_modules.client import ApiClient
 from okta_modules.helpers import get_upper_second
 from okta_modules.logging import get_logger
+from okta_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -122,6 +123,7 @@ class SystemLogConnector(Connector):
 
             # yielding events if defined
             if events:
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
                 yield events
             else:
                 logger.info(
@@ -170,6 +172,12 @@ class SystemLogConnector(Connector):
                 with self.context as cache:
                     cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
+        now = datetime.now(timezone.utc)
+        current_lag = now - most_recent_date_seen
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+            int(current_lag.total_seconds())
+        )
+
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
@@ -184,6 +192,7 @@ class SystemLogConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -195,6 +204,7 @@ class SystemLogConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
