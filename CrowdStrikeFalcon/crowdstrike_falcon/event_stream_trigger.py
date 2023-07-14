@@ -11,7 +11,6 @@ import orjson
 from requests.auth import AuthBase
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import Connector
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sekoia_automation.storage import PersistentJSON
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
@@ -316,7 +315,6 @@ class EventStreamTrigger(Connector):
         self.f_stop = threading.Event()
 
         self._network_sleep_on_retry = 60
-        self._exporter = None
 
     @cached_property
     def client(self):
@@ -346,19 +344,6 @@ class EventStreamTrigger(Connector):
         )
 
         return VerticlesCollector(self, tg_client, self.client)
-
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def read_queue(self) -> None:
         """
