@@ -174,9 +174,7 @@ class SystemLogConnector(Connector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-            int(current_lag.total_seconds())
-        )
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
 
     def next_batch(self):
         # save the starting time
