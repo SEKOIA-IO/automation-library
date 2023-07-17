@@ -81,13 +81,13 @@ class ThreatVisualizerLogConnector(Connector):
         response = []
         try:
             response = self.request_events().json()
+            logger.debug(f"Response from API: {response}")
         except ValueError:
             self.log(
                 message="The server response is not a json: " + str(response),
                 level="warn",
             )
             return
-        logger.debug(f"Response from API: {response}")
         if type(response) is list:
             response = self.refine_response(response)
             # if the response is not empty, push it
@@ -106,7 +106,7 @@ class ThreatVisualizerLogConnector(Connector):
                 )
         else:
             self.log(
-                message="Response is a " + type(response) + " : " + str(response),
+                message="Response is not a list : " + str(response),
                 level="warn",
             )
 
