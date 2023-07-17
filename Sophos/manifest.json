@@ -29,11 +29,14 @@
             "api_host",
             "client_id",
             "client_secret"
+        ],
+        "secrets": [
+            "client_secret"
         ]
     },
     "description": "Sophos Module",
     "name": "Sophos",
     "uuid": "0de5216e-19b0-4ad3-9b91-a547cfaf52ca",
     "slug": "sophos",
-    "version": "1.7.2"
+    "version": "1.11"
 }

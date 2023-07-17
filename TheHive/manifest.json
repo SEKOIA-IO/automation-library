@@ -22,11 +22,14 @@
             "organisation"
         ],
         "title": "Arguments",
-        "type": "object"
+        "type": "object",
+        "secrets": [
+            "apikey"
+        ]
     },
     "description": "[TheHive](https://thehive-project.org/) is a scalable, open source and free Security Incident Response Platform",
     "name": "The Hive",
     "uuid": "48086812-d709-4eff-b308-e8bf504b8a7a",
     "slug": "thehive",
-    "version": "1.10"
+    "version": "1.14"
 }

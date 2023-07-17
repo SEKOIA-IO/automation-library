@@ -1,33 +1,36 @@
 {
-  "configuration": {
-    "title": "AzureADConfiguration",
-    "type": "object",
-    "properties": {
-      "tenant_id": {
-        "title": "Tenant Id",
-        "description": "ID of the Azure AD tenant",
-        "type": "string"
-      },
-      "client_id": {
-        "title": "Client Id",
-        "description": "Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",
-        "type": "string"
-      },
-      "client_secret": {
-        "title": "Client Secret",
-        "description": "Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",
-        "type": "string"
-      }
+    "configuration": {
+        "title": "AzureADConfiguration",
+        "type": "object",
+        "properties": {
+            "tenant_id": {
+                "title": "Tenant Id",
+                "description": "ID of the Azure AD tenant",
+                "type": "string"
+            },
+            "client_id": {
+                "title": "Client Id",
+                "description": "Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",
+                "type": "string"
+            },
+            "client_secret": {
+                "title": "Client Secret",
+                "description": "Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",
+                "type": "string"
+            }
+        },
+        "required": [
+            "tenant_id",
+            "client_id",
+            "client_secret"
+        ],
+        "secrets": [
+            "client_secret"
+        ]
     },
-    "required": [
-      "tenant_id",
-      "client_id",
-      "client_secret"
-    ]
-  },
-  "description": "[Azure Active Directory (Azure AD)](https://azure.microsoft.com/en-us/services/active-directory/#overview) is an enterprise identity service that provides single sign-on, multifactor authentication, and conditional access to guard against 99.9 percent of cybersecurity attacks.",
-  "name": "Azure Active Directory",
-  "uuid": "3abf7928-65ef-4a5f-ba3e-5fbe56123d0c",
-  "slug": "azure-ad",
-  "version": "2.0.0"
+    "description": "[Azure Active Directory (Azure AD)](https://azure.microsoft.com/en-us/services/active-directory/#overview) is an enterprise identity service that provides single sign-on, multifactor authentication, and conditional access to guard against 99.9 percent of cybersecurity attacks.",
+    "name": "Azure Active Directory",
+    "uuid": "3abf7928-65ef-4a5f-ba3e-5fbe56123d0c",
+    "slug": "azure-ad",
+    "version": "2.4"
 }

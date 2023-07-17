@@ -3,5 +3,5 @@ from darktrace_modules.threat_visualizer_log_trigger import ThreatVisualizerLogC
 
 if __name__ == "__main__":
     module = DarktraceModule()
-    module.register(ThreatVisualizerLogConnector, "github_audit_logs")
+    module.register(ThreatVisualizerLogConnector, "darktrace_threat_visualizer_logs")
     module.run()

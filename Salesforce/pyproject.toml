@@ -1,0 +1,93 @@
+[tool.poetry]
+name = "SEKOIA.IO Automation Module to work with Salesforce"
+version = "0.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+orjson = "^3.7.7"
+python-dateutil = "^2.8.2"
+sekoia-automation-sdk = "^1.3.8"
+loguru = "^0.7.0"
+async-lru = "^2.0.2"
+aiohttp = "^3.8.4"
+aiofiles = "^23.1.0"
+aiolimiter = "^1.1.0"
+aiocsv = "^1.2.4"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-asyncio = "*"
+pytest-xdist = "*"
+pytest-env = "*"
+pytest-flake8 = "*"
+Faker = "^13.12.0"
+aioresponses = "^0.7.4"
+autoflake = "^1.4"
+isort = "^5.10.1"
+black = "^22.3.0"
+mypy = "^0.960"
+types-aiofiles = "^23.1.0.4"
+types-python-dateutil = "^2.8.19.13"
+poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
+
+[tool.black]
+line-length = 119
+target-version = ['py310']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore:.*unclosed.*:ResourceWarning",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=salesforce
+  --cov=client
+  --cov=logger
+  --cov=utils
+  --cov-branch
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=5
+  --numprocesses=auto
+  --asyncio-mode=auto
+'''
+
+[tool.poe.tasks.lint]
+sequence = [
+    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
+    { cmd = "poetry run black ." },
+    { cmd = "poetry run isort ." },
+    { cmd = "poetry run mypy ." },
+]
+help = "Make code linting and formatting."
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

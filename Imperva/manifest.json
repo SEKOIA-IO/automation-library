@@ -35,11 +35,14 @@
             "base_url",
             "api_id",
             "api_key"
+        ],
+        "secrets": [
+            "api_key"
         ]
     },
     "description": "Imperva Module",
     "name": "Imperva",
     "uuid": "ee0e5c81-5410-48d4-b155-135679c5ebb8",
     "slug": "imperva",
-    "version": "1.12"
+    "version": "1.16"
 }

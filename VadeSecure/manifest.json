@@ -27,11 +27,14 @@
             "api_host",
             "client_id",
             "client_secret"
+        ],
+        "secrets": [
+            "client_secret"
         ]
     },
     "description": "Vade Secure Module",
     "name": "Vade Secure",
     "uuid": "1411df5b-5de1-40bd-a988-725cfe692aff",
     "slug": "vadesecure",
-    "version": "1.40"
+    "version": "1.44"
 }
