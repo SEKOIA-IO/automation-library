@@ -166,7 +166,7 @@ async def test_salesforce_connector_push_events_wrapper(connector, pushed_events
 
 @pytest.mark.asyncio
 async def test_salesforce_connector_get_salesforce_events(
-    connector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
+    connector: SalesforceConnector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
 ):
     """
     Test salesforce connector get salesforce events.
@@ -185,7 +185,8 @@ async def test_salesforce_connector_get_salesforce_events(
         EventType=session_faker.pystr(),
         LogFile=session_faker.pystr(),
         LogDate=log_file_date.isoformat(),
-        LogFileLength=session_faker.pyfloat(),
+        CreatedDate=log_file_date.isoformat(),
+        LogFileLength=len(csv_content.encode("utf-8")),
     )
 
     log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
@@ -200,7 +201,7 @@ async def test_salesforce_connector_get_salesforce_events(
             payload=token_data,
         )
 
-        query = connector.salesforce_client._log_files_query(connector.last_event_date.isoformat())
+        query = connector.salesforce_client._log_files_query(connector.last_event_date)
         get_log_files_url = connector.salesforce_client._request_url_with_query(query)
 
         log_file_response_dict = log_files_response_success.dict()
@@ -225,7 +226,7 @@ async def test_salesforce_connector_get_salesforce_events(
 
 @pytest.mark.asyncio
 async def test_salesforce_connector_get_salesforce_events_1(
-    connector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
+    connector: SalesforceConnector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
 ):
     """
     Test salesforce connector get salesforce events.
@@ -249,7 +250,8 @@ async def test_salesforce_connector_get_salesforce_events_1(
         EventType=session_faker.pystr(),
         LogFile=session_faker.pystr(),
         LogDate=log_file_date.isoformat(),
-        LogFileLength=session_faker.pyfloat(),
+        CreatedDate=log_file_date.isoformat(),
+        LogFileLength=1024 * 1024 * 1024,
     )
 
     log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
@@ -264,7 +266,7 @@ async def test_salesforce_connector_get_salesforce_events_1(
             payload=token_data,
         )
 
-        query = connector.salesforce_client._log_files_query(connector.last_event_date.isoformat())
+        query = connector.salesforce_client._log_files_query(connector.last_event_date)
         get_log_files_url = connector.salesforce_client._request_url_with_query(query)
 
         log_file_response_dict = log_files_response_success.dict()
