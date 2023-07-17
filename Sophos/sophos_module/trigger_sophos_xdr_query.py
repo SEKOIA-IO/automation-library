@@ -91,11 +91,13 @@ class SophosXDRQueryTrigger(SophosConnector):
     def post_query(self, query: dict):
         # It's the first step of our query treatment.
         # Posting the query
+        self.log(message="Querying the Sophos data lake", level="info")
         response_runQuery = self.client.run_query(json_query=query).json()
 
         query_id = response_runQuery.get("id")
 
         status = ""
+        self.log(message=f"Waiting the query {query_id} to complete", level="info")
         while status != "finished":
             # Give time for query to finish.
             time.sleep(2)
@@ -105,10 +107,13 @@ class SophosXDRQueryTrigger(SophosConnector):
             status = response_queryStatus.get("status")
             result = response_queryStatus.get("result")
 
+        self.log(message=f"Finishing the loop with status {status} and result {result}", level="info")
+
         return result, query_id
 
     def getting_results(self, pagination: str):
         now = datetime.now(timezone.utc)
+
         result, query_id = self.post_query(self.query)
 
         if result != "succeeded":
@@ -117,6 +122,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         # If the result succeed ==> get the data.
         response = self.client.get_query_results(query_id, pagination).json()
         items = response.get("items", [])
+        self.log(message=f"Getting results with {len(items)} elements", level="info")
         INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
         if len(items) > 0:
