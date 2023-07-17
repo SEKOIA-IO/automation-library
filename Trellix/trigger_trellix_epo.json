@@ -59,8 +59,8 @@
         ]
     },
     "description": "Trigger playbook to get Trellix events information",
-    "docker_parameters": "salesforce",
-    "name": "Salesforce events",
+    "docker_parameters": "trellix_epo",
+    "name": "[ALPHA] Get Trellix ePo events",
     "results": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {},
