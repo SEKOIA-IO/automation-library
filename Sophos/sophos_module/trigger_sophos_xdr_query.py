@@ -91,7 +91,7 @@ class SophosXDRQueryTrigger(SophosConnector):
     def post_query(self, query: dict):
         # It's the first step of our query treatment.
         # Posting the query
-        self.log(message="Starting the first step of quering the Sophos data lake", level="info")
+        self.log(message="Querying the Sophos data lake", level="info")
         response_runQuery = self.client.run_query(json_query=query).json()
 
         query_id = response_runQuery.get("id")
