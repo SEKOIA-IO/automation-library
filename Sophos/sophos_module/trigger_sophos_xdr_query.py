@@ -147,7 +147,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             most_recent_date_seen = now
             self.from_date = most_recent_date_seen
             with self.context as cache:
-                cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
+                cache["most_recent_date_seen"] = most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         else:
             self.log(message="No messages to forward", level="info")
@@ -158,5 +158,5 @@ class SophosXDRIOCQuery(SophosXDRQueryTrigger):
         super().__init__(*args, **kwargs)
         self.query = {
             "adHocQuery": {"template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"},
-            "from": self.from_date.isoformat(),
+            "from": self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
