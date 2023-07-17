@@ -114,7 +114,6 @@ class SophosXDRQueryTrigger(SophosConnector):
     def getting_results(self, pagination: str):
         now = datetime.now(timezone.utc)
 
-        self.log(message=f"Using our function post_query to do the two first queries.", level="info")
         result, query_id = self.post_query(self.query)
 
         if result != "succeeded":
