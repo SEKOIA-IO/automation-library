@@ -99,7 +99,6 @@ class SophosEDREventsTrigger(SophosConnector):
                     self.log_exception(ex, message="Failed to get next batch of events")
                 except Exception as ex:
                     self.log_exception(ex, message="An unknown exception occurred")
-                    raise
         finally:
             self.log(message="Sophos Events Trigger has stopped", level="info")
 
