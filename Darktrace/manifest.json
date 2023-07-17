@@ -27,5 +27,5 @@
   "name": "Darktrace",
   "uuid": "0637f7c2-d68b-49cc-a1fc-ab7d0836e7ee",
   "docker": "sekoia-automation-module-darktrace",
-  "version": "1.0"
+  "version": "1.0.1"
 }
