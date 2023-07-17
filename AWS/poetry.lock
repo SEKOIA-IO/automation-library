@@ -1146,13 +1146,13 @@ crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.3.5"
+version = "1.3.8"
 description = "SDK to create SEKOIA.IO playbook modules"
 optional = false
 python-versions = ">=3.10,<3.12"
 files = [
-    {file = "sekoia_automation_sdk-1.3.5-py3-none-any.whl", hash = "sha256:2cbedbdf52dd1c92d7b12d71d1985c881451be3d18512f88d1f33d95dc28d10d"},
-    {file = "sekoia_automation_sdk-1.3.5.tar.gz", hash = "sha256:013d8ee7da2071b7a0e76cb57c36a1aa7e2c48f6417aea03bd4f5163c8afb281"},
+    {file = "sekoia_automation_sdk-1.3.8-py3-none-any.whl", hash = "sha256:23fa4efd518091caa7d015fb42b58d2e6cbd9b2a791ed59dc835706135219553"},
+    {file = "sekoia_automation_sdk-1.3.8.tar.gz", hash = "sha256:a9e3498b1323f22094adb3bdede98e3f8f190416727693eac4e70986e363d2bf"},
 ]
 
 [package.dependencies]
@@ -1345,4 +1345,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "5dbec21a1fd2f211d2f908d9094ba61449a2b4c225ea7cc2eb983906cac920ac"
+content-hash = "2665da69deb5109deef8d2f92007bfd1faebeee8b4dfad335dcbe5938bbaac8b"
