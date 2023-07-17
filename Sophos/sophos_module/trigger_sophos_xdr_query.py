@@ -95,10 +95,9 @@ class SophosXDRQueryTrigger(SophosConnector):
         response_runQuery = self.client.run_query(json_query=query).json()
 
         query_id = response_runQuery.get("id")
-        self.log(message=f"Getting the query id {query_id}", level="info")
 
         status = ""
-        self.log(message=f"Starting the while loop before finishing", level="info")
+        self.log(message=f"Waiting the query {query_id} to complete", level="info")
         while status != "finished":
             # Give time for query to finish.
             time.sleep(2)
