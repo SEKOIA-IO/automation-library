@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -26,6 +27,10 @@ jobs:
       - id: list-modules
         name: List modules having changed files
         run: |
+          if ${{ github.event_name == 'workflow_dispatch' }}; then
+            echo "matrix=$(cut -d "/" -f1 <<< "$(ls -a */manifest.json)" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           if ${{ github.event_name == 'pull_request' }}; then
             start="HEAD^1"
             end="HEAD"
@@ -188,7 +193,7 @@ jobs:
     name: Deploy modules
     runs-on: ubuntu-latest
     needs: [find-modules, build-docker]
-    if: ${{ github.event_name == 'push' && needs.find-modules.outputs.matrix != '[]' }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.find-modules.outputs.matrix != '[]' }}
     strategy:
       matrix:
         module: ${{fromJSON(needs.find-modules.outputs.matrix)}}

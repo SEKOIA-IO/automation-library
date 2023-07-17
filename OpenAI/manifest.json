@@ -2,7 +2,7 @@
     "uuid": "05fd97a1-43f7-4f47-ae02-63e1d1219040",
     "name": "OpenAI",
     "slug": "openai",
-    "version": "1.1",
+    "version": "1.3",
     "description": "The OpenAI API can be applied to virtually any task that involves understanding or generating natural language, code, or images.",
     "configuration": {
         "title": "OpenAIConfiguration",

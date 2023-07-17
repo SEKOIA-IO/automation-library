@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 class VadeSecureConfiguration(BaseModel):
     client_id: str = Field(..., description="OAuth2 Client Identifier")
-    client_secret: str = Field(..., description="OAuth2 Client Secret")
+    client_secret: str = Field(secret=True, description="OAuth2 Client Secret")
     oauth2_authorization_url: str = Field(..., description="0Auth2 Authorization url")
     api_host: str = Field(..., description="API Url of the VadeSecure platform")
 
