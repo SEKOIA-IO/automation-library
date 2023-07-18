@@ -133,7 +133,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
         if result != "succeeded":
             self.log(
-                message=f"Sophos request failed, there's no query after this time {self.from_date.strftime('%Y-%m-%d %H:%M:%S')} !!"
+                message=f"The query failed. No events collected at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')} !!"
             )
         else:
             # If the result succeed ==> get the data.
