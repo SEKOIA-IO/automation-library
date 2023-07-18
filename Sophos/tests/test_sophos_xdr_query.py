@@ -21,6 +21,7 @@ def trigger(symphony_storage):
     }
 
     trigger.configuration = {
+        "frequency": 604800,
         "tenant_id": "4feff6df-7454-4036-923d-7b2444462416",
         "chunk_size": 1,
         "intake_key": "0123456789",
@@ -74,6 +75,18 @@ def queryRun_message():
         "template": "SELECT * FROM xdr_ioc_view",
         "from": "2023-06-29T08:14:55.625Z",
         "to": "2023-06-30T08:14:55.625Z",
+    }
+
+
+@pytest.fixture
+def queryRunFailed_message():
+    return {
+        "error": "ValidationException",
+        "correlationId": "3f2aa7bc-bbb1-4f93-8d56-acad5f6ad3dc",
+        "requestId": "3dc153c6-03a4-45c9-abb0-8d4a7e41a96f",
+        "createdAt": "2023-07-18T09:23:25.449Z",
+        "code": 400,
+        "message": "Invalid time range 'from' field: 2023-07-18T10:52:22Z - cannot be in the future.",
     }
 
 
@@ -261,6 +274,27 @@ def test_getting_results(
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         assert len(calls[0]) == 7
         assert trigger.most_recent_date_seen.date() == datetime.now(timezone.utc).date()
+
+
+def test_getting_failed_results(trigger, authorization_message, whoami_message, queryRunFailed_message):
+    host = "https://api-eu01.central.sophos.com"
+    url = f"{host}/xdr-query/v1/queries/runs"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            f"{trigger.module.configuration.oauth2_authorization_url}",
+            status_code=200,
+            json=authorization_message,
+        )
+
+        mock.get(
+            f"{trigger.module.configuration.api_host}/whoami/v1",
+            status_code=200,
+            json=whoami_message,
+        )
+
+        mock.post(url, json=queryRunFailed_message)
+        assert trigger.post_query("query_ioc") == ("failed", None)
 
 
 def test_getting_next_results(
