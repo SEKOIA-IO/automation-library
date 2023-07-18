@@ -21,6 +21,7 @@ def trigger(symphony_storage):
     }
 
     trigger.configuration = {
+        "frequency": 604800,
         "tenant_id": "4feff6df-7454-4036-923d-7b2444462416",
         "chunk_size": 1,
         "intake_key": "0123456789",

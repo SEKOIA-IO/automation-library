@@ -26,6 +26,7 @@
         }
       },
       "required": [
+        "frequency",
         "intake_key"
       ],
       "title": "Sophos Query Events",
