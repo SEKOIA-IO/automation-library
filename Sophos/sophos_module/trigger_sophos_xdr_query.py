@@ -103,7 +103,9 @@ class SophosXDRQueryTrigger(SophosConnector):
     def post_query(self, query: dict):
         # It's the first step of our query treatment.
         # Posting the query
-        self.log(message=f"Querying the Sophos data lake at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')}", level="info")
+        self.log(
+            message=f"Querying the Sophos data lake at {self.from_date.strftime('%Y-%m-%d %H:%M:%S')}", level="info"
+        )
         response_runQuery = self.client.run_query(json_query=query).json()
 
         query_id = response_runQuery.get("id")
