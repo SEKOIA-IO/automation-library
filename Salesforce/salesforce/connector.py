@@ -23,8 +23,8 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 class SalesforceModuleConfig(BaseModel):
     """Configuration for SalesforceModule."""
 
-    client_id: str = Field(secret=True)
     client_secret: str = Field(secret=True)
+    client_id: str
     base_url: HttpUrl
 
 

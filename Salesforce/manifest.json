@@ -21,7 +21,6 @@
             "base_url"
         ],
         "secrets": [
-            "client_id",
             "client_secret"
         ],
         "title": "Salesforce module Configuration",
