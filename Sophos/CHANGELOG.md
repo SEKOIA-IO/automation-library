@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.7] - 2023-07-18
+
+### Added
+
+- add more logs
+- Add an interval between two requests in the XDR connector
+- Improve the way to handle failing requests
+
 ## [1.11] - 2023-07-13
 
 ### Changed
