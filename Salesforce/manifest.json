@@ -7,7 +7,7 @@
     },
     "description": "Salesforce provides users comprehensive tools to manage customer data, automate processes, analyze data and insights, and create personalized customer experiences. Salesforce also offers a variety of solutions for customer service, marketing automation, commerce, app development, and more",
     "name": "Salesforce",
-    "uuid": "626c6110-0a7a-11ee-be56-0242ac120002",
+    "uuid": "f811e134-2548-11ee-be56-0242ac120002",
     "slug": "salesforce",
-    "version": "1.2.2"
+    "version": "1.2.3"
 }
