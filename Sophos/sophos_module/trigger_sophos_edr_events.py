@@ -4,6 +4,7 @@ from functools import cached_property
 
 import orjson
 from requests.exceptions import HTTPError
+from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sekoia_automation.storage import PersistentJSON
@@ -80,25 +81,25 @@ class SophosEDREventsTrigger(SophosConnector):
 
         try:
             while self.running:
+                start = time.time()
+
                 try:
-                    start = time.time()
-
                     self.forward_next_batches()
-
-                    # compute the duration of the last events fetching
-                    duration = int(time.time() - start)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                    # Compute the remaining sleeping time
-                    delta_sleep = self.configuration.frequency - duration
-                    # if greater than 0, sleep
-                    if delta_sleep > 0:
-                        time.sleep(delta_sleep)
-
-                except HTTPError as ex:
+                except (HTTPError | BaseHTTPError) as ex:
                     self.log_exception(ex, message="Failed to get next batch of events")
                 except Exception as ex:
                     self.log_exception(ex, message="An unknown exception occurred")
+                    raise
+
+                # compute the duration of the last events fetching
+                duration = int(time.time() - start)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+
+                # Compute the remaining sleeping time
+                delta_sleep = self.configuration.frequency - duration
+                # if greater than 0, sleep
+                if delta_sleep > 0:
+                    time.sleep(delta_sleep)
         finally:
             self.log(message="Sophos Events Trigger has stopped", level="info")
 
