@@ -9,7 +9,7 @@ from aioresponses import aioresponses
 from sekoia_automation import constants
 
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
-from salesforce.connector import SalesforceConnector, SalesforceModule
+from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig, SalesforceModule
 
 
 @pytest.fixture
@@ -88,7 +88,13 @@ def pushed_events_ids(session_faker) -> list[str]:
 @pytest.fixture
 def connector(symphony_storage, client_id, client_secret, salesforce_url, pushed_events_ids, session_faker):
     module = SalesforceModule()
-    trigger = SalesforceConnector(module=module, data_path=symphony_storage)
+    config = SalesforceConnectorConfig(
+        intake_key=session_faker.word(),
+    )
+    trigger = SalesforceConnector(
+        module=module,
+        data_path=symphony_storage,
+    )
 
     # Mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()
@@ -98,12 +104,9 @@ def connector(symphony_storage, client_id, client_secret, salesforce_url, pushed
     trigger.push_events_to_intakes = MagicMock()
     trigger.push_events_to_intakes.return_value = pushed_events_ids
 
-    trigger.module.configuration = {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "base_url": salesforce_url,
-        "intake_key": session_faker.word(),
-    }
+    trigger.module.configuration = {"client_id": client_id, "client_secret": client_secret, "base_url": salesforce_url}
+
+    trigger.configuration = config
 
     return trigger
 

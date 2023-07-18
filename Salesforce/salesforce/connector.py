@@ -9,7 +9,7 @@ import orjson
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
-from pydantic import HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
@@ -20,19 +20,24 @@ from utils.file_utils import csv_file_as_rows, delete_file
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
-class SalesforceConfig(DefaultConnectorConfiguration):
-    """Configuration for SalesforceConnector."""
+class SalesforceModuleConfig(BaseModel):
+    """Configuration for SalesforceModule."""
 
+    client_secret: str = Field(secret=True)
     client_id: str
-    client_secret: str
     base_url: HttpUrl
-    ratelimit_per_minute: int = 60
 
 
 class SalesforceModule(Module):
-    """SalesforceConfig."""
+    """SalesforceModule."""
 
-    configuration: SalesforceConfig
+    configuration: SalesforceModuleConfig
+
+
+class SalesforceConnectorConfig(DefaultConnectorConfiguration):
+    """SalesforceConnector configuration."""
+
+    ratelimit_per_minute: int = 60
 
 
 class SalesforceConnector(Connector):
@@ -41,6 +46,7 @@ class SalesforceConnector(Connector):
     name = "SalesforceConnector"
 
     module: SalesforceModule
+    configuration: SalesforceConnectorConfig
 
     _salesforce_client: SalesforceHttpClient | None = None
 
@@ -88,7 +94,7 @@ class SalesforceConnector(Connector):
         if self._salesforce_client is not None:
             return self._salesforce_client
 
-        rate_limiter = AsyncLimiter(self.module.configuration.ratelimit_per_minute)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         self._salesforce_client = SalesforceHttpClient(
             client_id=self.module.configuration.client_id,
@@ -186,13 +192,13 @@ class SalesforceConnector(Connector):
             while True:
                 processing_start = time.time()
                 if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.module.configuration.intake_key).observe(
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
                         processing_start - previous_processing_end
                     )
 
                 message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events())
                 processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.module.configuration.intake_key).inc(len(message_ids))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:
@@ -201,7 +207,7 @@ class SalesforceConnector(Connector):
                 logger.info(log_message)
                 self.log(message=log_message, level="info")
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.module.configuration.intake_key).observe(
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                     processing_end - processing_start
                 )
 
