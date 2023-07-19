@@ -63,7 +63,13 @@ class DuoLogsConsumer(Thread):
         self.connector.context_lock.acquire()
 
         with self.connector.context as cache:
-            result = cache.get(self._log_type.value, {"min_time": None, "next_offset": None})
+            default_min_time = int(time.time()) - 5 * 60  # start with events from 5 min ago
+
+            # these are using milliseconds instead of seconds
+            if self._log_type in (LogType.AUTHENTICATION, LogType.TELEPHONY):
+                default_min_time *= 1000
+
+            result = cache.get(self._log_type.value, {"min_time": default_min_time, "next_offset": None})
 
         self.connector.context_lock.release()
 

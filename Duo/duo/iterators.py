@@ -4,8 +4,8 @@ import duo_client
 
 
 class DuoV1LogsIterator:
-    def __init__(self, func: Callable, min_time: int = 0, limit: int = 1000, callback: Optional[Callable] = None):
-        self.min_time = min_time if min_time else 0
+    def __init__(self, func: Callable, min_time: int, limit: int = 1000, callback: Optional[Callable] = None):
+        self.min_time = min_time
         self.func = func
         self.limit = limit
         self.callback = callback
