@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-07-19 - 1.3.1
+
+### Fixed
+
+- Fixed default `min_time`
+- Fixed bug with Telephony logs pagination
+
 ## 2023-06-30 - 1.0.1
 
 ### Fixed
