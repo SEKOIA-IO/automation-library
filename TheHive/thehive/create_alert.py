@@ -100,7 +100,7 @@ class TheHiveCreateAlert(Action):
             tags=[],
             title=arg_alert["title"],
             type=f"{arg_alert['alert_type']['category']}/{arg_alert['alert_type']['value']}",
-            source="SEKOIA.IO",
+            source="Sekoia.io",
             sourceRef=arg_alert["short_id"],
             externalLink=f"https://app.sekoia.io/operations/alerts/{arg_alert['short_id']}",
             description=arg_alert["details"],

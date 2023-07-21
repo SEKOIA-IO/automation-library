@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "SEKOIA.IO Automation Module for Duo"
+name = "Sekoia.io Automation Module for Duo"
 version = "0.0"
 description = ""
 authors = []

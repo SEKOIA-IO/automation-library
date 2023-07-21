@@ -11,11 +11,11 @@
                 "type": "string"
             },
             "api_key": {
-                "description": "The SEKOIA.IO API-Key to read the alert content.",
+                "description": "The Sekoia.io API-Key to read the alert content.",
                 "type": "string"
             },
             "base_url": {
-                "description": "Base URL of SEKOIA.IO api (e.g. https://api.sekoia.io/).",
+                "description": "Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).",
                 "type": "string",
                 "format": "uri"
             },
@@ -34,7 +34,7 @@
     },
     "description": "Post alert to Mattermost",
     "docker_parameters": "mattermost_post_alert",
-    "name": "Post SEKOIA.IO Alert",
+    "name": "Post Sekoia.io Alert",
     "results": {},
     "uuid": "ef3794ca-b5fa-4cee-af3f-fd5ffac01c88"
 }

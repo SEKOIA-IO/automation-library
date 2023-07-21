@@ -4,14 +4,14 @@
         "properties": {
             "feed_id": {
                 "type": "string",
-                "description": "ID of the SEKOIA.IO feed to get data from",
+                "description": "ID of the Sekoia.io feed to get data from",
                 "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608"
             }
         },
         "type": "object",
         "title": "Feed consumption configuration"
     },
-    "description": "Get all valid IOCs from SEKOIA.IO Intelligence feed",
+    "description": "Get all valid IOCs from Sekoia.io Intelligence feed",
     "docker_parameters": "feed_ioc_consumption_trigger",
     "name": "Feed IOC Consumption",
     "results": {

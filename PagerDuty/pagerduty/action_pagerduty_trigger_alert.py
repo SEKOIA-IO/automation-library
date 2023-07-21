@@ -54,7 +54,7 @@ class PagerDutyTriggerAlertAction(Action):
                 {
                     "src": "https://app.sekoia.io/assets/logos/sekoiaio-black.svg",
                     "href": "https://app.sekoia.io/",
-                    "alt": "SEKOIA.IO",
+                    "alt": "Sekoia.io",
                 }
             ],
             "links": [
@@ -64,7 +64,7 @@ class PagerDutyTriggerAlertAction(Action):
                 }
             ],
             "event_action": "trigger",
-            "client": "SEKOIA.IO Security Service",
+            "client": "Sekoia.io Security Service",
             "client_url": "https://app.sekoia.io",
         }
 
