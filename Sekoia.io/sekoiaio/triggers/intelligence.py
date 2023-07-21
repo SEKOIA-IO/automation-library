@@ -10,7 +10,7 @@ from sekoia_automation.trigger import Trigger
 
 class FeedConsumptionTrigger(Trigger):
     """
-    This trigger fetches STIX objects from SEKOIA.IO feed API
+    This trigger fetches STIX objects from Sekoia.io feed API
     """
 
     API_URL_ADDITIONAL_PARAMETERS = ["skip_expired=true", "include_revoked=false"]
@@ -136,7 +136,7 @@ class FeedConsumptionTrigger(Trigger):
 
 class FeedIOCConsumptionTrigger(FeedConsumptionTrigger):
     """
-    This trigger fetches STIX IOC objects from SEKOIA.IO feed API
+    This trigger fetches STIX IOC objects from Sekoia.io feed API
     """
 
     API_URL_ADDITIONAL_PARAMETERS = ["skip_expired=true", "include_revoked=false", "match[type]=indicator"]

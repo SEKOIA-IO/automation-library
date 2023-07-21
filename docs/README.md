@@ -1,6 +1,6 @@
 # Documentation
 
-SEKOIA.IO automation library offers pieces that help customers to build automation playbooks.
+Sekoia.io automation library offers pieces that help customers to build automation playbooks.
 
 - [Organization](organization.md)
 - [Module](module.md)

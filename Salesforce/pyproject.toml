@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "SEKOIA.IO Automation Module to work with Salesforce"
+name = "Sekoia.io Automation Module to work with Salesforce"
 version = "0.0"
 description = ""
 authors = []

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "SEKOIA.IO Automation Module for Okta"
+name = "Sekoia.io Automation Module for Okta"
 version = "0.0"
 description = ""
 authors = []

@@ -41,7 +41,7 @@ def requests_retry_session(
 def urgency_to_pagerduty_severity(urgency: int) -> str:
     """
     Returns the PagerDuty severity label that best matches
-    with the specified SEKOIA.IO urgency score
+    with the specified Sekoia.io urgency score
     """
 
     if urgency < 25:

@@ -1,5 +1,5 @@
 {
-  "description": "Forward Crowdstrike Falcon Data Replication events to SEKOIA.IO",
+  "description": "Forward Crowdstrike Falcon Data Replication events to Sekoia.io",
   "docker_parameters": "crowdstrike_telemetry",
   "name": "[ALPHA] Fetch new events from CrowdStrike Data replication",
   "arguments": {

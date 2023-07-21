@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Automation Module for SEKOIA.IO"
+name = "Automation Module for Sekoia.io"
 description = ""
 version = "0.0"
 authors = []

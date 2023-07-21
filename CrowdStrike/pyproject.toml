@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "SEKOIA.IO Automation Module to work with AWS S3 through SQS for CrowdStrike"
+name = "Sekoia.io Automation Module to work with AWS S3 through SQS for CrowdStrike"
 version = "0.0"
 description = ""
 authors = []

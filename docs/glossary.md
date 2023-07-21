@@ -8,7 +8,7 @@ An action helps to execute specific tasks (see [definition](https://docs.sekoia.
 
 ## Connector
 
-A connector is a specialized [trigger](#Trigger) that fetch events and forward them to SEKOIA.IO. A connector never launches [playbook runs](#Run).
+A connector is a specialized [trigger](#Trigger) that fetch events and forward them to Sekoia.io. A connector never launches [playbook runs](#Run).
 
 
 ## Module
@@ -30,4 +30,3 @@ A playbook run represents an execution of the [playbook](#Playbook). A run is st
 ## Trigger
 
 A trigger is the first step of a [playbook](#Playbook]. The trigger monitors new events and start a new run of the playbook (see [definition](https://docs.sekoia.io/xdr/features/automate/triggers/))
-
