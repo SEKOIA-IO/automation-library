@@ -39,7 +39,8 @@ class ThreatVisualizerLogConnector(Connector):
         with self.context as cache:
             ts = cache.get("last_ts")
             if ts is None:
-                ts = round(time.time() * 1000)
+                # Set starttime one hour in the past.
+                ts = round((time.time() + 3600) * 1000)
                 self.last_ts = ts
             return ts
 
