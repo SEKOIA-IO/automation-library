@@ -40,9 +40,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    module_conf = VadeCloudModuleConfiguration(
-        hostname=args.hostname, login=args.login, password=args.password
-    )
+    module_conf = VadeCloudModuleConfiguration(hostname=args.hostname, login=args.login, password=args.password)
 
     class DumbConnectorConfiguration(VadeCloudConnectorConfiguration):
         frequency: int = 60

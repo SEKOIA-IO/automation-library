@@ -113,18 +113,14 @@ def test_fetch_event(trigger: VadeCloudLogsConnector):
             ],
         )
 
-        consumer = VadeCloudConsumer(
-            connector=trigger, name="inbound", params={"stream": "Inbound"}
-        )
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
         consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
 
 
 def test_start_consumers(trigger):
-    with patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.start"
-    ) as mock_start:
+    with patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.start") as mock_start:
         consumers = trigger.start_consumers()
 
         assert "inbound" in consumers
@@ -133,9 +129,7 @@ def test_start_consumers(trigger):
 
 
 def test_supervise_consumers(trigger):
-    with patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.start"
-    ) as mock_start:
+    with patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.start") as mock_start:
         consumers = {
             "param_set_1": Mock(**{"is_alive.return_value": False, "running": True}),
             "param_set_2": None,
@@ -148,9 +142,7 @@ def test_supervise_consumers(trigger):
 
 
 def test_stop_consumers(trigger):
-    with patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.start"
-    ) as mock_start:
+    with patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.start") as mock_start:
         consumers = {
             "param_set_1": Mock(**{"is_alive.return_value": False}),
             "param_set_2": None,

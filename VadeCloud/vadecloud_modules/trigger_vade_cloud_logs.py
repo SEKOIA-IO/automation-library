@@ -109,9 +109,7 @@ class VadeCloudConsumer(Thread):
     def iterate_through_pages(self, from_timestamp: int) -> Generator[list, None, None]:
         page_num = 0
         search_period = "DAYS_07"  # long period will allow us to capture events with big time gap between them
-        response = self.request_logs_page(
-            start_date=from_timestamp, period=search_period, page=page_num
-        )
+        response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
         self._handle_response_error(response)
 
         while self.running:
@@ -124,9 +122,7 @@ class VadeCloudConsumer(Thread):
             else:
                 return
 
-            response = self.request_logs_page(
-                start_date=from_timestamp, period=search_period, page=page_num
-            )
+            response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_timestamp_seen = self.get_last_timestamp()
@@ -195,9 +191,7 @@ class VadeCloudConsumer(Thread):
                 self.next_batch()
 
         except Exception as error:
-            self.connector.log_exception(
-                error, message=f"{self.name}: Failed to forward events"
-            )
+            self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")
 
 
 class VadeCloudConnectorConfiguration(DefaultConnectorConfiguration):
@@ -226,9 +220,7 @@ class VadeCloudLogsConnector(Connector):
 
         for consumer_name, params in self.all_params.items():
             self.log(message=f"Start `{consumer_name}` consumer", level="info")
-            consumers[consumer_name] = VadeCloudConsumer(
-                connector=self, name=consumer_name, params=params
-            )
+            consumers[consumer_name] = VadeCloudConsumer(connector=self, name=consumer_name, params=params)
             consumers[consumer_name].start()
 
         return consumers
