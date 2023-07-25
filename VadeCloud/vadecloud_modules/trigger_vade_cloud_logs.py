@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from functools import cached_property
 from threading import Event, Lock, Thread
 from typing import Any, Generator
@@ -134,6 +135,12 @@ class VadeCloudConsumer(Thread):
 
                 last_event = max(next_events, key=lambda x: x.get("date"))
                 last_event_timestamp = last_event.get("date")
+
+                self.log(
+                    message=f"{self.name}: Last event timestamp is {last_event_timestamp} which is "
+                    f"{datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()}",
+                    level="debug",
+                )
 
                 # save the greater date ever seen
                 if last_event_timestamp > most_recent_timestamp_seen:

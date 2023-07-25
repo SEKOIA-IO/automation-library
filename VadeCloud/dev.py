@@ -11,7 +11,7 @@ from vadecloud_modules.models import VadeCloudModuleConfiguration
 from vadecloud_modules.trigger_vade_cloud_logs import VadeCloudConnectorConfiguration, VadeCloudLogsConnector
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - [%(levelname)s] - %(message)s",
     datefmt="%d-%b-%y %H:%M:%S",
 )
