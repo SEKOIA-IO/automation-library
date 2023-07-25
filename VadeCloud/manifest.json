@@ -1,0 +1,33 @@
+{
+    "configuration": {
+        "title": "Vade Cloud",
+        "type": "object",
+        "properties": {
+            "hostname": {
+                "description": "Vade Cloud API hostname",
+                "type": "string"
+            },
+            "login": {
+                "description": "Vade Cloud login",
+                "type": "string"
+            },
+            "password": {
+                "description": "Vade Cloud password",
+                "type": "string"
+            }
+        },
+        "required": [
+            "hostname",
+            "login",
+            "password"
+        ],
+        "secrets": [
+            "password"
+        ]
+    },
+    "description": "",
+    "name": "Vade Cloud",
+    "slug": "vade-cloud",
+    "uuid": "203d043e-a1ea-4b5c-81ef-6fc0f8a6a9d3",
+    "version": "1.0.0"
+}
