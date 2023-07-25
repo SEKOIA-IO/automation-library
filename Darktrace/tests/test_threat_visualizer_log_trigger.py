@@ -378,7 +378,7 @@ def test_next_batch(trigger, message1):
         batch_start = 1687774141.000
         batch_end = 1688465633.434
         mock_request.get(
-            trigger.module.configuration.api_url + "/modelbreaches?starttime=1687774141000&includeallpinned=False",
+            trigger.module.configuration.api_url + "/modelbreaches?starttime=1687770541000&includeallpinned=False",
             json=message1,
         )
 
