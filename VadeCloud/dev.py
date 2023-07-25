@@ -8,10 +8,7 @@ from pathlib import Path
 
 from vadecloud_modules import VadeCloudModule
 from vadecloud_modules.models import VadeCloudModuleConfiguration
-from vadecloud_modules.trigger_vade_cloud_logs import (
-    VadeCloudConnectorConfiguration,
-    VadeCloudLogsConnector,
-)
+from vadecloud_modules.trigger_vade_cloud_logs import VadeCloudConnectorConfiguration, VadeCloudLogsConnector
 
 logging.basicConfig(
     level=logging.INFO,

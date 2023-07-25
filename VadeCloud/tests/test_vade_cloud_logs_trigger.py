@@ -1,40 +1,17 @@
 import time
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
 
 from vadecloud_modules import VadeCloudModule
-from vadecloud_modules.trigger_vade_cloud_logs import (
-    VadeCloudLogsConnector,
-    VadeCloudConsumer,
-)
+from vadecloud_modules.client.exceptions import AuthenticationError
+from vadecloud_modules.trigger_vade_cloud_logs import FetchEventException, VadeCloudConsumer, VadeCloudLogsConnector
 
 
 @pytest.fixture
-def trigger(symphony_storage):
-    module = VadeCloudModule()
-    trigger = VadeCloudLogsConnector(module=module, data_path=symphony_storage)
-
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.module.configuration = {
-        "login": "demo_1@demovade.com",
-        "password": "pass",
-        "hostname": "https://cloud-preview.vadesecure.com",
-    }
-    trigger.configuration = {
-        "intake_key": "intake_key",
-    }
-
-    trigger.send_event = MagicMock()
-    trigger.log = MagicMock()
-    trigger.log_exception = MagicMock()
-
-    return trigger
-
-
-def test_fetch_event(trigger: VadeCloudLogsConnector):
-    auth_message = {
+def auth_message():
+    return {
         "accounts": [
             {
                 "accountId": 2882,
@@ -69,7 +46,10 @@ def test_fetch_event(trigger: VadeCloudLogsConnector):
         "result": "OK",
     }
 
-    response_message = {
+
+@pytest.fixture
+def response_message():
+    return {
         "logs": [
             {
                 "message": '2023-07-20T09:15:02+00:00 localhost ulog[568]: [0000F4E4] qid=aaa1bbb2cc3,ip=1.2.3.4,sender=test@test.com,site=VSC000001,domain=maildomain.com,recipient=demo_1@maildomain.com: action=drop,status=virus,spamlevel=unknwon,tag=[VIRUS],stop=nil,reply=2,subject="Some subject"',
@@ -92,6 +72,84 @@ def test_fetch_event(trigger: VadeCloudLogsConnector):
         ]
     }
 
+
+def test_auth_error(trigger: VadeCloudLogsConnector):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+        return_value=0,
+    ) as mock_get_ts, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp"
+    ) as mock_set_ts, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.time"
+    ) as mock_time:
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
+            status_code=404,
+            json={"error": {"code": 404, "message": "Not found", "reason": "USER_UNKNOWN", "trKey": "USER_UNKNOWN"}},
+        )
+
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
+
+        with pytest.raises(AuthenticationError) as context:
+            consumer.next_batch()
+
+
+def test_request_error(trigger: VadeCloudLogsConnector, auth_message):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+        return_value=0,
+    ) as mock_get_ts, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp"
+    ) as mock_set_ts, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.time"
+    ) as mock_time:
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
+            status_code=200,
+            json=auth_message,
+        )
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/filteringlog/getReport",
+            [
+                {
+                    "status_code": 400,
+                    "json": {
+                        "result": "NOK",
+                        "error": {"code": 400, "message": "Missing streamType", "trKey": "MISSING_STREAM_TYPE"},
+                    },
+                },
+            ],
+        )
+
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
+
+        with pytest.raises(FetchEventException):
+            consumer.next_batch()
+
+
+@pytest.fixture
+def trigger(symphony_storage):
+    module = VadeCloudModule()
+    trigger = VadeCloudLogsConnector(module=module, data_path=symphony_storage)
+
+    trigger.push_events_to_intakes = MagicMock()
+    trigger.module.configuration = {
+        "login": "demo_1@demovade.com",
+        "password": "pass",
+        "hostname": "https://cloud-preview.vadesecure.com",
+    }
+    trigger.configuration = {
+        "intake_key": "intake_key",
+    }
+
+    trigger.send_event = MagicMock()
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+
+    return trigger
+
+
+def test_fetch_event(trigger: VadeCloudLogsConnector, auth_message, response_message):
     with requests_mock.Mocker() as mock_requests, patch(
         "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
         return_value=0,

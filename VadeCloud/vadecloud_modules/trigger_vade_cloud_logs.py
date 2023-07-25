@@ -1,7 +1,7 @@
 import time
 from functools import cached_property
-from threading import Thread, Event, Lock
-from typing import Generator, Any
+from threading import Event, Lock, Thread
+from typing import Any, Generator
 
 import orjson
 import requests
