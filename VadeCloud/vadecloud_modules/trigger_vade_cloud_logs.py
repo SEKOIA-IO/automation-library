@@ -10,6 +10,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import VadeCloudModule
 from .client import ApiClient
+from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class FetchEventException(Exception):
@@ -160,7 +161,15 @@ class VadeCloudConsumer(Thread):
                     level="info",
                 )
 
+                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
+                    len(batch_of_events)
+                )
+
                 self.connector.push_events_to_intakes(events=batch_of_events)
+
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
+                    len(events)
+                )
 
             else:
                 self.log(
@@ -171,6 +180,11 @@ class VadeCloudConsumer(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
+
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
+            batch_duration
+        )
+
         self.log(
             message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
             level="info",
