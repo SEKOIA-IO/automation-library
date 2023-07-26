@@ -1,10 +1,10 @@
 import time
 
 import requests
+from requests.adapters import Retry
 from requests_ratelimiter import LimiterAdapter
 
 from .auth import ApiKeyAuthentication
-from .retry import Retry
 
 
 class ApiClient(requests.Session):
