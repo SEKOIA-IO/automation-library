@@ -5,7 +5,9 @@
     "properties": {
       "hostname": {
         "description": "Vade Cloud API hostname",
-        "type": "string"
+        "type": "string",
+        "default": "https://cloud.vadesecure.com",
+        "format": "uri"
       },
       "login": {
         "description": "Vade Cloud login",
