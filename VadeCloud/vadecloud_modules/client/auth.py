@@ -43,7 +43,7 @@ class ApiKeyAuthentication(AuthBase):
                     "Accept": "application/json",
                 },
                 json={"login": self.__login, "password": self.__password},
-                timeout=60
+                timeout=60,
             )
 
             if auth_response.status_code == 200:

@@ -91,9 +91,7 @@ class VadeCloudConsumer(Thread):
         params.update(self.params)  # override with custom stuff
 
         response = self.client.post(
-            f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport",
-            json=params,
-            timeout=60
+            f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport", json=params, timeout=60
         )
         return response
 
