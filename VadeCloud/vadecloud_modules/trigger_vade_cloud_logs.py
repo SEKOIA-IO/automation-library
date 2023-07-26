@@ -72,9 +72,10 @@ class VadeCloudConsumer(Thread):
     @cached_property
     def client(self):
         return ApiClient(
-            self.connector.module.configuration.hostname,
-            self.connector.module.configuration.login,
-            self.connector.module.configuration.password,
+            hostname=self.connector.module.configuration.hostname,
+            login=self.connector.module.configuration.login,
+            password=self.connector.module.configuration.password,
+            log_callback=self.log,
             ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
         )
 
@@ -92,6 +93,7 @@ class VadeCloudConsumer(Thread):
         response = self.client.post(
             f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport",
             json=params,
+            timeout=60
         )
         return response
 

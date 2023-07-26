@@ -1,4 +1,5 @@
 import time
+from typing import Callable
 
 import requests
 from requests.adapters import Retry
@@ -13,11 +14,12 @@ class ApiClient(requests.Session):
         hostname: str,
         login: str,
         password: str,
+        log_callback: Callable,
         nb_retries: int = 5,
         ratelimit_per_minute: int = 20,
     ):
         super().__init__()
-        self.auth: ApiKeyAuthentication = ApiKeyAuthentication(hostname, login, password)
+        self.auth: ApiKeyAuthentication = ApiKeyAuthentication(hostname, login, password, log_callback=log_callback)
         self.auth.authenticate()
 
         self.mount(
