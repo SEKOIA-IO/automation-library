@@ -139,35 +139,36 @@ class SystemLogConnector(Connector):
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
 
-        for next_events in self.__fetch_next_events(most_recent_date_seen):
-            if next_events:
-                # get the greater date seen in this list of events
-                events_date = list(
-                    sorted(
-                        filter(
-                            lambda x: x is not None,
-                            map(lambda x: x["published"], next_events),
+        try:
+            for next_events in self.__fetch_next_events(most_recent_date_seen):
+                if next_events:
+                    # get the greater date seen in this list of events
+                    events_date = list(
+                        sorted(
+                            filter(
+                                lambda x: x is not None,
+                                map(lambda x: x["published"], next_events),
+                            )
                         )
                     )
-                )
-                last_event_date = isoparse(events_date[-1])
+                    last_event_date = isoparse(events_date[-1])
 
-                # save the greater date ever seen
-                if last_event_date > most_recent_date_seen:
-                    most_recent_date_seen = get_upper_second(
-                        last_event_date
-                    )  # get the upper second to exclude the most recent event seen
+                    # save the greater date ever seen
+                    if last_event_date > most_recent_date_seen:
+                        most_recent_date_seen = get_upper_second(
+                            last_event_date
+                        )  # get the upper second to exclude the most recent event seen
 
-                # forward current events
-                yield next_events
+                    # forward current events
+                    yield next_events
+        finally:
+            # save the most recent date
+            if most_recent_date_seen > self.from_date:
+                self.from_date = most_recent_date_seen
 
-        # save the most recent date
-        if most_recent_date_seen > self.from_date:
-            self.from_date = most_recent_date_seen
-
-            # save in context the most recent date seen
-            with self.context as cache:
-                cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
+                # save in context the most recent date seen
+                with self.context as cache:
+                    cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
     def next_batch(self):
         # save the starting time
