@@ -7,7 +7,7 @@ class JumpcloudDirectoryInsightsModuleConfiguration(BaseModel):
         description="Jumpcloud Directory Insights API Base URL",
     )
     apikey: str = Field(
-        ...,
+        secret=True,
         description="The API key to authenticate calls to \
             the Jumpcloud Directory Insights API",
     )
