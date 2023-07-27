@@ -6,7 +6,6 @@ import requests.exceptions
 import requests_mock
 
 from vadecloud_modules import VadeCloudModule
-from vadecloud_modules.client.exceptions import AuthenticationError
 from vadecloud_modules.trigger_vade_cloud_logs import FetchEventException, VadeCloudConsumer, VadeCloudLogsConnector
 
 

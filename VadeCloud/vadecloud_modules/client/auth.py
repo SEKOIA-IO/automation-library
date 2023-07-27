@@ -1,10 +1,6 @@
-from typing import Callable
-
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from requests.auth import AuthBase
-
-from .exceptions import AuthenticationError
 
 
 class ApiKeyAuthentication(AuthBase):

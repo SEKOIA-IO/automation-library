@@ -1,5 +1,3 @@
-from typing import Callable
-
 import requests
 from requests.adapters import Retry
 from requests_ratelimiter import LimiterAdapter
