@@ -76,7 +76,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         }
 
         self.send_event(
-            event_name=f"SEKOIA.IO Alert: {alert_short_id}",
+            event_name=f"Sekoia.io Alert: {alert_short_id}",
             event=event,
             directory=directory,
             remove_directory=True,

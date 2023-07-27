@@ -9,7 +9,6 @@ import requests
 from requests import Response
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.connector.workers import Worker, Workers
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 
 from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 
@@ -239,20 +238,6 @@ class SkyhighSecuritySWGTrigger(Connector):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._exporter = None
-
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def run(self):  # pragma: no cover
         self.log(message="SkyhighSWG Trigger has started", level="info")

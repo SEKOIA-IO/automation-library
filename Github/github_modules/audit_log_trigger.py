@@ -10,6 +10,7 @@ from sekoia_automation.storage import PersistentJSON
 from github_modules import GithubModule
 from github_modules.client import ApiClient
 from github_modules.logging import get_logger
+from github_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -77,6 +78,7 @@ class AuditLogConnector(Connector):
         # save the starting time
         batch_start_time = time.time()
         response = self.request_events().json()
+        INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(response))
 
         if type(response) is list:
             response = self._refine_batch(response, batch_start_time)
@@ -85,11 +87,17 @@ class AuditLogConnector(Connector):
             if response != []:
                 self.last_ts = response[-1]["@timestamp"]
                 batch_of_events = [orjson.dumps(event).decode("utf-8") for event in response]
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
+
+                # compute the lag
+                now = time.time()
+                current_lag = now - self.last_ts / 1000
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag))
             else:
                 self.log(
                     message="No events to forward ",
@@ -105,6 +113,7 @@ class AuditLogConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

@@ -22,6 +22,7 @@ from cybereason_modules.constants import (
 )
 from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
 from cybereason_modules.helpers import extract_models_from_malop, merge_suspicions, validate_response_not_login_failure
+from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS
 
 
 class CybereasonEventConnectorConfiguration(DefaultConnectorConfiguration):
@@ -271,6 +272,7 @@ class CybereasonEventConnector(Connector):
 
         # fetch malops for the timerange
         next_malops = self.fetch_malops(from_date, to_date)
+        INCOMING_MALOPS.labels(intake_key=self.configuration.intake_key).inc(len(next_malops))
 
         most_recent_date_seen = from_date
         for malop in next_malops:
@@ -310,6 +312,11 @@ class CybereasonEventConnector(Connector):
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
 
+        # compute the lag
+        now = int(time.time())
+        current_lag = now - int(most_recent_date_seen / 1000)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(current_lag)
+
     def next_batch(self):
         """
         Retrieve and forward the most recent malops
@@ -321,6 +328,7 @@ class CybereasonEventConnector(Connector):
         batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.fetch_last_events()]
 
         if len(batch_of_events) > 0:
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
             self.push_events_to_intakes(events=batch_of_events)
 
         # get the ending time and compute the duration to fetch the events
@@ -330,6 +338,7 @@ class CybereasonEventConnector(Connector):
             message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
             level="info",
         )
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

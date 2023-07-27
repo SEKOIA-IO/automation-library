@@ -10,7 +10,7 @@ class SophosConfiguration(BaseModel):
         description="API Url of the Sophos Central API (e.g. 'https://api-{dataRegion}.central.sophos.com')",
     )
     client_id: str = Field(..., description="OAuth2 client identifier")
-    client_secret: str = Field(..., description="OAuth2 client secret")
+    client_secret: str = Field(secret=True, description="OAuth2 client secret")
 
 
 class SophosModule(Module):

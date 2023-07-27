@@ -1,10 +1,15 @@
 {
     "description": "Query last IoCs from the Sophos Data lake",
     "docker_parameters": "sophos_query_ioc_trigger",
-    "name": "Query IoC from data lake",
+    "name": "Query IoC from data lake [BETA]",
     "arguments": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "properties": {
+        "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "default": 60
+        },
         "chunk_size": {
           "type": "integer",
           "description": "The max size of chunks for the batch processing",
@@ -21,6 +26,7 @@
         }
       },
       "required": [
+        "frequency",
         "intake_key"
       ],
       "title": "Sophos Query Events",

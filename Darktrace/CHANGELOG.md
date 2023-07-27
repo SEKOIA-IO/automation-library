@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-06-30 - 1.3.1
+
+### Added
+
+- Add beta flag
+
+## 2023-07-13 - 1.3
+
+### Changed
+
+- Update `sekoia-automation-sdk` dependency
+
+## 2023-07-13 - 1.2
+
+### Changed
+
+- Update `sekoia-automation-sdk` dependency
+
+## 2023-07-03 - 1.1
+
+### Added
+
+- Add secrets
+
 ## 2023-06-30 - 1.0.1
 
 ### Fixed

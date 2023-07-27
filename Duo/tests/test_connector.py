@@ -68,9 +68,9 @@ def admin_response_2():
 
 def test_fetch_batches_v2(trigger, telephony_response_1, telephony_response_2):
     with patch(
-        "duo_client.Admin.get_telephony_log", side_effect=[telephony_response_1, telephony_response_2]
+        "duo_client.logs.Telephony.get_telephony_logs_v2", side_effect=[telephony_response_1, telephony_response_2]
     ) as mock_get_log, patch(
-        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={}
+        "duo.connector.DuoLogsConsumer.load_checkpoint", return_value={"min_time": 1687598073}
     ) as mock_load_checkpoint, patch(
         "duo.connector.DuoLogsConsumer.save_checkpoint"
     ) as mock_save_checkpoint, patch(

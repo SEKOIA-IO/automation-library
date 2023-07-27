@@ -4,7 +4,7 @@ from tehtris_modules.constants import API_BASE_URL_FORMAT
 
 
 class TehtrisModuleConfiguration(BaseModel):
-    apikey: str = Field(..., description="The APIkey to authenticate call to the API")
+    apikey: str = Field(secret=True, description="The APIkey to authenticate call to the API")
     tenant_id: str = Field(..., description="The identifier of the tenant")
 
     @property

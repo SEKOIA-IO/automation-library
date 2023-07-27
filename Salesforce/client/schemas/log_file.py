@@ -16,6 +16,7 @@ class EventLogFile(BaseModel):
     EventType: str
     LogFile: str
     LogDate: str
+    CreatedDate: str
     LogFileLength: float
 
 

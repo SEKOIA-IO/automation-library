@@ -11,7 +11,6 @@ from google.cloud.pubsub_v1 import SubscriberClient, types
 from google_module.base import GoogleTrigger
 from google_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from pydantic import BaseModel
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 
 max_chunk_size: int = 1000
 
@@ -180,7 +179,6 @@ class PubSub(GoogleTrigger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.client: SubscriberClient | None = None
-        self._exporter = None
 
     @cached_property
     def subscription_name(self) -> str:
@@ -216,19 +214,6 @@ class PubSub(GoogleTrigger):
 
         for worker in workers:
             worker.join(timeout=timeout_per_worker)
-
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def run(self) -> None:  # pragma: no cover
         self.log(

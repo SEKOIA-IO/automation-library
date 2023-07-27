@@ -1,11 +1,12 @@
 from typing import Callable, Optional
 
 import duo_client
+from duo_client.logs import Telephony
 
 
 class DuoV1LogsIterator:
-    def __init__(self, func: Callable, min_time: int = 0, limit: int = 1000, callback: Optional[Callable] = None):
-        self.min_time = min_time if min_time else 0
+    def __init__(self, func: Callable, min_time: int, limit: int = 1000, callback: Optional[Callable] = None):
+        self.min_time = min_time
         self.func = func
         self.limit = limit
         self.callback = callback
@@ -49,7 +50,12 @@ class DuoV2LogsIterator:
             response = self.func(next_offset=self.next_offset, api_version=2, limit=str(self.limit), sort="ts:asc")
 
         else:
-            response = self.func(mintime=self.min_time, api_version=2, limit=str(self.limit), sort="ts:asc")
+            min_time = self.min_time
+            max_time = min_time + 100 * 24 * 60 * 60 * 1000
+
+            response = self.func(
+                mintime=min_time, maxtime=max_time, api_version=2, limit=str(self.limit), sort="ts:asc"
+            )
 
         events = response.get(self.ITEMS_FIELD)
         response_metadata = response.get("metadata", {})
@@ -78,7 +84,14 @@ class TelephonyLogsIterator(DuoV2LogsIterator):
     ITEMS_FIELD = "items"
 
     def __init__(self, client: duo_client.Admin, **kwargs):
-        super().__init__(func=client.get_telephony_log, **kwargs)
+        self.__client = client
+        super().__init__(func=self.get_telephony_log, **kwargs)
+
+    def get_telephony_log(self, **kwargs):
+        # This is a workaround due to a bug in Duo Python client - it doesn't pass `mintime` to `get_telephony_logs_v2`
+        # method, because it's a positional function argument:
+        # https://github.com/duosecurity/duo_client_python/blob/master/duo_client/admin.py#L687
+        return Telephony.get_telephony_logs_v2(self.__client.json_api_call, self.__client.host, **kwargs)
 
 
 class AuthLogsIterator(DuoV2LogsIterator):

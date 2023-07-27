@@ -7,7 +7,6 @@ import orjson
 import requests
 from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 
 from proofpoint_modules.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
@@ -38,7 +37,6 @@ class TAPEventsTrigger(Connector):
 
         self.http_session = requests.Session()
         self.last_retrieval_date: datetime = datetime.now(timezone.utc) - timedelta(minutes=5)
-        self._exporter = None
 
     @cached_property
     def authentication(self):
@@ -50,19 +48,6 @@ class TAPEventsTrigger(Connector):
         Return the refresh frequency. Minimal to 60 seconds
         """
         return max(self.configuration.frequency, 60)
-
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def run(self):  # pragma: no cover
         self.log(message="ProofPoint Events Trigger has started", level="info")
