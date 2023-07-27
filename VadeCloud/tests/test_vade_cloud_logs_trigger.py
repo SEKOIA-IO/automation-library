@@ -2,6 +2,7 @@ import time
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests.exceptions
 import requests_mock
 
 from vadecloud_modules import VadeCloudModule
@@ -90,7 +91,7 @@ def test_auth_error(trigger: VadeCloudLogsConnector):
 
         consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
 
-        with pytest.raises(AuthenticationError) as context:
+        with pytest.raises(requests.exceptions.HTTPError) as context:
             consumer.next_batch()
 
 

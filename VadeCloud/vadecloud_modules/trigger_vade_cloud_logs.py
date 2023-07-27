@@ -71,13 +71,25 @@ class VadeCloudConsumer(Thread):
 
     @cached_property
     def client(self):
-        return ApiClient(
-            hostname=self.connector.module.configuration.hostname,
-            login=self.connector.module.configuration.login,
-            password=self.connector.module.configuration.password,
-            log_callback=self.log,
-            ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
-        )
+        try:
+            client = ApiClient(
+                hostname=self.connector.module.configuration.hostname,
+                login=self.connector.module.configuration.login,
+                password=self.connector.module.configuration.password,
+                ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
+            )
+            return client
+
+        except requests.exceptions.HTTPError as error:
+            http_error_code = error.response.status_code
+            if http_error_code == 404:
+                self.log(message=f"Wrong password or login", level="error")
+
+            raise error
+
+        except requests.Timeout:
+            self.log(message="Failed to authorize due to timeout", level="error")
+            raise
 
     def request_logs_page(self, start_date: int, period: str, page: int = 0):
         params = {
