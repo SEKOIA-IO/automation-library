@@ -382,7 +382,7 @@ def test_next_batch(trigger, message1):
             json=message1,
         )
 
-        mock_time.time.side_effect = [batch_start, last_ts, batch_end]
+        mock_time.time.side_effect = [batch_start, last_ts, last_ts, batch_end]
         trigger.next_batch()
 
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]

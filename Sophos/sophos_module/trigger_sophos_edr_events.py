@@ -6,7 +6,6 @@ import orjson
 from requests.exceptions import HTTPError
 from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sekoia_automation.storage import PersistentJSON
 
 from sophos_module.base import SophosConnector
@@ -37,7 +36,6 @@ class SophosEDREventsTrigger(SophosConnector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self._exporter = None
 
     @property
     def cursor(self) -> str | None:
@@ -62,19 +60,6 @@ class SophosEDREventsTrigger(SophosConnector):
             client_secret=self.module.configuration.client_secret,
         )
         return SophosApiClient(auth=auth)
-
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def run(self):
         self.log(message="Sophos Events Trigger has started", level="info")
