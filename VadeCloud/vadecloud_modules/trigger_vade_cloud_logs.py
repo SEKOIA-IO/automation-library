@@ -87,7 +87,7 @@ class VadeCloudConsumer(Thread):
 
             raise error
 
-        except requests.Timeout:
+        except TimeoutError:
             self.log(message="Failed to authorize due to timeout", level="error")
             raise
 
