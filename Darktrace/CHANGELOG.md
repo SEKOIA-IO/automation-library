@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-07-31 - 1.4.1
+
+### Changed
+
+- Changed starttime from now to an hour ago at the connector first execution.
+
 ## 2023-06-30 - 1.3.1
 
 ### Added
