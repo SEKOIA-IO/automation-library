@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Changed starttime from now to an hour ago at the connector first execution.
 
-## 2023-06-30 - 1.3.1
+## 2023-07-18 - 1.3.1
 
 ### Added
 
