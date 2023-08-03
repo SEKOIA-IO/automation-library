@@ -7,7 +7,7 @@ import pytest
 from faker import Faker
 from sekoia_automation import constants
 
-from cato.connector import CatoModule, CatoSaseConnector, CatoSaseConnectorConfig
+from cato.cato_sase_connector import CatoModule, CatoSaseConnector, CatoSaseConnectorConfig
 from client.schemas.events_feed import EventsFeedResponseSchema
 
 

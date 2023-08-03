@@ -1,6 +1,6 @@
 """Entry point for the Cato Network connector."""
 
-from cato.connector import CatoModule, CatoSaseConnector
+from cato.cato_sase_connector import CatoModule, CatoSaseConnector
 
 if __name__ == "__main__":
     module = CatoModule()
