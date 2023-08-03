@@ -1,4 +1,5 @@
 """Tests for Cato graphql client."""
+from enum import Enum
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -6,6 +7,36 @@ from aiolimiter import AsyncLimiter
 from faker import Faker
 
 from client.graphql_client import CatoGraphQLClient, CatoRequestType
+
+
+def extend_enum(inherited_enum):
+    """
+    Extend enum wrapper.
+
+    Only for testing purposes.
+
+    Args:
+        inherited_enum:
+    """
+
+    def wrapper(added_enum):
+        joined = {}
+        for item in inherited_enum:
+            joined[item.name] = item.value
+
+        for item in added_enum:
+            joined[item.name] = item.value
+
+        return Enum(added_enum.__name__, joined)
+
+    return wrapper
+
+
+@extend_enum(CatoRequestType)
+class CatoRequestTypeFake(Enum):
+    """Fake CatoRequestType."""
+
+    FAKE = "fake"
 
 
 @pytest.fixture
@@ -142,7 +173,7 @@ async def test_get_rate_limiter(session_faker: Faker):
     Test CatoGraphQLClient get_rate_limiter/set_rate_limiter.
 
     Args:
-        faker:
+        session_faker: Faker
     """
     # Generate fake data
     request_type = CatoRequestType.ACCOUNT_METRICS
@@ -164,14 +195,10 @@ async def test_get_rate_limiter_with_error(session_faker: Faker):
     Test CatoGraphQLClient get_rate_limiter that should raise error.
 
     Args:
-        faker:
+        session_faker: Faker
     """
-    assert CatoGraphQLClient._rate_limiters is None
-
     with pytest.raises(ValueError):
-        CatoGraphQLClient.get_rate_limiter(CatoRequestType.ACCOUNT_METRICS)
-
-    assert CatoGraphQLClient._rate_limiters == {}
+        CatoGraphQLClient.get_rate_limiter(CatoRequestTypeFake.FAKE)
 
 
 @pytest.mark.asyncio
@@ -180,7 +207,7 @@ async def test_generate_cato_client(session_faker: Faker):
     Test CatoGraphQLClient cato_client method.
 
     Args:
-        faker:
+        session_faker: Faker
     """
     client = CatoGraphQLClient(
         api_key=session_faker.uuid4(),
