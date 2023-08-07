@@ -13,6 +13,7 @@ from withsecure.client import ApiClient
 from withsecure.constants import API_FETCH_EVENTS_PAGE_SIZE, API_SECURITY_EVENTS_URL, API_TIMEOUT
 from withsecure.helpers import human_readable_api_exception
 from withsecure.logging import get_logger
+from withsecure.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -95,6 +96,7 @@ class SecurityEventsConnector(Connector):
 
             # yielding events if defined
             if events:
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
                 yield events
             else:
                 logger.info(
@@ -139,6 +141,11 @@ class SecurityEventsConnector(Connector):
             with self.context as cache:
                 cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
+        # Compute the current lag
+        now = datetime.now(timezone.utc)
+        current_lag = now - most_recent_date_seen
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
+
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
@@ -154,11 +161,13 @@ class SecurityEventsConnector(Connector):
                     level="info",
                 )
                 self.push_events_to_intakes(events=batch_of_events)
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

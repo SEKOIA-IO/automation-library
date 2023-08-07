@@ -10,7 +10,6 @@ import orjson
 from dateutil.parser import isoparse
 from requests import Response
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sekoia_automation.storage import PersistentJSON
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
@@ -39,21 +38,6 @@ class Office365MessageTraceBaseTrigger(Connector):
         )
         self._stop_event = Event()
         self.context = PersistentJSON("context.json", self._data_path)
-        self._exporter = None
-
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread,
-            int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10),
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Office365 MessageTrace trigger", level="info")

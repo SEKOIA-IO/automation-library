@@ -1,5 +1,3 @@
-import time
-
 import requests
 from requests.adapters import Retry
 from requests_ratelimiter import LimiterAdapter

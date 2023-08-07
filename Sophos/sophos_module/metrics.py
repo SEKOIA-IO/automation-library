@@ -1,14 +1,17 @@
 from prometheus_client import Counter, Histogram
 
 # Declare prometheus metrics
-prom_namespace = "symphony_module_sophos"
+prom_namespace_sophos = "symphony_module_sophos"
 
 INCOMING_EVENTS = Counter(
     name="collected_events",
     documentation="Number of events collected from Sophos",
-    namespace=prom_namespace,
+    namespace=prom_namespace_sophos,
     labelnames=["intake_key"],
 )
+
+# Declare prometheus metrics
+prom_namespace = "symphony_module_common"
 
 OUTCOMING_EVENTS = Counter(
     name="forwarded_events",
