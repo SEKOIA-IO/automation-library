@@ -25,6 +25,7 @@ class GoogleReportsConfig(BaseModel):
     intake_server: str = "https://intake.sekoia.io"
     chunk_size: int = 1000
 
+
 class GoogleReports(GoogleTrigger):
 
     """
@@ -103,9 +104,8 @@ class GoogleReports(GoogleTrigger):
                 message="Failed to forward events from Google Reports API",
                 level="info",
             )
-    
-    def get_build_object(self):
 
+    def get_build_object(self):
         credentials = service_account.Credentials.from_service_account_file(
             self.service_account_path, scopes=self.scopes
         )
@@ -116,28 +116,41 @@ class GoogleReports(GoogleTrigger):
         return reports_service
 
     def get_activities(self):
-
         reports_service = self.get_build_object()
 
         self.log(message=f"Start requesting the Goole reports with credential object created", level="info")
 
         activities = (
             reports_service.activities()
-            .list(userKey="all", applicationName=self.applicatioName, maxResults=self.pagination_limit, startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"))
+            .list(
+                userKey="all",
+                applicationName=self.applicatioName,
+                maxResults=self.pagination_limit,
+                startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
             .execute()
         )
 
-        return activities 
-    
-    def get_next_activities(self, next_key):
+        return activities
 
+    def get_next_activities(self, next_key):
         reports_service = self.get_build_object()
 
         self.log(message=f"Start requesting the Goole reports with credential object created", level="info")
 
-        activities = reports_service.activities().list(userKey="all", applicationName=self.applicatioName, maxResults=self.pagination_limit, pageToken=next_key, startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")).execute()
+        activities = (
+            reports_service.activities()
+            .list(
+                userKey="all",
+                applicationName=self.applicatioName,
+                maxResults=self.pagination_limit,
+                pageToken=next_key,
+                startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
+            .execute()
+        )
 
-        return activities 
+        return activities
 
     def get_repots_evts(self):
         now = datetime.now(timezone.utc)
@@ -170,19 +183,21 @@ class GoogleReports(GoogleTrigger):
                 self.push_events_to_intakes(events=grouped_data)
                 self.events_sum += len(grouped_data)
                 next_key = response_next_page.get("nextPageToken")
-            
+
             most_recent_date_seen = now
             self.from_date = most_recent_date_seen
             with self.context as cache:
                 cache["most_recent_date_seen"] = most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         else:
-            self.log(message="No messages to forward", level="info")  
+            self.log(message="No messages to forward", level="info")
 
 
 class DriveGoogleReports(GoogleReports):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.applicatioName = "drive"
-        self.scopes = ['https://www.googleapis.com/auth/admin.reports.audit.readonly', 'https://www.googleapis.com/auth/admin.reports.usage.readonly']
+        self.scopes = [
+            "https://www.googleapis.com/auth/admin.reports.audit.readonly",
+            "https://www.googleapis.com/auth/admin.reports.usage.readonly",
+        ]
