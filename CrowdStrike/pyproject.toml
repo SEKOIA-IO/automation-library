@@ -90,6 +90,7 @@ build-backend = "poetry.core.masonry.api"
 omit = [
     "tests/*",
     "main.py",
+    "crowdstrike_telemetry/metrics.py",
 ]
 concurrency = [
     "gevent",
