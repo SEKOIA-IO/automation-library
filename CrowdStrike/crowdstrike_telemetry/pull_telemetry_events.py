@@ -1,11 +1,15 @@
 """Contains connector, configuration and module."""
 import asyncio
+import hashlib
+import os
 import time
 from functools import cached_property
 from gzip import decompress
+from typing import Tuple
 
 from loguru import logger
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.storage import PersistentJSON
 
 from aws.s3 import S3Configuration, S3Wrapper
 from aws.sqs import SqsConfiguration, SqsWrapper
@@ -83,6 +87,7 @@ class CrowdStrikeTelemetryConnector(Connector):
         Run CrowdStrikeTelemetry.
         """
         result: list[str] = []
+        files_to_delete: list[PersistentJSON] = []
 
         async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True) as messages:
             validated_sqs_messages = []
@@ -92,7 +97,7 @@ class CrowdStrikeTelemetryConnector(Connector):
                 except Exception:
                     logger.warning("Invalid notification message")
 
-            pushed_events = await asyncio.gather(
+            pushed_events_data = await asyncio.gather(
                 *[
                     self.process_s3_file_and_push_to_intake(file.path, record.bucket)
                     for record in validated_sqs_messages
@@ -100,13 +105,18 @@ class CrowdStrikeTelemetryConnector(Connector):
                 ]
             )
 
-            # We have list of lists at this point we should flatten it
-            for records in pushed_events:
-                result.extend(records)
+            for records in pushed_events_data:
+                result.extend(records[0])
+                files_to_delete.append(records[1])
+
+        for persistent_file in files_to_delete:
+            os.remove(persistent_file._filepath)
 
         return result
 
-    async def process_s3_file_and_push_to_intake(self, key: str, bucket: str | None = None) -> list[str]:
+    async def process_s3_file_and_push_to_intake(
+        self, key: str, bucket: str | None = None
+    ) -> Tuple[list[str], PersistentJSON]:
         """
         Process S3 object and push data to intake.
 
@@ -117,18 +127,32 @@ class CrowdStrikeTelemetryConnector(Connector):
             bucket: str | None
 
         Returns:
-            list[str]: list of event ids
+            Tuple[list[str], PersistentJSON]: list of event ids and path to lock file
 
         Raises:
             Exception: Unexpected result type
         """
+        lock_key = key + (bucket or "")
+        local_file_lock_key = "{0}.json".format(hashlib.md5(lock_key.encode()).hexdigest())
+        local_file_lock = PersistentJSON(local_file_lock_key)
+
+        with local_file_lock as cached_data:
+            if "events_count" in cached_data:
+                logger.info(f"File {key} already processed")
+
+                return [], local_file_lock
+
         result = await self.process_s3_file(key, bucket)
 
         log_message = f"Found {len(result)} records to process"
         self.log(level="INFO", message=f"Found {len(result)} records to process")
         logger.info(log_message)
+        push_result = await self._push_events(result)
 
-        return await self._push_events(result)
+        with local_file_lock as cached_data:
+            cached_data["events_count"] = len(push_result)
+
+        return push_result, local_file_lock
 
     async def process_s3_file(self, key: str, bucket: str | None = None) -> list[str]:
         """

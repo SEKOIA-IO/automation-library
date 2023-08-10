@@ -10,12 +10,13 @@ from crowdstrike_telemetry.pull_telemetry_events import CrowdStrikeTelemetryConf
 
 
 @pytest.fixture
-def crowdstrike_connector(session_faker) -> CrowdStrikeTelemetryConnector:
+def crowdstrike_connector(session_faker, symphony_storage) -> CrowdStrikeTelemetryConnector:
     """
     Create CrowdStrikeTelemetryConnector instance.
 
     Args:
         session_faker: Faker
+        symphony_storage: str
 
     Returns:
         CrowdStrikeTelemetryConnector:
