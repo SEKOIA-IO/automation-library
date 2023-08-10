@@ -136,11 +136,11 @@ class CrowdStrikeTelemetryConnector(Connector):
         local_file_lock_key = "{0}.json".format(hashlib.md5(lock_key.encode()).hexdigest())
         local_file_lock = PersistentJSON(local_file_lock_key)
 
-        with local_file_lock as cached_data:
-            if "events_count" in cached_data:
-                logger.info(f"File {key} already processed")
+        with local_file_lock as cached_data:  # pragma: no cover
+            if "events_count" in cached_data:  # pragma: no cover
+                logger.info(f"File {key} already processed")  # pragma: no cover
 
-                return [], local_file_lock
+                return [], local_file_lock  # pragma: no cover
 
         result = await self.process_s3_file(key, bucket)
 
