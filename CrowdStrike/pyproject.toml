@@ -62,8 +62,16 @@ filterwarnings = [
 addopts = '''
   --strict-markers
   --tb=short
-  --numprocesses=auto
   --asyncio-mode=auto
+  --cov=crowdstrike_telemetry
+  --cov=aws
+  --cov=logger
+  --cov-branch
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=90
+  --numprocesses=auto
 '''
 
 [tool.poe.tasks.lint]
@@ -82,6 +90,7 @@ build-backend = "poetry.core.masonry.api"
 omit = [
     "tests/*",
     "main.py",
+    "crowdstrike_telemetry/metrics.py",
 ]
 concurrency = [
     "gevent",

@@ -1,9 +1,12 @@
 """Additional programmatic configuration for pytest."""
 
 import asyncio
+from shutil import rmtree
+from tempfile import mkdtemp
 
 import pytest
 from faker import Faker
+from sekoia_automation import constants
 
 
 @pytest.fixture(scope="session")
@@ -44,6 +47,23 @@ def session_faker(faker_locale: list[str], faker_seed: int) -> Faker:
     instance.seed_instance(seed=faker_seed)
 
     return instance
+
+
+@pytest.fixture
+def symphony_storage() -> str:
+    """
+    Fixture for symphony temporary storage.
+
+    Yields:
+        str:
+    """
+    original_storage = constants.DATA_STORAGE
+    constants.DATA_STORAGE = mkdtemp()
+
+    yield constants.DATA_STORAGE
+
+    rmtree(constants.DATA_STORAGE)
+    constants.SYMPHONY_STORAGE = original_storage
 
 
 @pytest.fixture(scope="session")

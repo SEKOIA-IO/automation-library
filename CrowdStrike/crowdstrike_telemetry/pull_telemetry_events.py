@@ -1,15 +1,21 @@
 """Contains connector, configuration and module."""
 import asyncio
+import hashlib
+import os
+import time
 from functools import cached_property
 from gzip import decompress
+from typing import Tuple
 
 from loguru import logger
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.storage import PersistentJSON
 
 from aws.s3 import S3Configuration, S3Wrapper
 from aws.sqs import SqsConfiguration, SqsWrapper
 
 from . import CrowdStrikeTelemetryModule
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from .schemas import CrowdStrikeNotificationSchema
 
 
@@ -56,11 +62,32 @@ class CrowdStrikeTelemetryConnector(Connector):
 
         return S3Wrapper(config)
 
-    async def get_crowdstrike_events(self) -> None:
+    async def _push_events(self, events: list[str]) -> list[str]:
+        """
+        Push events to intakes.
+
+        Simple wrapper over `self.push_events_to_intakes` to run it async.
+
+        Args:
+            events: list[str]
+
+        Returns:
+            list[str]:
+        """
+        logger.info("Pushing {count} events to intakes", count=len(events))
+
+        return await asyncio.to_thread(
+            self.push_events_to_intakes,
+            events=events,
+            sync=True,
+        )
+
+    async def get_crowdstrike_events(self) -> list[str]:
         """
         Run CrowdStrikeTelemetry.
         """
         result: list[str] = []
+        files_to_delete: list[PersistentJSON] = []
 
         async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True) as messages:
             validated_sqs_messages = []
@@ -70,38 +97,62 @@ class CrowdStrikeTelemetryConnector(Connector):
                 except Exception:
                     logger.warning("Invalid notification message")
 
-            s3_data_list = await asyncio.gather(
+            pushed_events_data = await asyncio.gather(
                 *[
-                    self.process_s3_file(file.path, record.bucket)
+                    self.process_s3_file_and_push_to_intake(file.path, record.bucket)
                     for record in validated_sqs_messages
                     for file in record.files
                 ]
             )
 
-            # We might have list of lists at this point we should flatten it
-            for records in s3_data_list:
-                result.extend(records)
+            for records in pushed_events_data:
+                result.extend(records[0])
+                files_to_delete.append(records[1])
 
+        for persistent_file in files_to_delete:
+            os.remove(persistent_file._filepath)
+
+        return result
+
+    async def process_s3_file_and_push_to_intake(
+        self, key: str, bucket: str | None = None
+    ) -> Tuple[list[str], PersistentJSON]:
+        """
+        Process S3 object and push data to intake.
+
+        If it is a compressed file, it will be decompressed, otherwise it will be read as json.
+
+        Args:
+            key: str
+            bucket: str | None
+
+        Returns:
+            Tuple[list[str], PersistentJSON]: list of event ids and path to lock file
+
+        Raises:
+            Exception: Unexpected result type
+        """
+        lock_key = key + (bucket or "")
+        local_file_lock_key = "{0}.json".format(hashlib.md5(lock_key.encode()).hexdigest())
+        local_file_lock = PersistentJSON(local_file_lock_key)
+
+        with local_file_lock as cached_data:  # pragma: no cover
+            if "events_count" in cached_data:  # pragma: no cover
+                logger.info(f"File {key} already processed")  # pragma: no cover
+
+                return [], local_file_lock  # pragma: no cover
+
+        result = await self.process_s3_file(key, bucket)
+
+        log_message = f"Found {len(result)} records to process"
         self.log(level="INFO", message=f"Found {len(result)} records to process")
+        logger.info(log_message)
+        push_result = await self._push_events(result)
 
-        if result:
-            await asyncio.to_thread(
-                self.push_events_to_intakes,
-                events=result,
-                sync=True,
-            )
+        with local_file_lock as cached_data:
+            cached_data["events_count"] = len(push_result)
 
-    def run(self) -> None:  # pragma: no cover
-        """Runs CrowdStrikeTelemetry."""
-        loop = asyncio.get_event_loop()
-
-        while self.running:
-            try:
-                loop.run_until_complete(self.get_crowdstrike_events())
-            except Exception as e:
-                self.log_exception(e, message="Error while running CrowdStrikeTelemetry")
-
-        loop.close()
+        return push_result, local_file_lock
 
     async def process_s3_file(self, key: str, bucket: str | None = None) -> list[str]:
         """
@@ -114,7 +165,7 @@ class CrowdStrikeTelemetryConnector(Connector):
             bucket: str | None
 
         Returns:
-            list[dict]:
+            list[str]: list of events inside file
 
         Raises:
             Exception: Unexpected result type
@@ -128,3 +179,39 @@ class CrowdStrikeTelemetryConnector(Connector):
                 result_content = decompress(content)
 
             return [line for line in result_content.decode("utf-8").split("\n") if len(line.strip()) > 0]
+
+    def run(self) -> None:  # pragma: no cover
+        """Runs Crowdstrike Telemetry."""
+        loop = asyncio.get_event_loop()
+
+        previous_processing_end = None
+        try:
+            while True:
+                processing_start = time.time()
+                if previous_processing_end is not None:
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_start - previous_processing_end
+                    )
+
+                message_ids: list[str] = loop.run_until_complete(self.get_crowdstrike_events())
+                processing_end = time.time()
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+
+                log_message = "No records to forward"
+                if len(message_ids) > 0:
+                    log_message = "Pushed {0} records".format(len(message_ids))
+
+                logger.info(log_message)
+                self.log(message=log_message, level="info")
+
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                    processing_end - processing_start
+                )
+
+                previous_processing_end = processing_end
+
+        except Exception as e:
+            logger.error("Error while running CrowdStrike Telemetry: {error}", error=e)
+
+        finally:
+            loop.close()
