@@ -192,7 +192,7 @@ class VadeCloudConsumer(Thread):
 
             else:
                 self.log(
-                    message="{self.name}: No events to forward",
+                    message=f"{self.name}: No events to forward",
                     level="info",
                 )
 
