@@ -11,7 +11,6 @@ from google_module.base import GoogleTrigger
 from google_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 from pydantic import BaseModel
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sekoia_automation.storage import PersistentJSON
 
 from requests.exceptions import HTTPError
@@ -22,14 +21,13 @@ class GoogleReportsConfig(BaseModel):
     admin_mail: str
     intake_key: str
     frequency: int = 20
-    intake_server: str = "https://intake.sekoia.io"
     chunk_size: int = 1000
 
 
 class GoogleReports(GoogleTrigger):
 
     """
-    Connect to Google Repots API and return the results
+    Connect to Google Reports API and return the results
 
     Good to know : This's the parent class for all other Google reports applications classes
     """
@@ -39,7 +37,7 @@ class GoogleReports(GoogleTrigger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.applicatioName = ""
+        self.applicationName = ""
         self.from_date = self.most_recent_date_seen
         self.service_account_path = self.CREDENTIALS_PATH
         self.scopes = []
@@ -66,13 +64,20 @@ class GoogleReports(GoogleTrigger):
 
             return most_recent_date_seen
 
+    @most_recent_date_seen.setter
+    def most_recent_date_seen(self, recent_date: str):
+        most_recent_date_seen = recent_date
+        self.from_date = most_recent_date_seen
+        with self.context as cache:
+            cache["most_recent_date_seen"] = most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     @cached_property
     def pagination_limit(self):
         return max(self.configuration.chunk_size, 1000)
 
     def run(self):
         self.log(
-            message=f"Starting Google Reports api for {self.applicatioName} application at {self.from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+            message=f"Starting Google Reports api for {self.applicationName} application at {self.from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
             level="info",
         )
 
@@ -81,7 +86,7 @@ class GoogleReports(GoogleTrigger):
                 start = time.time()
 
                 try:
-                    self.get_repots_evts()
+                    self.get_reports_events()
 
                 except HTTPError | BaseHTTPError as ex:
                     self.log_exception(ex, message="Failed to get next batch of events")
@@ -118,13 +123,13 @@ class GoogleReports(GoogleTrigger):
     def get_activities(self):
         reports_service = self.get_build_object()
 
-        self.log(message=f"Start requesting the Goole reports with credential object created", level="info")
+        self.log(message=f"Start requesting the Google reports with credential object created", level="info")
 
         activities = (
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.applicatioName,
+                applicationName=self.applicationName,
                 maxResults=self.pagination_limit,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             )
@@ -142,7 +147,7 @@ class GoogleReports(GoogleTrigger):
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.applicatioName,
+                applicationName=self.applicationName,
                 maxResults=self.pagination_limit,
                 pageToken=next_key,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -152,42 +157,46 @@ class GoogleReports(GoogleTrigger):
 
         return activities
 
+    def get_next_activities_with_next_key(self, next_key):
+        while next_key:
+            grouped_data = []
+            response_next_page = self.get_next_activities(next_key)
+
+            next_page_items = response_next_page.get("items", [])
+            recent_date = next_page_items[0].get("id").get("time")
+            self.most_recent_date_seen = isoparse(recent_date)
+            grouped_data.extend(next_page_items)
+            self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
+            self.push_events_to_intakes(events=grouped_data)
+            self.events_sum += len(grouped_data)
+            next_key = response_next_page.get("nextPageToken")
+
     def get_repots_evts(self):
         now = datetime.now(timezone.utc)
 
         self.log(message=f"Creating a google credentials objects", level="info")
 
         activities = self.get_activities()
-
         items = activities.get("items", [])
         next_key = activities.get("nextPageToken")
 
         self.log(message=f"Getting activities with {len(items)} elements", level="info")
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
+        if len(items) == 0:
+            self.most_recent_date_seen = now
+
         if len(items) > 0:
+            recent_date = items[0].get("id").get("time")
+            self.most_recent_date_seen = isoparse(recent_date)
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
             self.log(message=f"Sending the first batch of {len(messages)} elements", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
             self.push_events_to_intakes(events=messages)
             self.events_sum += len(messages)
 
-            while next_key:
-                grouped_data = []
-                response_next_page = self.get_next_activities(next_key)
-
-                next_page_items = response_next_page.get("items", [])
-                grouped_data.extend(next_page_items)
-                self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
-                self.push_events_to_intakes(events=grouped_data)
-                self.events_sum += len(grouped_data)
-                next_key = response_next_page.get("nextPageToken")
-
-            most_recent_date_seen = now
-            self.from_date = most_recent_date_seen
-            with self.context as cache:
-                cache["most_recent_date_seen"] = most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+            self.get_next_activities_with_next_key(next_key)
 
         else:
             self.log(message="No messages to forward", level="info")
@@ -196,7 +205,7 @@ class GoogleReports(GoogleTrigger):
 class DriveGoogleReports(GoogleReports):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.applicatioName = "drive"
+        self.applicationName = "drive"
         self.scopes = [
             "https://www.googleapis.com/auth/admin.reports.audit.readonly",
             "https://www.googleapis.com/auth/admin.reports.usage.readonly",

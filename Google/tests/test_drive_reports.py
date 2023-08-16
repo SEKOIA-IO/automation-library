@@ -25,9 +25,9 @@ def drive_response():
         "etag": "HT17nNOKg3qK25zh6p3L6mi",
         "nextPageToken": "",
         "items": [
-            {"kind": "admin#reports#activity", "id": {}, "etag": "etage1", "actor": {}, "events": []},
-            {"kind": "admin#reports#activity", "id": {}, "etag": "etage2", "actor": {}, "events": []},
-            {"kind": "admin#reports#activity", "id": {}, "etag": "etage3", "actor": {}, "events": []},
+            {"kind": "admin#reports#activity", "id": {"time": "2023-08-07T12:04:37.532Z"}, "etag": "etage1", "actor": {}, "events": []},
+            {"kind": "admin#reports#activity", "id": {"time": "2023-08-07T12:03:37.532Z"}, "etag": "etage2", "actor": {}, "events": []},
+            {"kind": "admin#reports#activity", "id": {"time": "2023-08-07T12:02:37.532Z"}, "etag": "etage3", "actor": {}, "events": []},
         ],
     }
 
@@ -39,9 +39,9 @@ def drive_response_NK():
         "etag": "HT17nNOKg3qK25zh6p3L6mi",
         "nextPageToken": "nextpagetoken_99",
         "items": [
-            {"kind": "admin#reports#activity", "id": {}, "etag": "etage1", "actor": {}, "events": []},
-            {"kind": "admin#reports#activity", "id": {}, "etag": "etage2", "actor": {}, "events": []},
-            {"kind": "admin#reports#activity", "id": {}, "etag": "etage3", "actor": {}, "events": []},
+            {"kind": "admin#reports#activity", "id": {"time": "2023-08-07T12:04:37.532Z"}, "etag": "etage1", "actor": {}, "events": []},
+            {"kind": "admin#reports#activity", "id": {"time": "2023-08-07T12:03:37.532Z"}, "etag": "etage2", "actor": {}, "events": []},
+            {"kind": "admin#reports#activity", "id": {"time": "2023-08-07T12:02:37.532Z"}, "etag": "etage3", "actor": {}, "events": []},
         ],
     }
 
