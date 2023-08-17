@@ -65,7 +65,7 @@ class GoogleReports(GoogleTrigger):
             return most_recent_date_seen
 
     @most_recent_date_seen.setter
-    def most_recent_date_seen(self, recent_date: str):
+    def most_recent_date_seen(self, recent_date):
         most_recent_date_seen = recent_date
         self.from_date = most_recent_date_seen
         with self.context as cache:
@@ -172,7 +172,7 @@ class GoogleReports(GoogleTrigger):
             self.events_sum += len(grouped_data)
             next_key = response_next_page.get("nextPageToken")
 
-    def get_repots_evts(self):
+    def get_reports_events(self):
         now = datetime.now(timezone.utc)
 
         self.log(message=f"Creating a google credentials objects", level="info")

@@ -88,7 +88,7 @@ def test_get_google_reports_data(trigger, drive_response):
 
     with patch("google_module.google_drive_reports.build", return_value=mock_service):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
-            trigger.get_repots_evts()
+            trigger.get_reports_events()
             resultats = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
             assert len(resultats[0]) != 0
             assert trigger.events_sum == 3
@@ -104,7 +104,7 @@ def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
                     "google_module.google_drive_reports.DriveGoogleReports.get_next_activities",
                     return_value=drive_response,
                 ):
-                    trigger.get_repots_evts()
+                    trigger.get_reports_events()
                     resultats = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
                     assert len(resultats[0]) != 0
                     assert trigger.events_sum == 6
@@ -135,6 +135,6 @@ def test_get_google_reports_data_integration():
     trigger.log = Mock()
     trigger.log_exception = Mock()
     trigger.push_events_to_intakes = Mock()
-    trigger.get_repots_evts()
+    trigger.get_reports_events()
     resultats = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     assert len(resultats[0]) != 0
