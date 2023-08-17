@@ -141,7 +141,10 @@ class GoogleReports(GoogleTrigger):
     def get_next_activities(self, next_key):
         reports_service = self.get_build_object()
 
-        self.log(message=f"Start requesting the Goole reports with credential object created", level="info")
+        self.log(
+            message=f"Start requesting the Google reports with credential object created and also next key",
+            level="info",
+        )
 
         activities = (
             reports_service.activities()
@@ -158,19 +161,24 @@ class GoogleReports(GoogleTrigger):
         return activities
 
     def get_next_activities_with_next_key(self, next_key):
-        while next_key:
+        const_next_key = next_key
+        while const_next_key:
             grouped_data = []
             response_next_page = self.get_next_activities(next_key)
 
             next_page_items = response_next_page.get("items", [])
-            recent_date = next_page_items[0].get("id").get("time")
-            self.most_recent_date_seen = isoparse(recent_date)
-            grouped_data.extend(next_page_items)
-            self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
-            self.push_events_to_intakes(events=grouped_data)
-            self.events_sum += len(grouped_data)
-            next_key = response_next_page.get("nextPageToken")
+            if next_page_items:
+                recent_date = next_page_items[0].get("id").get("time")
+                grouped_data.extend(next_page_items)
+                self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
+                self.push_events_to_intakes(events=grouped_data)
+                self.most_recent_date_seen = isoparse(recent_date)
+                self.events_sum += len(grouped_data)
+                const_next_key = response_next_page.get("nextPageToken")
+            else:
+                const_next_key = ""
+                self.log(message=f"There's no items even there's next key!!", level="info")
 
     def get_reports_events(self):
         now = datetime.now(timezone.utc)
@@ -189,11 +197,11 @@ class GoogleReports(GoogleTrigger):
 
         if len(items) > 0:
             recent_date = items[0].get("id").get("time")
-            self.most_recent_date_seen = isoparse(recent_date)
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
             self.log(message=f"Sending the first batch of {len(messages)} elements", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
             self.push_events_to_intakes(events=messages)
+            self.most_recent_date_seen = isoparse(recent_date)
             self.events_sum += len(messages)
 
             self.get_next_activities_with_next_key(next_key)

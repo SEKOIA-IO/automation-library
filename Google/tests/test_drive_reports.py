@@ -3,6 +3,10 @@ import os
 from unittest.mock import Mock, patch
 from google_module.google_drive_reports import DriveGoogleReports
 
+import tempfile
+import json
+import codecs
+
 
 @pytest.fixture
 def trigger(credentials):
@@ -89,8 +93,8 @@ def test_get_google_reports_data(trigger, drive_response):
     with patch("google_module.google_drive_reports.build", return_value=mock_service):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
             trigger.get_reports_events()
-            resultats = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-            assert len(resultats[0]) != 0
+            results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+            assert len(results[0]) != 0
             assert trigger.events_sum == 3
 
 
@@ -105,8 +109,8 @@ def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
                     return_value=drive_response,
                 ):
                     trigger.get_reports_events()
-                    resultats = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-                    assert len(resultats[0]) != 0
+                    results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+                    assert len(results[0]) != 0
                     assert trigger.events_sum == 6
 
 
@@ -135,6 +139,16 @@ def test_get_google_reports_data_integration():
     trigger.log = Mock()
     trigger.log_exception = Mock()
     trigger.push_events_to_intakes = Mock()
+
+    temp_fd, temp_file_path = tempfile.mkstemp(suffix=".json", dir="./tests")
+    with open(temp_file_path, "w") as json_file:
+        json_string = json.dumps(trigger.module._configuration)
+        decoded_json_string = codecs.decode(json_string, "unicode_escape")
+        json_file.write(decoded_json_string)
+        trigger.service_account_path = temp_file_path
+
     trigger.get_reports_events()
-    resultats = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-    assert len(resultats[0]) != 0
+    os.close(temp_fd)
+    os.remove(temp_file_path)
+    results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+    assert len(results[0]) != 0
