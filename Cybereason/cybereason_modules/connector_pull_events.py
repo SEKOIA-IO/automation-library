@@ -21,8 +21,11 @@ from cybereason_modules.constants import (
     MALOP_INBOX_ENDPOINT,
 )
 from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
+from cybereason_modules.logging import get_logger
 from cybereason_modules.helpers import extract_models_from_malop, merge_suspicions, validate_response_not_login_failure
 from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class CybereasonEventConnectorConfiguration(DefaultConnectorConfiguration):
@@ -86,10 +89,11 @@ class CybereasonEventConnector(Connector):
         params: dict[str, Any] = {"startTime": from_date, "endTime": to_date}
 
         if self.configuration.group_ids is not None:
-            params["groupIds"] = self.configuration.group_ids
+            params["groupIds"] = ",".join(self.configuration.group_ids)
 
         url = urljoin(self.module.configuration.base_url, MALOP_INBOX_ENDPOINT)
         try:
+            logger.debug("Fetching malops", url=url, params=params)
             response = self.client.post(url, json=params, timeout=60)
 
             if not response.ok:
