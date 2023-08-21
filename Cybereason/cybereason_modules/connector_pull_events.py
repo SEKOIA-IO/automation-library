@@ -89,7 +89,7 @@ class CybereasonEventConnector(Connector):
         params: dict[str, Any] = {"startTime": from_date, "endTime": to_date}
 
         if self.configuration.group_ids is not None:
-            params["groupIds"] = self.configuration.group_ids
+            params["groupIds"] = ",".join(self.configuration.group_ids)
 
         url = urljoin(self.module.configuration.base_url, MALOP_INBOX_ENDPOINT)
         try:
