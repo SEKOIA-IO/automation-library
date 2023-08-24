@@ -92,7 +92,7 @@ class CrowdStrikeTelemetryConnector(Connector):
             for message in messages:
                 try:
                     validated_sqs_messages.append(CrowdStrikeNotificationSchema.parse_raw(message))
-                except Exception:
+                except Exception:  # pragma: no cover
                     logger.warning("Invalid notification message {invalid_message}", invalid_message=message)
 
             if validated_sqs_messages:  # pragma: no cover
@@ -109,7 +109,7 @@ class CrowdStrikeTelemetryConnector(Connector):
                 # We have list of lists her, so we should flatten it
                 for records in s3_data_list:
                     result.extend(records)
-            else:
+            else:  # pragma: no cover
                 logger.info("No messages in sqs")
 
         self.log(level="INFO", message=f"Found {len(result)} records to process")
