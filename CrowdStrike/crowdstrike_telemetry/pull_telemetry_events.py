@@ -93,8 +93,11 @@ class CrowdStrikeTelemetryConnector(Connector):
                 try:
                     validated_sqs_messages.append(CrowdStrikeNotificationSchema.parse_raw(message))
                 except Exception:
-                    logger.warning("Invalid notification message")
+                    logger.warning("Invalid notification message {invalid_message}", invalid_message=message)
+
             if validated_sqs_messages:  # pragma: no cover
+                logger.info("Found {sqs_messages} entries in sqs", sqs_messages=len(validated_sqs_messages))
+
                 s3_data_list = await asyncio.gather(
                     *[
                         self.process_s3_file(file.path, record.bucket)
@@ -106,6 +109,8 @@ class CrowdStrikeTelemetryConnector(Connector):
                 # We have list of lists her, so we should flatten it
                 for records in s3_data_list:
                     result.extend(records)
+            else:
+                logger.info("No messages in sqs")
 
         self.log(level="INFO", message=f"Found {len(result)} records to process")
 
