@@ -1,15 +1,11 @@
 """Contains connector, configuration and module."""
 import asyncio
-import hashlib
-import os
 import time
 from functools import cached_property
 from gzip import decompress
-from typing import Tuple
 
 from loguru import logger
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from sekoia_automation.storage import PersistentJSON
 
 from aws.s3 import S3Configuration, S3Wrapper
 from aws.sqs import SqsConfiguration, SqsWrapper
@@ -85,74 +81,40 @@ class CrowdStrikeTelemetryConnector(Connector):
     async def get_crowdstrike_events(self) -> list[str]:
         """
         Run CrowdStrikeTelemetry.
+
+        Returns:
+            list[str]:
         """
         result: list[str] = []
-        files_to_delete: list[PersistentJSON] = []
 
         async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True) as messages:
             validated_sqs_messages = []
             for message in messages:
                 try:
                     validated_sqs_messages.append(CrowdStrikeNotificationSchema.parse_raw(message))
-                except Exception:
-                    logger.warning("Invalid notification message")
+                except Exception:  # pragma: no cover
+                    logger.warning("Invalid notification message {invalid_message}", invalid_message=message)
 
-            pushed_events_data = await asyncio.gather(
-                *[
-                    self.process_s3_file_and_push_to_intake(file.path, record.bucket)
-                    for record in validated_sqs_messages
-                    for file in record.files
-                ]
-            )
+            if validated_sqs_messages:  # pragma: no cover
+                logger.info("Found {sqs_messages} entries in sqs", sqs_messages=len(validated_sqs_messages))
 
-            for records in pushed_events_data:
-                result.extend(records[0])
-                files_to_delete.append(records[1])
+                s3_data_list = await asyncio.gather(
+                    *[
+                        self.process_s3_file(file.path, record.bucket)
+                        for record in validated_sqs_messages
+                        for file in record.files
+                    ]
+                )
 
-        for persistent_file in files_to_delete:
-            os.remove(persistent_file._filepath)
+                # We have list of lists her, so we should flatten it
+                for records in s3_data_list:
+                    result.extend(records)
+            else:  # pragma: no cover
+                logger.info("No messages in sqs")
 
-        return result
-
-    async def process_s3_file_and_push_to_intake(
-        self, key: str, bucket: str | None = None
-    ) -> Tuple[list[str], PersistentJSON]:
-        """
-        Process S3 object and push data to intake.
-
-        If it is a compressed file, it will be decompressed, otherwise it will be read as json.
-
-        Args:
-            key: str
-            bucket: str | None
-
-        Returns:
-            Tuple[list[str], PersistentJSON]: list of event ids and path to lock file
-
-        Raises:
-            Exception: Unexpected result type
-        """
-        lock_key = key + (bucket or "")
-        local_file_lock_key = "{0}.json".format(hashlib.md5(lock_key.encode()).hexdigest())
-        local_file_lock = PersistentJSON(local_file_lock_key)
-
-        with local_file_lock as cached_data:  # pragma: no cover
-            if "events_count" in cached_data:  # pragma: no cover
-                logger.info(f"File {key} already processed")  # pragma: no cover
-
-                return [], local_file_lock  # pragma: no cover
-
-        result = await self.process_s3_file(key, bucket)
-
-        log_message = f"Found {len(result)} records to process"
         self.log(level="INFO", message=f"Found {len(result)} records to process")
-        logger.info(log_message)
-        push_result = await self._push_events(result)
 
-        with local_file_lock as cached_data:
-            cached_data["events_count"] = len(push_result)
-
-        return push_result, local_file_lock
+        return await self._push_events(result)
 
     async def process_s3_file(self, key: str, bucket: str | None = None) -> list[str]:
         """
@@ -165,7 +127,7 @@ class CrowdStrikeTelemetryConnector(Connector):
             bucket: str | None
 
         Returns:
-            list[str]: list of events inside file
+            list[dict]:
 
         Raises:
             Exception: Unexpected result type
@@ -178,7 +140,7 @@ class CrowdStrikeTelemetryConnector(Connector):
                 logger.info(f"Decompressing file by key {key}")
                 result_content = decompress(content)
 
-            return [line for line in result_content.decode("utf-8").split("\n") if len(line.strip()) > 0]
+        return [line for line in result_content.decode("utf-8").split("\n") if len(line.strip()) > 0]
 
     def run(self) -> None:  # pragma: no cover
         """Runs Crowdstrike Telemetry."""
@@ -186,7 +148,7 @@ class CrowdStrikeTelemetryConnector(Connector):
 
         previous_processing_end = None
         try:
-            while True:
+            while self.running:
                 processing_start = time.time()
                 if previous_processing_end is not None:
                     EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
@@ -203,6 +165,11 @@ class CrowdStrikeTelemetryConnector(Connector):
 
                 logger.info(log_message)
                 self.log(message=log_message, level="info")
+                logger.info(log_message)
+                logger.info(
+                    "Processing took {processing_time} seconds",
+                    processing_time=(processing_end - processing_start),
+                )
 
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                     processing_end - processing_start

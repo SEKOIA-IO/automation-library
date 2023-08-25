@@ -42,12 +42,9 @@ class S3Wrapper(AwsClient[S3Configuration]):
 
         logger.info(f"Reading object {key} from bucket {bucket}")
 
-        try:
-            async with self.get_client("s3") as s3:
-                response = await s3.get_object(Bucket=bucket, Key=key)
-                async with response["Body"] as stream:
-                    data = await stream.read()
+        async with self.get_client("s3") as s3:
+            response = await s3.get_object(Bucket=bucket, Key=key)
+            async with response["Body"] as stream:
+                data = await stream.read()
 
-            yield data
-        finally:
-            pass
+                yield data
