@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2023-08-25
+
+### Fixed
+
+- Add more logs
+- Fix the way to read the content of objects
+
 ## [1.2.0] - 2023-08-10
 
 ### Fixed
