@@ -140,7 +140,7 @@ class CrowdStrikeTelemetryConnector(Connector):
                 logger.info(f"Decompressing file by key {key}")
                 result_content = decompress(content)
 
-            return [line for line in result_content.decode("utf-8").split("\n") if len(line.strip()) > 0]
+        return [line for line in result_content.decode("utf-8").split("\n") if len(line.strip()) > 0]
 
     def run(self) -> None:  # pragma: no cover
         """Runs Crowdstrike Telemetry."""
