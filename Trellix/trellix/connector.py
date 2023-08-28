@@ -33,6 +33,7 @@ class TrellixConfig(DefaultConnectorConfiguration):
 
 class TrellixModule(Module):
     """TrellixModule."""
+
     pass
 
 
