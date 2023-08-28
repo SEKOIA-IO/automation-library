@@ -75,37 +75,6 @@ async def test_process_s3_file(crowdstrike_connector, session_faker):
         mock_read_key.assert_called_once_with(key, None)
 
 
-# @pytest.mark.asyncio
-# async def test_client_session_init(crowdstrike_connector):
-#     """
-#     Test client session init.
-#
-#     Args:
-#         crowdstrike_connector: CrowdStrikeTelemetryConnector
-#     """
-#     assert crowdstrike_connector._session is None
-#     assert crowdstrike_connector._rate_limiter is None
-#     async with crowdstrike_connector.session() as session1:
-#         assert isinstance(crowdstrike_connector._session, ClientSession)
-#         assert isinstance(crowdstrike_connector._rate_limiter, AsyncLimiter)
-#         async with crowdstrike_connector.session() as session2:
-#             assert session2 == session1
-#
-#
-# @pytest.mark.asyncio
-# async def test_async_limiter_init(crowdstrike_connector):
-#     """
-#     Test async limiter init.
-#
-#     Args:
-#         crowdstrike_connector: CrowdStrikeTelemetryConnector
-#     """
-#     assert crowdstrike_connector._rate_limiter is None
-#     result = crowdstrike_connector.rate_limiter()
-#     assert isinstance(crowdstrike_connector._rate_limiter, AsyncLimiter)
-#     assert result == crowdstrike_connector.rate_limiter()
-
-
 @pytest.mark.asyncio
 async def test_process_gzipped_s3_file(crowdstrike_connector, session_faker):
     """
