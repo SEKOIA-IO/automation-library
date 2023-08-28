@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-08-28 - 1.9.3
+
+### Changed
+
+- revert the join on groupIds
+
 ## 2023-08-21 - 1.9.2
 
 ### Changed
