@@ -67,7 +67,8 @@ def connector(symphony_storage, pushed_events_ids, session_faker):
     trigger.push_events_to_intakes = MagicMock()
     trigger.push_events_to_intakes.return_value = pushed_events_ids
 
-    trigger.module.configuration = {
+    trigger.module.configuration = {}
+    trigger.configuration = {
         "client_id": session_faker.word(),
         "client_secret": session_faker.word(),
         "api_key": session_faker.word(),
@@ -152,7 +153,7 @@ async def test_trellix_connector_get_epo_events(
         expected_edr_result = [edr_epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
 
         mocked_responses.get(
-            http_client.epo_events_url(current_date, limit=connector.module.configuration.records_per_request),
+            http_client.epo_events_url(current_date, limit=connector.configuration.records_per_request),
             status=200,
             payload={
                 "data": orjson.loads(orjson.dumps(expected_edr_result).decode("utf-8")),

@@ -33,8 +33,7 @@ class TrellixConfig(DefaultConnectorConfiguration):
 
 class TrellixModule(Module):
     """TrellixModule."""
-
-    configuration: TrellixConfig
+    pass
 
 
 class TrellixEdrConnector(Connector):
@@ -43,6 +42,7 @@ class TrellixEdrConnector(Connector):
     name = "TrellixEdrConnector"
 
     module: TrellixModule
+    configuration: TrellixConfig
 
     _trellix_client: TrellixHttpClient | None = None
 
@@ -90,14 +90,14 @@ class TrellixEdrConnector(Connector):
         if self._trellix_client is not None:
             return self._trellix_client
 
-        rate_limiter = AsyncLimiter(self.module.configuration.ratelimit_per_minute)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         self._trellix_client = TrellixHttpClient(
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-            api_key=self.module.configuration.api_key,
-            auth_url=self.module.configuration.auth_url,
-            base_url=self.module.configuration.base_url,
+            client_id=self.configuration.client_id,
+            client_secret=self.configuration.client_secret,
+            api_key=self.configuration.api_key,
+            auth_url=self.configuration.auth_url,
+            base_url=self.configuration.base_url,
             rate_limiter=rate_limiter,
         )
 
@@ -130,7 +130,7 @@ class TrellixEdrConnector(Connector):
         """
         events = await self.trellix_client.get_epo_events(
             self.last_event_date,
-            self.module.configuration.records_per_request,
+            self.configuration.records_per_request,
         )
 
         return await self._push_events([orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events])
@@ -144,13 +144,13 @@ class TrellixEdrConnector(Connector):
             while True:
                 processing_start = time.time()
                 if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.module.configuration.intake_key).observe(
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
                         processing_start - previous_processing_end
                     )
 
                 message_ids: list[str] = loop.run_until_complete(self.get_trellix_edr_events())
                 processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.module.configuration.intake_key).inc(len(message_ids))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
                 log_message = "No records to forward"
                 if len(message_ids) > 0:
@@ -159,13 +159,13 @@ class TrellixEdrConnector(Connector):
                 logger.info(log_message)
                 self.log(message=log_message, level="info")
 
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.module.configuration.intake_key).observe(
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                     processing_end - processing_start
                 )
 
                 previous_processing_end = processing_end
 
-                loop.run_until_complete(asyncio.sleep(self.module.configuration.delay))
+                loop.run_until_complete(asyncio.sleep(self.configuration.delay))
 
         except Exception as e:
             logger.error("Error while running TrellixEdr: {error}", error=e)
