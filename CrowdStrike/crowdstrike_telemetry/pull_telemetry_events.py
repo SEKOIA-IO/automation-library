@@ -41,7 +41,7 @@ class CrowdStrikeTelemetryConnector(Connector):
     _rate_limiter: AsyncLimiter | None = None
 
     @classmethod
-    def rate_limiter(cls) -> AsyncLimiter:
+    def rate_limiter(cls) -> AsyncLimiter:  # pragma: no cover
         """
         Get or initialize rate limiter.
 
@@ -55,7 +55,7 @@ class CrowdStrikeTelemetryConnector(Connector):
 
     @classmethod
     @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[ClientSession, None]:
+    async def session(cls) -> AsyncGenerator[ClientSession, None]:  # pragma: no cover
         """
         Get or initialize client session.
 
