@@ -83,9 +83,9 @@ def test_handle_response_error(trigger):
     response = Response()
     response.status_code = 500
     response.reason = "Internal Error"
+    trigger._STOP_EVENT_WAIT = 0.01
     with pytest.raises(Exception):
         trigger._handle_response_error(response)
-    assert trigger._stop_event.is_set()
 
 
 def test_indicator_filter(data_storage):

@@ -17,21 +17,13 @@ class FeedConsumptionTrigger(Trigger):
     frequency: int = 3600  # Frequency in seconds
     batch_size_limit: int = 200
 
+    _STOP_EVENT_WAIT = 120
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._stop_event = Event()
         self.context = PersistentJSON("context.json", self._data_path)
         self.next_cursor = None
         self.resume_on_errors = False
-
-        # Register signal to terminate thread
-        signal.signal(signal.SIGINT, self.exit)
-        signal.signal(signal.SIGTERM, self.exit)
-
-    def exit(self, _, __):
-        self.log(message="Stopping Sekoia.io feed consumption trigger", level="info")
-        # Exit signal received, asking the processor to stop
-        self._stop_event.set()
 
     @property
     def feed_id(self) -> str:
@@ -60,9 +52,13 @@ class FeedConsumptionTrigger(Trigger):
                 f" {response.status_code} - {response.reason},"
                 f"URL: {self.url}"
             )
-            self.log(message=message, level="error")
+            # Critical error will stop the trigger
+            level = "error" if self.resume_on_errors else "critical"
+            self.log(message=message, level=level)
             if not self.resume_on_errors:
-                self._stop_event.set()
+                # Critical log should stop the trigger
+                # So we wait until sigint is sent to the trigger
+                self._stop_event.wait(self._STOP_EVENT_WAIT)
                 response.raise_for_status()
 
     def fetch_objects(self):
