@@ -1,7 +1,7 @@
 {
   "description": "Get last logs from the Vade Cloud platform",
   "docker_parameters": "vade_cloud_connector",
-  "name": "[ALPHA] Fetch new logs from Vade Cloud",
+  "name": "[BETA] Fetch new logs from Vade Cloud",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
