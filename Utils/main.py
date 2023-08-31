@@ -1,7 +1,8 @@
 from sekoia_automation.module import Module
 
-from fileutils.action_fileutils_readjsonfile import FileUtilsReadJSONFile
-from fileutils.action_fileutils_readxmlfile import FileUtilsReadXMLFile
+from utils.action_fileutils_readjsonfile import FileUtilsReadJSONFile
+from utils.action_fileutils_readxmlfile import FileUtilsReadXMLFile
+
 
 if __name__ == "__main__":
     module = Module()

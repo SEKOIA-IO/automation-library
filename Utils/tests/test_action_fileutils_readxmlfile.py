@@ -10,7 +10,7 @@ from tempfile import mkdtemp
 import pytest
 
 # internals
-from fileutils.action_fileutils_readxmlfile import FileUtilsReadXMLFile
+from utils.action_fileutils_readxmlfile import FileUtilsReadXMLFile
 
 
 @pytest.fixture(autouse=True, scope="session")
