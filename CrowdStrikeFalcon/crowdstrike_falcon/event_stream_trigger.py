@@ -305,6 +305,8 @@ class EventStreamTrigger(Connector):
     module: CrowdStrikeFalconModule
     configuration: CrowdStrikeFalconEventStreamConfiguration
 
+    seconds_without_events = 3600 * 24  # Time to wait without events before restarting the pod
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
