@@ -22,6 +22,9 @@ def test_action_wait_invalid_param():
     with pytest.raises(ValueError):
         action.run(arguments={"duration": 10000})
 
+    with pytest.raises(ValueError):
+        action.run(arguments={"duration": "hello"})
+
 
 def test_action_wait_normal():
     with patch("utils.action_utils_wait.sleep") as mock_time:
