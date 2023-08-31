@@ -82,7 +82,7 @@ class GoogleReports(GoogleTrigger):
         )
 
         try:
-            while self.is_running:
+            while self.running:
                 start = time.time()
 
                 try:
