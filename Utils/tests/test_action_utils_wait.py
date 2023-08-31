@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+from sekoia_automation.exceptions import MissingActionArgumentError
 
 from utils.action_utils_wait import UtilsWait
 
@@ -8,7 +9,7 @@ from utils.action_utils_wait import UtilsWait
 def test_action_wait_no_param():
     action = UtilsWait()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(MissingActionArgumentError):
         action.run(arguments={})
 
 
