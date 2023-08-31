@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-08-10 - 1.14.2
+
+### Changed
+
+- Add ALPHA flag
+
 ## 2023-08-10 - 1.14.1
 
 ### Added
