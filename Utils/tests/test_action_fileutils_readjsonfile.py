@@ -10,7 +10,7 @@ from tempfile import mkdtemp
 import pytest
 
 # internals
-from fileutils.action_fileutils_readjsonfile import FileUtilsReadJSONFile
+from utils.action_fileutils_readjsonfile import FileUtilsReadJSONFile
 
 
 @pytest.fixture(autouse=True, scope="session")

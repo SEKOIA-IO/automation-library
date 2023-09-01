@@ -6,3 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## 2023-09-01 - 1.0.0
+
+### Added
+
+- Add `Wait` action
+
+
+## 2023-06-12 - 1.0.0
+
+### Added
+
+- Initial version of the module
