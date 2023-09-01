@@ -128,10 +128,11 @@ class CatoSaseConnector(Connector):
 
     def run(self) -> None:  # pragma: no cover
         """Runs Cato Sase."""
-        loop = asyncio.get_event_loop()
-
         previous_processing_end = None
+
         try:
+            loop = asyncio.get_event_loop()
+
             while self.running:
                 processing_start = time.time()
                 if previous_processing_end is not None:
@@ -158,6 +159,3 @@ class CatoSaseConnector(Connector):
 
         except Exception as e:
             logger.error("Error while running Cato SASE: {error}", error=e)
-
-        finally:
-            loop.close()

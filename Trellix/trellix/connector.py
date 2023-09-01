@@ -138,10 +138,11 @@ class TrellixEdrConnector(Connector):
 
     def run(self) -> None:
         """Runs TrellixEdr."""
-        loop = asyncio.get_event_loop()
-
         previous_processing_end = None
+
         try:
+            loop = asyncio.get_event_loop()
+
             while True:
                 processing_start = time.time()
                 if previous_processing_end is not None:
@@ -170,6 +171,3 @@ class TrellixEdrConnector(Connector):
 
         except Exception as e:
             logger.error("Error while running TrellixEdr: {error}", error=e)
-
-        finally:
-            loop.close()
