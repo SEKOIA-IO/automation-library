@@ -1,6 +1,5 @@
 from time import sleep
 
-
 from sekoia_automation.action import Action
 
 

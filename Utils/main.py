@@ -4,7 +4,6 @@ from utils.action_fileutils_readjsonfile import FileUtilsReadJSONFile
 from utils.action_fileutils_readxmlfile import FileUtilsReadXMLFile
 from utils.action_utils_wait import UtilsWait
 
-
 if __name__ == "__main__":
     module = Module()
 
