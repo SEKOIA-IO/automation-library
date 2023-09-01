@@ -12,16 +12,15 @@ from google_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OU
 
 from pydantic import BaseModel
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from requests.exceptions import HTTPError
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
 
-class GoogleReportsConfig(BaseModel):
+class GoogleReportsConfig(DefaultConnectorConfiguration):
     admin_mail: str
-    intake_key: str
     frequency: int = 20
-    chunk_size: int = 1000
 
 
 class GoogleReports(GoogleTrigger):
@@ -210,7 +209,7 @@ class GoogleReports(GoogleTrigger):
             recent_date = items[0].get("id").get("time")
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
             self.log(message=f"Sending the first batch of {len(messages)} elements", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
             self.push_events_to_intakes(events=messages)
             self.most_recent_date_seen = isoparse(recent_date)
             self.log(
