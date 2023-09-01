@@ -159,7 +159,6 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
         mock_client.assert_has_calls([call("sqs")])
         mock_sqs.receive_message.assert_called_once_with(
             QueueUrl=queue_url,
-            MaxNumberOfMessages=sqs_wrapper_configuration.chunk_size,
             WaitTimeSeconds=sqs_wrapper_configuration.frequency,
             MessageAttributeNames=["All"],
             AttributeNames=["All"],
