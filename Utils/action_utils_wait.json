@@ -4,7 +4,9 @@
         "properties": {
             "duration": {
                 "description": "Time to wait, in seconds",
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3600
             }
         },
         "required": ["duration"],

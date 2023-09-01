@@ -2,7 +2,6 @@ from time import sleep
 
 
 from sekoia_automation.action import Action
-from sekoia_automation.exceptions import MissingActionArgumentError
 
 
 class UtilsWait(Action):
