@@ -179,7 +179,10 @@ class GoogleReports(GoogleTrigger):
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                 self.push_events_to_intakes(events=grouped_data)
                 self.most_recent_date_seen = isoparse(recent_date)
-                self.log(message=f"Changing recent date in get next activities to  {self.most_recent_date_seen}", level="info")
+                self.log(
+                    message=f"Changing recent date in get next activities to  {self.most_recent_date_seen}",
+                    level="info",
+                )
                 self.events_sum += len(grouped_data)
                 const_next_key = response_next_page.get("nextPageToken")
             else:
@@ -208,7 +211,9 @@ class GoogleReports(GoogleTrigger):
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
             self.push_events_to_intakes(events=messages)
             self.most_recent_date_seen = isoparse(recent_date)
-            self.log(message=f"Changing recent date in get reports events to  {self.most_recent_date_seen}", level="info")
+            self.log(
+                message=f"Changing recent date in get reports events to  {self.most_recent_date_seen}", level="info"
+            )
             self.events_sum += len(messages)
 
             self.get_next_activities_with_next_key(next_key)
