@@ -218,33 +218,34 @@ class CrowdStrikeTelemetryConnector(Connector):
             try:
                 loop = asyncio.get_event_loop()
 
-                processing_start = time.time()
-                if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_start - previous_processing_end
+                while self.running:
+                    processing_start = time.time()
+                    if previous_processing_end is not None:
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                            processing_start - previous_processing_end
+                        )
+
+                    message_ids: list[str] = loop.run_until_complete(self.get_crowdstrike_events())
+                    processing_end = time.time()
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+
+                    log_message = "No records to forward"
+                    if len(message_ids) > 0:
+                        log_message = "Pushed {0} records".format(len(message_ids))
+
+                    logger.info(log_message)
+                    self.log(message=log_message, level="info")
+                    logger.info(log_message)
+                    logger.info(
+                        "Processing took {processing_time} seconds",
+                        processing_time=(processing_end - processing_start),
                     )
 
-                message_ids: list[str] = loop.run_until_complete(self.get_crowdstrike_events())
-                processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_end - processing_start
+                    )
 
-                log_message = "No records to forward"
-                if len(message_ids) > 0:
-                    log_message = "Pushed {0} records".format(len(message_ids))
-
-                logger.info(log_message)
-                self.log(message=log_message, level="info")
-                logger.info(log_message)
-                logger.info(
-                    "Processing took {processing_time} seconds",
-                    processing_time=(processing_end - processing_start),
-                )
-
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                    processing_end - processing_start
-                )
-
-                previous_processing_end = processing_end
+                    previous_processing_end = processing_end
 
             except Exception as e:
                 logger.error("Error while running CrowdStrike Telemetry: {error}", error=e)
