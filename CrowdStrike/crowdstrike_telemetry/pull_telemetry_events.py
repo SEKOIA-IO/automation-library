@@ -214,8 +214,8 @@ class CrowdStrikeTelemetryConnector(Connector):
         """Runs Crowdstrike Telemetry."""
         previous_processing_end = None
 
-        try:
-            while self.running:
+        while self.running:
+            try:
                 loop = asyncio.get_event_loop()
 
                 processing_start = time.time()
@@ -246,5 +246,5 @@ class CrowdStrikeTelemetryConnector(Connector):
 
                 previous_processing_end = processing_end
 
-        except Exception as e:
-            logger.error("Error while running CrowdStrike Telemetry: {error}", error=e)
+            except Exception as e:
+                logger.error("Error while running CrowdStrike Telemetry: {error}", error=e)
