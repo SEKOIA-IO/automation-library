@@ -7,8 +7,8 @@
     "properties": {
       "chunk_size": {
         "type": "integer",
-        "description": "The size of max number of messages for the batch processing (default: 1)",
-        "default": 1
+        "description": "The size of max number of messages for the batch processing (default: 20000)",
+        "default": 20000
       },
       "frequency": {
         "type": "integer",
