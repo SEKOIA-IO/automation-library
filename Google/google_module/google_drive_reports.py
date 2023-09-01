@@ -12,17 +12,15 @@ from google_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OU
 
 from pydantic import BaseModel
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from requests.exceptions import HTTPError
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
 
-class GoogleReportsConfig(BaseModel):
+class GoogleReportsConfig(DefaultConnectorConfiguration):
     admin_mail: str
-    intake_key: str
     frequency: int = 20
-    chunk_size: int = 1000
-    intake_server: str = "https://intake.sekoia.io"
 
 
 class GoogleReports(GoogleTrigger):
