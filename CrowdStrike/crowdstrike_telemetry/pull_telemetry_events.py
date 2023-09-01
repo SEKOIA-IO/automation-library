@@ -215,9 +215,9 @@ class CrowdStrikeTelemetryConnector(Connector):
         previous_processing_end = None
 
         try:
-            loop = asyncio.get_event_loop()
-
             while self.running:
+                loop = asyncio.get_event_loop()
+
                 processing_start = time.time()
                 if previous_processing_end is not None:
                     EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
