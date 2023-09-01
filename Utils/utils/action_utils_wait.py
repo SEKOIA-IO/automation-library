@@ -13,18 +13,9 @@ class UtilsWait(Action):
     MAX_TIME_TO_WAIT = 3600  # 1 hour
 
     def run(self, arguments) -> None:
-        time_to_wait = arguments.get("duration")
+        time_to_wait = arguments.get("duration", 0)
 
-        if time_to_wait is None:
-            raise MissingActionArgumentError("duration")
-
-        elif type(time_to_wait) != int:
-            raise ValueError("Duration should be an integer")
-
-        elif time_to_wait < 0:
-            raise ValueError("Duration can't be negative")
-
-        elif time_to_wait >= self.MAX_TIME_TO_WAIT:
-            raise ValueError("Wait duration is too long. Please don't exceed %d second(s)" % self.MAX_TIME_TO_WAIT)
+        time_to_wait = max(time_to_wait, 0)  # can't be less than 0
+        time_to_wait = min(time_to_wait, self.MAX_TIME_TO_WAIT)  # can't be more than MAX_TIME_TO_WAIT
 
         sleep(time_to_wait)
