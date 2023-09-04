@@ -15,6 +15,11 @@
             "private_key": {
                 "description": "The private key to the Darktrace API",
                 "type": "string"
+            },
+            "appliance_certificate": {
+                "description": "The certificate of the Darktrace appliance (optional)",
+                "type": "string",
+                "default": ""
             }
         },
         "required": [

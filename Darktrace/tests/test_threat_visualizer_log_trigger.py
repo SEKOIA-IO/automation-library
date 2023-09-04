@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
+import time
 
 from darktrace_modules import DarktraceModule
 from darktrace_modules.threat_visualizer_log_trigger import ThreatVisualizerLogConnector
@@ -383,7 +384,9 @@ def test_next_batch(trigger, message1):
         )
 
         mock_time.time.side_effect = [batch_start, last_ts, last_ts, batch_end]
-        trigger.next_batch()
+        consumers = trigger.start_consumers()
+        time.sleep(3)
+        trigger.stop_consumers(consumers)
 
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         assert len(calls[0]) == 1

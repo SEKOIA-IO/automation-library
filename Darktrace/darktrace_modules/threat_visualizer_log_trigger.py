@@ -1,6 +1,7 @@
 import time
 import traceback
 from functools import cached_property
+from threading import Event, Thread
 from urllib.parse import urljoin
 
 import orjson
@@ -8,7 +9,7 @@ import requests
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
-from darktrace_modules import DarktraceModule
+from darktrace_modules import DarktraceModule, Endpoints
 from darktrace_modules.client import ApiClient
 from darktrace_modules.logging import get_logger
 from darktrace_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
@@ -23,18 +24,27 @@ class ThreatVisualizerLogConnectorConfiguration(DefaultConnectorConfiguration):
     q: str | None = None
 
 
-class ThreatVisualizerLogConnector(Connector):
-    """
-    This connector fetches threat visualizer logs from the Darktrace API
-    """
+class ThreatVisualizerLogConsumer(Thread):
 
     module: DarktraceModule
     configuration: ThreatVisualizerLogConnectorConfiguration
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
+    def __init__(self, connector: "ThreatVisualizerLogConnector", endpoint: Endpoints):
+        super().__init__()
 
+        self.connector = connector
+        self.endpoint = endpoint
+
+        self._stop_event = Event()
+
+        context_name = self.endpoint.value.replace("/", "_") + "_context.json"
+        self.context = PersistentJSON(context_name, connector._data_path)
+
+
+    @property
+    def running(self):
+        return not self._stop_event.is_set()
+    
     @property
     def last_ts(self) -> int:
         with self.context as cache:
@@ -49,11 +59,6 @@ class ThreatVisualizerLogConnector(Connector):
         with self.context as cache:
             cache["last_ts"] = last_ts
 
-    def stop(self, _, __):
-        self.log(message="Stopping Darktrace threat visualizer logs connector", level="info")
-        # Exit signal received, asking the processor to stop
-        super().stop()
-
     @cached_property
     def client(self):
         return ApiClient(
@@ -64,13 +69,16 @@ class ThreatVisualizerLogConnector(Connector):
 
     def request_events(self) -> requests.models.Response:
         params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
-        url = urljoin(self.module.configuration.api_url, "modelbreaches")
+        url = urljoin(self.module.configuration.api_url, self.endpoint.value)
+        #self.module.configuration.appliance_certificate
 
         response = self.client.get(url, params=params)
+        
         return response
 
     def refine_response(self, response: list) -> list:
-        # as we use the time variable of the newest event to set last_ts, this event has to be removed in the next batch of events.
+        # as we use the time variable of the newest event to set last_ts, 
+        # this event has to be removed in the next batch of events.
         if response != [] and response[0]["time"] == self.last_ts:
             return response[1:]
         return response
@@ -85,7 +93,7 @@ class ThreatVisualizerLogConnector(Connector):
             logger.debug(f"Response from API: {response}")
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(response))
         except ValueError:
-            self.log(
+            self.connector.log(
                 message="The server response is not a json: " + str(response),
                 level="warn",
             )
@@ -98,8 +106,8 @@ class ThreatVisualizerLogConnector(Connector):
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
                 self.last_ts = response[-1]["time"]
-                self.log(
-                    message=f"Forwarded {len(batch_of_events)} events to the intake",
+                self.connector.log(
+                    message=f"Forwarded {len(batch_of_events)} {self.endpoint.name} events to the intake",
                     level="info",
                 )
 
@@ -108,12 +116,12 @@ class ThreatVisualizerLogConnector(Connector):
                 current_lag = now - self.last_ts / 1000
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag))
             else:
-                self.log(
+                self.connector.log(
                     message="No events to forward",
                     level="info",
                 )
         else:
-            self.log(
+            self.connector.log(
                 message="Response is not a list : " + str(response),
                 level="warn",
             )
@@ -129,13 +137,59 @@ class ThreatVisualizerLogConnector(Connector):
         if delta_sleep > 0:
             logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
             time.sleep(delta_sleep)
-
+    
     def run(self):
-        self.log(message="Start fetching Darktrace threat visualizer logs", level="info")
+        self.connector.log(message=f"Start fetching Darktrace threat visualizer {self.endpoint.name} logs", level="info")
 
         while self.running:
             try:
                 self.next_batch()
             except Exception as error:
                 traceback.print_exc()
-                self.log_exception(error, message="Failed to forward events")
+                self.connector.log_exception(error, message="Failed to forward events")
+
+class ThreatVisualizerLogConnector(Connector):
+    """
+    This connector fetches threat visualizer logs from the Darktrace API
+    It uses threading for each darktrace endpoint
+    """
+
+    def start_consumers(self):
+        consumers = {}
+        for endpoint in Endpoints:
+            self.log(message=f"Start {endpoint.name} consumer", level="info")
+            
+            consumers[endpoint] = ThreatVisualizerLogConsumer(connector=self, endpoint=endpoint)
+            consumers[endpoint].start()
+
+        return consumers
+
+    def supervise_consumers(self, consumers):
+        """ Check consumer list and restart consumer if not alive. """
+        for endpoint, consumer in consumers.items():
+            if consumer is None or (not consumer.is_alive() and consumer.running):
+                self.log(message=f"Restarting {endpoint.name} consumer", level="info")
+
+                consumers[endpoint] = ThreatVisualizerLogConsumer(connector=self, endpoint=endpoint)
+                consumers[endpoint].start()
+
+    def stop_consumers(self, consumers):
+        for endpoint, consumer in consumers.items():
+            if consumer is not None and consumer.is_alive():
+                self.log(message=f"Stopping {endpoint.name} consumer", level="info")
+                consumer.stop()
+
+    def run(self):
+        self.log(message="Start fetching Darktrace threat visualizer logs", level="info")
+
+        consumers = self.start_consumers()
+        while self.running:
+            #self.supervise_consumers(consumers)
+            time.sleep(5)
+
+        self.stop_consumers(consumers)
+
+    def stop(self, _, __):
+        self.log(message="Stopping Darktrace threat visualizer logs connector", level="info")
+        # Exit signal received, asking the processor to stop
+        super().stop()
