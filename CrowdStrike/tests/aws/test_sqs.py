@@ -23,7 +23,6 @@ def sqs_wrapper_configuration(session_faker) -> SqsConfiguration:
         queue_name=session_faker.word(),
         aws_region=session_faker.word(),
         intake_key=session_faker.word(),
-        chunk_size=session_faker.random.randint(1, 10),
         frequency=session_faker.random.randint(0, 20),
         delete_consumed_messages=True,
         is_fifo=False,
@@ -48,7 +47,6 @@ def sqs_wrapper_with_url_configuration(session_faker) -> SqsConfiguration:
         queue_url=session_faker.url(),
         aws_region=session_faker.word(),
         intake_key=session_faker.word(),
-        chunk_size=session_faker.random.randint(1, 10),
         frequency=session_faker.random.randint(0, 20),
         delete_consumed_messages=True,
         is_fifo=False,
@@ -153,13 +151,14 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
 
         mock_client.return_value.__aenter__.return_value = mock_sqs
 
-        async with sqs_wrapper.receive_messages() as messages:
+        async with sqs_wrapper.receive_messages(max_messages=6) as messages:
             assert messages == expected_messages
 
         mock_client.assert_has_calls([call("sqs")])
         mock_sqs.receive_message.assert_called_once_with(
             QueueUrl=queue_url,
             WaitTimeSeconds=sqs_wrapper_configuration.frequency,
+            MaxNumberOfMessages=6,
             MessageAttributeNames=["All"],
             AttributeNames=["All"],
             VisibilityTimeout=0,

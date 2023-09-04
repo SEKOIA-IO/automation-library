@@ -12,7 +12,6 @@ from .client import AwsClient, AwsConfiguration
 class SqsConfiguration(AwsConfiguration):
     """AWS SQS wrapper configuration."""
 
-    chunk_size: int = Field(default=1, description="AWS SQS queue chunk size")
     frequency: int = Field(default=10, description="AWS SQS queue polling frequency in seconds")
     delete_consumed_messages: bool = Field(default=True, description="Delete consumed messages from queue")
     is_fifo: bool = Field(default=False, description="Is queue fifo, might ")
@@ -37,14 +36,12 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                 Initializing SQS client with configuration:
                     queue_name = {queue_name}
                     frequency = {frequency}
-                    chunk_size = {chunk_size}
                     delete_consumed_messages = {delete_consumed_messages}
                     is_fifo = {is_fifo}
                     queue_url = {queue_url}
             """,
             queue_name=configuration.queue_name,
             frequency=configuration.frequency,
-            chunk_size=configuration.chunk_size,
             delete_consumed_messages=configuration.delete_consumed_messages,
             is_fifo=configuration.is_fifo,
             queue_url=configuration.queue_url,
@@ -77,7 +74,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
 
     @asynccontextmanager
     async def receive_messages(
-        self, frequency: int | None = None, chunk_size: int | None = None, delete_consumed_messages: bool | None = None
+        self, frequency: int | None = None, max_messages: int = 10, delete_consumed_messages: bool | None = None
     ) -> AsyncGenerator[list[str], None]:
         """
         Receive SQS messages.
@@ -90,12 +87,15 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
 
         Args:
             frequency: int
-            chunk_size: int
+            max_messages: int
             delete_consumed_messages: int
 
         Yields:
             list[str]:
         """
+        if max_messages < 1 or max_messages > 10:
+            raise ValueError("max_messages should be between 1 and 10")
+
         frequency = frequency or self._configuration.frequency
         delete_consumed_messages = delete_consumed_messages or self._configuration.delete_consumed_messages
         queue_url = await self.queue_url()
@@ -104,6 +104,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             try:
                 response = await sqs.receive_message(
                     QueueUrl=queue_url,
+                    MaxNumberOfMessages=max_messages,
                     WaitTimeSeconds=frequency,
                     MessageAttributeNames=["All"],
                     AttributeNames=["All"],
