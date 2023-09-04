@@ -97,6 +97,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             list[str]:
         """
         frequency = frequency or self._configuration.frequency
+        chunk_size = chunk_size or self._configuration.chunk_size
         delete_consumed_messages = delete_consumed_messages or self._configuration.delete_consumed_messages
         queue_url = await self.queue_url()
 
@@ -104,6 +105,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             try:
                 response = await sqs.receive_message(
                     QueueUrl=queue_url,
+                    MaxNumberOfMessages=chunk_size,
                     WaitTimeSeconds=frequency,
                     MessageAttributeNames=["All"],
                     AttributeNames=["All"],
