@@ -155,7 +155,7 @@ class CrowdStrikeTelemetryConnector(Connector):
         """
         result: list[str] = []
 
-        async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True) as messages:
+        async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True, max_messages=10) as messages:
             validated_sqs_messages = []
             for message in messages:
                 try:
