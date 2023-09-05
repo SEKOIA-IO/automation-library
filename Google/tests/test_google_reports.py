@@ -1,7 +1,7 @@
 import pytest
 import os
 from unittest.mock import Mock, patch
-from google_module.google_drive_reports import GoogleReports
+from google_module.google_reports import GoogleReports
 
 import tempfile
 import json
@@ -91,7 +91,7 @@ def test_get_google_reports_data(trigger, drive_response):
     mock_service = Mock()
     mock_service.activities.return_value.list.return_value.execute.return_value = drive_response
 
-    with patch("google_module.google_drive_reports.build", return_value=mock_service):
+    with patch("google_module.google_reports.build", return_value=mock_service):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
             trigger.get_reports_events()
             results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
@@ -100,13 +100,13 @@ def test_get_google_reports_data(trigger, drive_response):
 
 
 def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
-    with patch("google_module.google_drive_reports.build", return_value=Mock()):
+    with patch("google_module.google_reports.build", return_value=Mock()):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
             with patch(
-                "google_module.google_drive_reports.GoogleReports.get_activities", return_value=drive_response_NK
+                "google_module.google_reports.GoogleReports.get_activities", return_value=drive_response_NK
             ):
                 with patch(
-                    "google_module.google_drive_reports.GoogleReports.get_next_activities",
+                    "google_module.google_reports.GoogleReports.get_next_activities",
                     return_value=drive_response,
                 ):
                     trigger.get_reports_events()
