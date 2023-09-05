@@ -3,6 +3,7 @@ from functools import cached_property
 
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import isoparse
+from enum import Enum
 import time
 
 from google.oauth2 import service_account
@@ -18,9 +19,34 @@ from requests.exceptions import HTTPError
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
 
+class ApplicationName(str, Enum):
+    ACCESS_TRANSPARENCY = "access_transparency"
+    ADMIN = "admin"
+    CALENDAR = "calendar"
+    CHAT = "chat"
+    DRIVE = "drive"
+    GCP = "gcp"
+    GPLUS = "gplus"
+    GROUPS = "groups"
+    GROUPS_ENTERPRISE = "groups_enterprise"
+    JAMBOARD = "jamboard"
+    LOGIN = "login"
+    MEET = "meet"
+    MOBILE = "mobile"
+    RULES = "rules"
+    SAML = "saml"
+    TOKEN = "token"
+    USER_ACCOUNTS = "user_accounts"
+    CONTEXT_AWARE_ACCESS = "context_aware_access"
+    CHROME = "chrome"
+    DATA_STUDIO = "data_studio"
+    KEEP = "keep"
+
+
 class GoogleReportsConfig(DefaultConnectorConfiguration):
     admin_mail: str
     frequency: int = 20
+    application_name: ApplicationName
 
 
 class GoogleReports(GoogleTrigger):
@@ -39,7 +65,10 @@ class GoogleReports(GoogleTrigger):
         self.applicationName = ""
         self.from_date = self.most_recent_date_seen
         self.service_account_path = self.CREDENTIALS_PATH
-        self.scopes = []
+        self.scopes = [
+            "https://www.googleapis.com/auth/admin.reports.audit.readonly",
+            "https://www.googleapis.com/auth/admin.reports.usage.readonly",
+        ]
         self.events_sum = 0
 
     @property
@@ -131,7 +160,7 @@ class GoogleReports(GoogleTrigger):
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.applicationName,
+                applicationName=self.configuration.application_name,
                 maxResults=self.pagination_limit,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             )
@@ -152,7 +181,7 @@ class GoogleReports(GoogleTrigger):
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.applicationName,
+                applicationName=self.configuration.application_name,
                 maxResults=self.pagination_limit,
                 pageToken=next_key,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -221,13 +250,3 @@ class GoogleReports(GoogleTrigger):
 
         else:
             self.log(message="No messages to forward", level="info")
-
-
-class DriveGoogleReports(GoogleReports):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.applicationName = "drive"
-        self.scopes = [
-            "https://www.googleapis.com/auth/admin.reports.audit.readonly",
-            "https://www.googleapis.com/auth/admin.reports.usage.readonly",
-        ]
