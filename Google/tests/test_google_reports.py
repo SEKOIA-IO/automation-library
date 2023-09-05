@@ -102,9 +102,7 @@ def test_get_google_reports_data(trigger, drive_response):
 def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
     with patch("google_module.google_reports.build", return_value=Mock()):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
-            with patch(
-                "google_module.google_reports.GoogleReports.get_activities", return_value=drive_response_NK
-            ):
+            with patch("google_module.google_reports.GoogleReports.get_activities", return_value=drive_response_NK):
                 with patch(
                     "google_module.google_reports.GoogleReports.get_next_activities",
                     return_value=drive_response,
