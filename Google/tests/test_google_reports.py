@@ -1,7 +1,7 @@
 import pytest
 import os
 from unittest.mock import Mock, patch
-from google_module.google_drive_reports import DriveGoogleReports
+from google_module.google_reports import GoogleReports
 
 import tempfile
 import json
@@ -10,11 +10,12 @@ import codecs
 
 @pytest.fixture
 def trigger(credentials):
-    trigger = DriveGoogleReports()
+    trigger = GoogleReports()
     trigger.module._configuration = dict(credentials)
     trigger.configuration = {
         "admin_mail": "admin_mail",
         "intake_key": "intake_key",
+        "application_name": "drive",
     }
     trigger.log = Mock()
     trigger.log_exception = Mock()
@@ -90,7 +91,7 @@ def test_get_google_reports_data(trigger, drive_response):
     mock_service = Mock()
     mock_service.activities.return_value.list.return_value.execute.return_value = drive_response
 
-    with patch("google_module.google_drive_reports.build", return_value=mock_service):
+    with patch("google_module.google_reports.build", return_value=mock_service):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
             trigger.get_reports_events()
             results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
@@ -99,13 +100,11 @@ def test_get_google_reports_data(trigger, drive_response):
 
 
 def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
-    with patch("google_module.google_drive_reports.build", return_value=Mock()):
+    with patch("google_module.google_reports.build", return_value=Mock()):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
-            with patch(
-                "google_module.google_drive_reports.DriveGoogleReports.get_activities", return_value=drive_response_NK
-            ):
+            with patch("google_module.google_reports.GoogleReports.get_activities", return_value=drive_response_NK):
                 with patch(
-                    "google_module.google_drive_reports.DriveGoogleReports.get_next_activities",
+                    "google_module.google_reports.GoogleReports.get_next_activities",
                     return_value=drive_response,
                 ):
                     trigger.get_reports_events()
@@ -118,7 +117,7 @@ def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
     "{'GOOGLE_TYPE', 'GOOGLE_PROJECT_ID', 'GOOGLE_PRIVATE_KEY_ID', 'GOOGLE_PRIVATE_KEY', 'GOOGLE_CLIENT_EMAIL', 'GOOGLE_CLIENT_ID', 'GOOGLE_AUTH_URI', 'GOOGLE_TOKEN_URI', 'GOOGLE_AUTH_PROVIDER', 'GOOGLE_CLIENT_CERT', 'GOOGLE_UNIVERSE_DOMAIN', 'GOOGLE_ADMIN_MAIL'}.issubset(os.environ.keys()) == False"  # noqa
 )
 def test_get_google_reports_data_integration():
-    trigger = DriveGoogleReports()
+    trigger = GoogleReports()
     trigger.module._configuration = {
         "type": os.environ["GOOGLE_TYPE"],
         "project_id": os.environ["GOOGLE_PROJECT_ID"],
@@ -135,6 +134,7 @@ def test_get_google_reports_data_integration():
     trigger.configuration = {
         "admin_mail": os.environ["GOOGLE_ADMIN_MAIL"],
         "intake_key": "intake_key",
+        "application_name": "drive",
     }
     trigger.log = Mock()
     trigger.log_exception = Mock()

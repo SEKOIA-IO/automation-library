@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-08-10 - 1.14.7
+
+### Changed
+
+- Allow the Report API connector to fetch events for all google applications
+
 ## 2023-08-10 - 1.14.6
 
 ### Changed

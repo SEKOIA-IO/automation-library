@@ -1,7 +1,7 @@
 {
-    "description": "Get drive user activities using google reports",
-    "docker_parameters": "run-google_drive_reports_trigger",
-    "name": "[BETA] Get activities from drive",
+    "description": "Get user activities using google reports",
+    "docker_parameters": "run-google_reports_trigger",
+    "name": "[BETA] Get user activities",
     "arguments": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "properties": {
@@ -10,6 +10,34 @@
           "description": "Batch frequency in seconds",
           "default": 20
         },
+	"application_name": {
+          "type": "string",
+          "description": "The application from which the activities should be fetched",
+          "enum": [
+		"access_transparency",
+		"admin",
+		"calendar",
+		"chat",
+		"drive",
+		"gcp",
+		"gplus",
+		"groups",
+		"groups_enterprise",
+		"jamboard",
+		"login",
+		"meet",
+		"mobile",
+		"rules",
+		"saml",
+		"token",
+		"user_accounts",
+		"context_aware_access",
+		"chrome",
+		"data_studio",
+		"keep"
+	  ],
+	  "default": "drive"
+	},
         "chunk_size": {
           "type": "integer",
           "description": "The max size of chunks for the batch processing",
@@ -33,7 +61,7 @@
         "admin_mail",
         "intake_key"
       ],
-      "title": "Google Drive Events",
+      "title": "Google Reports",
       "type": "object"
     },
     "results": {},
