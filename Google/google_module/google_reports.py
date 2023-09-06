@@ -160,7 +160,7 @@ class GoogleReports(GoogleTrigger):
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.configuration.application_name,
+                applicationName=self.configuration.application_name.value,
                 maxResults=self.pagination_limit,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             )
@@ -181,7 +181,7 @@ class GoogleReports(GoogleTrigger):
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.configuration.application_name,
+                applicationName=self.configuration.application_name.value,
                 maxResults=self.pagination_limit,
                 pageToken=next_key,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
