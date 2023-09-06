@@ -62,7 +62,6 @@ class GoogleReports(GoogleTrigger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.applicationName = ""
         self.from_date = self.most_recent_date_seen
         self.service_account_path = self.CREDENTIALS_PATH
         self.scopes = [
@@ -105,7 +104,7 @@ class GoogleReports(GoogleTrigger):
 
     def run(self):
         self.log(
-            message=f"Starting Google Reports api for {self.applicationName} application at {self.from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+            message=f"Starting Google Reports api for {self.configuration.application_name.value} application at {self.from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
             level="info",
         )
 
@@ -160,7 +159,7 @@ class GoogleReports(GoogleTrigger):
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.configuration.application_name,
+                applicationName=self.configuration.application_name.value,
                 maxResults=self.pagination_limit,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             )
@@ -181,7 +180,7 @@ class GoogleReports(GoogleTrigger):
             reports_service.activities()
             .list(
                 userKey="all",
-                applicationName=self.configuration.application_name,
+                applicationName=self.configuration.application_name.value,
                 maxResults=self.pagination_limit,
                 pageToken=next_key,
                 startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
