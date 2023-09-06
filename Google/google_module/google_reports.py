@@ -46,7 +46,7 @@ class ApplicationName(str, Enum):
 class GoogleReportsConfig(DefaultConnectorConfiguration):
     admin_mail: str
     frequency: int = 20
-    application_name: ApplicationName
+    application_name: ApplicationName = ApplicationName.DRIVE
 
 
 class GoogleReports(GoogleTrigger):

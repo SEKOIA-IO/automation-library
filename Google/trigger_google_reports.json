@@ -59,7 +59,8 @@
       },
       "required": [
         "admin_mail",
-        "intake_key"
+        "intake_key",
+	"application_name"
       ],
       "title": "Google Reports",
       "type": "object"
