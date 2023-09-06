@@ -62,7 +62,6 @@ class GoogleReports(GoogleTrigger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.applicationName = ""
         self.from_date = self.most_recent_date_seen
         self.service_account_path = self.CREDENTIALS_PATH
         self.scopes = [
@@ -105,7 +104,7 @@ class GoogleReports(GoogleTrigger):
 
     def run(self):
         self.log(
-            message=f"Starting Google Reports api for {self.applicationName} application at {self.from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+            message=f"Starting Google Reports api for {self.configuration.application_name.value} application at {self.from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
             level="info",
         )
 
