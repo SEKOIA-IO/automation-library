@@ -21,6 +21,7 @@ class ThreatVisualizerLogConnectorConfiguration(DefaultConnectorConfiguration):
     ratelimit_per_minute: int = 30
     filter: str | None = None
     q: str | None = None
+    verify_certificate: bool = True
 
 
 class ThreatVisualizerLogConnector(Connector):
@@ -66,7 +67,7 @@ class ThreatVisualizerLogConnector(Connector):
         params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
         url = urljoin(self.module.configuration.api_url, "modelbreaches")
 
-        response = self.client.get(url, params=params)
+        response = self.client.get(url, params=params, verify=self.configuration.verify_certificate)
         return response
 
     def refine_response(self, response: list) -> list:
