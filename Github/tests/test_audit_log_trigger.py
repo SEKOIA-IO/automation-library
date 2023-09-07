@@ -14,7 +14,7 @@ def trigger(symphony_storage):
     # mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
-    trigger.push_events_to_intakes = MagicMock()
+    trigger._push_data_to_intake = MagicMock()
     trigger.module.configuration = {
         "apikey": "ghp_AAA",
         "org_name": "Test-org",
@@ -108,6 +108,6 @@ def test_next_batch(trigger, message1):
 
         # Check that the result is well filtered
         # assert events_sent == expected_events
-        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        calls = [call.kwargs["events"] for call in trigger._push_data_to_intake.call_args_list]
         assert len(calls[0]) == 3
-        assert trigger.push_events_to_intakes.call_count == 1
+        assert trigger._push_data_to_intake.call_count == 1

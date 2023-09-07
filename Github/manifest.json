@@ -11,14 +11,22 @@
             "apikey": {
                 "description": "The APIkey to authenticate call to the Github API",
                 "type": "string"
+            },
+            "pem_file": {
+                "description": "Pem file to interact with Github API",
+                "type": "string"
+            },
+            "app_id": {
+                "description": "Github app id to interact with Github API",
+                "type": "integer"
             }
         },
         "required": [
             "org_name",
-            "apikey"
         ],
         "secrets": [
-            "apikey"
+            "apikey",
+            "pem_file"
         ]
     },
     "description": "Github connector for audit logs",
