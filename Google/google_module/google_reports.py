@@ -115,7 +115,7 @@ class GoogleReports(GoogleTrigger):
                 try:
                     self.get_reports_events()
 
-                except HTTPError | BaseHTTPError as ex:
+                except (HTTPError, BaseHTTPError) as ex:
                     self.log_exception(ex, message="Failed to get next batch of events")
                 except Exception as ex:
                     self.log(
