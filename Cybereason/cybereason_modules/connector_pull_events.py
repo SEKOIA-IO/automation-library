@@ -359,5 +359,7 @@ class CybereasonEventConnector(Connector):
                 self.next_batch()
             except LoginFailureError as error:
                 self.log(message=f"Invalid username/password for {error.url}", level="error")
+                time.sleep(self.configuration.frequency)
             except Exception as error:
                 self.log_exception(error, message="Failed to fetch and forward events")
+                time.sleep(self.configuration.frequency)
