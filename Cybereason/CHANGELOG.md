@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-09-07 - 1.9.4
+
+### Changed
+
+- wait when failing to authenticate or forward events
+
 ## 2023-08-28 - 1.9.3
 
 ### Changed
