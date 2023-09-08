@@ -1,3 +1,5 @@
+"""Contains tests for AuditLogConnector."""
+
 from typing import Any
 from unittest.mock import MagicMock
 from urllib.parse import urljoin
