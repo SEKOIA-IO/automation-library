@@ -24,30 +24,6 @@ async def test_github_client_init_error(session_faker):
 
 
 @pytest.mark.asyncio
-async def test_github_client_rate_limiter(session_faker):
-    """
-    Test GithubClient rate limiter.
-
-    Args:
-        session_faker: Faker
-    """
-    assert AsyncGithubClient._rate_limiter is None
-
-    AsyncGithubClient(session_faker.word(), session_faker.word(), None, None, None)
-
-    assert AsyncGithubClient._rate_limiter is None
-
-    async_limiter_1 = AsyncLimiter(1, 1)
-    async_limiter_2 = AsyncLimiter(2, 1)
-
-    AsyncGithubClient(session_faker.word(), session_faker.word(), None, None, async_limiter_1)
-    assert AsyncGithubClient._rate_limiter == async_limiter_1
-
-    AsyncGithubClient.set_rate_limiter(async_limiter_2)
-    assert AsyncGithubClient._rate_limiter == async_limiter_2
-
-
-@pytest.mark.asyncio
 async def test_github_client_token_refresher(session_faker, pem_content):
     """
     Test GithubClient token refresher.

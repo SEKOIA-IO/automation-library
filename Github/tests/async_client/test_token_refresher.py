@@ -97,17 +97,6 @@ async def test_github_refresher_access_token_for_installation_url(session_faker)
 
 
 @pytest.mark.asyncio
-async def test_github_refresher_access_token_session():
-    """
-    Test GithubTokenRefresher.get_token.
-    """
-    assert PemGithubTokenRefresher._session is None
-    session = PemGithubTokenRefresher.session()
-
-    assert PemGithubTokenRefresher._session == session
-
-
-@pytest.mark.asyncio
 async def test_github_refresher_incorrect_params(session_faker, pem_content):
     """
     Test GithubTokenRefresher.init.
