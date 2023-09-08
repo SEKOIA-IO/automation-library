@@ -163,7 +163,7 @@ class PemGithubTokenRefresher(object):
         """
         await self.close()
 
-        async def _refresh() -> None:
+        async def _refresh() -> None:  # pragma: no cover
             await asyncio.sleep(expires_in)
             await self.refresh_token()
 
@@ -186,7 +186,7 @@ class PemGithubTokenRefresher(object):
         if self._token is None:
             await self.refresh_token()
 
-        if not self._token:
+        if not self._token:  # pragma: no cover
             raise ValueError("Token is not initialized")
 
         return self._token

@@ -78,7 +78,7 @@ class AsyncGithubClient(object):
         Returns:
             PemGithubTokenRefresher:
         """
-        if not self.pem_file or not self.organization or not self.app_id:
+        if not self.pem_file or not self.app_id:
             raise ValueError("Pem file, organization and app id should be provided.")
 
         return await PemGithubTokenRefresher.instance(
@@ -124,6 +124,7 @@ class AsyncGithubClient(object):
         Returns:
             list[dict[str, Any]]:
         """
+        print(start_from)
         params = {"phrase": "created:>{0}".format(start_from), "order": "asc"}
 
         async with self.session() as session:

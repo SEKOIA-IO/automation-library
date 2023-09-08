@@ -10,10 +10,11 @@ from urllib.parse import urljoin
 import orjson
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
+from pydantic import BaseModel, Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
-from github_modules import GithubModule
 from github_modules.async_client.http_client import AsyncGithubClient
 from github_modules.logging import get_logger
 from github_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
@@ -22,11 +23,32 @@ logger = get_logger()
 
 
 class AuditLogConnectorConfiguration(DefaultConnectorConfiguration):
+    """Connector configuration for Github audit logs."""
+
     frequency: int = 1
     timebuffer: int = 60000
     ratelimit_per_minute: int = 83
     filter: str | None = None
     q: str | None = None
+
+
+class GithubModuleConfiguration(BaseModel):
+    """Contains all necessary configuration to interact with Github API."""
+
+    org_name: str = Field(description="The name of your Github organization")
+    apikey: str | None = Field(
+        default=None, required=False, secret=True, description="The APIkey to authenticate call to the Github API"
+    )
+    pem_file: str | None = Field(
+        default=None, required=False, secret=True, description="Pem file to interact with Github API"
+    )
+    app_id: int | None = Field(default=None, required=False, description="Github app id to interact with Github API")
+
+
+class GithubModule(Module):
+    """Configuration for Github module."""
+
+    configuration: GithubModuleConfiguration
 
 
 class AuditLogConnector(Connector):
@@ -274,7 +296,7 @@ class AuditLogConnector(Connector):
             logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
             time.sleep(delta_sleep)
 
-    def run(self) -> None:
+    def run(self) -> None:  # pragma: no cover
         """Runs Github audit logs."""
 
         self.log(message="Start fetching Github audit logs", level="info")

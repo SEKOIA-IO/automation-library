@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2023-06-13 - 1.0.1
+## 2023-09-08 - 1.5.0
 
 ### Changed
 
-- Remove useless parameter from the trigger configuration
+- Use fully async way of fetching data from the API
+- Add option to use pem file instead of api key
 
 ## 2023-06-13 - 1.0.0
 
