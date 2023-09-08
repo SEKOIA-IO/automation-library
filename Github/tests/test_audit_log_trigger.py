@@ -127,7 +127,6 @@ async def test_next_batch_with_api_key(connector_with_api_key, github_response, 
         github_response: list[dict[str, Any]]
     """
     with aioresponses() as mocked_responses:
-
         audit_logs_url = (
             connector_with_api_key.github_client.audit_logs_url
             + "?order=asc&phrase=created%253A%253E{0}".format(connector_with_api_key.last_ts)
