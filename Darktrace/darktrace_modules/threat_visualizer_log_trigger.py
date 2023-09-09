@@ -88,7 +88,7 @@ class ThreatVisualizerLogConnector(Connector):
         except ValueError:
             self.log(
                 message="The server response is not a json: " + str(response),
-                level="warn",
+                level="warning",
             )
             return
         if type(response) is list:
@@ -116,7 +116,7 @@ class ThreatVisualizerLogConnector(Connector):
         else:
             self.log(
                 message="Response is not a list : " + str(response),
-                level="warn",
+                level="warning",
             )
 
         # get the ending time and compute the duration to fetch the events
