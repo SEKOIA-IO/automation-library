@@ -11,13 +11,14 @@ class GetEvents(BaseGetEvents):
             query=arguments["query"],
             earliest_time=arguments["earliest_time"],
             latest_time=arguments["latest_time"],
+            limit=arguments.get("limit"),
         )
 
         self.wait_for_search_job_execution(event_search_job_uuid=event_search_job_uuid)
 
         results: list[dict[str, Any]] | None = None
         response_content: dict[str, Any] = {}
-        limit: int = 1000
+        limit: int = min(1000, arguments.get("limit")) if "limit" in arguments else 1000
         offset: int = 0
 
         while results is None or response_content["total"] > offset + limit:

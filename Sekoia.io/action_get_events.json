@@ -19,6 +19,10 @@
             "latest_time": {
                 "description": "The latest time of the time range of the search",
                 "type": "string"
+            },
+            "limit": {
+                "type": "number",
+                "description": "Maximum number of events to retrieve"
             }
         },
         "required": [

@@ -14,6 +14,7 @@ def test_get_events(requests_mock):
         "earliest_time": "-1d",
         "latest_time": "now",
         "fields": "event.dialect,action.outcome,action.id",
+        "limit": 6,
     }
 
     requests_mock.post(
@@ -95,7 +96,7 @@ def test_get_events(requests_mock):
     requests_mock.get(
         (
             "https://fake.url/api/v1/sic/conf/events/search/jobs/"
-            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=1000&offset=0"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=6&offset=0"
         ),
         json={
             "items": events,
