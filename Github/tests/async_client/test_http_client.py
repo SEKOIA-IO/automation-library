@@ -1,7 +1,6 @@
 """Tests related to github api client."""
 
 import pytest
-from aiolimiter import AsyncLimiter
 from aioresponses import aioresponses
 
 from github_modules.async_client.http_client import AsyncGithubClient

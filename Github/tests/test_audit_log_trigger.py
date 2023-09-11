@@ -7,7 +7,8 @@ from urllib.parse import urljoin
 import pytest
 from aioresponses import aioresponses
 
-from github_modules.audit_log_trigger import AuditLogConnector, GithubModule, GithubModuleConfiguration
+from github_modules import GithubModule, GithubModuleConfiguration
+from github_modules.audit_log_trigger import AuditLogConnector
 
 
 @pytest.fixture
