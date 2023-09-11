@@ -11,19 +11,27 @@
             "apikey": {
                 "description": "The APIkey to authenticate call to the Github API",
                 "type": "string"
+            },
+            "pem_file": {
+                "description": "Pem file to interact with Github API",
+                "type": "string"
+            },
+            "app_id": {
+                "description": "Github app id to interact with Github API",
+                "type": "integer"
             }
         },
         "required": [
-            "org_name",
-            "apikey"
+            "org_name"
         ],
         "secrets": [
-            "apikey"
+            "apikey",
+            "pem_file"
         ]
     },
     "description": "Github connector for audit logs",
     "name": "Github",
     "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
     "slug": "github",
-    "version": "1.4.1"
+    "version": "1.5.0"
 }
