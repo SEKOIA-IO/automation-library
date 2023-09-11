@@ -5,9 +5,9 @@
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {}
     },
-    "description": "This module exposes action to manipulate files. It extracts data from XML or JSON files.",
-    "name": "fileutils",
+    "description": "This module exposes utility actions",
+    "name": "Utils",
     "uuid": "07cce76b-a319-40ee-a0cf-1ba433431e21",
-    "slug": "fileutils",
-    "version": "1.26"
+    "slug": "utils",
+    "version": "1.0"
 }
