@@ -20,7 +20,7 @@
     },
     "description": "Trigger playbook to get Cato SASE information",
     "docker_parameters": "cato_sase",
-    "name": "[ALPHA] Collect Cato SASE events",
+    "name": "[BETA] Collect Cato SASE events",
     "results": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {},
