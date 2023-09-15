@@ -199,7 +199,7 @@ def test_fetch_malops(trigger, mock_cybereason_api):
     assert trigger.fetch_malops(0, 9999999) == [EPP_MALOP, EDR_MALOP]
 
 
-def test_fetch_malops(trigger, mock_cybereason_api):
+def test_fetch_malops_empty(trigger, mock_cybereason_api):
     mock_cybereason_api.post(
         "https://fake.cybereason.net/rest/mmng/v2/malops",
         status_code=404,
