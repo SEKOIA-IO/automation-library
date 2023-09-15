@@ -9,7 +9,7 @@ import requests_mock
 
 from cybereason_modules import CybereasonModule
 from cybereason_modules.connector_pull_events_new import CybereasonEventConnectorNew
-from cybereason_modules.exceptions import LoginFailureError
+from cybereason_modules.exceptions import InvalidResponse, LoginFailureError
 from tests.data import EDR_MALOP, EDR_MALOP_SUSPICIONS_RESULTS, EPP_MALOP, EPP_MALOP_DETAIL, LOGIN_HTML
 
 
@@ -197,6 +197,23 @@ def test_fetch_malops(trigger, mock_cybereason_api):
     )
 
     assert trigger.fetch_malops(0, 9999999) == [EPP_MALOP, EDR_MALOP]
+
+
+def test_fetch_malops(trigger, mock_cybereason_api):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/mmng/v2/malops",
+        status_code=404,
+        content=None,
+    )
+
+    assert trigger.fetch_malops(0, 9999999) == []
+
+
+def test_fetch_malops_failed(trigger, mock_cybereason_api):
+    mock_cybereason_api.post("https://fake.cybereason.net/rest/mmng/v2/malops", status_code=204, json={})
+
+    with pytest.raises(InvalidResponse):
+        trigger.fetch_malops(0, 999999)
 
 
 def consolidate_suspicions(suspicions: dict[tuple[str, str], dict[str, Any]]):
