@@ -146,7 +146,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
             if len(items) > 0:
                 messages = [orjson.dumps(message).decode("utf-8") for message in items]
-                nextKey = response.get("pages").get("nextKey")
+                nextKey = response.get("pages", {}).get("nextKey")
                 self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
                 self.push_events_to_intakes(events=messages)
@@ -161,7 +161,7 @@ class SophosXDRQueryTrigger(SophosConnector):
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                     self.push_events_to_intakes(events=grouped_data)
                     self.events_sum += len(grouped_data)
-                    nextKey = response_next_page.get("pages").get("nextKey")
+                    nextKey = response_next_page.get("pages", {}).get("nextKey")
 
                 most_recent_date_seen = now
                 self.from_date = most_recent_date_seen
