@@ -9,16 +9,13 @@ from cybereason_modules.exceptions import InvalidResponse
 
 
 def adapt_malops_to_legacy(ops: list[dict]):
-    from copy import deepcopy
-
     def replace_items_in_dict(key_to_key: dict, d: dict) -> dict:
         return {key_to_key.get(k, k): v for k, v in d.items()}
 
     res = []
     for item in ops:
-        malop = deepcopy(item)
-        malop = replace_items_in_dict({"isEdr": "edr"}, malop)
-
+        malop = replace_items_in_dict({"isEdr": "edr"}, item)
+        malop["@class"] = ".MalopInboxModel"
         res.append(malop)
 
     return res

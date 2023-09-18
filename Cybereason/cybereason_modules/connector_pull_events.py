@@ -113,7 +113,7 @@ class CybereasonEventConnector(Connector):
                     raise InvalidResponse(response)
 
                 self.log(
-                    message=(f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}"),
+                    message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
                     level="debug",
                 )
                 return malops
