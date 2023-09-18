@@ -21,8 +21,8 @@ from cybereason_modules.constants import (
     MALOP_INBOX_ENDPOINT,
 )
 from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
-from cybereason_modules.logging import get_logger
 from cybereason_modules.helpers import extract_models_from_malop, merge_suspicions, validate_response_not_login_failure
+from cybereason_modules.logging import get_logger
 from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS
 
 logger = get_logger()
@@ -68,7 +68,7 @@ class CybereasonEventConnector(Connector):
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
-    def __parse_response_content(self, response: requests.Response) -> Any:
+    def parse_response_content(self, response: requests.Response) -> Any:
         """
         Parse the content of the response
         """
@@ -106,14 +106,14 @@ class CybereasonEventConnector(Connector):
                 )
                 return []
             else:
-                content = self.__parse_response_content(response)
+                content = self.parse_response_content(response)
                 malops = content.get("malops")
 
                 if malops is None:
                     raise InvalidResponse(response)
 
                 self.log(
-                    message=(f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}"),
+                    message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
                     level="debug",
                 )
                 return malops
@@ -139,7 +139,7 @@ class CybereasonEventConnector(Connector):
             )
             return None
         else:
-            malop = self.__parse_response_content(response)
+            malop = self.parse_response_content(response)
             self.log(
                 message=(
                     f"Request on Cybereason API to fetch detail for malop '{malop_uuid}' was a success "
@@ -179,7 +179,7 @@ class CybereasonEventConnector(Connector):
             return None
 
         # get the results
-        content = self.__parse_response_content(response)
+        content = self.parse_response_content(response)
         data = content.get("data")
 
         if data is None:

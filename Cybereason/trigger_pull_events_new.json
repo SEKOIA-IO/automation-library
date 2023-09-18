@@ -1,7 +1,7 @@
 {
-    "description": "Get last events from the Cybereason platform up to version 23.1.152",
-    "docker_parameters": "cybereason_events_connector",
-    "name": "[LEGACY] Fetch new events from Cybereason",
+    "description": "Get last events from the Cybereason platform from versions 23.1.152 and higher",
+    "docker_parameters": "cybereason_events_connector_new",
+    "name": "Fetch new events from Cybereason [23.1.152+]",
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
@@ -44,5 +44,5 @@
         "properties": {},
         "title": "The events"
     },
-    "uuid": "56ab57e1-8847-4203-ad80-e655643c46d9"
+    "uuid": "8128d255-22df-4f4c-96af-ca6c1123f4cf"
 }

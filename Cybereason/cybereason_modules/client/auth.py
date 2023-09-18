@@ -65,9 +65,9 @@ class CybereasonApiAuthentication(AuthBase):
             credentials = CybereasonApiCredentials()
             credentials.session_id = self.__http_session.cookies.get("JSESSIONID")
             credentials.expires_at = current_dt + timedelta(hours=8)
-            self.api_credentials = credentials
+            self.__api_credentials = credentials
 
-        return self.api_credentials
+        return self.__api_credentials
 
     def __call__(self, request):
         request.prepare_cookies(merge_cookies(request._cookies, {"JSESSIONID": self.get_credentials().session_id}))
