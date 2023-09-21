@@ -277,11 +277,11 @@ class AWSS3FetcherTrigger(AWSConnector, metaclass=ABCMeta):
         return {self.prefix_pattern.format(account_id=account_id, region=region) for region in regions}
 
     def start_worker(self, prefix: str):
+        # Check if the worker is already running
         if prefix in self.workers:
             w = self.workers[prefix]
-            if not w.is_alive():
-                w.start()
-            return
+            if w.is_alive():
+                return
 
         self.log(f"Starting {self.name} worker for '{prefix}'", level="info")
         w = self.worker_class(self, prefix, data_path=self._data_path)
