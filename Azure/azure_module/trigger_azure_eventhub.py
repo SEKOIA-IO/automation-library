@@ -1,17 +1,15 @@
 import os
 import signal
 import time
+from datetime import datetime, timezone
 from functools import cached_property
-from threading import Event
 
 import orjson
 from azure.eventhub import EventData, EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblob import BlobCheckpointStore
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
-from azure_module.kafka import KafkaForwarder
-from azure_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-from azure_module.metrics.utils import make_prometheus_exporter
+from azure_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS, EVENTS_LAG
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -64,17 +62,11 @@ class AzureEventsHubTrigger(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._stop_event = Event()
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
-
-        # Register signal to terminate thread
-        signal.signal(signal.SIGINT, self.stop)
-        signal.signal(signal.SIGTERM, self.stop)
 
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Azure EventHub connector", level="info")
-        # Exit signal received, asking the processor to stop
-        self._stop_event.set()
+        super().stop(*args, **kwargs)
 
         # Close the azure EventHub client
         self.client.close()
@@ -82,10 +74,6 @@ class AzureEventsHubTrigger(Connector):
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
-
-    @cached_property
-    def kafka_producer(self) -> KafkaForwarder:
-        return KafkaForwarder()
 
     def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]):
         """
@@ -111,12 +99,20 @@ class AzureEventsHubTrigger(Connector):
     def forward_events(self, messages: list[EventData]):
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
-        records = [
-            orjson.dumps(record).decode("utf-8")
-            for message in messages
-            for record in message.body_as_json().get("records", [])
-            if record is not None
-        ]
+        records = []
+        most_recent_datetime_seen: datetime | None = None
+        for message in messages:
+            # flatten and serialize the list of records
+            for record in message.body_as_json().get("records", []):
+                if record is not None:
+                    records.append(orjson.dumps(record).decode("utf-8"))
+
+            # look for the most recent
+            enqueued_time = message.enqueued_time
+            if enqueued_time is not None and (
+                most_recent_datetime_seen is None or enqueued_time > most_recent_datetime_seen
+            ):
+                most_recent_datetime_seen = enqueued_time
 
         if len(records) > 0:
             self.log(
@@ -124,7 +120,6 @@ class AzureEventsHubTrigger(Connector):
                 level="info",
             )
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(records))
-            self.kafka_producer.produce(records)
             self.push_events_to_intakes(events=records)
         else:
             self.log(
@@ -134,6 +129,12 @@ class AzureEventsHubTrigger(Connector):
 
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
 
+        # compute the lag
+        if most_recent_datetime_seen:
+            now = datetime.now(timezone.utc)
+            current_lag = now - most_recent_datetime_seen
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
+
     def handle_exception(self, partition_context: PartitionContext, exception: Exception):
         self.log_exception(
             exception,
@@ -141,22 +142,15 @@ class AzureEventsHubTrigger(Connector):
         )
 
     def run(self):  # pragma: no cover
-        # start the prometheus exporter
-        exporter = make_prometheus_exporter(int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10))
-        exporter.start()
-
         self.log(message="Azure EventHub Trigger has started", level="info")
 
-        try:
-            while not self._stop_event.is_set():
-                try:
-                    self.client.receive_batch(
-                        self.handle_messages,
-                        on_error=self.handle_exception,
-                        max_wait_time=self._consumption_max_wait_time,
-                    )
-                except Exception as ex:
-                    self.log_exception(ex, message="Failed to consume messages")
-                    raise ex
-        finally:
-            exporter.stop()
+        while not self._stop_event.is_set():
+            try:
+                self.client.receive_batch(
+                    self.handle_messages,
+                    on_error=self.handle_exception,
+                    max_wait_time=self._consumption_max_wait_time,
+                )
+            except Exception as ex:
+                self.log_exception(ex, message="Failed to consume messages")
+                raise ex

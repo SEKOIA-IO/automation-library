@@ -53,7 +53,6 @@ def trigger(symphony_storage):
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
-    trigger.kafka_producer = Mock()
     yield trigger
 
 
@@ -71,7 +70,6 @@ def test_handle_messages(trigger):
 
     # assert
     assert partition_context.update_checkpoint.called
-    assert trigger.kafka_producer.produce.called
     calls = [record for call in trigger.push_events_to_intakes.call_args_list for record in call.kwargs["events"]]
     assert len(calls) == 5
 
