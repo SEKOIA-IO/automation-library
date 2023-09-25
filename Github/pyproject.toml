@@ -31,7 +31,7 @@ isort = "^5.10.1"
 black = { version = "^23.7.0", extras = ["colorama"] }
 mypy = "^0.960"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
-gevent = "^22.10"
+gevent = "^23.9"
 types-requests = "^2.31.0.2"
 
 [build-system]
