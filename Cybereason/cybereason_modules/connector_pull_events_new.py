@@ -47,7 +47,7 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
                 self.log(
                     message=(
                         f"Request on Cybereason API to fetch events failed with status {response.status_code}"
-                        " - {response.reason}"
+                        f" - {response.reason}"
                     ),
                     level="error",
                 )

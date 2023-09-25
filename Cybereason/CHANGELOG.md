@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-09-25 - 1.9.6
+
+### Fixed
+
+- fixed incorrect logging messages
+
+## 2023-09-18 - 1.9.5
+
+### Added
+
+- support the new endpoint 
+
 ## 2023-09-07 - 1.9.4
 
 ### Changed
