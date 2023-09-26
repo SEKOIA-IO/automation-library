@@ -29,4 +29,4 @@ A playbook run represents an execution of the [playbook](#Playbook). A run is st
 
 ## Trigger
 
-A trigger is the first step of a [playbook](#Playbook]. The trigger monitors new events and start a new run of the playbook (see [definition](https://docs.sekoia.io/xdr/features/automate/triggers/))
+A trigger is the first step of a [playbook](#Playbook). The trigger monitors new events and start a new run of the playbook (see [definition](https://docs.sekoia.io/xdr/features/automate/triggers/))
