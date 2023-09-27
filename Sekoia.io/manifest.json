@@ -33,6 +33,10 @@
             "stix_objects_path": {
                 "description": "Filepath of the STIX objects fetched from the collection",
                 "type": "string"
+            },
+            "stix_objects": {
+                "description": "List of STIX objects",
+                "type": "array"
             }
         },
         "title": "Results",
