@@ -2,14 +2,15 @@
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import orjson
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
 from pydantic import HttpUrl
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
@@ -34,10 +35,8 @@ class TrellixConfig(DefaultConnectorConfiguration):
 class TrellixModule(Module):
     """TrellixModule."""
 
-    pass
 
-
-class TrellixEdrConnector(Connector):
+class TrellixEdrConnector(AsyncConnector):
     """TrellixEdrConnector class to work with EDR events."""
 
     name = "TrellixEdrConnector"
@@ -104,25 +103,7 @@ class TrellixEdrConnector(Connector):
 
         return self._trellix_client
 
-    async def _push_events(self, events: list[str]) -> list[str]:
-        """
-        Push events to intakes.
-
-        Simple wrapper over `self.push_events_to_intakes` to run it async.
-
-        Args:
-            events: list[str]
-
-        Returns:
-            list[str]:
-        """
-        return await asyncio.to_thread(
-            self.push_events_to_intakes,
-            events=events,
-            sync=True,
-        )
-
-    async def get_trellix_edr_events(self) -> List[str]:
+    async def get_trellix_edr_events(self) -> list[str]:
         """
         Process trellix edr events.
 
@@ -134,7 +115,11 @@ class TrellixEdrConnector(Connector):
             self.configuration.records_per_request,
         )
 
-        return await self._push_events([orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events])
+        result: list[str] = await self.push_data_to_intakes(
+            [orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events]
+        )
+
+        return result
 
     def run(self) -> None:
         """Runs TrellixEdr."""

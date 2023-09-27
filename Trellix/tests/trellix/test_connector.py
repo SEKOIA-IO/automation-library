@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from shutil import rmtree
 from tempfile import mkdtemp
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import orjson
 import pytest
@@ -64,8 +64,7 @@ def connector(symphony_storage, pushed_events_ids, session_faker):
     trigger.log_exception = MagicMock()
 
     # Mock the push_events_to_intakes function
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.push_events_to_intakes.return_value = pushed_events_ids
+    trigger.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
 
     trigger.module.configuration = {}
     trigger.configuration = {
@@ -108,21 +107,6 @@ async def test_trellix_connector_last_event_date(connector):
         cache["last_event_date"] = (one_week_ago - timedelta(days=1)).isoformat()
 
     assert connector.last_event_date == one_week_ago
-
-
-@pytest.mark.asyncio
-async def test_trellix_connector_push_events_wrapper(connector, pushed_events_ids, session_faker):
-    """
-    Test trellix connector push events.
-
-    Args:
-        connector: TrellixEdrConnector
-        pushed_events_ids: list[str]
-        session_faker: Faker
-    """
-    data = [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
-
-    assert await connector._push_events(data) == pushed_events_ids
 
 
 @pytest.mark.asyncio

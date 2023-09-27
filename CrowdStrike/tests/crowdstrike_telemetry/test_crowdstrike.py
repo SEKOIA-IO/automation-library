@@ -4,20 +4,34 @@ from gzip import compress
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aioresponses import aioresponses
 
 from crowdstrike_telemetry import CrowdStrikeTelemetryModule, CrowdStrikeTelemetryModuleConfig
 from crowdstrike_telemetry.pull_telemetry_events import CrowdStrikeTelemetryConfig, CrowdStrikeTelemetryConnector
 
 
 @pytest.fixture
-def crowdstrike_connector(session_faker, symphony_storage) -> CrowdStrikeTelemetryConnector:
+def pushed_ids(session_faker) -> list[str]:
+    """
+    Generate random list of events ids.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        list[str]:
+    """
+    return [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
+
+
+@pytest.fixture
+def crowdstrike_connector(session_faker, symphony_storage, pushed_ids) -> CrowdStrikeTelemetryConnector:
     """
     Create CrowdStrikeTelemetryConnector instance.
 
     Args:
         session_faker: Faker
         symphony_storage: str
+        pushed_ids: list[str]
 
     Returns:
         CrowdStrikeTelemetryConnector:
@@ -29,7 +43,11 @@ def crowdstrike_connector(session_faker, symphony_storage) -> CrowdStrikeTelemet
         aws_region=session_faker.word(),
     )
 
-    connector = CrowdStrikeTelemetryConnector(module)
+    connector = CrowdStrikeTelemetryConnector(
+        module=module,
+        data_path=symphony_storage,
+    )
+
     connector.configuration = CrowdStrikeTelemetryConfig(
         intake_server=session_faker.url(),
         queue_name=session_faker.word(),
@@ -40,7 +58,7 @@ def crowdstrike_connector(session_faker, symphony_storage) -> CrowdStrikeTelemet
         is_fifo=False,
     )
     connector.push_events_to_intakes = MagicMock()
-    connector._push_data_to_intake = AsyncMock()
+    connector.push_data_to_intakes = AsyncMock(return_value=pushed_ids)
     connector.log = MagicMock()
     connector.log_exception = MagicMock()
 
@@ -125,13 +143,14 @@ async def test_process_s3_file_one_line(crowdstrike_connector, session_faker):
 
 
 @pytest.mark.asyncio
-async def test_get_crowdstrike_events(crowdstrike_connector, session_faker):
+async def test_get_crowdstrike_events(crowdstrike_connector, session_faker, pushed_ids):
     """
     Test get_crowdstrike_events method.
 
     Args:
         crowdstrike_connector: CrowdStrikeTelemetryConnector
         session_faker: Faker
+        pushed_ids: list[str]
     """
     receipt_handle_1 = session_faker.word()
     receipt_handle_2 = session_faker.word()
@@ -153,36 +172,29 @@ async def test_get_crowdstrike_events(crowdstrike_connector, session_faker):
         {"data": session_faker.sentence()},
     ]
 
-    with aioresponses() as mocked_responses:
-        mocked_responses.post(
-            "{0}/batch".format(crowdstrike_connector.configuration.intake_server),
-            status=200,
-            payload={
-                "event_ids": ["event_id_1", "event_id_2"],
-            },
+    with patch("aws.sqs.SqsWrapper.get_client") as mock_client, patch.object(
+        crowdstrike_connector.s3_wrapper, "read_key"
+    ) as mock_read_key:
+        mock_sqs = MagicMock()
+
+        mock_sqs.receive_message = AsyncMock()
+        mock_sqs.receive_message.return_value = expected_response
+
+        mock_sqs.delete_message = AsyncMock()
+        mock_sqs.delete_message.return_value = {}
+
+        mock_sqs.get_queue_url = AsyncMock()
+        mock_sqs.get_queue_url.return_value = {"QueueUrl": queue_url}
+
+        mock_client.return_value.__aenter__.return_value = mock_sqs
+
+        mock_read_key.return_value.__aenter__.return_value = b"\n".join(
+            [json.dumps(item).encode("utf-8") for item in expected]
         )
 
-        with patch("aws.sqs.SqsWrapper.get_client") as mock_client, patch.object(
-            crowdstrike_connector.s3_wrapper, "read_key"
-        ) as mock_read_key:
-            mock_sqs = MagicMock()
+        result = await crowdstrike_connector.get_crowdstrike_events()
 
-            mock_sqs.receive_message = AsyncMock()
-            mock_sqs.receive_message.return_value = expected_response
-
-            mock_sqs.delete_message = AsyncMock()
-            mock_sqs.delete_message.return_value = {}
-
-            mock_sqs.get_queue_url = AsyncMock()
-            mock_sqs.get_queue_url.return_value = {"QueueUrl": queue_url}
-
-            mock_client.return_value.__aenter__.return_value = mock_sqs
-
-            mock_read_key.return_value.__aenter__.return_value = b"\n".join(
-                [json.dumps(item).encode("utf-8") for item in expected]
-            )
-
-            await crowdstrike_connector.get_crowdstrike_events()
+        assert result == pushed_ids
 
 
 @pytest.mark.asyncio
@@ -196,7 +208,9 @@ async def test_specify_queue_url(session_faker):
         aws_region=session_faker.word(),
     )
 
-    connector = CrowdStrikeTelemetryConnector(module)
+    connector = CrowdStrikeTelemetryConnector(
+        module=module,
+    )
     connector.configuration = CrowdStrikeTelemetryConfig(
         queue_name=session_faker.word(),
         queue_url=queue_url,
