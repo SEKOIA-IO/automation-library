@@ -47,7 +47,12 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
             response = self.client.post(url, json=params, timeout=60)
 
             if not response.ok:
-                logger.error("Failed to fetch events from the Cybereason API", status_code=response.status_code, reason=response.reason, error=response.content)
+                logger.error(
+                    "Failed to fetch events from the Cybereason API",
+                    status_code=response.status_code,
+                    reason=response.reason,
+                    error=response.content,
+                )
                 self.log(
                     message=(
                         f"Request on Cybereason API to fetch events failed with status {response.status_code}"
