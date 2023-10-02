@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2023-10-02
+
+### Changed
+
+- Remove the alpha/beta flag
+
+## [1.6.4] - 2023-09-04
+
+### Fixed
+
+- Change the way to set the maximum number of messages got when reading the SQS queue
+
 ## [1.6.4] - 2023-09-04
 
 ### Fixed
