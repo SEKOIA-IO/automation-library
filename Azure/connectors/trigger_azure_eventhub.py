@@ -3,15 +3,17 @@ import signal
 import time
 from functools import cached_property
 from threading import Event
+from typing import Any, Optional
 
 import orjson
 from azure.eventhub import EventData, EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblob import BlobCheckpointStore
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
-from azure_module.kafka import KafkaForwarder
-from azure_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-from azure_module.metrics.utils import make_prometheus_exporter
+from helpers.kafka_forwarder import KafkaForwarder
+from helpers.prometheus_exporter import make_prometheus_exporter
+
+from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -22,8 +24,11 @@ class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
     storage_container_name: str
 
 
-class Client:
-    def __init__(self, configuration):
+class Client(object):
+
+    _client: EventHubConsumerClient | None = None
+
+    def __init__(self, configuration: AzureEventsHubConfiguration) -> None:
         self.configuration = configuration
         self._client = None
 
@@ -42,14 +47,14 @@ class Client:
             checkpoint_store=self.checkpoint_store,
         )
 
-    def receive_batch(self, *args, **kwargs):
+    def receive_batch(self, *args: Any, **kwargs: Optional[Any]) -> None:
         self._client = self._new_client()
         try:
-            self._client.receive_batch(*args, **kwargs)
+            self._client.receive_batch(*args, **kwargs)  # type: ignore
         finally:
             self.close()
 
-    def close(self):
+    def close(self) -> None:
         if self._client:
             self._client.close()
             self._client = None
@@ -62,7 +67,7 @@ class AzureEventsHubTrigger(Connector):
 
     configuration: AzureEventsHubConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self._stop_event = Event()
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
@@ -71,7 +76,7 @@ class AzureEventsHubTrigger(Connector):
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGTERM, self.stop)
 
-    def stop(self, *args, **kwargs):
+    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:
         self.log(message="Stopping Azure EventHub connector", level="info")
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
@@ -87,7 +92,7 @@ class AzureEventsHubTrigger(Connector):
     def kafka_producer(self) -> KafkaForwarder:
         return KafkaForwarder()
 
-    def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]):
+    def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
         Handle new messages
         """
@@ -108,7 +113,7 @@ class AzureEventsHubTrigger(Connector):
         # acknowledge the messages
         partition_context.update_checkpoint()
 
-    def forward_events(self, messages: list[EventData]):
+    def forward_events(self, messages: list[EventData]) -> None:
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
         records = [
@@ -134,13 +139,13 @@ class AzureEventsHubTrigger(Connector):
 
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
 
-    def handle_exception(self, partition_context: PartitionContext, exception: Exception):
+    def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
         self.log_exception(
             exception,
             message="Error raised when consuming messages",
         )
 
-    def run(self):  # pragma: no cover
+    def run(self) -> None:  # pragma: no cover
         # start the prometheus exporter
         exporter = make_prometheus_exporter(int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10))
         exporter.start()

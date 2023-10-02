@@ -8,9 +8,9 @@ import aiofiles
 import pytest
 from azure.storage.blob import BlobProperties
 from sekoia_automation import constants
+from sekoia_automation.module import Module
 
-from connector import AzureBlobStorageModule
-from connector.pull_azure_blob_data import AzureBlobConnector, AzureBlobConnectorConfig
+from connectors.pull_azure_blob_data import AzureBlobConnector, AzureBlobConnectorConfig
 
 
 @pytest.fixture
@@ -46,9 +46,13 @@ def pushed_events_ids(session_faker) -> list[str]:
 
 @pytest.fixture
 def connector(symphony_storage, container_name, account_name, account_key, pushed_events_ids, session_faker):
-    module = AzureBlobStorageModule()
+    module = Module()
+
     config = AzureBlobConnectorConfig(
         intake_key=session_faker.word(),
+        container_name=container_name,
+        account_name=account_name,
+        account_key=account_key,
     )
 
     trigger = AzureBlobConnector(
@@ -65,12 +69,6 @@ def connector(symphony_storage, container_name, account_name, account_key, pushe
     trigger.push_events_to_intakes.return_value = pushed_events_ids
 
     trigger.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
-
-    trigger.module.configuration = {
-        "container_name": container_name,
-        "account_name": account_name,
-        "account_key": account_key,
-    }
 
     trigger.configuration = config
 

@@ -8,13 +8,14 @@ import aiofiles
 import orjson
 from dateutil.parser import isoparse
 from loguru import logger
+from pydantic import Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.aio.helpers.files.utils import delete_file
 from sekoia_automation.connector import DefaultConnectorConfiguration
+from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
 from azure_helpers.storage import AzureBlobStorageConfig, AzureBlobStorageWrapper
-from connector import AzureBlobStorageModule
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
@@ -22,12 +23,16 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
     """Connector configuration."""
 
+    container_name: str
+    account_name: str
+    account_key: str = Field(secret=True)
+
 
 class AzureBlobConnector(AsyncConnector):
     """AzureBlobConnector."""
 
     name = "AzureBlobConnector"
-    module: AzureBlobStorageModule
+    module: Module
     configuration: AzureBlobConnectorConfig
 
     _azure_blob_storage_wrapper: AzureBlobStorageWrapper | None = None
@@ -73,7 +78,7 @@ class AzureBlobConnector(AsyncConnector):
             AzureBlobStorageWrapper:
         """
         if not self._azure_blob_storage_wrapper:
-            config = AzureBlobStorageConfig(**self.module.configuration.dict(exclude_unset=True, exclude_none=True))
+            config = AzureBlobStorageConfig(**self.configuration.dict(exclude_unset=True, exclude_none=True))
             self._azure_blob_storage_wrapper = AzureBlobStorageWrapper(config)
 
         return self._azure_blob_storage_wrapper
