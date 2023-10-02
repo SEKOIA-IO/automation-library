@@ -3,7 +3,7 @@
     "name": "CrowdStrike Falcon",
     "slug": "crowdstrike-falcon",
     "description": "Integrates with CrowdStrike Falcon EDR",
-    "version": "1.12.1",
+    "version": "1.13.0",
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
@@ -20,6 +20,10 @@
                 "type": "string",
                 "default": "https://api.eu-1.crowdstrike.com",
                 "format": "uri"
+            },
+            "stix_objects_path": {
+                "description": "Filepath of the STIX objects fetched from the collection",
+                "type": "string"
             }
         },
         "required": [
