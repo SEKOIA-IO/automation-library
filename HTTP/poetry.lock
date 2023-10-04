@@ -78,32 +78,32 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.26.151"
+version = "1.28.59"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.26.151-py3-none-any.whl", hash = "sha256:20b88a8145845e4923d438f5f89fdbdac5bae4011e706cd0974ac69c41f258b4"},
-    {file = "boto3-1.26.151.tar.gz", hash = "sha256:81bff32c96a6b4b203beb63826214d8cf24ca1a86e81d43bbb688a21c5d79e2a"},
+    {file = "boto3-1.28.59-py3-none-any.whl", hash = "sha256:7623b52c135becf145f762a9cc4203a1fb30055bb1cc7a254f82e5f7954d44a1"},
+    {file = "boto3-1.28.59.tar.gz", hash = "sha256:aa861e5568a564a5ce2fff5413d6ae2cda0eed7399b3a949bc861a20915e2046"},
 ]
 
 [package.dependencies]
-botocore = ">=1.29.151,<1.30.0"
+botocore = ">=1.31.59,<1.32.0"
 jmespath = ">=0.7.1,<2.0.0"
-s3transfer = ">=0.6.0,<0.7.0"
+s3transfer = ">=0.7.0,<0.8.0"
 
 [package.extras]
 crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.29.151"
+version = "1.31.59"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.29.151-py3-none-any.whl", hash = "sha256:0790bf5d25ad6f2db3450797251a78fbcb7b72cdeeb2fd0b82c2668a41d9f41c"},
-    {file = "botocore-1.29.151.tar.gz", hash = "sha256:fdaaa34ea5f09666f17d24d2f4179f7ec81dd6f831ef6b785d4552f919291cab"},
+    {file = "botocore-1.31.59-py3-none-any.whl", hash = "sha256:6485a700744c60fcbf4bba4fcacb22067f601e79fb0c27fae04cf07b03c5e8f9"},
+    {file = "botocore-1.31.59.tar.gz", hash = "sha256:159f637300206a0b37b49c1bee61265650843f591e9cb62e9adcb3d1c2afec91"},
 ]
 
 [package.dependencies]
@@ -112,7 +112,7 @@ python-dateutil = ">=2.1,<3.0.0"
 urllib3 = ">=1.25.4,<1.27"
 
 [package.extras]
-crt = ["awscrt (==0.16.9)"]
+crt = ["awscrt (==0.16.26)"]
 
 [[package]]
 name = "certifi"
@@ -460,16 +460,6 @@ files = [
     {file = "MarkupSafe-2.1.3-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:5bbe06f8eeafd38e5d0a4894ffec89378b6c6a625ff57e3028921f8ff59318ac"},
     {file = "MarkupSafe-2.1.3-cp311-cp311-win32.whl", hash = "sha256:dd15ff04ffd7e05ffcb7fe79f1b98041b8ea30ae9234aed2a9168b5797c3effb"},
     {file = "MarkupSafe-2.1.3-cp311-cp311-win_amd64.whl", hash = "sha256:134da1eca9ec0ae528110ccc9e48041e0828d79f24121a1a146161103c76e686"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:f698de3fd0c4e6972b92290a45bd9b1536bffe8c6759c62471efaa8acb4c37bc"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:aa57bd9cf8ae831a362185ee444e15a93ecb2e344c8e52e4d721ea3ab6ef1823"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ffcc3f7c66b5f5b7931a5aa68fc9cecc51e685ef90282f4a82f0f5e9b704ad11"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:47d4f1c5f80fc62fdd7777d0d40a2e9dda0a05883ab11374334f6c4de38adffd"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1f67c7038d560d92149c060157d623c542173016c4babc0c1913cca0564b9939"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:9aad3c1755095ce347e26488214ef77e0485a3c34a50c5a5e2471dff60b9dd9c"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-musllinux_1_1_i686.whl", hash = "sha256:14ff806850827afd6b07a5f32bd917fb7f45b046ba40c57abdb636674a8b559c"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:8f9293864fe09b8149f0cc42ce56e3f0e54de883a9de90cd427f191c346eb2e1"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-win32.whl", hash = "sha256:715d3562f79d540f251b99ebd6d8baa547118974341db04f5ad06d5ea3eb8007"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-win_amd64.whl", hash = "sha256:1b8dd8c3fd14349433c79fa8abeb573a55fc0fdd769133baac1f5e07abf54aeb"},
     {file = "MarkupSafe-2.1.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:8e254ae696c88d98da6555f5ace2279cf7cd5b3f52be2b5cf97feafe883b58d2"},
     {file = "MarkupSafe-2.1.3-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cb0932dc158471523c9637e807d9bfb93e06a95cbf010f1a38b98623b929ef2b"},
     {file = "MarkupSafe-2.1.3-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9402b03f1a1b4dc4c19845e5c749e3ab82d5078d16a2a4c2cd2df62d57bb0707"},
@@ -880,29 +870,28 @@ jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
 
 [[package]]
 name = "s3path"
-version = "0.4.1"
+version = "0.5.0"
 description = ""
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "s3path-0.4.1-py3-none-any.whl", hash = "sha256:861762382c7fb2c6aa401998042bbd2ee7da57579d9f865e1012290ffdefa0e0"},
-    {file = "s3path-0.4.1.tar.gz", hash = "sha256:f4aa7c877c7f0ee62807687f4c17a6ee7a05cc53bfc1bbbf11840562d4186205"},
+    {file = "s3path-0.5.0-py3-none-any.whl", hash = "sha256:94b0add85ce6be5c38c2bf109e27bef938850ce8d0c731e54f4527007710acbb"},
+    {file = "s3path-0.5.0.tar.gz", hash = "sha256:ccf2ab37d5c68eabcd10f8c6d2f7ed1ab4911a955cbd617de46b3478db70d1ac"},
 ]
 
 [package.dependencies]
 boto3 = ">=1.16.35"
-packaging = "*"
 smart-open = "*"
 
 [[package]]
 name = "s3transfer"
-version = "0.6.1"
+version = "0.7.0"
 description = "An Amazon S3 Transfer Manager"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "s3transfer-0.6.1-py3-none-any.whl", hash = "sha256:3c0da2d074bf35d6870ef157158641178a4204a6e689e82546083e31e0311346"},
-    {file = "s3transfer-0.6.1.tar.gz", hash = "sha256:640bb492711f4c0c0905e1f62b6aaeb771881935ad27884852411f8e9cacbca9"},
+    {file = "s3transfer-0.7.0-py3-none-any.whl", hash = "sha256:10d6923c6359175f264811ef4bf6161a3156ce8e350e705396a7557d6293c33a"},
+    {file = "s3transfer-0.7.0.tar.gz", hash = "sha256:fd3889a66f5fe17299fe75b82eae6cf722554edca744ca5d5fe308b104883d2e"},
 ]
 
 [package.dependencies]
@@ -913,18 +902,18 @@ crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.3.9"
+version = "1.5.1"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = ">=3.10,<3.12"
 files = [
-    {file = "sekoia_automation_sdk-1.3.9-py3-none-any.whl", hash = "sha256:9ec45ff67f76c0cb790147295380c692957dd1702756016c1d6e091b8eadacde"},
-    {file = "sekoia_automation_sdk-1.3.9.tar.gz", hash = "sha256:36545cf4a443e4bc005cce1d474e34b5b982fccc6accc5733cfe9dbb80f1f2dc"},
+    {file = "sekoia_automation_sdk-1.5.1-py3-none-any.whl", hash = "sha256:4d431cf33af78292c02dfae1db2150218e7184d1d3ba630399c46602a66ce56d"},
+    {file = "sekoia_automation_sdk-1.5.1.tar.gz", hash = "sha256:a0469445c0fbc77b3d56cec47bb286e04ff8e1ff1e3aa5da8199d75fe9cf36a0"},
 ]
 
 [package.dependencies]
 black = "*"
-boto3 = ">=1.26,<2.0"
+boto3 = ">=1.28,<2.0"
 cookiecutter = ">=2.1,<3.0"
 Jinja2 = ">=3.0.3,<4.0.0"
 orjson = ">=3.8,<4.0"
@@ -933,10 +922,17 @@ pydantic = ">=1.10,<2.0"
 python-slugify = ">=5.0.2,<6.0.0"
 PyYAML = ">=6.0,<7.0"
 requests = ">=2.25,<3.0"
-s3path = ">=0.4,<0.5"
+s3path = ">=0.5,<0.6"
 sentry-sdk = "*"
 tenacity = "*"
 typer = {version = ">=0.7,<0.8", extras = ["all"]}
+
+[package.extras]
+all = ["aiobotocore (>=2.5.2,<3.0.0)", "aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)", "aiohttp (>=3.8.4,<4.0.0)", "aiolimiter (>=1.1.0,<2.0.0)", "loguru (>=0.7.0,<0.8.0)"]
+async-aws = ["aiobotocore (>=2.5.2,<3.0.0)"]
+async-files = ["aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)"]
+async-http = ["aiofiles (>=23.1.0,<24.0.0)", "aiohttp (>=3.8.4,<4.0.0)", "aiolimiter (>=1.1.0,<2.0.0)"]
+logging = ["loguru (>=0.7.0,<0.8.0)"]
 
 [[package]]
 name = "sentry-sdk"
@@ -1112,4 +1108,4 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "76f818237f2ab9440c57cac719cf7bf931dbb7bb45771cc41d620f2b1995b075"
+content-hash = "e687f9f697f385ccf239b9bae9a7f272b9127363d5430f98e619b2cc180edc5e"
