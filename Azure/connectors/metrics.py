@@ -1,7 +1,8 @@
+"""Contains the prometheus metrics for the connector."""
 from prometheus_client import Counter, Histogram
 
-# Declare prometheus metrics
-prom_namespace = "symphony_module_azure"
+# Declare common prometheus metrics
+prom_namespace = "symphony_module_common"
 
 INCOMING_MESSAGES = Counter(
     name="collected_messages",
@@ -20,6 +21,13 @@ OUTCOMING_EVENTS = Counter(
 FORWARD_EVENTS_DURATION = Histogram(
     name="forward_events_duration",
     documentation="Duration to collect and forward events from eventhub",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)
+
+EVENTS_LAG = Histogram(
+    name="event_lags",
+    documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )
