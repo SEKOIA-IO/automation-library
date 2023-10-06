@@ -25,7 +25,6 @@ class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
 
 
 class Client(object):
-
     _client: EventHubConsumerClient | None = None
 
     def __init__(self, configuration: AzureEventsHubConfiguration) -> None:
