@@ -1,17 +1,12 @@
 """Contains connector, configuration and module."""
 import asyncio
 import time
-from contextlib import asynccontextmanager
-from datetime import datetime
 from functools import cached_property
 from gzip import decompress
-from typing import AsyncGenerator
-from urllib.parse import urljoin
 
-from aiohttp import ClientSession
-from aiolimiter import AsyncLimiter
 from loguru import logger
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from aws.s3 import S3Configuration, S3Wrapper
 from aws.sqs import SqsConfiguration, SqsWrapper
@@ -30,43 +25,12 @@ class CrowdStrikeTelemetryConfig(DefaultConnectorConfiguration):
     is_fifo: bool | None = None
 
 
-class CrowdStrikeTelemetryConnector(Connector):
+class CrowdStrikeTelemetryConnector(AsyncConnector):
     """CrowdStrikeTelemetryConnector class to work with logs."""
 
     name = "CrowdStrikeTelemetryConnector"
     module: CrowdStrikeTelemetryModule
     configuration: CrowdStrikeTelemetryConfig
-
-    _session: ClientSession | None = None
-    _rate_limiter: AsyncLimiter | None = None
-
-    @classmethod
-    def rate_limiter(cls) -> AsyncLimiter:  # pragma: no cover
-        """
-        Get or initialize rate limiter.
-
-        Returns:
-            AsyncLimiter:
-        """
-        if cls._rate_limiter is None:
-            cls._rate_limiter = AsyncLimiter(1, 1)
-
-        return cls._rate_limiter
-
-    @classmethod
-    @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[ClientSession, None]:  # pragma: no cover
-        """
-        Get or initialize client session.
-
-        Returns:
-            ClientSession:
-        """
-        if cls._session is None:
-            cls._session = ClientSession()
-
-        async with cls.rate_limiter():
-            yield cls._session
 
     @cached_property
     def sqs_wrapper(self) -> SqsWrapper:
@@ -94,57 +58,6 @@ class CrowdStrikeTelemetryConnector(Connector):
         config = S3Configuration(**self.module.configuration.dict(exclude_unset=True, exclude_none=True))
 
         return S3Wrapper(config)
-
-    async def _push_data_to_intake(self, events: list[str]) -> list[str]:  # pragma: no cover
-        """
-        Custom method to push events to intakes.
-
-        Args:
-            events: list[str]
-
-        Returns:
-            list[str]:
-        """
-        self._last_events_time = datetime.utcnow()
-        batch_api = urljoin(self.configuration.intake_server, "/batch")
-
-        logger.info("Pushing total: {count} events to intakes", count=len(events))
-
-        result_ids = []
-
-        chunks = self._chunk_events(events, self.configuration.chunk_size)
-        headers = {"User-Agent": f"sekoiaio-connector-{self.configuration.intake_key}"}
-        async with self.session() as session:
-            for chunk_index, chunk in enumerate(chunks):
-                logger.info(
-                    "Start to push chunk {chunk_index} with data count {data_count} to intakes",
-                    chunk_index=chunk_index,
-                    data_count=len(chunk),
-                )
-                request_body = {"intake_key": self.configuration.intake_key, "jsons": chunk}
-
-                async with session.post(batch_api, headers=headers, json=request_body) as response:
-                    # Not sure what response code will be at this point to identify error.
-                    # Usually 200, 201, 202 ... until 300 means success
-                    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#successful_responses
-                    if response.status >= 300:
-                        error = await response.text()
-                        logger.error(
-                            "Error while pushing chunk {chunk_index} to intakes: {error}",
-                            chunk_index=chunk_index,
-                            error=error,
-                        )
-
-                        raise Exception(error)
-
-                    logger.info(
-                        "Successfully pushed chunk {chunk_index} to intakes",
-                        chunk_index=chunk_index,
-                    )
-                    result = await response.json()
-                    result_ids.extend(result.get("event_ids", []))
-
-        return result_ids
 
     async def get_crowdstrike_events(self) -> list[str]:
         """
@@ -182,7 +95,9 @@ class CrowdStrikeTelemetryConnector(Connector):
 
             self.log(level="INFO", message=f"Found {len(result)} records to process")
 
-            return await self._push_data_to_intake(result)
+            pushed_ids: list[str] = await self.push_data_to_intakes(result)
+
+            return pushed_ids
 
     async def process_s3_file(self, key: str, bucket: str | None = None) -> list[str]:
         """

@@ -65,7 +65,7 @@ class ApiClient(requests.Session):
             if errors and len(errors):
                 errors_str = "\n".join([f"{error['code']}: {error['message']}" for error in errors])
                 msg = f"The API returns the following errors: \n{errors_str}"
-                raise HTTPError(msg, response=response)
+                raise HTTPError(msg, response=response)  # type: ignore[call-arg]
             yield from content.get("resources") or []
 
             pagination = content.get("meta", {}).get("pagination")

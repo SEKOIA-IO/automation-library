@@ -10,7 +10,8 @@ from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
 from pydantic import BaseModel, Field, HttpUrl
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
@@ -40,7 +41,7 @@ class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     ratelimit_per_minute: int = 60
 
 
-class SalesforceConnector(Connector):
+class SalesforceConnector(AsyncConnector):
     """SalesforceConnector class to work with salesforce events."""
 
     name = "SalesforceConnector"
@@ -105,26 +106,6 @@ class SalesforceConnector(Connector):
 
         return self._salesforce_client
 
-    async def _push_events(self, events: list[str]) -> list[str]:
-        """
-        Push events to intakes.
-
-        Simple wrapper over `self.push_events_to_intakes` to run it async.
-
-        Args:
-            events: list[str]
-
-        Returns:
-            list[str]:
-        """
-        logger.info("Pushing {count} events to intakes", count=len(events))
-
-        return await asyncio.to_thread(
-            self.push_events_to_intakes,
-            events=events,
-            sync=True,
-        )
-
     async def get_salesforce_events(self) -> list[str]:
         """
         Process salesforce events.
@@ -155,13 +136,13 @@ class SalesforceConnector(Connector):
 
             if records is not None:
                 log_file_results.extend(
-                    await self._push_events([orjson.dumps(event).decode("utf-8") for event in records])
+                    await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in records])
                 )
 
             # Process csv file row by row to avoid memory issues
             if csv_path is not None:
                 async for row in csv_file_as_rows(csv_path):
-                    log_file_results.extend(await self._push_events([orjson.dumps(row).decode("utf-8")]))
+                    log_file_results.extend(await self.push_data_to_intakes([orjson.dumps(row).decode("utf-8")]))
 
                 await delete_file(csv_path)
 

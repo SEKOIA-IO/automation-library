@@ -5,7 +5,10 @@ import requests
 
 from cybereason_modules.connector_pull_events import CybereasonEventConnector
 from cybereason_modules.constants import MALOP_GET_ALL_ENDPOINT
+from cybereason_modules.logging import get_logger
 from cybereason_modules.exceptions import InvalidResponse
+
+logger = get_logger()
 
 
 def adapt_malops_to_legacy(ops: list[dict]):
@@ -44,6 +47,12 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
             response = self.client.post(url, json=params, timeout=60)
 
             if not response.ok:
+                logger.error(
+                    "Failed to fetch events from the Cybereason API",
+                    status_code=response.status_code,
+                    reason=response.reason,
+                    error=response.content,
+                )
                 self.log(
                     message=(
                         f"Request on Cybereason API to fetch events failed with status {response.status_code}"
