@@ -172,8 +172,8 @@ S3Objects = {
                         },
                     },
                     "eventTime": "2022-02-21T10:11:12Z",
-                    "eventSource": "ec2.amazonaws.com",
-                    "eventName": "DescribeInstances",
+                    "eventSource": "s3.amazonaws.com",
+                    "eventName": "Copy",
                     "awsRegion": "eu-west-2",
                     "sourceIPAddress": "78.197.123.35",
                     "userAgent": "EC2ConsoleFrontend, aws-internal/3 aws-sdk-java/1.12.150 Linux/5.4.172-100.336.amzn2int.x86_64 OpenJDK_64-Bit_Server_VM/25.322-b06 java/1.8.0_322 vendor/Oracle_Corporation cfg/retry-mode/standard",
@@ -217,8 +217,8 @@ S3Objects = {
                         },
                     },
                     "eventTime": "2022-02-21T10:11:12Z",
-                    "eventSource": "ec2.amazonaws.com",
-                    "eventName": "DescribeSnapshots",
+                    "eventSource": "s3.amazonaws.com",
+                    "eventName": "GetObject",
                     "awsRegion": "eu-west-2",
                     "sourceIPAddress": "78.197.123.35",
                     "userAgent": "EC2ConsoleFrontend, aws-internal/3 aws-sdk-java/1.12.150 Linux/5.4.172-100.336.amzn2int.x86_64 OpenJDK_64-Bit_Server_VM/25.322-b06 java/1.8.0_322 vendor/Oracle_Corporation cfg/retry-mode/standard",
@@ -262,6 +262,30 @@ SQSMock = sqs_mock(SQSMessages)
 def test_get_next_objects(trigger, aws_mock):
     with mock.client.handler_for("s3", S3Mock), mock.client.handler_for("sqs", SQSMock):
         assert [obj.key for obj in trigger.get_next_objects(trigger.get_next_messages())] == list(S3Objects.keys())
+
+
+def test_check_if_payload_is_valid(trigger):
+    # for obj in S3Objects.values():
+    #     for record in orjson.loads(obj)["Records"]:
+    #         assert trigger.is_valid_payload(record) is True
+
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "List"}) is False
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Describe"}) is False
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Random"}) is False
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Delete"}) is True
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Create"}) is True
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Copy"}) is True
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Put"}) is True
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Restore"}) is True
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "GetObject"}) is True
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "GetObjectTorrent"}) is True
+    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "ListBuckets"}) is True
+
+    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "List"}) is True
+    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Describe"}) is True
+    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Delete"}) is False
+    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Create"}) is False
+    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Random"}) is False
 
 
 def test_forward_next_batches(trigger, aws_mock, symphony_storage):
