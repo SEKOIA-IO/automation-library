@@ -10,20 +10,19 @@ class AWSS3RecordsTrigger(AWSS3QueuedConnector):
     def is_valid_payload(payload: dict) -> bool:
         event_source = payload.get("eventSource")
 
-        if event_source == "s3.amazonaws.com" and list(
-            filter(
-                lambda x: payload.get("eventName", "").startswith(x),
-                ["Delete", "Create", "Copy", "Put", "Restore", "GetObject", "GetObjectTorrent", "ListBuckets"],
-            )
-        ):
-            return True
-
-        if event_source != "s3.amazonaws.com" and list(
-            filter(lambda x: payload.get("eventName", "").startswith(x), ["List", "Describe"])
-        ):
-            return True
-
-        return False
+        # If eventSource is "s3" then we should collect logs only if the event name starts with one of the following
+        if event_source == "s3.amazonaws.com":
+            return list(
+                filter(
+                    lambda x: payload.get("eventName", "").startswith(x),
+                    ["Delete", "Create", "Copy", "Put", "Restore", "GetObject", "GetObjectTorrent", "ListBuckets"],
+                )
+            ) != []
+        else:
+            # If eventSource is not "s3" we should skipp all events that start with "List" or "Describe"
+            return list(
+                filter(lambda x: payload.get("eventName", "").startswith(x), ["List", "Describe"])
+            ) == []
 
     def _parse_content(self, content: bytes) -> list:
         if len(content) == 0:

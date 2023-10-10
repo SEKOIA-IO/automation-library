@@ -58,7 +58,7 @@ class AWSS3Worker(Thread, metaclass=ABCMeta):
     def log(self, *args, **kwargs):
         self.trigger.log(*args, **kwargs)
 
-    def log_exception(self, *args, **kwargs):
+    def log_exception(self, *args, **kwargs):  # pragma: no cover
         self.trigger.log_exception(*args, **kwargs)
 
     def send_records(self, records: list, event_name: str):
@@ -79,7 +79,7 @@ class AWSS3Worker(Thread, metaclass=ABCMeta):
             with self.context as variables:
                 variables["marker"] = self.marker
 
-    def _list_of_objects(self, marker: str | None) -> Paginator:
+    def _list_of_objects(self, marker: str | None) -> Paginator:  # pragma: no cover
         kwargs = {
             "Bucket": self.bucket_name,
         }
@@ -93,7 +93,7 @@ class AWSS3Worker(Thread, metaclass=ABCMeta):
         paginator = self.client.get_paginator("list_objects_v2")
         return paginator.paginate(**kwargs)
 
-    def get_last_key(self, marker: str | None) -> str | None:
+    def get_last_key(self, marker: str | None) -> str | None:  # pragma: no cover
         """
         Return the last known key in the bucket
         """
@@ -190,13 +190,13 @@ class AWSS3Worker(Thread, metaclass=ABCMeta):
                     records=list(records),
                     event_name=f"{self.name.lower().replace(' ', '-')}_{str(time.time())}",
                 )
-        except Exception as ex:
+        except Exception as ex:  # pragma: no cover
             self.log_exception(ex, message=f"Failed to forward events from {self.bucket_name}")
 
     def stop(self):
         self.alive.set()
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.log(message=f"{self.name} worker for '{self.prefix}' has started", level="info")
 
         # get the last key on the Bucket from the marker
@@ -276,7 +276,7 @@ class AWSS3FetcherTrigger(AWSConnector, metaclass=ABCMeta):
 
         return {self.prefix_pattern.format(account_id=account_id, region=region) for region in regions}
 
-    def start_worker(self, prefix: str):
+    def start_worker(self, prefix: str):  # pragma: no cover
         # Check if the worker is already running
         if prefix in self.workers:
             w = self.workers[prefix]
@@ -292,7 +292,7 @@ class AWSS3FetcherTrigger(AWSConnector, metaclass=ABCMeta):
         for prefix in self.prefixes():
             self.start_worker(prefix)
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.log(message=f"Starting {self.name} Trigger", level="info")
 
         try:

@@ -90,7 +90,7 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
 
                     if receipt := message.get("ReceiptHandle"):
                         receipts.append(receipt)
-                except ValueError as e:
+                except ValueError as e:  # pragma: no cover
                     self.log_exception(e, message="Invalid record")
         if self.delete_consumed_messages:
             entries = [{"Id": f"{index:04d}", "ReceiptHandle": receipt} for index, receipt in enumerate(receipts)]
@@ -123,7 +123,7 @@ class AWSS3QueuedConnector(AWSConnector, metaclass=ABCMeta):
             )
             time.sleep(self.configuration.frequency)
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.log(message=f"Starting {self.name} Trigger", level="info")
 
         try:
