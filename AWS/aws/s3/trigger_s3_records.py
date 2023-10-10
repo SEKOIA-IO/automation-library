@@ -10,16 +10,17 @@ class AWSS3RecordsTrigger(AWSS3QueuedConnector):
     def is_valid_payload(payload: dict) -> bool:
         event_source = payload.get("eventSource")
 
-        if event_source == "s3.amazonaws.com" and list(filter(
-            lambda x: payload.get("eventName", "").startswith(x),
-            ["Delete", "Create", "Copy", "Put", "Restore", "GetObject", "GetObjectTorrent", "ListBuckets"],
-        )):
+        if event_source == "s3.amazonaws.com" and list(
+            filter(
+                lambda x: payload.get("eventName", "").startswith(x),
+                ["Delete", "Create", "Copy", "Put", "Restore", "GetObject", "GetObjectTorrent", "ListBuckets"],
+            )
+        ):
             return True
 
-        if event_source != "s3.amazonaws.com" and list(filter(
-            lambda x: payload.get("eventName", "").startswith(x),
-            ["List", "Describe"]
-        )):
+        if event_source != "s3.amazonaws.com" and list(
+            filter(lambda x: payload.get("eventName", "").startswith(x), ["List", "Describe"])
+        ):
             return True
 
         return False
