@@ -166,11 +166,11 @@ class VadeCloudConsumer(Thread):
             self.set_last_timestamp(most_recent_timestamp_seen)
 
     def next_batch(self):
-        # save the starting time
-        batch_start_time = time.time()
-
-        # Fetch next batch
+        # Iterate through batches
         for events in self.fetch_events():
+            # save the starting time
+            batch_start_time = time.time()
+
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
             # if the batch is full, push it
@@ -192,31 +192,31 @@ class VadeCloudConsumer(Thread):
 
             else:
                 self.log(
-                    message="{self.name}: No events to forward",
+                    message=f"{self.name}: No events to forward",
                     level="info",
                 )
 
-        # get the ending time and compute the duration to fetch the events
-        batch_end_time = time.time()
-        batch_duration = int(batch_end_time - batch_start_time)
+            # get the ending time and compute the duration to fetch the events
+            batch_end_time = time.time()
+            batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
-            batch_duration
-        )
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
+                batch_duration
+            )
 
-        self.log(
-            message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
-            level="info",
-        )
-
-        # compute the remaining sleeping time. If greater than 0, sleep
-        delta_sleep = self.connector.configuration.frequency - batch_duration
-        if delta_sleep > 0:
             self.log(
-                message=f"{self.name}: Next batch in the future. Waiting {delta_sleep} seconds",
+                message=f"{self.name}: Fetched and forwarded events in {batch_duration} seconds",
                 level="info",
             )
-            time.sleep(delta_sleep)
+
+            # compute the remaining sleeping time. If greater than 0, sleep
+            delta_sleep = self.connector.configuration.frequency - batch_duration
+            if delta_sleep > 0:
+                self.log(
+                    message=f"{self.name}: Next batch in the future. Waiting {delta_sleep} seconds",
+                    level="info",
+                )
+                time.sleep(delta_sleep)
 
     def run(self):
         try:
