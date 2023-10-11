@@ -4,7 +4,13 @@ from gevent import monkey
 monkey.patch_all()
 from sekoia_automation.module import Module
 
-from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostReportsPdf, PostReportsUrl, ReportsGetReport, ObjectsSearchObjects
+from sekoiaio.intelligence_center import (
+    CreateNewTrackerNotification,
+    PostReportsPdf,
+    PostReportsUrl,
+    ReportsGetReport,
+    ObjectsSearchObjects,
+)
 from sekoiaio.intelligence_center.actions import PostBundleAction
 from sekoiaio.intelligence_center.upload_observables_inthreat import UploadObservablesAction
 from sekoiaio.operation_center import (

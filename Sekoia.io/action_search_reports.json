@@ -1,112 +1,111 @@
 {
-    "uuid": "5d60776b-eb19-4421-aca3-df1cd109d9c0",
-    "name": "Get reports",
-    "docker_parameters": "post_search_objects",
-    "description": "Get reports from a specific term",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+  "uuid": "5d60776b-eb19-4421-aca3-df1cd109d9c0",
+  "name": "Get reports",
+  "docker_parameters": "post_search_objects",
+  "description": "Get reports from a specific term",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "post_search_objects",
+    "properties": {
+      "sort": {
+        "type": "string",
+        "default": "pertinence"
+      },
+      "term": {
+        "type": "string"
+      }
+    },
+    "required": ["term"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "items": {
         "type": "object",
-        "title": "post_search_objects",
         "properties": {
-            "sort": {
-                "type": "string",
-                "default": "pertinence"
-            },
-            "term": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "created_by_ref": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string"
+          },
+          "modified": {
+            "type": "string"
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "external_references": {
+            "type": "object",
+            "properties": {
+              "source_name": {
                 "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
             }
-        },
-        "required": [
-            "term"
-        ]
-    },
-    "results": {
-        "type": "object",
-        "properties": {
-            "items": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "type": {
-                        "type": "string"
-                    },
-                    "created_by_ref": {
-                        "type": "string"
-                    },
-                    "created": {
-                        "type": "string"
-                    },
-                    "modified": {
-                        "type": "string"
-                    },
-                    "revoked": {
-                        "type": "boolean"
-                    },
-                    "external_references": {
-                        "type": "object",
-                        "properties": {
-                            "source_name": {
-                                "type": "string"
-                            },
-                            "url": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "object_marking_refs": {
-                        "type": "array"
-                    },
-                    "confidence": {
-                        "type": "integer"
-                    },
-                    "lang": {
-                        "type": "string"
-                    },
-                    "spec_version": {
-                        "type": "string"
-                    },
-                    "x_inthreat_sources_refs": {
-                        "type": "array"
-                    },
-                    "x_inthreat_uploaded_files": {
-                        "type": "object",
-                        "properties": {
-                            "sha256": {
-                                "type": "string"
-                            },
-                            "uploaded_at": {
-                                "type": "string"
-                            },
-                            "mime_type": {
-                                "type": "string"
-                            },
-                            "file_name": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "x_ic_is_in_flint": {
-                        "type": "boolean"
-                    },
-                    "x_ic_deprecated": {
-                        "type": "boolean"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "published": {
-                        "type": "boolean"
-                    },
-                    "report_types": {
-                        "type": "array"
-                    }
-                }    
+          },
+          "object_marking_refs": {
+            "type": "array"
+          },
+          "confidence": {
+            "type": "integer"
+          },
+          "lang": {
+            "type": "string"
+          },
+          "spec_version": {
+            "type": "string"
+          },
+          "x_inthreat_sources_refs": {
+            "type": "array"
+          },
+          "x_inthreat_uploaded_files": {
+            "type": "object",
+            "properties": {
+              "sha256": {
+                "type": "string"
+              },
+              "uploaded_at": {
+                "type": "string"
+              },
+              "mime_type": {
+                "type": "string"
+              },
+              "file_name": {
+                "type": "string"
+              }
             }
+          },
+          "x_ic_is_in_flint": {
+            "type": "boolean"
+          },
+          "x_ic_deprecated": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "report_types": {
+            "type": "array"
+          }
         }
-    },
-        "required": [
-            "items"
-        ]
+      },
+      "has_more": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["items", "has_more"]
 }

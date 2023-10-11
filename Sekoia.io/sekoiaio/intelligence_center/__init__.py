@@ -622,7 +622,7 @@ ObjectsSearchObjects = type(
     {
         "verb": "post",
         "endpoint": base_url + "objects/search?types=report",
-        "query_parameters": [ "term", "sort"],
+        "query_parameters": ["term", "sort"],
     },
 )
 
