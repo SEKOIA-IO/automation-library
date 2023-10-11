@@ -4,7 +4,7 @@ from gevent import monkey
 monkey.patch_all()
 from sekoia_automation.module import Module
 
-from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostReportsPdf, PostReportsUrl, ReportsGetReport
+from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostReportsPdf, PostReportsUrl, ReportsGetReport, ObjectsSearchObjects
 from sekoiaio.intelligence_center.actions import PostBundleAction
 from sekoiaio.intelligence_center.upload_observables_inthreat import UploadObservablesAction
 from sekoiaio.operation_center import (
@@ -65,6 +65,7 @@ if __name__ == "__main__":
     module.register(DeletesAsset, "delete-assets/{uuid}")
     module.register(ReturnsAsset, "get-assets/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
+    module.register(ObjectsSearchObjects, "post_search_objects")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

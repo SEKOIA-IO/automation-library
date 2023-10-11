@@ -621,8 +621,8 @@ ObjectsSearchObjects = type(
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": base_url + "objects/search",
-        "query_parameters": ["limit", "offset", "term"],
+        "endpoint": base_url + "objects/search?types=report",
+        "query_parameters": [ "term", "sort"],
     },
 )
 
