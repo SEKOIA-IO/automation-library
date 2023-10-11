@@ -166,8 +166,13 @@ class VadeCloudConsumer(Thread):
             self.set_last_timestamp(most_recent_timestamp_seen)
 
     def next_batch(self):
+        no_events = True
+        start_time = time.time()
+
         # Iterate through batches
         for events in self.fetch_events():
+            no_events = False
+
             # save the starting time
             batch_start_time = time.time()
 
@@ -214,6 +219,19 @@ class VadeCloudConsumer(Thread):
             if delta_sleep > 0:
                 self.log(
                     message=f"{self.name}: Next batch in the future. Waiting {delta_sleep} seconds",
+                    level="info",
+                )
+                time.sleep(delta_sleep)
+
+        if no_events:
+            end_time = time.time()
+            duration = int(end_time - start_time)
+
+            # compute the remaining sleeping time. If greater than 0, sleep
+            delta_sleep = self.connector.configuration.frequency - duration
+            if delta_sleep > 0:
+                self.log(
+                    message=f"{self.name}: No events for now. Waiting {delta_sleep} seconds",
                     level="info",
                 )
                 time.sleep(delta_sleep)
