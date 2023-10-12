@@ -9,6 +9,7 @@ from sekoiaio.intelligence_center import base_url
 import re
 from posixpath import join as urljoin
 
+
 class PostBundleAction(GenericAPIAction):
     verb = "post"
     endpoint = base_url + "bundles"
@@ -25,9 +26,9 @@ class PostBundleAction(GenericAPIAction):
 
 
 class GetContextAction(GenericAPIAction):
-    verb= "post"
-    endpoint= base_url + "objects/search"
-    query_parameters= ["term", "sort"]
+    verb = "post"
+    endpoint = base_url + "objects/search"
+    query_parameters = ["term", "sort"]
 
     def run(self, arguments) -> dict:
         results = super().run(arguments)
@@ -35,10 +36,9 @@ class GetContextAction(GenericAPIAction):
 
         for item in items:
             if item.get("external_references")[0].get("source_name").startswith("FLINT"):
-                ind=items.index(item)
-                url = "https://app.sekoia.io/intelligence/objects/"+ item.get("id")
-                item["external_references"][0].update({"url" :url})
-                items[ind]=item
-        
-        return {"items" : items,  "has_more" : results.get("has_more")}
-    
+                ind = items.index(item)
+                url = "https://app.sekoia.io/intelligence/objects/" + item.get("id")
+                item["external_references"][0].update({"url": url})
+                items[ind] = item
+
+        return {"items": items, "has_more": results.get("has_more")}
