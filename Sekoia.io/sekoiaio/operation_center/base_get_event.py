@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 import requests
 from requests import Session
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 from requests.structures import CaseInsensitiveDict
 from sekoia_automation.action import Action
 
