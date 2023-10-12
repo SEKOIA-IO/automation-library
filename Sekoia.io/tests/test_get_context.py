@@ -79,7 +79,7 @@ def get_context_response_with_url():
     }
 
 
-def get_context_response_with_ur(get_context_response, get_context_response_with_url):
+def get_context_res_with_url(get_context_response, get_context_response_with_url):
     arguments = {"term": "8.8.8.8"}
     action: GetContextAction = GetContextAction()
     action.module.configuration = {"base_url": "http://fake.url/", "api_key": "fake_api_key"}
@@ -94,7 +94,7 @@ def get_context_response_with_ur(get_context_response, get_context_response_with
         assert results == get_context_response_with_url
 
 
-def get_context_response(get_context_response):
+def get_context_res(get_context_response):
     arguments = {"term": "8.8.8.8"}
     action: GetContextAction = GetContextAction()
     action.module.configuration = {"base_url": "http://fake.url/", "api_key": "fake_api_key"}
