@@ -21,3 +21,18 @@ class PostBundleAction(GenericAPIAction):
             return results.get("data")
 
         return None
+
+
+class GetContextAction(GenericAPIAction):
+    verb= "post"
+    endpoint= base_url + "objects/search?limit=10",
+    query_parameters= ["term", "sort"],
+
+    def run(self, arguments) -> dict:
+        results = super().run(arguments)
+
+        if results.get("external_references")[0].get("source_name").startswith("FLINT"):
+            url = "https://app.sekoia.io/intelligence/objects/"+ results.get("id", "")
+            results["external_references"][0]["url"] = url
+        
+        return results
