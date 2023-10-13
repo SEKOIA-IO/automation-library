@@ -53,7 +53,7 @@ class AWSSQSMessagesTrigger(AWSConnector):
 
                         if receipt := message.get("ReceiptHandle"):
                             receipts.append(receipt)
-                    except ValueError as e:
+                    except ValueError as e:  # pragma: no cover
                         self.log_exception(e, message="Invalid record")
             if records:
                 self.log(message=f"Forwarding {len(records)} messages", level="info")
@@ -65,14 +65,14 @@ class AWSSQSMessagesTrigger(AWSConnector):
                 entries = [{"Id": f"{index:04d}", "ReceiptHandle": receipt} for index, receipt in enumerate(receipts)]
                 if entries:
                     self.sqs_client.delete_message_batch(QueueUrl=self.queue_url, Entries=entries)
-        else:
+        else:  # pragma: no cover
             self.log(
                 message=f"No messages to process. Wait next batch in {self.configuration.frequency}s",
                 level="info",
             )
             time.sleep(self.configuration.frequency)
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.log(message=f"Starting {self.name} Trigger", level="info")
 
         try:
