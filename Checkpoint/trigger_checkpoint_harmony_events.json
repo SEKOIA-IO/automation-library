@@ -1,0 +1,40 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Trigger Checkpoint Harmony configuration",
+        "type": "object",
+        "properties": {
+            "ratelimit_per_minute": {
+                "description": "Maximum number of requests per minute",
+                "default": 60,
+                "type": "integer"
+            },
+            "intake_server": {
+                "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+                "default": "https://intake.sekoia.io",
+                "type": "string"
+            },
+            "intake_key": {
+                "description": "Intake key to use when sending events",
+                "type": "string"
+            },
+            "chunk_size": {
+                "type": "integer",
+                "description": "The max size of chunks for the batch processing",
+                "default": 1000
+            }
+        },
+        "required": [
+            "intake_key"
+        ]
+    },
+    "description": "Trigger playbook to get Checkpoint Harmony events",
+    "docker_parameters": "checkpoint_harmony",
+    "name": "Collect Checkpoint Harmony events",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {},
+        "title": "The records"
+    },
+    "uuid": "ff092b32-68dc-11ee-8c99-0242ac120002"
+}
