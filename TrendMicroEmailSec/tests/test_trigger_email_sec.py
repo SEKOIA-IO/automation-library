@@ -117,6 +117,10 @@ def test_saving_checkpoint(trigger):
     consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
 
     now = int(time.time())
+
+    result = consumer.get_last_timestamp()
+    assert now - result <= 5 * 60 + 5
+
     consumer.set_last_timestamp(last_timestamp=now)
 
     result = consumer.get_last_timestamp()
