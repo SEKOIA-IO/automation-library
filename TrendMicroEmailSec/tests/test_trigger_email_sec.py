@@ -142,19 +142,27 @@ def test_fetch_event(trigger, response_message, response_message_empty):
     ) as mock_time:
         mock_requests.get(
             "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog",
-            [{"status_code": 200, "json": response_message}, {"status_code": 200, "json": response_message_empty}],
+            [{"status_code": 200, "json": response_message}, {"status_code": 200, "content": response_message_empty}],
         )
 
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
         end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, start_time, end_time, end_time]
+        mock_time.time.side_effect = [
+            start_time,  # 1st batch start
+            start_time,  # 1st iterate_through_pages
+            end_time,  # 1st batch end
+            end_time,  # 2nd batch start
+            end_time,  # 2nd iterate_through_pages
+            end_time + batch_duration,  # 2nd batch start
+        ]
 
         consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
         consumer.next_batch()
+        mock_time.sleep.assert_called_once_with(44)
+        consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
-        mock_time.sleep.assert_called_once_with(44)
 
 
 def test_fetch_empty_content(trigger, response_message_empty):
