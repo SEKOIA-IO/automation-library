@@ -7,6 +7,7 @@ patch_all()
 import json
 import random
 import time
+from urllib.parse import urlparse
 
 import requests
 from sekoia_automation.trigger import Trigger
@@ -55,10 +56,13 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         # from the base URL (which is mandatory).
         if liveapi_url is None:
             base_url = self.module.configuration["base_url"]
-            if "app.test.sekoia.io" in base_url:
+            domain = urlparse(base_url).netloc
+            if domain in ["app.test.sekoia.io", "api.test.sekoia.io"]:
                 liveapi_url = "wss://live.test.sekoia.io/"
-            else:
+            elif domain in ["app.sekoia.io", "api.sekoia.io"]:
                 liveapi_url = "wss://live.sekoia.io/"
+            else:
+                liveapi_url = f"wss://{domain}/live"
 
         return liveapi_url
 
