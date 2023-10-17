@@ -15,7 +15,7 @@ def trigger(symphony_storage):
     trigger = TrendMicroEmailSecurityConnector(module=module, data_path=symphony_storage)
 
     trigger.module.configuration = {
-        "service_url": "https://api.tmes.trendmicro.eu",
+        "service_url": "api.tmes.trendmicro.eu",
         "username": "johndoe",
         "api_key": "01234556789abcdef",
     }
@@ -151,3 +151,29 @@ def test_fetch_event(trigger, response_message, response_message_empty):
 
         assert trigger.push_events_to_intakes.call_count == 1
         mock_time.sleep.assert_called_once_with(44)
+
+
+def test_fetch_empty_content(trigger, response_message_empty):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.get_last_timestamp",
+        return_value=0,
+    ) as mock_get_ts, patch(
+        "trendmicro_modules.trigger_email_sec.TrendMicroWorker.set_last_timestamp"
+    ) as mock_set_ts, patch(
+        "trendmicro_modules.trigger_email_sec.time"
+    ) as mock_time:
+        mock_requests.get(
+            "https://api.tmes.trendmicro.eu/api/v1/log/mailtrackinglog",
+            [{"status_code": 204, "content": response_message_empty}],
+        )
+
+        batch_duration = 60  # because we sleep after receiving no content
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, start_time, end_time]
+
+        consumer = TrendMicroWorker(connector=trigger, log_type="accepted_traffic")
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        mock_time.sleep.assert_called_once_with(60)
