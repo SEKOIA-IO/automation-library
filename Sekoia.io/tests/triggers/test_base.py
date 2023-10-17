@@ -38,12 +38,17 @@ def test_sekoianotificationbasetrigger_handler_dispatch_invalid_json(base_trigge
 
 def test_sekoianotificationbasetrigger_liveapi_url(base_trigger):
     base_trigger.module.configuration["base_url"] = "https://app.sekoia.io"
-    assert base_trigger.liveapi_url == "wss://live.sekoia.io/"
+    assert base_trigger.liveapi_url == "wss://app.sekoia.io/live"
+
+
+def test_sekoianotificationbasetrigger_liveapi_url_api(base_trigger):
+    base_trigger.module.configuration["base_url"] = "https://api.sekoia.io"
+    assert base_trigger.liveapi_url == "wss://app.sekoia.io/live"
 
 
 def test_sekoianotificationbasetrigger_liveapi_url_test(base_trigger):
     base_trigger.module.configuration["base_url"] = "wss://app.test.sekoia.io"
-    assert base_trigger.liveapi_url == "wss://live.test.sekoia.io/"
+    assert base_trigger.liveapi_url == "wss://app.test.sekoia.io/live"
 
 
 def test_sekoianotificationbasetrigger_liveapi_url_other(base_trigger):

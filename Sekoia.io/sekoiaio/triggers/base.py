@@ -57,12 +57,10 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         if liveapi_url is None:
             base_url = self.module.configuration["base_url"]
             domain = urlparse(base_url).netloc
-            if domain in ["app.test.sekoia.io", "api.test.sekoia.io"]:
-                liveapi_url = "wss://live.test.sekoia.io/"
-            elif domain in ["app.sekoia.io", "api.sekoia.io"]:
-                liveapi_url = "wss://live.sekoia.io/"
-            else:
-                liveapi_url = f"wss://{domain}/live"
+            if domain in ["api.sekoia.io", "api.test.sekoia.io"]:
+                domain = domain.replace("api", "app")
+
+            liveapi_url = f"wss://{domain}/live"
 
         return liveapi_url
 
