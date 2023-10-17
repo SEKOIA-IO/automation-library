@@ -12,7 +12,7 @@ class AWSS3RecordsTrigger(AWSS3QueuedConnector):
 
         # If eventSource is "s3" then we should collect logs only if the event name starts with one of the following
         if event_source == "s3.amazonaws.com":
-            if payload.get("eventName").startswith("GetObjectTagging"):
+            if payload.get("eventName", "").startswith("GetObjectTagging"):
                 return False
 
             return (
