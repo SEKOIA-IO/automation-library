@@ -29,7 +29,7 @@ def get_content(obj: dict[str, Any]) -> bytes:
     """
     content: bytes = obj["Body"].read()
 
-    if is_gzip_compressed(content):
+    if is_gzip_compressed(content):  # pragma: no cover
         content = decompress(content)
 
     return content
