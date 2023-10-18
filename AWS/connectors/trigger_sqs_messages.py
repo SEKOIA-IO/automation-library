@@ -41,18 +41,22 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         return SqsWrapper(config)
 
-    async def next_batch(self) -> list[str]:
+    async def next_batch(self) -> tuple[list[str], list[int]]:
         """
         Get next batch of messages.
 
         Contains main logic of the connector.
 
         Returns:
-            list[str]:
+            tuple[list[str], list[int]]:
         """
-        async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
+        async with self.sqs_wrapper.receive_messages(max_messages=1) as messages:
             records = []
-            for message in messages:
+            timestamps_to_log: list[int] = []
+            for data in messages:
+                message, message_timestamp = data
+
+                timestamps_to_log.append(message_timestamp)
                 try:
                     # Records is a list of strings
                     records.extend(orjson.loads(message).get("Records", []))
@@ -63,4 +67,4 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
             result: list[str] = await self.push_data_to_intakes(events=records)
 
-            return result
+            return result, timestamps_to_log

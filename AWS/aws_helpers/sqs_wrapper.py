@@ -73,7 +73,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
     @asynccontextmanager
     async def receive_messages(
         self, frequency: int | None = None, max_messages: int = 10, delete_consumed_messages: bool | None = None
-    ) -> AsyncGenerator[list[str], None]:
+    ) -> AsyncGenerator[list[tuple[str, int]], None]:
         """
         Receive SQS messages.
 
@@ -89,7 +89,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             delete_consumed_messages: int
 
         Yields:
-            list[str]:
+            list[tuple[str, int]]: list of message content and message sent timestamp
         """
         if max_messages < 1 or max_messages > 10:
             raise ValueError("max_messages should be between 1 and 10")
@@ -118,7 +118,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
 
             try:
                 for message in response.get("Messages", []):
-                    result.append(message["Body"])
+                    result.append((message["Body"], int(message["Attributes"]["SentTimestamp"])))
 
                 logger.info(f"Received {len(result)} messages from sqs queue {self._configuration.queue_name}")
 

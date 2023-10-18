@@ -2,17 +2,18 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from faker import Faker
 
 from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
 
 
 @pytest.mark.asyncio
-async def test_read_key(session_faker):
+async def test_read_key(session_faker: Faker):
     """
     Test read_key method.
 
     Args:
-        session_faker:
+        session_faker: Faker
     """
     key = session_faker.file_path(depth=2, extension="txt")
     bucket = session_faker.word()

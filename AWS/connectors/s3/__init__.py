@@ -88,7 +88,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return data
 
-    async def next_batch(self) -> list[str]:
+    async def next_batch(self) -> tuple[list[str], list[int]]:
         """
         Get next batch of messages.
 
@@ -98,9 +98,13 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             list[str]:
         """
         result = []
-        async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
+        async with self.sqs_wrapper.receive_messages(max_messages=1) as messages:
             records = []
-            for message in messages:
+            timestamps_to_log: list[int] = []
+            for message_data in messages:
+                message, message_timestamp = message_data
+
+                timestamps_to_log.append(message_timestamp)
                 try:
                     # Records is a list of strings
                     records.extend(orjson.loads(message).get("Records", []))
@@ -134,4 +138,4 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         level="warning",
                     )
 
-        return result
+            return result, timestamps_to_log

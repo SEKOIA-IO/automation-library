@@ -122,18 +122,29 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
         session_faker: Faker
     """
     first_message = session_faker.sentence()
+    first_timestamp = session_faker.pyint(min_value=1, max_value=1000)
+
     second_message = session_faker.sentence()
+    second_timestamp = session_faker.pyint(min_value=1, max_value=1000)
 
     receipt_handle_1 = session_faker.word()
     receipt_handle_2 = session_faker.word()
 
     queue_url = session_faker.url()
 
-    expected_messages = [first_message, second_message]
+    expected_messages = [(first_message, first_timestamp), (second_message, second_timestamp)]
     expected_response = {
         "Messages": [
-            {"Body": first_message, "ReceiptHandle": receipt_handle_1},
-            {"Body": second_message, "ReceiptHandle": receipt_handle_2},
+            {
+                "Body": first_message,
+                "ReceiptHandle": receipt_handle_1,
+                "Attributes": {"SentTimestamp": first_timestamp},
+            },
+            {
+                "Body": second_message,
+                "ReceiptHandle": receipt_handle_2,
+                "Attributes": {"SentTimestamp": second_timestamp},
+            },
         ]
     }
 

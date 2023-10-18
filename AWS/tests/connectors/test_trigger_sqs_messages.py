@@ -99,21 +99,29 @@ async def test_trigger_sqs_messages_client(
 
 
 @pytest.mark.asyncio
-async def test_trigger_sqs_messages(faker: Faker, sqs_message: str, connector: AwsSqsMessagesTrigger):
+async def test_trigger_sqs_messages(session_faker: Faker, sqs_message: str, connector: AwsSqsMessagesTrigger):
     """
     Test trigger AwsSqsMessagesTriggerConfiguration.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         sqs_message: str
         connector: AwsSqsMessagesTrigger
     """
-    amount_of_messages = faker.pyint(min_value=5, max_value=100)
+    amount_of_messages = session_faker.pyint(min_value=5, max_value=100)
 
-    valid_messages = [sqs_message for _ in range(amount_of_messages)]
-    expected_result = []
-    for message in valid_messages:
-        expected_result.extend(orjson.loads(message).get("Records", []))
+    valid_messages = [
+        (sqs_message, session_faker.pyint(min_value=1, max_value=1000)) for _ in range(amount_of_messages)
+    ]
+    expected_messages = []
+    expected_timestamps = []
+    for data in valid_messages:
+        message, timestamp = data
+
+        expected_messages.extend(orjson.loads(message).get("Records", []))
+        expected_timestamps.append(timestamp)
+
+    expected_result = expected_messages, expected_timestamps
 
     connector.sqs_wrapper = MagicMock()
     connector.sqs_wrapper.receive_messages = MagicMock()
@@ -123,24 +131,39 @@ async def test_trigger_sqs_messages(faker: Faker, sqs_message: str, connector: A
 
 
 @pytest.mark.asyncio
-async def test_trigger_sqs_messages_with_one_failed(faker: Faker, sqs_message: str, connector: AwsSqsMessagesTrigger):
+async def test_trigger_sqs_messages_with_one_failed(
+    session_faker: Faker, sqs_message: str, connector: AwsSqsMessagesTrigger
+):
     """
     Test trigger AwsSqsMessagesTriggerConfiguration with expected one failed message to decode.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         sqs_message: str
         connector: AwsSqsMessagesTrigger
     """
-    amount_of_messages = faker.pyint()
+    amount_of_messages = session_faker.pyint(min_value=1, max_value=100)
+    failed_message_timestamp = session_faker.pyint(min_value=1, max_value=1000)
+    valid_messages = [
+        (sqs_message, session_faker.pyint(min_value=1, max_value=1000)) for _ in range(amount_of_messages)
+    ]
 
-    valid_messages = [sqs_message for _ in range(amount_of_messages)]
-    expected_result = []
-    for message in valid_messages:
-        expected_result.extend(orjson.loads(message).get("Records", []))
+    expected_messages = []
+    expected_timestamps = []
+    for data in valid_messages:
+        message, timestamp = data
+
+        expected_messages.extend(orjson.loads(message).get("Records", []))
+        expected_timestamps.append(timestamp)
+
+    expected_timestamps.append(failed_message_timestamp)
+
+    expected_result = expected_messages, expected_timestamps
 
     connector.sqs_wrapper = MagicMock()
     connector.sqs_wrapper.receive_messages = MagicMock()
-    connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages + [faker.word()]
+    connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages + [
+        (session_faker.word(), failed_message_timestamp)
+    ]
 
     assert await connector.next_batch() == expected_result

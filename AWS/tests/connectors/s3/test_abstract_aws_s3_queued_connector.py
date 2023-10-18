@@ -13,31 +13,31 @@ from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
 @pytest.fixture
-def test_bucket(faker: Faker) -> str:
+def test_bucket(session_faker: Faker) -> str:
     """
     Create a test bucket.
 
     Args:
-        faker: Faker
+        session_faker: Faker
 
     Returns:
         str:
     """
-    return faker.word()
+    return session_faker.word()
 
 
 @pytest.fixture
-def test_key(faker: Faker) -> str:
+def test_key(session_faker: Faker) -> str:
     """
     Create a test key.
 
     Args:
-        faker: Faker
+        session_faker: Faker
 
     Returns:
         str:
     """
-    return faker.word()
+    return session_faker.word()
 
 
 @pytest.fixture
@@ -121,17 +121,17 @@ def test_abstract_aws_s3_queued_connector_wrappers(abstract_queued_connector: Ab
 
 
 def test_abstract_aws_s3_queued_connector_decompress_content(
-    faker: Faker,
+    session_faker: Faker,
     abstract_queued_connector: AbstractAwsS3QueuedConnector,
 ):
     """
     Test AbstractAwsS3QueuedConnector s3 wrapper initialization.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         abstract_queued_connector: AbstractAwsS3QueuedConnector
     """
-    input_data = faker.word().encode("utf-8")
+    input_data = session_faker.word().encode("utf-8")
 
     compressed_data = compress(input_data)
 
@@ -145,21 +145,27 @@ def test_abstract_aws_s3_queued_connector_decompress_content(
 
 @pytest.mark.asyncio
 async def test_abstract_aws_s3_queued_connector_next_batch(
-    faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
 ):
     """
     Test AbstractAwsS3QueuedConnector next_batch method.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         abstract_queued_connector: AbstractAwsS3QueuedConnector
         sqs_message: str
     """
-    amount_of_messages = faker.pyint(min_value=5, max_value=100)
+    amount_of_messages = session_faker.pyint(min_value=5, max_value=100)
 
-    sqs_messages = [sqs_message for _ in range(amount_of_messages)]
+    sqs_messages = [(sqs_message, session_faker.pyint(min_value=5, max_value=100)) for _ in range(amount_of_messages)]
 
-    data_content = faker.word()
+    expected_timestamps = []
+    for data in sqs_messages:
+        _, timestamp = data
+
+        expected_timestamps.append(timestamp)
+
+    data_content = session_faker.word()
     expected_result = [data_content for _ in range(amount_of_messages)]
 
     abstract_queued_connector.sqs_wrapper = MagicMock()
@@ -172,31 +178,40 @@ async def test_abstract_aws_s3_queued_connector_next_batch(
 
     result = await abstract_queued_connector.next_batch()
 
-    assert len(result) == len(expected_result)
-    assert result == expected_result
+    assert len(result[0]) == len(expected_result)
+    assert len(result[1]) == len(expected_timestamps)
+    assert result == (expected_result, expected_timestamps)
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message(
-    faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
 ):
     """
     Test AbstractAwsS3QueuedConnector next_batch method.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         abstract_queued_connector: AbstractAwsS3QueuedConnector
         sqs_message: str
     """
-    amount_of_messages = faker.pyint(min_value=5, max_value=100)
+    amount_of_messages = session_faker.pyint(min_value=5, max_value=100)
 
-    sqs_messages = [sqs_message for _ in range(amount_of_messages)] + [faker.word()]
+    valid_messages = [
+        (sqs_message, session_faker.pyint(min_value=1, max_value=1000)) for _ in range(amount_of_messages)
+    ] + [(session_faker.word(), session_faker.pyint(min_value=1, max_value=1000))]
 
-    data_content = faker.word()
+    expected_timestamps = []
+    for data in valid_messages:
+        message, timestamp = data
+
+        expected_timestamps.append(timestamp)
+
+    data_content = session_faker.word()
     expected_result = [data_content for _ in range(amount_of_messages)]
 
     abstract_queued_connector.sqs_wrapper = MagicMock()
     abstract_queued_connector.sqs_wrapper.receive_messages = MagicMock()
-    abstract_queued_connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = sqs_messages
+    abstract_queued_connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
 
     abstract_queued_connector.s3_wrapper = MagicMock()
     abstract_queued_connector.s3_wrapper.read_key = MagicMock()
@@ -204,24 +219,25 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message(
 
     result = await abstract_queued_connector.next_batch()
 
-    assert len(result) == len(expected_result)
-    assert result == expected_result
+    assert len(result[0]) == len(expected_result)
+    assert len(result[1]) == len(expected_timestamps)
+    assert result == (expected_result, expected_timestamps)
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_1(
-    faker: Faker,
+    session_faker: Faker,
     abstract_queued_connector: AbstractAwsS3QueuedConnector,
 ):
     """
     Test AbstractAwsS3QueuedConnector next_batch method.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         abstract_queued_connector: AbstractAwsS3QueuedConnector
     """
     sqs_message = orjson.dumps({"Records": [{}]}).decode("utf-8")
-
-    sqs_messages = [sqs_message]
+    message_timestamp = session_faker.pyint(min_value=1, max_value=1000)
+    sqs_messages = [(sqs_message, message_timestamp)]
 
     abstract_queued_connector.sqs_wrapper = MagicMock()
     abstract_queued_connector.sqs_wrapper.receive_messages = MagicMock()
@@ -229,23 +245,23 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_
 
     result = await abstract_queued_connector.next_batch()
 
-    assert result == []
+    assert result == ([], [message_timestamp])
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_2(
-    faker: Faker,
+    session_faker: Faker,
     abstract_queued_connector: AbstractAwsS3QueuedConnector,
 ):
     """
     Test AbstractAwsS3QueuedConnector next_batch method.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         abstract_queued_connector: AbstractAwsS3QueuedConnector
     """
-    sqs_message = orjson.dumps({"Records": [{"s3": {"bucket": {"name": faker.word()}}}]}).decode("utf-8")
-
-    sqs_messages = [sqs_message]
+    sqs_message = orjson.dumps({"Records": [{"s3": {"bucket": {"name": session_faker.word()}}}]}).decode("utf-8")
+    message_timestamp = session_faker.pyint(min_value=1, max_value=1000)
+    sqs_messages = [(sqs_message, message_timestamp)]
 
     abstract_queued_connector.sqs_wrapper = MagicMock()
     abstract_queued_connector.sqs_wrapper.receive_messages = MagicMock()
@@ -253,27 +269,29 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_
 
     result = await abstract_queued_connector.next_batch()
 
-    assert result == []
+    assert result == ([], [message_timestamp])
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_empty_data_in_s3(
-    faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
+    session_faker: Faker, abstract_queued_connector: AbstractAwsS3QueuedConnector, sqs_message: str
 ):
     """
     Test AbstractAwsS3QueuedConnector next_batch method.
 
     Args:
-        faker: Faker
+        session_faker: Faker
         abstract_queued_connector: AbstractAwsS3QueuedConnector
         sqs_message: str
     """
-    amount_of_messages = faker.pyint(min_value=5, max_value=100)
+    amount_of_messages = session_faker.pyint(min_value=5, max_value=100)
 
-    sqs_messages = [sqs_message for _ in range(amount_of_messages)] + [faker.word()]
+    valid_messages = [
+        (sqs_message, session_faker.pyint(min_value=1, max_value=1000)) for _ in range(amount_of_messages)
+    ]
 
     abstract_queued_connector.sqs_wrapper = MagicMock()
     abstract_queued_connector.sqs_wrapper.receive_messages = MagicMock()
-    abstract_queued_connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = sqs_messages
+    abstract_queued_connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
 
     abstract_queued_connector.s3_wrapper = MagicMock()
     abstract_queued_connector.s3_wrapper.read_key = MagicMock()
@@ -281,4 +299,4 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_empty_data_in_s3
 
     result = await abstract_queued_connector.next_batch()
 
-    assert result == []
+    assert result == ([], [message[1] for message in valid_messages])

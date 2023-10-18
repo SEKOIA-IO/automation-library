@@ -17,14 +17,14 @@ def test_normalize_s3_key():
     assert normalize_s3_key(data_2) == expected_result_2
 
 
-def test_get_content(faker: Faker):
+def test_get_content(session_faker: Faker):
     """
     Test get_content function.
 
     Args:
-        faker: Faker
+        session_faker: Faker
     """
-    expected_result_1 = faker.word().encode()
+    expected_result_1 = session_faker.word().encode()
     mock_1 = MagicMock()
     mock_1.read.return_value = expected_result_1
     data_1 = {
@@ -33,7 +33,7 @@ def test_get_content(faker: Faker):
 
     assert get_content(data_1) == expected_result_1
 
-    expected_result_2 = faker.word().encode()
+    expected_result_2 = session_faker.word().encode()
     mock_2 = MagicMock()
     mock_2.read.return_value = compress(expected_result_2)
     data_2 = {

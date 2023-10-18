@@ -57,50 +57,50 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
 
         return AwsClient(config)
 
-    async def next_batch(self) -> list[str]:
+    async def next_batch(self) -> tuple[list[str], list[int]]:
         """
         Get next batch of messages.
 
         Contains main logic of the connector.
 
         Returns:
-            list[str]:
+            tuple[list[str], int]:
         """
         raise NotImplementedError("next_batch method must be implemented")
 
     def run(self) -> None:  # pragma: no cover
         """Run the connector."""
-        loop = asyncio.get_event_loop()
+        while self.running:
+            try:
+                loop = asyncio.get_event_loop()
 
-        previous_processing_end = None
-        try:
-            while True:
-                processing_start = time.time()
-                if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_start - previous_processing_end
+                while self.running:
+                    processing_start = time.time()
+
+                    batch_result: tuple[list[str], list[int]] = loop.run_until_complete(self.next_batch())
+                    message_ids, messages_timestamp = batch_result
+
+                    # Identify delay between message timestamp ( when it was pushed to sqs )
+                    # and current timestamp ( when it was processed )
+                    processing_end = time.time()
+                    for message_timestamp in messages_timestamp:
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                            processing_end - message_timestamp
+                        )
+
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+
+                    log_message = "No records to forward"
+                    if len(message_ids) > 0:
+                        log_message = "Pushed {0} records".format(len(message_ids))
+
+                    self.log(message=log_message, level="info")
+
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_end - processing_start
                     )
 
-                message_ids: list[str] = loop.run_until_complete(self.next_batch())
-                processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    time.sleep(self.configuration.frequency)
 
-                log_message = "No records to forward"
-                if len(message_ids) > 0:
-                    log_message = "Pushed {0} records".format(len(message_ids))
-
-                self.log(message=log_message, level="info")
-
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                    processing_end - processing_start
-                )
-
-                previous_processing_end = processing_end
-
-                time.sleep(self.configuration.frequency)
-
-        except Exception as e:
-            self.log_exception(e)
-
-        finally:
-            loop.close()
+            except Exception as e:
+                self.log_exception(e)
