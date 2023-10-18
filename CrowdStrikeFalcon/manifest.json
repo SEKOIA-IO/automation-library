@@ -20,10 +20,6 @@
                 "type": "string",
                 "default": "https://api.eu-1.crowdstrike.com",
                 "format": "uri"
-            },
-            "stix_objects_path": {
-                "description": "Filepath of the STIX objects fetched from the collection",
-                "type": "string"
             }
         },
         "required": [
