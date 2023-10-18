@@ -27,11 +27,17 @@ class AwsModule(Module):
     configuration: AwsModuleConfiguration
 
 
+class AbstractAwsConnectorConfiguration(DefaultConnectorConfiguration):
+    """The abstract connector configuration."""
+
+    frequency: int = 60
+
+
 class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
     """The abstract connector."""
 
     module: AwsModule
-    configuration: DefaultConnectorConfiguration
+    configuration: AbstractAwsConnectorConfiguration
 
     @cached_property
     def aws_client(self) -> AwsClient:
@@ -90,6 +96,8 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                 )
 
                 previous_processing_end = processing_end
+
+                time.sleep(self.configuration.frequency)
 
         except Exception as e:
             self.log_exception(e)

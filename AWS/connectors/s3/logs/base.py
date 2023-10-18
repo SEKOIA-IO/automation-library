@@ -16,7 +16,7 @@ from aws_helpers.base import AWSConnector
 from aws_helpers.utils import get_content
 
 
-class AwsS3Worker(Thread, metaclass=ABCMeta):
+class AwsS3Worker(Thread, metaclass=ABCMeta):  # pragma: no cover
     """Implements logic for AwsS3Worker."""
 
     data_path: Path
@@ -252,7 +252,7 @@ class AwsS3FetcherConfiguration(BaseModel):
     bucket_name: str
 
 
-class AwsS3FetcherTrigger(AWSConnector, metaclass=ABCMeta):
+class AwsS3FetcherTrigger(AWSConnector, metaclass=ABCMeta):  # pragma: no cover
     """
     This trigger fetches content from objects stored on a S3 Bucket
     and forward them to the playbook run.

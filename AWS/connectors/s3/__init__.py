@@ -4,18 +4,16 @@ from functools import cached_property
 from gzip import decompress
 
 import orjson
-from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
 from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
 from aws_helpers.utils import normalize_s3_key
-from connectors import AbstractAwsConnector
+from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 
 
-class AwsS3QueuedConfiguration(DefaultConnectorConfiguration):
+class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
     """Base configuration that contains SQS configuration to work with AwsS3QueuedConnector."""
 
-    frequency: int = 60
     sqs_frequency: int = 10
     chunk_size: int = 10000
     delete_consumed_messages: bool = False

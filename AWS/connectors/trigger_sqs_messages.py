@@ -2,16 +2,14 @@
 from functools import cached_property
 
 import orjson
-from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
-from connectors import AbstractAwsConnector
+from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 
 
-class AwsSqsMessagesTriggerConfiguration(DefaultConnectorConfiguration):
+class AwsSqsMessagesTriggerConfiguration(AbstractAwsConnectorConfiguration):
     """Contains configuration for AwsSqsMessagesTrigger."""
 
-    frequency: int = 60
     sqs_frequency: int = 10
     chunk_size: int = 10000
     delete_consumed_messages: bool = False
