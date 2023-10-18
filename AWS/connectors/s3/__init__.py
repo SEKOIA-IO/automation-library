@@ -98,7 +98,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             list[str]:
         """
         result = []
-        async with self.sqs_wrapper.receive_messages(max_messages=1) as messages:
+        async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
             records = []
             timestamps_to_log: list[int] = []
             for message_data in messages:

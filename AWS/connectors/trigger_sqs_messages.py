@@ -50,7 +50,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         Returns:
             tuple[list[str], list[int]]:
         """
-        async with self.sqs_wrapper.receive_messages(max_messages=1) as messages:
+        async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
             records = []
             timestamps_to_log: list[int] = []
             for data in messages:
