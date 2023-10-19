@@ -2,8 +2,6 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 from requests.auth import HTTPBasicAuth
 
-from .auth import TrendMicroAuthentication
-
 
 class ApiClient(requests.Session):
     def __init__(self, username: str, api_key: str, nb_retries: int = 5):
