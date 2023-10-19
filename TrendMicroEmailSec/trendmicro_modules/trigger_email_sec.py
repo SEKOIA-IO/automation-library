@@ -12,6 +12,7 @@ from sekoia_automation.storage import PersistentJSON
 from . import TrendMicroModule
 from .client import ApiClient
 from .helpers import iso8601_to_timestamp, unixtime_to_iso8601
+from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
@@ -170,7 +171,15 @@ class TrendMicroWorker(Thread):
                     message=f"{self.log_type}: Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
+                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
+                    len(batch_of_events)
+                )
+
                 self.connector.push_events_to_intakes(events=batch_of_events)
+
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
+                    len(batch_of_events)
+                )
 
             else:
                 self.log(
@@ -185,6 +194,10 @@ class TrendMicroWorker(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
+
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.frequency - batch_duration
