@@ -10,7 +10,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import TrendMicroModule
-from .client import ApiClient, TrendMicroAuthentication
+from .client import ApiClient
 from .helpers import iso8601_to_timestamp, unixtime_to_iso8601
 
 
@@ -29,7 +29,10 @@ class TrendMicroWorker(Thread):
         self.connector = connector
 
         self.service_url = connector.module.configuration.service_url
-        if not self.service_url.startswith("https://"):
+        if self.service_url.startswith("http://"):
+            self.service_url = "https://%s" % self.service_url[7:]
+
+        elif not self.service_url.startswith("https://"):
             self.service_url = "https://%s" % self.service_url
 
         self._stop_event = Event()
@@ -47,11 +50,9 @@ class TrendMicroWorker(Thread):
 
     @cached_property
     def client(self) -> ApiClient:
-        auth = TrendMicroAuthentication(
-            username=self.connector.module.configuration.username,
-            api_key=self.connector.module.configuration.api_key,
+        return ApiClient(
+            username=self.connector.module.configuration.username, api_key=self.connector.module.configuration.api_key
         )
-        return ApiClient(auth=auth)
 
     def get_last_timestamp(self) -> int:
         now = int(time.time())  # in seconds
