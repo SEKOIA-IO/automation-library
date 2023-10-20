@@ -78,12 +78,12 @@ class CheckpointHarmonyConnector(AsyncConnector):
 
         return self._checkpoint_client
 
-    async def get_checkpoint_harmony_events(self) -> list[str]:
+    async def get_checkpoint_harmony_events(self) -> tuple[list[str], float]:
         """
         Get CheckpointHarmony events.
 
         Returns:
-            list[str]:
+            tuple[list[str], float]: result event ids and new latest event date in timestamp
         """
         _last_event_date = self.last_event_date
         events = await self.get_checkpoint_client().get_harmony_mobile_alerts(_last_event_date, 100)
@@ -111,11 +111,10 @@ class CheckpointHarmonyConnector(AsyncConnector):
         with self.context as cache:
             cache["last_event_date"] = _new_latest_event_date.isoformat()
 
-        return result
+        return result, _new_latest_event_date.timestamp()
 
     def run(self) -> None:  # pragma: no cover
         """Runs Crowdstrike Telemetry."""
-        previous_processing_end = None
 
         while self.running:
             try:
@@ -123,13 +122,14 @@ class CheckpointHarmonyConnector(AsyncConnector):
 
                 while self.running:
                     processing_start = time.time()
-                    if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                            processing_start - previous_processing_end
-                        )
 
-                    message_ids: list[str] = loop.run_until_complete(self.get_checkpoint_harmony_events())
+                    message_ids, latest_event_date = loop.run_until_complete(self.get_checkpoint_harmony_events())
                     processing_end = time.time()
+
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_end - latest_event_date
+                    )
+
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
                     log_message = "No records to forward"
@@ -146,8 +146,6 @@ class CheckpointHarmonyConnector(AsyncConnector):
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                         processing_end - processing_start
                     )
-
-                    previous_processing_end = processing_end
 
             except Exception as e:
                 logger.error("Error while running CrowdStrike Telemetry: {error}", error=e)

@@ -194,5 +194,8 @@ async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
             payload={"received": True, "event_ids": [session_faker.word() for _ in range(len(events))]},
         )
 
-        assert len(await checkpoint_harmony_connector.get_checkpoint_harmony_events()) == len(events)
+        result, resulted_event_date = await checkpoint_harmony_connector.get_checkpoint_harmony_events()
+
+        assert len(result) == len(events)
         assert checkpoint_harmony_connector.last_event_date == current_date
+        assert resulted_event_date == current_date.timestamp()
