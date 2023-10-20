@@ -4,11 +4,38 @@ from pydantic import BaseModel
 from typing import Literal
 
 
-class Arguments(BaseModel):  
-    selectedTimezone: Literal["UTC -12","UTC -11","UTC -10","UTC -9","UTC -8","UTC -7","UTC -6","UTC -5","UTC -4","UTC -3","UTC -2","UTC -1","UTC 0","UTC +1","UTC +2","UTC +3","UTC +4","UTC +5","UTC +6","UTC +7","UTC +8","UTC +9","UTC +10","UTC +11","UTC +12"]
+class Arguments(BaseModel):
+    selectedTimezone: Literal[
+        "UTC -12",
+        "UTC -11",
+        "UTC -10",
+        "UTC -9",
+        "UTC -8",
+        "UTC -7",
+        "UTC -6",
+        "UTC -5",
+        "UTC -4",
+        "UTC -3",
+        "UTC -2",
+        "UTC -1",
+        "UTC 0",
+        "UTC +1",
+        "UTC +2",
+        "UTC +3",
+        "UTC +4",
+        "UTC +5",
+        "UTC +6",
+        "UTC +7",
+        "UTC +8",
+        "UTC +9",
+        "UTC +10",
+        "UTC +11",
+        "UTC +12",
+    ]
 
-class Response(BaseModel):  
-    currentTimeEpoch: str
+
+class Response(BaseModel):
+    currentTimeEpoch: int
     currentTimeIso8601: str
 
 
@@ -17,7 +44,7 @@ class GetCurrentTimeAction(Action):
     Action to get current time and return it
     """
 
-    def _utc_to_gmt(self,value):
+    def _utc_to_gmt(self, value):
         offset_hours = int(value.split(" ")[1].strip())
 
         current_time = datetime.utcnow()
@@ -26,12 +53,11 @@ class GetCurrentTimeAction(Action):
 
         return result_time
 
-    def run(self,ra: Arguments) -> Response:
+    def run(self, ra: Arguments) -> Response:
         self.log(message=f"Retrieving current time for {ra.selectedTimezone}", level="info")
         dateToReturn = self._utc_to_gmt(ra.selectedTimezone)
 
-
         return Response(
-            currentTimeEpoch = int(dateToReturn.timestamp()),
-            currentTimeIso8601 = dateToReturn.isoformat()
+            currentTimeEpoch=int(dateToReturn.timestamp()),
+            currentTimeIso8601=dateToReturn.isoformat(),
         )

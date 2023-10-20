@@ -1,4 +1,8 @@
-from getcurrenttime_modules.action_get_current_time import GetCurrentTimeAction, Response, Arguments
+from getcurrenttime_modules.action_get_current_time import (
+    GetCurrentTimeAction,
+    Response,
+    Arguments,
+)
 from re import match
 from shutil import rmtree
 from tempfile import mkdtemp
@@ -22,10 +26,11 @@ def symphony_storage():
 
 def testGetCurrentTime():
     action = GetCurrentTimeAction()
-    reponse = Response(currentTimeEpoch = "",currentTimeIso8601 ="")
-    request = Arguments(selectedTimezone = "UTC 0")
-    
+    reponse = Response(currentTimeEpoch=0, currentTimeIso8601="")
+    request = Arguments(selectedTimezone="UTC 0")
     reponse = action.run(request)
-    
-    assert match(r'^[0-9]+$', reponse.currentTimeEpoch)
-    assert match(r'^[0-9]{4}\-[0-9]{2}\-[0-9]{2}T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{6}$', reponse.currentTimeIso8601)
+    assert match(r"^[0-9]+$", str(reponse.currentTimeEpoch))
+    assert match(
+        r"^[0-9]{4}\-[0-9]{2}\-[0-9]{2}T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{6}$",
+        reponse.currentTimeIso8601,
+    )
