@@ -8,6 +8,7 @@ import json
 from darktrace_modules import DarktraceModule, Endpoints
 from darktrace_modules.threat_visualizer_log_trigger import ThreatVisualizerLogConnector, ThreatVisualizerLogConsumer
 
+
 @pytest.fixture
 def trigger(symphony_storage):
     module = DarktraceModule()
@@ -22,13 +23,16 @@ def trigger(symphony_storage):
     }
     yield trigger
 
+
 def get_json(filename):
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         return json.load(file)
+
 
 @pytest.fixture
 def modelbreaches_response():
     return get_json("tests/modelbreaches_response.txt")
+
 
 @pytest.fixture
 def aianalyst_response():
@@ -56,6 +60,7 @@ def test_modelbreaches_consumer(trigger, modelbreaches_response):
         assert len(calls[0]) == 1
         assert trigger.push_events_to_intakes.call_count == 1
 
+
 def test_aianalyst_consumer(trigger, aianalyst_response):
     with patch(
         "darktrace_modules.threat_visualizer_log_trigger.time"
@@ -64,7 +69,8 @@ def test_aianalyst_consumer(trigger, aianalyst_response):
         batch_start = 1687774141.000
         batch_end = 1688465633.434
         mock_request.get(
-            trigger.module.configuration.api_url + "/aianalyst/incidentevents?starttime=1687774141000&includeallpinned=false",
+            trigger.module.configuration.api_url
+            + "/aianalyst/incidentevents?starttime=1687774141000&includeallpinned=false",
             json=aianalyst_response,
         )
 
@@ -75,4 +81,3 @@ def test_aianalyst_consumer(trigger, aianalyst_response):
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         assert len(calls[0]) == 16
         assert trigger.push_events_to_intakes.call_count == 1
-

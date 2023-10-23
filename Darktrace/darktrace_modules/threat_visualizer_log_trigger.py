@@ -26,7 +26,6 @@ class ThreatVisualizerLogConnectorConfiguration(DefaultConnectorConfiguration):
 
 
 class ThreatVisualizerLogConsumer(Thread):
-
     def __init__(self, connector: "ThreatVisualizerLogConnector", endpoint: Endpoints):
         super().__init__()
 
@@ -49,7 +48,7 @@ class ThreatVisualizerLogConsumer(Thread):
     @property
     def running(self):
         return not self._stop_event.is_set()
-    
+
     @property
     def last_ts(self) -> int:
         with self.context as cache:
@@ -75,12 +74,12 @@ class ThreatVisualizerLogConsumer(Thread):
     def request_events(self) -> requests.models.Response:
         params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
         url = urljoin(self.connector.module.configuration.api_url, self.endpoint.value)
-        #save cert in file to pass to request
+        # save cert in file to pass to request
         response = self.client.get(url, params=params, verify=self.configuration.verify_certificate)
         return response
 
     def refine_response(self, response: list) -> list:
-        # as we use the time variable of the newest event to set last_ts, 
+        # as we use the time variable of the newest event to set last_ts,
         # this event has to be removed in the next batch of events.
         if response != [] and response[0][self.time_field] == self.last_ts:
             return response[1:]
@@ -92,7 +91,7 @@ class ThreatVisualizerLogConsumer(Thread):
         batch_start_time = time.time()
         response = []
         try:
-            response = self.request_events()   
+            response = self.request_events()
             response = response.json()
             logger.debug(f"Response from API: {response}")
             INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(response))
@@ -102,7 +101,7 @@ class ThreatVisualizerLogConsumer(Thread):
                 level="warning",
             )
             return
-        
+
         if type(response) is list:
             response = self.refine_response(response)
             # if the response is not empty, push it
@@ -145,9 +144,11 @@ class ThreatVisualizerLogConsumer(Thread):
         if delta_sleep > 0:
             logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
             time.sleep(delta_sleep)
-    
+
     def run(self):
-        self.connector.log(message=f"Start fetching Darktrace threat visualizer {self.endpoint.name} logs", level="info")
+        self.connector.log(
+            message=f"Start fetching Darktrace threat visualizer {self.endpoint.name} logs", level="info"
+        )
 
         while self.running:
             try:
@@ -155,6 +156,7 @@ class ThreatVisualizerLogConsumer(Thread):
             except Exception as error:
                 traceback.print_exc()
                 self.connector.log_exception(error, message="Failed to forward events")
+
 
 class ThreatVisualizerLogConnector(Connector):
     """
@@ -169,14 +171,14 @@ class ThreatVisualizerLogConnector(Connector):
         consumers = {}
         for endpoint in Endpoints:
             self.log(message=f"Start {endpoint.name} consumer", level="info")
-            
+
             consumers[endpoint] = ThreatVisualizerLogConsumer(connector=self, endpoint=endpoint)
             consumers[endpoint].start()
 
         return consumers
 
     def supervise_consumers(self, consumers):
-        """ Check consumer list and restart consumer if not alive. """
+        """Check consumer list and restart consumer if not alive."""
         for endpoint, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
                 self.log(message=f"Restarting {endpoint.name} consumer", level="info")
@@ -195,7 +197,7 @@ class ThreatVisualizerLogConnector(Connector):
 
         consumers = self.start_consumers()
         while self.running:
-            #self.supervise_consumers(consumers)
+            # self.supervise_consumers(consumers)
             time.sleep(5)
 
         self.stop_consumers(consumers)

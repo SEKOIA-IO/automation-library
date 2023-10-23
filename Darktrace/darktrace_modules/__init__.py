@@ -6,6 +6,7 @@ from enum import Enum
 class DarktraceModule(Module):
     configuration: DarktraceModuleConfiguration
 
+
 class Endpoints(Enum):
     MODEL_BREACHES = "modelbreaches"
     AI_ANALYST = "aianalyst/incidentevents"
