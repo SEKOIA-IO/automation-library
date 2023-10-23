@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
-import time
 import json
 
 from darktrace_modules import DarktraceModule, Endpoints
