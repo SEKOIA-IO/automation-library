@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from shutil import rmtree
 from tempfile import mkdtemp
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aioresponses import aioresponses
@@ -101,8 +101,7 @@ def connector(symphony_storage, client_id, client_secret, salesforce_url, pushed
     trigger.log_exception = MagicMock()
 
     # Mock the push_events_to_intakes function
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.push_events_to_intakes.return_value = pushed_events_ids
+    trigger.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
 
     trigger.module.configuration = {"client_id": client_id, "client_secret": client_secret, "base_url": salesforce_url}
 
@@ -152,19 +151,6 @@ async def test_salesforce_connector_salesforce_client(connector):
     client2 = connector.salesforce_client
 
     assert client1 is client2 is connector._salesforce_client
-
-
-@pytest.mark.asyncio
-async def test_salesforce_connector_push_events_wrapper(connector, pushed_events_ids, session_faker):
-    """
-    Test salesforce connector push events.
-
-    Args:
-        connector: SalesforceConnector
-    """
-    data = [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
-
-    assert await connector._push_events(data) == pushed_events_ids
 
 
 @pytest.mark.asyncio

@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 import requests
 from requests import Session
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 from requests.structures import CaseInsensitiveDict
 from sekoia_automation.action import Action
 
@@ -39,15 +39,20 @@ class BaseGetEvents(Action):
             }
         )
 
-    def trigger_event_search_job(self, query: str, earliest_time: str, latest_time: str) -> str:
+    def trigger_event_search_job(
+        self, query: str, earliest_time: str, latest_time: str, limit: int | None = None
+    ) -> str:
+        data = {
+            "term": query,
+            "earliest_time": earliest_time,
+            "latest_time": latest_time,
+            "visible": False,
+        }
+        if limit is not None:
+            data["max_last_events"] = limit
         response_start = self.http_session.post(
             f"{self.events_api_path}/search/jobs",
-            json={
-                "term": query,
-                "earliest_time": earliest_time,
-                "latest_time": latest_time,
-                "visible": False,
-            },
+            json=data,
         )
         response_start.raise_for_status()
 

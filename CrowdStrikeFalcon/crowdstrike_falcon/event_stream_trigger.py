@@ -490,6 +490,9 @@ class EventStreamTrigger(Connector):
 
                 time.sleep(5)
 
+        except Exception as error:
+            self.log_exception(error, message="Failed to fetch and forward events")
+
         finally:
             # just in case
             self.f_stop.set()

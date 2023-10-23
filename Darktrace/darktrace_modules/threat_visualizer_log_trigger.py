@@ -22,6 +22,7 @@ class ThreatVisualizerLogConnectorConfiguration(DefaultConnectorConfiguration):
     ratelimit_per_minute: int = 30
     filter: str | None = None
     q: str | None = None
+    verify_certificate: bool = True
 
 
 class ThreatVisualizerLogConsumer(Thread):
@@ -75,7 +76,7 @@ class ThreatVisualizerLogConsumer(Thread):
         params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
         url = urljoin(self.connector.module.configuration.api_url, self.endpoint.value)
         #save cert in file to pass to request
-        response = self.client.get(url, params=params)
+        response = self.client.get(url, params=params, verify=self.configuration.verify_certificate)
         return response
 
     def refine_response(self, response: list) -> list:
@@ -98,7 +99,7 @@ class ThreatVisualizerLogConsumer(Thread):
         except ValueError:
             self.connector.log(
                 message="The server response is not a json: " + str(response),
-                level="warn",
+                level="warning",
             )
             return
         
@@ -130,7 +131,7 @@ class ThreatVisualizerLogConsumer(Thread):
         else:
             self.connector.log(
                 message="Response is not a list : " + str(response),
-                level="warn",
+                level="warning",
             )
 
         # get the ending time and compute the duration to fetch the events

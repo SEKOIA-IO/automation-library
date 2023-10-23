@@ -19,6 +19,11 @@
                 "description": "Intake key to use when sending events",
                 "type": "string"
             },
+            "verify_certificate": {
+                "description": "Is the server certificate is verified",
+                "type": "boolean",
+		"default": true
+            },
             "ratelimit_per_minute": {
                 "description": "The number of requests allowed to the API in one minute",
                 "type": "integer",

@@ -5,7 +5,7 @@ monkey.patch_all()
 from sekoia_automation.module import Module
 
 from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostReportsPdf, PostReportsUrl, ReportsGetReport
-from sekoiaio.intelligence_center.actions import PostBundleAction
+from sekoiaio.intelligence_center.actions import PostBundleAction, GetContextAction
 from sekoiaio.intelligence_center.upload_observables_inthreat import UploadObservablesAction
 from sekoiaio.operation_center import (
     ActivateCountermeasure,
@@ -49,6 +49,7 @@ if __name__ == "__main__":
     module.register(GetAlert, "get-alerts/{uuid}")
     module.register(CreateNewTrackerNotification, "post-trackers/notifications/")
     module.register(PostBundleAction, "post_bundle")
+    module.register(GetContextAction, "get_context")
     module.register(UploadObservablesAction, "upload_observables_inthreat")
     module.register(ListAlerts, "get-alerts")
     module.register(PatchAlert, "patch-alerts/{uuid}")

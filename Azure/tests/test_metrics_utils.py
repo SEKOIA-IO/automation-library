@@ -1,7 +1,7 @@
 import requests
 from prometheus_client import CollectorRegistry, Counter
 
-from azure_module.metrics.utils import make_prometheus_exporter
+from helpers.prometheus_exporter import make_prometheus_exporter
 
 
 def test_make_prometheus_exporter():
@@ -21,4 +21,5 @@ def test_make_prometheus_exporter():
 
     response = requests.get(f"http://{address}:{port}/metrics")
     exporter.stop()
+
     assert b'namespace_counter_total{label="label1"} 42.0' in response.content

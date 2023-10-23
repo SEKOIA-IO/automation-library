@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [1.7.1] - 2023-10-02
+
+### Changed
+
+- Remove the alpha/beta flag
+
+## [1.7.0] - 2023-09-28
+
+### Changed
+
+- Change the way of how events pushed to the intake. Use async wrapper for that
+
+## [1.6.4] - 2023-09-04
+
+### Fixed
+
+- Change the way to set the maximum number of messages got when reading the SQS queue
+
 ## [1.6.2] - 2023-08-28
 
 ### Fixed
