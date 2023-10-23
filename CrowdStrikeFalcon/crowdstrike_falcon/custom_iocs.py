@@ -110,7 +110,7 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
         stix_objects = self.json_argument("stix_objects", arguments)
         indicators = self.get_valid_indicators(stix_objects)
         if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
-            self.log("Received indicators were not valid and/or not supported")
+            self.log(f"Received indicators were not valid and/or not supported in stix_objects {str(stix_objects)}")
             return
         self.create_indicators(indicators["valid"])
         self.remove_indicators(indicators["revoked"])
