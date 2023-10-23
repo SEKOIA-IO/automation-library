@@ -1,7 +1,7 @@
 import hmac
 import hashlib
 import requests
-from urllib3.poolmanager import urlparse
+from urllib.parse import urlparse
 
 
 def generate_darktrace_signature(public_key: str, private_key: str, query: str, now: str) -> str:
