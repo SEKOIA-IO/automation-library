@@ -197,7 +197,7 @@ class ThreatVisualizerLogConnector(Connector):
 
         consumers = self.start_consumers()
         while self.running:
-            # self.supervise_consumers(consumers)
+            self.supervise_consumers(consumers)
             time.sleep(5)
 
         self.stop_consumers(consumers)
