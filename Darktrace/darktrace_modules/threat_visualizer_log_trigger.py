@@ -26,9 +26,6 @@ class ThreatVisualizerLogConnectorConfiguration(DefaultConnectorConfiguration):
 
 class ThreatVisualizerLogConsumer(Thread):
 
-    module: DarktraceModule
-    configuration: ThreatVisualizerLogConnectorConfiguration
-
     def __init__(self, connector: "ThreatVisualizerLogConnector", endpoint: Endpoints):
         super().__init__()
 
@@ -40,6 +37,13 @@ class ThreatVisualizerLogConsumer(Thread):
         context_name = self.endpoint.value.replace("/", "_") + "_context.json"
         self.context = PersistentJSON(context_name, connector._data_path)
 
+        if self.endpoint == Endpoints.MODEL_BREACHES:
+            self.time_field = "time"
+        elif self.endpoint == Endpoints.AI_ANALYST:
+            self.time_field = "createdAt"
+
+    def stop(self):
+        self._stop_event.set()
 
     @property
     def running(self):
@@ -62,24 +66,22 @@ class ThreatVisualizerLogConsumer(Thread):
     @cached_property
     def client(self):
         return ApiClient(
-            self.module.configuration.public_key,
-            self.module.configuration.private_key,
-            ratelimit_per_minute=self.configuration.ratelimit_per_minute,
+            self.connector.module.configuration.public_key,
+            self.connector.module.configuration.private_key,
+            ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
         )
 
     def request_events(self) -> requests.models.Response:
         params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
-        url = urljoin(self.module.configuration.api_url, self.endpoint.value)
-        #self.module.configuration.appliance_certificate
-
+        url = urljoin(self.connector.module.configuration.api_url, self.endpoint.value)
+        #save cert in file to pass to request
         response = self.client.get(url, params=params)
-        
         return response
 
     def refine_response(self, response: list) -> list:
         # as we use the time variable of the newest event to set last_ts, 
         # this event has to be removed in the next batch of events.
-        if response != [] and response[0]["time"] == self.last_ts:
+        if response != [] and response[0][self.time_field] == self.last_ts:
             return response[1:]
         return response
 
@@ -89,23 +91,28 @@ class ThreatVisualizerLogConsumer(Thread):
         batch_start_time = time.time()
         response = []
         try:
-            response = self.request_events().json()
+            response = self.request_events()   
+            response = response.json()
             logger.debug(f"Response from API: {response}")
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(response))
+            INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(response))
         except ValueError:
             self.connector.log(
                 message="The server response is not a json: " + str(response),
                 level="warn",
             )
             return
+        
         if type(response) is list:
             response = self.refine_response(response)
             # if the response is not empty, push it
             if response != []:
+                for event in response:
+                    event["log_type"] = self.endpoint.value
                 batch_of_events = [orjson.dumps(event).decode("utf-8") for event in response]
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-                self.push_events_to_intakes(events=batch_of_events)
-                self.last_ts = response[-1]["time"]
+
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
+                self.connector.push_events_to_intakes(events=batch_of_events)
+                self.last_ts = response[-1][self.time_field]
                 self.connector.log(
                     message=f"Forwarded {len(batch_of_events)} {self.endpoint.name} events to the intake",
                     level="info",
@@ -114,7 +121,7 @@ class ThreatVisualizerLogConsumer(Thread):
                 # compute the lag
                 now = time.time()
                 current_lag = now - self.last_ts / 1000
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag))
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).observe(int(current_lag))
             else:
                 self.connector.log(
                     message="No events to forward",
@@ -130,10 +137,10 @@ class ThreatVisualizerLogConsumer(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
-        delta_sleep = self.configuration.frequency - batch_duration
+        delta_sleep = self.connector.configuration.frequency - batch_duration
         if delta_sleep > 0:
             logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
             time.sleep(delta_sleep)
@@ -153,6 +160,9 @@ class ThreatVisualizerLogConnector(Connector):
     This connector fetches threat visualizer logs from the Darktrace API
     It uses threading for each darktrace endpoint
     """
+
+    module: DarktraceModule
+    configuration: ThreatVisualizerLogConnectorConfiguration
 
     def start_consumers(self):
         consumers = {}
