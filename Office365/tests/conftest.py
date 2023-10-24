@@ -2,16 +2,24 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
-
+from unittest.mock import Mock
+import uuid
+from sekoia_automation.storage import get_data_path
+import requests_mock
 import pytest
 from sekoia_automation import constants
+from office365.management_api.configuration import Office365Configuration
+
+from office365.management_api.connector import Office365Connector
 
 
 @pytest.fixture
 def symphony_storage():
+    # Clear cache so that we get the right DataPath at every initialization
+    get_data_path.cache_clear()
+
     original_storage = constants.DATA_STORAGE
     constants.DATA_STORAGE = mkdtemp()
-
     yield Path(constants.DATA_STORAGE)
 
     rmtree(constants.DATA_STORAGE)
@@ -101,3 +109,107 @@ def end_time(trigger_activation) -> datetime:
 @pytest.fixture
 def start_time(trigger_activation) -> datetime:
     return trigger_activation - timedelta(minutes=1)
+
+
+@pytest.fixture
+def client():
+    client = Mock()
+    client.activate_subscriptions = Mock()
+    client.get_subscription_contents = Mock()
+    client.list_subscriptions = Mock()
+    client.get_content = Mock()
+    yield client
+
+
+@pytest.fixture
+def connector(symphony_storage, client, monkeypatch):
+    connector = Office365Connector(data_path=symphony_storage)
+    connector.configuration = Office365Configuration(
+        intake_key="foo",
+        client_secret="bar",
+        uuid="0000",
+        intake_uuid="2222",
+        community_uuid="3333",
+        client_id="0",
+        publisher_id="1",
+        tenant_id="2",
+        content_types={"json", "xml"},
+    )
+
+    connector.module.configuration = {}
+    connector.log = Mock()
+    connector.log_exception = Mock()
+    connector.push_events_to_intakes = Mock()
+
+    # Need the heavy artillery to override a property in a fixture
+    monkeypatch.setattr("office365.management_api.connector.Office365Connector.client", client)
+    yield connector
+
+
+@pytest.fixture
+def event():
+    yield {"id": "42"}
+
+
+@pytest.fixture
+def other_event():
+    yield {"id": "9000"}
+
+
+@pytest.fixture
+def tenant_id():
+    yield str(uuid.uuid4())
+
+
+@pytest.fixture
+def mock_azure_authentication(requests_mock, tenant_id):
+    requests_mock.get(
+        f"https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration",
+        status_code=200,
+        json={
+            "token_endpoint": f"https://login.microsoftonline.com/{tenant_id}/oauth2/token",
+            "authorization_endpoint": f"https://login.microsoftonline.com/{tenant_id}/oauth2/authorize",
+        },
+    )
+    requests_mock.post(
+        f"https://login.microsoftonline.com/{tenant_id}/oauth2/token",
+        status_code=200,
+        json={"access_token": "access_token", "token_type": "Bearer", "expires_in": 0},
+    )
+    yield requests_mock
+
+
+@pytest.fixture
+def mock_azure_authentication_no_access_token(requests_mock, tenant_id):
+    requests_mock.get(
+        f"https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration",
+        status_code=200,
+        json={
+            "token_endpoint": f"https://login.microsoftonline.com/{tenant_id}/oauth2/token",
+            "authorization_endpoint": f"https://login.microsoftonline.com/{tenant_id}/oauth2/authorize",
+        },
+    )
+    requests_mock.post(
+        f"https://login.microsoftonline.com/{tenant_id}/oauth2/token",
+        status_code=200,
+        json={"token_type": "Bearer", "expires_in": 0},
+    )
+    yield requests_mock
+
+
+@pytest.fixture
+def mock_azure_authentication_wrong_token_type(requests_mock, tenant_id):
+    requests_mock.get(
+        f"https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration",
+        status_code=200,
+        json={
+            "token_endpoint": f"https://login.microsoftonline.com/{tenant_id}/oauth2/token",
+            "authorization_endpoint": f"https://login.microsoftonline.com/{tenant_id}/oauth2/authorize",
+        },
+    )
+    requests_mock.post(
+        f"https://login.microsoftonline.com/{tenant_id}/oauth2/token",
+        status_code=200,
+        json={"access_token": "access_token", "token_type": "foo", "expires_in": 0},
+    )
+    yield requests_mock

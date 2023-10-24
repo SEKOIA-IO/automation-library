@@ -13,8 +13,8 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from office365.message_trace.timestepper import TimeStepper
-from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from .timestepper import TimeStepper
+from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class O365BaseConfig(DefaultConnectorConfiguration):
