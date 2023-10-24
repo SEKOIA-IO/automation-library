@@ -528,9 +528,9 @@ class FileDownloader:
 
     def request_file_content(self, url: str, timeout: int = 20):
         """A method for getting a destination URL file content"""
-        response_content = ""
+        response_content = b""
         https: urllib3.ProxyManager | urllib3.PoolManager
-        if self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "YES":
+        if self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "YES" and self.config.PROXY_SERVER:
             self.logger(message="Using proxy %s" % self.config.PROXY_SERVER, level="info")
             https = urllib3.ProxyManager(
                 self.config.PROXY_SERVER,
@@ -538,7 +538,7 @@ class FileDownloader:
                 cert_reqs="CERT_REQUIRED",
                 timeout=timeout,
             )
-        elif self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "NO":
+        elif self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "NO" and self.config.PROXY_SERVER:
             self.logger(message="Using proxy %s" % self.config.PROXY_SERVER, level="info")
             https = urllib3.ProxyManager(self.config.PROXY_SERVER, cert_reqs="CERT_REQUIRED", timeout=timeout)
         elif self.config.USE_PROXY == "NO" and self.config.USE_CUSTOM_CA_FILE == "YES":
@@ -579,7 +579,7 @@ class FileDownloader:
             else:
                 self.logger(
                     message=f"Failed to download file {url}. Response code is {response.status}. "
-                    f"Data is {response.data}",
+                    f"Data is {response.data.decode()}",
                     level="error",
                 )
 

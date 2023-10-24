@@ -223,6 +223,7 @@ async def test_salesforce_http_client_get_log_file_content(
 
     http_client_session.get = MagicMock()
     http_client_session.get.return_value = response
+    http_client_session._resolve_charset.return_value = "utf-8"
 
     log_file = EventLogFile(
         Id=session_faker.pystr(),
