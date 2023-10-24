@@ -16,6 +16,7 @@ from tehtris_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMIN
 class TehtrisEventConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     filter_id: int | str | None = None
+    chunk_size: int = 10000
 
 
 class TehtrisEventConnector(Connector):

@@ -9,7 +9,7 @@
       "chunk_size": {
         "type": "integer",
         "description": "The size of chunks for the batch processing",
-        "default": 2000
+        "default": 500
       },
       "intake_key": {
         "description": "Intake key to use when sending events",
