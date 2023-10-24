@@ -16,7 +16,7 @@ class JiraCreateIssueArguments(BaseModel):
     assignee: str | None = Field(description="Exact display name of an assignee (e.g. John Doe)")
     reporter: str | None = Field(description="Exact display name of a reporter (e.g. Jane Doe)")
     priority: str | None = Field(description="Issue priority (e.g. Highest)")
-    parent_key: str | None = Field(description="Key of a parent issue (e.g. PRJ-1)")
+    parent_key: str | None = Field(None, description="Key of a parent issue (e.g. PRJ-1)")
 
 
 class JIRACreateIssue(Action):

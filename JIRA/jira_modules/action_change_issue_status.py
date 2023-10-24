@@ -25,7 +25,7 @@ class JIRAChangeIssueStatus(Action):
             api_token=self.module.configuration.api_key,
         )
 
-    def run(self, arguments: JiraChangeStatusArguments) -> dict:
+    def run(self, arguments: JiraChangeStatusArguments) -> None:
         _transitions = self.client.get_json(
             f"issue/{arguments.issue_key}/transitions",
             params={"includeUnavailableTransitions": False},
@@ -36,9 +36,7 @@ class JIRAChangeIssueStatus(Action):
 
         desired_trans_id = avail_transitions.get(arguments.status_name)
 
-        response = self.client.post_json(
+        self.client.post_json(
             path=f"issue/{arguments.issue_key}/transitions",
             json={"transition": {"id": desired_trans_id}},
         )
-
-        return {}

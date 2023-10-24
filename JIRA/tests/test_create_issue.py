@@ -155,7 +155,7 @@ def test_add_comment(
                 {"json": []},
             ],
         )
-        mock.register_uri("POST", "https://test.atlassian.net/rest/api/3/issue", json={})
+        mock.register_uri("POST", "https://test.atlassian.net/rest/api/3/issue", json={"key": "PRJ-1"})
         args = JiraCreateIssueArguments(
             project_key="PRJ",
             summary="New Task",
@@ -165,5 +165,7 @@ def test_add_comment(
             assignee="John Doe",
             reporter="Jane Doe",
             priority="Major",
+            parent_key=None,
         )
         result = action.run(args)
+        assert result.get("issue_key") == "PRJ-1"

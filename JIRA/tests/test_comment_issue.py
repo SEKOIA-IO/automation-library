@@ -33,4 +33,4 @@ def test_add_comment(action: JIRAAddCommentToIssue):
             json={},
         )
         args = JiraAddCommentArguments(issue_key="PRJ-1", comment="Hello, world")
-        result = action.run(args)
+        action.run(args)

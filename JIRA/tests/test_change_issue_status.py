@@ -136,4 +136,4 @@ def test_change_status(action: JIRAChangeIssueStatus, transitions_1):
             json={},
         )
         args = JiraChangeStatusArguments(issue_key="PRJ-1", status_name="Close Issue")
-        result = action.run(args)
+        action.run(args)
