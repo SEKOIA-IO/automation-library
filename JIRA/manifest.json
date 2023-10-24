@@ -1,0 +1,30 @@
+{
+  "uuid": "d1445e5e-8e3b-417f-ae19-bca67a10affd",
+  "name": "JIRA",
+  "slug": "jira",
+  "version": "1.0.0",
+  "description": "Integrates with JIRA",
+  "configuration": {
+    "title": "JIRA",
+    "type": "object",
+    "properties": {
+      "domain": {
+        "title": "Domain",
+        "description": "Your organization JIRA domain (e.g. 'sandbox.atlassian.net')",
+        "type": "string"
+      },
+      "email": {
+        "title": "Email",
+        "description": "Email of the user",
+        "type": "string"
+      },
+      "api_key": {
+        "title": "Api Key",
+        "description": "API Key to use to connect to JIRA API endpoints",
+        "type": "string"
+      }
+    },
+    "required": ["domain", "email", "api_key"],
+    "secrets": ["api_key"]
+  }
+}
