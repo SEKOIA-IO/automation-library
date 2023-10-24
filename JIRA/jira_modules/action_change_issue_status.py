@@ -37,7 +37,7 @@ class JIRAChangeIssueStatus(Action):
         desired_trans_id = avail_transitions.get(arguments.status_name)
 
         response = self.client.post_json(
-            path=f"/issue/{arguments.issue_key}/transitions",
+            path=f"issue/{arguments.issue_key}/transitions",
             json={"transition": {"id": desired_trans_id}},
         )
 

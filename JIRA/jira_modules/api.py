@@ -1,6 +1,6 @@
 from functools import cached_property
 
-from client import ApiClient
+from .client import ApiClient
 
 
 class JiraApi:
@@ -15,15 +15,15 @@ class JiraApi:
 
     @cached_property
     def base_url(self):
-        return "https://%s" % self.domain.lstrip("http://").lstrip("https://")
+        return "https://%s" % self.domain.replace("https://", "").replace("http://", "")
 
     def get_json(self, path: str, **kwargs):
-        response = self.client.get(f"{self.base_url}/rest/api/3/{path}", **kwargs)
+        response = self.client.get(f"{self.base_url}/rest/api/3/{path}", timeout=60, **kwargs)
         response.raise_for_status()
         return response.json() if len(response.content) > 0 else None
 
     def post_json(self, path: str, **kwargs):
-        response = self.client.post(f"{self.base_url}/rest/api/3/{path}", **kwargs)
+        response = self.client.post(f"{self.base_url}/rest/api/3/{path}", timeout=60, **kwargs)
         response.raise_for_status()
         return response.json() if len(response.content) > 0 else None
 

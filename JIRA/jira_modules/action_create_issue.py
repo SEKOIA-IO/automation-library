@@ -1,21 +1,22 @@
 from functools import cached_property
 
-from api import JiraApi
-from base import JIRAModule
 from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
+
+from .api import JiraApi
+from .base import JIRAModule
 
 
 class JiraCreateIssueArguments(BaseModel):
     project_key: str = Field(..., description="Project key (e.g. 'PRJ')")
     summary: str = Field(..., description="Summary of an issue (e.g. 'Fix a bug')")
     issue_type: str = Field(..., description="Issue type (e.g. 'Task')")
-    due_date: str = Field(description="Due date (e.g. '2023-10-31')'")
-    labels: str = Field(description="Comma-separated labels (e.g. 'devops,support'")
-    assignee: str = Field(description="Exact display name of an assignee (e.g. John Doe)")
-    reporter: str = Field(description="Exact display name of a reporter (e.g. Jane Doe)")
-    priority: str = Field(description="Issue priority (e.g. Highest)")
-    parent_key: str = Field(description="Key of a parent issue (e.g. PRJ-1)")
+    due_date: str | None = Field(description="Due date (e.g. '2023-10-31')'")
+    labels: str | None = Field(description="Comma-separated labels (e.g. 'devops,support'")
+    assignee: str | None = Field(description="Exact display name of an assignee (e.g. John Doe)")
+    reporter: str | None = Field(description="Exact display name of a reporter (e.g. Jane Doe)")
+    priority: str | None = Field(description="Issue priority (e.g. Highest)")
+    parent_key: str | None = Field(description="Key of a parent issue (e.g. PRJ-1)")
 
 
 class JIRACreateIssue(Action):

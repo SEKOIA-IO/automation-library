@@ -27,7 +27,7 @@ class JIRAAddCommentToIssue(Action):
 
     def add_comment_to_issue(self, issue_key: str, comment: str):
         return self.client.post_json(
-            path=f"/issue/{issue_key}/comment",
+            path=f"issue/{issue_key}/comment",
             json={
                 "body": {
                     "content": [
