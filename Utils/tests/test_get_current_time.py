@@ -1,4 +1,4 @@
-from getcurrenttime_modules.action_get_current_time import (
+from utils.action_get_current_time import (
     GetCurrentTimeAction,
     Response,
     Arguments,
