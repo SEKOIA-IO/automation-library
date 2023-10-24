@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-10-24 - 2.1.1
+
+### Fixed
+
+- Added Beta Flag for Azure Blob Storage
+
 ## 2023-10-20 - 2.0.1
 
 ### Fixed
