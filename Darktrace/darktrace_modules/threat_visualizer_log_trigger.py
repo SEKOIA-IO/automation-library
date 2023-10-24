@@ -75,7 +75,7 @@ class ThreatVisualizerLogConsumer(Thread):
         params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
         url = urljoin(self.connector.module.configuration.api_url, self.endpoint.value)
         # save cert in file to pass to request
-        response = self.client.get(url, params=params, verify=self.connector.module.configuration.verify_certificate)
+        response = self.client.get(url, params=params, verify=self.connector.configuration.verify_certificate)
         return response
 
     def refine_response(self, response: list) -> list:
