@@ -54,9 +54,7 @@ class TrendMicroWorker(Thread):
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(
-            username=self.connector.configuration.username, api_key=self.connector.configuration.api_key
-        )
+        return ApiClient(username=self.connector.configuration.username, api_key=self.connector.configuration.api_key)
 
     def get_last_timestamp(self) -> int:
         now = int(time.time())  # in seconds
