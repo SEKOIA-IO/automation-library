@@ -6,6 +6,7 @@ from threading import Event, Lock, Thread
 from typing import Generator
 
 import orjson
+from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
