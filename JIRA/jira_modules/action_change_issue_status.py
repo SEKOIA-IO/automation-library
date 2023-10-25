@@ -18,7 +18,7 @@ class JIRAChangeIssueStatus(Action):
     module: JIRAModule
 
     @cached_property
-    def client(self):
+    def client(self) -> JiraApi:
         return JiraApi(
             domain=self.module.configuration.domain,
             email=self.module.configuration.email,

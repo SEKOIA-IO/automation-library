@@ -10,19 +10,19 @@ class JiraApi:
         self.api_token = api_token
 
     @cached_property
-    def client(self):
+    def client(self) -> ApiClient:
         return ApiClient(email=self.email, api_token=self.api_token)
 
     @cached_property
-    def base_url(self):
+    def base_url(self) -> str:
         return "https://%s" % self.domain.replace("https://", "").replace("http://", "")
 
-    def get_json(self, path: str, **kwargs):
+    def get_json(self, path: str, **kwargs) -> dict:
         response = self.client.get(f"{self.base_url}/rest/api/3/{path}", timeout=60, **kwargs)
         response.raise_for_status()
         return response.json() if len(response.content) > 0 else None
 
-    def post_json(self, path: str, **kwargs):
+    def post_json(self, path: str, **kwargs) -> dict:
         response = self.client.post(f"{self.base_url}/rest/api/3/{path}", timeout=60, **kwargs)
         response.raise_for_status()
         return response.json() if len(response.content) > 0 else None

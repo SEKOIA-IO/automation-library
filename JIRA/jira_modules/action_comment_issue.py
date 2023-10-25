@@ -18,14 +18,14 @@ class JIRAAddCommentToIssue(Action):
     module: JIRAModule
 
     @cached_property
-    def client(self):
+    def client(self) -> JiraApi:
         return JiraApi(
             domain=self.module.configuration.domain,
             email=self.module.configuration.email,
             api_token=self.module.configuration.api_key,
         )
 
-    def add_comment_to_issue(self, issue_key: str, comment: str):
+    def add_comment_to_issue(self, issue_key: str, comment: str) -> dict:
         return self.client.post_json(
             path=f"issue/{issue_key}/comment",
             json={
