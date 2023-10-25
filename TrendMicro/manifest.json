@@ -2,7 +2,7 @@
   "configuration": {
     "title": "Trend Micro",
     "type": "object",
-    "properties": {},
+    "properties": {}
   },
   "description": "",
   "name": "Trend Micro",

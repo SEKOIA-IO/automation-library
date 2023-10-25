@@ -38,7 +38,13 @@
         "type": "string"
       }
     },
-    "required": ["frequency", "intake_key","service_url", "username", "api_key"],
+    "required": [
+      "frequency",
+      "intake_key",
+      "service_url",
+      "username",
+      "api_key"
+    ],
     "secrets": ["api_key"],
     "title": "The configuration to fetch new logs",
     "type": "object"
