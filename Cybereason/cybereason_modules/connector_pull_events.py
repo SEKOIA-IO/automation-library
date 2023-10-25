@@ -31,6 +31,7 @@ logger = get_logger()
 class CybereasonEventConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     group_ids: list[str] | None = None
+    chunk_size: int = 1000
 
 
 class CybereasonEventConnector(Connector):

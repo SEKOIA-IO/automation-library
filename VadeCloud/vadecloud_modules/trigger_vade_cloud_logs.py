@@ -48,16 +48,16 @@ class VadeCloudConsumer(Thread):
         self.connector.context_lock.acquire()
         with self.connector.context as cache:
             most_recent_ts_seen = cache.get("last_ts")
-
-            # if undefined, retrieve events from the last 5 minutes
-            if most_recent_ts_seen is None:
-                return now - 5 * 60 * 1000
-
-            # We don't retrieve messages older than one week
-            one_week_ago = now - 7 * 24 * 60 * 60 * 1000
-            if most_recent_ts_seen < one_week_ago:
-                most_recent_ts_seen = one_week_ago
         self.connector.context_lock.release()
+
+        # if undefined, retrieve events from the last 5 minutes
+        if most_recent_ts_seen is None:
+            return now - 5 * 60 * 1000
+
+        # We don't retrieve messages older than one week
+        one_week_ago = now - 7 * 24 * 60 * 60 * 1000
+        if most_recent_ts_seen < one_week_ago:
+            most_recent_ts_seen = one_week_ago
 
         return most_recent_ts_seen
 

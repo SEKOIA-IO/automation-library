@@ -29,7 +29,7 @@ class AWSS3LogsTrigger(AWSS3QueuedConnector):
     def _parse_content(self, content: bytes) -> list:
         records = (record for record in content.decode("utf-8").split(self.separator) if len(record) > 0)
 
-        if self.ignore_comments:
+        if self.ignore_comments:  # pragma: no cover
             records = (record for record in records if not record.strip().startswith("#"))
 
         return list(islice(records, self.skip_first, None))

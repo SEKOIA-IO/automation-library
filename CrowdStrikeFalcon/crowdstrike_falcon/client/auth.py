@@ -60,9 +60,9 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
             credentials.token_type = api_credentials["token_type"]
             credentials.access_token = api_credentials["access_token"]
             credentials.expires_at = current_dt + timedelta(seconds=api_credentials["expires_in"])
-            self.api_credentials = credentials
+            self.__api_credentials = credentials
 
-        return self.api_credentials
+        return self.__api_credentials
 
     def __call__(self, request):
         request.headers["Authorization"] = self.get_credentials().authorization

@@ -164,38 +164,38 @@ class SalesforceConnector(AsyncConnector):
 
         return result
 
-    def run(self) -> None:
+    def run(self) -> None:  # pragma: no cover
         """Runs Salesforce."""
-        loop = asyncio.get_event_loop()
+        while self.running:
+            try:
+                loop = asyncio.get_event_loop()
 
-        previous_processing_end = None
-        try:
-            while True:
-                processing_start = time.time()
-                if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_start - previous_processing_end
+                previous_processing_end = None
+
+                while self.running:
+                    processing_start = time.time()
+                    if previous_processing_end is not None:
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                            processing_start - previous_processing_end
+                        )
+
+                    message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events())
+                    processing_end = time.time()
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+
+                    log_message = "No records to forward"
+                    if len(message_ids) > 0:
+                        log_message = "Pushed {0} records".format(len(message_ids))
+
+                    logger.info(log_message)
+                    self.log(message=log_message, level="info")
+
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_end - processing_start
                     )
 
-                message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events())
-                processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    previous_processing_end = processing_end
 
-                log_message = "No records to forward"
-                if len(message_ids) > 0:
-                    log_message = "Pushed {0} records".format(len(message_ids))
-
-                logger.info(log_message)
-                self.log(message=log_message, level="info")
-
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                    processing_end - processing_start
-                )
-
-                previous_processing_end = processing_end
-
-        except Exception as e:
-            logger.error("Error while running Salesforce: {error}", error=e)
-
-        finally:
-            loop.close()
+            except Exception as error:
+                logger.error("Error while running Salesforce: {error}", error=error)
+                self.log_exception(error, message="Failed to forward events")

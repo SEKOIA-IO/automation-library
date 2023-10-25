@@ -1,0 +1,28 @@
+{
+  "configuration": {
+    "title": "Trend Micro Email Security",
+    "type": "object",
+    "properties": {
+      "service_url": {
+        "description": "API service URL",
+        "type": "string",
+        "format": "uri"
+      },
+      "username": {
+        "description": "Trend Micro username",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "Trend Micro api_key",
+        "type": "string"
+      }
+    },
+    "required": ["service_url", "username", "api_key"],
+    "secrets": ["api_key"]
+  },
+  "description": "",
+  "name": "Trend Micro Email Security",
+  "slug": "trend-micro-email-security",
+  "uuid": "1b02d442-b804-4987-afe7-6a4be6ef35e6",
+  "version": "1.0.0"
+}

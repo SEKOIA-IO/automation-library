@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "Automation Module for Trend Micro Email Security"
+description = ""
+version = "0.0"
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+sekoia-automation-sdk = "^1.3.8"
+requests = "^2.31.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+
+[build-system]
+requires = [ "poetry-core>=1.0.0",]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+    "dev.py"
+]

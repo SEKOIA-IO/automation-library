@@ -3,6 +3,8 @@ from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
 
+from sekoia_automation import config
+from sekoia_automation import storage as storage_module
 import pytest
 
 
@@ -20,3 +22,15 @@ def mocked_uuid(mocker):
     mock_uuid = mocker.patch.object(uuid, "uuid4", autospec=True)
     mock_uuid.return_value = uuid.UUID(hex="00000000000000000000000000000000")
     return mock_uuid
+
+
+@pytest.fixture()
+def config_storage():
+    old_config_storage = config.VOLUME_PATH
+    config.VOLUME_PATH = mkdtemp()
+    storage_module.VOLUME_PATH = config.VOLUME_PATH
+
+    yield Path(config.VOLUME_PATH)
+
+    rmtree(config.VOLUME_PATH)
+    config.VOLUME_PATH = old_config_storage
