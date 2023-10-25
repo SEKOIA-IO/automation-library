@@ -19,14 +19,17 @@ class AWSS3RecordsTrigger(AWSS3QueuedConnector):
                 list(
                     filter(
                         lambda x: payload.get("eventName", "").startswith(x),
-                        ["Delete", "Create", "Copy", "Put", "Restore", "GetObject", "GetObjectTorrent", "ListBuckets"],
+                        ["Delete", "Create", "Copy", "Put", "Restore", "GetObjectTorrent", "ListBuckets"],
                     )
                 )
                 != []
             )
         else:
             # If eventSource is not "s3" we should skipp all events that start with "List" or "Describe"
-            return list(filter(lambda x: payload.get("eventName", "").startswith(x), ["List", "Describe"])) == []
+            return (
+                list(filter(lambda x: payload.get("eventName", "").startswith(x), ["List", "Describe", "GetRecords"]))
+                == []
+            )
 
     def _parse_content(self, content: bytes) -> list:
         if len(content) == 0:
