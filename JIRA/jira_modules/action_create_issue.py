@@ -33,13 +33,13 @@ class JIRACreateIssue(Action):
         )
 
     def get_create_issue_meta(self, project_key: str, issue_type: str) -> dict | None:
-        response = self.client.get_json(
+        response: dict = self.client.get_json(
             "issue/createmeta",
             params={"projectKeys": project_key, "issuetypeNames": issue_type},
         )
 
         projects = response.get("projects")
-        if len(projects) == 0:
+        if not projects or len(projects) == 0:
             raise AttributeError("Project `%s` is not found" % project_key)
 
         project = projects[0]
