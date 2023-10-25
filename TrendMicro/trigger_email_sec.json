@@ -5,6 +5,19 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
+      "service_url": {
+        "description": "API service URL",
+        "type": "string",
+        "format": "uri"
+      },
+      "username": {
+        "description": "Trend Micro username",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "Trend Micro api_key",
+        "type": "string"
+      },
       "frequency": {
         "type": "integer",
         "description": "Batch frequency in seconds",
@@ -25,7 +38,8 @@
         "type": "string"
       }
     },
-    "required": ["frequency", "intake_key"],
+    "required": ["frequency", "intake_key","service_url", "username", "api_key"],
+    "secrets": ["api_key"],
     "title": "The configuration to fetch new logs",
     "type": "object"
   },

@@ -16,6 +16,9 @@ from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENT
 
 
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
+    service_url: str = Field(..., description="Service URL")
+    username: str = Field(..., description="Username")
+    api_key: str = Field(..., description="API key", secret=True)
     frequency: int = 60
     batch_size: int = 500
 
@@ -29,7 +32,7 @@ class TrendMicroWorker(Thread):
         self.log_type = log_type
         self.connector = connector
 
-        self.service_url = connector.module.configuration.service_url
+        self.service_url = connector.configuration.service_url
         if self.service_url.startswith("http://"):
             self.service_url = "https://%s" % self.service_url[7:]
 
@@ -52,7 +55,7 @@ class TrendMicroWorker(Thread):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
-            username=self.connector.module.configuration.username, api_key=self.connector.module.configuration.api_key
+            username=self.connector.configuration.username, api_key=self.connector.configuration.api_key
         )
 
     def get_last_timestamp(self) -> int:
