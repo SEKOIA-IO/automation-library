@@ -37,11 +37,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    module_conf = TrendMicroModuleConfiguration(
-        service_url=args.service_url, username=args.username, api_key=args.api_key
-    )
-
     class DumbConnectorConfiguration(TrendMicroConnectorConfiguration):
+        service_url: str = args.service_url
+        username: str = args.username
+        api_key: str = args.api_key
+
         batch_size: int = 2
         frequency: int = 13
         intake_key = args.intake_key
@@ -52,7 +52,6 @@ if __name__ == "__main__":
     connector_conf = DumbConnectorConfiguration()
 
     module = TrendMicroModule()
-    module.configuration = module_conf
 
     conn = TrendMicroEmailSecurityConnector(module=module, data_path=Path("."))
     conn.configuration = connector_conf
