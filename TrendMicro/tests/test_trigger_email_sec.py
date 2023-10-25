@@ -2,7 +2,6 @@ import time
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-import requests.exceptions
 import requests_mock
 
 from trendmicro_modules import TrendMicroModule
@@ -14,13 +13,11 @@ def trigger(symphony_storage):
     module = TrendMicroModule()
     trigger = TrendMicroEmailSecurityConnector(module=module, data_path=symphony_storage)
 
-    trigger.module.configuration = {
+    trigger.push_events_to_intakes = MagicMock()
+    trigger.configuration = {
         "service_url": "api.tmes.trendmicro.eu",
         "username": "johndoe",
         "api_key": "01234556789abcdef",
-    }
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.configuration = {
         "intake_key": "intake_key",
     }
 
