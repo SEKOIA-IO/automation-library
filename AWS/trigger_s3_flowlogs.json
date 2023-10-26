@@ -1,5 +1,5 @@
 {
-  "description": "Get line-oriented records from new S3 objects based on notifications",
+  "description": "Get line-oriented Flowlog records from new S3 objects based on notifications",
   "docker_parameters": "aws_s3_flowlogs_trigger",
   "name": "Fetch new Flowlogs on S3",
   "arguments": {
