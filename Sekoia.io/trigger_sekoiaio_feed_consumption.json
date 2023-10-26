@@ -6,6 +6,11 @@
                 "type": "string",
                 "description": "ID of the Sekoia.io feed to get data from",
                 "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608"
+            },
+            "to_file": {
+                "type": "boolean",
+                "description": "Whether the event should be saved in a file or sent directly",
+                "default": false
             }
         },
         "type": "object",
@@ -20,6 +25,10 @@
             "stix_objects": {
                 "description": "STIX objects returned by the feed",
                 "type": "object"
+            },
+            "stix_objects_path": {
+                "description": "Filepath of the STIX objects fetched from the collection",
+                "type": "string"
             }
         },
         "required": [

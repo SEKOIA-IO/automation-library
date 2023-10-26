@@ -10,11 +10,6 @@
                 "description": "Sekoia.io base URL (ex. https://api.sekoia.io)",
                 "type": "string",
                 "format": "uri"
-            },
-            "to_file": {
-                "type": "boolean",
-                "description": "Whether the event should be saved in a file or sent directly",
-                "default": false
             }
         },
         "required": [
@@ -27,24 +22,9 @@
             "api_key"
         ]
     },
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "stix_objects_path": {
-                "description": "Filepath of the STIX objects fetched from the collection",
-                "type": "string"
-            },
-            "stix_objects": {
-                "description": "List of STIX objects",
-                "type": "array"
-            }
-        },
-        "title": "Results",
-        "type": "object"
-    },
     "description": "Sekoia.io",
     "name": "Sekoia.io",
     "uuid": "92d8bb47-7c51-445d-81de-ae04edbb6f0a",
     "slug": "sekoia.io",
-    "version": "2.47.0"
+    "version": "2.49"
 }

@@ -2405,18 +2405,17 @@ files = [
 
 [[package]]
 name = "s3path"
-version = "0.4.2"
+version = "0.5.0"
 description = ""
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "s3path-0.4.2-py3-none-any.whl", hash = "sha256:abbd723ced0567aabc10b4f7b435016d9678330365703aae7d3f905451efbaeb"},
-    {file = "s3path-0.4.2.tar.gz", hash = "sha256:04a2ba953555c0191122d87aa90cde27ac5e68253817831f17c538c96f3e58cf"},
+    {file = "s3path-0.5.0-py3-none-any.whl", hash = "sha256:94b0add85ce6be5c38c2bf109e27bef938850ce8d0c731e54f4527007710acbb"},
+    {file = "s3path-0.5.0.tar.gz", hash = "sha256:ccf2ab37d5c68eabcd10f8c6d2f7ed1ab4911a955cbd617de46b3478db70d1ac"},
 ]
 
 [package.dependencies]
 boto3 = ">=1.16.35"
-packaging = "*"
 smart-open = "*"
 
 [[package]]
@@ -2453,30 +2452,38 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.3.8"
-description = "SDK to create SEKOIA.IO playbook modules"
+version = "1.6.0"
+description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = ">=3.10,<3.12"
 files = [
-    {file = "sekoia_automation_sdk-1.3.8-py3-none-any.whl", hash = "sha256:23fa4efd518091caa7d015fb42b58d2e6cbd9b2a791ed59dc835706135219553"},
-    {file = "sekoia_automation_sdk-1.3.8.tar.gz", hash = "sha256:a9e3498b1323f22094adb3bdede98e3f8f190416727693eac4e70986e363d2bf"},
+    {file = "sekoia_automation_sdk-1.6.0-py3-none-any.whl", hash = "sha256:be6f6f5a84c1cc9d97a694d85ac24a9a29901398bb4380e96492802a7e885300"},
+    {file = "sekoia_automation_sdk-1.6.0.tar.gz", hash = "sha256:a21bcd4ba574176d06fda8c629ff66d90b9d8734bb2bd3ca749581a2b4309b7d"},
 ]
 
 [package.dependencies]
 black = "*"
-boto3 = ">=1.26,<2.0"
+boto3 = ">=1.28,<2.0"
 cookiecutter = ">=2.1,<3.0"
 Jinja2 = ">=3.0.3,<4.0.0"
 orjson = ">=3.8,<4.0"
+poetry = "*"
 prometheus-client = ">=0.16.0,<0.17.0"
 pydantic = ">=1.10,<2.0"
 python-slugify = ">=5.0.2,<6.0.0"
 PyYAML = ">=6.0,<7.0"
 requests = ">=2.25,<3.0"
-s3path = ">=0.4,<0.5"
+s3path = ">=0.5,<0.6"
 sentry-sdk = "*"
 tenacity = "*"
 typer = {version = ">=0.7,<0.8", extras = ["all"]}
+
+[package.extras]
+all = ["aiobotocore (>=2.5.2,<3.0.0)", "aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)", "aiohttp (>=3.8.4,<4.0.0)", "aiolimiter (>=1.1.0,<2.0.0)", "loguru (>=0.7.0,<0.8.0)"]
+async-aws = ["aiobotocore (>=2.5.2,<3.0.0)"]
+async-files = ["aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)"]
+async-http = ["aiofiles (>=23.1.0,<24.0.0)", "aiohttp (>=3.8.4,<4.0.0)", "aiolimiter (>=1.1.0,<2.0.0)"]
+logging = ["loguru (>=0.7.0,<0.8.0)"]
 
 [[package]]
 name = "sentry-sdk"
@@ -2994,4 +3001,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "e673fac17eba83092040cdc2af5573fc6b5059b93bc9601c96584c195f229947"
+content-hash = "fba400be01d0affd1a4ac29bfc9f1d0739a1114bf4fd36293cffb074c09b9620"
