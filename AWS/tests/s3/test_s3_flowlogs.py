@@ -79,8 +79,8 @@ def test_forward_next_batches(trigger, aws_mock, symphony_storage):
             record
             for obj in S3Objects.values()
             for record in obj.decode("utf-8").split("\n")[1:]
-            if len(record) > 0 and
-               not (ip_address(record.split(" ")[3]).is_private and ip_address(record.split(" ")[4]).is_private)
+            if len(record) > 0
+            and not (ip_address(record.split(" ")[3]).is_private and ip_address(record.split(" ")[4]).is_private)
         ]
 
 
