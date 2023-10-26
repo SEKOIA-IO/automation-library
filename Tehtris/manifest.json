@@ -11,6 +11,10 @@
             "tenant_id": {
                 "description": "The identifier of your tenant (most of the time, your tenant id is a trigram in the url of your TETHRIS instance; eg: https://{tenant_id}.tehtris.net)",
                 "type": "string"
+            },
+            "alternative_url": {
+                "description": "The alternative url to contact the TEHTRIS instance",
+                "type": "string"
             }
         },
         "required": [
