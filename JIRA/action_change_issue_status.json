@@ -1,5 +1,5 @@
 {
-  "name": "Create Issue",
+  "name": "Change Status of an Issue",
   "description": "Change status of an issue in JIRA",
   "uuid": "38162480-9916-4027-9314-62cd04c918e8",
   "docker_parameters": "jira_change_status",
