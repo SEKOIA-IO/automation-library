@@ -108,7 +108,6 @@ files = [
 botocore = ">=1.31.72,<1.32.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.7.0,<0.8.0"
-s3transfer = ">=0.7.0,<0.8.0"
 
 [package.extras]
 crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
@@ -127,7 +126,6 @@ files = [
 [package.dependencies]
 jmespath = ">=0.7.1,<2.0.0"
 python-dateutil = ">=2.1,<3.0.0"
-urllib3 = {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""}
 urllib3 = {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""}
 
 [package.extras]
@@ -2200,10 +2198,8 @@ jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
 [[package]]
 name = "s3path"
 version = "0.5.0"
-version = "0.5.0"
 description = ""
 optional = false
-python-versions = ">=3.8"
 python-versions = ">=3.8"
 files = [
     {file = "s3path-0.5.0-py3-none-any.whl", hash = "sha256:94b0add85ce6be5c38c2bf109e27bef938850ce8d0c731e54f4527007710acbb"},
@@ -2218,7 +2214,6 @@ smart-open = "*"
 
 [[package]]
 name = "s3transfer"
-version = "0.7.0"
 version = "0.7.0"
 description = "An Amazon S3 Transfer Manager"
 optional = false
@@ -2270,8 +2265,6 @@ jeepney = ">=0.6"
 name = "sekoia-automation-sdk"
 version = "1.6.0"
 description = "SDK to create Sekoia.io playbook modules"
-version = "1.6.0"
-description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = ">=3.10,<3.12"
 files = [
@@ -2284,11 +2277,9 @@ files = [
 [package.dependencies]
 black = "*"
 boto3 = ">=1.28,<2.0"
-boto3 = ">=1.28,<2.0"
 cookiecutter = ">=2.1,<3.0"
 Jinja2 = ">=3.0.3,<4.0.0"
 orjson = ">=3.8,<4.0"
-poetry = "*"
 poetry = "*"
 prometheus-client = ">=0.16.0,<0.17.0"
 pydantic = ">=1.10,<2.0"
@@ -2296,17 +2287,9 @@ python-slugify = ">=5.0.2,<6.0.0"
 PyYAML = ">=6.0,<7.0"
 requests = ">=2.25,<3.0"
 s3path = ">=0.5,<0.6"
-s3path = ">=0.5,<0.6"
 sentry-sdk = "*"
 tenacity = "*"
 typer = {version = ">=0.7,<0.8", extras = ["all"]}
-
-[package.extras]
-all = ["aiobotocore (>=2.5.2,<3.0.0)", "aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)", "aiohttp (>=3.8.4,<4.0.0)", "aiolimiter (>=1.1.0,<2.0.0)", "loguru (>=0.7.0,<0.8.0)"]
-async-aws = ["aiobotocore (>=2.5.2,<3.0.0)"]
-async-files = ["aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)"]
-async-http = ["aiofiles (>=23.1.0,<24.0.0)", "aiohttp (>=3.8.4,<4.0.0)", "aiolimiter (>=1.1.0,<2.0.0)"]
-logging = ["loguru (>=0.7.0,<0.8.0)"]
 
 [package.extras]
 all = ["aiobotocore (>=2.5.2,<3.0.0)", "aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)", "aiohttp (>=3.8.4,<4.0.0)", "aiolimiter (>=1.1.0,<2.0.0)", "loguru (>=0.7.0,<0.8.0)"]
