@@ -1,10 +1,10 @@
-"""Tests related to AwsS3LogsTrigger."""
+"""Tests related to AwsS3FlowLogsTrigger."""
 
 import pytest
 from faker import Faker
 
 from connectors import AwsModule
-from connectors.s3.trigger_s3_logs import AwsS3LogsConfiguration, AwsS3LogsTrigger
+from connectors.s3.trigger_s3_flowlogs import AwsS3FlowLogsConfiguration, AwsS3FlowLogsTrigger
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def test_data() -> bytes:
 version account-id interface-id srcaddr dstaddr srcport dstport protocol packets bytes start end action log-status
 
 2 111111111111 eni-0a479835a7588c9ca 79.124.62.82 172.31.39.167 58757 39045 6 1 40 1645469669 1645469724 REJECT OK
-2 111111111111 eni-0a479835a7588c9ca 172.31.39.167 188.114.116.1 44789 123 17 1 76 1645469669 1645469724 ACCEPT OK
+2 111111111111 eni-0a479835a7588c9ca 172.31.39.167 172.31.39.169 44789 123 17 1 76 1645469669 1645469724 ACCEPT OK
 2 111111111111 eni-0a479835a7588c9ca 45.79.182.177 172.31.39.167 61000 465 6 1 40 1645469669 1645469724 REJECT OK
 2 111111111111 eni-0a479835a7588c9ca 188.114.116.1 172.31.39.167 123 44789 17 1 76 1645469669 1645469724 ACCEPT OK
 # 2 111111111111 eni-0a479835a7588c9ca 188.114.116.1 172.31.39.167 123 44789 17 1 76 1645469669 1645469724 ACCEPT OK
@@ -24,7 +24,7 @@ version account-id interface-id srcaddr dstaddr srcport dstport protocol packets
 
 
 @pytest.fixture
-def aws_s3_logs_trigger_config(faker: Faker) -> AwsS3LogsConfiguration:
+def aws_s3_flowlogs_trigger_config(faker: Faker) -> AwsS3FlowLogsConfiguration:
     """
     Create a configuration.
 
@@ -43,45 +43,47 @@ def aws_s3_logs_trigger_config(faker: Faker) -> AwsS3LogsConfiguration:
         "intake_key": faker.word(),
     }
 
-    return AwsS3LogsConfiguration(**config)
+    return AwsS3FlowLogsConfiguration(**config)
 
 
 @pytest.fixture
 def connector(
     aws_module: AwsModule,
-    aws_s3_logs_trigger_config: AwsS3LogsConfiguration,
-) -> AwsS3LogsTrigger:
+    aws_s3_flowlogs_trigger_config: AwsS3FlowLogsConfiguration,
+) -> AwsS3FlowLogsTrigger:
     """
     Create a connector.
 
     Args:
         aws_module: AwsModule
-        aws_s3_logs_trigger_config: AwsS3LogsConfiguration
+        aws_s3_flowlogs_trigger_config: AwsS3FlowLogsConfiguration
 
     Returns:
         AwsS3ParquetRecordsTrigger:
     """
-    connector = AwsS3LogsTrigger()
+    connector = AwsS3FlowLogsTrigger()
 
     connector.module = aws_module
-    connector.configuration = aws_s3_logs_trigger_config
+    connector.configuration = aws_s3_flowlogs_trigger_config
 
     return connector
 
 
-def test_aws_s3_logs_trigger_parse_data(connector: AwsS3LogsTrigger, test_data: bytes):
+def test_aws_s3_logs_trigger_parse_data(connector: AwsS3FlowLogsTrigger, test_data: bytes):
     """
-    Test AwsS3LogsTrigger `_parse_data`.
+    Test AwsS3FlowLogsTrigger `_parse_data`.
 
     Args:
-        connector: AwsS3LogsTrigger
+        connector: AwsS3FlowLogsTrigger
         test_data: bytes
     """
     assert (
         connector._parse_content(test_data)
-        == [line for line in test_data.decode("utf-8").split("\n") if line != "" and not line.startswith("#")][
-            connector.configuration.skip_first :
-        ]
+        == [
+            line
+            for line in test_data.decode("utf-8").split("\n")
+            if line != "" and not line.startswith("#") and not connector.check_all_ips_are_private(line)
+        ][connector.configuration.skip_first :]
     )
 
     assert connector._parse_content(b"") == []

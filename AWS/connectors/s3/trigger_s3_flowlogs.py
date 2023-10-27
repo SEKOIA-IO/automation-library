@@ -1,12 +1,22 @@
+"""Contains AwsS3FlowLogsTrigger."""
+import ipaddress
 from itertools import islice
 
-from aws.s3.queued import AWSS3QueuedConnector
-from aws.s3.trigger_s3_logs import AWSS3LogsConfiguration
-import ipaddress
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
-class AWSS3FlowLogsTrigger(AWSS3QueuedConnector):
-    configuration: AWSS3LogsConfiguration
+class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):
+    """AwsS3FlowLogsTrigger configuration."""
+
+    ignore_comments: bool = False
+    skip_first: int = 0
+    separator: str
+
+
+class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
+    """Implementation of AwsS3FlowLogsTrigger."""
+
+    configuration: AwsS3FlowLogsConfiguration
     name = "AWS S3 Flow Logs"
 
     @staticmethod
@@ -29,7 +39,7 @@ class AWSS3FlowLogsTrigger(AWSS3QueuedConnector):
 
         return all([ip.is_private for ip in ips])
 
-    def _parse_content(self, content: bytes) -> list:
+    def _parse_content(self, content: bytes) -> list[str]:
         """
         Parse content from S3 bucket.
 

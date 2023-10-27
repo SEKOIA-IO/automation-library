@@ -5,6 +5,8 @@ from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
 class AwsS3LogsConfiguration(AwsS3QueuedConfiguration):
+    """AwsS3LogsTrigger configuration."""
+
     ignore_comments: bool = False
     skip_first: int = 0
     separator: str
