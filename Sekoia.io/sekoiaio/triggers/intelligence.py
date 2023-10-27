@@ -117,7 +117,7 @@ class FeedConsumptionTrigger(Trigger):
                 filepath = write("stix_objects.json", {"stix_objects": objects})
                 self.send_event(
                     event_name=event_name,
-                    event={"stix_objects_path": filepath},
+                    event={"stix_objects_path": str(filepath)},
                     directory=filepath.parent.as_posix(),
                     remove_directory=True,
                 )
@@ -148,6 +148,7 @@ class FeedConsumptionTrigger(Trigger):
             try:
                 self.next_batch()
             except Exception as error:
+                self.log(message="Failed to get data from feed", level="error")
                 self.log_exception(error, message="Failed to get data from feed")
 
 

@@ -1,7 +1,7 @@
 import time
 
 from urllib3.response import HTTPResponse
-from urllib3.util import Retry as BaseRetry
+from urllib3.util.retry import Retry as BaseRetry
 
 
 class Retry(BaseRetry):
@@ -21,7 +21,7 @@ class Retry(BaseRetry):
 
         return None
 
-    def get_retry_after(self, response: HTTPResponse) -> float | None:
+    def get_retry_after(self, response: HTTPResponse) -> float | None:  # type: ignore
         """
         Manage Rate-limiting headers from the server.
         Support standard header Retry-After and custom header X-RateLimit-RetryAfter

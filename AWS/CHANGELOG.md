@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2023-10-18 - 1.23.0
+## 2023-10-18 - 1.25.0
 
 ### Changed
 
 - Refactoring of main functionality to make it more robust and easier to maintain
+
+## 2023-10-26 - 1.24.0
+
+### Changed
+
+- Add new Flowlogs connector to collect VPC Flowlogs
 
 ## 2023-10-17 - 1.22.5
 
