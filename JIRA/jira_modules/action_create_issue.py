@@ -115,6 +115,10 @@ class JIRACreateIssue(Action):
                 return {"issue_key": response.get("key")}
 
         except requests.HTTPError as error:
+            if not error.response:
+                self.log_exception(exception=error)
+                return None
+
             status_code = error.response.status_code
 
             if status_code == 400:

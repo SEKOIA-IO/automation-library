@@ -50,6 +50,10 @@ class JIRAAddCommentToIssue(Action):
             )
 
         except requests.HTTPError as error:
+            if not error.response:
+                self.log_exception(exception=error)
+                return None
+
             status_code = error.response.status_code
 
             if status_code == 404:
@@ -59,6 +63,8 @@ class JIRAAddCommentToIssue(Action):
             elif status_code == 401:
                 self.log(message="Credentials are incorrect", level="error")
                 return None
+
+        return None
 
     def run(self, arguments: JiraAddCommentArguments) -> None:
         self.add_comment_to_issue(issue_key=arguments.issue_key, comment=arguments.comment)

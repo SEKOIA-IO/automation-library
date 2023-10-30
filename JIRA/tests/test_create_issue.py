@@ -168,4 +168,5 @@ def test_add_comment(
             parent_key=None,
         )
         result = action.run(args)
+        assert result is not None
         assert result.get("issue_key") == "PRJ-1"
