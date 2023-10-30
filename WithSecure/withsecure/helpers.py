@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 import requests
 from requests import HTTPError, Response
@@ -34,11 +35,9 @@ def human_readable_api_exception(any_exception: Exception) -> str:
         connection_error: requests.exceptions.ConnectionError = any_exception
         return f"Failed to connect on WithSecure's API ({connection_error.__class__.__name__})"
 
-    elif isinstance(any_exception, HTTPError) and isinstance(any_exception.response, Response):
+    elif isinstance(any_exception, HTTPError) and any_exception.response:
         http_error: HTTPError = any_exception
-
-        http_response: Response = http_error.response
-
+        http_response: Response = cast(Response, http_error.response)
         return human_readable_api_error(http_response)
 
     return str(any_exception)
