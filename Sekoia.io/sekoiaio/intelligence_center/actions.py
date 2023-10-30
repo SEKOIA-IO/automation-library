@@ -35,10 +35,13 @@ class GetContextAction(GenericAPIAction):
         items = results.get("items")
 
         for item in items:
-            if item.get("external_references")[0].get("source_name").startswith("FLINT"):
-                ind = items.index(item)
-                url = "https://app.sekoia.io/intelligence/objects/" + item.get("id")
-                item["external_references"][0].update({"url": url})
-                items[ind] = item
+            if item.get("external_references"):
+                external_references = item.get("external_references")
+                # Search for FLINT source_name and add url to them
+                if external_references[0].get("source_name").startswith("FLINT") :
+                    ind = items.index(item)
+                    url = "https://app.sekoia.io/intelligence/objects/" + item.get("id")
+                    item["external_references"][0].update({"url": url})
+                    items[ind] = item
 
         return {"items": items, "has_more": results.get("has_more")}
