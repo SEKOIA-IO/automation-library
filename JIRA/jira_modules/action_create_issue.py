@@ -1,5 +1,6 @@
 from functools import cached_property
 
+import requests
 from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 
@@ -12,7 +13,7 @@ class JiraCreateIssueArguments(BaseModel):
     summary: str = Field(..., description="Summary of an issue (e.g. 'Fix a bug')")
     issue_type: str = Field(..., description="Issue type (e.g. 'Task')")
     due_date: str | None = Field(description="Due date (e.g. '2023-10-31')'")
-    labels: str | None = Field(description="Comma-separated labels (e.g. 'devops,support'")
+    labels: str | None = Field(description="Comma-separated labels (e.g. 'devops,support')")
     assignee: str | None = Field(description="Exact display name of an assignee (e.g. John Doe)")
     reporter: str | None = Field(description="Exact display name of a reporter (e.g. Jane Doe)")
     priority: str | None = Field(description="Issue priority (e.g. Highest)")
@@ -40,22 +41,25 @@ class JIRACreateIssue(Action):
 
         projects = response.get("projects")
         if not projects or len(projects) == 0:
-            raise AttributeError("Project `%s` is not found" % project_key)
+            self.log(message="Project `%s` is not found" % project_key, level="error")
+            return None
 
         project = projects[0]
         project_id = project.get("id")
         issues_types = project.get("issuetypes")
 
         if not issues_types or len(issues_types) == 0:
-            raise AttributeError("Issue type `%s` is not found " % issue_type)
+            self.log(message="Issue type `%s` is not found " % issue_type, level="error")
+            return None
 
         issue_type_id = project["issuetypes"][0]["id"]
         return {"project_id": project_id, "issue_type_id": issue_type_id}
 
-    def run(self, arguments: JiraCreateIssueArguments) -> dict:
+    def run(self, arguments: JiraCreateIssueArguments) -> dict | None:
         meta = self.get_create_issue_meta(project_key=arguments.project_key, issue_type=arguments.issue_type)
         if not meta:
-            raise AttributeError("Project key OR/AND issue type are incorrect")
+            self.log("Project key OR/AND issue type are incorrect", level="error")
+            return None
 
         # Mandatory Fields
         params = {
@@ -74,14 +78,16 @@ class JIRACreateIssue(Action):
             if arguments.assignee:
                 assignee_user_id = user_name_to_id.get(arguments.assignee)
                 if not assignee_user_id:
-                    raise AttributeError("User with name `%s` is not found" % arguments.assignee)
+                    self.log(message="User with name `%s` is not found" % arguments.assignee, level="error")
+                    return None
 
                 params["assignee"] = {"id": assignee_user_id}
 
             if arguments.reporter:
                 reporter_user_id = user_name_to_id.get(arguments.reporter)
                 if not reporter_user_id:
-                    raise AttributeError("User with name `%s` is not found" % arguments.reporter)
+                    self.log(message="User with name `%s` is not found" % arguments.reporter, level="error")
+                    return None
 
                 params["reporter"] = {"id": reporter_user_id}
 
@@ -96,14 +102,31 @@ class JIRACreateIssue(Action):
             priority_name_to_id = {item["name"]: item["id"] for item in possible_priorities}
             priority_id = priority_name_to_id.get(arguments.priority)
             if not priority_id:
-                raise AttributeError("Priority `%s` does not exist" % arguments.priority)
+                self.log(message="Priority `%s` does not exist" % arguments.priority, level="error")
+                return None
 
-        response = self.client.post_json(
-            "issue",
-            json={"fields": params},
-        )
+        try:
+            response = self.client.post_json(
+                "issue",
+                json={"fields": params},
+            )
 
-        if "key" in response:
-            return {"issue_key": response.get("key")}
+            if "key" in response:
+                return {"issue_key": response.get("key")}
+
+        except requests.HTTPError as error:
+            status_code = error.response.status_code
+
+            if status_code == 400:
+                self.log(message="Incorrect fields and/or permissions", level="error")
+                return None
+
+            elif status_code == 403:
+                self.log(message="You don't have enough permissions to create an issue", level="error")
+                return None
+
+            elif status_code == 401:
+                self.log(message="Credentials are incorrect", level="error")
+                return None
 
         return {}
