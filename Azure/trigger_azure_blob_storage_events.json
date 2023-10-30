@@ -43,7 +43,7 @@
     },
     "description": "Trigger p laybook to get Azure Blob Storage events information",
     "docker_parameters": "azure_blob_storage",
-    "name": "Collect Azure Blob Storage events",
+    "name": "[BETA] Collect Azure Blob Storage events",
     "results": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {},

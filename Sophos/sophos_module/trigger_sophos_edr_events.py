@@ -18,6 +18,7 @@ from sophos_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTC
 class SophosEDRConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     exclude_types: list[str] | None = None
+    chunk_size: int = 1000
 
 
 class SophosEDREventsTrigger(SophosConnector):

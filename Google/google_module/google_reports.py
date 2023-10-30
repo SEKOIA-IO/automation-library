@@ -47,6 +47,7 @@ class GoogleReportsConfig(DefaultConnectorConfiguration):
     admin_mail: str
     frequency: int = 20
     application_name: ApplicationName = ApplicationName.DRIVE
+    chunk_size: int = 1000
 
 
 class GoogleReports(GoogleTrigger):

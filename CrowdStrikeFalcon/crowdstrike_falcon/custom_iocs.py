@@ -74,6 +74,7 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
         results = {"valid": [], "revoked": []}
         for object in stix_objects:
             # Extract value and type from pattern
+            self.log(message=f"object in stix_objects {str(object)}", level="debug")
             indicators = stix_to_indicators(stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP)
             for indicator in indicators:
                 ioc_value = indicator["value"]

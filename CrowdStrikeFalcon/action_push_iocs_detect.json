@@ -6,6 +6,10 @@
                 "description": "The IOCs to disseminate",
                 "type": "object"
             },
+            "stix_objects_path": {
+                "description": "Filepath of the STIX objects fetched from the collection",
+                "type": "string"
+            },
             "sekoia_base_url": {
                 "description": "[Optional] Sekoia base url, used to generate direct links to IOCs",
                 "default": "https://app.sekoia.io",

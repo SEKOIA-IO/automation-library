@@ -1,0 +1,31 @@
+{
+  "name": "Change Status of an Issue",
+  "description": "Change status of an issue in JIRA",
+  "uuid": "38162480-9916-4027-9314-62cd04c918e8",
+  "docker_parameters": "jira_change_status",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "JiraChangeStatusArguments",
+    "type": "object",
+    "properties": {
+      "issue_key": {
+        "title": "Issue Key",
+        "description": "Issue key (e.g. PROJ-1)",
+        "type": "string"
+      },
+      "status_name": {
+        "title": "Status Name",
+        "description": "Exact name of the status (e.g. 'To Do')",
+        "type": "string"
+      }
+    },
+    "required": ["issue_key", "status_name"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "required": [],
+    "title": "Results",
+    "type": "object"
+  }
+}
