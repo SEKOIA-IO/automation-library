@@ -38,7 +38,7 @@ class GetContextAction(GenericAPIAction):
             if item.get("external_references"):
                 external_references = item.get("external_references")
                 # Search for FLINT source_name and add url to them
-                if external_references[0].get("source_name").startswith("FLINT") :
+                if external_references[0].get("source_name").startswith("FLINT"):
                     ind = items.index(item)
                     url = "https://app.sekoia.io/intelligence/objects/" + item.get("id")
                     item["external_references"][0].update({"url": url})
