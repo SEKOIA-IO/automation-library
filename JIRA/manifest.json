@@ -2,7 +2,7 @@
   "uuid": "d1445e5e-8e3b-417f-ae19-bca67a10affd",
   "name": "Atlassian JIRA",
   "slug": "atlassian-jira",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Integrates with JIRA",
   "configuration": {
     "title": "JIRA",
