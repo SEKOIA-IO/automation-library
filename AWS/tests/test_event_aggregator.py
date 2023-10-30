@@ -115,17 +115,21 @@ def decrypt_event():
     }
 
 
-def test_aggregation_twice(decrypt_event):
-    aggregation_definitions = {
+@pytest.fixture
+def decrypt_event_aggregations():
+    return {
         "d3a813ac-f9b5-451c-a602-a5994544d9ed": [
             Fingerprint(
                 condition_func=lambda e: (e["event"]["action"] == "Decrypt"),
                 build_hash_str_func=lambda e: f"{e['aws']['cloudtrail']['userIdentity']['arn']}:{e['aws']['cloudtrail']['resources'][0]['ARN']}",
+                ttl=30,
             )
         ]
     }
 
-    aggregator = EventAggregator(aggregation_definitions=aggregation_definitions)
+
+def test_aggregation_twice(decrypt_event, decrypt_event_aggregations):
+    aggregator = EventAggregator(aggregation_definitions=decrypt_event_aggregations)
     assert aggregator.aggregate(decrypt_event) == decrypt_event
     assert len(aggregator.aggregations) == 1
 
@@ -148,6 +152,7 @@ def test_fingerprint_condition_return_false(decrypt_event):
             Fingerprint(
                 condition_func=lambda e: (e["event"]["action"] == "Invalid"),
                 build_hash_str_func=lambda e: f"{e['aws']['cloudtrail']['userIdentity']['arn']}:{e['aws']['cloudtrail']['resources'][0]['ARN']}",
+                ttl=30,
             )
         ]
     }
@@ -163,6 +168,7 @@ def test_fingerprint_condition_raises_error(decrypt_event):
             Fingerprint(
                 condition_func=lambda e: (e["unknown-field"] == "Invalid"),
                 build_hash_str_func=lambda e: f"{e['aws']['cloudtrail']['userIdentity']['arn']}:{e['aws']['cloudtrail']['resources'][0]['ARN']}",
+                ttl=30,
             )
         ]
     }
@@ -184,12 +190,33 @@ def test_flush_on_ttl(decrypt_event):
             Fingerprint(
                 condition_func=lambda e: (e["event"]["action"] == "Decrypt"),
                 build_hash_str_func=lambda e: f"{e['aws']['cloudtrail']['userIdentity']['arn']}:{e['aws']['cloudtrail']['resources'][0]['ARN']}",
+                ttl=2,
             )
         ]
     }
     magic = MagicMock()
     aggregator = EventAggregator(aggregation_definitions=aggregation_definitions)
-    aggregator.start_flush_on_ttl(ttl=2, on_flush_func=magic, delay=0.5)
+    aggregator.start_flush_on_ttl(on_flush_func=magic, delay=0.5)
+    aggregator.aggregate(decrypt_event)
+    aggregator.aggregate(decrypt_event)
+    time.sleep(2)
+    aggregator.stop()
+    assert magic.called
+
+
+def test_flush_on_ttl_support_per_fingerprint_ttl(decrypt_event):
+    aggregation_definitions = {
+        "d3a813ac-f9b5-451c-a602-a5994544d9ed": [
+            Fingerprint(
+                condition_func=lambda e: (e["event"]["action"] == "Decrypt"),
+                build_hash_str_func=lambda e: f"{e['aws']['cloudtrail']['userIdentity']['arn']}:{e['aws']['cloudtrail']['resources'][0]['ARN']}",
+                ttl=2,
+            )
+        ]
+    }
+    magic = MagicMock()
+    aggregator = EventAggregator(aggregation_definitions=aggregation_definitions)
+    aggregator.start_flush_on_ttl(on_flush_func=magic, delay=0.5)
     aggregator.aggregate(decrypt_event)
     aggregator.aggregate(decrypt_event)
     time.sleep(2)
@@ -203,15 +230,16 @@ def test_flush_on_stop(decrypt_event):
             Fingerprint(
                 condition_func=lambda e: (e["event"]["action"] == "Decrypt"),
                 build_hash_str_func=lambda e: f"{e['aws']['cloudtrail']['userIdentity']['arn']}:{e['aws']['cloudtrail']['resources'][0]['ARN']}",
+                ttl=100,
             )
         ]
     }
     magic = MagicMock()
     aggregator = EventAggregator(aggregation_definitions=aggregation_definitions)
-    aggregator.start_flush_on_ttl(ttl=100, on_flush_func=magic, delay=0.5)
+    aggregator.start_flush_on_ttl(on_flush_func=magic, delay=0.5)
     aggregator.aggregate(decrypt_event)
     aggregator.aggregate(decrypt_event)
     aggregator.aggregate(decrypt_event)
     aggregator.stop()
     assert magic.called
-    assert magic.call_args_list[0].args[0]["event"]["count"] == 2
+    assert magic.call_args_list[0].args[0]["sekoiaio"]["repeat"]["count"] == 2

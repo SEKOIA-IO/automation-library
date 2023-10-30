@@ -1,7 +1,9 @@
+import copy
 import datetime
 import threading
 import time
-from typing import Callable
+
+from typing import Callable, Tuple
 from ciso8601 import parse_datetime_as_naive
 
 from pydantic import BaseModel
@@ -10,19 +12,23 @@ from pydantic import BaseModel
 class Fingerprint(BaseModel):
     condition_func: Callable[[dict], bool]
     build_hash_str_func: Callable[[dict], str]
+    ttl: int
 
 
 class Aggregation(BaseModel):
     start: datetime.datetime
     end: datetime.datetime
+    ttl: int
     count: int
     event: dict
 
     def get_aggregated_event(self):
-        aggregated_event = self.event
-        aggregated_event["event"]["start"] = self.start.isoformat()
-        aggregated_event["event"]["end"] = self.start.isoformat()
-        aggregated_event["event"]["count"] = self.count
+        aggregated_event = copy.deepcopy(self.event)
+        aggregated_event["sekoiaio"]["repeat"] = {
+            "start": self.start.isoformat(),
+            "end": self.end.isoformat(),
+            "count": self.count,
+        }
         return aggregated_event
 
 
@@ -34,14 +40,12 @@ class EventAggregatorTTLThread(threading.Thread):
     def __init__(
         self,
         event_aggregator: "EventAggregator",
-        ttl: int,
         on_flush_func: Callable[[dict], None],
         delay: float = 10,
     ):
         super().__init__()
         self.event_aggregator = event_aggregator
         self.f_must_stop = False
-        self.ttl = ttl
         self.on_flush_func = on_flush_func
         self.delay = delay
 
@@ -52,7 +56,7 @@ class EventAggregatorTTLThread(threading.Thread):
         try:
             while not self.f_must_stop:
                 time.sleep(self.delay)
-                for aggregated_event in self.event_aggregator.flush_all_ttl(ttl=self.ttl):
+                for aggregated_event in self.event_aggregator.flush_all_ttl():
                     self.on_flush_func(aggregated_event)
         finally:
             for aggregated_event in self.event_aggregator.flush_all():
@@ -68,13 +72,11 @@ class EventAggregator:
         self.aggregations: dict[str, Aggregation] = dict()
         self.lock = threading.Lock()
 
-    def start_flush_on_ttl(self, ttl: int, on_flush_func: Callable[[dict], None], delay: float = 10):
+    def start_flush_on_ttl(self, on_flush_func: Callable[[dict], None], delay: float = 10):
         """
         This method MUST be called to trigger the execution of the ttl thread
         """
-        self.ttl_thread = EventAggregatorTTLThread(
-            event_aggregator=self, ttl=ttl, on_flush_func=on_flush_func, delay=delay
-        )
+        self.ttl_thread = EventAggregatorTTLThread(event_aggregator=self, on_flush_func=on_flush_func, delay=delay)
         self.ttl_thread.start()
 
     def stop(self):
@@ -100,7 +102,7 @@ class EventAggregator:
             self.aggregations = dict()
         return aggregated_events
 
-    def flush_all_ttl(self, ttl: int) -> list[dict]:
+    def flush_all_ttl(self) -> list[dict]:
         """
         Returns (and delete) all the events we aggregate for at least the ttl time
         """
@@ -109,7 +111,7 @@ class EventAggregator:
         # we prevent any actions on the aggregations while flushing
         with self.lock:
             for event_hash, aggregation in self.aggregations.items():
-                if aggregation.start + datetime.timedelta(seconds=ttl) < datetime.datetime.utcnow():
+                if aggregation.start + datetime.timedelta(seconds=aggregation.ttl) < datetime.datetime.utcnow():
                     event_hashes_to_flush.append(event_hash)
 
                     if aggregation.count > 0:
@@ -120,7 +122,7 @@ class EventAggregator:
 
         return aggregated_events
 
-    def get_hash(self, event: dict) -> str | None:
+    def get_hash(self, event: dict) -> Tuple[str, int] | None:
         """
         Returns the hash to fingerprint the specified event
         """
@@ -128,15 +130,16 @@ class EventAggregator:
 
         for fingerprint in self.aggregation_definitions.get(event_dialect_uuid, []):
             if fingerprint.condition_func(event):
-                return f"{event_dialect_uuid};{fingerprint.build_hash_str_func(event)}"
+                return f"{event_dialect_uuid};{fingerprint.build_hash_str_func(event)}", fingerprint.ttl
         return None
 
     def aggregate(self, event: dict) -> dict | None:
         try:
-            event_hash = self.get_hash(event)
+            hash_and_ttl = self.get_hash(event)
             # if no hash can be computed, we don't aggregate and forward the event
-            if not event_hash:
+            if not hash_and_ttl:
                 return event
+            event_hash, ttl = hash_and_ttl
 
             # the aggregation stores the parsed timestamp
             event_dt = parse_datetime_as_naive(event["@timestamp"])
@@ -158,6 +161,7 @@ class EventAggregator:
                         event=event,
                         start=event_dt,
                         end=event_dt,
+                        ttl=ttl,
                         count=0
                         # =0 to prevent replay on flushing because we already send first occurrence of the event
                     )
