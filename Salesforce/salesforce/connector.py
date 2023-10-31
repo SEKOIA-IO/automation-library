@@ -14,6 +14,10 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.utils import (
+    get_annotation_for,
+    get_as_model,
+)
 
 from client.http_client import SalesforceHttpClient
 from utils.file_utils import csv_file_as_rows, delete_file
@@ -98,7 +102,9 @@ class SalesforceConnector(AsyncConnector):
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         configuration = self.module._configuration
-        conf_msg = f"Configuration:\n - type: {type(configuration)}\n - content: {str(configuration)}"
+        model_def = get_annotation_for(self.module.__class__, "configuration")
+        model = get_as_model(model_def, configuration)
+        conf_msg = f"Configuration:\n - type: {type(configuration)}\n - content: {str(configuration)}\n - model_def: {model_def}\n - model: {model}"
         logger.info(conf_msg)
         self.log(level="info", message=conf_msg)
 
