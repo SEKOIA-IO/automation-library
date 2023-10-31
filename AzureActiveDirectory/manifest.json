@@ -19,13 +19,13 @@
                 "type": "string"
             },
             "username": {
-                "title": "Client UserName",
-                "description": "Client username account to use reset password action. the account should have admin permissions to reset password",
+                "title": "Delegated account username",
+                "description": "The username of the delegated account used for some administrative tasks (eg: reset password)",
                 "type": "string"
             },
             "password": {
-                "title": "New Password",
-                "description": "New password for the target user. the account should have admin permissions to reset password",
+                "title": "Delegated account password",
+                "description": "The password of the delegated account used for some administrative tasks (eg: reset password)",
                 "type": "string"
             }
         },
