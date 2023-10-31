@@ -1,5 +1,4 @@
 import json
-import os
 import queue
 import threading
 import time
@@ -346,6 +345,12 @@ class EventStreamTrigger(Connector):
         )
 
         return VerticlesCollector(self, tg_client, self.client)
+
+    @cached_property
+    def _connector_user_agent(self) -> str:
+        return "sekoiaio-connector/{0}-{1}".format(
+            self.module.manifest.get("slug", ""), self.module.manifest.get("version", "")
+        )
 
     def read_queue(self) -> None:
         """
