@@ -64,6 +64,7 @@ class JIRAAction(Action):
     def _process_http_error(self, error: requests.exceptions.HTTPError) -> None:
         if not error.response:
             self.log_exception(exception=error)
+            return
 
         status_code = error.response.status_code
 
