@@ -13,7 +13,7 @@ class DeleteApplicationAction(MicrosoftGraphAction):
         "Delete an application object. Requires the Application.ReadWrite.OwnedBy or Application.ReadWrite.All."
     )
 
-    async def query_delete_app(self, id: str, req_conf):
+    async def query_delete_app(self, id, req_conf):
         return await self.client.applications.by_application_id(id).delete(request_configuration=req_conf)
 
     async def run(self, arguments: ApplicationArguments):

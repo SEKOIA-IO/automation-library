@@ -38,7 +38,7 @@ class GetUserAction(MicrosoftGraphAction):
     # results_model doesn't support async model
     # results_model = GetUserResults
 
-    async def query_get_user(self, user_param: str, req_conf):
+    async def query_get_user(self, user_param, req_conf):
         return await self.client.users.by_user_id(user_param).get(request_configuration=req_conf)
 
     async def run(self, arguments: RequiredSingleUserArguments):
@@ -63,7 +63,7 @@ class DisableUserAction(MicrosoftGraphAction):
         "Disable an Azure Active Directory user. Requires the User.ReadWrite.All app permission."  # noqa: E501
     )
 
-    async def query_disable_user(self, user_param: str, req_body, req_conf):
+    async def query_disable_user(self, user_param, req_body, req_conf):
         return await self.client.users.by_user_id(user_param).patch(body=req_body, request_configuration=req_conf)
 
     async def run(self, arguments: RequiredSingleUserArguments):
@@ -84,7 +84,7 @@ class EnableUserAction(MicrosoftGraphAction):
         "Enable an Azure Active Directory user. Requires the User.ReadWrite.All app permission."  # noqa: E501
     )
 
-    async def query_enable_user(self, user_param: str, req_body, req_conf):
+    async def query_enable_user(self, user_param, req_body, req_conf):
         return await self.client.users.by_user_id(user_param).patch(body=req_body, request_configuration=req_conf)
 
     async def run(self, arguments: RequiredSingleUserArguments):
@@ -103,10 +103,10 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
     name = "Reset User Password"
     description = "Reset a user's password. You will need UserAuthenticationMethod.ReadWrite.All deleguated permission."  # noqa: E501
 
-    async def query_list_user_methods(self, user_param: str, req_conf):
+    async def query_list_user_methods(self, user_param, req_conf):
         return await self.client.users.by_user_id(user_param).get(request_configuration=req_conf)
 
-    async def query_reset_user_password(self, user_param: str, id_methods: str, req_body, req_conf):
+    async def query_reset_user_password(self, user_param, id_methods, req_body, req_conf):
         return (
             await self.client_password.users.by_user_id(user_param)
             .authentication.methods.by_authentication_method_id(id_methods)
