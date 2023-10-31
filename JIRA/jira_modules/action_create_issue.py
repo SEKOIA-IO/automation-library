@@ -1,10 +1,6 @@
-from functools import cached_property
-
-import requests
 from pydantic import BaseModel, Field
-from sekoia_automation.action import Action
 
-from .api import JiraApi
+from .action_base import JIRAAction
 from .base import JIRAModule
 
 
@@ -20,21 +16,13 @@ class JiraCreateIssueArguments(BaseModel):
     parent_key: str | None = Field(None, description="Key of a parent issue (e.g. PRJ-1)")
 
 
-class JIRACreateIssue(Action):
+class JIRACreateIssue(JIRAAction):
     name = "Create an issue"
     description = "Create an issue"
     module: JIRAModule
 
-    @cached_property
-    def client(self) -> JiraApi:
-        return JiraApi(
-            domain=self.module.configuration.domain,
-            email=self.module.configuration.email,
-            api_token=self.module.configuration.api_key,
-        )
-
     def get_create_issue_meta(self, project_key: str, issue_type: str) -> dict | None:
-        response: dict = self.client.get_json(
+        response: dict = self.get_json(
             "issue/createmeta",
             params={"projectKeys": project_key, "issuetypeNames": issue_type},
         )
@@ -72,7 +60,7 @@ class JIRACreateIssue(Action):
             params["duedate"] = arguments.due_date
 
         if arguments.assignee or arguments.reporter:
-            all_users = self.client.get_paginated_results(path="users/search", result_field=None)
+            all_users = self.get_paginated_results(path="users/search", result_field=None)
             user_name_to_id = {user.get("displayName"): user.get("accountId") for user in all_users}
 
             if arguments.assignee:
@@ -98,39 +86,19 @@ class JIRACreateIssue(Action):
             params["parent"] = {"key": arguments.parent_key}
 
         if arguments.priority:
-            possible_priorities = self.client.get_paginated_results("priority/search")
+            possible_priorities = self.get_paginated_results("priority/search")
             priority_name_to_id = {item["name"]: item["id"] for item in possible_priorities}
             priority_id = priority_name_to_id.get(arguments.priority)
             if not priority_id:
                 self.log(message="Priority `%s` does not exist" % arguments.priority, level="error")
                 return None
 
-        try:
-            response = self.client.post_json(
-                "issue",
-                json={"fields": params},
-            )
+        response = self.post_json(
+            "issue",
+            json={"fields": params},
+        )
 
-            if "key" in response:
-                return {"issue_key": response.get("key")}
-
-        except requests.HTTPError as error:
-            if not error.response:
-                self.log_exception(exception=error)
-                return None
-
-            status_code = error.response.status_code
-
-            if status_code == 400:
-                self.log(message="Incorrect fields and/or permissions", level="error")
-                return None
-
-            elif status_code == 403:
-                self.log(message="You don't have enough permissions to create an issue", level="error")
-                return None
-
-            elif status_code == 401:
-                self.log(message="Credentials are incorrect", level="error")
-                return None
+        if "key" in response:
+            return {"issue_key": response.get("key")}
 
         return {}
