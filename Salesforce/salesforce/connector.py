@@ -9,7 +9,6 @@ import orjson
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
-from pydantic import BaseModel, Field, HttpUrl
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
@@ -22,21 +21,8 @@ from sekoia_automation.utils import (
 from client.http_client import SalesforceHttpClient
 from utils.file_utils import csv_file_as_rows, delete_file
 
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-
-
-class SalesforceModuleConfig(BaseModel):
-    """Configuration for SalesforceModule."""
-
-    client_secret: str = Field(secret=True)
-    client_id: str
-    base_url: HttpUrl
-
-
-class SalesforceModule(Module):
-    """SalesforceModule."""
-
-    configuration: SalesforceModuleConfig
+from salesforce import SalesforceModule
+from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):

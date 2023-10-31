@@ -9,7 +9,8 @@ from aioresponses import aioresponses
 from sekoia_automation import constants
 
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
-from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig, SalesforceModule
+from salesforce import SalesforceModule
+from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig
 
 
 @pytest.fixture
