@@ -27,7 +27,7 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
         client_id: str,
         client_secret: str,
         module_name: str | None = None,
-        module_version: str | None = None
+        module_version: str | None = None,
     ):
         self.__authorization_url = urljoin(base_url, "/oauth2/token")
         self.__client_id = client_id
