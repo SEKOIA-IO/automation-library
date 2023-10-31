@@ -97,6 +97,11 @@ class SalesforceConnector(AsyncConnector):
 
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
+        configuration = self.module.configuration
+        conf_msg = f"Configuration:\n - type: {type(configuration)}\n - content: {str(configuration)}"
+        logger.info(conf_msg)
+        self.log(level="info", message=conf_msg)
+
         self._salesforce_client = SalesforceHttpClient(
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
