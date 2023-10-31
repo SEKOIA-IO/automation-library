@@ -1,11 +1,7 @@
-from urllib.parse import unquote as url_decoder
-
 import pytest
 import requests_mock
 
 from sekoiaio.intelligence_center.actions import GetContextAction
-from sekoiaio.operation_center import GetAlert, ListAlerts
-from sekoiaio.intelligence_center.actions import PostBundleAction
 
 
 @pytest.fixture
@@ -88,10 +84,12 @@ def get_context_res_with_url(get_context_response, get_context_response_with_url
 
     with requests_mock.Mocker() as mock:
         mock.post("http://fake.url/api/v2/inthreat/objects/search", json=expected_response)
-
-        results = action.run(arguments)
+        results: dict = action.run(arguments)
 
         assert results == get_context_response_with_url
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "POST"
 
 
 def get_context_res(get_context_response):
@@ -103,7 +101,9 @@ def get_context_res(get_context_response):
 
     with requests_mock.Mocker() as mock:
         mock.post("http://fake.url/api/v2/inthreat/objects/search", json=expected_response)
-
-        results = action.run(arguments)
+        results: dict = action.run(arguments)
 
         assert results == get_context_response
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "POST"
