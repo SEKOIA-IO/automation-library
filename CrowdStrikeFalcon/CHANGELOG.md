@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-10-31 - 1.14.1
+
+### Changed
+
+- Update connector to use new format of user-agent when push to intake
+
 ## 2023-09-07 - 1.12.1
 
 ### Changed
