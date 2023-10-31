@@ -13,11 +13,13 @@ from crowdstrike_falcon.client.retry import Retry
 
 class ApiClient(requests.Session):
     def __init__(
-        self,
-        base_url: str,
-        auth: AuthBase,
-        nb_retries: int = 5,
-        ratelimit_per_second: int = 100,
+            self,
+            base_url: str,
+            auth: AuthBase,
+            nb_retries: int = 5,
+            ratelimit_per_second: int = 100,
+            module_name: str | None = None,
+            module_version: str | None = None,
     ):
         super().__init__()
         self._base_url = base_url
@@ -32,6 +34,13 @@ class ApiClient(requests.Session):
                 ),
             ),
         )
+
+        if module_name and module_version:
+            self.headers.update(
+                {
+                    "User-Agent": "sekoiaio-connector/{0}-{1}".format(module_name, module_version),
+                }
+            )
 
     def get_url(self, endpoint: str) -> str:
         return urljoin(self._base_url, endpoint)
@@ -73,11 +82,29 @@ class ApiClient(requests.Session):
 
 
 class CrowdstrikeFalconClient(ApiClient):
-    def __init__(self, base_url: str, client_id: str, client_secret: str, nb_retries: int = 5):
+    def __init__(
+        self,
+        base_url: str,
+        client_id: str,
+        client_secret: str,
+        nb_retries: int = 5,
+        module_name: str | None = None,
+        module_version: str | None = None
+    ):
+        _auth = CrowdStrikeFalconApiAuthentication(
+            base_url,
+            client_id,
+            client_secret,
+            module_name=module_name,
+            module_version=module_version
+        )
+
         super().__init__(
             base_url,
-            CrowdStrikeFalconApiAuthentication(base_url, client_id, client_secret),
+            _auth,
             nb_retries=nb_retries,
+            module_name=module_name,
+            module_version=module_version
         )
 
     def list_streams(self, app_id: str, **kwargs) -> Generator[dict, None, None]:
@@ -118,14 +145,28 @@ class CrowdstrikeFalconClient(ApiClient):
 
 
 class CrowdstrikeThreatGraphClient(ApiClient):
-    def __init__(self, base_url: str, username: str, password: str, nb_retries: int = 5):
-        super().__init__(base_url, HTTPBasicAuth(username, password), nb_retries=nb_retries)
+    def __init__(
+        self,
+        base_url: str,
+        username: str,
+        password: str,
+        nb_retries: int = 5,
+        module_name: str | None = None,
+        module_version: str | None = None
+    ):
+        super().__init__(
+            base_url,
+            HTTPBasicAuth(username, password),
+            nb_retries=nb_retries,
+            module_name=module_name,
+            module_version=module_version
+        )
 
     def get_edge_types(self, **kwargs) -> Generator[str, None, None]:
         yield from self.request_endpoint("GET", "threatgraph/queries/edge-types/v1", **kwargs)
 
     def list_edges(
-        self, verticle_id: str, edge_type: str, scope: str = "device", **kwargs
+            self, verticle_id: str, edge_type: str, scope: str = "device", **kwargs
     ) -> Generator[dict, None, None]:
         yield from self.request_endpoint(
             "GET",
@@ -135,11 +176,11 @@ class CrowdstrikeThreatGraphClient(ApiClient):
         )
 
     def get_verticles_details(
-        self,
-        verticle_ids: list[str],
-        verticle_type: str,
-        scope: str = "device",
-        **kwargs,
+            self,
+            verticle_ids: list[str],
+            verticle_type: str,
+            scope: str = "device",
+            **kwargs,
     ) -> Generator[dict, None, None]:
         yield from self.request_endpoint(
             "GET",

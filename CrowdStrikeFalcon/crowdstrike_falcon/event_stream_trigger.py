@@ -342,6 +342,8 @@ class EventStreamTrigger(Connector):
             self.configuration.tg_base_url,
             self.configuration.tg_username,
             self.configuration.tg_password,
+            module_name=self.module.manifest.get("slug"),
+            module_version=self.module.manifest.get("version"),
         )
 
         return VerticlesCollector(self, tg_client, self.client)

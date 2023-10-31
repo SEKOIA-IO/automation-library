@@ -15,4 +15,6 @@ class CrowdstrikeAction(Action):
             self.module.configuration.base_url,
             self.module.configuration.client_id,
             self.module.configuration.client_secret,
+            module_name=self.module.manifest.get("slug"),
+            module_version=self.module.manifest.get("version"),
         )
