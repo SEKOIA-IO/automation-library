@@ -11,13 +11,13 @@ def request_mock():
 
 
 @pytest.fixture
-def trigger(symphony_storage, request_mock):
+def trigger(symphony_storage, request_mock, config_storage):
     trigger = TriggerFetchIPtoASNDatabase(data_path=symphony_storage)
     trigger.configuration = {"interval": 0, "chunk_size": 5}
     trigger._token = "token"
-    trigger._callback_url = "https://callback.url"
+    config_storage.joinpath(TriggerFetchIPtoASNDatabase.CALLBACK_URL_FILE_NAME).write_text("https://callback.url/")
     request_mock.post(trigger.callback_url)
-    request_mock.post(trigger._log_url)
+    request_mock.post(trigger.logs_url)
     yield trigger
 
 

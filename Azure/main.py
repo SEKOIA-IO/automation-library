@@ -1,10 +1,10 @@
 """Entry point for connectors."""
 
-from connector.pull_azure_blob_data import AzureBlobConnector
+from connectors.pull_azure_blob_data import AzureBlobConnector
+from connectors.trigger_azure_eventhub import AzureEventsHubTrigger
 from sekoia_automation.loguru.config import init_logging
 from sekoia_automation.module import Module
 
-from helpers.trigger_azure_eventhub import AzureEventsHubTrigger
 
 if __name__ == "__main__":
     init_logging()
