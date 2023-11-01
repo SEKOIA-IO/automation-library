@@ -337,6 +337,7 @@ class EventStreamTrigger(Connector):
             self.module.configuration.base_url,
             self.module.configuration.client_id,
             self.module.configuration.client_secret,
+            default_headers=self._http_default_headers,
         )
 
     @cached_property
