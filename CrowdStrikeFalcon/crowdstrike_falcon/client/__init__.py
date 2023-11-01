@@ -18,8 +18,7 @@ class ApiClient(requests.Session):
         auth: AuthBase,
         nb_retries: int = 5,
         ratelimit_per_second: int = 100,
-        module_name: str | None = None,
-        module_version: str | None = None,
+        default_headers: dict[str, str] | None = None,
     ):
         super().__init__()
         self._base_url = base_url
@@ -35,12 +34,8 @@ class ApiClient(requests.Session):
             ),
         )
 
-        if module_name and module_version:
-            self.headers.update(
-                {
-                    "User-Agent": "sekoiaio-connector/{0}-{1}".format(module_name, module_version),
-                }
-            )
+        if default_headers:
+            self.headers.update(default_headers)
 
     def get_url(self, endpoint: str) -> str:
         return urljoin(self._base_url, endpoint)
@@ -88,16 +83,11 @@ class CrowdstrikeFalconClient(ApiClient):
         client_id: str,
         client_secret: str,
         nb_retries: int = 5,
-        module_name: str | None = None,
-        module_version: str | None = None,
+        default_headers: dict[str, str] | None = None,
     ):
-        _auth = CrowdStrikeFalconApiAuthentication(
-            base_url, client_id, client_secret, module_name=module_name, module_version=module_version
-        )
+        _auth = CrowdStrikeFalconApiAuthentication(base_url, client_id, client_secret, default_headers=default_headers)
 
-        super().__init__(
-            base_url, _auth, nb_retries=nb_retries, module_name=module_name, module_version=module_version
-        )
+        super().__init__(base_url, _auth, nb_retries=nb_retries, default_headers=default_headers)
 
     def list_streams(self, app_id: str, **kwargs) -> Generator[dict, None, None]:
         yield from self.request_endpoint("GET", "/sensors/entities/datafeed/v2", params={"appId": app_id}, **kwargs)
@@ -143,15 +133,13 @@ class CrowdstrikeThreatGraphClient(ApiClient):
         username: str,
         password: str,
         nb_retries: int = 5,
-        module_name: str | None = None,
-        module_version: str | None = None,
+        default_headers: dict[str, str] | None = None,
     ):
         super().__init__(
             base_url,
             HTTPBasicAuth(username, password),
             nb_retries=nb_retries,
-            module_name=module_name,
-            module_version=module_version,
+            default_headers=default_headers,
         )
 
     def get_edge_types(self, **kwargs) -> Generator[str, None, None]:

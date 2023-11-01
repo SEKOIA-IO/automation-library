@@ -26,8 +26,7 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
         base_url: str,
         client_id: str,
         client_secret: str,
-        module_name: str | None = None,
-        module_version: str | None = None,
+        default_headers: dict[str, str] | None = None,
     ):
         self.__authorization_url = urljoin(base_url, "/oauth2/token")
         self.__client_id = client_id
@@ -35,12 +34,8 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
         self.__api_credentials: CrowdStrikeFalconApiCredentials | None = None
         self.__http_session = requests.Session()
 
-        if module_name and module_version:
-            self.__http_session.headers.update(
-                {
-                    "User-Agent": "sekoiaio-connector/{0}-{1}".format(module_name, module_version),
-                }
-            )
+        if default_headers:
+            self.__http_session.headers.update(default_headers)
 
         self.__http_session.mount(
             "https://",
