@@ -4,8 +4,9 @@ import time
 from asyncio import Lock, Task
 from typing import Optional
 
+import jwt
 from aiohttp import ClientSession
-from jwt import PyJWT
+from jwt import JWT
 
 
 class PemGithubTokenRefresher(object):
@@ -139,7 +140,9 @@ class PemGithubTokenRefresher(object):
             "iss": self.app_id,
         }
 
-        return PyJWT().encode(payload, self.pem_file.encode("utf-8"), algorithm="RS256")
+        signing_key = jwt.jwk_from_pem(self.pem_file.encode("utf-8"))
+
+        return JWT().encode(payload, signing_key, alg="RS256")
 
     async def refresh_token(self) -> None:
         """
