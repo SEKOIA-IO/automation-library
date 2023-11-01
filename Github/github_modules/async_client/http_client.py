@@ -20,9 +20,11 @@ class AsyncGithubClient(object):
         api_key: str | None = None,
         pem_file: str | None = None,
         app_id: int | None = None,
+        default_headers: dict[str, str] | None = None,
         rate_limiter: AsyncLimiter | None = None,
     ):
         """
+        Initialize AsyncGithubClient.
 
         Args:
             organization: str
@@ -39,6 +41,7 @@ class AsyncGithubClient(object):
         self.pem_file = pem_file
         self.organization = organization
         self.app_id = app_id
+        self.default_headers = default_headers or {}
 
         if rate_limiter:
             self.set_rate_limiter(rate_limiter)
@@ -85,11 +88,13 @@ class AsyncGithubClient(object):
             self.pem_file,
             self.organization,
             self.app_id,
+            default_headers=self.default_headers,
         )
 
     async def get_auth_headers(self) -> dict[str, str]:
         """Get auth headers."""
         headers = {
+            **self.default_headers,
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
@@ -124,7 +129,6 @@ class AsyncGithubClient(object):
         Returns:
             list[dict[str, Any]]:
         """
-        print(start_from)
         params = {"phrase": "created:>{0}".format(start_from), "order": "asc"}
 
         async with self.session() as session:
