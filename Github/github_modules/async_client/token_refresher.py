@@ -6,7 +6,6 @@ from typing import Optional
 
 import jwt
 from aiohttp import ClientSession
-from jwt import JWT
 
 
 class PemGithubTokenRefresher(object):
@@ -80,6 +79,7 @@ class PemGithubTokenRefresher(object):
             organization: str
             app_id: int
             token_ttl: int
+            default_headers: dict[str, str] | None
 
         Returns:
             PemGithubTokenRefresher:
@@ -140,9 +140,7 @@ class PemGithubTokenRefresher(object):
             "iss": self.app_id,
         }
 
-        signing_key = jwt.jwk_from_pem(self.pem_file.encode("utf-8"))
-
-        return JWT().encode(payload, signing_key, alg="RS256")
+        return jwt.encode(payload, self.pem_file.encode("utf-8"), algorithm="RS256")
 
     async def refresh_token(self) -> None:
         """
