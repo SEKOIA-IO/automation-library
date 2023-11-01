@@ -32,6 +32,7 @@ class CatoGraphQLClient(object):
         api_key: str,
         account_id: str,
         base_url: str | None = None,
+        default_headers: dict[str, str] | None = None,
         account_metrics_rate_limiter: AsyncLimiter | None = None,
         account_snapshot_rate_limiter: AsyncLimiter | None = None,
         audit_feed_rate_limiter: AsyncLimiter | None = None,
@@ -65,6 +66,7 @@ class CatoGraphQLClient(object):
         self.api_key = api_key
 
         self.base_url = "https://api.catonetworks.com/api/v1/graphql2" if not base_url else base_url
+        self.default_headers = default_headers if default_headers else {}
 
         self.set_rate_limiter(CatoRequestType.ACCOUNT_METRICS, account_metrics_rate_limiter)
         self.set_rate_limiter(CatoRequestType.ACCOUNT_SNAPSHOT, account_snapshot_rate_limiter)
@@ -139,7 +141,13 @@ class CatoGraphQLClient(object):
 
         _cato_client = self._cato_clients.get(request_type)
         if not _cato_client:
-            transport = AIOHTTPTransport(url=self.base_url, headers={"x-api-key": self.api_key})
+            transport = AIOHTTPTransport(
+                url=self.base_url,
+                headers={
+                    **self.default_headers,
+                    "x-api-key": self.api_key,
+                },
+            )
 
             _cato_client = Client(transport=transport, fetch_schema_from_transport=False)
 
