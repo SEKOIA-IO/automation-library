@@ -89,7 +89,7 @@ class SearchLightTrigger(Trigger):
         """
         headers: dict[str, str] = {
             **self._http_default_headers,
-            "searchlight-account-id": self.module.configuration["searchlight_account_id"]
+            "searchlight-account-id": self.module.configuration["searchlight_account_id"],
         }
 
         credentials: HTTPBasicAuth = HTTPBasicAuth(
