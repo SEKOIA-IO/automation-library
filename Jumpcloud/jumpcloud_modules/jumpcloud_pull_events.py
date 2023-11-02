@@ -117,7 +117,11 @@ failed with status {response.status_code} - {response.reason}"
         }
 
         # get the first page of events
-        headers = {"Accept": "application/json", "Content-type": "application/json"}
+        headers = {
+            **self._http_default_headers,
+            "Accept": "application/json",
+            "Content-type": "application/json",
+        }
         url = urljoin(self.module.configuration.base_url, "/insights/directory/v1/events")
         response = self.client.post(url, json=params, headers=headers)
 
