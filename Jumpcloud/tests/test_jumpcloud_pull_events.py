@@ -9,10 +9,7 @@ import requests_mock
 from requests import Response
 
 from jumpcloud_modules import JumpcloudDirectoryInsightsModule
-from jumpcloud_modules.jumpcloud_pull_events import (
-    FetchEventsException,
-    JumpcloudDirectoryInsightsConnector,
-)
+from jumpcloud_modules.jumpcloud_pull_events import FetchEventsException, JumpcloudDirectoryInsightsConnector
 
 
 @pytest.fixture

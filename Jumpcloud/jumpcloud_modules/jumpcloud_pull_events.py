@@ -18,12 +18,7 @@ from jumpcloud_modules import JumpcloudDirectoryInsightsModule
 from jumpcloud_modules.client import ApiClient
 from jumpcloud_modules.helpers import get_upper_second
 from jumpcloud_modules.logging import get_logger
-from jumpcloud_modules.metrics import (
-    EVENTS_LAG,
-    FORWARD_EVENTS_DURATION,
-    INCOMING_MESSAGES,
-    OUTCOMING_EVENTS,
-)
+from jumpcloud_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -59,6 +54,20 @@ class JumpcloudDirectoryInsightsConnector(Connector):
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     @property
     def most_recent_date_seen(self):
         now = datetime.now(timezone.utc)
@@ -82,9 +91,9 @@ class JumpcloudDirectoryInsightsConnector(Connector):
 
     @cached_property
     def client(self):
-        return ApiClient(self.module.configuration.apikey)
+        return ApiClient(self.module.configuration.apikey, default_headers=self._http_default_headers)
 
-    def _handle_response_error(self, response: requests.Response):
+    def _handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
             message = f"Request to Jumpcloud Directory Insights API to fetch events \
 failed with status {response.status_code} - {response.reason}"
