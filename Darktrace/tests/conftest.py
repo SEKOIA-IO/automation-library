@@ -2,7 +2,6 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 import pytest
-
 from sekoia_automation import constants
 
 

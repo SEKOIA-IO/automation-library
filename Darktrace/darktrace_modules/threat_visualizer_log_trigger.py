@@ -36,6 +36,20 @@ class ThreatVisualizerLogConnector(Connector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     @property
     def last_ts(self) -> int:
         with self.context as cache:
@@ -61,6 +75,7 @@ class ThreatVisualizerLogConnector(Connector):
             self.module.configuration.public_key,
             self.module.configuration.private_key,
             ratelimit_per_minute=self.configuration.ratelimit_per_minute,
+            default_headers=self._http_default_headers,
         )
 
     def request_events(self) -> requests.models.Response:

@@ -1,5 +1,6 @@
-from requests.auth import AuthBase
 from datetime import datetime
+
+from requests.auth import AuthBase
 
 import helpers
 
