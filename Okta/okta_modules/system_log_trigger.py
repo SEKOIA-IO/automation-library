@@ -126,7 +126,10 @@ class SystemLogConnector(Connector):
                 params[param_name] = value
 
         # get the first page of events
-        headers = {"Accept": "application/json"}
+        headers = {
+            **self._http_default_headers,
+            "Accept": "application/json",
+        }
         url = urljoin(self.module.configuration.base_url, "/api/v1/logs")
         response = self.client.get(url, params=params, headers=headers)
 
