@@ -14,6 +14,7 @@ def test_get_events(requests_mock):
         "earliest_time": "-1d",
         "latest_time": "now",
         "fields": "event.dialect,action.outcome,action.id",
+        "limit": 6,
     }
 
     requests_mock.post(
@@ -95,7 +96,7 @@ def test_get_events(requests_mock):
     requests_mock.get(
         (
             "https://fake.url/api/v1/sic/conf/events/search/jobs/"
-            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=1000&offset=0"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=6&offset=0"
         ),
         json={
             "items": events,
@@ -141,3 +142,41 @@ def test_not_events_found(requests_mock):
 
     results: dict = action.run(arguments)
     assert results["events"] == []
+
+
+def test_not_events_found_but_total(requests_mock):
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1" OR destination.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+        "fields": "event.dialect,action.outcome,action.id",
+    }
+
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs",
+        json={"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"},
+    )
+
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        json={"status": 2, "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"},
+    )
+
+    requests_mock.get(
+        (
+            "https://fake.url/api/v1/sic/conf/events/search/jobs/"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=1000&offset=0"
+        ),
+        json={
+            "items": [],
+            "total": 100,
+        },
+    )
+
+    results: dict = action.run(arguments)
+    assert results["events"] == []
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"

@@ -4,8 +4,8 @@ from functools import cached_property
 
 import orjson
 from requests.exceptions import HTTPError
+from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sekoia_automation.storage import PersistentJSON
 
 from sophos_module.base import SophosConnector
@@ -18,6 +18,7 @@ from sophos_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTC
 class SophosEDRConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     exclude_types: list[str] | None = None
+    chunk_size: int = 1000
 
 
 class SophosEDREventsTrigger(SophosConnector):
@@ -36,7 +37,6 @@ class SophosEDREventsTrigger(SophosConnector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self._exporter = None
 
     @property
     def cursor(self) -> str | None:
@@ -62,44 +62,30 @@ class SophosEDREventsTrigger(SophosConnector):
         )
         return SophosApiClient(auth=auth)
 
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
-        )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
-
     def run(self):
         self.log(message="Sophos Events Trigger has started", level="info")
 
         try:
             while self.running:
+                start = time.time()
+
                 try:
-                    start = time.time()
-
                     self.forward_next_batches()
-
-                    # compute the duration of the last events fetching
-                    duration = int(time.time() - start)
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                    # Compute the remaining sleeping time
-                    delta_sleep = self.configuration.frequency - duration
-                    # if greater than 0, sleep
-                    if delta_sleep > 0:
-                        time.sleep(delta_sleep)
-
-                except HTTPError as ex:
+                except (HTTPError, BaseHTTPError) as ex:
                     self.log_exception(ex, message="Failed to get next batch of events")
                 except Exception as ex:
                     self.log_exception(ex, message="An unknown exception occurred")
                     raise
+
+                # compute the duration of the last events fetching
+                duration = int(time.time() - start)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+
+                # Compute the remaining sleeping time
+                delta_sleep = self.configuration.frequency - duration
+                # if greater than 0, sleep
+                if delta_sleep > 0:
+                    time.sleep(delta_sleep)
         finally:
             self.log(message="Sophos Events Trigger has stopped", level="info")
 

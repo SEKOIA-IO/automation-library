@@ -1,113 +1,190 @@
-from unittest.mock import MagicMock, patch
+"""Contains tests for AuditLogConnector."""
+
+from typing import Any
+from unittest.mock import MagicMock
+from urllib.parse import urljoin
 
 import pytest
-import requests_mock
+from aioresponses import aioresponses
 
-from github_modules import GithubModule
+from github_modules import GithubModule, GithubModuleConfiguration
 from github_modules.audit_log_trigger import AuditLogConnector
 
 
 @pytest.fixture
-def trigger(symphony_storage):
+def intake_response(session_faker) -> dict[str, Any]:
+    """
+    Create intake response.
+
+    Returns:
+        dict[str, Any]:
+    """
+    return {"event_ids": [session_faker.word() for _ in range(10)]}
+
+
+@pytest.fixture
+def connector_with_api_key(symphony_storage, session_faker, intake_response):
+    """
+    Create a AuditLogConnector instance.
+
+    Args:
+        symphony_storage: str
+        session_faker: Faker
+        intake_response: list[str]
+    """
     module = GithubModule()
     trigger = AuditLogConnector(module=module, data_path=symphony_storage)
-    # mock the log function of trigger that requires network access to the api for reporting
+
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.module.configuration = {
-        "apikey": "ghp_AAA",
-        "org_name": "Test-org",
-    }
+    trigger.module.configuration = GithubModuleConfiguration(
+        **{
+            "apikey": session_faker.word(),
+            "org_name": session_faker.word(),
+        }
+    )
+
     trigger.configuration = {
-        "intake_key": "intake_key",
+        "intake_key": session_faker.word(),
     }
+
     yield trigger
 
 
 @pytest.fixture
-def message1():
-    # flake8: noqa
-    return [
-        {
-            "@timestamp": 1685465626150,
-            "_document_id": "aCjok7V1YYqP1c9IE6qbkg",
-            "action": "org.block_user",
-            "actor": "Admin",
-            "actor_id": 6123123,
-            "actor_location": {"country_code": "FR"},
-            "blocked_user": "aaa",
-            "created_at": 1685465626150,
-            "operation_type": "create",
-            "org": "Test-org",
-            "org_id": 123123995,
-            "user_agent": "Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36",
-        },
-        {
-            "@timestamp": 1685465627991,
-            "_document_id": "gMzuZXn3m1ewbOR6RkNnLw",
-            "action": "org.unblock_user",
-            "actor": "Admin",
-            "actor_id": 6123123,
-            "actor_location": {"country_code": "FR"},
-            "blocked_user": "aaa",
-            "created_at": 1685465627991,
-            "operation_type": "remove",
-            "org": "Test-org",
-            "org_id": 123123995,
-            "user_agent": "Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36",
-        },
-        {
-            "@timestamp": 1685465630880,
-            "_document_id": "UKmJTzlW7D2OvZ5F3GrpnA",
-            "action": "org.block_user",
-            "actor": "Admin",
-            "actor_id": 6123123,
-            "actor_location": {"country_code": "FR"},
-            "blocked_user": "aaa",
-            "created_at": 1685465630880,
-            "operation_type": "create",
-            "org": "Test-org",
-            "org_id": 123123995,
-            "user_agent": "Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36",
-        },
-        {
-            "@timestamp": 1685465633434,
-            "_document_id": "Ih4X_g0X7Ots5Mr6O-eozA",
-            "action": "org.unblock_user",
-            "actor": "Admin",
-            "actor_id": 6123123,
-            "actor_location": {"country_code": "FR"},
-            "blocked_user": "aaa",
-            "created_at": 1685465633434,
-            "operation_type": "remove",
-            "org": "Test-org",
-            "org_id": 123123995,
-            "user_agent": "Mozilla/5.0 (Linux; Android 12; SM-S906N Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.119 Mobile Safari/537.36",
-        },
-    ]
-    # flake8: qa
+def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake_response):
+    """
+    Create a AuditLogConnector instance.
+
+    Args:
+        symphony_storage: str
+        pem_content: str
+        session_faker: Faker
+        intake_response: list[str]
+    """
+    module = GithubModule()
+    trigger = AuditLogConnector(module=module, data_path=symphony_storage)
+
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+    trigger.module.configuration = GithubModuleConfiguration(
+        **{
+            "org_name": session_faker.word(),
+            "pem_file": pem_content,
+            "app_id": session_faker.pyint(),
+        }
+    )
+
+    trigger.configuration = {
+        "intake_key": session_faker.word(),
+    }
+
+    yield trigger
 
 
-def test_next_batch(trigger, message1):
-    with patch("github_modules.audit_log_trigger.time") as mock_time, requests_mock.Mocker() as mock_request:
-        last_ts = 1685465627.991
-        batch_start = 1685465690.881
-        batch_end = 1685465633.434
-        mock_request.get(
-            "https://api.github.com/orgs/"
-            + trigger.module.configuration.org_name
-            + "/audit-log?phrase=created%3A%3E"
-            + str(round(last_ts * 1000) - 60000)
-            + "&order=asc",
-            json=message1,
+@pytest.mark.asyncio
+async def test_connector_session_and_rate_limiter(symphony_storage):
+    """
+    Test AuditLogConnector session and rate limiter.
+
+    Args:
+        symphony_storage: str
+    """
+    assert AuditLogConnector._session is None
+    assert AuditLogConnector._rate_limiter is None
+
+    rate_limiter = AuditLogConnector.rate_limiter()
+
+    assert AuditLogConnector._rate_limiter == rate_limiter
+
+    async with AuditLogConnector.session() as session:
+        assert AuditLogConnector._rate_limiter == rate_limiter
+        assert AuditLogConnector._session == session
+
+
+@pytest.mark.asyncio
+async def test_connector_get_github_client_instance(connector_with_api_key):
+    """
+    Test AuditLogConnector github_client.
+
+    Args:
+        connector_with_api_key: AuditLogConnector
+    """
+    assert AuditLogConnector._github_client is None
+
+    github_client = connector_with_api_key.github_client
+
+    assert connector_with_api_key._github_client == github_client
+    assert connector_with_api_key.github_client == github_client
+
+
+@pytest.mark.asyncio
+async def test_next_batch_with_api_key(connector_with_api_key, github_response, intake_response):
+    """
+    Test AuditLogConnector next_batch.
+
+    Args:
+        connector_with_api_key: AuditLogConnector
+        github_response: list[dict[str, Any]]
+    """
+    with aioresponses() as mocked_responses:
+        audit_logs_url = (
+            connector_with_api_key.github_client.audit_logs_url
+            + "?order=asc&phrase=created%253A%253E{0}".format(connector_with_api_key.last_ts)
         )
 
-        mock_time.time.side_effect = [batch_start, last_ts, batch_end]
-        trigger.next_batch()
+        mocked_responses.get(
+            audit_logs_url,
+            status=200,
+            payload=github_response,
+        )
 
-        # Check that the result is well filtered
-        # assert events_sent == expected_events
-        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-        assert len(calls[0]) == 3
-        assert trigger.push_events_to_intakes.call_count == 1
+        mocked_responses.post(
+            urljoin(connector_with_api_key.configuration.intake_server, "/batch"),
+            status=200,
+            payload=intake_response,
+        )
+
+        await connector_with_api_key.next_batch()
+
+
+@pytest.mark.asyncio
+async def test_next_batch_with_pem_file(connector_with_pem_file, github_response, session_faker, intake_response):
+    """
+    Test AuditLogConnector next_batch.
+
+    Args:
+        connector_with_pem_file: AuditLogConnector
+        github_response: list[dict[str, Any]]
+    """
+    with aioresponses() as mocked_responses:
+        access_tokens_url = session_faker.uri()
+        access_token = session_faker.word()
+        mocked_responses.get(
+            "https://api.github.com/orgs/{0}/installation".format(
+                connector_with_pem_file.module.configuration.org_name,
+            ),
+            status=200,
+            payload={"access_tokens_url": access_tokens_url},
+        )
+
+        mocked_responses.post(access_tokens_url, status=200, payload={"token": access_token})
+
+        audit_logs_url = (
+            connector_with_pem_file.github_client.audit_logs_url
+            + "?order=asc&phrase=created%253A%253E{0}".format(connector_with_pem_file.last_ts)
+        )
+
+        mocked_responses.get(
+            audit_logs_url,
+            status=200,
+            payload=github_response,
+        )
+
+        mocked_responses.post(
+            urljoin(connector_with_pem_file.configuration.intake_server, "/batch"),
+            status=200,
+            payload=intake_response,
+        )
+
+        await connector_with_pem_file.next_batch()

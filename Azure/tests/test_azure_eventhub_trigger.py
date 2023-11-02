@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, Mock
 import pytest
 from azure.eventhub import EventData
 
-from azure_module.trigger_azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
+from connectors.trigger_azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
 
 
 @pytest.mark.skipif(
@@ -34,6 +34,7 @@ def test_forward_next_batches_integration(symphony_storage):
     trigger.client.close()
     trigger.stop()
     calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+
     assert len(calls) > 0
 
 

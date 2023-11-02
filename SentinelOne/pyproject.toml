@@ -6,11 +6,11 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.3.8"
+sekoia-automation-sdk = "^1.6.0"
 orjson = "^3.7.7"
 sentinelone-management-sdk = {path = "sentinel-mgmt-sdk.tar.gz"}
 confluent-kafka = "^2.1.1"
-certifi = "^2022.9.24"
+certifi = "^2023.7.22"
 protobuf = "^4.21.9"
 
 [tool.poetry.dev-dependencies]

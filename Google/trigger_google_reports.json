@@ -1,0 +1,62 @@
+{
+    "description": "Get user activities using google reports",
+    "docker_parameters": "run-google_reports_trigger",
+    "name": "[BETA] Get user activities",
+    "arguments": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "default": 20
+        },
+	"application_name": {
+          "type": "string",
+          "description": "The application from which the activities should be fetched",
+          "enum": [
+		"admin",
+		"calendar",
+		"chat",
+		"drive",
+		"gcp",
+		"groups",
+		"groups_enterprise",
+		"jamboard",
+		"login",
+		"meet",
+		"token",
+		"user_accounts",
+		"keep"
+	  ],
+	  "default": "drive"
+	},
+        "chunk_size": {
+          "type": "integer",
+          "description": "The max size of chunks for the batch processing",
+          "default": 1000
+        },
+        "intake_server": {
+          "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+          "default": "https://intake.sekoia.io",
+          "type": "string"
+        },
+        "intake_key": {
+          "description": "Intake key to use when sending events",
+          "type": "string"
+        }, 
+        "admin_mail": {
+          "description": "Email of your google admin",
+          "type": "string"
+        }
+      },
+      "required": [
+        "admin_mail",
+        "intake_key",
+	"application_name"
+      ],
+      "title": "Google Reports",
+      "type": "object"
+    },
+    "results": {},
+    "uuid": "ce5535a3-4d14-4d7b-9b5a-f948e64fe755"
+}

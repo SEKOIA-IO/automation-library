@@ -23,6 +23,10 @@
             "fields": {
                 "type": "string",
                 "description": "Fields to compute the most common values (use a coma between fields)"
+            },
+            "limit": {
+                "type": "number",
+                "description": "Maximum number of events to retrieve"
             }
         },
         "required": [

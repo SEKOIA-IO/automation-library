@@ -74,6 +74,7 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
         results = {"valid": [], "revoked": []}
         for object in stix_objects:
             # Extract value and type from pattern
+            self.log(message=f"object in stix_objects {str(object)}", level="debug")
             indicators = stix_to_indicators(stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP)
             for indicator in indicators:
                 ioc_value = indicator["value"]
@@ -106,7 +107,7 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
     def run(self, arguments):
         if arguments.get("sekoia_base_url"):
             self.sekoia_base_url = arguments.get("sekoia_base_url")
-        stix_objects = arguments.get("stix_objects", [])
+        stix_objects = self.json_argument("stix_objects", arguments)
         indicators = self.get_valid_indicators(stix_objects)
         if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
             self.log("Received indicators were not valid and/or not supported")

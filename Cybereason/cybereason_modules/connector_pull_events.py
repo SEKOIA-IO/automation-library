@@ -22,11 +22,16 @@ from cybereason_modules.constants import (
 )
 from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
 from cybereason_modules.helpers import extract_models_from_malop, merge_suspicions, validate_response_not_login_failure
+from cybereason_modules.logging import get_logger
+from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class CybereasonEventConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     group_ids: list[str] | None = None
+    chunk_size: int = 1000
 
 
 class CybereasonEventConnector(Connector):
@@ -64,7 +69,7 @@ class CybereasonEventConnector(Connector):
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
-    def __parse_response_content(self, response: requests.Response) -> Any:
+    def parse_response_content(self, response: requests.Response) -> Any:
         """
         Parse the content of the response
         """
@@ -89,26 +94,27 @@ class CybereasonEventConnector(Connector):
 
         url = urljoin(self.module.configuration.base_url, MALOP_INBOX_ENDPOINT)
         try:
+            logger.debug("Fetching malops", url=url, params=params)
             response = self.client.post(url, json=params, timeout=60)
 
             if not response.ok:
                 self.log(
                     message=(
                         f"Request on Cybereason API to fetch events failed with status {response.status_code}"
-                        " - {response.reason}"
+                        f" - {response.reason}"
                     ),
                     level="error",
                 )
                 return []
             else:
-                content = self.__parse_response_content(response)
+                content = self.parse_response_content(response)
                 malops = content.get("malops")
 
                 if malops is None:
                     raise InvalidResponse(response)
 
                 self.log(
-                    message=(f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}"),
+                    message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
                     level="debug",
                 )
                 return malops
@@ -134,7 +140,7 @@ class CybereasonEventConnector(Connector):
             )
             return None
         else:
-            malop = self.__parse_response_content(response)
+            malop = self.parse_response_content(response)
             self.log(
                 message=(
                     f"Request on Cybereason API to fetch detail for malop '{malop_uuid}' was a success "
@@ -174,7 +180,7 @@ class CybereasonEventConnector(Connector):
             return None
 
         # get the results
-        content = self.__parse_response_content(response)
+        content = self.parse_response_content(response)
         data = content.get("data")
 
         if data is None:
@@ -271,6 +277,7 @@ class CybereasonEventConnector(Connector):
 
         # fetch malops for the timerange
         next_malops = self.fetch_malops(from_date, to_date)
+        INCOMING_MALOPS.labels(intake_key=self.configuration.intake_key).inc(len(next_malops))
 
         most_recent_date_seen = from_date
         for malop in next_malops:
@@ -310,6 +317,11 @@ class CybereasonEventConnector(Connector):
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
 
+        # compute the lag
+        now = int(time.time())
+        current_lag = now - int(most_recent_date_seen / 1000)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(current_lag)
+
     def next_batch(self):
         """
         Retrieve and forward the most recent malops
@@ -321,6 +333,7 @@ class CybereasonEventConnector(Connector):
         batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.fetch_last_events()]
 
         if len(batch_of_events) > 0:
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
             self.push_events_to_intakes(events=batch_of_events)
 
         # get the ending time and compute the duration to fetch the events
@@ -330,6 +343,7 @@ class CybereasonEventConnector(Connector):
             message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
             level="info",
         )
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
@@ -346,5 +360,7 @@ class CybereasonEventConnector(Connector):
                 self.next_batch()
             except LoginFailureError as error:
                 self.log(message=f"Invalid username/password for {error.url}", level="error")
+                time.sleep(self.configuration.frequency)
             except Exception as error:
                 self.log_exception(error, message="Failed to fetch and forward events")
+                time.sleep(self.configuration.frequency)

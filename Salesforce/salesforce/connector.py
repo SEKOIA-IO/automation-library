@@ -9,29 +9,19 @@ import orjson
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
-from pydantic import BaseModel, Field, HttpUrl
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.utils import get_as_model
+
 
 from client.http_client import SalesforceHttpClient
 from utils.file_utils import csv_file_as_rows, delete_file
 
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-
-
-class SalesforceModuleConfig(BaseModel):
-    """Configuration for SalesforceModule."""
-
-    client_secret: str = Field(secret=True)
-    client_id: str
-    base_url: HttpUrl
-
-
-class SalesforceModule(Module):
-    """SalesforceModule."""
-
-    configuration: SalesforceModuleConfig
+from salesforce import SalesforceModule
+from salesforce.models import SalesforceModuleConfig
+from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
@@ -40,7 +30,7 @@ class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     ratelimit_per_minute: int = 60
 
 
-class SalesforceConnector(Connector):
+class SalesforceConnector(AsyncConnector):
     """SalesforceConnector class to work with salesforce events."""
 
     name = "SalesforceConnector"
@@ -96,34 +86,15 @@ class SalesforceConnector(Connector):
 
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
+        module_configuration = get_as_model(SalesforceModuleConfig, self.module.configuration)
         self._salesforce_client = SalesforceHttpClient(
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-            base_url=self.module.configuration.base_url,
+            client_id=module_configuration.client_id,
+            client_secret=module_configuration.client_secret,
+            base_url=module_configuration.base_url,
             rate_limiter=rate_limiter,
         )
 
         return self._salesforce_client
-
-    async def _push_events(self, events: list[str]) -> list[str]:
-        """
-        Push events to intakes.
-
-        Simple wrapper over `self.push_events_to_intakes` to run it async.
-
-        Args:
-            events: list[str]
-
-        Returns:
-            list[str]:
-        """
-        logger.info("Pushing {count} events to intakes", count=len(events))
-
-        return await asyncio.to_thread(
-            self.push_events_to_intakes,
-            events=events,
-            sync=True,
-        )
 
     async def get_salesforce_events(self) -> list[str]:
         """
@@ -155,13 +126,13 @@ class SalesforceConnector(Connector):
 
             if records is not None:
                 log_file_results.extend(
-                    await self._push_events([orjson.dumps(event).decode("utf-8") for event in records])
+                    await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in records])
                 )
 
             # Process csv file row by row to avoid memory issues
             if csv_path is not None:
                 async for row in csv_file_as_rows(csv_path):
-                    log_file_results.extend(await self._push_events([orjson.dumps(row).decode("utf-8")]))
+                    log_file_results.extend(await self.push_data_to_intakes([orjson.dumps(row).decode("utf-8")]))
 
                 await delete_file(csv_path)
 
@@ -183,38 +154,38 @@ class SalesforceConnector(Connector):
 
         return result
 
-    def run(self) -> None:
+    def run(self) -> None:  # pragma: no cover
         """Runs Salesforce."""
-        loop = asyncio.get_event_loop()
+        while self.running:
+            try:
+                loop = asyncio.get_event_loop()
 
-        previous_processing_end = None
-        try:
-            while True:
-                processing_start = time.time()
-                if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_start - previous_processing_end
+                previous_processing_end = None
+
+                while self.running:
+                    processing_start = time.time()
+                    if previous_processing_end is not None:
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                            processing_start - previous_processing_end
+                        )
+
+                    message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events())
+                    processing_end = time.time()
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+
+                    log_message = "No records to forward"
+                    if len(message_ids) > 0:
+                        log_message = "Pushed {0} records".format(len(message_ids))
+
+                    logger.info(log_message)
+                    self.log(message=log_message, level="info")
+
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_end - processing_start
                     )
 
-                message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events())
-                processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    previous_processing_end = processing_end
 
-                log_message = "No records to forward"
-                if len(message_ids) > 0:
-                    log_message = "Pushed {0} records".format(len(message_ids))
-
-                logger.info(log_message)
-                self.log(message=log_message, level="info")
-
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                    processing_end - processing_start
-                )
-
-                previous_processing_end = processing_end
-
-        except Exception as e:
-            logger.error("Error while running Salesforce: {error}", error=e)
-
-        finally:
-            loop.close()
+            except Exception as error:
+                logger.error("Error while running Salesforce: {error}", error=error)
+                self.log_exception(error, message="Failed to forward events")

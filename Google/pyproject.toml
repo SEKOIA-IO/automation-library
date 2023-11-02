@@ -6,9 +6,15 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.3.8"
+sekoia-automation-sdk = "^1.6.0"
 google-cloud-bigquery = "^3.7.0"
 google-cloud-pubsub = "^2.12.0"
+google-api-python-client = "^2.95.0"
+google-auth-httplib2 = "^0.1.0"
+google-auth-oauthlib = "^1.0.0"
+google-api-core = "^2.11.1"
+google-auth = "^2.22.0"
+googleapis-common-protos = "^1.59.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

@@ -4,7 +4,7 @@ from threading import Event
 from urllib.parse import urljoin
 
 import requests
-from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.storage import PersistentJSON, write
 from sekoia_automation.trigger import Trigger
 
 
@@ -13,35 +13,39 @@ class FeedConsumptionTrigger(Trigger):
     This trigger fetches STIX objects from Sekoia.io feed API
     """
 
-    API_URL_ADDITIONAL_PARAMETERS = ["skip_expired=true", "include_revoked=false"]
-    frequency: int = 3600  # Frequency in seconds
-    batch_size_limit: int = 200
+    API_URL_ADDITIONAL_PARAMETERS = ["skip_expired=true"]
+    frequency: int = 300  # Frequency in seconds, previous value 3600
+
+    _STOP_EVENT_WAIT = 120
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._stop_event = Event()
         self.context = PersistentJSON("context.json", self._data_path)
         self.next_cursor = None
         self.resume_on_errors = False
-
-        # Register signal to terminate thread
-        signal.signal(signal.SIGINT, self.exit)
-        signal.signal(signal.SIGTERM, self.exit)
-
-    def exit(self, _, __):
-        self.log(message="Stopping Sekoia.io feed consumption trigger", level="info")
-        # Exit signal received, asking the processor to stop
-        self._stop_event.set()
+        self.first_run = True
 
     @property
     def feed_id(self) -> str:
         return self.configuration.get("feed_id", "d6092c37-d8d7-45c3-8aff-c4dc26030608")
 
     @property
+    def to_file(self) -> bool:
+        return self.configuration.get("to_file", False)
+
+    @property
+    def batch_size_limit(self) -> int:
+        return 2000 if self.to_file else 200
+
+    @property
     def url(self):
         url = (
-            urljoin(self.module.configuration["base_url"], f"v2/inthreat/collections/{self.feed_id}/objects")
-            + f"?limit={self.__class__.batch_size_limit}"
+            urljoin(
+                self.module.configuration["base_url"],
+                f"v2/inthreat/collections/{self.feed_id}/objects",
+            )
+            + f"?limit={self.batch_size_limit}"
+            + f"&include_revoked={not self.first_run}"
         )
         if len(self.__class__.API_URL_ADDITIONAL_PARAMETERS) > 0:
             url += "&" + "&".join(self.__class__.API_URL_ADDITIONAL_PARAMETERS)
@@ -60,9 +64,13 @@ class FeedConsumptionTrigger(Trigger):
                 f" {response.status_code} - {response.reason},"
                 f"URL: {self.url}"
             )
-            self.log(message=message, level="error")
+            # Critical error will stop the trigger
+            level = "error" if self.resume_on_errors else "critical"
+            self.log(message=message, level=level)
             if not self.resume_on_errors:
-                self._stop_event.set()
+                # Critical log should stop the trigger
+                # So we wait until sigint is sent to the trigger
+                self._stop_event.wait(self._STOP_EVENT_WAIT)
                 response.raise_for_status()
 
     def fetch_objects(self):
@@ -104,10 +112,18 @@ class FeedConsumptionTrigger(Trigger):
                 level="info",
             )
 
-            # Send objects as result of the trigger
-            self.send_event(
-                event_name=f"Sekoia.io feed - batch of {len(objects)} objects", event={"stix_objects": objects}
-            )
+            event_name = f"Sekoia.io feed - batch of {len(objects)} objects"
+            if self.to_file:
+                filepath = write("stix_objects.json", {"stix_objects": objects})
+                self.send_event(
+                    event_name=event_name,
+                    event={"stix_objects_path": str(filepath)},
+                    directory=filepath.parent.as_posix(),
+                    remove_directory=True,
+                )
+
+            else:
+                self.send_event(event_name=event_name, event={"stix_objects": objects})
 
             # Store the cursor in the context for the next API call
             with self.context as cache:
@@ -121,7 +137,8 @@ class FeedConsumptionTrigger(Trigger):
             )
 
         # Wait before launching the next batch if we reached the last updated object
-        if len(objects) < self.__class__.batch_size_limit and not self._stop_event.is_set():
+        if len(objects) < self.batch_size_limit and not self._stop_event.is_set():
+            self.first_run = False
             time.sleep(self.__class__.frequency)
 
     def run(self):
@@ -131,6 +148,7 @@ class FeedConsumptionTrigger(Trigger):
             try:
                 self.next_batch()
             except Exception as error:
+                self.log(message="Failed to get data from feed", level="error")
                 self.log_exception(error, message="Failed to get data from feed")
 
 
@@ -139,4 +157,8 @@ class FeedIOCConsumptionTrigger(FeedConsumptionTrigger):
     This trigger fetches STIX IOC objects from Sekoia.io feed API
     """
 
-    API_URL_ADDITIONAL_PARAMETERS = ["skip_expired=true", "include_revoked=false", "match[type]=indicator"]
+    API_URL_ADDITIONAL_PARAMETERS = [
+        "skip_expired=true",
+        "include_revoked=false",
+        "match[type]=indicator",
+    ]

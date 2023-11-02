@@ -7,7 +7,10 @@ import pytest
 import requests_mock
 from requests import Response
 
-from sekoiaio.triggers.intelligence import FeedConsumptionTrigger, FeedIOCConsumptionTrigger
+from sekoiaio.triggers.intelligence import (
+    FeedConsumptionTrigger,
+    FeedIOCConsumptionTrigger,
+)
 
 # Test data, using fake STIX payload data as the trigger does not parse these objects
 message1 = {"items": [f"STIX item {i}" for i in range(200)], "next_cursor": "abcd"}
@@ -29,7 +32,7 @@ def trigger(data_storage):
         "api_key": os.environ.get("SEKOIA_API_KEY", ""),
         "base_url": "https://api.sekoia.io",
     }
-    trigger.configuration = {"feed_id": "d6092c37-d8d7-45c3-8aff-c4dc26030608"}
+    trigger.configuration = {"feed_id": "d6092c37-d8d7-45c3-8aff-c4dc26030608", "to_file": False}
     yield trigger
 
 
@@ -37,7 +40,7 @@ def test_url_generation(trigger):
     expected_url = (
         "https://api.sekoia.io/v2/inthreat/collections/"
         "d6092c37-d8d7-45c3-8aff-c4dc26030608/objects"
-        "?limit=200&skip_expired=true&include_revoked=false"
+        "?limit=200&include_revoked=False&skip_expired=true"
     )
     assert expected_url == trigger.url
 
@@ -83,9 +86,9 @@ def test_handle_response_error(trigger):
     response = Response()
     response.status_code = 500
     response.reason = "Internal Error"
+    trigger._STOP_EVENT_WAIT = 0.01
     with pytest.raises(Exception):
         trigger._handle_response_error(response)
-    assert trigger._stop_event.is_set()
 
 
 def test_indicator_filter(data_storage):
@@ -98,7 +101,10 @@ def test_indicator_filter(data_storage):
     assert "match[type]=indicator" in trigger.url
 
 
-@pytest.mark.skipif(os.environ.get("SEKOIA_API_KEY") is None, reason="Missing SEKOIA_API_KEY environment variable")
+@pytest.mark.skipif(
+    os.environ.get("SEKOIA_API_KEY") is None,
+    reason="Missing SEKOIA_API_KEY environment variable",
+)
 def test_run(trigger):
     main_thread = Thread(target=trigger.run)
     main_thread.start()
@@ -109,4 +115,22 @@ def test_run(trigger):
     main_thread.join(timeout=60)
 
     calls = [call.kwargs["event"] for call in trigger.send_event.call_args_list]
+    assert len(calls) > 0
+
+
+@pytest.mark.skipif(
+    os.environ.get("SEKOIA_API_KEY") is None,
+    reason="Missing SEKOIA_API_KEY environment variable",
+)
+def test_run_with_to_file_true(trigger):
+    trigger.configuration["to_file"] = True  # Set to_file to True
+    main_thread = Thread(target=trigger.run)
+    main_thread.start()
+
+    # wait few seconds
+    time.sleep(1)
+    trigger._stop_event.set()
+    main_thread.join(timeout=60)
+
+    calls = [call.kwargs["directory"] for call in trigger.send_event.call_args_list]
     assert len(calls) > 0

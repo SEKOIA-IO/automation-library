@@ -3,6 +3,7 @@ from typing import Any
 from sekoia_automation.action import Action
 from thehive4py.api import TheHiveApi
 from thehive4py.models import Alert, AlertArtifact
+from requests import HTTPError
 
 THEHIVE_TYPES = [
     "autonomous-system",
@@ -111,6 +112,11 @@ class TheHiveCreateAlert(Action):
             response = api.create_alert(alert)
             response.raise_for_status()
             return response.json()
+        except HTTPError as e:
+            self.error(str(e))
+            if e.response is not None:
+                self.log(f"Status code: {e.response.status_code}")
+                self.log(f"Response: {e.response.text}")
         except Exception as e:
             self.error(str(e))
-            return
+        return None

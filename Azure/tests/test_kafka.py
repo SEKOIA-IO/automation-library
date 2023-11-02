@@ -1,10 +1,9 @@
-import logging
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from azure_module.kafka import KafkaForwarder
+from helpers.kafka_forwarder import KafkaForwarder
 
 
 @pytest.fixture
@@ -14,7 +13,7 @@ def fake_time():
 
 @pytest.fixture
 def patch_datetime_now(fake_time):
-    with patch("azure_module.kafka.datetime") as mock_datetime:
+    with patch("helpers.kafka_forwarder.datetime") as mock_datetime:
         mock_datetime.now.return_value = fake_time
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
         yield mock_datetime
@@ -48,6 +47,6 @@ def test_produce_exception(patch_datetime_now):
     producer.kafka_producer.produce = MagicMock(side_effect=Exception())
     producer.kafka_topic = topic
 
-    with patch("azure_module.kafka.logging.exception") as mock_logging:
+    with patch("helpers.kafka_forwarder.logging.exception") as mock_logging:
         producer.produce(records)
         mock_logging.assert_called_once_with("Failed to forward events to kafka")

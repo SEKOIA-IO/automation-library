@@ -1,7 +1,7 @@
 {
-    "description": "Get last events from the Cybereason platform",
+    "description": "Get last events from the Cybereason platform up to version 23.1.152",
     "docker_parameters": "cybereason_events_connector",
-    "name": "Fetch new events from Cybereason",
+    "name": "[LEGACY] Fetch new events from Cybereason",
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {

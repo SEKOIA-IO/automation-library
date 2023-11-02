@@ -308,7 +308,7 @@ def test_next_batch_sleep_until_next_batch(trigger, mock_cybereason_api):
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
         end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, start_time, end_time]
+        mock_time.time.side_effect = [start_time, start_time, start_time, end_time]
 
         trigger.next_batch()
 
@@ -336,7 +336,7 @@ def test_long_next_batch_should_not_sleep(trigger, mock_cybereason_api):
         batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
         start_time = 1666711174.0
         end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, start_time, end_time]
+        mock_time.time.side_effect = [start_time, start_time, start_time, end_time]
 
         trigger.next_batch()
 

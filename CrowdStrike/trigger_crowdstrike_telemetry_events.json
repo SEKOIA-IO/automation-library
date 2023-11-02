@@ -1,14 +1,14 @@
 {
   "description": "Forward Crowdstrike Falcon Data Replication events to Sekoia.io",
   "docker_parameters": "crowdstrike_telemetry",
-  "name": "[ALPHA] Fetch new events from CrowdStrike Data replication",
+  "name": "Fetch new events from CrowdStrike Data replication",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "chunk_size": {
         "type": "integer",
-        "description": "The size of max number of messages for the batch processing. Must be between 1 and 10 (default: 1)",
-        "default": 1
+        "description": "The size of max number of messages for the batch processing (default: 20000)",
+        "default": 20000
       },
       "frequency": {
         "type": "integer",

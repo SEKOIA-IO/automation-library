@@ -16,6 +16,7 @@ from okta_modules import OktaModule
 from okta_modules.client import ApiClient
 from okta_modules.helpers import get_upper_second
 from okta_modules.logging import get_logger
+from okta_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -122,6 +123,7 @@ class SystemLogConnector(Connector):
 
             # yielding events if defined
             if events:
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
                 yield events
             else:
                 logger.info(
@@ -139,35 +141,40 @@ class SystemLogConnector(Connector):
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
 
-        for next_events in self.__fetch_next_events(most_recent_date_seen):
-            if next_events:
-                # get the greater date seen in this list of events
-                events_date = list(
-                    sorted(
-                        filter(
-                            lambda x: x is not None,
-                            map(lambda x: x["published"], next_events),
+        try:
+            for next_events in self.__fetch_next_events(most_recent_date_seen):
+                if next_events:
+                    # get the greater date seen in this list of events
+                    events_date = list(
+                        sorted(
+                            filter(
+                                lambda x: x is not None,
+                                map(lambda x: x["published"], next_events),
+                            )
                         )
                     )
-                )
-                last_event_date = isoparse(events_date[-1])
+                    last_event_date = isoparse(events_date[-1])
 
-                # save the greater date ever seen
-                if last_event_date > most_recent_date_seen:
-                    most_recent_date_seen = get_upper_second(
-                        last_event_date
-                    )  # get the upper second to exclude the most recent event seen
+                    # save the greater date ever seen
+                    if last_event_date > most_recent_date_seen:
+                        most_recent_date_seen = get_upper_second(
+                            last_event_date
+                        )  # get the upper second to exclude the most recent event seen
 
-                # forward current events
-                yield next_events
+                    # forward current events
+                    yield next_events
+        finally:
+            # save the most recent date
+            if most_recent_date_seen > self.from_date:
+                self.from_date = most_recent_date_seen
 
-        # save the most recent date
-        if most_recent_date_seen > self.from_date:
-            self.from_date = most_recent_date_seen
+                # save in context the most recent date seen
+                with self.context as cache:
+                    cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
-            # save in context the most recent date seen
-            with self.context as cache:
-                cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
+        now = datetime.now(timezone.utc)
+        current_lag = now - most_recent_date_seen
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
 
     def next_batch(self):
         # save the starting time
@@ -183,6 +190,7 @@ class SystemLogConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -194,6 +202,7 @@ class SystemLogConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

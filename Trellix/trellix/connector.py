@@ -2,14 +2,15 @@
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import orjson
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
 from pydantic import HttpUrl
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
@@ -34,15 +35,14 @@ class TrellixConfig(DefaultConnectorConfiguration):
 class TrellixModule(Module):
     """TrellixModule."""
 
-    configuration: TrellixConfig
 
-
-class TrellixEdrConnector(Connector):
+class TrellixEdrConnector(AsyncConnector):
     """TrellixEdrConnector class to work with EDR events."""
 
     name = "TrellixEdrConnector"
 
     module: TrellixModule
+    configuration: TrellixConfig
 
     _trellix_client: TrellixHttpClient | None = None
 
@@ -90,38 +90,20 @@ class TrellixEdrConnector(Connector):
         if self._trellix_client is not None:
             return self._trellix_client
 
-        rate_limiter = AsyncLimiter(self.module.configuration.ratelimit_per_minute)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         self._trellix_client = TrellixHttpClient(
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-            api_key=self.module.configuration.api_key,
-            auth_url=self.module.configuration.auth_url,
-            base_url=self.module.configuration.base_url,
+            client_id=self.configuration.client_id,
+            client_secret=self.configuration.client_secret,
+            api_key=self.configuration.api_key,
+            auth_url=self.configuration.auth_url,
+            base_url=self.configuration.base_url,
             rate_limiter=rate_limiter,
         )
 
         return self._trellix_client
 
-    async def _push_events(self, events: list[str]) -> list[str]:
-        """
-        Push events to intakes.
-
-        Simple wrapper over `self.push_events_to_intakes` to run it async.
-
-        Args:
-            events: list[str]
-
-        Returns:
-            list[str]:
-        """
-        return await asyncio.to_thread(
-            self.push_events_to_intakes,
-            events=events,
-            sync=True,
-        )
-
-    async def get_trellix_edr_events(self) -> List[str]:
+    async def get_trellix_edr_events(self) -> list[str]:
         """
         Process trellix edr events.
 
@@ -130,45 +112,51 @@ class TrellixEdrConnector(Connector):
         """
         events = await self.trellix_client.get_epo_events(
             self.last_event_date,
-            self.module.configuration.records_per_request,
+            self.configuration.records_per_request,
         )
 
-        return await self._push_events([orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events])
+        result: list[str] = await self.push_data_to_intakes(
+            [orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events]
+        )
 
-    def run(self) -> None:
+        return result
+
+    def run(self) -> None:  # pragma: no cover
         """Runs TrellixEdr."""
-        loop = asyncio.get_event_loop()
-
         previous_processing_end = None
-        try:
-            while True:
-                processing_start = time.time()
-                if previous_processing_end is not None:
-                    EVENTS_LAG.labels(intake_key=self.module.configuration.intake_key).observe(
-                        processing_start - previous_processing_end
+
+        while self.running:
+            try:
+                loop = asyncio.get_event_loop()
+
+                while self.running:
+                    processing_start = time.time()
+                    if previous_processing_end is not None:
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                            processing_start - previous_processing_end
+                        )
+
+                    message_ids: list[str] = loop.run_until_complete(self.get_trellix_edr_events())
+                    processing_end = time.time()
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+
+                    log_message = "No records to forward"
+                    if len(message_ids) > 0:
+                        log_message = "Pushed {0} records".format(len(message_ids))
+
+                    logger.info(log_message)
+                    self.log(message=log_message, level="info")
+                    logger.info(log_message)
+                    logger.info(
+                        "Processing took {processing_time} seconds",
+                        processing_time=(processing_end - processing_start),
                     )
 
-                message_ids: list[str] = loop.run_until_complete(self.get_trellix_edr_events())
-                processing_end = time.time()
-                OUTCOMING_EVENTS.labels(intake_key=self.module.configuration.intake_key).inc(len(message_ids))
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_end - processing_start
+                    )
 
-                log_message = "No records to forward"
-                if len(message_ids) > 0:
-                    log_message = "Pushed {0} records".format(len(message_ids))
+                    previous_processing_end = processing_end
 
-                logger.info(log_message)
-                self.log(message=log_message, level="info")
-
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.module.configuration.intake_key).observe(
-                    processing_end - processing_start
-                )
-
-                previous_processing_end = processing_end
-
-                loop.run_until_complete(asyncio.sleep(self.module.configuration.delay))
-
-        except Exception as e:
-            logger.error("Error while running TrellixEdr: {error}", error=e)
-
-        finally:
-            loop.close()
+            except Exception as e:
+                logger.error("Error while running Trellix EDR: {error}", error=e)

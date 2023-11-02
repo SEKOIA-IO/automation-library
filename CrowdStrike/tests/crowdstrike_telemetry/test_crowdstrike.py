@@ -10,12 +10,28 @@ from crowdstrike_telemetry.pull_telemetry_events import CrowdStrikeTelemetryConf
 
 
 @pytest.fixture
-def crowdstrike_connector(session_faker) -> CrowdStrikeTelemetryConnector:
+def pushed_ids(session_faker) -> list[str]:
+    """
+    Generate random list of events ids.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        list[str]:
+    """
+    return [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
+
+
+@pytest.fixture
+def crowdstrike_connector(session_faker, symphony_storage, pushed_ids) -> CrowdStrikeTelemetryConnector:
     """
     Create CrowdStrikeTelemetryConnector instance.
 
     Args:
         session_faker: Faker
+        symphony_storage: str
+        pushed_ids: list[str]
 
     Returns:
         CrowdStrikeTelemetryConnector:
@@ -27,8 +43,13 @@ def crowdstrike_connector(session_faker) -> CrowdStrikeTelemetryConnector:
         aws_region=session_faker.word(),
     )
 
-    connector = CrowdStrikeTelemetryConnector(module)
+    connector = CrowdStrikeTelemetryConnector(
+        module=module,
+        data_path=symphony_storage,
+    )
+
     connector.configuration = CrowdStrikeTelemetryConfig(
+        intake_server=session_faker.url(),
         queue_name=session_faker.word(),
         intake_key=session_faker.word(),
         chunk_size=session_faker.random.randint(1, 10),
@@ -37,6 +58,7 @@ def crowdstrike_connector(session_faker) -> CrowdStrikeTelemetryConnector:
         is_fifo=False,
     )
     connector.push_events_to_intakes = MagicMock()
+    connector.push_data_to_intakes = AsyncMock(return_value=pushed_ids)
     connector.log = MagicMock()
     connector.log_exception = MagicMock()
 
@@ -121,13 +143,14 @@ async def test_process_s3_file_one_line(crowdstrike_connector, session_faker):
 
 
 @pytest.mark.asyncio
-async def test_get_crowdstrike_events(crowdstrike_connector, session_faker):
+async def test_get_crowdstrike_events(crowdstrike_connector, session_faker, pushed_ids):
     """
     Test get_crowdstrike_events method.
 
     Args:
         crowdstrike_connector: CrowdStrikeTelemetryConnector
         session_faker: Faker
+        pushed_ids: list[str]
     """
     receipt_handle_1 = session_faker.word()
     receipt_handle_2 = session_faker.word()
@@ -169,10 +192,9 @@ async def test_get_crowdstrike_events(crowdstrike_connector, session_faker):
             [json.dumps(item).encode("utf-8") for item in expected]
         )
 
-        await crowdstrike_connector.get_crowdstrike_events()
+        result = await crowdstrike_connector.get_crowdstrike_events()
 
-        assert crowdstrike_connector.push_events_to_intakes.called
-        assert not crowdstrike_connector.log_exception.called
+        assert result == pushed_ids
 
 
 @pytest.mark.asyncio
@@ -186,7 +208,9 @@ async def test_specify_queue_url(session_faker):
         aws_region=session_faker.word(),
     )
 
-    connector = CrowdStrikeTelemetryConnector(module)
+    connector = CrowdStrikeTelemetryConnector(
+        module=module,
+    )
     connector.configuration = CrowdStrikeTelemetryConfig(
         queue_name=session_faker.word(),
         queue_url=queue_url,

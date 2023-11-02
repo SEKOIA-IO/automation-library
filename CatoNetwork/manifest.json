@@ -1,0 +1,29 @@
+{
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "api_key": {
+                "description": "Api key to interact with Cato API",
+                "type": "string"
+            },
+            "account_id": {
+                "description": "Account Id to work with Cato API",
+                "type": "string"
+            }
+        },
+        "required": [
+            "api_key",
+            "account_id"
+        ],
+        "secrets": [
+            "api_key"
+        ],
+        "title": "Cato Networks module Configuration",
+        "type": "object"
+    },
+    "description": "Cato Networks is a software company providing solutions to protect cloud applications.",
+    "name": "Cato Networks",
+    "uuid": "d7aa9364-3182-11ee-be56-0242ac120002",
+    "slug": "cato",
+    "version": "1.2.1"
+}

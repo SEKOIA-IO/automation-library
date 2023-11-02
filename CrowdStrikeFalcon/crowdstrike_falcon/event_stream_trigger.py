@@ -1,5 +1,4 @@
 import json
-import os
 import queue
 import threading
 import time
@@ -11,7 +10,6 @@ import orjson
 from requests.auth import AuthBase
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import Connector
-from sekoia_automation.metrics import PrometheusExporterThread, make_exporter
 from sekoia_automation.storage import PersistentJSON
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
@@ -306,6 +304,8 @@ class EventStreamTrigger(Connector):
     module: CrowdStrikeFalconModule
     configuration: CrowdStrikeFalconEventStreamConfiguration
 
+    seconds_without_events = 3600 * 24  # Time to wait without events before restarting the pod
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -316,7 +316,6 @@ class EventStreamTrigger(Connector):
         self.f_stop = threading.Event()
 
         self._network_sleep_on_retry = 60
-        self._exporter = None
 
     @cached_property
     def client(self):
@@ -347,18 +346,11 @@ class EventStreamTrigger(Connector):
 
         return VerticlesCollector(self, tg_client, self.client)
 
-    def start_monitoring(self):
-        super().start_monitoring()
-        # start the prometheus exporter
-        self._exporter = make_exporter(
-            PrometheusExporterThread, int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10)
+    @cached_property
+    def _connector_user_agent(self) -> str:
+        return "sekoiaio-connector/{0}-{1}".format(
+            self.module.manifest.get("slug", ""), self.module.manifest.get("version", "")
         )
-        self._exporter.start()
-
-    def stop_monitoring(self):
-        super().stop_monitoring()
-        if self._exporter:
-            self._exporter.stop()
 
     def read_queue(self) -> None:
         """
@@ -502,6 +494,9 @@ class EventStreamTrigger(Connector):
                     break
 
                 time.sleep(5)
+
+        except Exception as error:
+            self.log_exception(error, message="Failed to fetch and forward events")
 
         finally:
             # just in case
