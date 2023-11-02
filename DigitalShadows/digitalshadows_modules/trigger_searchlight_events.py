@@ -1,5 +1,6 @@
 import time
 from datetime import datetime, timezone
+from functools import cached_property
 
 import requests as requests
 from requests import Response
@@ -22,6 +23,20 @@ class SearchLightTrigger(Trigger):
         self.pagination_limit: int = 1000
         self.previous_alerts: list[dict] = []
         self.trigger_activation = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
 
     def run(self) -> None:  # pragma: no cover
         self.log(message="Digital Shadows SearchLight Trigger has started.", level="info")
@@ -72,7 +87,11 @@ class SearchLightTrigger(Trigger):
         Query SearchLight API with configured credentials'
         pagination_event_num_after is an offset
         """
-        headers: dict[str, str] = {"searchlight-account-id": self.module.configuration["searchlight_account_id"]}
+        headers: dict[str, str] = {
+            **self._http_default_headers,
+            "searchlight-account-id": self.module.configuration["searchlight_account_id"]
+        }
+
         credentials: HTTPBasicAuth = HTTPBasicAuth(
             self.module.configuration["basicauth_key"],
             self.module.configuration["basicauth_secret"],
@@ -86,7 +105,9 @@ class SearchLightTrigger(Trigger):
             params=params,
             headers=headers,
         )
+
         response_body = response.json()
+
         if not response.ok:
             self.log(
                 message=(
