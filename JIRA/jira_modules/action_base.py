@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from functools import cached_property
 from typing import Any
 
@@ -77,5 +78,6 @@ class JIRAAction(Action):
         elif status_code == 401:
             self.log(message="Credentials are incorrect", level="error")
 
+    @abstractmethod
     def run(self, arguments: Any) -> Any:
         raise NotImplementedError
