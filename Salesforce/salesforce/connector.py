@@ -3,6 +3,7 @@
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from typing import Any, Optional
 
 import orjson
@@ -11,17 +12,14 @@ from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
-from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.utils import get_as_model
 
-
 from client.http_client import SalesforceHttpClient
-from utils.file_utils import csv_file_as_rows, delete_file
-
 from salesforce import SalesforceModule
-from salesforce.models import SalesforceModuleConfig
 from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from salesforce.models import SalesforceModuleConfig
+from utils.file_utils import csv_file_as_rows, delete_file
 
 
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
@@ -45,6 +43,20 @@ class SalesforceConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
 
     @property
     def last_event_date(self) -> datetime:
@@ -92,6 +104,7 @@ class SalesforceConnector(AsyncConnector):
             client_secret=module_configuration.client_secret,
             base_url=module_configuration.base_url,
             rate_limiter=rate_limiter,
+            default_headers=self._http_default_headers,
         )
 
         return self._salesforce_client

@@ -28,6 +28,7 @@ class SalesforceHttpClient(object):
         client_secret: str,
         base_url: str,
         rate_limiter: AsyncLimiter | None = None,
+        default_headers: dict[str, str] | None = None,
     ):
         """
         Initialize SalesforceHttpClient.
@@ -37,10 +38,12 @@ class SalesforceHttpClient(object):
             client_secret: str
             base_url: str
             rate_limiter: AsyncLimiter
+            default_headers: dict[str, str] | None
         """
         self.client_id = client_id
         self.client_secret = client_secret
         self.base_url = base_url
+        self.default_headers = default_headers if default_headers is not None else {}
 
         if rate_limiter:
             self.set_rate_limiter(rate_limiter)
@@ -155,6 +158,7 @@ class SalesforceHttpClient(object):
 
         async with token_refresher.with_access_token() as token:
             headers = {
+                **self.default_headers,
                 "Authorization": "Bearer {0}".format(token.token.access_token),
                 "Content-Type": "application/json",
                 "Content-Encoding": "gzip",

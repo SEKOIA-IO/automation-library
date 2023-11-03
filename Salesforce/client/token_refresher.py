@@ -30,7 +30,14 @@ class SalesforceTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, client_id: str, client_secret: str, auth_url: str, token_ttl: int = 300):
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        auth_url: str,
+        token_ttl: int = 300,
+        default_headers: dict[str, str] | None = None,
+    ):
         """
         Initialize SalesforceTokenRefresher.
 
@@ -41,11 +48,13 @@ class SalesforceTokenRefresher(object):
             client_secret: str
             auth_url: str
             token_ttl: int
+            default_headers: dict[str, str] | None
         """
         self.client_id = client_id
         self.client_secret = client_secret
         self.auth_url = auth_url
         self.token_ttl = token_ttl
+        self.default_headers = default_headers if default_headers is not None else {}
 
         self._token: SalesforceToken | None = None
         self._token_refresh_task: Optional[Task[None]] = None
@@ -109,7 +118,9 @@ class SalesforceTokenRefresher(object):
 
         url = URL("{0}/services/oauth2/token".format(self.auth_url)).with_query(urlencode(params, encoding="utf-8"))
 
-        async with self.session().post(url, auth=BasicAuth(self.client_id, self.client_secret), json={}) as response:
+        async with self.session().post(
+            url, auth=BasicAuth(self.client_id, self.client_secret), json={}, headers=self.default_headers
+        ) as response:
             response_data = await response.json()
 
             self._token = SalesforceToken(
