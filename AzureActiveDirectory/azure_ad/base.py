@@ -8,11 +8,15 @@ from pydantic import BaseModel, Field, root_validator
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
+import sentry_sdk
+from traceback import format_exc
+import asyncio
+
 
 class AzureADConfiguration(BaseModel):
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
     username: str = Field(..., description="")
-    password: str = Field(..., description="")
+    password: str = Field(secret=True, description="")
     client_id: str = Field(
         ...,
         description="Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",  # noqa: E501
@@ -27,7 +31,20 @@ class AzureADModule(Module):
     configuration: AzureADConfiguration
 
 
-class MicrosoftGraphAction(Action):
+class AsyncAction(Action):
+    def execute(self) -> None:
+        try:
+            self._ensure_data_path_set()
+            self.set_task_as_running()
+            self._results = asyncio.run(self.run(self.arguments))
+        except Exception:
+            self.error(f"An unexpected error occured: {format_exc()}")
+            sentry_sdk.capture_exception()
+
+        self.send_results()
+
+
+class MicrosoftGraphAction(AsyncAction):
     module: AzureADModule
 
     @cached_property

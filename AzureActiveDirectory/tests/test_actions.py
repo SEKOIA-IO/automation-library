@@ -5,7 +5,6 @@ from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction, Re
 from azure_ad.delete_app import DeleteApplicationAction
 
 from unittest.mock import AsyncMock, patch
-import asyncio
 import pytest
 import requests
 import json
