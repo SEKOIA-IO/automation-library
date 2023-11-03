@@ -104,7 +104,9 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
     description = "Reset a user's password. You will need UserAuthenticationMethod.ReadWrite.All deleguated permission."  # noqa: E501
 
     async def query_list_user_methods(self, user_param, req_conf):
-        return await self.client.users.by_user_id(user_param).authentication.password_methods.get(request_configuration=req_conf)
+        return await self.client.users.by_user_id(user_param).authentication.password_methods.get(
+            request_configuration=req_conf
+        )
 
     async def query_reset_user_password(self, user_param, id_methods, req_body, req_conf):
         return (
