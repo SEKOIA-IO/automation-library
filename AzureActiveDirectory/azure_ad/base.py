@@ -80,7 +80,7 @@ class ApplicationArguments(BaseModel):
 
 
 class IdArguments(BaseModel):
-    Id: str | None = Field(None, description="ID of the user. id should be specified.")
+    id: str | None = Field(None, description="ID of the user. id should be specified.")
 
 
 class SingleUserArguments(BaseModel):
