@@ -2,6 +2,7 @@ import collections
 import time
 from collections.abc import Generator, Sequence
 from datetime import datetime, timedelta
+from functools import cached_property
 from typing import Deque
 
 import requests
@@ -143,6 +144,7 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
                 f"{self.module.configuration['account_id']}/securityevents/{event_type}/export/1"
             ),
             headers={
+                **self._http_default_headers,
                 "Accept": "application/json",
                 "Authorization": self._get_authorization(),
                 "WatchGuard-API-Key": self.module.configuration["api_key"],

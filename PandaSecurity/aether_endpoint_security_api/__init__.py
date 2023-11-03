@@ -12,6 +12,7 @@ class AetherAction(GenericAPIAction, AuthorizationMixin):
 
     def get_headers(self):
         return {
+            **self._http_default_headers,
             "Accept": "application/json",
             "Authorization": self._get_authorization(),
             "WatchGuard-API-Key": self.module.configuration["api_key"],
