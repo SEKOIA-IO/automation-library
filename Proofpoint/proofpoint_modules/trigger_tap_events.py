@@ -39,6 +39,20 @@ class TAPEventsTrigger(Connector):
         self.last_retrieval_date: datetime = datetime.now(timezone.utc) - timedelta(minutes=5)
 
     @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
+    @cached_property
     def authentication(self):
         return requests.auth.HTTPBasicAuth(self.configuration.client_principal, self.configuration.client_secret)
 
@@ -75,6 +89,7 @@ class TAPEventsTrigger(Connector):
             url=(f"{self.configuration.api_host}/v2/siem/all"),
             params=parameters,
             auth=self.authentication,
+            headers=self._http_default_headers,
         )
 
         # something failed

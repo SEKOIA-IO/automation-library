@@ -195,6 +195,20 @@ class PoDEventsTrigger(Connector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Proofpoint PoD connector", level="info")
         super().stop(*args, **kwargs)
