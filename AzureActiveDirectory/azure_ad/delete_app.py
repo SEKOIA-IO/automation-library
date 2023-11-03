@@ -21,6 +21,6 @@ class DeleteApplicationAction(MicrosoftGraphAction):
             options=[ResponseHandlerOption(NativeResponseHandler())],
         )
 
-        response = await self.query_delete_app(arguments.id, request_configuration)
+        response = await self.query_delete_app(arguments.objectId, request_configuration)
 
         response.raise_for_status()
