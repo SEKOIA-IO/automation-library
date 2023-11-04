@@ -2,6 +2,7 @@ import csv
 import os
 import queue
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from threading import Thread
 from time import sleep
 
@@ -29,7 +30,11 @@ class EventCollector(Thread):
         self.connector = connector
         self.events_queue = events_queue
         self.trigger_activation: datetime = datetime.now(timezone.utc)
-        self.headers = {"Accept": "text/csv", "x-mwg-api-version": "8"}
+        self.headers = {
+            **connector._http_default_headers,
+            "Accept": "text/csv",
+            "x-mwg-api-version": "8",
+        }
         self.endpoint: str = "/mwg/api/reporting/forensic/"
         self._stop_event = connector._stop_event
         self.configuration = connector.configuration
@@ -238,6 +243,20 @@ class SkyhighSecuritySWGTrigger(Connector):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
 
     def run(self):  # pragma: no cover
         self.log(message="SkyhighSWG Trigger has started", level="info")
