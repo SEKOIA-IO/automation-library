@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2023-10-31 - 1.1.1
 
-### Fixed
+### Changed
 
-- Fixed bug with a first start
+- Add additional user-agent to work with api
 
 ## 2023-10-12 - 1.0.5
 
