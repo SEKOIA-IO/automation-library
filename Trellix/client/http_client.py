@@ -28,6 +28,7 @@ class TrellixHttpClient(object):
         auth_url: str,
         base_url: str,
         rate_limiter: AsyncLimiter | None = None,
+        default_headers: dict[str, str] | None = None,
     ):
         """
         Initialize TrellixHttpClient.
@@ -38,12 +39,15 @@ class TrellixHttpClient(object):
             api_key: str
             auth_url: str
             base_url: str
+            rate_limiter: AsyncLimiter | None
+            default_headers: dict[str, str] | None
         """
         self.client_id = client_id
         self.client_secret = client_secret
         self.api_key = api_key
         self.auth_url = auth_url
         self.base_url = base_url
+        self.default_headers: dict[str, str] = default_headers or {}
         if rate_limiter:
             self.set_rate_limiter(rate_limiter)
 
@@ -56,6 +60,7 @@ class TrellixHttpClient(object):
         auth_url: str,
         base_url: str,
         rate_limiter: AsyncLimiter | None = None,
+        default_headers: dict[str, str] | None = None,
     ) -> "TrellixHttpClient":
         """
         Get instance of TrellixHttpClient.
@@ -66,12 +71,22 @@ class TrellixHttpClient(object):
             api_key: str
             auth_url: str
             base_url: str
+            rate_limiter: AsyncLimiter | None
+            default_headers: dict[str, str] | None
 
         Returns:
             TrellixHttpClient:
         """
         if not cls._client:
-            cls._client = TrellixHttpClient(client_id, client_secret, api_key, auth_url, base_url, rate_limiter)
+            cls._client = TrellixHttpClient(
+                client_id,
+                client_secret,
+                api_key,
+                auth_url,
+                base_url,
+                rate_limiter,
+                default_headers,
+            )
 
         return cls._client
 
@@ -123,13 +138,17 @@ class TrellixHttpClient(object):
 
         Safe to reuse. It will not do additional request if token is still alive.
 
+        Args:
+            scopes: Set[Scope]
+            encoding: bool
+
         Returns:
             dict[str, str]:
         """
-
         token_refresher = await self._get_token_refresher(scopes)
         async with token_refresher.with_access_token() as trellix_token:
             headers = {
+                **self.default_headers,
                 "x-api-key": self.api_key,
                 "Authorization": "Bearer {0}".format(trellix_token.token.access_token),
             }
@@ -145,7 +164,7 @@ class TrellixHttpClient(object):
 
         Args:
             start_date: datetime
-            limit: 10
+            limit: int
 
         Returns:
             URL:
@@ -166,7 +185,7 @@ class TrellixHttpClient(object):
 
         Args:
             start_date: datetime
-            limit: 10
+            limit: int
 
         Returns:
             List[TrellixEdrResponse[EpoEventAttributes]]:
