@@ -1,3 +1,4 @@
+from functools import cached_property
 from threading import Event
 
 from pydantic import BaseModel
@@ -24,6 +25,19 @@ class ActionResults(BaseModel):
 class ListDevicesAction(Action):
     results_model = ActionResults
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     def run(self, arguments: ActionArguments):
         # set request params
         params = {}
@@ -39,6 +53,7 @@ class ListDevicesAction(Action):
             scope="connect.api.read",
             stop_event=Event(),
             log_cb=self.log,
+            default_headers=self._http_default_headers,
         )
 
         devices: list[Device] = []

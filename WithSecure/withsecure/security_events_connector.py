@@ -42,6 +42,20 @@ class SecurityEventsConnector(Connector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.from_date = self.most_recent_date_seen
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     @property
     def most_recent_date_seen(self):
         now = datetime.now(timezone.utc)
@@ -65,6 +79,7 @@ class SecurityEventsConnector(Connector):
             scope="connect.api.read",
             stop_event=self._stop_event,
             log_cb=self.log,
+            default_headers=self._http_default_headers,
         )
 
     def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
