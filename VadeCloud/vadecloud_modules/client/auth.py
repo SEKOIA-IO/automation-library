@@ -4,11 +4,17 @@ from requests.auth import AuthBase
 
 
 class ApiKeyAuthentication(AuthBase):
-    def __init__(self, hostname: str, login: str, password: str):
+    def __init__(self, hostname: str, login: str, password: str, default_headers: dict[str, str] | None = None):
         self.__hostname = hostname
         self.__login = login
         self.__password = password
         self.__http_session = requests.Session()
+
+        self.default_headers: dict[str, str] = default_headers or {}
+
+        if default_headers is not None:
+            self.__http_session.headers.update(default_headers)
+
         self.__http_session.mount(
             "https://",
             HTTPAdapter(
@@ -28,6 +34,7 @@ class ApiKeyAuthentication(AuthBase):
             response = self.__http_session.post(
                 url=f"{self.__hostname}/rest/v3.0/login/login",
                 headers={
+                    **self.default_headers,
                     "Content-type": "application/json",
                     "Accept": "application/json",
                 },
@@ -55,4 +62,5 @@ class ApiKeyAuthentication(AuthBase):
 
     def __call__(self, request):
         request.headers["x-vrc-authorization"] = self.get_authorization_header()
+
         return request
