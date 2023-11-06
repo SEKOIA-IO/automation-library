@@ -114,7 +114,7 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
             self.log("Received stix_objects were empty")
         indicators = self.get_valid_indicators(stix_objects)
         if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
-            self.log("Received indicators were not valid and/or not supported in stix_objects")
+            self.log("Received indicators were not valid and/or not supported")
             return
         self.create_indicators(indicators["valid"])
         self.remove_indicators(indicators["revoked"])
