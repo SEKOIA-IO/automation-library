@@ -1,7 +1,11 @@
 # flake8: noqa: E402
-from gevent import monkey
+from sekoiaio.utils import should_patch
 
-monkey.patch_all()
+if should_patch():
+    from gevent import monkey
+
+    monkey.patch_all()
+
 from sekoia_automation.module import Module
 
 from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostReportsPdf, PostReportsUrl, ReportsGetReport
