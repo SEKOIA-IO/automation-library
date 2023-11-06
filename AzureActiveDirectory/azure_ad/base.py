@@ -102,7 +102,7 @@ class RequiredSingleUserArguments(SingleUserArguments):
 
 class RequiredTwoUserArguments(SingleUserArguments):
     userNewPassword: str | None = Field(
-        secret=True,
+        None,
         description="New password, required to reset the old one of course.",
     )
 
