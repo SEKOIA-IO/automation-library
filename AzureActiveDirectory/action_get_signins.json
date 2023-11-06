@@ -4,17 +4,12 @@
   "uuid": "02d6dbc8-6622-5718-9925-ae032dfa5208",
   "docker_parameters": "GetSignInsAction",
   "arguments": {
-    "title": "SingleUserArguments",
+    "title": "IdArguments",
     "type": "object",
     "properties": {
       "id": {
         "title": "Id",
         "description": "ID of the user. id or userPrincipalName should be specified.",
-        "type": "string"
-      },
-      "userPrincipalName": {
-        "title": "Userprincipalname",
-        "description": "Principal Name of the user. id or userPrincipalName should be specified.",
         "type": "string"
       }
     }
