@@ -6,7 +6,6 @@ from typing import Optional
 
 import jwt
 from aiohttp import ClientSession
-from jwt import JWT
 
 
 class PemGithubTokenRefresher(object):
@@ -16,7 +15,14 @@ class PemGithubTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, pem_file: str, organization: str, app_id: int, token_ttl: int = 300):
+    def __init__(
+        self,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
+        default_headers: dict[str, str] | None = None,
+    ):
         """
         Initialize GithubTokenRefresher.
 
@@ -36,6 +42,7 @@ class PemGithubTokenRefresher(object):
         self.pem_file = pem_file
         self.organization = organization
         self.app_id = app_id
+        self.default_headers = default_headers or {}
 
         self._token: str | None = None
         self._token_refresh_task: Optional[Task[None]] = None
@@ -57,7 +64,12 @@ class PemGithubTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls, pem_file: str, organization: str, app_id: int, token_ttl: int = 300
+        cls,
+        pem_file: str,
+        organization: str,
+        app_id: int,
+        token_ttl: int = 300,
+        default_headers: dict[str, str] | None = None,
     ) -> "PemGithubTokenRefresher":
         """
         Get singleton PemGithubTokenRefresher instance for specified input params.
@@ -67,6 +79,7 @@ class PemGithubTokenRefresher(object):
             organization: str
             app_id: int
             token_ttl: int
+            default_headers: dict[str, str] | None
 
         Returns:
             PemGithubTokenRefresher:
@@ -83,6 +96,7 @@ class PemGithubTokenRefresher(object):
                         organization,
                         app_id,
                         token_ttl,
+                        default_headers=default_headers,
                     )
 
         return cls._instances[refresher_unique_key]
@@ -126,9 +140,7 @@ class PemGithubTokenRefresher(object):
             "iss": self.app_id,
         }
 
-        signing_key = jwt.jwk_from_pem(self.pem_file.encode("utf-8"))
-
-        return JWT().encode(payload, signing_key, alg="RS256")
+        return jwt.encode(payload, self.pem_file.encode("utf-8"), algorithm="RS256")
 
     async def refresh_token(self) -> None:
         """
@@ -137,6 +149,7 @@ class PemGithubTokenRefresher(object):
         Also triggers token refresh task.
         """
         headers = {
+            **self.default_headers,
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "Authorization": "Bearer {0}".format(self._get_jwt()),
