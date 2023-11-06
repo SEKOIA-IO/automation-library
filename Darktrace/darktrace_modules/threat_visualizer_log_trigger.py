@@ -80,9 +80,7 @@ class ThreatVisualizerLogConsumer(Thread):
         params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
         url = urljoin(self.connector.module.configuration.api_url, self.endpoint.value)
         # save cert in file to pass to request
-        response = self.client.get(
-            url, params=params, verify=self.connector.configuration.verify_certificate
-        )
+        response = self.client.get(url, params=params, verify=self.connector.configuration.verify_certificate)
         return response
 
     def refine_response(self, response: list) -> list:
@@ -101,9 +99,7 @@ class ThreatVisualizerLogConsumer(Thread):
             response = self.request_events()
             response = response.json()
             logger.debug(f"Response from API: {response}")
-            INCOMING_MESSAGES.labels(
-                intake_key=self.connector.configuration.intake_key
-            ).inc(len(response))
+            INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(response))
         except ValueError:  # pragma: no cover
             self.connector.log(
                 message="The server response is not a json: " + str(response),
@@ -117,13 +113,9 @@ class ThreatVisualizerLogConsumer(Thread):
             if response != []:
                 for event in response:
                     event["log_type"] = self.endpoint.value
-                batch_of_events = [
-                    orjson.dumps(event).decode("utf-8") for event in response
-                ]
+                batch_of_events = [orjson.dumps(event).decode("utf-8") for event in response]
 
-                OUTCOMING_EVENTS.labels(
-                    intake_key=self.connector.configuration.intake_key
-                ).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
                 for event in batch_of_events:
                     print("\n", event, "\n")
@@ -136,9 +128,7 @@ class ThreatVisualizerLogConsumer(Thread):
                 # compute the lag
                 now = time.time()
                 current_lag = now - self.last_ts / 1000
-                EVENTS_LAG.labels(
-                    intake_key=self.connector.configuration.intake_key
-                ).observe(int(current_lag))
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).observe(int(current_lag))
             else:  # pragma: no cover
                 self.connector.log(
                     message="No events to forward",
@@ -154,9 +144,7 @@ class ThreatVisualizerLogConsumer(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.connector.configuration.intake_key
-        ).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.connector.configuration.frequency - batch_duration
@@ -190,13 +178,9 @@ class ThreatVisualizerLogConnector(Connector):
     def start_consumers(self):
         consumers = {}
         for endpoint in Endpoints:
-            self.log(
-                message=f"Start {endpoint.name} consumer", level="info"
-            )  # pragma: no cover
+            self.log(message=f"Start {endpoint.name} consumer", level="info")  # pragma: no cover
 
-            consumers[endpoint] = ThreatVisualizerLogConsumer(
-                connector=self, endpoint=endpoint
-            )
+            consumers[endpoint] = ThreatVisualizerLogConsumer(connector=self, endpoint=endpoint)
             consumers[endpoint].start()
 
         return consumers
@@ -205,27 +189,19 @@ class ThreatVisualizerLogConnector(Connector):
         """Check consumer list and restart consumer if not alive."""
         for endpoint, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(
-                    message=f"Restarting {endpoint.name} consumer", level="info"
-                )  # pragma: no cover
+                self.log(message=f"Restarting {endpoint.name} consumer", level="info")  # pragma: no cover
 
-                consumers[endpoint] = ThreatVisualizerLogConsumer(
-                    connector=self, endpoint=endpoint
-                )
+                consumers[endpoint] = ThreatVisualizerLogConsumer(connector=self, endpoint=endpoint)
                 consumers[endpoint].start()
 
     def stop_consumers(self, consumers):
         for endpoint, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(
-                    message=f"Stopping {endpoint.name} consumer", level="info"
-                )  # pragma: no cover
+                self.log(message=f"Stopping {endpoint.name} consumer", level="info")  # pragma: no cover
                 consumer.stop()
 
     def run(self):
-        self.log(
-            message="Start fetching Darktrace threat visualizer logs", level="info"
-        )  # pragma: no cover
+        self.log(message="Start fetching Darktrace threat visualizer logs", level="info")  # pragma: no cover
 
         consumers = self.start_consumers()
         while self.running:
@@ -235,8 +211,6 @@ class ThreatVisualizerLogConnector(Connector):
         self.stop_consumers(consumers)
 
     def stop(self, _, __):
-        self.log(
-            message="Stopping Darktrace threat visualizer logs connector", level="info"
-        )  # pragma: no cover
+        self.log(message="Stopping Darktrace threat visualizer logs connector", level="info")  # pragma: no cover
         # Exit signal received, asking the processor to stop
         super().stop()
