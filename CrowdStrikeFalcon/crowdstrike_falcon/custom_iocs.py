@@ -34,15 +34,11 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
             if result:
                 ids_to_remove.append(result)
             else:
-                self.log(
-                    f"IOC with value {indicator['value']} not found, skipping delete"
-                )
+                self.log(f"IOC with value {indicator['value']} not found, skipping delete")
 
         # Delete the IOCs in Crowdstrike
         if len(ids_to_remove) > 0:
-            self.log(
-                f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon"
-            )
+            self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
             next(self.client.delete_indicators(ids_to_remove))
 
     def create_indicators(self, indicators: list):
@@ -79,9 +75,7 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
         for object in stix_objects:
             # Extract value and type from pattern
             self.log(message=f"object in stix_objects {str(object)}", level="debug")
-            indicators = stix_to_indicators(
-                stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP
-            )
+            indicators = stix_to_indicators(stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP)
             for indicator in indicators:
                 ioc_value = indicator["value"]
                 ioc_type = indicator["type"]
@@ -151,16 +145,10 @@ class CrowdstrikeActionAddIOC(CrowdstrikeActionIOC):
         ioc_value = arguments.get("value", "")
         ioc_type = arguments.get("type", "").lower()
         if ioc_type not in self.SUPPORTED_TYPES:
-            self.error(
-                f"Type {ioc_type} is not supported. Refer to the documentation for supported types."
-            )
+            self.error(f"Type {ioc_type} is not supported. Refer to the documentation for supported types.")
             return
-        self.log(
-            f"Pushing {ioc_type} {ioc_value} with action {self.ACTION} to Crowdstrike Falcon"
-        )
-        self.create_indicators(
-            indicators=[self.get_payload(value=ioc_value, type=ioc_type)]
-        )
+        self.log(f"Pushing {ioc_type} {ioc_value} with action {self.ACTION} to Crowdstrike Falcon")
+        self.create_indicators(indicators=[self.get_payload(value=ioc_value, type=ioc_type)])
 
 
 class CrowdstrikeActionBlockIOC(CrowdstrikeActionAddIOC):
