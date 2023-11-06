@@ -47,7 +47,7 @@ class ThreatVisualizerLogConsumer(Thread):
         elif self.endpoint == Endpoints.AI_ANALYST:
             self.time_field = "createdAt"
 
-    def stop(self):
+    def stop(self):  # pragma: no cover
         self._stop_event.set()
 
     @property
