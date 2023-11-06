@@ -198,7 +198,7 @@ class ThreatVisualizerLogConnector(Connector):
         for endpoint, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
                 self.log(message=f"Stopping {endpoint.name} consumer", level="info")  # pragma: no cover
-                consumer.stop()
+                consumer.stop()  # pragma: no cover
 
     def run(self):
         self.log(message="Start fetching Darktrace threat visualizer logs", level="info")  # pragma: no cover
@@ -210,7 +210,7 @@ class ThreatVisualizerLogConnector(Connector):
 
         self.stop_consumers(consumers)
 
-    def stop(self, _, __):
-        self.log(message="Stopping Darktrace threat visualizer logs connector", level="info")  # pragma: no cover
+    def stop(self, _, __):  # pragma: no cover
+        self.log(message="Stopping Darktrace threat visualizer logs connector", level="info")
         # Exit signal received, asking the processor to stop
         super().stop()
