@@ -107,8 +107,6 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
     def run(self, arguments):
         if arguments.get("sekoia_base_url"):
             self.sekoia_base_url = arguments.get("sekoia_base_url")
-        if "stix_objects_path" in arguments:
-            arguments.pop("stix_objects")
         stix_objects = self.json_argument("stix_objects", arguments)
         if stix_objects is None or len(stix_objects) == 0:
             self.log("Received stix_objects were empty")
