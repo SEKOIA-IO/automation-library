@@ -1,9 +1,6 @@
-from functools import cached_property
-
 from pydantic import BaseModel, Field
-from sekoia_automation.action import Action
 
-from .api import JiraApi
+from .action_base import JIRAAction
 from .base import JIRAModule
 
 
@@ -12,21 +9,13 @@ class JiraAddCommentArguments(BaseModel):
     comment: str = Field(..., description="Text of a comment")
 
 
-class JIRAAddCommentToIssue(Action):
+class JIRAAddCommentToIssue(JIRAAction):
     name = "Comment an issue"
     description = "Add a comment to an issue"
     module: JIRAModule
 
-    @cached_property
-    def client(self) -> JiraApi:
-        return JiraApi(
-            domain=self.module.configuration.domain,
-            email=self.module.configuration.email,
-            api_token=self.module.configuration.api_key,
-        )
-
-    def add_comment_to_issue(self, issue_key: str, comment: str) -> dict:
-        return self.client.post_json(
+    def add_comment_to_issue(self, issue_key: str, comment: str) -> dict | None:
+        return self.post_json(
             path=f"issue/{issue_key}/comment",
             json={
                 "body": {
