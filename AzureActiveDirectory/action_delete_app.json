@@ -9,7 +9,7 @@
       "properties": {
         "id": {
           "title": "Id",
-          "description": "ID of the app.",
+          "description": "Object ID of the app.",
           "type": "string"
         }
       }
