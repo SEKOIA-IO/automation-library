@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 import asyncio
 
-from .base import MicrosoftGraphAction, SingleUserArguments
+from .base import MicrosoftGraphAction, SingleUserArguments, IdArguments
 
 from kiota_abstractions.native_response_handler import NativeResponseHandler
 from kiota_http.middleware.options import ResponseHandlerOption
@@ -112,16 +112,10 @@ class GetSignInsAction(MicrosoftGraphAction):
     async def query_get_user_signin(self, req_conf):
         return await self.client.audit_logs.sign_ins.get(request_configuration=req_conf)
 
-    async def run(self, arguments: SingleUserArguments):
-        if arguments.id:
-            query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
-                filter=f"userId eq '{arguments.id}'"
-            )
-        elif arguments.userPrincipalName:
-            query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
-                filter=f"userPrincipalName eq '{arguments.userPrincipalName}'"
-            )
-
+    async def run(self, arguments: IdArguments):
+        query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
+            filter=f"userId eq '{arguments.id}'"
+        )
         request_configuration = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration(
             options=[ResponseHandlerOption(NativeResponseHandler())], query_parameters=query_params
         )

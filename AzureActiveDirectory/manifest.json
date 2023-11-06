@@ -32,7 +32,9 @@
         "required": [
             "tenant_id",
             "client_id",
-            "client_secret"
+            "client_secret",
+            "username",
+            "password"
         ],
         "secrets": [
             "client_secret",
@@ -43,5 +45,5 @@
     "name": "Azure Active Directory",
     "uuid": "3abf7928-65ef-4a5f-ba3e-5fbe56123d0c",
     "slug": "azure-ad",
-    "version": "2.5.2"
+    "version": "2.5.3"
 }

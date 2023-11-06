@@ -76,7 +76,11 @@ class MicrosoftGraphAction(AsyncAction):
 
 
 class ApplicationArguments(BaseModel):
-    id: str | None = Field(None, description="ID of the user. id or userPrincipalName should be specified.")
+    objectId: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
+
+
+class IdArguments(BaseModel):
+    id: str | None = Field(None, description="ID of the user. id should be specified.")
 
 
 class SingleUserArguments(BaseModel):
