@@ -2,6 +2,7 @@
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from typing import Any, Optional
 
 import orjson
@@ -99,9 +100,24 @@ class TrellixEdrConnector(AsyncConnector):
             auth_url=self.configuration.auth_url,
             base_url=self.configuration.base_url,
             rate_limiter=rate_limiter,
+            default_headers=self._http_default_headers,
         )
 
         return self._trellix_client
+
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
 
     async def get_trellix_edr_events(self) -> list[str]:
         """

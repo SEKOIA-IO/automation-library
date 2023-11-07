@@ -30,7 +30,15 @@ class TrellixTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, client_id: str, client_secret: str, api_key: str, base_url: str, scopes: Set[Scope]):
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        api_key: str,
+        base_url: str,
+        scopes: Set[Scope],
+        default_headers: dict[str, str] | None = None,
+    ):
         """
         Initialize TrellixTokenRefresher.
 
@@ -42,12 +50,14 @@ class TrellixTokenRefresher(object):
             api_key: str
             base_url: str
             scopes: Set[Scope]
+            default_headers: dict[str, str] | None
         """
         self.client_id = client_id
         self.client_secret = client_secret
         self.api_key = api_key
         self.base_url = base_url
         self.scopes = scopes
+        self.default_headers: dict[str, str] = default_headers or {}
 
         self._token: TrellixToken | None = None
         self._token_refresh_task: Optional[Task[None]] = None
@@ -69,7 +79,13 @@ class TrellixTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls, client_id: str, client_secret: str, api_key: str, auth_url: str, scopes: Set[Scope]
+        cls,
+        client_id: str,
+        client_secret: str,
+        api_key: str,
+        auth_url: str,
+        scopes: Set[Scope],
+        default_headers: dict[str, str] | None = None,
     ) -> "TrellixTokenRefresher":
         """
         Get singleton TrellixTokenRefresher instance for specified set of scopes.
@@ -80,6 +96,7 @@ class TrellixTokenRefresher(object):
             api_key: str
             auth_url: str
             scopes: Set[Scope]
+            default_headers: dict[str, str] | None
 
         Returns:
             TrellixTokenRefresher:
@@ -92,7 +109,12 @@ class TrellixTokenRefresher(object):
             async with cls._locks[refresher_unique_key]:
                 if not cls._instances.get(refresher_unique_key):
                     cls._instances[refresher_unique_key] = TrellixTokenRefresher(
-                        client_id, client_secret, api_key, auth_url, scopes
+                        client_id,
+                        client_secret,
+                        api_key,
+                        auth_url,
+                        scopes,
+                        default_headers,
                     )
 
         return cls._instances[refresher_unique_key]
@@ -114,7 +136,7 @@ class TrellixTokenRefresher(object):
 
         Also triggers token refresh task.
         """
-        headers = {"x-api-header": self.api_key}
+        headers = {**self.default_headers, "x-api-header": self.api_key}
 
         async with self.session().post(
             self.auth_url, headers=headers, auth=BasicAuth(self.client_id, self.client_secret), json={}
