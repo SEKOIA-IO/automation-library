@@ -8,11 +8,11 @@ authors = []
 python = ">=3.10,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
-sekoia-automation-sdk = "^1.6.0"
+sekoia-automation-sdk = { version = "^1.6.0", extras = ["all"] }
 loguru = "^0.7.0"
 async-lru = "^2.0.2"
 aiolimiter = "^1.1.0"
-gql = {extras = ["all"], version = "^3.4.1"}
+gql = {  version = "^3.4.1", extras = ["all"] }
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

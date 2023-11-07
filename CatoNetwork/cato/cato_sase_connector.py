@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from functools import cached_property
 from typing import Any, Optional
 
 import orjson
@@ -43,6 +44,20 @@ class CatoSaseConnector(Connector):
 
     _cato_client: CatoGraphQLClient | None = None
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init CatoSaseConnector."""
 
@@ -79,6 +94,7 @@ class CatoSaseConnector(Connector):
         self._cato_client = CatoGraphQLClient(
             api_key=self.module.configuration.api_key,
             account_id=self.module.configuration.account_id,
+            default_headers=self._http_default_headers,
         )
 
         return self._cato_client
