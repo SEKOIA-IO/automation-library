@@ -1,5 +1,6 @@
 import base64
 from datetime import datetime, timedelta
+from functools import cached_property
 
 import requests
 from sekoia_automation.module import Module
@@ -9,6 +10,20 @@ class AuthorizationMixin:
     http_session: requests.Session
     api_credentials: dict | None
     module: Module
+
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
 
     def _get_authorization_headers(self):
         access_id = self.module.configuration["access_id"]
