@@ -1,4 +1,5 @@
 import re
+from functools import cached_property
 from uuid import uuid4
 
 import requests
@@ -11,6 +12,20 @@ class DownloadFileAction(Action):
     Action to download a file
     """
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this Action.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     def _get_headers(self, arguments: dict) -> dict:
         """
         Get headers to use in the requests.
@@ -19,6 +34,8 @@ class DownloadFileAction(Action):
         """
         headers = self.module.configuration.get("headers", {}).copy()
         headers.update(arguments.get("headers", {}))
+        headers.update(self._http_default_headers)
+
         return headers
 
     def _perform_stream_request(self, arguments: dict) -> Response:
