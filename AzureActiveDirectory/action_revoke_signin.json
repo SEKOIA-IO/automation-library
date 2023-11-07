@@ -1,0 +1,23 @@
+{
+    "name": "Revoke Sign in",
+    "description": "Invalidates all the refresh tokens issued to applications for a user. Requires the User.ReadWrite.All or Directory.ReadWrite.All permissions.",
+    "uuid": "4be1e1e1-cb41-4b93-ac3d-cdc6a5c38c71",
+    "docker_parameters": "RevokeSignInsSessionsAction",
+    "arguments": {
+      "title": "SingleUserArguments",
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "description": "ID of the app.",
+          "type": "string"
+        },
+        "userPrincipalName": {
+          "title": "Userprincipalname",
+          "description": "Principal Name of the user. id or userPrincipalName should be specified.",
+          "type": "string"
+        }
+      }
+    },
+    "results": {}
+  }

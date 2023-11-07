@@ -137,3 +137,19 @@ def test_change_status(action: JIRAChangeIssueStatus, transitions_1):
         )
         args = JiraChangeStatusArguments(issue_key="PRJ-1", status_name="Close Issue")
         action.run(args)
+
+
+def test_change_status_incorrect_transition(action: JIRAChangeIssueStatus, transitions_1):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/issue/PRJ-1/transitions",
+            json=transitions_1,
+        )
+        mock.register_uri(
+            "POST",
+            "https://test.atlassian.net/rest/api/3/issue/PRJ-1/transitions",
+            json={},
+        )
+        args = JiraChangeStatusArguments(issue_key="PRJ-1", status_name="To Test")
+        action.run(args)
