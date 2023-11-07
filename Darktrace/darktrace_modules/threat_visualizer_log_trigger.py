@@ -64,7 +64,8 @@ class ThreatVisualizerLogConsumer(Thread):
         """
         return {
             "User-Agent": "sekoiaio-connector/{0}-{1}".format(
-                self.module.manifest.get("slug"), self.module.manifest.get("version")
+                self.connector.module.manifest.get("slug"),
+                self.connector.module.manifest.get("version"),
             ),
         }
 
