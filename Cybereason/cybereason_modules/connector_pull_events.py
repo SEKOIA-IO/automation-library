@@ -53,6 +53,19 @@ class CybereasonEventConnector(Connector):
         signal.signal(signal.SIGTERM, self.exit)
 
     @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
+    @cached_property
     def client(self):
         """
         Return the HTTP client for the API
@@ -63,7 +76,7 @@ class CybereasonEventConnector(Connector):
         auth = CybereasonApiAuthentication(
             self.module.configuration.base_url, self.module.configuration.username, self.module.configuration.password
         )
-        return ApiClient(auth=auth)
+        return ApiClient(auth=auth, default_headers=self._http_default_headers)
 
     def exit(self, _, __):
         # Exit signal received, asking the processor to stop
