@@ -13,10 +13,14 @@ class ApiClient(requests.Session):
         password: str,
         nb_retries: int = 5,
         ratelimit_per_minute: int = 20,
+        default_headers: dict[str, str] | None = None,
     ):
         super().__init__()
         self.auth: ApiKeyAuthentication = ApiKeyAuthentication(hostname, login, password)
         self.auth.authenticate()
+
+        if default_headers is not None:
+            self.headers.update(default_headers)
 
         self.mount(
             "https://",

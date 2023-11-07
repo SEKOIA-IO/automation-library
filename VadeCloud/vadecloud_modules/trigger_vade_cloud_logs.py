@@ -77,6 +77,7 @@ class VadeCloudConsumer(Thread):
                 login=self.connector.module.configuration.login,
                 password=self.connector.module.configuration.password,
                 ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
+                default_headers=self.connector._http_default_headers,
             )
             return client
 
@@ -247,6 +248,20 @@ class VadeCloudLogsConnector(Connector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
         self.consumers = {}
+
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
 
     def start_consumers(self):
         consumers = {}
