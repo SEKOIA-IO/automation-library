@@ -1,8 +1,8 @@
+import json
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
-import json
 
 from darktrace_modules import DarktraceModule, Endpoints
 from darktrace_modules.threat_visualizer_log_trigger import (

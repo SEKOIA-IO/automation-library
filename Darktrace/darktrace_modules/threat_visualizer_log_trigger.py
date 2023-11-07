@@ -54,6 +54,21 @@ class ThreatVisualizerLogConsumer(Thread):
     def running(self):
         return not self._stop_event.is_set()
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.connector.module.manifest.get("slug"),
+                self.connector.module.manifest.get("version"),
+            ),
+        }
+
     @property
     def last_ts(self) -> int:
         with self.context as cache:
@@ -74,6 +89,7 @@ class ThreatVisualizerLogConsumer(Thread):
             self.connector.module.configuration.public_key,
             self.connector.module.configuration.private_key,
             ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
+            default_headers=self._http_default_headers,
         )
 
     def request_events(self) -> requests.models.Response:

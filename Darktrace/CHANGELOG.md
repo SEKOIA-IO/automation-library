@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2023-10-23 - 1.4.1
+## 2023-10-23 - 1.4.2
 
 ### Removed
 
 - Type verification in retry.py for HTTPrequest
 
+## 2023-06-30 - 1.4.1
+
+### Changed
+
+- Add additional user-agent to work with api
+- 
 ## 2023-10-23 - 1.4.0
 
 ### Added

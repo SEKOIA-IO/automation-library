@@ -1,5 +1,6 @@
-import helpers
 import requests
+
+import helpers
 
 
 def test_signature_generation():
