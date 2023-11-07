@@ -51,6 +51,20 @@ class SystemLogConnector(Connector):
         signal.signal(signal.SIGINT, self.exit)
         signal.signal(signal.SIGTERM, self.exit)
 
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
     def exit(self, _, __):
         self.log(message="Stopping OKTA system logs connector", level="info")
         # Exit signal received, asking the processor to stop
@@ -80,7 +94,9 @@ class SystemLogConnector(Connector):
     @cached_property
     def client(self):
         return ApiClient(
-            self.module.configuration.apikey, ratelimit_per_minute=self.configuration.ratelimit_per_minute
+            self.module.configuration.apikey,
+            ratelimit_per_minute=self.configuration.ratelimit_per_minute,
+            default_headers=self._http_default_headers,
         )
 
     def _handle_response_error(self, response: requests.Response):
@@ -110,7 +126,10 @@ class SystemLogConnector(Connector):
                 params[param_name] = value
 
         # get the first page of events
-        headers = {"Accept": "application/json"}
+        headers = {
+            **self._http_default_headers,
+            "Accept": "application/json",
+        }
         url = urljoin(self.module.configuration.base_url, "/api/v1/logs")
         response = self.client.get(url, params=params, headers=headers)
 
