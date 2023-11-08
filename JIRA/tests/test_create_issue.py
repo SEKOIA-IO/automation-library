@@ -165,6 +165,8 @@ def test_create_issue(
             reporter="Jane Doe",
             priority="Major",
             parent_key=None,
+            custom_fields=None,
+            description=None
         )
         result = action.run(args)
         assert result is not None
@@ -188,6 +190,8 @@ def test_create_issue_no_project(action: JIRACreateIssue) -> None:
             reporter="Jane Doe",
             priority="Major",
             parent_key=None,
+            custom_fields=None,
+            description=None
         )
         result = action.run(args)
         assert result is None
@@ -228,6 +232,8 @@ def test_create_issue_with_incorrect_user(
             reporter="Jane Doe",
             priority="Highest",
             parent_key=None,
+            custom_fields=None,
+            description=None
         )
         result = action.run(args)
         assert result is None
@@ -268,6 +274,8 @@ def test_create_issue_with_non_existent_priority(
             reporter="Jane Doe",
             priority="HIGHEST",
             parent_key=None,
+            custom_fields=None,
+            description=None
         )
         result = action.run(args)
         assert result is None
@@ -287,6 +295,8 @@ def test_incorrect_credentials(action: JIRACreateIssue):
             reporter="Jane Doe",
             priority="HIGHEST",
             parent_key=None,
+            custom_fields=None,
+            description=None
         )
         with pytest.raises(HTTPError):
             result = action.run(args)

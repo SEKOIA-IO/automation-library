@@ -22,6 +22,11 @@
         "description": "Issue type (e.g. 'Task')",
         "type": "string"
       },
+      "description": {
+        "title": "Description",
+        "description": "Description text in ADF (Atlassian Document Format)",
+        "type": "string"
+      },
       "due_date": {
         "title": "Due Date",
         "description": "Due date (e.g. '2023-10-31')'",
@@ -50,6 +55,11 @@
       "parent_key": {
         "title": "Parent Key",
         "description": "Key of a parent issue (e.g. PRJ-1)",
+        "type": "string"
+      },
+      "custom_fields": {
+        "title": "Custom Fields",
+        "description": "JSON with custom fields (e.g. {\"Some Field\": \"2\"})",
         "type": "string"
       }
     },

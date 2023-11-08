@@ -1,3 +1,5 @@
+import json
+
 from pydantic import BaseModel, Field
 
 from .action_base import JIRAAction
@@ -8,12 +10,14 @@ class JiraCreateIssueArguments(BaseModel):
     project_key: str = Field(..., description="Project key (e.g. 'PRJ')")
     summary: str = Field(..., description="Summary of an issue (e.g. 'Fix a bug')")
     issue_type: str = Field(..., description="Issue type (e.g. 'Task')")
-    due_date: str | None = Field(description="Due date (e.g. '2023-10-31')'")
-    labels: str | None = Field(description="Comma-separated labels (e.g. 'devops,support')")
-    assignee: str | None = Field(description="Exact display name of an assignee (e.g. John Doe)")
-    reporter: str | None = Field(description="Exact display name of a reporter (e.g. Jane Doe)")
-    priority: str | None = Field(description="Issue priority (e.g. Highest)")
+    description: str | None = Field(None, description="Description text in ADF (Atlassian Document Format)")
+    due_date: str | None = Field(None, description="Due date (e.g. '2023-10-31')'")
+    labels: str | None = Field(None, description="Comma-separated labels (e.g. 'devops,support')")
+    assignee: str | None = Field(None, description="Exact display name of an assignee (e.g. John Doe)")
+    reporter: str | None = Field(None, description="Exact display name of a reporter (e.g. Jane Doe)")
+    priority: str | None = Field(None, description="Issue priority (e.g. Highest)")
     parent_key: str | None = Field(None, description="Key of a parent issue (e.g. PRJ-1)")
+    custom_fields: str | None = Field(None, description="""JSON with custom fields (e.g. {"Some Field": "2"})""")
 
 
 class JIRACreateIssue(JIRAAction):
@@ -55,6 +59,39 @@ class JIRACreateIssue(JIRAAction):
             "issuetype": {"id": meta["issue_type_id"]},
             "summary": arguments.summary,
         }
+
+        if arguments.description:
+            try:
+                description_json = json.loads(arguments.description)
+
+            except ValueError:
+                self.log(message="Incorrect description", level="error")
+                raise
+
+            params["description"] = description_json
+
+        if arguments.custom_fields:
+            try:
+                custom_fields_json = json.loads(arguments.custom_fields)
+
+            except ValueError:
+                self.log(message="Incorrect custom_fields JSON", level="error")
+                raise
+
+            all_fields = self.get_json("field")
+            field_display_name_to_id = {item["name"]: item["id"] for item in all_fields}
+
+            custom_fields = {}
+            for field_name, field_content in custom_fields_json.items():
+                if field_name not in field_display_name_to_id:
+                    self.log(message=f"{field_name} does not exists in JIRA", level="error")
+                    raise ValueError
+
+                else:
+                    field_id = field_display_name_to_id[field_name]
+                    custom_fields[field_id] = {"value": field_content}
+
+            params.update(custom_fields)
 
         if arguments.due_date:
             params["duedate"] = arguments.due_date
