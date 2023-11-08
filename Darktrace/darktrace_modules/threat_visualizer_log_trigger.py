@@ -102,9 +102,18 @@ class ThreatVisualizerLogConsumer(Thread):
     def refine_response(self, response: list) -> list:
         # as we use the time variable of the newest event to set last_ts,
         # this event has to be removed in the next batch of events.
-        if response != [] and response[0][self.time_field] == self.last_ts:
-            return response[1:]
+        for item in response:
+            if item.get(self.time_field) == self.last_ts:
+                response.remove(item)
+
         return response
+
+    def update_last_ts(self, response):
+        # update last_ts with newest event ts
+
+        for item in response:
+            if item.get(self.time_field) > self.last_ts:
+                self.last_ts = item[self.time_field]
 
     def next_batch(self):
         logger.debug(f"New batch")
@@ -133,9 +142,7 @@ class ThreatVisualizerLogConsumer(Thread):
 
                 OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
-                for event in batch_of_events:
-                    print("\n", event, "\n")
-                self.last_ts = response[-1][self.time_field]
+                self.update_last_ts(response)
                 self.connector.log(
                     message=f"Forwarded {len(batch_of_events)} {self.endpoint.name} events to the intake",
                     level="info",
