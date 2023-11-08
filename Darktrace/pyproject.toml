@@ -11,6 +11,7 @@ requests = "^2.31.0"
 requests-ratelimiter = "^0.4.0"
 requests-mock = "^1.11.0"
 structlog = "^23.1.0"
+urllib3 = "^2.0.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
