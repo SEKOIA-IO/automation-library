@@ -28,7 +28,7 @@ OUTCOMING_EVENTS = Counter(
 )
 
 EVENTS_LAG = Histogram(
-    name="event_lags",
+    name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,
     labelnames=["intake_key", "stream"],
