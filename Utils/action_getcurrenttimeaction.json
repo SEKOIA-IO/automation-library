@@ -1,6 +1,6 @@
 {
   "name": "GetCurrentTimeAction",
-  "description": null,
+  "description": "Get the current time according to the timezone",
   "uuid": "ed382185-77bc-5092-8b54-7ffa94a0587e",
   "docker_parameters": "GetCurrentTimeAction",
   "arguments": {
@@ -36,7 +36,8 @@
           "UTC +11",
           "UTC +12"
         ],
-        "type": "string"
+        "type": "string",
+	"default": "UTC 0"
       }
     },
     "required": [
