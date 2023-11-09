@@ -51,6 +51,11 @@
         "title": "Parent Key",
         "description": "Key of a parent issue (e.g. PRJ-1)",
         "type": "string"
+      },
+      "description": {
+        "title": "Description",
+        "description": "Description of the issue",
+        "type": "string"
       }
     },
     "required": ["project_key", "summary", "issue_type"]

@@ -14,6 +14,7 @@ class JiraCreateIssueArguments(BaseModel):
     reporter: str | None = Field(description="Exact display name of a reporter (e.g. Jane Doe)")
     priority: str | None = Field(description="Issue priority (e.g. Highest)")
     parent_key: str | None = Field(None, description="Key of a parent issue (e.g. PRJ-1)")
+    description: str | None = Field(description="Description of the issue")
 
 
 class JIRACreateIssue(JIRAAction):
@@ -84,6 +85,9 @@ class JIRACreateIssue(JIRAAction):
 
         if arguments.parent_key:
             params["parent"] = {"key": arguments.parent_key}
+
+        if arguments.description:
+            params["description"] = arguments.description
 
         if arguments.priority:
             possible_priorities = self.get_paginated_results("priority/search")
