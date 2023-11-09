@@ -318,11 +318,26 @@ class EventStreamTrigger(Connector):
         self._network_sleep_on_retry = 60
 
     @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
+
+    @cached_property
     def client(self):
         return CrowdstrikeFalconClient(
             self.module.configuration.base_url,
             self.module.configuration.client_id,
             self.module.configuration.client_secret,
+            default_headers=self._http_default_headers,
         )
 
     @cached_property
@@ -342,15 +357,10 @@ class EventStreamTrigger(Connector):
             self.configuration.tg_base_url,
             self.configuration.tg_username,
             self.configuration.tg_password,
+            default_headers=self._http_default_headers,
         )
 
         return VerticlesCollector(self, tg_client, self.client)
-
-    @cached_property
-    def _connector_user_agent(self) -> str:
-        return "sekoiaio-connector/{0}-{1}".format(
-            self.module.manifest.get("slug", ""), self.module.manifest.get("version", "")
-        )
 
     def read_queue(self) -> None:
         """
