@@ -289,6 +289,31 @@ def test_create_issue_no_project(action: JIRACreateIssue) -> None:
             assert result is None
 
 
+def test_create_issue_incorrect_description(action: JIRACreateIssue) -> None:
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/issue/createmeta",
+            json={"projects": []},
+        )
+        args = JiraCreateIssueArguments(
+            project_key="PRJ",
+            summary="New Task",
+            issue_type="Bug",
+            due_date="2077-10-23",
+            labels="dev,cloud9",
+            assignee="John Doe",
+            reporter="Jane Doe",
+            priority="Highest",
+            parent_key=None,
+            custom_fields=None,
+            description="{",
+        )
+        with pytest.raises(ValueError):
+            result = action.run(args)
+            assert result is None
+
+
 def test_create_issue_with_incorrect_user(
     action: JIRACreateIssue, create_issue_metadata_response: dict, get_all_users_response: dict
 ):
