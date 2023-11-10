@@ -249,13 +249,15 @@ def test_create_issue(action: JIRACreateIssue, create_issue_metadata_response: d
             priority="Highest",
             parent_key=None,
             custom_fields=None,
-            description=json.dumps({
-                "content": [
-                    {"content": [{"text": "This is a description field.", "type": "text"}], "type": "paragraph"}
-                ],
-                "type": "doc",
-                "version": 1,
-            }),
+            description=json.dumps(
+                {
+                    "content": [
+                        {"content": [{"text": "This is a description field.", "type": "text"}], "type": "paragraph"}
+                    ],
+                    "type": "doc",
+                    "version": 1,
+                }
+            ),
         )
         result = action.run(args)
         assert result is not None
