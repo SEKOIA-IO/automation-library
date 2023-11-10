@@ -75,11 +75,11 @@ class JiraCreateIssueRequest:
 
     @property
     def issue_type_id(self) -> str:
-        return self.issue_type_meta.get("id")
+        return self.issue_type_meta["id"]
 
     @property
     def fields_in_jira(self) -> dict:
-        return self.issue_type_meta.get("fields")
+        return self.issue_type_meta["fields"]
 
     def __process_fields(self) -> None:
         self._field_name_to_id = {}
