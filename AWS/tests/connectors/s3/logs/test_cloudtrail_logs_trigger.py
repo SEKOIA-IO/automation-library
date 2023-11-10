@@ -354,27 +354,6 @@ def test_commit_marker(prefix: str, worker: CloudTrailLogsWorker, symphony_stora
             assert variables.get("marker") == list(S3Objects.keys()).pop()
 
 
-def test_check_if_payload_is_valid(trigger):
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "List"}) is False
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Describe"}) is False
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "GetObjectTagging"}) is False
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Random"}) is False
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Delete"}) is True
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Create"}) is True
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Copy"}) is True
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Put"}) is True
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "Restore"}) is True
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "GetObject"}) is False
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "GetObjectTorrent"}) is True
-    assert trigger.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": "ListBuckets"}) is True
-
-    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "List"}) is False
-    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Describe"}) is False
-    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Delete"}) is True
-    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Create"}) is True
-    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Random"}) is True
-    assert trigger.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "GetRecords"}) is False
-
 def test_read_marker(faker: Faker, aws_module: AwsModule, symphony_storage: Path, aws_mock):
     """
     Test read marker.

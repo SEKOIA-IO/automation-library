@@ -1,4 +1,5 @@
 """Contains tests for AwsSqsMessagesTrigger."""
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import orjson
@@ -99,11 +100,14 @@ async def test_trigger_sqs_messages_client(
 
 
 @pytest.mark.asyncio
-async def test_trigger_sqs_messages(session_faker: Faker, sqs_message: str, connector: AwsSqsMessagesTrigger):
+async def test_trigger_sqs_messages(
+    symphony_storage: Path, session_faker: Faker, sqs_message: str, connector: AwsSqsMessagesTrigger
+):
     """
     Test trigger AwsSqsMessagesTriggerConfiguration.
 
     Args:
+        symphony_storage: Path,
         session_faker: Faker
         sqs_message: str
         connector: AwsSqsMessagesTrigger

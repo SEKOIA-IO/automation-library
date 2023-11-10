@@ -20,14 +20,13 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
                 "Copy",
                 "Put",
                 "Restore",
-                "GetObject",
                 "GetObjectTorrent",
                 "ListBuckets",
             ],
             # If it is one of the unsupported events, we should skip it
             "unsupported": ["GetObjectTagging"],
         },
-        "default": {"unsupported": ["List", "Describe"]},
+        "default": {"unsupported": ["List", "Describe", "GetRecords"]},
     }
 
     @classmethod

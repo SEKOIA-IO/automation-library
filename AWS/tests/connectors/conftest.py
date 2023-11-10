@@ -1,4 +1,5 @@
 """Additional fixtures for this package."""
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -66,11 +67,12 @@ def aws_configuration(faker: Faker) -> dict[str, str]:
 
 
 @pytest.fixture
-def aws_module(aws_configuration) -> AwsModule:
+def aws_module(symphony_storage: Path, aws_configuration) -> AwsModule:
     """
     Create an AWS module.
 
     Args:
+        symphony_storage: Path
         aws_configuration: dict[str, str]
 
     Returns:
