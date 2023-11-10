@@ -9,8 +9,13 @@ class ApiClient(requests.Session):
         self,
         apikey: str,
         nb_retries: int = 5,
+        default_headers: dict[str, str] = None,
     ):
         super().__init__()
+
+        if default_headers is not None:
+            self.headers.update(default_headers)
+
         self.auth = ApiKeyAuthentication(apikey)
         self.mount(
             "https://",
