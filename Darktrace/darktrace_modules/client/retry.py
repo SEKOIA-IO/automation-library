@@ -1,7 +1,7 @@
 import time
 
 from urllib3.response import BaseHTTPResponse
-from urllib3.util import Retry as BaseRetry
+from urllib3.util.retry import Retry as BaseRetry
 
 
 class Retry(BaseRetry):
@@ -28,11 +28,11 @@ class Retry(BaseRetry):
         """
 
         # parse Retry-After header if defined
-        retry_after = response.getheader("Retry-After")
+        retry_after = response.headers.get("Retry-After")
         if retry_after:
             return self.parse_retry_after(retry_after)
 
-        ratelimit_retry_after = response.getheader("X-Rate-Limit-Reset")
+        ratelimit_retry_after = response.headers.get("X-Rate-Limit-Reset")
         if ratelimit_retry_after:
             return self.parse_ratelimit_retry_after(ratelimit_retry_after)
 

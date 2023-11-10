@@ -1,9 +1,8 @@
-import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock
 
 import pytest
-import requests.exceptions
 import requests_mock
+from requests import HTTPError
 
 from jira_modules.action_create_issue import JIRACreateIssue, JiraCreateIssueArguments
 from jira_modules.base import JIRAModule
@@ -130,7 +129,7 @@ def get_all_priorities_response():
     }
 
 
-def test_add_comment(
+def test_create_issue(
     action: JIRACreateIssue,
     create_issue_metadata_response: dict,
     get_all_users_response: dict,
@@ -168,4 +167,127 @@ def test_add_comment(
             parent_key=None,
         )
         result = action.run(args)
+        assert result is not None
         assert result.get("issue_key") == "PRJ-1"
+
+
+def test_create_issue_no_project(action: JIRACreateIssue) -> None:
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/issue/createmeta",
+            json={"projects": []},
+        )
+        args = JiraCreateIssueArguments(
+            project_key="PRJ",
+            summary="New Task",
+            issue_type="Bug",
+            due_date="2077-10-23",
+            labels="dev,cloud9",
+            assignee="John Doe",
+            reporter="Jane Doe",
+            priority="Major",
+            parent_key=None,
+        )
+        result = action.run(args)
+        assert result is None
+
+
+def test_create_issue_with_incorrect_user(
+    action: JIRACreateIssue,
+    create_issue_metadata_response: dict,
+    get_all_users_response: dict,
+    get_all_priorities_response: dict,
+):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/issue/createmeta",
+            json=create_issue_metadata_response,
+        )
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/priority/search",
+            json=get_all_priorities_response,
+        )
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/users/search",
+            [
+                {"json": get_all_users_response},
+                {"json": []},
+            ],
+        )
+        args = JiraCreateIssueArguments(
+            project_key="PRJ",
+            summary="New Task",
+            issue_type="Bug",
+            due_date="2077-10-23",
+            labels="dev,cloud9",
+            assignee="John Ham",
+            reporter="Jane Doe",
+            priority="Highest",
+            parent_key=None,
+        )
+        result = action.run(args)
+        assert result is None
+
+
+def test_create_issue_with_non_existent_priority(
+    action: JIRACreateIssue,
+    create_issue_metadata_response: dict,
+    get_all_users_response: dict,
+    get_all_priorities_response: dict,
+):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/issue/createmeta",
+            json=create_issue_metadata_response,
+        )
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/priority/search",
+            json=get_all_priorities_response,
+        )
+        mock.register_uri(
+            "GET",
+            "https://test.atlassian.net/rest/api/3/users/search",
+            [
+                {"json": get_all_users_response},
+                {"json": []},
+            ],
+        )
+        args = JiraCreateIssueArguments(
+            project_key="PRJ",
+            summary="New Task",
+            issue_type="Bug",
+            due_date="2077-10-23",
+            labels="dev,cloud9",
+            assignee="John Doe",
+            reporter="Jane Doe",
+            priority="HIGHEST",
+            parent_key=None,
+        )
+        result = action.run(args)
+        assert result is None
+
+
+def test_incorrect_credentials(action: JIRACreateIssue):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri("GET", "https://test.atlassian.net/rest/api/3/issue/createmeta", json={}, status_code=403)
+
+        args = JiraCreateIssueArguments(
+            project_key="PRJ",
+            summary="New Task",
+            issue_type="Bug",
+            due_date="2077-10-23",
+            labels="dev,cloud9",
+            assignee="John Doe",
+            reporter="Jane Doe",
+            priority="HIGHEST",
+            parent_key=None,
+        )
+        with pytest.raises(HTTPError):
+            result = action.run(args)
+            assert result is None

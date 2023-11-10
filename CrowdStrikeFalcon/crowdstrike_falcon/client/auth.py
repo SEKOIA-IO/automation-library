@@ -21,12 +21,22 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
     Implements a Requests's authentification for CrowdStrike Falcon API
     """
 
-    def __init__(self, base_url: str, client_id: str, client_secret: str):
+    def __init__(
+        self,
+        base_url: str,
+        client_id: str,
+        client_secret: str,
+        default_headers: dict[str, str] | None = None,
+    ):
         self.__authorization_url = urljoin(base_url, "/oauth2/token")
         self.__client_id = client_id
         self.__client_secret = client_secret
         self.__api_credentials: CrowdStrikeFalconApiCredentials | None = None
         self.__http_session = requests.Session()
+
+        if default_headers:
+            self.__http_session.headers.update(default_headers)
+
         self.__http_session.mount(
             "https://",
             HTTPAdapter(

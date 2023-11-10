@@ -1,8 +1,13 @@
-import requests_mock
 from azure_ad.base import AzureADModule, MicrosoftGraphAction
-from azure_ad.get_sign_ins import GetSignInsAction
+from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
 from azure_ad.get_user_authentication_methods import GetUserAuthenticationMethodsAction
-from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction
+from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction, ResetUserPasswordAction
+from azure_ad.delete_app import DeleteApplicationAction
+
+from unittest.mock import AsyncMock, patch
+import pytest
+import requests
+import json
 
 
 def configured_action(action: MicrosoftGraphAction):
@@ -10,17 +15,19 @@ def configured_action(action: MicrosoftGraphAction):
     a = action(module)
 
     a.module.configuration = {
-        "tenant_id": "my-tenant-id",
-        "client_id": "my-client-id",
-        "client_secret": "my-client-secret",
+        "tenant_id": "azefazefazegazetazeytazeyaze",
+        "client_id": "e139c076-122f-4c2e-9d0d-azefazegazeg",
+        "client_secret": "client_secret",
+        "username": "username",
+        "password": "password",
     }
 
     return a
 
 
-def test_get_user():
+@pytest.mark.asyncio
+async def test_get_user():
     action = configured_action(GetUserAction)
-
     expected_user = {
         "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
         "accountEnabled": True,
@@ -47,21 +54,96 @@ def test_get_user():
         "userPrincipalName": "jean.test@test.onmicrosoft.com",
     }
 
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://graph.microsoft.com/beta/users/jean.test@test.onmicrosoft.com?%24select=id%2CaccountEnabled%2CassignedLicenses%2Ccity%2CcompanyName%2Ccountry%2CcreatedDateTime%2CcreationType%2CdeletedDateTime%2Cdepartment%2CdisplayName%2Cidentities%2CjobTitle%2ClastPasswordChangeDateTime%2Cmail%2CmobilePhone%2CuserPrincipalName",  # noqa: E501
-            json=expected_user,
-        )
-        results = action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+    response = requests.Response()
+    response._content = json.dumps(expected_user).encode("utf-8")
+    response.status_code = 200
 
-    assert results == expected_user
+    async_mock = AsyncMock(return_value=response)
+    with patch("azure_ad.user.GetUserAction.query_get_user", side_effect=async_mock):
+        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+
+        assert results == expected_user
 
 
-def test_get_user_authentication_methods():
+@pytest.mark.asyncio
+async def test_disable_user():
+    action = configured_action(DisableUserAction)
+
+    response = requests.Response()
+    response._content = b'{"accountEnabled": False}'
+    response.status_code = 204
+
+    async_mock = AsyncMock(return_value=response)
+    with patch("azure_ad.user.DisableUserAction.query_disable_user", side_effect=async_mock):
+        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+
+        assert results is None
+
+
+@pytest.mark.asyncio
+async def test_enable_user():
+    action = configured_action(EnableUserAction)
+
+    response = requests.Response()
+    response._content = b'{"accountEnabled": True}'
+    response.status_code = 204
+
+    async_mock = AsyncMock(return_value=response)
+    with patch("azure_ad.user.EnableUserAction.query_enable_user", side_effect=async_mock):
+        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+
+        assert results is None
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password():
+    action = configured_action(ResetUserPasswordAction)
+
+    methods_response, reset_response = requests.Response(), requests.Response()
+    expected_methods_response = {
+        "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('')/authentication/passwordMethods",
+        "value": [{"id": "28c10230-6103-485e-b985-444c60001490", "password": "", "createdDateTime": ""}],
+    }
+    methods_response._content = json.dumps(expected_methods_response).encode("utf-8")
+    methods_response.status_code = 200
+    methods_async_mock = AsyncMock(return_value=methods_response)
+
+    reset_response._content = b"{}"
+    reset_response.status_code = 202
+
+    reset_async_mock = AsyncMock(return_value=reset_response)
+    with patch("azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock):
+        with patch("azure_ad.user.ResetUserPasswordAction.query_reset_user_password", side_effect=reset_async_mock):
+            results = await action.run(
+                {"userPrincipalName": "jean.test@test.onmicrosoft.com", "userNewPassword": "justtotest"}
+            )
+
+            assert results is None
+
+
+@pytest.mark.asyncio
+async def test_get_user_authentication_methods():
     action = configured_action(GetUserAuthenticationMethodsAction)
 
     expected = {
+        "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#reports/authenticationMethods/userRegistrationDetails",
+        "value": [
+            {
+                "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
+                "userPrincipalName": "jean.test@test.onmicrosoft.com",
+                "userDisplayName": "Jean Test",
+                "isSsprRegistered": True,
+                "isSsprEnabled": False,
+                "isSsprCapable": False,
+                "isMfaRegistered": True,
+                "isMfaCapable": True,
+                "isPasswordlessCapable": False,
+                "methodsRegistered": ["mobilePhone", "windowsHelloForBusiness"],
+                "defaultMfaMethod": "mobilePhone",
+            }
+        ],
+    }
+    value_expected = {
         "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
         "userPrincipalName": "jean.test@test.onmicrosoft.com",
         "userDisplayName": "Jean Test",
@@ -75,15 +157,18 @@ def test_get_user_authentication_methods():
         "defaultMfaMethod": "mobilePhone",
     }
 
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails/?%24filter=userPrincipalName+eq+%27jean.test%40test.onmicrosoft.com%27",  # noqa: E501
-            json={"value": [expected]},
-        )
-        results = action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+    response = requests.Response()
+    response._content = json.dumps(expected).encode("utf-8")
+    response.status_code = 200
 
-    assert results == expected
+    async_mock = AsyncMock(return_value=response)
+    with patch(
+        "azure_ad.get_user_authentication_methods.GetUserAuthenticationMethodsAction.query_user_auth_methods",
+        side_effect=async_mock,
+    ):
+        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+
+        assert results == value_expected
 
 
 SIGN_INS: list[dict] = [
@@ -285,61 +370,49 @@ SIGN_INS: list[dict] = [
 ]
 
 
-def test_get_signins():
+@pytest.mark.asyncio
+async def test_get_signins():
     action = configured_action(GetSignInsAction)
 
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://graph.microsoft.com/beta/auditLogs/signIns",
-            json={"value": SIGN_INS},
-            complete_qs=True,
-        )
-        results = action.run({})
+    expected = {"value": SIGN_INS}
+    value_expected = {"signIns": SIGN_INS}
+    response = requests.Response()
+    response._content = json.dumps(expected).encode("utf-8")
+    response.status_code = 200
 
-    assert results == {"signIns": SIGN_INS}
+    async_mock = AsyncMock(return_value=response)
+    with patch("azure_ad.get_sign_ins.GetSignInsAction.query_get_user_signin", side_effect=async_mock):
+        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
 
-
-def test_get_signins_specific_user():
-    action = configured_action(GetSignInsAction)
-
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://graph.microsoft.com/beta/auditLogs/signIns?%24filter=userPrincipalName+eq+%27test%40gmail.com%27",  # noqa: E501
-            json={"value": SIGN_INS},
-            complete_qs=True,
-        )
-        results = action.run({"userPrincipalName": "test@gmail.com"})
-
-    assert results == {"signIns": SIGN_INS}
+        assert results == value_expected
 
 
-def test_enable_user():
-    action = configured_action(EnableUserAction)
+@pytest.mark.asyncio
+async def test_revoke_signins():
+    action = configured_action(RevokeSignInsSessionsAction)
 
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "PATCH",
-            "https://graph.microsoft.com/beta/users/test.user@test.onmicrosoft.com",
-        )
-        results = action.run({"userPrincipalName": "test.user@test.onmicrosoft.com"})
+    expected = {"@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Edm.Boolean", "value": True}
+    response = requests.Response()
+    response._content = json.dumps(expected).encode("utf-8")
+    response.status_code = 200
 
-        assert mock.last_request.json() == {"accountEnabled": True}
+    async_mock = AsyncMock(return_value=response)
+    with patch("azure_ad.get_sign_ins.RevokeSignInsSessionsAction.query_revoke_signin", side_effect=async_mock):
+        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
 
-    assert results is None
+        assert results is None
 
 
-def test_disable_user():
-    action = configured_action(DisableUserAction)
+@pytest.mark.asyncio
+async def test_delete_app():
+    action = configured_action(DeleteApplicationAction)
 
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "PATCH",
-            "https://graph.microsoft.com/beta/users/test.user@test.onmicrosoft.com",
-        )
-        results = action.run({"userPrincipalName": "test.user@test.onmicrosoft.com"})
+    response = requests.Response()
+    response._content = b"{}"
+    response.status_code = 200
 
-        assert mock.last_request.json() == {"accountEnabled": False}
+    async_mock = AsyncMock(return_value=response)
+    with patch("azure_ad.delete_app.DeleteApplicationAction.query_delete_app", side_effect=async_mock):
+        results = await action.run({"id": "1986123896DGAZ12938"})
 
-    assert results is None
+        assert results is None

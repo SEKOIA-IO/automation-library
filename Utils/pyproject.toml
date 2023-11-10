@@ -11,6 +11,7 @@ sekoia-automation-sdk = "^1.6.0"
 jsonpath_ng = "^1.5"
 orjson = "*"
 lxml = "^4.6.3"
+datetime = "^5.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

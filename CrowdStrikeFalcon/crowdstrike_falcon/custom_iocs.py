@@ -108,6 +108,8 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
         if arguments.get("sekoia_base_url"):
             self.sekoia_base_url = arguments.get("sekoia_base_url")
         stix_objects = self.json_argument("stix_objects", arguments)
+        if stix_objects is None or len(stix_objects) == 0:
+            self.log("Received stix_objects were empty")
         indicators = self.get_valid_indicators(stix_objects)
         if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
             self.log("Received indicators were not valid and/or not supported")

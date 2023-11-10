@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-11-08 - 1.14.3
+
+### Fixed
+
+- fix metrics
+
+## 2023-10-31 - 1.14.2
+
+### Changed
+
+- Revert changes of user-agent to interact with intake
+- Add additional user-agent to work with api
+
+## 2023-10-31 - 1.14.1
+
+### Changed
+
+- Update connector to use new format of user-agent when push to intake
+
 ## 2023-09-07 - 1.12.1
 
 ### Changed

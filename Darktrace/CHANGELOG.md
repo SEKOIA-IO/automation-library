@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-11-09 - 1.4.3
+
+### Modified
+
+- Improved last_ts update
+
+## 2023-10-23 - 1.4.2
+
+### Modified
+
+- Moved to urllib3 2.x 
+
+## 2023-06-30 - 1.4.1
+
+### Changed
+
+- Add additional user-agent to work with api
+
+## 2023-10-23 - 1.4.0
+
+### Added
+
+- Add threading
+- Add AIanalyst endpoint
+
 ## 2023-06-30 - 1.3.2
 
 ### Added

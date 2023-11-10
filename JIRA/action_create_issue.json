@@ -29,7 +29,7 @@
       },
       "labels": {
         "title": "Labels",
-        "description": "Comma-separated labels (e.g. 'devops,support'",
+        "description": "Comma-separated labels (e.g. 'devops,support')",
         "type": "string"
       },
       "assignee": {

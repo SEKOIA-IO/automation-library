@@ -20,9 +20,9 @@
                 "type": "string"
             },
             "verify_certificate": {
-                "description": "Is the server certificate is verified",
+                "description": "Is the server certificate verified",
                 "type": "boolean",
-		"default": true
+                "default": true
             },
             "ratelimit_per_minute": {
                 "description": "The number of requests allowed to the API in one minute",

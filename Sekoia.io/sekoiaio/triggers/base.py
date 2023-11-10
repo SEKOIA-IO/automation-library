@@ -1,8 +1,11 @@
 # flake8: noqa: E402
 
-from gevent.monkey import patch_all
+from sekoiaio.utils import should_patch
 
-patch_all()
+if should_patch():
+    from gevent import monkey
+
+    monkey.patch_all()
 
 import json
 import random

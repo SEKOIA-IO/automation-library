@@ -1,11 +1,11 @@
 from crowdstrike_falcon import CrowdStrikeFalconModule
-from crowdstrike_falcon.event_stream_trigger import EventStreamTrigger
 from crowdstrike_falcon.custom_iocs import (
-    CrowdstrikeActionPushIOCsBlock,
-    CrowdstrikeActionPushIOCsDetect,
     CrowdstrikeActionBlockIOC,
     CrowdstrikeActionMonitorIOC,
+    CrowdstrikeActionPushIOCsBlock,
+    CrowdstrikeActionPushIOCsDetect,
 )
+from crowdstrike_falcon.event_stream_trigger import EventStreamTrigger
 
 if __name__ == "__main__":
     module = CrowdStrikeFalconModule()

@@ -18,6 +18,7 @@ class ApiClient(requests.Session):
         auth: AuthBase,
         nb_retries: int = 5,
         ratelimit_per_second: int = 100,
+        default_headers: dict[str, str] | None = None,
     ):
         super().__init__()
         self._base_url = base_url
@@ -32,6 +33,9 @@ class ApiClient(requests.Session):
                 ),
             ),
         )
+
+        if default_headers:
+            self.headers.update(default_headers)
 
     def get_url(self, endpoint: str) -> str:
         return urljoin(self._base_url, endpoint)
@@ -73,12 +77,17 @@ class ApiClient(requests.Session):
 
 
 class CrowdstrikeFalconClient(ApiClient):
-    def __init__(self, base_url: str, client_id: str, client_secret: str, nb_retries: int = 5):
-        super().__init__(
-            base_url,
-            CrowdStrikeFalconApiAuthentication(base_url, client_id, client_secret),
-            nb_retries=nb_retries,
-        )
+    def __init__(
+        self,
+        base_url: str,
+        client_id: str,
+        client_secret: str,
+        nb_retries: int = 5,
+        default_headers: dict[str, str] | None = None,
+    ):
+        _auth = CrowdStrikeFalconApiAuthentication(base_url, client_id, client_secret, default_headers=default_headers)
+
+        super().__init__(base_url, _auth, nb_retries=nb_retries, default_headers=default_headers)
 
     def list_streams(self, app_id: str, **kwargs) -> Generator[dict, None, None]:
         yield from self.request_endpoint("GET", "/sensors/entities/datafeed/v2", params={"appId": app_id}, **kwargs)
@@ -118,8 +127,20 @@ class CrowdstrikeFalconClient(ApiClient):
 
 
 class CrowdstrikeThreatGraphClient(ApiClient):
-    def __init__(self, base_url: str, username: str, password: str, nb_retries: int = 5):
-        super().__init__(base_url, HTTPBasicAuth(username, password), nb_retries=nb_retries)
+    def __init__(
+        self,
+        base_url: str,
+        username: str,
+        password: str,
+        nb_retries: int = 5,
+        default_headers: dict[str, str] | None = None,
+    ):
+        super().__init__(
+            base_url,
+            HTTPBasicAuth(username, password),
+            nb_retries=nb_retries,
+            default_headers=default_headers,
+        )
 
     def get_edge_types(self, **kwargs) -> Generator[str, None, None]:
         yield from self.request_endpoint("GET", "threatgraph/queries/edge-types/v1", **kwargs)

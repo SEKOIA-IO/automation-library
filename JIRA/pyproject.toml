@@ -33,4 +33,5 @@ line_length = 119
 omit = [
     "tests/*",
     "main.py",
+    "dev.py"
 ]

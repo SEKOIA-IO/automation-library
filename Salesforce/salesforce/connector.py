@@ -9,30 +9,19 @@ import orjson
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
-from pydantic import BaseModel, Field, HttpUrl
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.utils import get_as_model
+
 
 from client.http_client import SalesforceHttpClient
 from utils.file_utils import csv_file_as_rows, delete_file
 
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-
-
-class SalesforceModuleConfig(BaseModel):
-    """Configuration for SalesforceModule."""
-
-    client_secret: str = Field(secret=True)
-    client_id: str
-    base_url: HttpUrl
-
-
-class SalesforceModule(Module):
-    """SalesforceModule."""
-
-    configuration: SalesforceModuleConfig
+from salesforce import SalesforceModule
+from salesforce.models import SalesforceModuleConfig
+from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
@@ -97,10 +86,11 @@ class SalesforceConnector(AsyncConnector):
 
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
+        module_configuration = get_as_model(SalesforceModuleConfig, self.module.configuration)
         self._salesforce_client = SalesforceHttpClient(
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-            base_url=self.module.configuration.base_url,
+            client_id=module_configuration.client_id,
+            client_secret=module_configuration.client_secret,
+            base_url=module_configuration.base_url,
             rate_limiter=rate_limiter,
         )
 

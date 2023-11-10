@@ -1,0 +1,18 @@
+{
+    "name": "Delete app",
+    "description": "Delete an app in azure AD. Requires the Application.ReadWrite.OwnedBy or Application.ReadWrite.All.",
+    "uuid": "ec4039ec-7991-48ac-9d8f-503ef17013a2",
+    "docker_parameters": "DeleteApplicationAction",
+    "arguments": {
+      "title": "ApplicationArguments",
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "description": "Object ID of the app.",
+          "type": "string"
+        }
+      }
+    },
+    "results": {}
+  }
