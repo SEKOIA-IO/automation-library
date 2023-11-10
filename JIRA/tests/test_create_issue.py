@@ -54,7 +54,53 @@ def create_issue_metadata_response():
                                 "key": "issuetype",
                                 "hasDefaultValue": False,
                                 "operations": ["set"],
-                            }
+                            },
+                            "priority": {
+                                "required": False,
+                                "schema": {"type": "priority", "system": "priority"},
+                                "name": "Priority",
+                                "key": "priority",
+                                "hasDefaultValue": True,
+                                "operations": ["set"],
+                                "allowedValues": [
+                                    {
+                                        "self": "https://test.atlassian.net/rest/api/3/priority/1",
+                                        "iconUrl": "https://test.atlassian.net/images/icons/priorities/highest.svg",
+                                        "name": "Highest",
+                                        "id": "1",
+                                    },
+                                    {
+                                        "self": "https://test.atlassian.net/rest/api/3/priority/2",
+                                        "iconUrl": "https://test.atlassian.net/images/icons/priorities/high.svg",
+                                        "name": "High",
+                                        "id": "2",
+                                    },
+                                    {
+                                        "self": "https://test.atlassian.net/rest/api/3/priority/3",
+                                        "iconUrl": "https://test.atlassian.net/images/icons/priorities/medium.svg",
+                                        "name": "Medium",
+                                        "id": "3",
+                                    },
+                                    {
+                                        "self": "https://test.atlassian.net/rest/api/3/priority/4",
+                                        "iconUrl": "https://test.atlassian.net/images/icons/priorities/low.svg",
+                                        "name": "Low",
+                                        "id": "4",
+                                    },
+                                    {
+                                        "self": "https://test.atlassian.net/rest/api/3/priority/5",
+                                        "iconUrl": "https://test.atlassian.net/images/icons/priorities/lowest.svg",
+                                        "name": "Lowest",
+                                        "id": "5",
+                                    },
+                                ],
+                                "defaultValue": {
+                                    "self": "https://test.atlassian.net/rest/api/3/priority/3",
+                                    "iconUrl": "https://test.atlassian.net/images/icons/priorities/medium.svg",
+                                    "name": "Medium",
+                                    "id": "3",
+                                },
+                            },
                         },
                     }
                 ],
@@ -99,52 +145,12 @@ def get_all_users_response():
     ]
 
 
-@pytest.fixture
-def get_all_priorities_response():
-    return {
-        "maxResults": 50,
-        "startAt": 0,
-        "total": 2,
-        "isLast": True,
-        "values": [
-            {
-                "self": "https://test.atlassian.net/rest/api/3/priority/3",
-                "statusColor": "#009900",
-                "description": "Major loss of function.",
-                "iconUrl": "https://test.atlassian.net/images/icons/priorities/major.png",
-                "name": "Major",
-                "id": "1",
-                "isDefault": True,
-            },
-            {
-                "self": "https://test.atlassian.net/rest/api/3/priority/5",
-                "statusColor": "#cfcfcf",
-                "description": "Very little impact.",
-                "iconUrl": "https://test.atlassian.net/images/icons/priorities/trivial.png",
-                "name": "Trivial",
-                "id": "2",
-                "isDefault": False,
-            },
-        ],
-    }
-
-
-def test_create_issue(
-    action: JIRACreateIssue,
-    create_issue_metadata_response: dict,
-    get_all_users_response: dict,
-    get_all_priorities_response: dict,
-):
+def test_create_issue(action: JIRACreateIssue, create_issue_metadata_response: dict, get_all_users_response: dict):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
             "https://test.atlassian.net/rest/api/3/issue/createmeta",
             json=create_issue_metadata_response,
-        )
-        mock.register_uri(
-            "GET",
-            "https://test.atlassian.net/rest/api/3/priority/search",
-            json=get_all_priorities_response,
         )
         mock.register_uri(
             "GET",
@@ -163,10 +169,10 @@ def test_create_issue(
             labels="dev,cloud9",
             assignee="John Doe",
             reporter="Jane Doe",
-            priority="Major",
+            priority="Highest",
             parent_key=None,
             custom_fields=None,
-            description=None
+            description=None,
         )
         result = action.run(args)
         assert result is not None
@@ -191,28 +197,21 @@ def test_create_issue_no_project(action: JIRACreateIssue) -> None:
             priority="Major",
             parent_key=None,
             custom_fields=None,
-            description=None
+            description=None,
         )
-        result = action.run(args)
-        assert result is None
+        with pytest.raises(ValueError):
+            result = action.run(args)
+            assert result is None
 
 
 def test_create_issue_with_incorrect_user(
-    action: JIRACreateIssue,
-    create_issue_metadata_response: dict,
-    get_all_users_response: dict,
-    get_all_priorities_response: dict,
+    action: JIRACreateIssue, create_issue_metadata_response: dict, get_all_users_response: dict
 ):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
             "https://test.atlassian.net/rest/api/3/issue/createmeta",
             json=create_issue_metadata_response,
-        )
-        mock.register_uri(
-            "GET",
-            "https://test.atlassian.net/rest/api/3/priority/search",
-            json=get_all_priorities_response,
         )
         mock.register_uri(
             "GET",
@@ -233,28 +232,21 @@ def test_create_issue_with_incorrect_user(
             priority="Highest",
             parent_key=None,
             custom_fields=None,
-            description=None
+            description=None,
         )
-        result = action.run(args)
-        assert result is None
+        with pytest.raises(ValueError):
+            result = action.run(args)
+            assert result is None
 
 
 def test_create_issue_with_non_existent_priority(
-    action: JIRACreateIssue,
-    create_issue_metadata_response: dict,
-    get_all_users_response: dict,
-    get_all_priorities_response: dict,
+    action: JIRACreateIssue, create_issue_metadata_response: dict, get_all_users_response: dict
 ):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
             "https://test.atlassian.net/rest/api/3/issue/createmeta",
             json=create_issue_metadata_response,
-        )
-        mock.register_uri(
-            "GET",
-            "https://test.atlassian.net/rest/api/3/priority/search",
-            json=get_all_priorities_response,
         )
         mock.register_uri(
             "GET",
@@ -275,10 +267,11 @@ def test_create_issue_with_non_existent_priority(
             priority="HIGHEST",
             parent_key=None,
             custom_fields=None,
-            description=None
+            description=None,
         )
-        result = action.run(args)
-        assert result is None
+        with pytest.raises(ValueError):
+            result = action.run(args)
+            assert result is None
 
 
 def test_incorrect_credentials(action: JIRACreateIssue):
@@ -296,7 +289,7 @@ def test_incorrect_credentials(action: JIRACreateIssue):
             priority="HIGHEST",
             parent_key=None,
             custom_fields=None,
-            description=None
+            description=None,
         )
         with pytest.raises(HTTPError):
             result = action.run(args)

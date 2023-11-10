@@ -1,4 +1,6 @@
 import json
+from functools import cached_property
+from typing import cast
 
 from pydantic import BaseModel, Field
 
@@ -20,115 +22,263 @@ class JiraCreateIssueArguments(BaseModel):
     custom_fields: str | None = Field(None, description="""JSON with custom fields (e.g. {"Some Field": "2"})""")
 
 
+class JiraCreateIssueRequest:
+    def __init__(self, action: "JIRACreateIssue", arguments: JiraCreateIssueArguments) -> None:
+        self.action = action
+        self.args = arguments
+
+        self._field_name_to_id: dict = cast(dict, None)
+        self._field_name_to_type = cast(dict, None)
+        self._field_allowed_values = cast(dict, None)
+        self._field_item_type = cast(dict, None)
+
+    @cached_property
+    def user_name_to_id(self) -> dict:
+        all_users = self.action.get_paginated_results(path="users/search", result_field=None)
+        user_name_to_id = {user.get("displayName"): user.get("accountId") for user in all_users}
+        return user_name_to_id
+
+    @cached_property
+    def create_issue_meta(self) -> dict:
+        response: dict = self.action.get_json(
+            "issue/createmeta",
+            params={
+                "projectKeys": self.args.project_key,
+                "issuetypeNames": self.args.issue_type,
+                "expand": "projects.issuetypes.fields",
+            },
+        )
+        return response
+
+    @property
+    def project_meta(self) -> dict:
+        projects = self.create_issue_meta.get("projects")
+        if not projects or len(projects) == 0:
+            self.action.log(message="Project `%s` is not found" % self.args.project_key, level="error")
+            raise ValueError
+
+        project = projects[0]
+        return project
+
+    @property
+    def project_id(self) -> str:
+        return self.project_meta.get("id")
+
+    @property
+    def issue_type_meta(self) -> dict:
+        issues_types = self.project_meta.get("issuetypes")
+        if not issues_types or len(issues_types) == 0:
+            self.action.log(message="Issue type `%s` is not found " % self.args.issue_type, level="error")
+            raise ValueError
+
+        return issues_types[0]
+
+    @property
+    def issue_type_id(self) -> str:
+        return self.issue_type_meta.get("id")
+
+    @property
+    def fields_in_jira(self) -> dict:
+        return self.issue_type_meta.get("fields")
+
+    def __process_fields(self) -> None:
+        self._field_name_to_id = {}
+        self._field_name_to_type = {}
+        self._field_allowed_values = {}
+        self._field_item_type = {}
+
+        for field_id, field_params in self.fields_in_jira.items():
+            field_name = field_params.get("name")
+            self._field_name_to_id[field_name] = field_id
+
+            schema = field_params.get("schema", {})
+            self._field_name_to_type[field_name] = schema.get("type")
+
+            if schema.get("items"):
+                self._field_item_type[field_name] = schema["items"]
+
+            allowed_values = field_params.get("allowedValues")
+            if allowed_values:
+                self._field_allowed_values[field_name] = {
+                    item.get("name") or item.get("value"): item.get("id") for item in allowed_values
+                }
+
+    @property
+    def field_name_to_id(self):
+        if not self._field_name_to_id:
+            self.__process_fields()
+
+        return self._field_name_to_id
+
+    @property
+    def field_name_to_type(self):
+        if not self._field_name_to_type:
+            self.__process_fields()
+
+        return self._field_name_to_type
+
+    @property
+    def field_allowed_values(self):
+        if not self._field_allowed_values:
+            self.__process_fields()
+
+        return self._field_allowed_values
+
+    @property
+    def field_item_type_by_name(self):
+        if not self._field_item_type:
+            self.__process_fields()
+
+        return self._field_item_type
+
+    def fill_parent_key(self, prev_step: dict) -> None:
+        if self.args.parent_key:
+            if not self.issue_type_meta.get("subtask"):
+                self.action.log(
+                    message="Issue type `%s` could not be a sub-task" % self.args.issue_type, level="error"
+                )
+                raise ValueError
+
+            prev_step["parent"] = {"key": self.args.parent_key}
+
+    def fill_description(self, prev_step: dict) -> None:
+        if self.args.description:
+            try:
+                description_json = json.loads(self.args.description)
+
+            except ValueError:
+                self.action.log(message="Incorrect description", level="error")
+                raise
+
+            prev_step["description"] = description_json
+
+    def fill_due_date(self, prev_step: dict) -> None:
+        if self.args.due_date:
+            prev_step["duedate"] = self.args.due_date
+
+    def fill_assignee(self, prev_step: dict) -> None:
+        if self.args.assignee:
+            assignee_user_id = self.user_name_to_id.get(self.args.assignee)
+            if not assignee_user_id:
+                self.action.log(message="User with name `%s` is not found" % self.args.assignee, level="error")
+                raise ValueError
+
+            prev_step["assignee"] = {"id": assignee_user_id}
+
+    def fill_reporter(self, prev_step: dict) -> None:
+        if self.args.reporter:
+            reporter_user_id = self.user_name_to_id.get(self.args.reporter)
+            if not reporter_user_id:
+                self.action.log(message="User with name `%s` is not found" % self.args.assignee, level="error")
+                raise ValueError
+
+            prev_step["reporter"] = {"id": reporter_user_id}
+
+    def fill_labels(self, prev_step: dict) -> None:
+        if self.args.labels:
+            prev_step["labels"] = self.args.labels.split(",")
+
+    def fill_priority(self, prev_step: dict) -> None:
+        if self.args.priority:
+            priority_values = self.field_allowed_values["Priority"]
+            if not priority_values or self.args.priority not in priority_values:
+                self.action.log(message="Priority `%s` does not exist" % self.args.priority, level="error")
+                raise ValueError
+
+            prev_step["priority"] = {"id": priority_values[self.args.priority]}
+
+    def fill_custom_fields(self, prev_step: dict) -> None:
+        # https://support.atlassian.com/cloud-automation/docs/advanced-field-editing-using-json/
+        if self.args.custom_fields:
+            try:
+                custom_fields_json = json.loads(self.args.custom_fields)
+
+            except ValueError:
+                self.action.log(message="Incorrect custom_fields JSON", level="error")
+                raise
+
+            for custom_field_name, custom_field_values in custom_fields_json.items():
+                custom_field_type = self.field_name_to_type[custom_field_name]
+                custom_field_id = self.field_name_to_id[custom_field_name]
+                allowed_values = self.field_allowed_values.get(custom_field_name)
+
+                if custom_field_type == "option":
+                    if allowed_values and custom_field_values not in allowed_values:
+                        self.action.log(
+                            message="Incorrect value `%s` for the field `%s`"
+                            % (custom_field_values, custom_field_name),
+                            level="error",
+                        )
+                        raise ValueError
+
+                    prev_step[custom_field_id] = {"id": allowed_values[custom_field_values]}
+
+                elif custom_field_type == "array":
+                    field_result = []
+                    field_items = self.field_item_type_by_name.get(custom_field_name)
+
+                    if allowed_values:
+                        for custom_field_value in custom_field_values:
+                            if custom_field_value not in allowed_values:
+                                self.action.log(
+                                    message="Incorrect value `%s` for the field `%s`"
+                                    % (custom_field_value, custom_field_name),
+                                    level="error",
+                                )
+                                raise ValueError
+
+                            field_result.append({"id": allowed_values[custom_field_value]})
+
+                    elif field_items == "user":
+                        field_result = []
+                        for custom_field_value in custom_field_values:
+                            user_id = self.user_name_to_id.get(custom_field_value)
+                            if not user_id:
+                                self.action.log(
+                                    message="User `%s` mentioned in the field `%s` does not exist"
+                                    % (custom_field_value, custom_field_name),
+                                    level="error",
+                                )
+                                raise ValueError
+
+                            field_result.append({"id": user_id})
+
+                    else:
+                        field_result = [{"value": custom_field_value for custom_field_value in custom_field_values}]
+
+                    prev_step[custom_field_id] = field_result
+
+                else:
+                    prev_step[custom_field_id] = custom_field_values
+
+    def generate_params(self) -> dict:
+        # Mandatory Fields
+        params = {
+            "project": {"id": self.project_id},
+            "issuetype": {"id": self.issue_type_id},
+            "summary": self.args.summary,
+        }
+
+        self.fill_parent_key(params)
+        self.fill_description(params)
+        self.fill_due_date(params)
+        self.fill_assignee(params)
+        self.fill_reporter(params)
+        self.fill_labels(params)
+        self.fill_priority(params)
+        self.fill_custom_fields(params)
+
+        return params
+
+
 class JIRACreateIssue(JIRAAction):
     name = "Create an issue"
     description = "Create an issue"
     module: JIRAModule
 
-    def get_create_issue_meta(self, project_key: str, issue_type: str) -> dict | None:
-        response: dict = self.get_json(
-            "issue/createmeta",
-            params={"projectKeys": project_key, "issuetypeNames": issue_type},
-        )
-
-        projects = response.get("projects")
-        if not projects or len(projects) == 0:
-            self.log(message="Project `%s` is not found" % project_key, level="error")
-            return None
-
-        project = projects[0]
-        project_id = project.get("id")
-        issues_types = project.get("issuetypes")
-
-        if not issues_types or len(issues_types) == 0:
-            self.log(message="Issue type `%s` is not found " % issue_type, level="error")
-            return None
-
-        issue_type_id = project["issuetypes"][0]["id"]
-        return {"project_id": project_id, "issue_type_id": issue_type_id}
-
     def run(self, arguments: JiraCreateIssueArguments) -> dict | None:
-        meta = self.get_create_issue_meta(project_key=arguments.project_key, issue_type=arguments.issue_type)
-        if not meta:
-            self.log("Project key OR/AND issue type are incorrect", level="error")
-            return None
-
-        # Mandatory Fields
-        params = {
-            "project": {"id": meta["project_id"]},
-            "issuetype": {"id": meta["issue_type_id"]},
-            "summary": arguments.summary,
-        }
-
-        if arguments.description:
-            try:
-                description_json = json.loads(arguments.description)
-
-            except ValueError:
-                self.log(message="Incorrect description", level="error")
-                raise
-
-            params["description"] = description_json
-
-        if arguments.custom_fields:
-            try:
-                custom_fields_json = json.loads(arguments.custom_fields)
-
-            except ValueError:
-                self.log(message="Incorrect custom_fields JSON", level="error")
-                raise
-
-            all_fields = self.get_json("field")
-            field_display_name_to_id = {item["name"]: item["id"] for item in all_fields}
-
-            custom_fields = {}
-            for field_name, field_content in custom_fields_json.items():
-                if field_name not in field_display_name_to_id:
-                    self.log(message=f"{field_name} does not exists in JIRA", level="error")
-                    raise ValueError
-
-                else:
-                    field_id = field_display_name_to_id[field_name]
-                    custom_fields[field_id] = {"value": field_content}
-
-            params.update(custom_fields)
-
-        if arguments.due_date:
-            params["duedate"] = arguments.due_date
-
-        if arguments.assignee or arguments.reporter:
-            all_users = self.get_paginated_results(path="users/search", result_field=None)
-            user_name_to_id = {user.get("displayName"): user.get("accountId") for user in all_users}
-
-            if arguments.assignee:
-                assignee_user_id = user_name_to_id.get(arguments.assignee)
-                if not assignee_user_id:
-                    self.log(message="User with name `%s` is not found" % arguments.assignee, level="error")
-                    return None
-
-                params["assignee"] = {"id": assignee_user_id}
-
-            if arguments.reporter:
-                reporter_user_id = user_name_to_id.get(arguments.reporter)
-                if not reporter_user_id:
-                    self.log(message="User with name `%s` is not found" % arguments.reporter, level="error")
-                    return None
-
-                params["reporter"] = {"id": reporter_user_id}
-
-        if arguments.labels:
-            params["labels"] = arguments.labels.split(",")
-
-        if arguments.parent_key:
-            params["parent"] = {"key": arguments.parent_key}
-
-        if arguments.priority:
-            possible_priorities = self.get_paginated_results("priority/search")
-            priority_name_to_id = {item["name"]: item["id"] for item in possible_priorities}
-            priority_id = priority_name_to_id.get(arguments.priority)
-            if not priority_id:
-                self.log(message="Priority `%s` does not exist" % arguments.priority, level="error")
-                return None
+        create_issue_request = JiraCreateIssueRequest(action=self, arguments=arguments)
+        params = create_issue_request.generate_params()
 
         response = self.post_json(
             "issue",
