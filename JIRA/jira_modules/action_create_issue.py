@@ -62,7 +62,7 @@ class JiraCreateIssueRequest:
 
     @property
     def project_id(self) -> str:
-        return self.project_meta.get("id")
+        return self.project_meta["id"]
 
     @property
     def issue_type_meta(self) -> dict:
