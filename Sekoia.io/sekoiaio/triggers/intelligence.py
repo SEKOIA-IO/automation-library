@@ -47,8 +47,8 @@ class FeedConsumptionTrigger(Trigger):
             + f"?limit={self.batch_size_limit}"
             + f"&include_revoked={not self.first_run}"
         )
-        if len(self.__class__.API_URL_ADDITIONAL_PARAMETERS) > 0:
-            url += "&" + "&".join(self.__class__.API_URL_ADDITIONAL_PARAMETERS)
+        if len(self.API_URL_ADDITIONAL_PARAMETERS) > 0:
+            url += "&" + "&".join(self.API_URL_ADDITIONAL_PARAMETERS)
 
         with self.context as cache:
             cursor = cache.get("cursors", {}).get(self.feed_id)
@@ -114,10 +114,10 @@ class FeedConsumptionTrigger(Trigger):
 
             event_name = f"Sekoia.io feed - batch of {len(objects)} objects"
             if self.to_file:
-                filepath = write(self.__class__.FILE_NAME, {"stix_objects": objects})
+                filepath = write(self.FILE_NAME, objects)
                 self.send_event(
                     event_name=event_name,
-                    event={"stix_objects_path": self.__class__.FILE_NAME},
+                    event={"stix_objects_path": self.FILE_NAME},
                     directory=filepath.parent.as_posix(),
                     remove_directory=True,
                 )
@@ -139,7 +139,7 @@ class FeedConsumptionTrigger(Trigger):
         # Wait before launching the next batch if we reached the last updated object
         if len(objects) < self.batch_size_limit and not self._stop_event.is_set():
             self.first_run = False
-            time.sleep(self.__class__.frequency)
+            time.sleep(self.frequency)
 
     def run(self):
         self.log(message="Start SEKOIA feed consumption trigger", level="info")
