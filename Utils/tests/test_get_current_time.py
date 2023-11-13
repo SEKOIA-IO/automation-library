@@ -26,11 +26,11 @@ def symphony_storage():
 
 def testGetCurrentTime():
     action = GetCurrentTimeAction()
-    reponse = Response(currentTimeEpoch=0, currentTimeIso8601="")
+    reponse = Response(epoch=0, iso8601="")
     request = Arguments(selectedTimezone="UTC 0")
     reponse = action.run(request)
-    assert match(r"^[0-9]+$", str(reponse.currentTimeEpoch))
+    assert match(r"^[0-9]+$", str(reponse.epoch))
     assert match(
         r"^[0-9]{4}\-[0-9]{2}\-[0-9]{2}T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{6}$",
-        reponse.currentTimeIso8601,
+        reponse.iso8601,
     )

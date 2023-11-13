@@ -35,8 +35,8 @@ class Arguments(BaseModel):
 
 
 class Response(BaseModel):
-    currentTimeEpoch: int
-    currentTimeIso8601: str
+    epoch: int
+    iso8601: str
 
 
 class GetCurrentTimeAction(Action):
@@ -58,6 +58,6 @@ class GetCurrentTimeAction(Action):
         dateToReturn = self._utc_to_gmt(ra.selectedTimezone)
 
         return Response(
-            currentTimeEpoch=int(dateToReturn.timestamp()),
-            currentTimeIso8601=dateToReturn.isoformat(),
+            epoch=int(dateToReturn.timestamp()),
+            iso8601=dateToReturn.isoformat(),
         )

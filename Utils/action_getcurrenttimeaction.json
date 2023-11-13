@@ -44,5 +44,20 @@
       "selectedTimezone"
     ]
   },
-  "results": {}
+  "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "epoch": {
+                "description": "The current datetime represented as an epoch",
+                "type": "integer"
+            },
+            "iso8601": {
+                "description": "The current datetime represented as an iso8601-formatted string",
+                "type": "string"
+            }
+        },
+        "required": [],
+        "title": "Results",
+        "type": "object"
+  }
 }
