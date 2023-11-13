@@ -277,7 +277,7 @@ class SkyhighSecuritySWGTrigger(Connector):
                 # if the collector is down, restart it
                 if not collector.is_alive():
                     self.log(message="Event collector failed", level="error")
-                    collector = EventCollector(self)
+                    collector = EventCollector(self, collect_queue)
                     collector.start()
 
         finally:
