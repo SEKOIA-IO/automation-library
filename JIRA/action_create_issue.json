@@ -25,7 +25,7 @@
       "description": {
         "title": "Description",
         "description": "Description text in ADF (Atlassian Document Format)",
-        "type": "string"
+        "type": "object"
       },
       "due_date": {
         "title": "Due Date",
@@ -60,7 +60,7 @@
       "custom_fields": {
         "title": "Custom Fields",
         "description": "JSON with custom fields (e.g. {\"Some Field\": \"2\"})",
-        "type": "string"
+        "type": "object"
       }
     },
     "required": ["project_key", "summary", "issue_type"]

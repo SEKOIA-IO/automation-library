@@ -12,14 +12,14 @@ class JiraCreateIssueArguments(BaseModel):
     project_key: str = Field(..., description="Project key (e.g. 'PRJ')")
     summary: str = Field(..., description="Summary of an issue (e.g. 'Fix a bug')")
     issue_type: str = Field(..., description="Issue type (e.g. 'Task')")
-    description: str | None = Field(None, description="Description text in ADF (Atlassian Document Format)")
+    description: dict | None = Field(None, description="Description text in ADF (Atlassian Document Format)")
     due_date: str | None = Field(None, description="Due date (e.g. '2023-10-31')'")
     labels: str | None = Field(None, description="Comma-separated labels (e.g. 'devops,support')")
     assignee: str | None = Field(None, description="Exact display name of an assignee (e.g. John Doe)")
     reporter: str | None = Field(None, description="Exact display name of a reporter (e.g. Jane Doe)")
     priority: str | None = Field(None, description="Issue priority (e.g. Highest)")
     parent_key: str | None = Field(None, description="Key of a parent issue (e.g. PRJ-1)")
-    custom_fields: str | None = Field(None, description="""JSON with custom fields (e.g. {"Some Field": "2"})""")
+    custom_fields: dict | None = Field(None, description="""JSON with custom fields (e.g. {"Some Field": "2"})""")
 
 
 class JiraCreateIssueRequest:
@@ -143,14 +143,7 @@ class JiraCreateIssueRequest:
 
     def fill_description(self, prev_step: dict) -> None:
         if self.args.description:
-            try:
-                description_json = json.loads(self.args.description)
-
-            except ValueError:
-                self.action.log(message="Incorrect description", level="error")
-                raise
-
-            prev_step["description"] = description_json
+            prev_step["description"] = self.args.description
 
     def fill_due_date(self, prev_step: dict) -> None:
         if self.args.due_date:
@@ -190,13 +183,7 @@ class JiraCreateIssueRequest:
     def fill_custom_fields(self, prev_step: dict) -> None:
         # https://support.atlassian.com/cloud-automation/docs/advanced-field-editing-using-json/
         if self.args.custom_fields:
-            try:
-                custom_fields_json = json.loads(self.args.custom_fields)
-
-            except ValueError:
-                self.action.log(message="Incorrect custom_fields JSON", level="error")
-                raise
-
+            custom_fields_json = self.args.custom_fields
             for custom_field_name, custom_field_values in custom_fields_json.items():
                 custom_field_type = self.field_name_to_type[custom_field_name]
                 custom_field_id = self.field_name_to_id[custom_field_name]
