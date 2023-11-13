@@ -249,15 +249,13 @@ def test_create_issue(action: JIRACreateIssue, create_issue_metadata_response: d
             priority="Highest",
             parent_key=None,
             custom_fields=None,
-            description=json.dumps(
-                {
-                    "content": [
-                        {"content": [{"text": "This is a description field.", "type": "text"}], "type": "paragraph"}
-                    ],
-                    "type": "doc",
-                    "version": 1,
-                }
-            ),
+            description={
+                "content": [
+                    {"content": [{"text": "This is a description field.", "type": "text"}], "type": "paragraph"}
+                ],
+                "type": "doc",
+                "version": 1,
+            },
         )
         result = action.run(args)
         assert result is not None
@@ -283,31 +281,6 @@ def test_create_issue_no_project(action: JIRACreateIssue) -> None:
             parent_key=None,
             custom_fields=None,
             description=None,
-        )
-        with pytest.raises(ValueError):
-            result = action.run(args)
-            assert result is None
-
-
-def test_create_issue_incorrect_description(action: JIRACreateIssue) -> None:
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://test.atlassian.net/rest/api/3/issue/createmeta",
-            json={"projects": []},
-        )
-        args = JiraCreateIssueArguments(
-            project_key="PRJ",
-            summary="New Task",
-            issue_type="Bug",
-            due_date="2077-10-23",
-            labels="dev,cloud9",
-            assignee="John Doe",
-            reporter="Jane Doe",
-            priority="Highest",
-            parent_key=None,
-            custom_fields=None,
-            description="{",
         )
         with pytest.raises(ValueError):
             result = action.run(args)
@@ -433,7 +406,7 @@ def test_custom_field_text_value(
             reporter="Jane Doe",
             priority="Highest",
             parent_key=None,
-            custom_fields=json.dumps({"Some Field Name": "Option 1"}),
+            custom_fields={"Some Field Name": "Option 1"},
             description=None,
         )
         result = action.run(args)
@@ -462,7 +435,7 @@ def test_custom_field_text_value(
             reporter="Jane Doe",
             priority="Highest",
             parent_key=None,
-            custom_fields=json.dumps({"Some Field Name": "Option 3"}),  # non-existent
+            custom_fields={"Some Field Name": "Option 3"},  # non-existent
             description=None,
         )
         with pytest.raises(ValueError):
@@ -497,7 +470,7 @@ def test_custom_select_field_value(
             reporter="Jane Doe",
             priority="Highest",
             parent_key=None,
-            custom_fields=json.dumps({"Some Checkbox": ["C1", "C2"]}),
+            custom_fields={"Some Checkbox": ["C1", "C2"]},
             description=None,
         )
         result = action.run(args)
@@ -526,7 +499,7 @@ def test_custom_select_field_value(
             reporter="Jane Doe",
             priority="Highest",
             parent_key=None,
-            custom_fields=json.dumps({"Some Checkbox": ["C3", "C1"]}),  # C3 does not exist
+            custom_fields={"Some Checkbox": ["C3", "C1"]},  # C3 does not exist
             description=None,
         )
         with pytest.raises(ValueError):
@@ -561,7 +534,7 @@ def test_custom_user_list_field_value(
             reporter="Jane Doe",
             priority="Highest",
             parent_key=None,
-            custom_fields=json.dumps({"Some User Field": ["John Doe"]}),
+            custom_fields={"Some User Field": ["John Doe"]},
             description=None,
         )
         result = action.run(args)
@@ -591,7 +564,7 @@ def test_custom_user_list_field_value(
             reporter="Jane Doe",
             priority="Highest",
             parent_key=None,
-            custom_fields=json.dumps({"Some User Field": ["John D'oh"]}),
+            custom_fields={"Some User Field": ["John D'oh"]},
             description=None,
         )
         with pytest.raises(ValueError):
