@@ -14,8 +14,8 @@ class FeedConsumptionTrigger(Trigger):
     """
 
     API_URL_ADDITIONAL_PARAMETERS = ["skip_expired=true"]
+    FILE_NAME = "stix_objects.json"
     frequency: int = 300  # Frequency in seconds, previous value 3600
-
     _STOP_EVENT_WAIT = 120
 
     def __init__(self, *args, **kwargs):
@@ -114,10 +114,10 @@ class FeedConsumptionTrigger(Trigger):
 
             event_name = f"Sekoia.io feed - batch of {len(objects)} objects"
             if self.to_file:
-                filepath = write("stix_objects.json", {"stix_objects": objects})
+                filepath = write(self.__class__.FILE_NAME, {"stix_objects": objects})
                 self.send_event(
                     event_name=event_name,
-                    event={"stix_objects_path": str(filepath)},
+                    event={"stix_objects_path": self.__class__.FILE_NAME},
                     directory=filepath.parent.as_posix(),
                     remove_directory=True,
                 )
