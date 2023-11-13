@@ -3,6 +3,7 @@ import time
 import uuid
 from collections.abc import Generator, Sequence
 from datetime import datetime, timedelta
+from functools import cached_property
 from typing import Deque
 from urllib.parse import urljoin
 
@@ -48,6 +49,20 @@ class M365EventsTrigger(Trigger):
         self.pagination_limit = 100
         self.max_batch_size = self.configuration.chunk_size
         self.log(message="M365 Events Trigger has started", level="info")
+
+    @cached_property
+    def _http_default_headers(self) -> dict[str, str]:
+        """
+        Return the default headers for the HTTP requests used in this connector.
+
+        Returns:
+            dict[str, str]:
+        """
+        return {
+            "User-Agent": "sekoiaio-connector/{0}-{1}".format(
+                self.module.manifest.get("slug"), self.module.manifest.get("version")
+            ),
+        }
 
     def run(self):
         self.initializing()
@@ -180,7 +195,7 @@ class M365EventsTrigger(Trigger):
         response = self.http_session.post(
             url=url,
             json=payload_json,
-            headers={"Authorization": self._get_authorization()},
+            headers={**self._http_default_headers, "Authorization": self._get_authorization()},
         )
         if not response.ok:
             # Exit trigger if we can't authenticate against the server
@@ -218,6 +233,7 @@ class M365EventsTrigger(Trigger):
                     "client_id": self.module.configuration.client_id,
                     "client_secret": self.module.configuration.client_secret,
                 },
+                headers=self._http_default_headers,
             )
             if not response.ok:
                 self.log(
