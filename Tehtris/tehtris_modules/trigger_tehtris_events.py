@@ -64,7 +64,7 @@ class TehtrisEventConnector(Connector):
                     f"failed with status {response.status_code} - {response.reason}"
                 ),
                 level=level,
-                response=response.text
+                response=response.text,
             )
             return []
         else:
