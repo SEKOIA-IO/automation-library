@@ -1,0 +1,40 @@
+{
+    "uuid": "4fdbae70-e9cd-492e-9a39-24ce99325e3f",
+    "name": "Zscaler",
+    "slug": "Zscaler",
+    "description": "Integrates with Zscaler",
+    "version": "0.0.0",
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "base_url": {
+                "description": "Zscaler Base Url (ex: zscalerone.net, zscaler.net, zscloud.net)",
+                "type": "string"
+            },
+            "username": {
+                "description": "Email ID of the API admin",
+                "type": "string"
+            },
+            "password": {
+                "description": "Password for the API admin",
+                "type": "string"
+            },
+            "api_key": {
+                "description": "API key",
+                "type": "string"
+            }
+        },
+        "required": [
+            "base_url",
+            "username",
+            "password",
+            "api_key"
+        ],
+        "title": "Zscaler Configuration",
+        "type": "object",
+        "secrets": [
+            "password",
+            "api_key"
+        ]
+    }
+}
