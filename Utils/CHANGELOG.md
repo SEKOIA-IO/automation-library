@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-11-14 - 1.0.4
+
+### Fixed
+
+- Fix the return of the action GetCurrentTime
+
 ## 2023-11-13 - 1.0.2
 
 ### Fixed
