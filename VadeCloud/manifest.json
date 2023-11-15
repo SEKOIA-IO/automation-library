@@ -10,7 +10,7 @@
                 "format": "uri"
             },
             "login": {
-                "description": "Vade Cloud login (Email is expected)",
+                "description": "Vade Cloud Email",
                 "type": "string"
             },
             "password": {
