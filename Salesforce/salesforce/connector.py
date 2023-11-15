@@ -86,11 +86,10 @@ class SalesforceConnector(AsyncConnector):
 
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
-        module_configuration = get_as_model(SalesforceModuleConfig, self.module.configuration)
         self._salesforce_client = SalesforceHttpClient(
-            client_id=module_configuration.client_id,
-            client_secret=module_configuration.client_secret,
-            base_url=module_configuration.base_url,
+            client_id=self.module.configuration.client_id,
+            client_secret=self.module.configuration.client_secret,
+            base_url=self.module.configuration.base_url,
             rate_limiter=rate_limiter,
         )
 
