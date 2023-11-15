@@ -10,7 +10,8 @@ from sekoia_automation import constants
 
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
 from salesforce import SalesforceModule
-from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig, SalesforceModuleConfig
+from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig
+from salesforce.models import SalesforceModuleConfig
 
 
 @pytest.fixture
