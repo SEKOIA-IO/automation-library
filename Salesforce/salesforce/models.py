@@ -6,9 +6,9 @@ class SalesforceModuleConfig(BaseModel):
     """Configuration for SalesforceModule."""
 
     client_secret: str = Field(secret=True)
-    client_id: str
-    base_url: HttpUrl
-    org_type: str = "production"
+    client_id: str = Field(required=True, description="Salesforce client id")
+    base_url: HttpUrl = Field(required=True, description="Salesforce auth url")
+    org_type: str = Field(default="production", required=True, description="Salesforce org type")
 
     @property
     def rate_limiter(self) -> AsyncLimiter:
