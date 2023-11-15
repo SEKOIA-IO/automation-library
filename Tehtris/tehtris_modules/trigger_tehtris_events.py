@@ -61,10 +61,9 @@ class TehtrisEventConnector(Connector):
             self.log(
                 message=(
                     f"Request on Tehtris API to fetch events of tenant {self.module.configuration.tenant_id}"
-                    f"failed with status {response.status_code} - {response.reason}"
+                    f"failed with status {response.status_code} - {response.reason}: {response.text}"
                 ),
                 level=level,
-                response=response.text,
             )
             return []
         else:
