@@ -118,12 +118,11 @@ def test_check_if_payload_is_valid_2(connector: AwsS3RecordsTrigger, session_fak
         "Copy",
         "Put",
         "Restore",
-        "GetObject",
         "GetObjectTorrent",
         "ListBuckets",
     ]
 
-    invalid_s3_events_prefixes = ["List", "Describe", "Random", "GetObjectTagging"]
+    invalid_s3_events_prefixes = ["List", "Describe", "Random", "GetObject", "GetObjectTagging"]
     for event in valid_s3_events_prefixes:
         assert (
             connector.is_valid_payload(
@@ -144,12 +143,12 @@ def test_check_if_payload_is_valid_2(connector: AwsS3RecordsTrigger, session_fak
 
         assert connector.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": event}) is False
 
-    valid_default_prefixes = ["Delete", "Create", "Copy", "Put", "Restore", "GetObject", "GetObjectTorrent"]
-    invalid_default_prefixes = ["List", "Describe"]
+    valid_default_prefixes = ["Delete", "Create", "Copy", "Put", "Restore", "GetObjectTorrent"]
+    invalid_default_prefixes = ["List", "Describe", "GetRecords"]
     for event in valid_default_prefixes:
         assert (
             connector.is_valid_payload(
-                {"eventSource": "s3.amazonaws.com", "eventName": "{0}:{1}".format(event, session_faker.word())}
+                {"eventSource": "random.amazonaws.com", "eventName": "{0}:{1}".format(event, session_faker.word())}
             )
             is True
         )
@@ -159,9 +158,9 @@ def test_check_if_payload_is_valid_2(connector: AwsS3RecordsTrigger, session_fak
     for event in invalid_default_prefixes:
         assert (
             connector.is_valid_payload(
-                {"eventSource": "s3.amazonaws.com", "eventName": "{0}:{1}".format(event, session_faker.word())}
+                {"eventSource": "random.amazonaws.com", "eventName": "{0}:{1}".format(event, session_faker.word())}
             )
             is False
         )
 
-        assert connector.is_valid_payload({"eventSource": "s3.amazonaws.com", "eventName": event}) is False
+        assert connector.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": event}) is False
