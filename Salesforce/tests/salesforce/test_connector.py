@@ -11,6 +11,7 @@ from sekoia_automation import constants
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
 from salesforce import SalesforceModule
 from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig
+from salesforce.models import SalesforceModuleConfig
 
 
 @pytest.fixture
@@ -104,7 +105,9 @@ def connector(symphony_storage, client_id, client_secret, salesforce_url, pushed
     # Mock the push_events_to_intakes function
     trigger.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
 
-    trigger.module.configuration = {"client_id": client_id, "client_secret": client_secret, "base_url": salesforce_url}
+    trigger.module.configuration = SalesforceModuleConfig(
+        client_id=client_id, client_secret=client_secret, base_url=salesforce_url
+    )
 
     trigger.configuration = config
 
@@ -152,6 +155,64 @@ async def test_salesforce_connector_salesforce_client(connector):
     client2 = connector.salesforce_client
 
     assert client1 is client2 is connector._salesforce_client
+
+
+@pytest.mark.asyncio
+async def test_module_configuration(session_faker):
+    """
+    Test module configuration.
+
+    Returns:
+        None:
+    """
+    config_1 = SalesforceModuleConfig(
+        client_secret=session_faker.pystr(),
+        client_id=session_faker.pystr(),
+        base_url=session_faker.uri(),
+    )
+
+    assert config_1.rate_limiter.max_rate == 25
+    assert config_1.rate_limiter.time_period == 20
+
+    config_2 = SalesforceModuleConfig(
+        client_secret=session_faker.pystr(),
+        client_id=session_faker.pystr(),
+        base_url=session_faker.uri(),
+        org_type="sandbox",
+    )
+
+    assert config_2.rate_limiter.max_rate == 25
+    assert config_2.rate_limiter.time_period == 20
+
+    config_3 = SalesforceModuleConfig(
+        client_secret=session_faker.pystr(),
+        client_id=session_faker.pystr(),
+        base_url=session_faker.uri(),
+        org_type="developer",
+    )
+
+    assert config_3.rate_limiter.max_rate == 5
+    assert config_3.rate_limiter.time_period == 20
+
+    config_4 = SalesforceModuleConfig(
+        client_secret=session_faker.pystr(),
+        client_id=session_faker.pystr(),
+        base_url=session_faker.uri(),
+        org_type="trial",
+    )
+
+    assert config_4.rate_limiter.max_rate == 5
+    assert config_4.rate_limiter.time_period == 20
+
+    config_5 = SalesforceModuleConfig(
+        client_secret=session_faker.pystr(),
+        client_id=session_faker.pystr(),
+        base_url=session_faker.uri(),
+        org_type=session_faker.word(),
+    )
+
+    assert config_5.rate_limiter.max_rate == 5
+    assert config_5.rate_limiter.time_period == 20
 
 
 @pytest.mark.asyncio

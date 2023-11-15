@@ -2,6 +2,11 @@
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
+            "org_type": {
+                "description": "Organization type. Might be one of the following: 'production', 'sandbox', 'trial', 'developer'. Default is 'production'",
+                "type": "string",
+                "default": "production"
+            },
             "client_id": {
                 "description": "Client id to interact with salesforce API",
                 "type": "string"
@@ -30,5 +35,5 @@
     "name": "Salesforce",
     "uuid": "f811e134-2548-11ee-be56-0242ac120002",
     "slug": "salesforce",
-    "version": "1.4.7"
+    "version": "1.4.8"
 }

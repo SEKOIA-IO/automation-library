@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2023-11-08 - 1.4.8
+
+#### Fixed
+
+- Fix rate limiting and change configuration of the module
+
 ### 2023-11-08 - 1.4.6
 
 #### Fixed
