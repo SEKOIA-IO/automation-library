@@ -4,11 +4,6 @@
         "title": "Trigger salesforce configuration",
         "type": "object",
         "properties": {
-            "ratelimit_per_minute": {
-                "description": "Maximum number of requests per minute",
-                "default": 60,
-                "type": "integer"
-            },
             "intake_server": {
                 "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
                 "default": "https://intake.sekoia.io",

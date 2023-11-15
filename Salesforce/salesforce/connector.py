@@ -27,7 +27,31 @@ from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EV
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     """SalesforceConnector configuration."""
 
-    ratelimit_per_minute: int = 60
+    org_type: str = "production"
+
+    @property
+    def rate_limiter(self) -> AsyncLimiter:
+        """
+        Get rate limit.
+
+        During client initialization we should limit amount of concurrent requests to salesforce platform:
+        * 25 requests per 20 seconds if it is production org type
+        * 5 requests per 20 seconds for the rest of org types
+
+        Docs: https://developer.salesforce.com/docs/atlas.en-us.salesforce_app_limits_cheatsheet.meta/salesforce_app_limits_cheatsheet/salesforce_app_limits_platform_api.htm
+
+        Returns:
+            int:
+        """
+        match self.org_type:
+            case "production":
+                return AsyncLimiter(25, 20)
+
+            case "sandbox":
+                return AsyncLimiter(25, 20)
+
+            case _:
+                return AsyncLimiter(5, 20)
 
 
 class SalesforceConnector(AsyncConnector):
@@ -84,13 +108,11 @@ class SalesforceConnector(AsyncConnector):
         if self._salesforce_client is not None:
             return self._salesforce_client
 
-        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
-
         self._salesforce_client = SalesforceHttpClient(
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
             base_url=self.module.configuration.base_url,
-            rate_limiter=rate_limiter,
+            rate_limiter=self.configuration.rate_limiter,
         )
 
         return self._salesforce_client
