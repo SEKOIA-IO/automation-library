@@ -1,4 +1,5 @@
 # flake8: noqa: E402
+from datetime import datetime, timedelta
 
 from sekoiaio.utils import should_patch
 
@@ -8,13 +9,11 @@ if should_patch():
     monkey.patch_all()
 
 import json
-import random
-import time
 from urllib.parse import urlparse
 
 import requests
 from sekoia_automation.trigger import Trigger
-from websocket import WebSocketApp, WebSocketBadStatusException, WebSocketTimeoutException, setdefaulttimeout
+from websocket import WebSocketApp, WebSocketTimeoutException, setdefaulttimeout
 
 from sekoiaio.triggers.messages_processor import MessagesProcessor
 from sekoiaio.utils import user_agent
@@ -36,19 +35,13 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
     api_key: str
 
-    _websocket: WebSocketApp
-
     seconds_without_events = 3600 * 24  # Force restart the pod every day if no events were received
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self._message_processor: MessagesProcessor = MessagesProcessor(self.handler_dispatcher)
-
-        # Attributes related to failures
-        self._failed_attempts: int = 0
-        self._last_failed_attempt: float | None = None
-        self._must_stop = False
+        self._websocket: WebSocketApp | None = None
+        self._last_error: datetime | None = None
 
     @property
     def liveapi_url(self):
@@ -92,33 +85,39 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             on_message=self.on_message,
             on_close=self.on_close,
             on_error=self.on_error,
+            on_ping=self.on_ping,
+            on_pong=self.on_pong,
             cookie=f"access_token_cookie={api_key}",
         )
-        while not self._must_stop:
-            self.log("The trigger restarts", level="info")
+        while self.running:
+            self.log("Websocket starts listening", level="info")
             try:
-                self._websocket.run_forever(ping_interval=60, ping_timeout=10)
+                self._websocket.run_forever(ping_interval=20, ping_timeout=5, reconnect=1)
             except WebSocketTimeoutException:
                 self.log("The websocket timed out", level="error")
 
     def on_error(self, _, error: Exception):
-        # If the last failed attempt is old, reset the failed
-        # attempts counter. This might be a platform issue.
-        if self._last_failed_attempt is not None and time.time() - self._last_failed_attempt > 3600:
-            self._failed_attempts = 0
-
-        self._last_failed_attempt = time.time()
-        sleep_duration = 0.5 * 2**self._failed_attempts + random.uniform(0, 1)
+        now = datetime.utcnow()
+        if self._last_error and now < self._last_error + timedelta(seconds=10):
+            # Prevent from sending too many exceptions
+            return
+        self._last_error = now
         self.log_exception(
             exception=error,
             message="An exception occurred in the main WebSocket client’s loop",
-            sleep_duration=sleep_duration,
         )
-        time.sleep(sleep_duration)
-        self._failed_attempts += 1
+
+    def on_ping(self, _, __):
+        self.log("Responded to ping sent by server", level="debug")
+
+    def on_pong(self, _, __):
+        self.log("Received pong from server", level="debug")
 
     def on_close(self, *args, **kwargs):  # pragma: no cover
         self.log("Socket closed", level="warning")
+        # Reset teardown so we can run again the app from the start
+        with self._websocket.has_done_teardown_lock:
+            self._websocket.has_done_teardown = False
 
     def on_message(self, _, raw_message: str):
         self._message_processor.push_message(raw_message)
@@ -156,5 +155,6 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
     def stop(self, *args, **kwargs):
         super().stop(*args, **kwargs)
-        self._must_stop = True
         self._message_processor.stop()
+        if self._websocket:
+            self._websocket.close()

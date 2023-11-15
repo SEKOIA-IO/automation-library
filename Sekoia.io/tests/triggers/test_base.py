@@ -62,12 +62,21 @@ def test_sekoianotificationbasetrigger_liveapi_url_other_generated(base_trigger)
 
 
 def test_on_error(base_trigger):
-    base_trigger._failed_attempts = 42
-    base_trigger._last_failed_attempt = (datetime.utcnow() - timedelta(hours=5)).timestamp()
     base_trigger.on_error(None, Exception())
-    assert base_trigger._must_stop is False
-    assert base_trigger._failed_attempts == 1
-    assert base_trigger._last_failed_attempt is not None
+    base_trigger.log_exception.assert_called_once()
+    base_trigger.log_exception.reset_mock()
+    base_trigger.on_error(None, Exception())
+    base_trigger.log_exception.assert_not_called()
+
+
+def test_ping(base_trigger):
+    base_trigger.on_ping(None, None)
+    base_trigger.log.assert_called_once()
+
+
+def test_pong(base_trigger):
+    base_trigger.on_pong(None, None)
+    base_trigger.log.assert_called_once()
 
 
 def test_run_forbidden(base_trigger, requests_mock):
@@ -79,7 +88,7 @@ def test_run_forbidden(base_trigger, requests_mock):
 
 def test_run(base_trigger, requests_mock):
     requests_mock.get("http://fake.url//v1/me", status_code=200)
-    base_trigger._must_stop = True
+    base_trigger.stop()
     try:
         base_trigger.run()
     except Exception:
@@ -89,4 +98,4 @@ def test_run(base_trigger, requests_mock):
 
 def test_stop(base_trigger):
     base_trigger.stop()
-    assert base_trigger._must_stop is True
+    assert base_trigger.running is False
