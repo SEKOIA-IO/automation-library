@@ -34,11 +34,6 @@ class Arguments(BaseModel):
     ]
 
 
-class Response(BaseModel):
-    currentTimeEpoch: int
-    currentTimeIso8601: str
-
-
 class GetCurrentTimeAction(Action):
     """
     Action to get current time and return it
@@ -53,11 +48,11 @@ class GetCurrentTimeAction(Action):
 
         return result_time
 
-    def run(self, ra: Arguments) -> Response:
+    def run(self, ra: Arguments) -> dict:
         self.log(message=f"Retrieving current time for {ra.selectedTimezone}", level="info")
         dateToReturn = self._utc_to_gmt(ra.selectedTimezone)
 
-        return Response(
-            currentTimeEpoch=int(dateToReturn.timestamp()),
-            currentTimeIso8601=dateToReturn.isoformat(),
-        )
+        return {
+            "epoch": int(dateToReturn.timestamp()),
+            "iso8601": dateToReturn.isoformat(),
+        }
