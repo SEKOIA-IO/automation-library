@@ -6,22 +6,16 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import orjson
-from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
-from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
-from sekoia_automation.utils import get_as_model
-
 
 from client.http_client import SalesforceHttpClient
-from utils.file_utils import csv_file_as_rows, delete_file
-
 from salesforce import SalesforceModule
-from salesforce.models import SalesforceModuleConfig
 from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from utils.file_utils import csv_file_as_rows, delete_file
 
 
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
@@ -86,7 +80,7 @@ class SalesforceConnector(AsyncConnector):
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
             base_url=self.module.configuration.base_url,
-            rate_limiter=self.module.rate_limiter,
+            rate_limiter=self.module.configuration.rate_limiter,
         )
 
         return self._salesforce_client
