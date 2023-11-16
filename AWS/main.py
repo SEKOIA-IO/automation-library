@@ -1,19 +1,24 @@
-from aws.base import AWSModule
-from aws.s3.trigger_cloudtrail_logs import CloudTrailLogsTrigger
-from aws.s3.trigger_flowlog_records import FlowlogRecordsTrigger
-from aws.s3.trigger_s3_flowlogs import AWSS3FlowLogsTrigger
-from aws.s3.trigger_s3_logs import AWSS3LogsTrigger
-from aws.s3.trigger_s3_parquet import AWSS3ParquetRecordsTrigger
-from aws.s3.trigger_s3_records import AWSS3RecordsTrigger
-from aws.sqs.trigger_sqs_messages import AWSSQSMessagesTrigger
+"""Initialize module and all connectors."""
+from sekoia_automation.loguru.config import init_logging
+
+from connectors import AwsModule
+from connectors.s3.logs.trigger_cloudtrail_logs import CloudTrailLogsTrigger
+from connectors.s3.logs.trigger_flowlog_records import FlowlogRecordsTrigger
+from connectors.s3.trigger_s3_logs import AwsS3LogsTrigger
+from connectors.s3.trigger_s3_parquet import AwsS3ParquetRecordsTrigger
+from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
+from connectors.trigger_sqs_messages import AwsSqsMessagesTrigger
 
 if __name__ == "__main__":
-    module = AWSModule()
+    init_logging()
+
+    module = AwsModule()
+
     module.register(CloudTrailLogsTrigger, "cloudtrail_logs_trigger")
     module.register(FlowlogRecordsTrigger, "flowlog_records_trigger")
-    module.register(AWSS3LogsTrigger, "aws_s3_logs_trigger")
-    module.register(AWSS3FlowLogsTrigger, "aws_s3_flowlogs_trigger")
-    module.register(AWSS3RecordsTrigger, "aws_s3_cloudtrail_records_trigger")
-    module.register(AWSS3ParquetRecordsTrigger, "aws_s3_parquet_records_trigger")
-    module.register(AWSSQSMessagesTrigger, "aws_sqs_messages_trigger")
+    module.register(AwsS3LogsTrigger, "aws_s3_logs_trigger")
+    module.register(AwsS3RecordsTrigger, "aws_s3_cloudtrail_records_trigger")
+    module.register(AwsS3ParquetRecordsTrigger, "aws_s3_parquet_records_trigger")
+    module.register(AwsSqsMessagesTrigger, "aws_sqs_messages_trigger")
+
     module.run()
