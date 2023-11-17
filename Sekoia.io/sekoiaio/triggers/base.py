@@ -42,6 +42,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self._message_processor: MessagesProcessor = MessagesProcessor(self.handler_dispatcher)
         self._websocket: WebSocketApp | None = None
         self._last_error: datetime | None = None
+        self._last_close: datetime | None = None
 
     @property
     def liveapi_url(self):
@@ -56,7 +57,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             if domain in ["api.sekoia.io", "api.test.sekoia.io"]:
                 domain = domain.replace("api", "app")
 
-            liveapi_url = f"wss://{domain}/live"
+            liveapi_url = f"wss://{domain}/live/"
 
         return liveapi_url
 
@@ -89,10 +90,10 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             on_pong=self.on_pong,
             cookie=f"access_token_cookie={api_key}",
         )
+        self.log("Websocket starts listening", level="info")
         while self.running:
-            self.log("Websocket starts listening", level="info")
             try:
-                self._websocket.run_forever(ping_interval=20, ping_timeout=5, reconnect=1)
+                self._websocket.run_forever(ping_interval=20, ping_timeout=5)
             except WebSocketTimeoutException:
                 self.log("The websocket timed out", level="error")
 
@@ -114,10 +115,15 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self.log("Received pong from server", level="debug")
 
     def on_close(self, *args, **kwargs):  # pragma: no cover
-        self.log("Socket closed", level="warning")
         # Reset teardown so we can run again the app from the start
         with self._websocket.has_done_teardown_lock:
             self._websocket.has_done_teardown = False
+        now = datetime.utcnow()
+        if self._last_close and now < self._last_close + timedelta(seconds=10):
+            # Prevent from sending too many logs
+            return
+        self._last_close = now
+        self.log("Socket closed", level="warning")
 
     def on_message(self, _, raw_message: str):
         self._message_processor.push_message(raw_message)
