@@ -7,7 +7,7 @@
                 "type": "string"
             },
             "account_id": {
-                "description": "Account Id to work with Cato API",
+                "description": "Account Id (4 digits) to work with Cato API",
                 "type": "string"
             }
         },
@@ -25,5 +25,5 @@
     "name": "Cato Networks",
     "uuid": "d7aa9364-3182-11ee-be56-0242ac120002",
     "slug": "cato",
-    "version": "1.2.2"
+    "version": "1.2.3"
 }
