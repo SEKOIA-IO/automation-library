@@ -10,7 +10,7 @@
                 "format": "uri"
             },
             "login": {
-                "description": "Vade Cloud login",
+                "description": "Vade Cloud Email",
                 "type": "string"
             },
             "password": {
@@ -31,5 +31,5 @@
     "name": "Vade Cloud",
     "slug": "vade-cloud",
     "uuid": "203d043e-a1ea-4b5c-81ef-6fc0f8a6a9d3",
-    "version": "1.1"
+    "version": "1.1.1"
 }
