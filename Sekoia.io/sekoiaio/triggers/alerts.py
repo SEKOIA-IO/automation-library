@@ -3,6 +3,7 @@ from posixpath import join as urljoin
 
 import orjson
 import requests
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 from sekoiaio.utils import user_agent
 
@@ -82,6 +83,11 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             remove_directory=True,
         )
 
+    @retry(
+        reraise=True,
+        wait=wait_exponential(max=10),
+        stop=stop_after_attempt(10),
+    )
     def _retrieve_alert_from_alertapi(self, alert_uuid):
         api_url = urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
 

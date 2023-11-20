@@ -1,6 +1,8 @@
 # flake8: noqa: E402
 from datetime import datetime, timedelta
 
+from tenacity import Retrying, wait_exponential, stop_after_attempt
+
 from sekoiaio.utils import should_patch
 
 if should_patch():
@@ -67,16 +69,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         api_key = self.module.configuration["api_key"]
         base_url = self.module.configuration["base_url"]
 
-        # Ensure submitted APIKey is valid, raise a exception if not.
-        response = requests.get(
-            f"{base_url}/v1/me",
-            headers={"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()},
-        )
-        if response.status_code in [401, 403]:
-            # Critical log will make the API stop the trigger deployment
-            self.log("The credential provided are invalid", level="critical")
-            self._error_count = 5  # Set the number of error to the maximum so the pod exits directly
-        response.raise_for_status()
+        self._validate_api_key(base_url, api_key)
 
         self._message_processor.start()
 
@@ -164,3 +157,24 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self._message_processor.stop()
         if self._websocket:
             self._websocket.close()
+
+    def _validate_api_key(self, base_url: str, api_key: str):
+        """Ensure submitted APIKey is valid, raise a exception if not."""
+        for attempt in Retrying(
+            reraise=True,
+            wait=wait_exponential(max=10),
+            stop=stop_after_attempt(10),
+        ):
+            with attempt:
+                response = requests.get(
+                    f"{base_url}/v1/me",
+                    headers={"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()},
+                )
+                # Retry 5xx errors
+                if response.status_code >= 500:
+                    response.raise_for_status()
+        if response.status_code in [401, 403]:
+            # Critical log will make the API stop the trigger deployment
+            self.log("The credential provided are invalid", level="critical")
+            self._error_count = 5  # Set the number of error to the maximum so the pod exits directly
+        response.raise_for_status()
