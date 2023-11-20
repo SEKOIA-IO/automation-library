@@ -8,7 +8,7 @@
             },
             "account_id": {
                 "description": "Account Id (4 digits) to work with Cato API",
-                "pattern": "^[0-9]{4}$"
+                "pattern": "^[0-9]{4}$",
                 "type": "string"
             }
         },
