@@ -9,5 +9,6 @@ if __name__ == "__main__":
     module.register(SecurityEventsConnector, "security_events_connector")
     module.register(IsolateDeviceFromNetworkAction, "isolate_device_from_network")
     module.register(ReleaseDeviceFromNetworkIsolationAction, "release_device_from_network_isolation")
+    module.register(ScanDeviceForMalware, "scan_device_for_malware")
     module.register(ListDevicesAction, "list_devices")
     module.run()
