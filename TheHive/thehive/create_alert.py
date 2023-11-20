@@ -101,7 +101,7 @@ class TheHiveCreateAlert(Action):
         alert: Alert = Alert(
             id=arg_alert["uuid"],
             severity=arg_alert["urgency"]["severity"] // 25 + 1,  # from 0-100 to 1-4
-            date=arg_alert["created_at"],
+            date=arg_alert["created_at"] * 1000,  # date in ms for TheHive instead of sec in Sekoia
             tags=[],
             title=arg_alert["title"],
             type=alert_type,
