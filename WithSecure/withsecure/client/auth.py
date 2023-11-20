@@ -35,11 +35,13 @@ class OAuthAuthentication(AuthBase):
         scope: str,
         stop_event: Event,
         log_cb: Callable[[str, str], None],
+        default_headers: dict[str, str] | None = None,
     ):
         self.client_id = client_id
         self.secret = secret
         self.grant_type = grant_type
         self.scope = scope
+        self.default_headers = default_headers or {}
 
         # authentication material
         self.access_token_value: str = ""
@@ -94,6 +96,7 @@ class OAuthAuthentication(AuthBase):
                     auth=HTTPBasicAuth(self.client_id, self.secret),
                     timeout=API_TIMEOUT,
                     data={"grant_type": self.grant_type, "scope": self.scope},
+                    headers=self.default_headers,
                 )
                 if auth_response.status_code == 200:
                     # reads the server response

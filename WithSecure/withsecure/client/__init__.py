@@ -9,8 +9,20 @@ from withsecure.client.auth import OAuthAuthentication
 
 
 class ApiClient(requests.Session):
-    def __init__(self, client_id: str, secret: str, scope: str, stop_event: Event, log_cb: Callable[[str, str], None]):
+    def __init__(
+        self,
+        client_id: str,
+        secret: str,
+        scope: str,
+        stop_event: Event,
+        log_cb: Callable[[str, str], None],
+        default_headers: dict[str, str] | None = None,
+    ):
         super().__init__()
+
+        if default_headers:
+            self.headers.update(default_headers)
+
         self.auth = OAuthAuthentication(
             client_id=client_id,
             secret=secret,
