@@ -96,7 +96,7 @@ class TheHiveCreateAlert(Action):
 
         alert_type = f"{arg_alert['alert_type']['category']}/{arg_alert['alert_type']['value']}"
         if len(alert_type) > 32:
-            alert_type = arg_alert['alert_type']['category'][:32]  # limit to 32 char, max of thehive api
+            alert_type = arg_alert["alert_type"]["category"][:32]  # limit to 32 char, max of thehive api
         link = f"https://app.sekoia.io/operations/alerts/{arg_alert['short_id']}"
         alert: Alert = Alert(
             id=arg_alert["uuid"],
@@ -104,7 +104,7 @@ class TheHiveCreateAlert(Action):
             date=arg_alert["created_at"],
             tags=[],
             title=arg_alert["title"],
-            type=alert_type
+            type=alert_type,
             source="Sekoia.io",
             sourceRef=arg_alert["short_id"],
             externalLink=link,
