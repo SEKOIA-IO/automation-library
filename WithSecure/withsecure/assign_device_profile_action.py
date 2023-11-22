@@ -10,10 +10,11 @@ class ActionArguments(BaseModel):
 
 class AssignDeviceProfileAction(DeviceOperationAction):
     def run(self, arguments: ActionArguments):
+        parameters = {}
         parameters["profile"] = arguments.profile
 
 
         # execute the operation
         self._execute_operation_on_device(
-            operation_name="assignProfile", target=arguments.target, parameters=arguments.profile
+            operation_name="assignProfile", target=arguments.target, parameters=parameters
         )
