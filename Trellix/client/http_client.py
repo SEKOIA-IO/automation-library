@@ -214,7 +214,7 @@ class TrellixHttpClient(object):
         return URL("{0}/edr/v2/threats".format(self.base_url)).with_query(params)
 
     def edr_threat_detections_url(
-        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0,
+        self, threat_id: str, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0,
     ) -> URL:
         """
         Get EDR threats url.
@@ -232,6 +232,7 @@ class TrellixHttpClient(object):
         Args:
             threat_id: str
             start_date: datetime
+            end_date: datetime
             limit: int
             offset: int
 
@@ -241,6 +242,7 @@ class TrellixHttpClient(object):
         params = {
             "sort": "firstDetected",
             "from": int(start_date.strftime("%s")) * 1000,
+            "to": int(end_date.strftime("%s")) * 1000,
             "page[limit]": str(limit),
             "page[offset]": str(offset),
         }
@@ -248,7 +250,12 @@ class TrellixHttpClient(object):
         return URL("{0}/edr/v2/threats/{1}/detections".format(self.base_url, threat_id)).with_query(params)
 
     def edr_threat_affectedhosts_url(
-        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0,
+        self,
+        threat_id: str,
+        start_date: datetime,
+        end_date: datetime,
+        limit: int = 10,
+        offset: int = 0,
     ) -> URL:
         """
         Get EDR threats url.
@@ -266,6 +273,7 @@ class TrellixHttpClient(object):
         Args:
             threat_id: str
             start_date: datetime
+            end_date: datetime
             limit: int
             offset: int
 
@@ -275,6 +283,7 @@ class TrellixHttpClient(object):
         params = {
             "sort": "firstDetected",
             "from": int(start_date.strftime("%s")) * 1000,
+            "to": int(end_date.strftime("%s")) * 1000,
             "page[limit]": str(limit),
             "page[offset]": str(offset),
         }
@@ -328,7 +337,7 @@ class TrellixHttpClient(object):
 
     async def get_edr_threats(
         self, start_date: datetime, limit: int = 10
-    ) -> Tuple[list[TrellixResponse[EdrThreatAttributes]], bool]:
+    ) -> list[TrellixResponse[EdrThreatAttributes]]:
         """
         Get EDR threats.
 
@@ -344,13 +353,15 @@ class TrellixHttpClient(object):
 
         data = await self._get_data(url, headers)
 
-        return (
-            [TrellixResponse[EdrThreatAttributes](**result) for result in data["data"]],
-            data.get("relationships") is not None
-        )
+        return [TrellixResponse[EdrThreatAttributes](**result) for result in data["data"]]
 
     async def get_edr_threat_affectedhosts(
-        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0
+        self,
+        threat_id: str,
+        start_date: datetime,
+        end_date: datetime,
+        limit: int = 10,
+        offset: int = 0
     ) -> list[TrellixResponse[EdrAffectedhostAttributes]]:
         """
         Get EDR threat affected hosts.
@@ -358,6 +369,7 @@ class TrellixHttpClient(object):
         Args:
             threat_id: int
             start_date: datetime
+            end_date: datetime
             limit: int
             offset: int
 
@@ -365,14 +377,19 @@ class TrellixHttpClient(object):
             list[TrellixResponse[EdrAffectedhostAttributes]]:
         """
         headers = await self._request_headers(Scope.threats_set_of_scopes())
-        url = self.edr_threat_affectedhosts_url(threat_id, start_date, limit, offset)
+        url = self.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit, offset)
 
         data = await self._get_data(url, headers)
 
         return [TrellixResponse[EdrAffectedhostAttributes](**result) for result in data["data"]]
 
     async def get_edr_threat_detections(
-        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0
+        self,
+        threat_id: str,
+        start_date: datetime,
+        end_date: datetime,
+        limit: int = 10,
+        offset: int = 0,
     ) -> list[TrellixResponse[EdrDetectionAttributes]]:
         """
         Get EDR threats.
@@ -380,14 +397,15 @@ class TrellixHttpClient(object):
         Args:
             threat_id: int
             start_date: datetime
+            end_date: datetime
             limit: int
             offset: int
 
         Returns:
-            List[dict[str, str]]:
+            list[dict[str, str]]:
         """
         headers = await self._request_headers(Scope.threats_set_of_scopes())
-        url = self.edr_threat_detections_url(threat_id, start_date, limit, offset)
+        url = self.edr_threat_detections_url(threat_id, start_date, end_date, limit, offset)
 
         data = await self._get_data(url, headers)
 

@@ -10,6 +10,7 @@ from aioresponses import aioresponses
 from sekoia_automation import constants
 
 from client.schemas.token import Scope
+from connectors.trellix_edr_connector import TrellixEdrConnector
 from connectors.trellix_epo_connector import TrellixEpoConnector, TrellixModule
 
 
@@ -23,11 +24,15 @@ def pushed_events_ids(session_faker) -> list[str]:
     Returns:
         list[str]:
     """
-    return [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
+    return [session_faker.word() for _ in range(session_faker.random.randint(1, 100))]
 
 
 @pytest.fixture
-def connector(module: TrellixModule, symphony_storage, pushed_events_ids, session_faker) -> TrellixEpoConnector:
+def connector(
+    module: TrellixModule,
+    symphony_storage,
+    pushed_events_ids, session_faker
+) -> TrellixEdrConnector:
     """
     Fixture for TrellixEdrConnector.
 
@@ -37,23 +42,23 @@ def connector(module: TrellixModule, symphony_storage, pushed_events_ids, sessio
         session_faker:
 
     Returns:
-        TrellixEpoConnector:
+        TrellixEdrConnector:
     """
-    trigger = TrellixEpoConnector(module=module, data_path=symphony_storage)
+    connector = TrellixEdrConnector(module=module, data_path=symphony_storage)
 
     # Mock the log function of trigger that requires network access to the api for reporting
-    trigger.log = MagicMock()
-    trigger.log_exception = MagicMock()
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
 
     # Mock the push_events_to_intakes function
-    trigger.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
+    connector.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
 
-    trigger.configuration = {
+    connector.configuration = {
         "intake_key": session_faker.word(),
         "intake_server": session_faker.uri(),
     }
 
-    return trigger
+    return connector
 
 
 @pytest.mark.asyncio

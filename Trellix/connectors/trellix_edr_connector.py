@@ -38,8 +38,7 @@ class TrellixEdrConnector(AsyncConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
-    @property
-    def last_event_date(self) -> datetime:
+    def last_event_date(self, name: str) -> datetime:
         """
         Get last event date for .
 
@@ -50,7 +49,7 @@ class TrellixEdrConnector(AsyncConnector):
         one_week_ago = (now - timedelta(days=7)).replace(microsecond=0)
 
         with self.context as cache:
-            last_event_date_str = cache.get("last_event_date")
+            last_event_date_str = cache.get(name)
 
             # If undefined, retrieve events from the last 7 days
             if last_event_date_str is None:
@@ -96,14 +95,134 @@ class TrellixEdrConnector(AsyncConnector):
         Returns:
             List[str]:
         """
-        events = await self.trellix_client.get_epo_events(
-            self.last_event_date,
-            self.module.configuration.records_per_request,
+        # Check alerts. If there is any - push to intake
+        alerts = await self.trellix_client.get_edr_alerts(
+            self.last_event_date('alerts'), self.module.configuration.records_per_request,
         )
+        result = await self.push_data_to_intakes(
+            [orjson.dumps(event.dict()).decode("utf-8") for event in alerts]
+        )
+
+        # Check threats. If there is any - push to intake
+        threats = await self.trellix_client.get_edr_threats(
+            self.last_event_date("threats"), self.module.configuration.records_per_request,
+        )
+        result.extend(
+            await self.push_data_to_intakes(
+                [orjson.dumps(event.dict()).decode("utf-8") for event in threats]
+            )
+        )
+
+        # Go through each threat and get detections and affected hosts information based on same last_event_date
+        for threat in threats:
+            threat_id: str = threat.id
+
+            offset = 0
+            while True:
+                detections = await self.trellix_client.get_edr_threat_detections(
+                    threat_id,
+                    self.last_event_date("threats"),
+                    self.module.configuration.records_per_request,
+                    offset,
+                )
+                result.extend(
+                    await self.push_data_to_intakes(
+                        [orjson.dumps(event.dict()).decode("utf-8") for event in detections]
+                    )
+                )
+                offset = offset + self.module.configuration.records_per_request
+
+                if len(detections) == 0:
+                    break
+
 
         result: list[str] = await self.push_data_to_intakes(
             [orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events]
         )
+
+        return result
+
+    async def get_threat_detections(self, threat_id: str, start_date: datetime, end_date: datetime) -> list[str]:
+        """
+        Get threat detections.
+
+        Args:
+            threat_id: str
+            start_date: datetime
+            end_date: datetime
+
+        Returns:
+            list[str]
+        """
+        result = []
+
+        offset = 0
+        while True:
+            detections = await self.trellix_client.get_edr_threat_detections(
+                threat_id,
+                start_date,
+                end_date,
+                self.module.configuration.records_per_request,
+                offset,
+            )
+
+            result_data = [
+                orjson.dumps(
+                    {
+                        **event.dict(),
+                        "threatId": threat_id
+                    }
+                ).decode("utf-8")
+                for event in detections
+            ]
+
+            result.extend(await self.push_data_to_intakes(result_data))
+            offset = offset + self.module.configuration.records_per_request
+
+            if len(detections) == 0:
+                break
+
+        return result
+
+    async def get_threat_affectedhosts(self, threat_id: str, start_date: datetime, end_date: datetime) -> list[str]:
+        """
+        Get threat affectedhosts.
+
+        Args:
+            threat_id: str
+            start_date: datetime
+            end_date: datetime
+
+        Returns:
+            list[str]
+        """
+        result = []
+
+        offset = 0
+        while True:
+            affectedhosts = await self.trellix_client.get_edr_threat_affectedhosts(
+                threat_id,
+                start_date,
+                end_date,
+                self.module.configuration.records_per_request,
+                offset,
+            )
+
+            result_data = [
+                orjson.dumps(
+                    {
+                        **event.dict(),
+                        "threatId": threat_id
+                    }
+                ).decode("utf-8")
+                for event in affectedhosts
+            ]
+
+            result.extend(await self.push_data_to_intakes(result_data))
+            offset = offset + self.module.configuration.records_per_request
+
+            if len(affectedhosts) == 0:
+                break
 
         return result
 
