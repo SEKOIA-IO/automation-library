@@ -107,6 +107,8 @@ def abstract_queued_connector(
         return []
 
     connector._parse_content = MagicMock(side_effect=_parse_content)
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
 
     return connector
 

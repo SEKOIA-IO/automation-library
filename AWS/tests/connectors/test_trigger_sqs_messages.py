@@ -77,6 +77,8 @@ def connector(
     connector.configuration = connector_config
 
     connector.push_data_to_intakes = mock_push_data_to_intakes
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
 
     return connector
 
