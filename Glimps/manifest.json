@@ -3,7 +3,7 @@
     "name": "GLIMPS",
     "slug": "glimps",
     "description": "[Glimps](https://www.glimps.fr/) offers a DeepLearning solution to detect, analyze and classify malwares. It enables faster responses during incidents with a detailed understanding of the threat",
-    "version": "1.11",
+    "version": "1.12",
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
