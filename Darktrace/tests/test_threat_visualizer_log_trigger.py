@@ -53,7 +53,8 @@ def test_modelbreaches_consumer(trigger, modelbreaches_response):
         batch_start = 1687774141.000
         batch_end = 1688465633.434
         mock_request.get(
-            trigger.module.configuration.api_url + "/modelbreaches?starttime=1687774141000&includeallpinned=False",
+            trigger.module.configuration.api_url
+            + "/modelbreaches?starttime=1687774141000&includeallpinned=False&historicmodelonly=false",
             json=modelbreaches_response,
         )
 
@@ -76,7 +77,7 @@ def test_aianalyst_consumer(trigger, aianalyst_response):
         batch_end = 1688465633.434
         mock_request.get(
             trigger.module.configuration.api_url
-            + "/aianalyst/incidentevents?starttime=1687774141000&includeallpinned=false",
+            + "/aianalyst/incidentevents?starttime=1687774141000&includeallpinned=false&historicmodelonly=false",
             json=aianalyst_response,
         )
 
