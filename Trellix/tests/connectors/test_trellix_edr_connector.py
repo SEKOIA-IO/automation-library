@@ -10,24 +10,7 @@ from aioresponses import aioresponses
 from sekoia_automation import constants
 
 from client.schemas.token import Scope
-from trellix.connector import TrellixEdrConnector, TrellixModule
-
-
-@pytest.fixture
-def symphony_storage() -> str:
-    """
-    Fixture for symphony temporary storage.
-
-    Yields:
-        str:
-    """
-    original_storage = constants.DATA_STORAGE
-    constants.DATA_STORAGE = mkdtemp()
-
-    yield constants.DATA_STORAGE
-
-    rmtree(constants.DATA_STORAGE)
-    constants.SYMPHONY_STORAGE = original_storage
+from connectors.trellix_epo_connector import TrellixEpoConnector, TrellixModule
 
 
 @pytest.fixture
@@ -44,7 +27,7 @@ def pushed_events_ids(session_faker) -> list[str]:
 
 
 @pytest.fixture
-def connector(symphony_storage, pushed_events_ids, session_faker):
+def connector(module: TrellixModule, symphony_storage, pushed_events_ids, session_faker) -> TrellixEpoConnector:
     """
     Fixture for TrellixEdrConnector.
 
@@ -54,10 +37,9 @@ def connector(symphony_storage, pushed_events_ids, session_faker):
         session_faker:
 
     Returns:
-        TrellixEdrConnector:
+        TrellixEpoConnector:
     """
-    module = TrellixModule()
-    trigger = TrellixEdrConnector(module=module, data_path=symphony_storage)
+    trigger = TrellixEpoConnector(module=module, data_path=symphony_storage)
 
     # Mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()
@@ -66,17 +48,9 @@ def connector(symphony_storage, pushed_events_ids, session_faker):
     # Mock the push_events_to_intakes function
     trigger.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
 
-    trigger.module.configuration = {}
     trigger.configuration = {
-        "client_id": session_faker.word(),
-        "client_secret": session_faker.word(),
-        "api_key": session_faker.word(),
         "intake_key": session_faker.word(),
-        "delay": session_faker.random.randint(1, 10),
-        "ratelimit_per_minute": session_faker.random.randint(1, 10),
-        "records_per_request": session_faker.random.randint(1, 100),
-        "auth_url": session_faker.uri(),
-        "base_url": session_faker.uri(),
+        "intake_server": session_faker.uri(),
     }
 
     return trigger
@@ -137,13 +111,13 @@ async def test_trellix_connector_get_epo_events(
         expected_edr_result = [edr_epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
 
         mocked_responses.get(
-            http_client.epo_events_url(current_date, limit=connector.configuration.records_per_request),
+            http_client.epo_events_url(current_date, limit=connector.module.configuration.records_per_request),
             status=200,
             payload={
                 "data": orjson.loads(orjson.dumps(expected_edr_result).decode("utf-8")),
             },
         )
 
-        result = await connector.get_trellix_edr_events()
+        result = await connector.get_trellix_epo_events()
 
         assert result == pushed_events_ids

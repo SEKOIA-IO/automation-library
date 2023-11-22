@@ -1,14 +1,18 @@
 """Trellix http client."""
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator, List, Optional, Set
+from typing import AsyncGenerator, List, Optional, Set, Any, Tuple
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
 from yarl import URL
 
+from .schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
+from .schemas.attributes.edr_alerts import EdrAlertAttributes
+from .schemas.attributes.edr_detections import EdrDetectionAttributes
+from .schemas.attributes.edr_threats import EdrThreatAttributes
 from .schemas.attributes.epo_events import EpoEventAttributes
-from .schemas.edr import TrellixEdrResponse
+from .schemas.trellix_response import TrellixResponse
 from .schemas.token import Scope
 from .token_refresher import TrellixTokenRefresher
 
@@ -139,13 +143,38 @@ class TrellixHttpClient(object):
 
             return headers
 
+    async def _get_data(self, url: URL, headers: dict[str, str]) -> dict[str, Any]:
+        """
+        Get data from platform.
+
+        Args:
+            url: URL
+            headers: dict[str, str]
+
+        Raises:
+            Exception: if response status is not 200
+
+        Returns:
+            dict[str, Any]:
+        """
+        async with self.session() as session:
+            async with session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    raise Exception(
+                        "Error while getting data from {0} status {1}: {2}".format(
+                            url, response.status, await response.text()
+                        ),
+                    )
+
+                return await response.json()
+
     def epo_events_url(self, start_date: datetime, limit: int = 10) -> URL:
         """
         Get EPO events url.
 
         Args:
             start_date: datetime
-            limit: 10
+            limit: int
 
         Returns:
             URL:
@@ -158,31 +187,228 @@ class TrellixHttpClient(object):
 
         return URL("{0}/epo/v2/events".format(self.base_url)).with_query(params)
 
+    def edr_threats_url(self, start_date: datetime, limit: int = 10) -> URL:
+        """
+        Get EDR threats url.
+
+        Filter by `from` should be enough to get threats for specified window,
+            as it applies on `lastDetected` field.
+
+        It will get all threats from start_date to now.
+
+        Doc:
+        https://developer.manage.trellix.com/mvision/apis/threats
+
+        Args:
+            start_date: datetime
+            limit: int
+
+        Returns:
+            URL:
+        """
+        params = {
+            "from": int(start_date.strftime("%s")) * 1000,
+            "page[limit]": str(limit),
+        }
+
+        return URL("{0}/edr/v2/threats".format(self.base_url)).with_query(params)
+
+    def edr_threat_detections_url(
+        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0,
+    ) -> URL:
+        """
+        Get EDR threats url.
+
+        By default, sort is `-rank` (descending).
+        We want to use `asc` on firstDetected (ascending) to get the oldest first.
+
+        Filter by `from` should be enough to get threats for specified window,
+            as it applies on `lastDetected` field.
+        It will get all detection from start_date to now with specified offset and limit.
+
+        Doc:
+        https://developer.manage.trellix.com/mvision/apis/threats
+
+        Args:
+            threat_id: str
+            start_date: datetime
+            limit: int
+            offset: int
+
+        Returns:
+            URL:
+        """
+        params = {
+            "sort": "firstDetected",
+            "from": int(start_date.strftime("%s")) * 1000,
+            "page[limit]": str(limit),
+            "page[offset]": str(offset),
+        }
+
+        return URL("{0}/edr/v2/threats/{1}/detections".format(self.base_url, threat_id)).with_query(params)
+
+    def edr_threat_affectedhosts_url(
+        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0,
+    ) -> URL:
+        """
+        Get EDR threats url.
+
+        By default, sort is `-rank` (descending).
+        We want to use `asc` on firstDetected (ascending) to get the oldest first.
+
+        Filter by `from` should be enough to get threats for specified window,
+            as it applies on `lastDetected` field.
+        It will get all detection from start_date to now with specified offset and limit.
+
+        Doc:
+        https://developer.manage.trellix.com/mvision/apis/threats
+
+        Args:
+            threat_id: str
+            start_date: datetime
+            limit: int
+            offset: int
+
+        Returns:
+            URL:
+        """
+        params = {
+            "sort": "firstDetected",
+            "from": int(start_date.strftime("%s")) * 1000,
+            "page[limit]": str(limit),
+            "page[offset]": str(offset),
+        }
+
+        return URL("{0}/edr/v2/threats/{1}/affectedhosts".format(self.base_url, threat_id)).with_query(params)
+
+    def edr_alerts_url(self, start_date: datetime, limit: int = 10) -> URL:
+        """
+        Get EDR alerts url.
+
+        By default, sort is `-detectionDate` (descending).
+        We want to use `asc` (ascending) to get the oldest first.
+
+        Doc:
+        https://developer.manage.trellix.com/mvision/apis/threats
+
+        Args:
+            start_date: datetime
+            limit: int
+
+        Returns:
+            URL:
+        """
+        params = {
+            "sort": "detectionDate",
+            "from": int(start_date.strftime("%s")) * 1000,
+            "page[limit]": str(limit),
+        }
+
+        return URL("{0}/edr/v2/alerts".format(self.base_url)).with_query(params)
+
     async def get_epo_events(
         self, start_date: datetime, limit: int = 10
-    ) -> List[TrellixEdrResponse[EpoEventAttributes]]:
+    ) -> list[TrellixResponse[EpoEventAttributes]]:
         """
         Get EPO events.
+
+        Args:
+            start_date: datetime
+            limit: int
+
+        Returns:
+            list[TrellixResponse[EpoEventAttributes]]:
+        """
+        headers = await self._request_headers(Scope.complete_set_of_scopes())
+        url = self.epo_events_url(start_date, limit)
+
+        data = await self._get_data(url, headers)
+
+        return [TrellixResponse[EpoEventAttributes](**result) for result in data["data"]]
+
+    async def get_edr_threats(
+        self, start_date: datetime, limit: int = 10
+    ) -> Tuple[list[TrellixResponse[EdrThreatAttributes]], bool]:
+        """
+        Get EDR threats.
+
+        Args:
+            start_date: datetime
+            limit: int
+
+        Returns:
+            Tuple[list[TrellixResponse[EdrThreatAttributes]], bool]:
+        """
+        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        url = self.edr_threats_url(start_date, limit)
+
+        data = await self._get_data(url, headers)
+
+        return (
+            [TrellixResponse[EdrThreatAttributes](**result) for result in data["data"]],
+            data.get("relationships") is not None
+        )
+
+    async def get_edr_threat_affectedhosts(
+        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0
+    ) -> list[TrellixResponse[EdrAffectedhostAttributes]]:
+        """
+        Get EDR threat affected hosts.
+
+        Args:
+            threat_id: int
+            start_date: datetime
+            limit: int
+            offset: int
+
+        Returns:
+            list[TrellixResponse[EdrAffectedhostAttributes]]:
+        """
+        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        url = self.edr_threat_affectedhosts_url(threat_id, start_date, limit, offset)
+
+        data = await self._get_data(url, headers)
+
+        return [TrellixResponse[EdrAffectedhostAttributes](**result) for result in data["data"]]
+
+    async def get_edr_threat_detections(
+        self, threat_id: str, start_date: datetime, limit: int = 10, offset: int = 0
+    ) -> list[TrellixResponse[EdrDetectionAttributes]]:
+        """
+        Get EDR threats.
+
+        Args:
+            threat_id: int
+            start_date: datetime
+            limit: int
+            offset: int
+
+        Returns:
+            List[dict[str, str]]:
+        """
+        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        url = self.edr_threat_detections_url(threat_id, start_date, limit, offset)
+
+        data = await self._get_data(url, headers)
+
+        return [TrellixResponse[EdrDetectionAttributes](**result) for result in data["data"]]
+
+    async def get_edr_alerts(
+        self, start_date: datetime, limit: int = 10
+    ) -> list[TrellixResponse[EdrAlertAttributes]]:
+        """
+        Get EDR threats.
 
         Args:
             start_date: datetime
             limit: 10
 
         Returns:
-            List[TrellixEdrResponse[EpoEventAttributes]]:
+            list[TrellixResponse[EdrAlertAttributes]]:
         """
-        headers = await self._request_headers(Scope.complete_set_of_scopes())
-        url = self.epo_events_url(start_date, limit)
+        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        url = self.edr_alerts_url(start_date, limit)
 
-        async with self.session() as session:
-            async with session.get(url, headers=headers) as response:
-                if response.status != 200:
-                    raise Exception(
-                        "Error while getting EPO events with status {0}: {1}".format(
-                            response.status, await response.text()
-                        ),
-                    )
+        data = await self._get_data(url, headers)
 
-                data = await response.json()
-
-        return [TrellixEdrResponse[EpoEventAttributes](**result) for result in data["data"]]
+        return [TrellixResponse[EdrAlertAttributes](**result) for result in data["data"]]

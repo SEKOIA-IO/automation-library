@@ -7,9 +7,19 @@ from pydantic.generics import GenericModel
 EntityAttributesT = TypeVar("EntityAttributesT", bound=BaseModel)
 
 
-class TrellixEdrResponse(GenericModel, Generic[EntityAttributesT]):
-    """Model to handle trellix edr response."""
+class Links(BaseModel):
+    """Links model."""
 
-    id: str
+    self: str
+    first: str
+    prev: str
+    next: str
+    last: str
+
+
+class TrellixResponse(GenericModel, Generic[EntityAttributesT]):
+    """Model to handle trellix response."""
+
+    id: str | None = None
     type: str
     attributes: EntityAttributesT

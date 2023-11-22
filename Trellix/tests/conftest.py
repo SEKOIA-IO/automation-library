@@ -1,14 +1,17 @@
 """Additional programmatic configuration for pytest."""
 
 import asyncio
+from shutil import rmtree
+from tempfile import mkdtemp
 from typing import List
 from unittest.mock import patch
 
 import pytest
 from faker import Faker
+from sekoia_automation import constants
 
 from client.schemas.attributes.epo_events import EpoEventAttributes
-from client.schemas.edr import TrellixEdrResponse
+from client.schemas.trellix_response import TrellixResponse
 from client.schemas.token import HttpToken
 from client.token_refresher import TrellixTokenRefresher
 
@@ -85,7 +88,24 @@ def token_refresher_session():
 
 
 @pytest.fixture
-def edr_epo_event_response(session_faker) -> TrellixEdrResponse[EpoEventAttributes]:
+def symphony_storage() -> str:
+    """
+    Fixture for symphony temporary storage.
+
+    Yields:
+        str:
+    """
+    original_storage = constants.DATA_STORAGE
+    constants.DATA_STORAGE = mkdtemp()
+
+    yield constants.DATA_STORAGE
+
+    rmtree(constants.DATA_STORAGE)
+    constants.SYMPHONY_STORAGE = original_storage
+
+
+@pytest.fixture
+def edr_epo_event_response(session_faker) -> TrellixResponse[EpoEventAttributes]:
     """
     Generate TrellixEdrResponse[EpoEventAttributes].
 
@@ -93,9 +113,9 @@ def edr_epo_event_response(session_faker) -> TrellixEdrResponse[EpoEventAttribut
         session_faker: Faker
 
     Returns:
-        TrellixEdrResponse[EpoEventAttributes]:
+        TrellixResponse[EpoEventAttributes]:
     """
-    return TrellixEdrResponse[EpoEventAttributes](
+    return TrellixResponse[EpoEventAttributes](
         id=session_faker.uuid4(),
         type=session_faker.word(),
         attributes=EpoEventAttributes(
