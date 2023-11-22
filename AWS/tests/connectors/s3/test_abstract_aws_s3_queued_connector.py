@@ -1,5 +1,6 @@
 """Contains tests for AbstractAwsS3QueuedConnector."""
 from gzip import compress
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import orjson
@@ -70,6 +71,7 @@ def sqs_message(test_bucket: str, test_key: str) -> str:
 @pytest.fixture
 def abstract_queued_connector(
     aws_module: AwsModule,
+    symphony_storage: Path,
     aws_s3_queued_config: AwsS3QueuedConfiguration,
     mock_push_data_to_intakes: AsyncMock,
 ) -> AbstractAwsS3QueuedConnector:
@@ -78,15 +80,15 @@ def abstract_queued_connector(
 
     Args:
         aws_module: AwsModule
+        symphony_storage: Path
         aws_s3_queued_config: AwsS3QueuedConfiguration
         mock_push_data_to_intakes: AsyncMock
 
     Returns:
         AbstractAwsS3QueuedConnector:
     """
-    connector = AbstractAwsS3QueuedConnector()
+    connector = AbstractAwsS3QueuedConnector(module=aws_module, data_path=symphony_storage)
 
-    connector.module = aws_module
     connector.configuration = aws_s3_queued_config
 
     connector.push_data_to_intakes = mock_push_data_to_intakes
