@@ -13,6 +13,7 @@ from dateutil.parser import ParserError
 from sekoia_automation.trigger import Trigger
 
 from vadesecure_modules import VadeSecureModule
+from vadesecure_modules.metrics import EVENTS_LAG
 from vadesecure_modules.models import VadeSecureTriggerConfiguration
 
 EVENT_TYPES: list[str] = ["emails", "remediations/auto", "remediations/manual"]
@@ -142,6 +143,11 @@ class M365EventsTrigger(Trigger):
                     message=f"Send a batch of {len(message_batch)} {event_type} messages",
                     level="info",
                 )
+
+                last_message = message_batch[-1]
+                last_message_date = self._get_last_message_date([last_message])
+                events_lag = int(time.time() - last_message_date.timestamp())
+                EVENTS_LAG.labels(tenant_id=self.configuration.tenant_id).observe(events_lag)
 
                 for emails in self._chunk_events(list(message_batch), self.max_batch_size):
                     self._send_emails(
