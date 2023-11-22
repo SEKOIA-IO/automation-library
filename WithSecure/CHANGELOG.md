@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-10-24 - 2.10.0
+
+### Added
+
+- Add new action to scan devices for malwares
+
+## 2023-10-24 - 2.9.0
+
+### Changed
+
+- Update dependencies
+
 ## 2023-10-02 - 2.8.0
 
 ### Changed
