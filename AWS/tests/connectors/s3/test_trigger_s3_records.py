@@ -1,4 +1,6 @@
 """Tests related to AwsS3RecordsTrigger."""
+from pathlib import Path
+
 import orjson
 import pytest
 from faker import Faker
@@ -11,6 +13,7 @@ from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
 @pytest.fixture
 def connector(
     aws_module: AwsModule,
+    symphony_storage: Path,
     aws_s3_queued_config: AwsS3QueuedConfiguration,
 ) -> AwsS3RecordsTrigger:
     """
@@ -18,14 +21,14 @@ def connector(
 
     Args:
         aws_module: AwsModule
+        symphony_storage: Path
         aws_s3_queued_config: AwsS3QueuedConfiguration
 
     Returns:
         AwsS3RecordsTrigger:
     """
-    connector = AwsS3RecordsTrigger()
+    connector = AwsS3RecordsTrigger(module=aws_module, data_path=symphony_storage)
 
-    connector.module = aws_module
     connector.configuration = aws_s3_queued_config
 
     return connector

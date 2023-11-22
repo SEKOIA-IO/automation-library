@@ -57,6 +57,7 @@ def connector_config(faker: Faker, intake_key: str) -> AwsSqsMessagesTriggerConf
 def connector(
     aws_module: AwsModule,
     connector_config: AwsSqsMessagesTriggerConfiguration,
+    symphony_storage: Path,
     mock_push_data_to_intakes: AsyncMock,
 ) -> AwsSqsMessagesTrigger:
     """
@@ -65,17 +66,19 @@ def connector(
     Args:
         aws_module: AwsModule
         connector_config: AwsSqsMessagesTriggerConfiguration
+        symphony_storage: Path
         mock_push_data_to_intakes: AsyncMock
 
     Returns:
         AwsSqsMessagesTrigger:
     """
-    connector = AwsSqsMessagesTrigger()
+    connector = AwsSqsMessagesTrigger(module=aws_module, data_path=symphony_storage)
 
-    connector.module = aws_module
     connector.configuration = connector_config
 
     connector.push_data_to_intakes = mock_push_data_to_intakes
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
 
     return connector
 

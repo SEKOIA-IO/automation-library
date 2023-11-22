@@ -7,9 +7,7 @@ import aiocsv
 import aiofiles
 import pytest
 from aiohttp import ClientResponse
-from aiohttp.helpers import TimerNoop
 from aioresponses import aioresponses
-from yarl import URL
 
 from client.http_client import SalesforceHttpClient
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
@@ -174,73 +172,6 @@ async def test_salesforce_http_client_get_log_files(
 
 
 @pytest.mark.asyncio
-async def test_salesforce_http_client_get_log_file_content(
-    session_faker, http_token, token_refresher_session, http_client_session, csv_content, event_loop
-):
-    """
-    Test SalesforceHttpClient.get_log_file_content.
-
-    Args:
-        session_faker: Faker
-        token_refresher_session: MagicMock
-        http_client_session: MagicMock
-    """
-    client = SalesforceHttpClient(
-        client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=session_faker.uri()
-    )
-
-    token_data = http_token.dict()
-    token_data["id"] = token_data["tid"]
-
-    token_refresher_session.post = MagicMock()
-    token_refresher_session.post.return_value.__aenter__.return_value.status = 200
-    token_refresher_session.post.return_value.__aenter__.return_value.json.return_value = token_data
-
-    response = ClientResponse(
-        "get",
-        URL("http://def-cl-resp.org"),
-        request_info=MagicMock(),
-        writer=MagicMock(),
-        continue100=None,
-        timer=TimerNoop(),
-        traces=[],
-        loop=event_loop,
-        session=http_client_session,
-    )
-
-    def _content_future():
-        content_future = event_loop.create_future()
-        content_future.set_result(csv_content.encode("utf-8"))
-
-        return content_future
-
-    content = MagicMock()
-    content.read.side_effect = _content_future
-
-    response.status = 200
-    response.content = content
-    response._headers = {"Content-Length": "1"}
-
-    http_client_session.get = MagicMock()
-    http_client_session.get.return_value = response
-    http_client_session._resolve_charset.return_value = "utf-8"
-
-    log_file = EventLogFile(
-        Id=session_faker.pystr(),
-        EventType=session_faker.pystr(),
-        LogFile=session_faker.pystr(),
-        LogDate=session_faker.date_time().isoformat(),
-        CreatedDate=session_faker.date_time().isoformat(),
-        LogFileLength=session_faker.pyfloat(),
-    )
-
-    result_content, result_file = await client.get_log_file_content(log_file, persist_to_file=False)
-
-    assert result_content == list(csv.DictReader(csv_content.splitlines(), delimiter=","))
-    assert result_file is None
-
-
-@pytest.mark.asyncio
 async def test_salesforce_http_client_handle_error_response():
     response = MagicMock(spec=ClientResponse)
     response.status = 200
@@ -276,7 +207,7 @@ async def test_salesforce_http_client_error_response_with_non_200_status(session
 
 
 @pytest.mark.asyncio
-async def test_salesforce_http_client_get_log_file_content_1(session_faker, http_token, csv_content):
+async def test_salesforce_http_client_get_log_file_content(session_faker, http_token, csv_content):
     """
     Test SalesforceHttpClient.get_log_file_content.
 

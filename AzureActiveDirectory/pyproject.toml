@@ -8,7 +8,7 @@ authors = []
 python = ">=3.10,<3.12"
 azure-identity = "^1.10.0"
 pydantic = "^1.9.1"
-sekoia-automation-sdk = "^1.6.0"
+sekoia-automation-sdk = "^1.8.1"
 msgraph-sdk = "^1.0.0a16"
 pytest-asyncio = "^0.21.1"
 
