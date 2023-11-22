@@ -65,6 +65,8 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
             self.log(message=f"Forwarding {len(records)} messages", level="info")
 
-            result: list[str] = await self.push_data_to_intakes(events=records)
+            result: list[str] = await self.push_data_to_intakes(
+                events=[orjson.dumps(record).decode("utf-8") for record in records],
+            )
 
             return result, timestamps_to_log
