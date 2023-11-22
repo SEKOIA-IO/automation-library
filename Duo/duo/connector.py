@@ -1,3 +1,4 @@
+import datetime
 import time
 from functools import cached_property
 from threading import Event, Lock, Thread
@@ -135,8 +136,14 @@ class DuoLogsConsumer(Thread):
             batch_start_time = time.time()
 
             if len(events) > 0:
-                most_recent_event = max(events, key=lambda item: item.get("timestamp"))
-                most_recent_timestamp = most_recent_event["timestamp"]
+                if self._log_type == LogType.TELEPHONY:
+                    # Telephony logs have their datetime represented as "2023-03-21T22:34:49.466370+00:00"
+                    most_recent_event = max(events, key=lambda item: datetime.datetime.fromisoformat(item["ts"]))
+                    most_recent_timestamp = datetime.datetime.fromisoformat(most_recent_event["ts"]).timestamp()
+                else:
+                    most_recent_event = max(events, key=lambda item: item.get("timestamp"))
+                    most_recent_timestamp = most_recent_event["timestamp"]
+
                 current_timestamp = int(time.time())
                 events_lag = current_timestamp - most_recent_timestamp
                 EVENTS_LAG.labels(
