@@ -1,0 +1,26 @@
+{
+  "name": "Assign Profile",
+  "description": "Assigned an ID profile to a machine.",
+  "uuid": "2c15e5f5-35a1-42aa-9ea1-445a75c7d0fa",
+  "docker_parameters": "assign_device_profile",
+  "arguments": {
+    "title": "TargetAndProfile",
+    "type": "object",
+    "properties": {
+      "target": {
+        "title": "Target",
+        "description": "Device identifier to assign profile.",
+        "type": "string"
+      },
+      "profile": {
+        "title": "profile",
+        "description": "Put the ID profile to assign it to the device.",
+        "type": "string"
+      }
+    },
+    "required": [
+        "target"
+    ]
+  },
+  "results": {}
+}
