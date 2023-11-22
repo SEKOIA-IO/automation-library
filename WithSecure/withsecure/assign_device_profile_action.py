@@ -16,3 +16,4 @@ class AssignDeviceProfileAction(DeviceOperationAction):
         # execute the operation
         self._execute_operation_on_device(
             operation_name="assignProfile", target=arguments.target, parameters=arguments.profile
+        )
