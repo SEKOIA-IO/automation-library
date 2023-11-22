@@ -93,7 +93,7 @@ class ThreatVisualizerLogConsumer(Thread):
         )
 
     def request_events(self) -> requests.models.Response:
-        params = {"starttime": str(self.last_ts), "includeallpinned": "false"}
+        params = {"starttime": str(self.last_ts), "includeallpinned": "false", "historicmodelonly": "false"}
         url = urljoin(self.connector.module.configuration.api_url, self.endpoint.value)
         # save cert in file to pass to request
         response = self.client.get(url, params=params, verify=self.connector.configuration.verify_certificate)
@@ -109,8 +109,7 @@ class ThreatVisualizerLogConsumer(Thread):
         return response
 
     def update_last_ts(self, response):
-        # update last_ts with newest event ts
-
+        # update last_ts with
         for item in response:
             if item.get(self.time_field) > self.last_ts:
                 self.last_ts = item[self.time_field]
