@@ -13,7 +13,7 @@ from sekoia_automation.storage import PersistentJSON
 from . import TrendMicroModule
 from .client import ApiClient
 from .helpers import iso8601_to_timestamp, unixtime_to_iso8601
-from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class TrendMicroConnectorConfiguration(DefaultConnectorConfiguration):
@@ -156,6 +156,11 @@ class TrendMicroWorker(Thread):
                 if last_event_timestamp > most_recent_timestamp_seen:
                     most_recent_timestamp_seen = last_event_timestamp + 1
                     self.set_last_timestamp(most_recent_timestamp_seen)
+
+                events_lag = int(time.time()) - most_recent_timestamp_seen
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key, type=self.log_type
+                ).observe(events_lag)
 
                 yield next_events
 
