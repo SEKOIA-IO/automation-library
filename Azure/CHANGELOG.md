@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2023-11-22 - 2.2
+## 2023-11-21 - 2.1.3
 
-### Changed
+### Fixed
 
-- Upgrade dependencies: Sekoia-automation-SDK 1.8.1
+- Fix connector startup problems
 
 ## 2023-11-08 - 2.1.2
 
