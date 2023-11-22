@@ -2,7 +2,7 @@
 name = "Automation module for Digital Shadows"
 version = "0.0.0"
 description = ""
-authors = [""]
+authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
