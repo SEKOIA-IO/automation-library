@@ -71,7 +71,8 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
         self._validate_api_key(base_url, api_key)
 
-        self._message_processor.start()
+        if not self._message_processor.is_alive():
+            self._message_processor.start()
 
         setdefaulttimeout(10)  # socket timeout
         self._websocket = WebSocketApp(
