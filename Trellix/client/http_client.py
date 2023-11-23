@@ -166,7 +166,9 @@ class TrellixHttpClient(object):
                         ),
                     )
 
-                return await response.json()
+                result: dict[str, Any] = await response.json()
+
+                return result
 
     def epo_events_url(self, start_date: datetime, limit: int = 10) -> URL:
         """
@@ -206,7 +208,7 @@ class TrellixHttpClient(object):
         Returns:
             URL:
         """
-        params = {
+        params: dict[str, int | str] = {
             "from": int(start_date.strftime("%s")) * 1000,
             "page[limit]": str(limit),
         }
@@ -244,7 +246,7 @@ class TrellixHttpClient(object):
         Returns:
             URL:
         """
-        params = {
+        params: dict[str, int | str] = {
             "sort": "firstDetected",
             "from": int(start_date.strftime("%s")) * 1000,
             "to": int(end_date.strftime("%s")) * 1000,
@@ -285,7 +287,7 @@ class TrellixHttpClient(object):
         Returns:
             URL:
         """
-        params = {
+        params: dict[str, int | str] = {
             "sort": "firstDetected",
             "from": int(start_date.strftime("%s")) * 1000,
             "to": int(end_date.strftime("%s")) * 1000,
@@ -312,7 +314,7 @@ class TrellixHttpClient(object):
         Returns:
             URL:
         """
-        params = {
+        params: dict[str, int | str] = {
             "sort": "detectionDate",
             "from": int(start_date.strftime("%s")) * 1000,
             "page[limit]": str(limit),
