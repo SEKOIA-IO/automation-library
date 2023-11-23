@@ -1,5 +1,9 @@
 from microsoft_ad.base import MicrosoftADModule
-from microsoft_ad.user import ResetUserPasswordAction, EnableUserAction, DisableUserAction
+from microsoft_ad.user import (
+    ResetUserPasswordAction,
+    EnableUserAction,
+    DisableUserAction,
+)
 
 if __name__ == "__main__":
     module = MicrosoftADModule()
