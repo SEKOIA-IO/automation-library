@@ -7,15 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2023-10-12 - 1.1.2
+## 2023-11-22 - 1.2
 
-### Added
+### Changed
 
-- Collect events lag metric
-
-### Fixed
-
-- Fixed bug with a first start
+- Upgrade dependencies: Sekoia-automation-SDK 1.8.1
 
 ## 2023-10-12 - 1.0.5
 

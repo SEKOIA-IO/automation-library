@@ -9,6 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2023-11-22 - 1.46
 
-### Added
+### Changed
 
-- Collect events lag metric
+- Upgrade dependencies: Sekoia-automation-SDK 1.8.1

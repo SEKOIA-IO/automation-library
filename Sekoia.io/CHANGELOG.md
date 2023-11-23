@@ -7,14 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
- ## 2023-10-10 - 2.47.0
+## 2023-11-22 - 2.52.0
 
- ### Added
+### Changed
 
- - Add the action that let us get reports from a specific term
+- Upgrade dependencies: Sekoia-automation-SDK 1.8.1
 
- ## 2023-10-31 - 2.50.0
+## 2023-10-10 - 2.47.0
 
- ### Updated
+### Added
 
- - Update get context action
+- Add the action that let us get reports from a specific term
+
+## 2023-10-31 - 2.50.0
+
+### Updated
+
+- Update get context action
