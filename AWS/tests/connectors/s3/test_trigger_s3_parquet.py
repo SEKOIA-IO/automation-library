@@ -1,5 +1,6 @@
 """Tests related to AwsS3ParquetRecordsTrigger."""
 from os import path
+from pathlib import Path
 
 import orjson
 import pytest
@@ -12,6 +13,7 @@ from connectors.s3.trigger_s3_parquet import AwsS3ParquetRecordsTrigger
 @pytest.fixture
 def connector(
     aws_module: AwsModule,
+    symphony_storage: Path,
     aws_s3_queued_config: AwsS3QueuedConfiguration,
 ) -> AwsS3ParquetRecordsTrigger:
     """
@@ -19,14 +21,14 @@ def connector(
 
     Args:
         aws_module: AwsModule
+        symphony_storage: Path
         aws_s3_queued_config: AwsS3QueuedConfiguration
 
     Returns:
         AwsS3ParquetRecordsTrigger:
     """
-    connector = AwsS3ParquetRecordsTrigger()
+    connector = AwsS3ParquetRecordsTrigger(module=aws_module, data_path=symphony_storage)
 
-    connector.module = aws_module
     connector.configuration = aws_s3_queued_config
 
     return connector

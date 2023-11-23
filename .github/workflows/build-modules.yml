@@ -10,7 +10,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX_NAME: SEKOIA-IO
+  SECONDARY_REGISTRY: registry.sekoia.io
+  IMAGE_PREFIX_NAME: sekoia-io
 
 jobs:
 
@@ -150,12 +151,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to the secondary Container registry
+        if: ${{ github.event_name == 'push' }}
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.SECONDARY_REGISTRY }}
+          username: ${{ secrets.SECONDARY_REGISTRY_USERNAME }}
+          password: ${{ secrets.SECONDARY_REGISTRY_PASSWORD }}
+
       - name: Extract metadata (tags, labels) for Docker
         if: ${{ github.event_name == 'push' }}
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{fromJson(steps.read-module-manifest.outputs.manifest).slug}}
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{fromJson(steps.read-module-manifest.outputs.manifest).slug}}
+            ${{ env.SECONDARY_REGISTRY }}/${{ env.IMAGE_PREFIX_NAME }}/automation-module-${{fromJson(steps.read-module-manifest.outputs.manifest).slug}}
           flavor: |
             latest=auto
             prefix=
