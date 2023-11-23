@@ -1,4 +1,5 @@
 # flake8: noqa: E402
+import os
 from datetime import datetime, timedelta
 
 from tenacity import Retrying, wait_exponential, stop_after_attempt
@@ -63,6 +64,17 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
         return liveapi_url
 
+    @property
+    def ssl_opt(self) -> dict[str, str]:
+        """
+        Return the SSL options to use for the WebSocket connection. See
+        https://websocket-client.readthedocs.io/en/latest/faq.html#what-else-can-i-do-with-sslopts
+        """
+        ca_certs = os.getenv("REQUESTS_CA_BUNDLE") or os.getenv("CURL_CA_BUNDLE")
+        if ca_certs:
+            return {"ca_certs": ca_certs}
+        return {}
+
     def run(self) -> None:
         self.log(f"Starting LiveAPI consumer on URL {self.liveapi_url}", level="info")
 
@@ -87,7 +99,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self.log("Websocket starts listening", level="info")
         while self.running:
             try:
-                self._websocket.run_forever(ping_interval=20, ping_timeout=5)
+                self._websocket.run_forever(ping_interval=20, ping_timeout=5, sslopt=self.ssl_opt)
             except WebSocketTimeoutException:
                 self.log("The websocket timed out", level="error")
 

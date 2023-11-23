@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-11-23 - 2.53.0
+
+### Added
+
+- Add support for custom CA certs bundle in triggers
+
 ## 2023-11-22 - 2.52.0
 
 ### Changed

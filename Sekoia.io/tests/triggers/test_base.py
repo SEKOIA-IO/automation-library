@@ -99,3 +99,12 @@ def test_run(base_trigger, requests_mock):
 def test_stop(base_trigger):
     base_trigger.stop()
     assert base_trigger.running is False
+
+
+def test_ssl_opt_no_env(base_trigger):
+    assert base_trigger.ssl_opt == {}
+
+
+def test_ssl_opt_env(base_trigger, monkeypatch):
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", "test")
+    assert base_trigger.ssl_opt == {"ca_certs": "test"}
