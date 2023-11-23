@@ -13,8 +13,9 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import TrellixHttpClient
+from client.schemas.attributes.edr_alerts import EdrAlertAttributes
+from client.schemas.trellix_response import TrellixResponse
 from connectors import TrellixModule
-
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
@@ -95,52 +96,56 @@ class TrellixEdrConnector(AsyncConnector):
         Returns:
             List[str]:
         """
+        datetime.now(timezone.utc)
+
         # Check alerts. If there is any - push to intake
         alerts = await self.trellix_client.get_edr_alerts(
-            self.last_event_date('alerts'), self.module.configuration.records_per_request,
+            self.last_event_date("alerts"),
+            self.module.configuration.records_per_request,
         )
-        result = await self.push_data_to_intakes(
-            [orjson.dumps(event.dict()).decode("utf-8") for event in alerts]
-        )
+        result = await self.push_data_to_intakes([orjson.dumps(event.dict()).decode("utf-8") for event in alerts])
+        await self.update_alerts_last_event_date(alerts)
 
+        threats_start_date = self.last_event_date("threats")
+        threats_stop_date = threats_start_date
         # Check threats. If there is any - push to intake
         threats = await self.trellix_client.get_edr_threats(
-            self.last_event_date("threats"), self.module.configuration.records_per_request,
+            threats_start_date,
+            self.module.configuration.records_per_request,
         )
         result.extend(
-            await self.push_data_to_intakes(
-                [orjson.dumps(event.dict()).decode("utf-8") for event in threats]
-            )
+            await self.push_data_to_intakes([orjson.dumps(event.dict()).decode("utf-8") for event in threats])
         )
+
+        for threat in threats:
+            threat_detection_date = isoparse(threat.attributes.lastDetected)
+            if threat_detection_date > threats_stop_date:
+                threats_stop_date = threat_detection_date
+
+        with self.context as cache:
+            cache["threats"] = threats_stop_date.isoformat()
 
         # Go through each threat and get detections and affected hosts information based on same last_event_date
         for threat in threats:
             threat_id: str = threat.id
 
-            offset = 0
-            while True:
-                detections = await self.trellix_client.get_edr_threat_detections(
-                    threat_id,
-                    self.last_event_date("threats"),
-                    self.module.configuration.records_per_request,
-                    offset,
-                )
-                result.extend(
-                    await self.push_data_to_intakes(
-                        [orjson.dumps(event.dict()).decode("utf-8") for event in detections]
-                    )
-                )
-                offset = offset + self.module.configuration.records_per_request
-
-                if len(detections) == 0:
-                    break
-
-
-        result: list[str] = await self.push_data_to_intakes(
-            [orjson.dumps(event.attributes.dict()).decode("utf-8") for event in events]
-        )
+            result.extend(await self.get_threat_detections(threat_id, threats_start_date, threats_stop_date))
+            result.extend(await self.get_threat_affectedhosts(threat_id, threats_start_date, threats_stop_date))
 
         return result
+
+    async def update_alerts_last_event_date(self, alerts: list[TrellixResponse[EdrAlertAttributes]]) -> None:
+        """
+        Update alerts last event date.
+
+        Args:
+            alerts: list[TrellixResponse[EdrAlertAttributes]]
+        """
+        for alert in alerts:
+            alert_detection_date = isoparse(alert.attributes.detectionDate)
+            if alert_detection_date > self.last_event_date("alerts"):
+                with self.context as cache:
+                    cache["alerts"] = alert_detection_date.isoformat()
 
     async def get_threat_detections(self, threat_id: str, start_date: datetime, end_date: datetime) -> list[str]:
         """
@@ -167,13 +172,7 @@ class TrellixEdrConnector(AsyncConnector):
             )
 
             result_data = [
-                orjson.dumps(
-                    {
-                        **event.dict(),
-                        "threatId": threat_id
-                    }
-                ).decode("utf-8")
-                for event in detections
+                orjson.dumps({**event.dict(), "threatId": threat_id}).decode("utf-8") for event in detections
             ]
 
             result.extend(await self.push_data_to_intakes(result_data))
@@ -209,13 +208,7 @@ class TrellixEdrConnector(AsyncConnector):
             )
 
             result_data = [
-                orjson.dumps(
-                    {
-                        **event.dict(),
-                        "threatId": threat_id
-                    }
-                ).decode("utf-8")
-                for event in affectedhosts
+                orjson.dumps({**event.dict(), "threatId": threat_id}).decode("utf-8") for event in affectedhosts
             ]
 
             result.extend(await self.push_data_to_intakes(result_data))

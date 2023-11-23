@@ -1,15 +1,12 @@
 """Tests for Trellix connector."""
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from shutil import rmtree
-from tempfile import mkdtemp
 from unittest.mock import AsyncMock, MagicMock
 
 import orjson
 import pytest
 from aioresponses import aioresponses
 from faker import Faker
-from sekoia_automation import constants
 
 from client.schemas.token import Scope
 from connectors.trellix_epo_connector import TrellixEpoConnector, TrellixModule
@@ -30,10 +27,7 @@ def pushed_events_ids(session_faker: Faker) -> list[str]:
 
 @pytest.fixture
 def connector(
-    module: TrellixModule,
-    symphony_storage: Path,
-    pushed_events_ids: list[str],
-    session_faker: Faker
+    module: TrellixModule, symphony_storage: Path, pushed_events_ids: list[str], session_faker: Faker
 ) -> TrellixEpoConnector:
     """
     Fixture for TrellixEpoConnector.

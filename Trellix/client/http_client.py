@@ -1,7 +1,7 @@
 """Trellix http client."""
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator, List, Optional, Set, Any, Tuple
+from typing import Any, AsyncGenerator, Optional, Set
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
@@ -12,8 +12,8 @@ from .schemas.attributes.edr_alerts import EdrAlertAttributes
 from .schemas.attributes.edr_detections import EdrDetectionAttributes
 from .schemas.attributes.edr_threats import EdrThreatAttributes
 from .schemas.attributes.epo_events import EpoEventAttributes
-from .schemas.trellix_response import TrellixResponse
 from .schemas.token import Scope
+from .schemas.trellix_response import TrellixResponse
 from .token_refresher import TrellixTokenRefresher
 
 
@@ -214,7 +214,12 @@ class TrellixHttpClient(object):
         return URL("{0}/edr/v2/threats".format(self.base_url)).with_query(params)
 
     def edr_threat_detections_url(
-        self, threat_id: str, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0,
+        self,
+        threat_id: str,
+        start_date: datetime,
+        end_date: datetime,
+        limit: int = 10,
+        offset: int = 0,
     ) -> URL:
         """
         Get EDR threats url.
@@ -315,9 +320,7 @@ class TrellixHttpClient(object):
 
         return URL("{0}/edr/v2/alerts".format(self.base_url)).with_query(params)
 
-    async def get_epo_events(
-        self, start_date: datetime, limit: int = 10
-    ) -> list[TrellixResponse[EpoEventAttributes]]:
+    async def get_epo_events(self, start_date: datetime, limit: int = 10) -> list[TrellixResponse[EpoEventAttributes]]:
         """
         Get EPO events.
 
@@ -356,12 +359,7 @@ class TrellixHttpClient(object):
         return [TrellixResponse[EdrThreatAttributes](**result) for result in data["data"]]
 
     async def get_edr_threat_affectedhosts(
-        self,
-        threat_id: str,
-        start_date: datetime,
-        end_date: datetime,
-        limit: int = 10,
-        offset: int = 0
+        self, threat_id: str, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0
     ) -> list[TrellixResponse[EdrAffectedhostAttributes]]:
         """
         Get EDR threat affected hosts.
@@ -411,9 +409,7 @@ class TrellixHttpClient(object):
 
         return [TrellixResponse[EdrDetectionAttributes](**result) for result in data["data"]]
 
-    async def get_edr_alerts(
-        self, start_date: datetime, limit: int = 10
-    ) -> list[TrellixResponse[EdrAlertAttributes]]:
+    async def get_edr_alerts(self, start_date: datetime, limit: int = 10) -> list[TrellixResponse[EdrAlertAttributes]]:
         """
         Get EDR threats.
 

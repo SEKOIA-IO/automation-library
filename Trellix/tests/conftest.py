@@ -11,8 +11,8 @@ from faker import Faker
 from sekoia_automation import constants
 
 from client.schemas.attributes.epo_events import EpoEventAttributes
-from client.schemas.trellix_response import TrellixResponse
 from client.schemas.token import HttpToken
+from client.schemas.trellix_response import TrellixResponse
 from client.token_refresher import TrellixTokenRefresher
 
 

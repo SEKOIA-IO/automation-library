@@ -14,7 +14,6 @@ from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import TrellixHttpClient
 from connectors import TrellixModule
-
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
