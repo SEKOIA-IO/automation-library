@@ -1,19 +1,18 @@
-from datetime import datetime, timedelta, timezone
-from dateutil.parser import isoparse
 import time
-
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 
 import orjson
+from dateutil.parser import isoparse
 from requests.exceptions import HTTPError
-from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
+from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
-from sophos_module.metrics import INCOMING_EVENTS, OUTCOMING_EVENTS, FORWARD_EVENTS_DURATION
+from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
 class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
@@ -128,6 +127,24 @@ class SophosXDRQueryTrigger(SophosConnector):
 
         return result, query_id
 
+    def _observe_items_events_lag(self, items: list[dict]) -> None:
+        def _extract_timestamp(item: dict) -> float:
+            RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+            return datetime.strptime(item["calendar_time"], RFC3339_STRICT_FORMAT).timestamp()
+
+        if len(items) == 0:
+            return
+
+        if "calendar_time" not in items[0]:
+            # can't measure lag, because there's no timestamp
+            return
+
+        most_recent_item = max(items, key=lambda item: _extract_timestamp(item))
+        most_recent_timestamp = _extract_timestamp(most_recent_item)
+
+        events_lag = int(time.time() - most_recent_timestamp)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+
     def getting_results(self, pagination: str):
         now = datetime.now(timezone.utc)
 
@@ -141,6 +158,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             # If the result succeed ==> get the data.
             response = self.client.get_query_results(query_id, pagination).json()
             items = response.get("items", [])
+            self._observe_items_events_lag(items)
             self.log(message=f"Getting results with {len(items)} elements", level="info")
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
@@ -156,6 +174,7 @@ class SophosXDRQueryTrigger(SophosConnector):
                     grouped_data = []
                     response_next_page = self.client.get_query_results_next_page(query_id, pagination, nextKey).json()
                     next_page_items = response_next_page.get("items", [])
+                    self._observe_items_events_lag(next_page_items)
                     grouped_data.extend(next_page_items)
                     self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))

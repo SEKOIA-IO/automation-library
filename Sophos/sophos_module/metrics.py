@@ -33,4 +33,3 @@ EVENTS_LAG = Histogram(
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )
-

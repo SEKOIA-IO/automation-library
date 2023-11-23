@@ -1,13 +1,12 @@
 import datetime
-import os
 import time
 from functools import cached_property
 
 import orjson
 from requests.exceptions import HTTPError
-from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
+from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
