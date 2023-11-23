@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "Microsoft Active Directory"
+version = "0.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+ldap3 = "^2.9.1"
+sekoia-automation-sdk = "^1.8.1"
+pytest = "^7.4.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
