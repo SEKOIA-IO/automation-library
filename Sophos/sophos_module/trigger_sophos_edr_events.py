@@ -156,11 +156,12 @@ class SophosEDREventsTrigger(SophosConnector):
                 cursor = next_cursor
 
             items = batch.get("items", [])
-            most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
-            events_lag = int(time.time() - most_recent_timestamp_seen)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+            if len(items) > 0:
+                most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
+                events_lag = int(time.time() - most_recent_timestamp_seen)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
             for message in items:
                 normalized_message = normalize_message(message)
                 messages.append(orjson.dumps(normalized_message).decode("utf-8"))
