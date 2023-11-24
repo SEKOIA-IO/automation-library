@@ -129,7 +129,7 @@ class SophosEDREventsTrigger(SophosConnector):
             RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
             return datetime.datetime.strptime(item["created_at"], RFC3339_STRICT_FORMAT).timestamp()
 
-        latest_message = max(items, key=lambda item: item['created_at'])
+        latest_message = max(items, key=lambda item: item["created_at"])
         latest_message_timestamp = _extract_timestamp(latest_message)
         return latest_message_timestamp
 

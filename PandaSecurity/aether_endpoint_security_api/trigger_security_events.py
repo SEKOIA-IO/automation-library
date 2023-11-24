@@ -94,9 +94,7 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
                     break
 
             if message_batch:
-                INCOMING_MESSAGES.labels(type=event_type_name).inc(
-                    len(message_batch)
-                )
+                INCOMING_MESSAGES.labels(type=event_type_name).inc(len(message_batch))
 
                 self.log(
                     message=f"Send a batch of {len(message_batch)} {event_type} messages",
@@ -108,23 +106,17 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
                     event={"events": list(message_batch)},
                 )
 
-                OUTCOMING_EVENTS.labels(type=event_type_name).inc(
-                    len(message_batch)
-                )
+                OUTCOMING_EVENTS.labels(type=event_type_name).inc(len(message_batch))
 
             # get the ending time and compute the duration to fetch the events
             batch_end_time = time.time()
             batch_duration = int(batch_end_time - batch_start_time)
-            FORWARD_EVENTS_DURATION.labels(
-                type=event_type_name
-            ).observe(batch_duration)
+            FORWARD_EVENTS_DURATION.labels(type=event_type_name).observe(batch_duration)
 
             # compute the events lag
             last_message_timestamp = datetime.strptime(last_message_date, self.RFC3339_STRICT_FORMAT)
             events_lag = (datetime.utcnow() - last_message_timestamp).total_seconds()
-            EVENTS_LAG.labels(type=event_type_name).observe(
-                events_lag
-            )
+            EVENTS_LAG.labels(type=event_type_name).observe(events_lag)
 
             self.log(
                 message=f"Set last_message_date for Aether '{event_type_name}' to {last_message_date}",

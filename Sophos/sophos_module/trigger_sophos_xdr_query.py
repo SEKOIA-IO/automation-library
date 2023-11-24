@@ -139,7 +139,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             # can't measure lag, because there's no timestamp
             return
 
-        most_recent_item = max(items, key=lambda item: _extract_timestamp(item))
+        most_recent_item = max(items, key=lambda item: item["calendar_time"])
         most_recent_timestamp = _extract_timestamp(most_recent_item)
 
         events_lag = int(time.time() - most_recent_timestamp)
