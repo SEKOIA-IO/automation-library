@@ -141,7 +141,7 @@ class DuoLogsConsumer(Thread):
                     most_recent_event = max(events, key=lambda item: item["ts"])
                     most_recent_timestamp = datetime.datetime.fromisoformat(most_recent_event["ts"]).timestamp()
                 else:
-                    most_recent_event = max(events, key=lambda item: item.get("timestamp"))
+                    most_recent_event = max(events, key=lambda item: item["timestamp"])
                     most_recent_timestamp = most_recent_event["timestamp"]
 
                 current_timestamp = int(time.time())
