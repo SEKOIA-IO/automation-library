@@ -211,8 +211,8 @@ class TrellixHttpClient(object):
             URL:
         """
         params: dict[str, int | str] = {
-            "from": int(start_date.strftime("%s")) * 1000,
-            "to": int(end_date.strftime("%s")) * 1000,
+            "from": int(start_date.timestamp()) * 1000,
+            "to": int(end_date.timestamp()) * 1000,
             "page[limit]": str(limit),
             "page[offset]": str(offset),
         }
@@ -252,8 +252,8 @@ class TrellixHttpClient(object):
         """
         params: dict[str, int | str] = {
             "sort": "firstDetected",
-            "from": int(start_date.strftime("%s")) * 1000,
-            "to": int(end_date.strftime("%s")) * 1000,
+            "from": int(start_date.timestamp()) * 1000,
+            "to": int(end_date.timestamp()) * 1000,
             "page[limit]": str(limit),
             "page[offset]": str(offset),
         }
@@ -293,8 +293,8 @@ class TrellixHttpClient(object):
         """
         params: dict[str, int | str] = {
             "sort": "firstDetected",
-            "from": int(start_date.strftime("%s")) * 1000,
-            "to": int(end_date.strftime("%s")) * 1000,
+            "from": int(start_date.timestamp()) * 1000,
+            "to": int(end_date.timestamp()) * 1000,
             "page[limit]": str(limit),
             "page[offset]": str(offset),
         }
@@ -320,7 +320,7 @@ class TrellixHttpClient(object):
         """
         params: dict[str, int | str] = {
             "sort": "detectionDate",
-            "from": int(start_date.strftime("%s")) * 1000,
+            "from": int(start_date.timestamp()) * 1000,
             "page[limit]": str(limit),
         }
 
