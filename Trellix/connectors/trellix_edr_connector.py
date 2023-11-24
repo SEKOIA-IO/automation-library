@@ -14,7 +14,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import TrellixHttpClient
 from connectors import TrellixModule
-from connectors.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class TrellixEdrConnectorConfig(DefaultConnectorConfiguration):
@@ -87,7 +87,7 @@ class TrellixEdrConnector(AsyncConnector):
 
         return self._trellix_client
 
-    async def populate_alerts(self) -> list[str]:
+    async def populate_alerts(self) -> Tuple[list[str], datetime]:
         """
         Process trellix edr alerts.
 
@@ -113,7 +113,7 @@ class TrellixEdrConnector(AsyncConnector):
         with self.context as cache:
             cache["alerts"] = last_event_date.isoformat()
 
-        return result
+        return result, last_event_date
 
     async def populate_threats(self, end_date: datetime | None = None) -> Tuple[list[str], datetime]:
         """
@@ -129,6 +129,8 @@ class TrellixEdrConnector(AsyncConnector):
         if end_date is None:
             end_date = datetime.now(timezone.utc).replace(microsecond=0)
 
+        most_recent_threat_date = start_date
+
         offset = 0
         while True:
             threats = await self.trellix_client.get_edr_threats(
@@ -142,6 +144,11 @@ class TrellixEdrConnector(AsyncConnector):
             result.extend(await self.push_data_to_intakes(result_data))
 
             for threat in threats:
+                threat_date = isoparse(threat.attributes.lastDetected).replace(tzinfo=timezone.utc)
+
+                if threat_date > most_recent_threat_date:
+                    most_recent_threat_date = threat_date
+
                 if threat.id is None:
                     raise Exception("Threat id is None")
 
@@ -156,7 +163,7 @@ class TrellixEdrConnector(AsyncConnector):
         with self.context as cache:
             cache["threats"] = end_date.isoformat()
 
-        return result, end_date
+        return result, most_recent_threat_date
 
     async def get_threat_detections(self, threat_id: str, start_date: datetime, end_date: datetime) -> list[str]:
         """
@@ -241,11 +248,21 @@ class TrellixEdrConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
 
-                    message_threats_ids, end_processing_date = loop.run_until_complete(self.populate_threats())
-                    message_alerts_ids: list[str] = loop.run_until_complete(self.populate_alerts())
+                    message_threats_ids, most_recent_threat_date = loop.run_until_complete(self.populate_threats())
+                    message_alerts_ids, most_recent_alert_date = loop.run_until_complete(self.populate_alerts())
+
+                    processing_end = time.time()
 
                     message_ids = message_alerts_ids + message_threats_ids
-                    processing_end = time.time()
+
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").observe(
+                        processing_end - most_recent_threat_date.timestamp()
+                    )
+
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="alerts").observe(
+                        processing_end - most_recent_alert_date.timestamp()
+                    )
+
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
                     log_message = "No records to forward"
@@ -254,10 +271,10 @@ class TrellixEdrConnector(AsyncConnector):
 
                     logger.info(log_message)
                     self.log(message=log_message, level="info")
-                    logger.info(log_message)
+
                     logger.info(
                         "Processing took {processing_time} seconds",
-                        processing_time=(end_processing_date.timestamp() - processing_start),
+                        processing_time=(processing_end - processing_start),
                     )
 
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(

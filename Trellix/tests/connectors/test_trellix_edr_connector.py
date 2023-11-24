@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aioresponses import aioresponses
+from dateutil.parser import isoparse
 from faker import Faker
 from orjson import orjson
 
@@ -123,7 +124,7 @@ async def test_trellix_connector_get_alert_events(
             },
         )
 
-        result = await connector.populate_alerts()
+        result, _ = await connector.populate_alerts()
 
         assert result == [orjson.dumps(event).decode("utf-8") for event in expected_edr_result]
 
@@ -311,6 +312,7 @@ async def test_trellix_connector_get_threats_events(
     threat_id_2 = str(session_faker.pyint())
 
     threat_response_1 = edr_threat_event_response.copy()
+    threat_response_1.attributes.lastDetected = (end_date - timedelta(minutes=1)).isoformat()
     threat_response_1.id = threat_id_1
 
     threat_response_2 = edr_threat_event_response.copy()
@@ -447,7 +449,9 @@ async def test_trellix_connector_get_threats_events(
 
         result, result_end_date = await connector.populate_threats(end_date=end_date)
 
-        assert result_end_date == end_date
+        assert result_end_date == max(
+            [isoparse(threat.attributes.lastDetected) for threat in [threat_response_1, threat_response_2]]
+        )
 
         assert sorted(result) == sorted(
             [
