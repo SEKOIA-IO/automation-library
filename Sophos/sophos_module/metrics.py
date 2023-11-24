@@ -26,3 +26,10 @@ FORWARD_EVENTS_DURATION = Histogram(
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )
+
+EVENTS_LAG = Histogram(
+    name="events_lags",
+    documentation="The delay, in seconds, from the date of the last event",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)

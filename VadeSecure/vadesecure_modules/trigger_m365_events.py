@@ -13,6 +13,7 @@ from dateutil.parser import ParserError
 from sekoia_automation.trigger import Trigger
 
 from vadesecure_modules import VadeSecureModule
+from vadesecure_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from vadesecure_modules.models import VadeSecureTriggerConfiguration
 
 EVENT_TYPES: list[str] = ["emails", "remediations/auto", "remediations/manual"]
@@ -121,6 +122,9 @@ class M365EventsTrigger(Trigger):
                 level="debug",
             )
 
+            # save the starting time
+            batch_start_time = time.time()
+
             while has_more_message:
                 has_more_message = False
                 next_events = self._fetch_next_events(
@@ -143,11 +147,26 @@ class M365EventsTrigger(Trigger):
                     level="info",
                 )
 
+                INCOMING_MESSAGES.labels(type=event_type).inc(len(message_batch))
+
+                last_message = message_batch[-1]
+                last_message_date = self._get_last_message_date([last_message])
+                events_lag = int(time.time() - last_message_date.timestamp())
+                EVENTS_LAG.labels(type=event_type).observe(events_lag)
+
                 for emails in self._chunk_events(list(message_batch), self.max_batch_size):
                     self._send_emails(
                         emails=list(emails),
                         event_name=f"M365-events_{last_message_date}",
                     )
+
+                OUTCOMING_EVENTS.labels(type=event_type).inc(len(message_batch))
+
+            # get the ending time and compute the duration to fetch the events
+            batch_end_time = time.time()
+            batch_duration = int(batch_end_time - batch_start_time)
+            FORWARD_EVENTS_DURATION.labels(type=event_type).observe(batch_duration)
+
             self.last_message_id[event_type] = last_message_id
             self.last_message_date[event_type] = last_message_date
 
