@@ -22,18 +22,16 @@ class MicrosoftADAction(Action):
 
     @cached_property
     def client(self):
-        tls_configuration = Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1_2)
         server = Server(
             host=self.module.configuration.servername,
             port=636,
             use_ssl=True,
-            tls=tls_configuration,
         )
         conn = Connection(
             server,
             auto_bind=True,
-            user=self.module.configuration.username,
-            password=self.module.configuration.password,
+            user=self.module.configuration.admin_username,
+            password=self.module.configuration.admin_password,
         )
 
         return conn

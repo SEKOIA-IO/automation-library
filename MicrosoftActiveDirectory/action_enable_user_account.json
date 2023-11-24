@@ -4,20 +4,20 @@
     "uuid": "5ce71d6f-bd74-40a7-8ba0-c2bf5e5e9c90",
     "docker_parameters": "EnableUserAction",
     "arguments": {
-      "title": "UserAccountArguments",
-      "type": "object",
-      "properties": {
-        "username": {
-          "title": "UserName",
-          "description": "Target user",
-          "type": "string"
-        },
-        "basedn": {
-          "title": "BaseDN",
-          "description": "he starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
-          "type": "string"
+        "title": "UserAccountArguments",
+        "type": "object",
+        "properties": {
+            "username": {
+                "title": "UserName",
+                "description": "Target user",
+                "type": "string"
+            },
+            "basedn": {
+                "title": "BaseDN",
+                "description": "he starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
+                "type": "string"
+            }
         }
-      }
     },
     "results": {}
-  }
+}
