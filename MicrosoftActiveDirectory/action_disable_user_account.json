@@ -1,0 +1,23 @@
+{
+  "name": "Disable User",
+  "description": "Disable a Microsoft Active Directory user.",
+  "uuid": "251b87ba-270e-4ca0-8c80-95f7c32116f1",
+  "docker_parameters": "DisableUserAction",
+  "arguments": {
+    "title": "UserAccountArguments",
+    "type": "object",
+    "properties": {
+      "username": {
+        "title": "UserName",
+        "description": "Target user",
+        "type": "string"
+      },
+      "basedn": {
+        "title": "BaseDN",
+        "description": "The starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}

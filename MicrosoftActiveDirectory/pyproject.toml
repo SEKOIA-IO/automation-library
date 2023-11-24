@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "Microsoft Active Directory"
+version = "0.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+ldap3 = "^2.9.1"
+sekoia-automation-sdk = "^1.8.1"
+pytest = "^7.4.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests-mock = "*"
+black = {version = "^22.6.0", allow-prereleases = true}
+flake8 = "^4.0.1"
+mypy = "^0.961"
+pytest-clarity = "^1.0.1"
+
+[build-system]
+requires = [ "poetry-core>=1.0.0",]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra"
+testpaths = [
+    "tests",
+]
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py"
+]
