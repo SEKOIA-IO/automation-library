@@ -92,20 +92,24 @@ class CheckpointHarmonyConnector(AsyncConnector):
 
         _new_latest_event_date = _last_event_date
         for event in events:
-            # Swagger says that it should have "%m/%d/%Y %H:%M:%S" but all other values that we pass are in ISO format
-            # So we try to parse it as ISO and if it fails we parse it as "%m/%d/%Y %H:%M:%S"
-            # See 200 response here:
-            # https://app.swaggerhub.com/apis-docs/Check-Point/harmony-mobile/1.0.0-oas3#/Events/GetAlerts
-            try:
-                event_date = isoparse(event.event_timestamp)
-            except ValueError:
-                event_date = datetime.strptime(event.event_timestamp, "%m/%d/%Y %H:%M:%S")
+            event_date = event.event_timestamp or event.backend_last_updated or _last_event_date
 
             if event_date > _new_latest_event_date:
                 _new_latest_event_date = event_date
 
         result: list[str] = await self.push_data_to_intakes(
-            [orjson.dumps(event.dict()).decode("utf-8") for event in events]
+            [
+                orjson.dumps(
+                    {
+                        **event.dict(),
+                        "event_timestamp": (event.event_timestamp.isoformat() if event.event_timestamp else None),
+                        "backend_last_updated": (
+                            event.backend_last_updated.isoformat() if event.backend_last_updated else None
+                        ),
+                    }
+                ).decode("utf-8")
+                for event in events
+            ]
         )
 
         with self.context as cache:
@@ -148,4 +152,4 @@ class CheckpointHarmonyConnector(AsyncConnector):
                     )
 
             except Exception as e:
-                logger.error("Error while running CrowdStrike Telemetry: {error}", error=e)
+                logger.error("Error while running Checkpoint Harmony: {error}", error=e)

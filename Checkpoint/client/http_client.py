@@ -81,8 +81,6 @@ class CheckpointHttpClient(HttpClient):
 
         token_refresher = await self.get_token_refresher(CheckpointServiceType.HARMONY_MOBILE)
 
-        logger.info(url)
-
         async with token_refresher.with_access_token() as token:
             async with self.session() as session:
                 async with session.get(
@@ -90,11 +88,53 @@ class CheckpointHttpClient(HttpClient):
                     headers={"Authorization": f"Bearer {token.token.token}"},
                     params=params,
                 ) as response:
-                    result = await response.json()
+                    response_json = await response.json()
 
-        if result.get("objects") is None:
-            logger.error("Failed to get events from server. Invalid response : {0}", result)
+        if response_json.get("objects") is None:
+            logger.error("Failed to get events from server. Invalid response : {0}", response_json)
 
             return []
 
-        return [HarmonyMobileSchema(**data) for data in result["objects"]]
+        return [
+            HarmonyMobileSchema(
+                **{
+                    **data,
+                    "event_timestamp": self.parse_date(data.get("event_timestamp")),
+                    "backend_last_updated": self.parse_date(data.get("backend_last_updated")),
+                }
+            )
+            for data in response_json["objects"]
+        ]
+
+    @staticmethod
+    def parse_date(value: str | None) -> datetime | None:
+        """
+        Parse date.
+
+        Swagger says that it should have "%m/%d/%Y %H:%M:%S" but all other values that we pass are in ISO format
+        So we try to parse it as ISO and if it fails we parse it as "%m/%d/%Y %H:%M:%S"
+        See 200 response here:
+        https://app.swaggerhub.com/apis-docs/Check-Point/harmony-mobile/1.0.0-oas3#/Events/GetAlerts
+
+        Also, sometimes it can be `No data` value.
+
+        Args:
+            value: str
+
+        Returns:
+            datetime | None:
+        """
+        if value is None:
+            return None
+
+        try:
+            return datetime.fromisoformat(value)
+
+        except ValueError:
+            try:
+                return datetime.strptime(value, "%m/%d/%Y %H:%M:%S")
+
+            except ValueError:
+                logger.warning("Failed to parse date: {0}. It is not either ISO or `%m/%d/%Y %H:%M:%S` format", value)
+
+                return None
