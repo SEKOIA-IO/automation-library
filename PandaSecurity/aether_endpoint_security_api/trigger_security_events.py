@@ -94,7 +94,7 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
                     break
 
             if message_batch:
-                INCOMING_MESSAGES.labels(account_id=self.module.configuration["account_id"], type=event_type_name).inc(
+                INCOMING_MESSAGES.labels(type=event_type_name).inc(
                     len(message_batch)
                 )
 
@@ -108,7 +108,7 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
                     event={"events": list(message_batch)},
                 )
 
-                OUTCOMING_EVENTS.labels(account_id=self.module.configuration["account_id"], type=event_type_name).inc(
+                OUTCOMING_EVENTS.labels(type=event_type_name).inc(
                     len(message_batch)
                 )
 
@@ -116,13 +116,13 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
             batch_end_time = time.time()
             batch_duration = int(batch_end_time - batch_start_time)
             FORWARD_EVENTS_DURATION.labels(
-                account_id=self.module.configuration["account_id"], type=event_type_name
+                type=event_type_name
             ).observe(batch_duration)
 
             # compute the events lag
             last_message_timestamp = datetime.strptime(last_message_date, self.RFC3339_STRICT_FORMAT)
             events_lag = (datetime.utcnow() - last_message_timestamp).total_seconds()
-            EVENTS_LAG.labels(account_id=self.module.configuration["account_id"], type=event_type_name).observe(
+            EVENTS_LAG.labels(type=event_type_name).observe(
                 events_lag
             )
 

@@ -147,14 +147,14 @@ class M365EventsTrigger(Trigger):
                     level="info",
                 )
 
-                INCOMING_MESSAGES.labels(tenant_id=self.configuration.tenant_id, type=event_type).inc(
+                INCOMING_MESSAGES.labels(type=event_type).inc(
                     len(message_batch)
                 )
 
                 last_message = message_batch[-1]
                 last_message_date = self._get_last_message_date([last_message])
                 events_lag = int(time.time() - last_message_date.timestamp())
-                EVENTS_LAG.labels(tenant_id=self.configuration.tenant_id, type=event_type).observe(events_lag)
+                EVENTS_LAG.labels(type=event_type).observe(events_lag)
 
                 for emails in self._chunk_events(list(message_batch), self.max_batch_size):
                     self._send_emails(
@@ -162,14 +162,14 @@ class M365EventsTrigger(Trigger):
                         event_name=f"M365-events_{last_message_date}",
                     )
 
-                OUTCOMING_EVENTS.labels(tenant_id=self.configuration.tenant_id, type=event_type).inc(
+                OUTCOMING_EVENTS.labels(type=event_type).inc(
                     len(message_batch)
                 )
 
             # get the ending time and compute the duration to fetch the events
             batch_end_time = time.time()
             batch_duration = int(batch_end_time - batch_start_time)
-            FORWARD_EVENTS_DURATION.labels(tenant_id=self.configuration.tenant_id, type=event_type).observe(
+            FORWARD_EVENTS_DURATION.labels(type=event_type).observe(
                 batch_duration
             )
 

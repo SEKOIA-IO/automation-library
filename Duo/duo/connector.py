@@ -138,7 +138,7 @@ class DuoLogsConsumer(Thread):
             if len(events) > 0:
                 if self._log_type == LogType.TELEPHONY:
                     # Telephony logs have their datetime represented as "2023-03-21T22:34:49.466370+00:00"
-                    most_recent_event = max(events, key=lambda item: datetime.datetime.fromisoformat(item["ts"]))
+                    most_recent_event = max(events, key=lambda item: item["ts"])
                     most_recent_timestamp = datetime.datetime.fromisoformat(most_recent_event["ts"]).timestamp()
                 else:
                     most_recent_event = max(events, key=lambda item: item.get("timestamp"))
