@@ -1,38 +1,38 @@
-"""Tests for Trellix connector."""
+"""Tests for Trellix EDR connector."""
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-import orjson
 import pytest
 from aioresponses import aioresponses
+from faker import Faker
+from orjson import orjson
 
-from client.schemas.token import Scope
+from client.schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
+from client.schemas.attributes.edr_alerts import EdrAlertAttributes
+from client.schemas.attributes.edr_detections import EdrDetectionAttributes
+from client.schemas.attributes.edr_threats import EdrThreatAttributes
+from client.schemas.token import HttpToken, Scope
+from client.schemas.trellix_response import TrellixResponse
 from connectors.trellix_edr_connector import TrellixEdrConnector
 from connectors.trellix_epo_connector import TrellixModule
 
 
 @pytest.fixture
-def pushed_events_ids(session_faker) -> list[str]:
-    """
-    Generate random list of events ids.
-
-    Args:
-        session_faker: Faker
-    Returns:
-        list[str]:
-    """
-    return [session_faker.word() for _ in range(session_faker.random.randint(1, 100))]
-
-
-@pytest.fixture
-def connector(module: TrellixModule, symphony_storage, pushed_events_ids, session_faker) -> TrellixEdrConnector:
+def connector(
+    module: TrellixModule,
+    symphony_storage: Path,
+    session_faker: Faker,
+    mock_push_data_to_intakes: AsyncMock,
+) -> TrellixEdrConnector:
     """
     Fixture for TrellixEdrConnector.
 
     Args:
-        symphony_storage:
-        pushed_events_ids:
-        session_faker:
+        module: TrellixModule,
+        symphony_storage: Path,
+        session_faker: Faker
+        mock_push_data_to_intakes: AsyncMock
 
     Returns:
         TrellixEdrConnector:
@@ -44,7 +44,7 @@ def connector(module: TrellixModule, symphony_storage, pushed_events_ids, sessio
     connector.log_exception = MagicMock()
 
     # Mock the push_events_to_intakes function
-    connector.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
+    connector.push_data_to_intakes = mock_push_data_to_intakes
 
     connector.configuration = {
         "intake_key": session_faker.word(),
@@ -55,67 +55,405 @@ def connector(module: TrellixModule, symphony_storage, pushed_events_ids, sessio
 
 
 @pytest.mark.asyncio
-async def test_trellix_connector_last_event_date(connector):
+async def test_trellix_connector_last_event_date(connector: TrellixEdrConnector, session_faker: Faker):
     """
     Test `last_event_date`.
 
     Args:
         connector: TrellixEdrConnector
+        session_faker: Faker
     """
+    random_key = session_faker.word()
     with connector.context as cache:
-        cache["last_event_date"] = None
+        cache[random_key] = None
 
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
     one_week_ago = current_date - timedelta(days=7)
 
-    assert connector.last_event_date == one_week_ago
+    assert connector.last_event_date(random_key) == one_week_ago
 
     with connector.context as cache:
-        cache["last_event_date"] = current_date.isoformat()
+        cache[random_key] = current_date.isoformat()
 
-    assert connector.last_event_date == current_date
+    assert connector.last_event_date(random_key) == current_date
 
     with connector.context as cache:
-        cache["last_event_date"] = (one_week_ago - timedelta(days=1)).isoformat()
+        cache[random_key] = (one_week_ago - timedelta(days=1)).isoformat()
 
-    assert connector.last_event_date == one_week_ago
+    assert connector.last_event_date(random_key) == one_week_ago
 
 
 @pytest.mark.asyncio
-async def test_trellix_connector_get_epo_events(
-    connector, session_faker, http_token, pushed_events_ids, edr_epo_event_response
+async def test_trellix_connector_get_alert_events(
+    connector: TrellixEdrConnector,
+    session_faker: Faker,
+    http_token: HttpToken,
+    edr_alert_event_response: TrellixResponse[EdrAlertAttributes],
 ):
     """
-    Test salesforce connector get salesforce events.
+    Test connector to get alert events.
 
     Args:
-        connector: SalesforceConnector
+        connector: TrellixEdrConnector
         session_faker: Faker
         http_token: HttpToken
-        edr_epo_event_response: TrellixEdrResponse
+        edr_alert_event_response: TrellixResponse[EdrAlertAttributes]
     """
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
 
     with connector.context as cache:
-        cache["last_event_date"] = current_date.isoformat()
+        cache["alerts"] = current_date.isoformat()
 
     with aioresponses() as mocked_responses:
         http_client = connector.trellix_client
 
-        token_refresher = await http_client._get_token_refresher(Scope.complete_set_of_scopes())
+        token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
         mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
 
-        expected_edr_result = [edr_epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+        expected_edr_result = [
+            edr_alert_event_response.dict(exclude_none=True) for _ in range(0, session_faker.pyint(max_value=100))
+        ]
 
         mocked_responses.get(
-            http_client.epo_events_url(current_date, limit=connector.module.configuration.records_per_request),
+            http_client.edr_alerts_url(current_date, limit=connector.module.configuration.records_per_request),
             status=200,
             payload={
                 "data": orjson.loads(orjson.dumps(expected_edr_result).decode("utf-8")),
             },
         )
 
-        result = await connector.get_trellix_epo_events()
+        result = await connector.populate_alerts()
 
-        assert result == pushed_events_ids
+        assert result == [orjson.dumps(event).decode("utf-8") for event in expected_edr_result]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_get_detection_events(
+    connector: TrellixEdrConnector,
+    session_faker: Faker,
+    http_token: HttpToken,
+    edr_detection_event_response: TrellixResponse[EdrDetectionAttributes],
+):
+    """
+    Test connector to get detection events.
+
+    Args:
+        connector: TrellixEdrConnector
+        session_faker: Faker
+        http_token: HttpToken
+        edr_alert_event_response: TrellixResponse[EdrAlertAttributes]
+    """
+    # Starting from 1 hour ago
+    end_date = datetime.now(timezone.utc).replace(microsecond=0)
+    start_date = end_date - timedelta(hours=1)
+    limit = connector.module.configuration.records_per_request
+
+    threat_id = str(session_faker.pyint())
+
+    with aioresponses() as mocked_responses:
+        http_client = connector.trellix_client
+
+        token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
+
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+
+        first_request_expected_detections_result = [
+            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, session_faker.pyint(max_value=100))
+        ]
+        second_request_expected_detections_result = [
+            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, session_faker.pyint(max_value=100))
+        ]
+        third_request_expected_detections_result = []
+
+        mocked_responses.get(
+            http_client.edr_threat_detections_url(threat_id, start_date, end_date, limit=limit, offset=0),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(first_request_expected_detections_result).decode("utf-8")),
+            },
+        )
+
+        mocked_responses.get(
+            http_client.edr_threat_detections_url(threat_id, start_date, end_date, limit=limit, offset=limit),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(second_request_expected_detections_result).decode("utf-8")),
+            },
+        )
+
+        mocked_responses.get(
+            http_client.edr_threat_detections_url(threat_id, start_date, end_date, limit=limit, offset=limit * 2),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(third_request_expected_detections_result).decode("utf-8")),
+            },
+        )
+
+        result = await connector.get_threat_detections(threat_id, start_date, end_date)
+
+        total_expected_detections_result = [
+            {**event, "threatId": threat_id}
+            for event in first_request_expected_detections_result
+            + second_request_expected_detections_result
+            + third_request_expected_detections_result
+        ]
+
+        assert result == [orjson.dumps(event).decode("utf-8") for event in total_expected_detections_result]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_get_affectedhosts_events(
+    connector: TrellixEdrConnector,
+    session_faker: Faker,
+    http_token: HttpToken,
+    edr_affectedhost_event_response: TrellixResponse[EdrAffectedhostAttributes],
+):
+    """
+    Test connector to get affected host events.
+
+    Args:
+        connector: TrellixEdrConnector
+        session_faker: Faker
+        http_token: HttpToken
+        edr_affectedhost_event_response: TrellixResponse[EdrAffectedhostAttributes]
+    """
+    # Starting from 1 hour ago
+    end_date = datetime.now(timezone.utc).replace(microsecond=0)
+    start_date = end_date - timedelta(hours=1)
+    limit = connector.module.configuration.records_per_request
+
+    threat_id = str(session_faker.pyint())
+
+    with aioresponses() as mocked_responses:
+        http_client = connector.trellix_client
+
+        token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
+
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+
+        first_request_expected_detections_result = [
+            edr_affectedhost_event_response.dict(exclude_none=True)
+            for _ in range(0, session_faker.pyint(max_value=100))
+        ]
+        second_request_expected_detections_result = [
+            edr_affectedhost_event_response.dict(exclude_none=True)
+            for _ in range(0, session_faker.pyint(max_value=100))
+        ]
+        third_request_expected_detections_result = []
+
+        mocked_responses.get(
+            http_client.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit=limit, offset=0),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(first_request_expected_detections_result).decode("utf-8")),
+            },
+        )
+
+        mocked_responses.get(
+            http_client.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit=limit, offset=limit),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(second_request_expected_detections_result).decode("utf-8")),
+            },
+        )
+
+        mocked_responses.get(
+            http_client.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit=limit, offset=limit * 2),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(third_request_expected_detections_result).decode("utf-8")),
+            },
+        )
+
+        result = await connector.get_threat_affectedhosts(threat_id, start_date, end_date)
+
+        total_expected_detections_result = [
+            {**event, "threatId": threat_id}
+            for event in first_request_expected_detections_result
+            + second_request_expected_detections_result
+            + third_request_expected_detections_result
+        ]
+
+        assert result == [orjson.dumps(event).decode("utf-8") for event in total_expected_detections_result]
+
+
+@pytest.mark.asyncio
+async def test_trellix_connector_get_threats_events(
+    connector: TrellixEdrConnector,
+    session_faker: Faker,
+    http_token: HttpToken,
+    edr_threat_event_response: TrellixResponse[EdrThreatAttributes],
+    edr_detection_event_response: TrellixResponse[EdrDetectionAttributes],
+    edr_affectedhost_event_response: TrellixResponse[EdrAffectedhostAttributes],
+):
+    """
+    Test connector to get threats host events.
+
+    Args:
+        connector: TrellixEdrConnector
+        session_faker: Faker
+        http_token: HttpToken
+        edr_threat_event_response: TrellixResponse[EdrThreatAttributes]
+        edr_detection_event_response: TrellixResponse[EdrDetectionAttributes]
+        edr_affectedhost_event_response: TrellixResponse[EdrAffectedhostAttributes]
+    """
+    # Starting from 1 hour ago
+    end_date = datetime.now(timezone.utc).replace(microsecond=0)
+    start_date = end_date - timedelta(hours=1)
+
+    with connector.context as cache:
+        cache["threats"] = start_date.isoformat()
+
+    limit = connector.module.configuration.records_per_request
+
+    threat_id_1 = str(session_faker.pyint())
+    threat_id_2 = str(session_faker.pyint())
+
+    threat_response_1 = edr_threat_event_response.copy()
+    threat_response_1.id = threat_id_1
+
+    threat_response_2 = edr_threat_event_response.copy()
+    threat_response_2.id = threat_id_2
+
+    with aioresponses() as mocked_responses:
+        http_client = connector.trellix_client
+
+        token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
+
+        # Mocks #1
+        # We mock request to get token
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+
+        # Mocks #2
+        # We mock request to get threats. Let`s say we should send 2 requests. First request
+        # will return first threat, second request should return second threat
+        first_threat_request_result = [threat_response_1.dict(exclude_none=True)]
+        second_threat_request_result = [threat_response_2.dict(exclude_none=True)]
+
+        mocked_responses.get(
+            http_client.edr_threats_url(start_date, end_date, limit=limit, offset=0),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(first_threat_request_result).decode("utf-8")),
+            },
+        )
+
+        mocked_responses.get(
+            http_client.edr_threats_url(start_date, end_date, limit=limit, offset=limit),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(second_threat_request_result).decode("utf-8")),
+            },
+        )
+
+        mocked_responses.get(
+            http_client.edr_threats_url(start_date, end_date, limit=limit, offset=limit * 2),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps([]).decode("utf-8")),
+            },
+        )
+
+        # Mocks #3
+        # We mock request to get detections. Let`s say we should send 3 requests for each threat
+        # First request will return first max 100 detections, second request should return second 100 detections
+        # and third request should return empty list
+        first_request_expected_detections_result = [
+            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, 1)
+        ]
+        second_request_expected_detections_result = [
+            edr_detection_event_response.dict(exclude_none=True) for _ in range(0, 1)
+        ]
+        total_detections_expected_result = []
+        for threat_id in [threat_id_1, threat_id_2]:
+            mocked_responses.get(
+                http_client.edr_threat_detections_url(threat_id, start_date, end_date, limit=limit, offset=0),
+                status=200,
+                payload={
+                    "data": orjson.loads(orjson.dumps(first_request_expected_detections_result).decode("utf-8")),
+                },
+            )
+
+            mocked_responses.get(
+                http_client.edr_threat_detections_url(threat_id, start_date, end_date, limit=limit, offset=limit),
+                status=200,
+                payload={
+                    "data": orjson.loads(orjson.dumps(second_request_expected_detections_result).decode("utf-8")),
+                },
+            )
+
+            mocked_responses.get(
+                http_client.edr_threat_detections_url(threat_id, start_date, end_date, limit=limit, offset=limit * 2),
+                status=200,
+                payload={
+                    "data": orjson.loads(orjson.dumps([]).decode("utf-8")),
+                },
+            )
+
+            total_detections_expected_result.extend(
+                [
+                    {**event, "threatId": threat_id}
+                    for event in first_request_expected_detections_result + second_request_expected_detections_result
+                ]
+            )
+
+        # Mocks #4
+        # We mock request to get affected hosts. Let`s say we should send 3 requests for each threat
+        # First request will return first max 100 affected hosts, second request should return second 100 affected hosts
+        # and third request should return empty list
+        first_request_expected_affectedhosts_result = [
+            edr_affectedhost_event_response.dict(exclude_none=True) for _ in range(0, 1)
+        ]
+        second_request_expected_affectedhosts_result = [
+            edr_affectedhost_event_response.dict(exclude_none=True) for _ in range(0, 1)
+        ]
+
+        total_affectedhosts_expected_result = []
+        for threat_id in [threat_id_1, threat_id_2]:
+            mocked_responses.get(
+                http_client.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit=limit, offset=0),
+                status=200,
+                payload={
+                    "data": orjson.loads(orjson.dumps(first_request_expected_affectedhosts_result).decode("utf-8")),
+                },
+            )
+
+            mocked_responses.get(
+                http_client.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit=limit, offset=limit),
+                status=200,
+                payload={
+                    "data": orjson.loads(orjson.dumps(second_request_expected_affectedhosts_result).decode("utf-8")),
+                },
+            )
+
+            mocked_responses.get(
+                http_client.edr_threat_affectedhosts_url(
+                    threat_id, start_date, end_date, limit=limit, offset=limit * 2
+                ),
+                status=200,
+                payload={
+                    "data": orjson.loads(orjson.dumps([]).decode("utf-8")),
+                },
+            )
+
+            total_affectedhosts_expected_result.extend(
+                [
+                    {**event, "threatId": threat_id}
+                    for event in first_request_expected_affectedhosts_result
+                    + second_request_expected_affectedhosts_result
+                ]
+            )
+
+        result, result_end_date = await connector.populate_threats(end_date=end_date)
+
+        assert result_end_date == end_date
+
+        assert sorted(result) == sorted(
+            [
+                orjson.dumps(event).decode("utf-8")
+                for event in [threat_response_1.dict(exclude_none=True), threat_response_2.dict(exclude_none=True)]
+                + total_affectedhosts_expected_result
+                + total_detections_expected_result
+            ]
+        )

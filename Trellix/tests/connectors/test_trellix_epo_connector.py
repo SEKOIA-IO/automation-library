@@ -1,4 +1,4 @@
-"""Tests for Trellix connector."""
+"""Tests for Trellix EPO connector."""
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -8,21 +8,10 @@ import pytest
 from aioresponses import aioresponses
 from faker import Faker
 
-from client.schemas.token import Scope
+from client.schemas.attributes.epo_events import EpoEventAttributes
+from client.schemas.token import HttpToken, Scope
+from client.schemas.trellix_response import TrellixResponse
 from connectors.trellix_epo_connector import TrellixEpoConnector, TrellixModule
-
-
-@pytest.fixture
-def pushed_events_ids(session_faker: Faker) -> list[str]:
-    """
-    Generate random list of events ids.
-
-    Args:
-        session_faker: Faker
-    Returns:
-        list[str]:
-    """
-    return [session_faker.word() for _ in range(session_faker.random.randint(1, 10))]
 
 
 @pytest.fixture
@@ -33,10 +22,10 @@ def connector(
     Fixture for TrellixEpoConnector.
 
     Args:
-        module:
-        symphony_storage:
-        pushed_events_ids:
-        session_faker:
+        module: TrellixModule,
+        symphony_storage: Path,
+        pushed_events_ids: list[str],
+        session_faker: Faker
 
     Returns:
         TrellixEpoConnector:
@@ -59,12 +48,12 @@ def connector(
 
 
 @pytest.mark.asyncio
-async def test_trellix_connector_last_event_date(connector):
+async def test_trellix_connector_last_event_date(connector: TrellixEpoConnector):
     """
     Test `last_event_date`.
 
     Args:
-        connector: TrellixEdrConnector
+        connector: TrellixEpoConnector
     """
     with connector.context as cache:
         cache["last_event_date"] = None
@@ -87,16 +76,21 @@ async def test_trellix_connector_last_event_date(connector):
 
 @pytest.mark.asyncio
 async def test_trellix_connector_get_epo_events(
-    connector, session_faker, http_token, pushed_events_ids, edr_epo_event_response
+    connector: TrellixEpoConnector,
+    session_faker: Faker,
+    http_token: HttpToken,
+    pushed_events_ids: list[str],
+    epo_event_response: TrellixResponse[EpoEventAttributes],
 ):
     """
-    Test salesforce connector get salesforce events.
+    Test connector get epo events.
 
     Args:
-        connector: SalesforceConnector
+        connector: TrellixEpoConnector
         session_faker: Faker
         http_token: HttpToken
-        edr_epo_event_response: TrellixEdrResponse
+        pushed_events_ids: list[str]
+        epo_event_response: TrellixResponse[EpoEventAttributes]
     """
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
 
@@ -110,7 +104,7 @@ async def test_trellix_connector_get_epo_events(
 
         mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
 
-        expected_edr_result = [edr_epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+        expected_edr_result = [epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
 
         mocked_responses.get(
             http_client.epo_events_url(current_date, limit=connector.module.configuration.records_per_request),

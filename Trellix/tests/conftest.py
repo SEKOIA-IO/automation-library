@@ -10,6 +10,10 @@ import pytest
 from faker import Faker
 from sekoia_automation import constants
 
+from client.schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
+from client.schemas.attributes.edr_alerts import EdrAlertAttributes
+from client.schemas.attributes.edr_detections import EdrDetectionAttributes
+from client.schemas.attributes.edr_threats import EdrThreatAttributes
 from client.schemas.attributes.epo_events import EpoEventAttributes
 from client.schemas.token import HttpToken
 from client.schemas.trellix_response import TrellixResponse
@@ -70,7 +74,7 @@ def http_token(session_faker) -> HttpToken:
     return HttpToken(
         tid=session_faker.pyint(),
         token_type=session_faker.word(),
-        expires_in=session_faker.pyint(),
+        expires_in=session_faker.pyint(min_value=100, max_value=1000),
         access_token=session_faker.word(),
     )
 
@@ -105,7 +109,7 @@ def symphony_storage() -> str:
 
 
 @pytest.fixture
-def edr_epo_event_response(session_faker) -> TrellixResponse[EpoEventAttributes]:
+def epo_event_response(session_faker) -> TrellixResponse[EpoEventAttributes]:
     """
     Generate TrellixEdrResponse[EpoEventAttributes].
 
@@ -121,8 +125,8 @@ def edr_epo_event_response(session_faker) -> TrellixResponse[EpoEventAttributes]
         attributes=EpoEventAttributes(
             timestamp=session_faker.date_time(),
             autoguid=session_faker.word(),
-            detectedutc="{0}".format(session_faker.date_time().timestamp()),
-            receivedutc="{0}".format(session_faker.date_time().timestamp()),
+            detectedutc=session_faker.date_time().isoformat(),
+            receivedutc=session_faker.date_time().isoformat(),
             agentguid=session_faker.word(),
             analyzer=session_faker.word(),
             analyzername=session_faker.word(),
@@ -146,7 +150,7 @@ def edr_epo_event_response(session_faker) -> TrellixResponse[EpoEventAttributes]
             targetipv6=session_faker.ipv6(),
             targetmac=session_faker.word(),
             targetusername=session_faker.word(),
-            targetport="{0}".format(session_faker.pyint()),
+            targetport=str(session_faker.pyint()),
             targetprotocol=session_faker.word(),
             targetprocessname=session_faker.word(),
             targetfilename=session_faker.word(),
@@ -163,6 +167,126 @@ def edr_epo_event_response(session_faker) -> TrellixResponse[EpoEventAttributes]
             sourceprocesssigned=session_faker.word(),
             sourceprocesssigner=session_faker.word(),
             sourcefilepath=session_faker.file_path(),
+        ),
+    )
+
+
+@pytest.fixture
+def edr_alert_event_response(session_faker) -> TrellixResponse[EdrAlertAttributes]:
+    """
+    Generate TrellixEdrResponse[EdrAlertAttributes].
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        TrellixResponse[EdrAlertAttributes]:
+    """
+    return TrellixResponse[EdrAlertAttributes](
+        id=session_faker.uuid4(),
+        type=session_faker.word(),
+        attributes=EdrAlertAttributes(
+            traceId=session_faker.word(),
+            parentTraceId=session_faker.word(),
+            rootTraceId=session_faker.word(),
+            aGuid=session_faker.word(),
+            detectionDate=session_faker.date_time().isoformat(),
+            eventDate=session_faker.word(),
+            eventType=session_faker.word(),
+            severity=session_faker.word(),
+            score=session_faker.pyint(),
+            detectionTags=[session_faker.word(), session_faker.word()],
+            relatedTraceIds=[session_faker.word(), session_faker.word()],
+            ruleId=session_faker.word(),
+            rank=session_faker.pyint(),
+            pid=session_faker.pyint(),
+            version=session_faker.word(),
+            parentsTraceId=[session_faker.word(), session_faker.word()],
+            processName=session_faker.word(),
+            user=session_faker.word(),
+            cmdLine=session_faker.word(),
+            hashId=session_faker.word(),
+            h_os=session_faker.word(),
+            domain=session_faker.word(),
+            hostName=session_faker.word(),
+        ),
+    )
+
+
+@pytest.fixture
+def edr_threat_event_response(session_faker) -> TrellixResponse[EdrThreatAttributes]:
+    """
+    Generate TrellixEdrResponse[EdrThreatAttributes].
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        TrellixResponse[EdrThreatAttributes]:
+    """
+    return TrellixResponse[EdrThreatAttributes](
+        id=session_faker.uuid4(),
+        type=session_faker.word(),
+        attributes=EdrThreatAttributes(
+            aggregationKey=session_faker.word(),
+            severity=session_faker.word(),
+            rank=session_faker.pyint(),
+            score=session_faker.pyint(),
+            name=session_faker.word(),
+            type=session_faker.word(),
+            status=session_faker.word(),
+            firstDetected=session_faker.date_time().isoformat(),
+            lastDetected=session_faker.date_time().isoformat(),
+            hashes={session_faker.word(): session_faker.word(), session_faker.word(): session_faker.word()},
+            interpreter={session_faker.word(): session_faker.pyint(), session_faker.word(): session_faker.word()},
+        ),
+    )
+
+
+@pytest.fixture
+def edr_detection_event_response(session_faker) -> TrellixResponse[EdrDetectionAttributes]:
+    """
+    Generate TrellixEdrResponse[EdrDetectionAttributes].
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        TrellixResponse[EdrDetectionAttributes]:
+    """
+    return TrellixResponse[EdrDetectionAttributes](
+        type=session_faker.word(),
+        attributes=EdrDetectionAttributes(
+            traceId=session_faker.word(),
+            firstDetected=session_faker.date_time().isoformat(),
+            severity=session_faker.word(),
+            rank=session_faker.pyint(),
+            tags=[session_faker.word(), session_faker.word()],
+            host={session_faker.word(): session_faker.word(), session_faker.word(): session_faker.word()},
+            sha256=session_faker.word(),
+        ),
+    )
+
+
+@pytest.fixture
+def edr_affectedhost_event_response(session_faker) -> TrellixResponse[EdrAffectedhostAttributes]:
+    """
+    Generate TrellixEdrResponse[EdrAffectedhostAttributes].
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        TrellixResponse[EdrAffectedhostAttributes]:
+    """
+    return TrellixResponse[EdrAffectedhostAttributes](
+        type=session_faker.word(),
+        attributes=EdrAffectedhostAttributes(
+            detectionsCount=session_faker.pyint(),
+            severity=session_faker.word(),
+            rank=session_faker.pyint(),
+            firstDetected=session_faker.date_time().isoformat(),
+            host={session_faker.word(): session_faker.word(), session_faker.word(): session_faker.pyint()},
         ),
     )
 

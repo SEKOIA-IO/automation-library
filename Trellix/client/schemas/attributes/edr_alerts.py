@@ -14,7 +14,7 @@ class EdrAlertAttributes(BaseModel):
     parentTraceId: str
     rootTraceId: str | None = None
     aGuid: str
-    detectionDate: str | None = None
+    detectionDate: str
     eventDate: str | None = None
     eventType: str
     severity: str | None = None

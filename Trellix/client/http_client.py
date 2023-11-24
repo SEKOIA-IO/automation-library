@@ -189,7 +189,7 @@ class TrellixHttpClient(object):
 
         return URL("{0}/epo/v2/events".format(self.base_url)).with_query(params)
 
-    def edr_threats_url(self, start_date: datetime, limit: int = 10) -> URL:
+    def edr_threats_url(self, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0) -> URL:
         """
         Get EDR threats url.
 
@@ -203,14 +203,18 @@ class TrellixHttpClient(object):
 
         Args:
             start_date: datetime
+            end_date: datetime
             limit: int
+            offset: int
 
         Returns:
             URL:
         """
         params: dict[str, int | str] = {
             "from": int(start_date.strftime("%s")) * 1000,
+            "to": int(end_date.strftime("%s")) * 1000,
             "page[limit]": str(limit),
+            "page[offset]": str(offset),
         }
 
         return URL("{0}/edr/v2/threats".format(self.base_url)).with_query(params)
@@ -341,20 +345,22 @@ class TrellixHttpClient(object):
         return [TrellixResponse[EpoEventAttributes](**result) for result in data["data"]]
 
     async def get_edr_threats(
-        self, start_date: datetime, limit: int = 10
+        self, start_date: datetime, end_date: datetime, limit: int = 10, offset: int = 0
     ) -> list[TrellixResponse[EdrThreatAttributes]]:
         """
         Get EDR threats.
 
         Args:
             start_date: datetime
+            end_date: datetime
             limit: int
+            offset: int
 
         Returns:
             Tuple[list[TrellixResponse[EdrThreatAttributes]], bool]:
         """
         headers = await self._request_headers(Scope.threats_set_of_scopes())
-        url = self.edr_threats_url(start_date, limit)
+        url = self.edr_threats_url(start_date, end_date, limit, offset)
 
         data = await self._get_data(url, headers)
 
