@@ -10,7 +10,7 @@
             },
             "admin_username": {
                 "title": "Admin username account",
-                "description": "The username of the account that have necessary permisions to change passwords (e.g admin@sekoaia.com )",
+                "description": "The username of the account that have necessary permisions to change passwords (e.g admin@example.com )",
                 "type": "string"
             },
             "admin_password": {
