@@ -29,6 +29,26 @@ def http_client(session_faker: Faker) -> CheckpointHttpClient:
 
 
 @pytest.mark.asyncio
+async def test_checkpoint_http_client_parse_date(
+    session_faker: Faker,
+    http_client: CheckpointHttpClient,
+):
+    """
+    Test `parse_date` method.
+
+    Args:
+        session_faker: Faker
+        http_client: CheckpointHttpClient
+    """
+    assert http_client.parse_date(None) is None
+    assert http_client.parse_date(session_faker.word()) is None
+
+    expected = session_faker.date_time()
+    assert http_client.parse_date(expected.strftime("%m/%d/%Y %H:%M:%S")) == expected
+    assert http_client.parse_date(expected.isoformat()) == expected
+
+
+@pytest.mark.asyncio
 async def test_checkpoint_http_client_get_harmony_mobile_alerts_empty(
     session_faker: Faker, http_client: CheckpointHttpClient, http_token: tuple[CheckpointToken, dict[str, Any]]
 ):

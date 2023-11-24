@@ -98,7 +98,18 @@ class CheckpointHarmonyConnector(AsyncConnector):
                 _new_latest_event_date = event_date
 
         result: list[str] = await self.push_data_to_intakes(
-            [orjson.dumps(event.dict()).decode("utf-8") for event in events]
+            [
+                orjson.dumps(
+                    {
+                        **event.dict(),
+                        "event_timestamp": (event.event_timestamp.isoformat() if event.event_timestamp else None),
+                        "backend_last_updated": (
+                            event.backend_last_updated.isoformat() if event.backend_last_updated else None
+                        ),
+                    }
+                ).decode("utf-8")
+                for event in events
+            ]
         )
 
         with self.context as cache:

@@ -99,15 +99,15 @@ class CheckpointHttpClient(HttpClient):
             HarmonyMobileSchema(
                 **{
                     **data,
-                    "event_timestamp": self._parse_date(data.get("event_timestamp")),
-                    "backend_last_updated": self._parse_date(data.get("backend_last_updated")),
+                    "event_timestamp": self.parse_date(data.get("event_timestamp")),
+                    "backend_last_updated": self.parse_date(data.get("backend_last_updated")),
                 }
             )
             for data in response_json["objects"]
         ]
 
     @staticmethod
-    def _parse_date(value: str | None) -> datetime | None:
+    def parse_date(value: str | None) -> datetime | None:
         """
         Parse date.
 
