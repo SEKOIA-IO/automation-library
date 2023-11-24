@@ -130,7 +130,9 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
         result = await http_client.get_harmony_mobile_alerts(time_events_from, limit)
 
         assert len(result) == len(events)
-        assert [event.dict() for event in result] == events
+        assert [event.dict() for event in result] == [
+            {**event, "event_timestamp": None, "backend_last_updated": None} for event in events
+        ]
 
 
 @pytest.mark.asyncio
