@@ -32,9 +32,7 @@ def test_disable_user():
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
 
-            results = action.run(
-                {"username": "test_username", "basedn": "cn=test_basedn"}
-            )
+            results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
             assert results is None
 
@@ -50,9 +48,7 @@ def test_enable_user():
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
 
-            results = action.run(
-                {"username": "test_username", "basedn": "cn=test_basedn"}
-            )
+            results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
             assert results is None
 

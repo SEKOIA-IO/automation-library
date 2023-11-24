@@ -7,9 +7,7 @@ class ResetUserPasswordAction(MicrosoftADAction):
 
     def run(self, arguments: ResetPassUserArguments):
         user_dn = self.search_userdn_query(arguments.username, arguments.basedn)
-        response = self.client.extend.microsoft.modify_password(
-            user_dn, arguments.new_password
-        )
+        response = self.client.extend.microsoft.modify_password(user_dn, arguments.new_password)
 
         if not response:
             raise Exception(f"Failed to reset {arguments.username} password account!!!")
@@ -21,9 +19,7 @@ class EnableUserAction(MicrosoftADAction):
 
     def run(self, arguments: UserAccountArguments):
         user_dn = self.search_userdn_query(arguments.username, arguments.basedn)
-        response = self.client.modify(
-            user_dn, {"userAccountControl": [("MODIFY_REPLACE", (512))]}, None
-        )
+        response = self.client.modify(user_dn, {"userAccountControl": [("MODIFY_REPLACE", (512))]}, None)
 
         if not response:
             raise Exception(f"Failed to Enable {arguments.username} account!!!")
@@ -35,9 +31,7 @@ class DisableUserAction(MicrosoftADAction):
 
     def run(self, arguments: UserAccountArguments):
         user_dn = self.search_userdn_query(arguments.username, arguments.basedn)
-        response = self.client.modify(
-            user_dn, {"userAccountControl": [("MODIFY_REPLACE", (514))]}, None
-        )
+        response = self.client.modify(user_dn, {"userAccountControl": [("MODIFY_REPLACE", (514))]}, None)
 
         if not response:
             raise Exception(f"Failed to Disable {arguments.username} account!!!")

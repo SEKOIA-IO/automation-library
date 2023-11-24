@@ -39,9 +39,7 @@ class MicrosoftADAction(Action):
     def search_userdn_query(self, username, basedn):
         SEARCHFILTER = f"(|(givenName={username})(mail= +{username}+))"
 
-        self.client.search(
-            search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail"]
-        )
+        self.client.search(search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail"])
         for entry in self.client.response:
             if entry.get("dn") and entry.get("attributes"):
                 if entry.get("attributes").get("cn"):
