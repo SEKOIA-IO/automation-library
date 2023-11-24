@@ -125,7 +125,9 @@ async def test_trigger_sqs_messages(
     for data in valid_messages:
         message, timestamp = data
 
-        expected_messages.extend(orjson.loads(message).get("Records", []))
+        expected_messages.extend(
+            [orjson.dumps(record).decode("utf-8") for record in orjson.loads(message).get("Records", [])]
+        )
         expected_timestamps.append(timestamp)
 
     expected_result = expected_messages, expected_timestamps
@@ -160,7 +162,10 @@ async def test_trigger_sqs_messages_with_one_failed(
     for data in valid_messages:
         message, timestamp = data
 
-        expected_messages.extend(orjson.loads(message).get("Records", []))
+        expected_messages.extend(
+            [orjson.dumps(record).decode("utf-8") for record in orjson.loads(message).get("Records", [])]
+        )
+
         expected_timestamps.append(timestamp)
 
     expected_timestamps.append(failed_message_timestamp)
