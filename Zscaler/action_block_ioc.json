@@ -15,7 +15,7 @@
     },
     "description": "Block the provided IOCs: IP / domain",
     "docker_parameters": "zscaler_block_ioc",
-    "name": "Block IoC",
+    "name": "Zscaler Block IoC",
     "results": {},
     "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f2"
 }

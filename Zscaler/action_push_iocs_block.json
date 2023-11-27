@@ -22,9 +22,9 @@
         "title": "Arguments",
         "type": "object"
     },
-    "description": "Block the provided IOCs: IP / domain",
+    "description": "Block the provided IOCs: IP / domain / Url",
     "docker_parameters": "push_iocs_block",
-    "name": "Push IOCs for detection",
+    "name": "Zscaler Push IOCs for detection",
     "results": {},
     "uuid": "103d8377-7a61-4558-8eae-1041b130c871"
 }
