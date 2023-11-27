@@ -63,6 +63,12 @@ ECS_TO_THEHIVE: dict[str, str] = {
     "url.full": "url",
     "url.original": "url",
     "user_agent.original": "user-agent",
+    "host.name": "hostname",
+    "log.hostname": "hostname",
+    "host.hostname": "hostname",
+    "user.name": "other",
+    "host.user.name": "other",
+    "user.full_name": "other",
 }
 
 
