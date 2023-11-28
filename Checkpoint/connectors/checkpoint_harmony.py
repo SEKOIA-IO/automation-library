@@ -158,6 +158,5 @@ class CheckpointHarmonyConnector(AsyncConnector):
                         )
                         time.sleep(delta_sleep)
 
-
             except Exception as e:
                 logger.error("Error while running Checkpoint Harmony: {error}", error=e)
