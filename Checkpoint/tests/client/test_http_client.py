@@ -1,5 +1,6 @@
 """Tests related to http client."""
 from typing import Any
+from datetime import timezone
 
 import pytest
 from aioresponses import aioresponses
@@ -43,7 +44,7 @@ async def test_checkpoint_http_client_parse_date(
     assert http_client.parse_date(None) is None
     assert http_client.parse_date(session_faker.word()) is None
 
-    expected = session_faker.date_time()
+    expected = session_faker.date_time(tzinfo=timezone.utc)
     assert http_client.parse_date(expected.strftime("%m/%d/%Y %H:%M:%S")) == expected
     assert http_client.parse_date(expected.isoformat()) == expected
 

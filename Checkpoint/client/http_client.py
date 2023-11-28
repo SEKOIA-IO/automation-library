@@ -1,5 +1,5 @@
 """Contains http client."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 from aiolimiter import AsyncLimiter
 from loguru import logger
@@ -128,11 +128,11 @@ class CheckpointHttpClient(HttpClient):
             return None
 
         try:
-            return datetime.fromisoformat(value)
+            return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
 
         except ValueError:
             try:
-                return datetime.strptime(value, "%m/%d/%Y %H:%M:%S")
+                return datetime.strptime(value, "%m/%d/%Y %H:%M:%S").replace(tzinfo=timezone.utc)
 
             except ValueError:
                 logger.warning("Failed to parse date: {0}. It is not either ISO or `%m/%d/%Y %H:%M:%S` format", value)
