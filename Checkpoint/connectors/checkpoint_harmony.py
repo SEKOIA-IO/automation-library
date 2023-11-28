@@ -130,9 +130,8 @@ class CheckpointHarmonyConnector(AsyncConnector):
                     message_ids, latest_event_date = loop.run_until_complete(self.get_checkpoint_harmony_events())
                     processing_end = time.time()
 
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - latest_event_date
-                    )
+                    lag = processing_end - latest_event_date
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(lag)
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
@@ -150,6 +149,15 @@ class CheckpointHarmonyConnector(AsyncConnector):
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                         processing_end - processing_start
                     )
+
+                    # compute the remaining sleeping time. If greater than 0, sleep
+                    delta_sleep = self.configuration.frequency - lag
+                    if delta_sleep > 0:
+                        logger.info(
+                            f"Next batch of events in the future. Waiting {delta_sleep} seconds",
+                        )
+                        time.sleep(delta_sleep)
+
 
             except Exception as e:
                 logger.error("Error while running Checkpoint Harmony: {error}", error=e)
