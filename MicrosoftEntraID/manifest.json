@@ -30,7 +30,7 @@
             }
         },
         "required": [
-            "tenant_id",
+            "tenant_id"
         ],
         "secrets": [
             "client_secret",
