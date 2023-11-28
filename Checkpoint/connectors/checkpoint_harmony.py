@@ -22,6 +22,7 @@ class CheckpointHarmonyConfiguration(DefaultConnectorConfiguration):
 
     ratelimit_per_minute: int = 60
     chunk_size: int = 1000
+    frequency: int = 60
 
 
 class CheckpointHarmonyConnector(AsyncConnector):
