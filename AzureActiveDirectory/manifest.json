@@ -1,11 +1,11 @@
 {
     "configuration": {
-        "title": "AzureADConfiguration",
+        "title": "Entra ID configuration",
         "type": "object",
         "properties": {
             "tenant_id": {
                 "title": "Tenant Id",
-                "description": "ID of the Azure AD tenant",
+                "description": "ID of the Microsoft Entra ID tenant",
                 "type": "string"
             },
             "client_id": {
@@ -41,8 +41,8 @@
             "password"
         ]
     },
-    "description": "[Azure Active Directory (Azure AD)](https://azure.microsoft.com/en-us/services/active-directory/#overview) is an enterprise identity service that provides single sign-on, multifactor authentication, and conditional access to guard against 99.9 percent of cybersecurity attacks.",
-    "name": "Azure Active Directory",
+    "description": "[Microsoft Entra ID (formely Azure Active Directory)](https://azure.microsoft.com/en-us/services/active-directory/#overview) is an enterprise identity service that provides single sign-on, multifactor authentication, and conditional access to guard against 99.9 percent of cybersecurity attacks.",
+    "name": "Microsoft Entra ID",
     "uuid": "3abf7928-65ef-4a5f-ba3e-5fbe56123d0c",
     "slug": "azure-ad",
     "version": "2.6"
