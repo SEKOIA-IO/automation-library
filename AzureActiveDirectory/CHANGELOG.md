@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-11-28 - 2.7
+
+### Changed
+
+- Change the name of the module to Microsoft Entra ID
+
+### Fixed
+
+- Remove credentials from required fields (as the module support OAUTH2.0 and delegated account authentication)
+
 ## 2023-11-22 - 2.6
 
 ### Changed
