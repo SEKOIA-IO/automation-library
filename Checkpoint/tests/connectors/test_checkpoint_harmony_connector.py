@@ -158,11 +158,10 @@ async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
         base_url = checkpoint_harmony_connector.module.configuration.base_url
         auth_url = checkpoint_harmony_connector.module.configuration.authentication_url
         intake_post_url = urljoin(checkpoint_harmony_connector.configuration.intake_server, "/batch")
-
-        get_events_url = "{0}/app/SBM/external_api/v3/alert/?backend_last_updated__gte={1}&limit={2}".format(
+        half_hour_ago_str = half_hour_ago.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        get_events_url = urljoin(
             base_url,
-            half_hour_ago.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            limit,
+            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}"
         )
 
         # all events except last one have event_timestamp < current date

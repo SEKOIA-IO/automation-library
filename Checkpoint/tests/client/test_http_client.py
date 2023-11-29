@@ -1,6 +1,7 @@
 """Tests related to http client."""
 from typing import Any
 from datetime import timezone
+from urllib.parse import urljoin
 
 import pytest
 from aioresponses import aioresponses
@@ -64,11 +65,11 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_empty(
     _, token_data = http_token
     with aioresponses() as mocked:
         time_events_from = session_faker.date_time()
+        time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)
-        get_events_url = "{0}/app/SBM/external_api/v3/alert/?backend_last_updated__gte={1}&limit={2}".format(
+        get_events_url = urljoin(
             http_client.base_url,
-            time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            limit,
+            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}"
         )
 
         events_data = {
@@ -105,11 +106,11 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
     _, token_data = http_token
     with aioresponses() as mocked:
         time_events_from = session_faker.date_time()
+        time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)
-        get_events_url = "{0}/app/SBM/external_api/v3/alert/?backend_last_updated__gte={1}&limit={2}".format(
+        get_events_url = urljoin(
             http_client.base_url,
-            time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            limit,
+            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}"
         )
 
         events = [
@@ -171,11 +172,11 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success_1(
     _, token_data = http_token
     with aioresponses() as mocked:
         time_events_from = session_faker.date_time()
+        time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)
-        get_events_url = "{0}/app/SBM/external_api/v3/alert/?backend_last_updated__gte={1}&limit={2}".format(
+        get_events_url = urljoin(
             http_client.base_url,
-            time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            limit,
+            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}"
         )
 
         events_data = {
