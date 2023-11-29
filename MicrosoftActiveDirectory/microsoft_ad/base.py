@@ -36,7 +36,9 @@ class MicrosoftADAction(Action):
         return conn
 
     def search_userdn_query(self, username, basedn):
-        SEARCHFILTER = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
+        SEARCHFILTER = (
+            f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
+        )
 
         self.client.search(search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail"])
         users_dn = []

@@ -12,3 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add for the first time microsotf AD actions
+
+## 2023-11-29 - 1.1.0
+
+### Update
+
+- Update LDAP query
+- Add some tests

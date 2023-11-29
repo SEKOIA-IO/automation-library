@@ -26,9 +26,13 @@ def configured_action(action: MicrosoftADAction):
 def one_user_dn():
     return ["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com"]
 
+
 @pytest.fixture
 def two_users_dn():
-    return ["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com", "CN=integration test1,CN=Users,DC=lab,DC=test,DC=com"]
+    return [
+        "CN=integration_test,CN=Users,DC=lab,DC=test,DC=com",
+        "CN=integration test1,CN=Users,DC=lab,DC=test,DC=com",
+    ]
 
 
 def test_disable_user(one_user_dn):
@@ -45,6 +49,7 @@ def test_disable_user(one_user_dn):
             results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
             assert results is None
+
 
 def test_disable_two_users(two_users_dn):
     action = configured_action(DisableUserAction)

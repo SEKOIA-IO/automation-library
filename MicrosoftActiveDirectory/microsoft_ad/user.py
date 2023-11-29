@@ -10,13 +10,13 @@ class ResetUserPasswordAction(MicrosoftADAction):
 
         if len(users_dn) == 0:
             raise Exception(f"There's no one with this name !!")
-        
+
         if len(users_dn) > 1:
             raise Exception(f"There's {len(users_dn)} persons with the same name !!")
 
-        try : 
+        try:
             self.client.extend.microsoft.modify_password(users_dn[0], arguments.new_password)
-        except :
+        except:
             self.log(f"Failed to reset {arguments.username} password account!!!")
 
 
@@ -29,13 +29,13 @@ class EnableUserAction(MicrosoftADAction):
 
         if len(users_dn) == 0:
             raise Exception(f"There's no one with this name !!")
-        
+
         if len(users_dn) > 1:
             raise Exception(f"There's {len(users_dn)} persons with the same name !!")
 
-        try :
+        try:
             self.client.modify(users_dn[0], {"userAccountControl": [("MODIFY_REPLACE", (512))]}, None)
-        except :
+        except:
             self.log(f"Failed to Enable {arguments.username} account!!!")
 
 
@@ -48,11 +48,11 @@ class DisableUserAction(MicrosoftADAction):
 
         if len(users_dn) == 0:
             raise Exception(f"There's no one with this name !!")
-        
+
         if len(users_dn) > 1:
             raise Exception(f"There's {len(users_dn)} persons with the same name !!")
 
-        try :
+        try:
             self.client.modify(users_dn[0], {"userAccountControl": [("MODIFY_REPLACE", (514))]}, None)
         except:
             self.log(f"Failed to Disable {arguments.username} account!!!")
