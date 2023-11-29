@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2023-11-29 - 1.1.5
+
+#### Fixed
+
+- Handle the pagination when listing the alerts
+- Add 1 milliseconds to the start date when requested the last alerts, in order to exclude the last collected event
+
 ### 2023-11-28 - 1.1.4
 
 #### Fixed
