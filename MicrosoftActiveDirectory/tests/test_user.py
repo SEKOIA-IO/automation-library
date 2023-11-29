@@ -6,6 +6,7 @@ from microsoft_ad.user import (
 )
 
 from unittest.mock import patch
+import pytest
 
 
 def configured_action(action: MicrosoftADAction):
@@ -21,13 +22,22 @@ def configured_action(action: MicrosoftADAction):
     return a
 
 
-def test_disable_user():
+@pytest.fixture
+def one_user_dn():
+    return ["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com"]
+
+@pytest.fixture
+def two_users_dn():
+    return ["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com", "CN=integration test1,CN=Users,DC=lab,DC=test,DC=com"]
+
+
+def test_disable_user(one_user_dn):
     action = configured_action(DisableUserAction)
     response = True
 
     with patch(
         "microsoft_ad.base.MicrosoftADAction.search_userdn_query",
-        return_value="test_ad",
+        return_value=one_user_dn,
     ):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
@@ -36,14 +46,28 @@ def test_disable_user():
 
             assert results is None
 
+def test_disable_two_users(two_users_dn):
+    action = configured_action(DisableUserAction)
+    response = True
 
-def test_enable_user():
+    with patch(
+        "microsoft_ad.base.MicrosoftADAction.search_userdn_query",
+        return_value=two_users_dn,
+    ):
+        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+            with pytest.raises(Exception):
+                mock_client.modify.return_value = response
+
+                results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
+
+
+def test_enable_user(one_user_dn):
     action = configured_action(EnableUserAction)
     response = True
 
     with patch(
         "microsoft_ad.base.MicrosoftADAction.search_userdn_query",
-        return_value="test_ad",
+        return_value=one_user_dn,
     ):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
@@ -53,13 +77,28 @@ def test_enable_user():
             assert results is None
 
 
-def test_reset_password_user():
+def test_enable_two_users(two_users_dn):
+    action = configured_action(EnableUserAction)
+    response = True
+
+    with patch(
+        "microsoft_ad.base.MicrosoftADAction.search_userdn_query",
+        return_value=two_users_dn,
+    ):
+        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+            with pytest.raises(Exception):
+                mock_client.modify.return_value = response
+
+                results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
+
+
+def test_reset_password_user(one_user_dn):
     action = configured_action(ResetUserPasswordAction)
     response = True
 
     with patch(
         "microsoft_ad.base.MicrosoftADAction.search_userdn_query",
-        return_value="test_ad",
+        return_value=one_user_dn,
     ):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
@@ -73,3 +112,24 @@ def test_reset_password_user():
             )
 
             assert results is None
+
+
+def test_reset_password_two_users(two_users_dn):
+    action = configured_action(ResetUserPasswordAction)
+    response = True
+
+    with patch(
+        "microsoft_ad.base.MicrosoftADAction.search_userdn_query",
+        return_value=two_users_dn,
+    ):
+        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+            with pytest.raises(Exception):
+                mock_client.modify.return_value = response
+
+                results = action.run(
+                    {
+                        "username": "test_username",
+                        "basedn": "cn=test_basedn",
+                        "new_password": "test_new_password",
+                    }
+                )
