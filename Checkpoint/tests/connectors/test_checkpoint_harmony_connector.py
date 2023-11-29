@@ -155,38 +155,43 @@ async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
         # Right now it is default value in limit count when we get events
         limit = 100
 
-        base_url = checkpoint_harmony_connector.module.configuration.base_url
+        base_url = urljoin(checkpoint_harmony_connector.module.configuration.base_url, "/app/SBM")
         auth_url = checkpoint_harmony_connector.module.configuration.authentication_url
         intake_post_url = urljoin(checkpoint_harmony_connector.configuration.intake_server, "/batch")
-        half_hour_ago_str = half_hour_ago.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        get_events_url = urljoin(
-            base_url,
-            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}"
-        )
 
-        # all events except last one have event_timestamp < current date
-        events = [
-            create_event(
-                session_faker, current_date - timedelta(minutes=session_faker.pyint(min_value=1, max_value=30))
-            )
-            for _ in range(session_faker.pyint(min_value=1, max_value=limit - 1))
+        half_hour_ago_str = half_hour_ago.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        endpoints = [
+            f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}&offset={limit}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}&offset={limit*2}",
         ]
 
-        events.append(create_event(session_faker, current_date))
+        events = []
+        for index, endpoint in enumerate(endpoints):
+            # all events except last one have event_timestamp < current date
+            objects = [
+                create_event(
+                    session_faker, current_date - timedelta(minutes=session_faker.pyint(min_value=1, max_value=30))
+                )
+                for _ in range(session_faker.pyint(min_value=1, max_value=limit - 1))
+            ]
 
-        events_data = {
-            "meta": {
-                "limit": limit,
-                "next": session_faker.word(),
-                "previous": session_faker.word(),
-                "offset": 0,
-                "total_count": 0,
-            },
-            "objects": events,
-        }
+            objects.append(create_event(session_faker, current_date))
+            events.extend(objects)
+
+            events_data = {
+                "meta": {
+                    "limit": limit,
+                    "next": endpoints[index + 1] if index + 1 < len(endpoints) else None,
+                    "previous": session_faker.word(),
+                    "offset": 0,
+                    "total_count": 0,
+                },
+                "objects": objects,
+            }
+            mocked.get(f"{base_url}{endpoint}", status=200, payload=events_data)
 
         mocked.post(auth_url, status=200, payload=token_data)
-        mocked.get(get_events_url, status=200, payload=events_data)
         mocked.post(
             intake_post_url,
             status=200,

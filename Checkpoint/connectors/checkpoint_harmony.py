@@ -87,7 +87,8 @@ class CheckpointHarmonyConnector(AsyncConnector):
             tuple[list[str], float]: result event ids and new latest event date in timestamp
         """
         _last_event_date = self.last_event_date
-        events = await self.get_checkpoint_client().get_harmony_mobile_alerts(_last_event_date, 100)
+        list_of_events = self.get_checkpoint_client().get_harmony_mobile_alerts(_last_event_date, 100)
+        events = [event async for events in list_of_events for event in events]
 
         logger.info("Fetched {0} events from source", len(events))
 
