@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-11-21 - 1.27.1
+
+### Fixed
+
+- Bugfix with SQS connector push events to intake
+
+## 2023-11-21 - 1.27
+
+### Fixed
+
+- Fix connector startup problems
+
 ## 2023-10-18 - 1.26
 
 ### Changed

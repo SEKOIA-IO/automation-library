@@ -6,3 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## 2023-11-23 - 1.47
+
+### Added
+
+- Collecting events lag metric
+
+## 2023-11-22 - 1.46
+
+### Changed
+
+- Upgrade dependencies: Sekoia-automation-SDK 1.8.1

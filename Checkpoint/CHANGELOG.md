@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2023-11-28 - 1.1.4
+
+#### Fixed
+
+- Convert naive datetimes from events into aware ones
+
+### 2023-11-28 - 1.1.3
+
+#### Fixed
+
+- Add the frequency property in the configuration
+
+### 2023-11-28 - 1.1.2
+
+#### Added
+
+- Add timer to schedule calls
+
+### 2023-11-24 - 1.1.1
+
+#### Fixed
+
+- Fix datetime parsing problem
+
+### 2023-11-21 - 1.1.0
+
+#### Fixed
+
+- Fix connector startup problems
+
 ### 2023-10-06 - 1.0.0
 
 #### Added

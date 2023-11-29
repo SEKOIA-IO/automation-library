@@ -7,14 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
- ## 2023-10-10 - 2.47.0
+## 2023-11-23 - 2.53.0
 
- ### Added
+### Added
 
- - Add the action that let us get reports from a specific term
+- Add support for custom CA certs bundle in triggers
 
- ## 2023-10-31 - 2.50.0
+## 2023-11-22 - 2.52.0
 
- ### Updated
+### Changed
 
- - Update get context action
+- Upgrade dependencies: Sekoia-automation-SDK 1.8.1
+
+## 2023-10-10 - 2.47.0
+
+### Added
+
+- Add the action that let us get reports from a specific term
+
+## 2023-10-31 - 2.50.0
+
+### Updated
+
+- Update get context action

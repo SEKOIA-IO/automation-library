@@ -1,5 +1,6 @@
 """Tests related to http client."""
 from typing import Any
+from datetime import timezone
 
 import pytest
 from aioresponses import aioresponses
@@ -26,6 +27,26 @@ def http_client(session_faker: Faker) -> CheckpointHttpClient:
         auth_url=session_faker.url(),
         base_url=session_faker.url(),
     )
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_http_client_parse_date(
+    session_faker: Faker,
+    http_client: CheckpointHttpClient,
+):
+    """
+    Test `parse_date` method.
+
+    Args:
+        session_faker: Faker
+        http_client: CheckpointHttpClient
+    """
+    assert http_client.parse_date(None) is None
+    assert http_client.parse_date(session_faker.word()) is None
+
+    expected = session_faker.date_time(tzinfo=timezone.utc)
+    assert http_client.parse_date(expected.strftime("%m/%d/%Y %H:%M:%S")) == expected
+    assert http_client.parse_date(expected.isoformat()) == expected
 
 
 @pytest.mark.asyncio
@@ -130,7 +151,9 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
         result = await http_client.get_harmony_mobile_alerts(time_events_from, limit)
 
         assert len(result) == len(events)
-        assert [event.dict() for event in result] == events
+        assert [event.dict() for event in result] == [
+            {**event, "event_timestamp": None, "backend_last_updated": None} for event in events
+        ]
 
 
 @pytest.mark.asyncio

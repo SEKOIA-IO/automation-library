@@ -57,6 +57,7 @@ def connector_config(faker: Faker, intake_key: str) -> AwsSqsMessagesTriggerConf
 def connector(
     aws_module: AwsModule,
     connector_config: AwsSqsMessagesTriggerConfiguration,
+    symphony_storage: Path,
     mock_push_data_to_intakes: AsyncMock,
 ) -> AwsSqsMessagesTrigger:
     """
@@ -65,17 +66,19 @@ def connector(
     Args:
         aws_module: AwsModule
         connector_config: AwsSqsMessagesTriggerConfiguration
+        symphony_storage: Path
         mock_push_data_to_intakes: AsyncMock
 
     Returns:
         AwsSqsMessagesTrigger:
     """
-    connector = AwsSqsMessagesTrigger()
+    connector = AwsSqsMessagesTrigger(module=aws_module, data_path=symphony_storage)
 
-    connector.module = aws_module
     connector.configuration = connector_config
 
     connector.push_data_to_intakes = mock_push_data_to_intakes
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
 
     return connector
 
@@ -122,7 +125,9 @@ async def test_trigger_sqs_messages(
     for data in valid_messages:
         message, timestamp = data
 
-        expected_messages.extend(orjson.loads(message).get("Records", []))
+        expected_messages.extend(
+            [orjson.dumps(record).decode("utf-8") for record in orjson.loads(message).get("Records", [])]
+        )
         expected_timestamps.append(timestamp)
 
     expected_result = expected_messages, expected_timestamps
@@ -157,7 +162,10 @@ async def test_trigger_sqs_messages_with_one_failed(
     for data in valid_messages:
         message, timestamp = data
 
-        expected_messages.extend(orjson.loads(message).get("Records", []))
+        expected_messages.extend(
+            [orjson.dumps(record).decode("utf-8") for record in orjson.loads(message).get("Records", [])]
+        )
+
         expected_timestamps.append(timestamp)
 
     expected_timestamps.append(failed_message_timestamp)

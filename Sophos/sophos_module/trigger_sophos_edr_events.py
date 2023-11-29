@@ -1,18 +1,18 @@
-import os
+import datetime
 import time
 from functools import cached_property
 
 import orjson
 from requests.exceptions import HTTPError
-from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
+from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
 from sophos_module.helper import normalize_message
-from sophos_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
 class SophosEDRConfiguration(DefaultConnectorConfiguration):
@@ -124,6 +124,15 @@ class SophosEDREventsTrigger(SophosConnector):
 
         return response.json()
 
+    def _get_most_recent_timestamp_from_items(self, items: list[dict]):
+        def _extract_timestamp(item: dict) -> float:
+            RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+            return datetime.datetime.strptime(item["created_at"], RFC3339_STRICT_FORMAT).timestamp()
+
+        latest_message = max(items, key=lambda item: item["created_at"])
+        latest_message_timestamp = _extract_timestamp(latest_message)
+        return latest_message_timestamp
+
     def forward_next_batches(self) -> None:
         """
         Successively queries the Sophos Central API while more are available
@@ -147,7 +156,12 @@ class SophosEDREventsTrigger(SophosConnector):
                 cursor = next_cursor
 
             items = batch.get("items", [])
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
+            if len(items) > 0:
+                most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
+                events_lag = int(time.time() - most_recent_timestamp_seen)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
+
             for message in items:
                 normalized_message = normalize_message(message)
                 messages.append(orjson.dumps(normalized_message).decode("utf-8"))

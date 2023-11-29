@@ -1,12 +1,12 @@
 {
-  "configuration": {
-    "title": "Trend Micro",
-    "type": "object",
-    "properties": {}
-  },
-  "description": "",
-  "name": "Trend Micro",
-  "slug": "trend-micro",
-  "uuid": "1b02d442-b804-4987-afe7-6a4be6ef35e6",
-  "version": "1.0.1"
+    "configuration": {
+        "title": "Trend Micro",
+        "type": "object",
+        "properties": {}
+    },
+    "description": "",
+    "name": "Trend Micro",
+    "slug": "trend-micro",
+    "uuid": "1b02d442-b804-4987-afe7-6a4be6ef35e6",
+    "version": "1.2.0"
 }

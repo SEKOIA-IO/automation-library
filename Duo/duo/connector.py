@@ -1,7 +1,7 @@
+import datetime
 import time
 from functools import cached_property
-from threading import Event, Thread
-from threading import Lock
+from threading import Event, Lock, Thread
 from typing import Optional
 
 import duo_client
@@ -11,7 +11,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import DuoModule, LogType
 from .iterators import AdminLogsIterator, AuthLogsIterator, OfflineLogsIterator, TelephonyLogsIterator
-from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class AdminLogsConnectorConfiguration(DefaultConnectorConfiguration):
@@ -134,6 +134,21 @@ class DuoLogsConsumer(Thread):
         # Fetch next batch
         for events in self.get_events_iterator():
             batch_start_time = time.time()
+
+            if len(events) > 0:
+                if self._log_type == LogType.TELEPHONY:
+                    # Telephony logs have their datetime represented as "2023-03-21T22:34:49.466370+00:00"
+                    most_recent_event = max(events, key=lambda item: item["ts"])
+                    most_recent_timestamp = datetime.datetime.fromisoformat(most_recent_event["ts"]).timestamp()
+                else:
+                    most_recent_event = max(events, key=lambda item: item["timestamp"])
+                    most_recent_timestamp = most_recent_event["timestamp"]
+
+                current_timestamp = int(time.time())
+                events_lag = current_timestamp - most_recent_timestamp
+                EVENTS_LAG.labels(
+                    intake_key=self.connector.configuration.intake_key, type=self._log_type.value
+                ).observe(events_lag)
 
             # Add `eventtype` field
             for event in events:

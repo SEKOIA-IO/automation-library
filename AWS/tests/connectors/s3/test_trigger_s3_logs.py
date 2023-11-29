@@ -1,4 +1,5 @@
 """Tests related to AwsS3LogsTrigger."""
+from pathlib import Path
 
 import pytest
 from faker import Faker
@@ -49,6 +50,7 @@ def aws_s3_logs_trigger_config(faker: Faker) -> AwsS3LogsConfiguration:
 @pytest.fixture
 def connector(
     aws_module: AwsModule,
+    symphony_storage: Path,
     aws_s3_logs_trigger_config: AwsS3LogsConfiguration,
 ) -> AwsS3LogsTrigger:
     """
@@ -56,12 +58,13 @@ def connector(
 
     Args:
         aws_module: AwsModule
+        symphony_storage: Path
         aws_s3_logs_trigger_config: AwsS3LogsConfiguration
 
     Returns:
         AwsS3ParquetRecordsTrigger:
     """
-    connector = AwsS3LogsTrigger()
+    connector = AwsS3LogsTrigger(module=aws_module, data_path=symphony_storage)
 
     connector.module = aws_module
     connector.configuration = aws_s3_logs_trigger_config

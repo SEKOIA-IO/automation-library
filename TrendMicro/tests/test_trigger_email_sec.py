@@ -148,6 +148,7 @@ def test_fetch_event(trigger, response_message, response_message_empty):
         mock_time.time.side_effect = [
             start_time,  # 1st batch start
             start_time,  # 1st iterate_through_pages
+            start_time,  # 1st events lag measurement
             end_time,  # 1st batch end
             end_time,  # 2nd batch start
             end_time,  # 2nd iterate_through_pages

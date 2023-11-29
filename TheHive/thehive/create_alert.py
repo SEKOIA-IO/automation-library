@@ -63,6 +63,12 @@ ECS_TO_THEHIVE: dict[str, str] = {
     "url.full": "url",
     "url.original": "url",
     "user_agent.original": "user-agent",
+    "host.name": "hostname",
+    "log.hostname": "hostname",
+    "host.hostname": "hostname",
+    "user.name": "other",
+    "host.user.name": "other",
+    "user.full_name": "other",
 }
 
 
@@ -78,21 +84,24 @@ class TheHiveCreateAlert(Action):
         arg_events = arguments.get("events", [])
 
         artifacts: list[AlertArtifact] = []
+        previous_value = []
         for event in arg_events:
             for key, values in event.items():
                 if key in ECS_TO_THEHIVE:
                     for value in values if isinstance(values, list) else [values]:
-                        artifacts.append(
-                            AlertArtifact(
-                                dataType=ECS_TO_THEHIVE[key],
-                                tlp=arguments.get("artifact_tlp", 1),
-                                ioc=False,  # True only if we can check it came from the IC
-                                sighted=arguments.get("artifact_sighted", True),
-                                ignoreSimilarity=arguments.get("artifact_ignore_similarity", True),
-                                tags=[f"sekoia:type={key}"],
-                                data=value,
+                        if value not in previous_value:
+                            artifacts.append(
+                                AlertArtifact(
+                                    dataType=ECS_TO_THEHIVE[key],
+                                    tlp=arguments.get("artifact_tlp", 1),
+                                    ioc=False,  # True only if we can check it came from the IC
+                                    sighted=arguments.get("artifact_sighted", True),
+                                    ignoreSimilarity=arguments.get("artifact_ignore_similarity", True),
+                                    tags=[f"sekoia:type={key}"],
+                                    data=value,
+                                )
                             )
-                        )
+                            previous_value.append(value)
 
         alert_type = f"{arg_alert['alert_type']['category']}/{arg_alert['alert_type']['value']}"
         if len(alert_type) > 32:

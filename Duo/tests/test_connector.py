@@ -80,7 +80,7 @@ def test_fetch_batches_v2(trigger, telephony_response_1, telephony_response_2):
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
         end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
+        mock_time.time.side_effect = [start_time, end_time, end_time]
 
         consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.TELEPHONY)
         consumer.fetch_batches()
@@ -104,7 +104,7 @@ def test_fetch_batches_v1(trigger, admin_response_1, admin_response_2):
         batch_duration = 42  # the batch lasts 16 seconds
         start_time = 1666711174.0
         end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
+        mock_time.time.side_effect = [start_time, end_time, end_time]
 
         consumer = DuoLogsConsumer(connector=trigger, log_type=LogType.ADMINISTRATION)
         consumer.fetch_batches()

@@ -11,7 +11,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import VadeCloudModule
 from .client import ApiClient
-from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class FetchEventException(Exception):
@@ -152,6 +152,11 @@ class VadeCloudConsumer(Thread):
                     message=f"{self.name}: Last event timestamp is {last_event_timestamp} which is "
                     f"{datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()}",
                     level="debug",
+                )
+
+                event_lag = int(time.time()) - last_event_timestamp // 1000
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
+                    event_lag
                 )
 
                 # save the greater date ever seen

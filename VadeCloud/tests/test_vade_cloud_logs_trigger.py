@@ -193,7 +193,7 @@ def test_fetch_event(trigger: VadeCloudLogsConnector, auth_message, response_mes
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1666711174.0
         end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
+        mock_time.time.side_effect = [start_time, end_time, end_time]
 
         consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
         consumer.next_batch()
