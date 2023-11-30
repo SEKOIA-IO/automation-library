@@ -61,7 +61,7 @@ class CheckpointHttpClient(HttpClient):
 
     async def get_harmony_mobile_alerts(
         self, start_from: datetime = datetime.now(), limit: int = 100
-    ) -> AsyncGenerator[list[HarmonyMobileSchema], None, None]:
+    ) -> AsyncGenerator[list[HarmonyMobileSchema], None]:
         """
         Get Harmony Mobile alerts.
 
