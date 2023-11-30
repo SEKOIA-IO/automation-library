@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2023-11-30 - 1.1.6
+
+#### Fixed
+
+- Increase to 1 seconds the delta from the start date when requested the last alerts
+
 ### 2023-11-29 - 1.1.5
 
 #### Fixed
