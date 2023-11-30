@@ -114,7 +114,7 @@ def test_client_close():
             }
         )
     )
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(client.close())  # nothing happens
 
     fake_client = AsyncMock()
