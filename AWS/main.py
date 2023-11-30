@@ -7,6 +7,7 @@ from connectors.s3.logs.trigger_flowlog_records import FlowlogRecordsTrigger
 from connectors.s3.trigger_s3_logs import AwsS3LogsTrigger
 from connectors.s3.trigger_s3_parquet import AwsS3ParquetRecordsTrigger
 from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
+from connectors.s3.trigger_s3_flowlogs import AwsS3FlowLogsTrigger
 from connectors.trigger_sqs_messages import AwsSqsMessagesTrigger
 
 if __name__ == "__main__":
@@ -20,5 +21,6 @@ if __name__ == "__main__":
     module.register(AwsS3RecordsTrigger, "aws_s3_cloudtrail_records_trigger")
     module.register(AwsS3ParquetRecordsTrigger, "aws_s3_parquet_records_trigger")
     module.register(AwsSqsMessagesTrigger, "aws_sqs_messages_trigger")
+    module.register(AwsS3FlowLogsTrigger, "aws_s3_flowlogs_trigger")
 
     module.run()
