@@ -159,7 +159,7 @@ async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
         auth_url = checkpoint_harmony_connector.module.configuration.authentication_url
         intake_post_url = urljoin(checkpoint_harmony_connector.configuration.intake_server, "/batch")
 
-        half_hour_ago_str = (half_hour_ago + timedelta(milliseconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        half_hour_ago_str = (half_hour_ago + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         endpoints = [
             f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}",
             f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}&offset={limit}",
