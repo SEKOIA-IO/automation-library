@@ -16,7 +16,8 @@ from connectors import CheckpointModule
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
-ONE_MILLISECOND = timedelta(milliseconds=1)
+
+ONE_SECOND = timedelta(seconds=1)
 
 
 class CheckpointHarmonyConfiguration(DefaultConnectorConfiguration):
@@ -88,7 +89,7 @@ class CheckpointHarmonyConnector(AsyncConnector):
         Returns:
             tuple[list[str], float]: result event ids and new latest event date in timestamp
         """
-        _last_event_date = self.last_event_date + ONE_MILLISECOND
+        _last_event_date = self.last_event_date + ONE_SECOND
         list_of_events = self.get_checkpoint_client().get_harmony_mobile_alerts(_last_event_date, 100)
         events = [event async for events in list_of_events for event in events]
 
@@ -161,6 +162,11 @@ class CheckpointHarmonyConnector(AsyncConnector):
                             f"Next batch of events in the future. Waiting {delta_sleep} seconds",
                         )
                         time.sleep(delta_sleep)
+
+                # Close the current event loop
+                if loop.is_running():
+                    loop.stop()
+                    loop.close()
 
             except Exception as e:
                 logger.error("Error while running Checkpoint Harmony: {error}", error=e)
