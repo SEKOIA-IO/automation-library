@@ -1,5 +1,7 @@
 """Contains http client."""
+from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
+from urllib.parse import urljoin
 
 from aiolimiter import AsyncLimiter
 from loguru import logger
@@ -59,7 +61,7 @@ class CheckpointHttpClient(HttpClient):
 
     async def get_harmony_mobile_alerts(
         self, start_from: datetime = datetime.now(), limit: int = 100
-    ) -> list[HarmonyMobileSchema]:
+    ) -> AsyncGenerator[list[HarmonyMobileSchema], None]:
         """
         Get Harmony Mobile alerts.
 
@@ -68,43 +70,41 @@ class CheckpointHttpClient(HttpClient):
             limit: int
 
         Returns:
-            list[HarmonyMobileSchema]:
+            AsyncGenerator[list[HarmonyMobileSchema]]:
         """
-        url = "{0}/app/SBM/external_api/v3/alert/".format(self.base_url)
+        base_url = urljoin(self.base_url, "/app/SBM")
         formatted_start_date = start_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        endpoint = f"/external_api/v3/alert/?backend_last_updated__gte={formatted_start_date}&limit={limit}"
         logger.info("Fetch events with limit {0} starting from: {1}", limit, formatted_start_date)
-
-        params = {
-            "backend_last_updated__gte": formatted_start_date,
-            "limit": limit,
-        }
 
         token_refresher = await self.get_token_refresher(CheckpointServiceType.HARMONY_MOBILE)
 
-        async with token_refresher.with_access_token() as token:
-            async with self.session() as session:
-                async with session.get(
-                    url=url,
-                    headers={"Authorization": f"Bearer {token.token.token}"},
-                    params=params,
-                ) as response:
-                    response_json = await response.json()
+        while endpoint is not None:
+            async with token_refresher.with_access_token() as token:
+                async with self.session() as session:
+                    async with session.get(
+                        url=f"{base_url}{endpoint}",
+                        headers={"Authorization": f"Bearer {token.token.token}"},
+                    ) as response:
+                        response_json = await response.json()
 
-        if response_json.get("objects") is None:
-            logger.error("Failed to get events from server. Invalid response : {0}", response_json)
+            if response_json.get("objects") is None:
+                logger.error("Failed to get events from server. Invalid response : {0}", response_json)
 
-            return []
+                return
 
-        return [
-            HarmonyMobileSchema(
-                **{
-                    **data,
-                    "event_timestamp": self.parse_date(data.get("event_timestamp")),
-                    "backend_last_updated": self.parse_date(data.get("backend_last_updated")),
-                }
-            )
-            for data in response_json["objects"]
-        ]
+            yield [
+                HarmonyMobileSchema(
+                    **{
+                        **data,
+                        "event_timestamp": self.parse_date(data.get("event_timestamp")),
+                        "backend_last_updated": self.parse_date(data.get("backend_last_updated")),
+                    }
+                )
+                for data in response_json["objects"]
+            ]
+
+            endpoint = response_json.get("meta", {}).get("next")
 
     @staticmethod
     def parse_date(value: str | None) -> datetime | None:
