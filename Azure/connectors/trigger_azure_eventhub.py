@@ -50,11 +50,11 @@ class Client(object):
         try:
             await self._client.receive_batch(*args, **kwargs)  # type: ignore
         finally:
-            self.close()
+            await self.close()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         if self._client:
-            self._client.close()
+            await self._client.close()
             self._client = None
 
 
@@ -91,7 +91,7 @@ class AzureEventsHubTrigger(AsyncConnector):
                 ),
                 level="info",
             )
-            self.client.close()
+            await self.client.close()
 
         # acknowledge the messages
         await partition_context.update_checkpoint()

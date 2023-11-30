@@ -59,7 +59,7 @@ show_error_codes = true
 implicit_reexport = true
 allow_untyped_decorators = true
 warn_return_any = true
-exclude = ["tests/*"]
+exclude = ["tests/*", "dev.py"]
 
 [[tool.mypy.overrides]]
 module = "azure.eventhub.extensions.checkpointstoreblob.*"
@@ -103,4 +103,5 @@ help = "Make code linting and formatting."
 omit = [
     "tests/*",
     "main.py",
+    "dev.py"
 ]
