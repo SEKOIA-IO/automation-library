@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-11-30 - 2.2.0
+
+### Changed
+
+- Converted to async for better performance
+
+### Removed
+
+- Removed deprecated metrics code
+
 ## 2023-11-21 - 2.1.3
 
 ### Fixed
