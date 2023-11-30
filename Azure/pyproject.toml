@@ -6,13 +6,13 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version="^1.8.1", extras=["all"] }
-orjson = "^3.7.7"
+sekoia-automation-sdk = { version="^1.8.2", extras=["all"] }
+orjson = "^3.9.10"
 azure-eventhub-checkpointstoreblob-aio = "^1.1.4"
-azure-storage-blob = "^12.18.1"
-azure-eventhub = "^5.10.0"
-azure-identity = "^1.14.0"
-async-lru = "^2.0.2"
+azure-storage-blob = "^12.19.0"
+azure-eventhub = "^5.11.5"
+azure-identity = "^1.15.0"
+async-lru = "^2.0.4"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
 
