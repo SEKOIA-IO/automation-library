@@ -62,7 +62,7 @@ warn_return_any = true
 exclude = ["tests/*", "dev.py"]
 
 [[tool.mypy.overrides]]
-module = "azure.eventhub.extensions.checkpointstoreblob.*"
+module = "azure.eventhub.extensions.checkpointstoreblobaio.*"
 ignore_errors = true
 
 [tool.pytest.ini_options]
