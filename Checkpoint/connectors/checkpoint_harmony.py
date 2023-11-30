@@ -163,5 +163,10 @@ class CheckpointHarmonyConnector(AsyncConnector):
                         )
                         time.sleep(delta_sleep)
 
+                # Close the current event loop
+                if loop.is_running():
+                    loop.stop()
+                    loop.close()
+
             except Exception as e:
                 logger.error("Error while running Checkpoint Harmony: {error}", error=e)
