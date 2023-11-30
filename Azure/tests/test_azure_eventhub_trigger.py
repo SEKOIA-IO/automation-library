@@ -126,4 +126,4 @@ def test_client_close():
 
 
 def test_trigger_stop(trigger):
-    trigger.stop()
+    asyncio.run(trigger.stop())
