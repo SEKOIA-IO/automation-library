@@ -1,6 +1,5 @@
 from functools import cached_property
-from ldap3 import Server, Connection, Tls
-import ssl
+from ldap3 import Server, Connection
 
 from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
@@ -37,15 +36,18 @@ class MicrosoftADAction(Action):
         return conn
 
     def search_userdn_query(self, username, basedn):
-        SEARCHFILTER = f"(|(givenName={username})(mail= +{username}+))"
+        SEARCHFILTER = (
+            f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
+        )
 
         self.client.search(search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail"])
+        users_dn = []
         for entry in self.client.response:
             if entry.get("dn") and entry.get("attributes"):
                 if entry.get("attributes").get("cn"):
-                    user_dn = entry.get("dn")
+                    users_dn.append(entry.get("dn"))
 
-        return user_dn
+        return users_dn
 
 
 class UserAccountArguments(BaseModel):
