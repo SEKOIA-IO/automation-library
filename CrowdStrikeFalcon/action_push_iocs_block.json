@@ -2,10 +2,6 @@
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
-            "stix_objects": {
-                "description": "The IOCs to disseminate",
-                "type": "object"
-            },
             "stix_objects_path": {
                 "description": "Filepath of the STIX objects fetched from the collection",
                 "type": "string"
@@ -17,7 +13,7 @@
             }
         },
         "required": [
-            "stix_objects"
+            "stix_objects_path"
         ],
         "title": "Arguments",
         "type": "object"

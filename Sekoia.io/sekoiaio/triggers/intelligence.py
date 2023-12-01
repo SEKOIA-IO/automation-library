@@ -28,12 +28,8 @@ class FeedConsumptionTrigger(Trigger):
         return self.configuration.get("feed_id", "d6092c37-d8d7-45c3-8aff-c4dc26030608")
 
     @property
-    def to_file(self) -> bool:
-        return self.configuration.get("to_file", False)
-
-    @property
     def batch_size_limit(self) -> int:
-        return 2000 if self.to_file else 200
+        return self.configuration.get("batch_size_limit", 200)
 
     @property
     def url(self):
@@ -111,17 +107,13 @@ class FeedConsumptionTrigger(Trigger):
             )
 
             event_name = f"Sekoia.io feed - batch of {len(objects)} objects"
-            if self.to_file:
-                filepath = write(self.FILE_NAME, objects)
-                self.send_event(
-                    event_name=event_name,
-                    event={"stix_objects_path": self.FILE_NAME},
-                    directory=filepath.parent.as_posix(),
-                    remove_directory=True,
-                )
-
-            else:
-                self.send_event(event_name=event_name, event={"stix_objects": objects})
+            filepath = write(self.FILE_NAME, objects)
+            self.send_event(
+                event_name=event_name,
+                event={"stix_objects_path": self.FILE_NAME},
+                directory=filepath.parent.as_posix(),
+                remove_directory=True,
+            )
 
             # Store the cursor in the context for the next API call
             with self.context as cache:

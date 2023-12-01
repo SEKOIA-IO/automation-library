@@ -7,10 +7,10 @@
                 "description": "ID of the Sekoia.io feed to get data from",
                 "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608"
             },
-            "to_file": {
-                "type": "boolean",
-                "description": "Whether the event should be saved in a file or sent directly",
-                "default": false
+            "batch_size_limit": {
+                "type": "integer",
+                "description": "Size of the batch of elements to get from the Sekoia.io feed in one time",
+                "default": 200
             }
         },
         "type": "object",
@@ -22,17 +22,13 @@
     "results": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
-            "stix_objects": {
-                "description": "IOCs returned by the feed (STIX objects)",
-                "type": "object"
-            },
             "stix_objects_path": {
                 "description": "Filepath of the STIX objects fetched from the collection",
                 "type": "string"
             }
         },
         "required": [
-            "stix_objects"
+            "stix_objects_path"
         ],
         "title": "Results",
         "type": "object"
