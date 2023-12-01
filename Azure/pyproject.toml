@@ -6,15 +6,13 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version="^1.8.1", extras=["all"] }
-orjson = "^3.7.7"
-prometheus-client = "^0.16.0"
-confluent-kafka = "^2.0.2"
-azure-eventhub-checkpointstoreblob = "^1.1.4"
-azure-storage-blob = "^12.18.1"
-azure-eventhub = "^5.10.0"
-azure-identity = "^1.14.0"
-async-lru = "^2.0.2"
+sekoia-automation-sdk = { version="^1.8.2", extras=["all"] }
+orjson = "^3.9.10"
+azure-eventhub-checkpointstoreblob-aio = "^1.1.4"
+azure-storage-blob = "^12.19.0"
+azure-eventhub = "^5.11.5"
+azure-identity = "^1.15.0"
+async-lru = "^2.0.4"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
 
@@ -61,10 +59,10 @@ show_error_codes = true
 implicit_reexport = true
 allow_untyped_decorators = true
 warn_return_any = true
-exclude = ["tests/*"]
+exclude = ["tests/*", "dev.py"]
 
 [[tool.mypy.overrides]]
-module = "azure.eventhub.extensions.checkpointstoreblob.*"
+module = "azure.eventhub.extensions.checkpointstoreblobaio.*"
 ignore_errors = true
 
 [tool.pytest.ini_options]
@@ -105,4 +103,5 @@ help = "Make code linting and formatting."
 omit = [
     "tests/*",
     "main.py",
+    "dev.py"
 ]

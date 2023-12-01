@@ -1,3 +1,4 @@
+import asyncio
 import os
 import signal
 import time
@@ -6,12 +7,11 @@ from threading import Event
 from typing import Any, Optional
 
 import orjson
-from azure.eventhub import EventData, EventHubConsumerClient, PartitionContext
-from azure.eventhub.extensions.checkpointstoreblob import BlobCheckpointStore
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-
-from helpers.kafka_forwarder import KafkaForwarder
-from helpers.prometheus_exporter import make_prometheus_exporter
+from azure.eventhub import EventData
+from azure.eventhub.aio import EventHubConsumerClient, PartitionContext
+from azure.eventhub.extensions.checkpointstoreblobaio import BlobCheckpointStore
+from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -33,9 +33,8 @@ class Client(object):
 
     @cached_property
     def checkpoint_store(self) -> BlobCheckpointStore:
-        return BlobCheckpointStore.from_connection_string(
-            self.configuration.storage_connection_string,
-            container_name=self.configuration.storage_container_name,
+        return BlobCheckpointStore.from_connection_string(  # type: ignore[misc]
+            self.configuration.storage_connection_string, container_name=self.configuration.storage_container_name
         )
 
     def _new_client(self) -> EventHubConsumerClient:
@@ -46,20 +45,20 @@ class Client(object):
             checkpoint_store=self.checkpoint_store,
         )
 
-    def receive_batch(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    async def receive_batch(self, *args: Any, **kwargs: Optional[Any]) -> None:
         self._client = self._new_client()
         try:
-            self._client.receive_batch(*args, **kwargs)  # type: ignore
+            await self._client.receive_batch(*args, **kwargs)  # type: ignore
         finally:
-            self.close()
+            await self.close()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         if self._client:
-            self._client.close()
+            await self._client.close()
             self._client = None
 
 
-class AzureEventsHubTrigger(Connector):
+class AzureEventsHubTrigger(AsyncConnector):
     """
     This trigger consumes messages from Microsoft Azure EventHub
     """
@@ -71,33 +70,26 @@ class AzureEventsHubTrigger(Connector):
         self._stop_event = Event()
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
 
-        # Register signal to terminate thread
-        signal.signal(signal.SIGINT, self.stop)
-        signal.signal(signal.SIGTERM, self.stop)
-
-    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    async def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:
         self.log(message="Stopping Azure EventHub connector", level="info")
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
         # Close the azure EventHub client
-        self.client.close()
+        await self.client.close()
 
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
 
-    @cached_property
-    def kafka_producer(self) -> KafkaForwarder:
-        return KafkaForwarder()
-
-    def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
+    async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
         Handle new messages
         """
         if len(messages) > 0:
             # got messages, we forward them
-            self.forward_events(messages)
+            await self.forward_events(messages)
+
         else:
             # We reached the max_wait_time, close the current client
             self.log(
@@ -107,12 +99,12 @@ class AzureEventsHubTrigger(Connector):
                 ),
                 level="info",
             )
-            self.client.close()
+            await self.client.close()
 
         # acknowledge the messages
-        partition_context.update_checkpoint()
+        await partition_context.update_checkpoint()
 
-    def forward_events(self, messages: list[EventData]) -> None:
+    async def forward_events(self, messages: list[EventData]) -> None:
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
         records = [
@@ -128,8 +120,8 @@ class AzureEventsHubTrigger(Connector):
                 level="info",
             )
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(records))
-            self.kafka_producer.produce(records)
-            self.push_events_to_intakes(events=records)
+            await self.push_data_to_intakes(events=records)
+
         else:
             self.log(
                 message="No events to forward",
@@ -138,29 +130,29 @@ class AzureEventsHubTrigger(Connector):
 
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
 
-    def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
+    async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
         self.log_exception(
             exception,
             message="Error raised when consuming messages",
         )
 
     def run(self) -> None:  # pragma: no cover
-        # start the prometheus exporter
-        exporter = make_prometheus_exporter(int(os.environ.get("WORKER_PROM_LISTEN_PORT", "8010"), 10))
-        exporter.start()
-
         self.log(message="Azure EventHub Trigger has started", level="info")
 
-        try:
-            while not self._stop_event.is_set():
-                try:
+        while self.running:
+            try:
+                loop = asyncio.new_event_loop()
+                loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(self.stop()))
+                loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.stop()))
+
+                loop.run_until_complete(
                     self.client.receive_batch(
-                        self.handle_messages,
+                        on_event_batch=self.handle_messages,
                         on_error=self.handle_exception,
                         max_wait_time=self._consumption_max_wait_time,
                     )
-                except Exception as ex:
-                    self.log_exception(ex, message="Failed to consume messages")
-                    raise ex
-        finally:
-            exporter.stop()
+                )
+
+            except Exception as ex:
+                self.log_exception(ex, message="Failed to consume messages")
+                raise ex

@@ -1,7 +1,8 @@
+import asyncio
 import os
 import time
 from threading import Thread
-from unittest.mock import MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from azure.eventhub import EventData
@@ -51,10 +52,9 @@ def trigger(symphony_storage):
         "storage_container_name": "storage_container_name",
         "intake_key": "",
     }
-    trigger.push_events_to_intakes = Mock()
+    trigger.push_data_to_intakes = AsyncMock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
-    trigger.kafka_producer = Mock()
     yield trigger
 
 
@@ -65,15 +65,14 @@ def test_handle_messages(trigger):
         EventData('{"type": "heartbeat"}'),
         EventData('{"records": [{"name": "record3"}, {"name": "record4"}, {"name": "record5"}]}'),
     ]
-    partition_context = Mock()
+    partition_context = AsyncMock()
 
     # act
-    trigger.handle_messages(partition_context, messages)
+    asyncio.run(trigger.handle_messages(partition_context, messages))
 
     # assert
     assert partition_context.update_checkpoint.called
-    assert trigger.kafka_producer.produce.called
-    calls = [record for call in trigger.push_events_to_intakes.call_args_list for record in call.kwargs["events"]]
+    calls = [record for call in trigger.push_data_to_intakes.await_args_list for record in call.kwargs["events"]]
     assert len(calls) == 5
 
 
@@ -91,13 +90,14 @@ def test_client_receive_batch():
             }
         )
     )
-    consumer = MagicMock()
-    client._new_client = Mock(return_value=consumer)
+    consumer = AsyncMock()
+    client._new_client = MagicMock(return_value=consumer)
 
-    client.receive_batch()
+    asyncio.run(client.receive_batch())
+
     assert client._new_client.called
-    assert consumer.receive_batch.called
-    assert consumer.close.called
+    consumer.receive_batch.assert_awaited_once()
+    consumer.close.assert_awaited_once()
 
 
 def test_client_close():
@@ -114,14 +114,16 @@ def test_client_close():
             }
         )
     )
-    client.close()  # nothing happens
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(client.close())  # nothing happens
 
-    fake_client = Mock()
+    fake_client = AsyncMock()
     client._client = fake_client
-    client.close()
-    assert fake_client.close.called
+    loop.run_until_complete(client.close())
+
+    fake_client.close.assert_awaited_once()
     assert client._client is None
 
 
 def test_trigger_stop(trigger):
-    trigger.stop()
+    asyncio.run(trigger.stop())
