@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-05 - 1.6.1
+
+### Fixed
+
+- Fixed default refresh time
+- Fixed bug with an exception propagation
+
 ## 2023-11-23 - 1.6.0
 
 ### Added
