@@ -170,6 +170,10 @@ class EventStreamReader(threading.Thread):
     def __authorization(self):
         return EventStreamAuthentication(self.stream_info["sessionToken"]["token"])
 
+    @property
+    def refresh_interval(self) -> int:
+        return int(self.stream_info["refreshActiveSessionInterval"])
+
     def log(self, *args, **kwargs):
         self.connector.log(*args, **kwargs)
 
@@ -194,7 +198,7 @@ class EventStreamReader(threading.Thread):
         Read the events transported by the specified stream.
         """
 
-        next_refresh_at = datetime.utcnow() + timedelta(minutes=25)
+        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
         self.log(
             message=f"reading event stream {self.data_feed_url} starting on offset {self.offset}",
             level="info",
@@ -220,8 +224,7 @@ class EventStreamReader(threading.Thread):
                 while not self.f_stop.is_set():
                     if datetime.utcnow() >= next_refresh_at:
                         self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                        time_to_refresh = int(self.stream_info["refreshActiveSessionInterval"])
-                        next_refresh_at = datetime.utcnow() + timedelta(seconds=time_to_refresh)
+                        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                     for line in http_response.iter_lines():
                         if line.strip():
@@ -244,10 +247,10 @@ class EventStreamReader(threading.Thread):
                                 self.log_exception(any_exception)
                                 raise any_exception
 
-                        # we refresh the session every 25min
+                        # we refresh the session every 25min (by default)
                         if datetime.utcnow() >= next_refresh_at:
                             self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                            next_refresh_at = datetime.utcnow() + timedelta(minutes=25)
+                            next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                         # we exit the loop if the worker is stopping
                         if self.f_stop.is_set():
