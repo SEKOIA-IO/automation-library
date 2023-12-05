@@ -220,7 +220,8 @@ class EventStreamReader(threading.Thread):
                 while not self.f_stop.is_set():
                     if datetime.utcnow() >= next_refresh_at:
                         self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                        next_refresh_at = datetime.utcnow() + timedelta(minutes=25)
+                        time_to_refresh = int(self.stream_info["refreshActiveSessionInterval"])
+                        next_refresh_at = datetime.utcnow() + timedelta(seconds=time_to_refresh)
 
                     for line in http_response.iter_lines():
                         if line.strip():
@@ -241,6 +242,7 @@ class EventStreamReader(threading.Thread):
                                     level="error",
                                 )
                                 self.log_exception(any_exception)
+                                raise any_exception
 
                         # we refresh the session every 25min
                         if datetime.utcnow() >= next_refresh_at:
@@ -311,11 +313,14 @@ class EventStreamTrigger(Connector):
 
         self.auth_token = None
 
-        self.app_id = f"sio-{time.time()}"
+        self.app_id = self.generate_app_id()
         self.events_queue: queue.SimpleQueue = queue.SimpleQueue()
         self.f_stop = threading.Event()
 
         self._network_sleep_on_retry = 60
+
+    def generate_app_id(self):
+        return f"sio-{time.time()}"
 
     @cached_property
     def _http_default_headers(self) -> dict[str, str]:
