@@ -20,20 +20,20 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 ONE_SECOND = timedelta(seconds=1)
 
 
-class CheckpointHarmonyConfiguration(DefaultConnectorConfiguration):
-    """The CheckpointHarmony configuration."""
+class CheckpointHarmonyMobileConfiguration(DefaultConnectorConfiguration):
+    """The CheckpointHarmonyMobile configuration."""
 
     ratelimit_per_minute: int = 60
     chunk_size: int = 1000
     frequency: int = 60
 
 
-class CheckpointHarmonyConnector(AsyncConnector):
-    """The CheckpointHarmony connector."""
+class CheckpointHarmonyMobileConnector(AsyncConnector):
+    """The CheckpointHarmonyMobile connector."""
 
-    name = "CheckpointHarmonyConnector"
+    name = "CheckpointHarmonyMobileConnector"
     module: CheckpointModule
-    configuration: CheckpointHarmonyConfiguration
+    configuration: CheckpointHarmonyMobileConfiguration
 
     _checkpoint_client: CheckpointHttpClient | None = None
 
