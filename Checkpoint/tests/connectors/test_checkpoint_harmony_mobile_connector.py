@@ -10,7 +10,7 @@ from faker import Faker
 
 from client.token_refresher import CheckpointToken
 from connectors import CheckpointModule
-from connectors.checkpoint_harmony import CheckpointHarmonyConfiguration, CheckpointHarmonyConnector
+from connectors.checkpoint_harmony_mobile import CheckpointHarmonyMobileConfiguration, CheckpointHarmonyMobileConnector
 
 
 @pytest.fixture
@@ -18,9 +18,9 @@ def checkpoint_harmony_connector(
     session_faker: Faker,
     symphony_storage: Path,
     checkpoint_module: CheckpointModule,
-) -> CheckpointHarmonyConnector:
+) -> CheckpointHarmonyMobileConnector:
     """
-    Create a CheckpointHarmonyConnector instance.
+    Create a CheckpointHarmonyMobileConnector instance.
 
     Args:
         session_faker: Faker
@@ -30,14 +30,14 @@ def checkpoint_harmony_connector(
     Returns:
         CheckpointHarmonyConnector:
     """
-    configuration = CheckpointHarmonyConfiguration(
+    configuration = CheckpointHarmonyMobileConfiguration(
         intake_server=session_faker.url(),
         intake_key=session_faker.word(),
         ratelimit_per_minute=session_faker.random.randint(10, 100),
         chunk_size=session_faker.random.randint(100, 10000),
     )
 
-    connector = CheckpointHarmonyConnector(module=checkpoint_module, data_path=symphony_storage)
+    connector = CheckpointHarmonyMobileConnector(module=checkpoint_module, data_path=symphony_storage)
 
     connector.configuration = configuration
 
@@ -87,14 +87,14 @@ async def test_checkpoint_harmony_connector_init_with_empty_client(
         session_faker: Faker
         checkpoint_module: CheckpointModule
     """
-    configuration = CheckpointHarmonyConfiguration(
+    configuration = CheckpointHarmonyMobileConfiguration(
         intake_server=session_faker.url(),
         intake_key=session_faker.word(),
         ratelimit_per_minute=session_faker.random.randint(10, 100),
         chunk_size=session_faker.random.randint(100, 10000),
     )
 
-    connector = CheckpointHarmonyConnector()
+    connector = CheckpointHarmonyMobileConnector()
     connector.module = checkpoint_module
     connector.configuration = configuration
 
@@ -103,7 +103,7 @@ async def test_checkpoint_harmony_connector_init_with_empty_client(
 
 @pytest.mark.asyncio
 async def test_checkpoint_harmony_connector_last_event_date(
-    checkpoint_harmony_connector: CheckpointHarmonyConnector,
+    checkpoint_harmony_connector: CheckpointHarmonyMobileConnector,
 ):
     """
     Test CheckpointHarmonyConnector last_event_date.
@@ -132,7 +132,7 @@ async def test_checkpoint_harmony_connector_last_event_date(
 
 @pytest.mark.asyncio
 async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
-    checkpoint_harmony_connector: CheckpointHarmonyConnector,
+    checkpoint_harmony_connector: CheckpointHarmonyMobileConnector,
     http_token: tuple[CheckpointToken, dict[str, Any]],
     session_faker: Faker,
 ):
