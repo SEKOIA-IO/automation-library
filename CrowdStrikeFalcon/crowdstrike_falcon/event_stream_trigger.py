@@ -143,6 +143,7 @@ class EventStreamReader(threading.Thread):
         connector: "EventStreamTrigger",
         stream_root_url: str,
         stream_info: dict,
+        app_id: str,
         offset: int = 0,
         client: CrowdstrikeFalconClient | None = None,
         verticles_collector: VerticlesCollector | None = None,
@@ -154,7 +155,7 @@ class EventStreamReader(threading.Thread):
         self.offset = offset
         self.client = client or connector.client
         self.verticles_collector = verticles_collector
-        self.app_id = connector.app_id
+        self.app_id = app_id
         self.f_stop = connector.f_stop
         self.events_queue = connector.events_queue
 
@@ -316,7 +317,6 @@ class EventStreamTrigger(Connector):
 
         self.auth_token = None
 
-        self.app_id = self.generate_app_id()
         self.events_queue: queue.SimpleQueue = queue.SimpleQueue()
         self.f_stop = threading.Event()
 
@@ -422,7 +422,7 @@ class EventStreamTrigger(Connector):
             except queue.Empty:
                 pass
 
-    def get_streams(self) -> dict[str, dict]:
+    def get_streams(self, app_id: str) -> dict[str, dict]:
         """
         Query the CS EventStream API to retrieve the streams
         """
@@ -430,7 +430,7 @@ class EventStreamTrigger(Connector):
 
         self.log(message="fetch the available event streams", level="debug")
 
-        resources = self.client.list_streams(self.app_id)
+        resources = self.client.list_streams(app_id)
         for stream_info in resources:
             stream_root_url = stream_info["dataFeedURL"].split("?")[0]
             streams[stream_root_url] = stream_info
@@ -439,7 +439,7 @@ class EventStreamTrigger(Connector):
 
         return streams
 
-    def start_streams(self, streams: dict) -> dict:
+    def start_streams(self, streams: dict, app_id: str) -> dict:
         # start a stream thread for each stream
         stream_threads: dict[str, threading.Thread] = dict()
 
@@ -452,6 +452,7 @@ class EventStreamTrigger(Connector):
                 self,
                 stream_root_url,
                 stream_info,
+                app_id,
                 stream_offset,
                 self.client,
                 self.verticles_collector,
@@ -473,7 +474,8 @@ class EventStreamTrigger(Connector):
                 restart_stream_readers = True
 
         if restart_stream_readers:
-            streams = self.get_streams()
+            app_id = self.generate_app_id()
+            streams = self.get_streams(app_id)
             for stream_root_url, stream_info in streams.items():
                 if stream_root_url not in stream_threads or not stream_threads[stream_root_url].is_alive():
                     # read the stream offset
@@ -484,6 +486,7 @@ class EventStreamTrigger(Connector):
                         self,
                         stream_root_url,
                         stream_info,
+                        app_id,
                         stream_offset,
                         self.client,
                         self.verticles_collector,
@@ -496,8 +499,9 @@ class EventStreamTrigger(Connector):
             read_queue_thread = threading.Thread(target=self.read_queue)
             read_queue_thread.start()
 
-            streams: dict[str, dict] = self.get_streams()
-            stream_threads = self.start_streams(streams)
+            app_id: str = self.generate_app_id()
+            streams: dict[str, dict] = self.get_streams(app_id)
+            stream_threads = self.start_streams(streams, app_id)
 
             while True:
                 # if the read queue thread is down, we spawn a new one
