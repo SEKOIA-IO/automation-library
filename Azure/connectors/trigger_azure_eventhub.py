@@ -139,12 +139,12 @@ class AzureEventsHubTrigger(AsyncConnector):
     def run(self) -> None:  # pragma: no cover
         self.log(message="Azure EventHub Trigger has started", level="info")
 
+        loop = asyncio.new_event_loop()
+        loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(self.stop()))
+        loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.stop()))
+
         while self.running:
             try:
-                loop = asyncio.new_event_loop()
-                loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(self.stop()))
-                loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.stop()))
-
                 loop.run_until_complete(
                     self.client.receive_batch(
                         on_event_batch=self.handle_messages,
