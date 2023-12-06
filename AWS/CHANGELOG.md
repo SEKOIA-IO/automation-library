@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-01 - 1.28.1
+
+### Fixed
+
+- Only pause, temporary, the connector if no events were forwarded
+
 ## 2023-12-01 - 1.28.0
 
 ### Changed
