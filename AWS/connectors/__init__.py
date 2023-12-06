@@ -69,6 +69,32 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
         """
         raise NotImplementedError("next_batch method must be implemented")
 
+    def _next_batch(self, loop):
+        processing_start = time.time()
+
+        batch_result: tuple[list[str], list[int]] = loop.run_until_complete(self.next_batch())
+        message_ids, messages_timestamp = batch_result
+
+        # Identify delay between message timestamp ( when it was pushed to sqs )
+        # and current timestamp ( when it was processed )
+        processing_end = time.time()
+        for message_timestamp in messages_timestamp:
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
+                processing_end - (message_timestamp / 1000)
+            )
+
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+            processing_end - processing_start
+        )
+
+        if len(message_ids) > 0:
+            self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+        else:
+            self.log(message="No records to forward", level="info")
+            time.sleep(self.configuration.frequency)
+
+
     def run(self) -> None:  # pragma: no cover
         """Run the connector."""
         while self.running:
@@ -76,29 +102,7 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                 loop = asyncio.get_event_loop()
 
                 while self.running:
-                    processing_start = time.time()
-
-                    batch_result: tuple[list[str], list[int]] = loop.run_until_complete(self.next_batch())
-                    message_ids, messages_timestamp = batch_result
-
-                    # Identify delay between message timestamp ( when it was pushed to sqs )
-                    # and current timestamp ( when it was processed )
-                    processing_end = time.time()
-                    for message_timestamp in messages_timestamp:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                            processing_end - (message_timestamp / 1000)
-                        )
-
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
-                    )
-
-                    if len(message_ids) > 0:
-                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
-                    else:
-                        self.log(message="No records to forward", level="info")
-                        time.sleep(self.configuration.frequency)
+                    self._next_batch(loop)
 
             except Exception as e:
                 self.log_exception(e)
