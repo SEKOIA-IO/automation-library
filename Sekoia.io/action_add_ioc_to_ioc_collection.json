@@ -2,22 +2,31 @@
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
-            "observables": {
-                "description": "List of observables or bundle to upload to inThreat",
-                "type": "array"
+            "indicators": {
+                "description": "List of indicators (one per line) to add to an IOC collection",
+                "type": "string"
             },
-            "observables_path": {
-                "description": "Path of the observables file to upload inThreat",
+            "ioc_collection_id": {
+                "description": "Identifier of the IOC collection",
+                "type": "string"
+            },
+            "ioc_type": {
+                "description": "Type of IOC",
+                "example": "domain-name.value, ipv4-addr.value, ipv6-addr.value, url.value, email-addr.value or file.hashes",
                 "type": "string"
             }
         },
-        "oneOf": [{"required": ["observables"]}, {"required": ["observables_path"]}],
+        "required": [
+            "indicators",
+            "ioc_collection_id",
+            "ioc_type"
+        ],
         "title": "Arguments",
         "type": "object"
     },
-    "description": "Upload observables to inthreat",
-    "docker_parameters": "upload_observables_inthreat",
-    "name": "Upload Observables",
+    "description": "Add indicators to an IOC Collection",
+    "docker_parameters": "add_ioc_to_ioc_collection",
+    "name": "Add IOC to IOC Collection",
     "results": {},
-    "uuid": "ab660ed7-9160-4f91-bb1c-3d49dc8c0972"
+    "uuid": "0acabc04-43b4-4564-b9b2-08b80e0e1ecf"
 }
