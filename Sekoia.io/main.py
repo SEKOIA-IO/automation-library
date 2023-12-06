@@ -11,6 +11,7 @@ from sekoia_automation.module import Module
 from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostReportsPdf, PostReportsUrl, ReportsGetReport
 from sekoiaio.intelligence_center.actions import PostBundleAction, GetContextAction
 from sekoiaio.intelligence_center.upload_observables_inthreat import UploadObservablesAction
+from sekoiaio.intelligence_center.add_ioc_to_ioc_collection import AddIOCtoIOCCollectionAction
 from sekoiaio.operation_center import (
     ActivateCountermeasure,
     AddsAttributeToAsset,
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     module.register(DeletesAsset, "delete-assets/{uuid}")
     module.register(ReturnsAsset, "get-assets/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
+    module.register(AddIOCtoIOCCollectionAction, "add_ioc_to_ioc_collection")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")
