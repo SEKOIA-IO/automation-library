@@ -78,22 +78,26 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
         # Identify delay between message timestamp ( when it was pushed to sqs )
         # and current timestamp ( when it was processed )
         processing_end = time.time()
-        for message_timestamp in messages_timestamp:
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                processing_end - (message_timestamp / 1000)
-            )
-
         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-            processing_end - processing_start
-        )
+
+        batch_duration = processing_end - processing_start
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+
+        current_lag = 0
+        if len(messages_timestamp) > 0:
+            last_message_timestamp = max(messages_timestamp)
+            current_lag = processing_end - (last_message_timestamp / 1000)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
         if len(message_ids) > 0:
             self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
         else:
             self.log(message="No records to forward", level="info")
-            time.sleep(self.configuration.frequency)
 
+            delta_sleep = self.configuration.frequency - batch_duration
+            # pause the connector if there is no lag and there is still some time to sleep.
+            if delta_sleep > 0 and current_lag < delta_sleep:
+                time.sleep(delta_sleep)
 
     def run(self) -> None:  # pragma: no cover
         """Run the connector."""
