@@ -3,7 +3,11 @@
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
             "indicators": {
-                "description": "List of indicators (one per line) to add to an IOC collection",
+                "description": "List of indicators to add to an IOC collection",
+                "type": "array"
+            },
+            "indicators_path": {
+                "description": "Path of the indicators file to add to an IOC collection",
                 "type": "string"
             },
             "ioc_collection_id": {
@@ -13,11 +17,12 @@
             "ioc_type": {
                 "description": "Type of IOC",
                 "example": "domain-name.value, ipv4-addr.value, ipv6-addr.value, url.value, email-addr.value or file.hashes",
-                "type": "string"
+                "type": "string",
+                "enum": ["domain-name.value", "ipv4-addr.value", "ipv6-addr.value", "url.value", "email-addr.value", "file.hashes"]
             }
         },
+        "oneOf": [{"required": ["indicators"]}, {"required": ["indicators_path"]}],
         "required": [
-            "indicators",
             "ioc_collection_id",
             "ioc_type"
         ],
