@@ -25,18 +25,26 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         """
         Transform the raw data to key value data.
         """
-        columns_name = records[0].split("Fields:",1)[1].strip().split(" ")
+        columns_name = records[0].split("Fields:", 1)[1].strip().split(" ")
         values = [record.split("\t") for record in records[1:]]
         df = pd.DataFrame(values, columns=columns_name)
-        return df.to_dict(orient='records')
-
+        return df.to_dict(orient="records")
 
     def update_record(self, existing_entry, entry):
         """
         Update record if there some similarity.
         """
         columns_name = list(existing_entry.keys())
-        removed_list = ["date", "x-edge-location", "cs-ip", "cs-method", "cs(Host)", "cs-uri-stem", "sc-status", "x-edge-result-type"]
+        removed_list = [
+            "date",
+            "x-edge-location",
+            "cs-ip",
+            "cs-method",
+            "cs(Host)",
+            "cs-uri-stem",
+            "sc-status",
+            "x-edge-result-type",
+        ]
 
         # To compare other columns
         for item in removed_list:
@@ -44,28 +52,25 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         for column in columns_name:
             if existing_entry[column] != "_":
-                if existing_entry[column] != entry[column] :
+                if existing_entry[column] != entry[column]:
                     existing_entry[column] = "_"
-
 
     def add_start_end_time(self, result: list, agg_time: float) -> None:
         """
         Add start_time and end_time to each record.
         """
         for item in result:
-            item.update( {"start_time":item["time"]})
-            start_timestamp = time.mktime(datetime.datetime.strptime(item["time"],"%H:%M:%S").timetuple())
-            end_time = datetime.datetime.fromtimestamp(start_timestamp+agg_time).strftime('%H:%M:%S')
-            item.update( {"end_time":end_time})
+            item.update({"start_time": item["time"]})
+            start_timestamp = time.mktime(datetime.datetime.strptime(item["time"], "%H:%M:%S").timetuple())
+            end_time = datetime.datetime.fromtimestamp(start_timestamp + agg_time).strftime("%H:%M:%S")
+            item.update({"end_time": end_time})
             del item["time"]
-    
 
-    def records_to_str(self,results:list[dict]) -> list[str]:
+    def records_to_str(self, results: list[dict]) -> list[str]:
         """
         Transform the records to str data.
         """
-        return [str(result) for result in results ]
-
+        return [str(result) for result in results]
 
     def logs_aggregation(self, data: list[dict]) -> list[str]:
         """
@@ -74,16 +79,41 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         """
         results = []
         start_aggregation = time.time()
-        for _, group in groupby(data, lambda x: (x['date'], x['time'], x['x-edge-location'], x['c-ip'] ,x['cs-method'], x['cs(Host)'], x['cs-uri-stem'], x['sc-status'], x['x-edge-result-type'])):
+        for _, group in groupby(
+            data,
+            lambda x: (
+                x["date"],
+                x["time"],
+                x["x-edge-location"],
+                x["c-ip"],
+                x["cs-method"],
+                x["cs(Host)"],
+                x["cs-uri-stem"],
+                x["sc-status"],
+                x["x-edge-result-type"],
+            ),
+        ):
             group_list = list(group)
             agg_results = []
-            if len(group_list) > 1 :
-                for record in group_list :
-                    existing_entry = next((item for item in agg_results if (item['date'] == record['date'] and item['time'] == record['time'] and item['x-edge-location'] == record['x-edge-location'] and item['c-ip'] == record['c-ip'])), None)
+            if len(group_list) > 1:
+                for record in group_list:
+                    existing_entry = next(
+                        (
+                            item
+                            for item in agg_results
+                            if (
+                                item["date"] == record["date"]
+                                and item["time"] == record["time"]
+                                and item["x-edge-location"] == record["x-edge-location"]
+                                and item["c-ip"] == record["c-ip"]
+                            )
+                        ),
+                        None,
+                    )
 
                     if existing_entry:
                         self.update_record(existing_entry, record)
-                    else :
+                    else:
                         agg_results.append(record)
                 group_list = agg_results
             results.append(group_list[0])
@@ -92,7 +122,6 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         self.add_start_end_time(results, aggregation_time)
 
         return self.records_to_str(results)
-    
 
     def _parse_content(self, content: bytes) -> list[str]:
         """
@@ -109,7 +138,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         # return [] if there's no records
         if not records:
             return records
-        
+
         # Starting records from second element, skipping version
         kv_records = self.data_to_kv(records[1:])
 

@@ -38,7 +38,6 @@ def connector(
     symphony_storage: Path,
     aws_s3_cloudfront_trigger_config: AwsS3CloudFrontConfiguration,
 ) -> AwsS3CloudFrontTrigger:
-    
     connector = AwsS3CloudFrontTrigger(module=aws_module, data_path=symphony_storage)
 
     connector.module = aws_module
@@ -48,6 +47,5 @@ def connector(
 
 
 def test_aws_s3_logs_trigger_parse_data(connector: AwsS3CloudFrontTrigger, test_data: bytes):
-
-    assert len(connector._parse_content(test_data))== 1
+    assert len(connector._parse_content(test_data)) == 1
     assert connector._parse_content(b"") == []
