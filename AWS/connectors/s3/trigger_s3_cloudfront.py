@@ -3,6 +3,7 @@
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from itertools import groupby, islice
 
+from typing import Any, List, Dict
 import pandas as pd
 import time
 import datetime
@@ -21,7 +22,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
     configuration: AwsS3CloudFrontConfiguration
     name = "AWS S3 CloudFront Logs"
 
-    def data_to_kv(self, records: list) -> list[dict]:
+    def data_to_kv(self, records: List[str]) -> Any:
         """
         Transform the raw data to key value data.
         """
@@ -30,7 +31,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         df = pd.DataFrame(values, columns=columns_name)
         return df.to_dict(orient="records")
 
-    def update_record(self, existing_entry, entry):
+    def update_record(self, existing_entry: Dict[str, Any], entry: Dict[str, Any]) -> None:
         """
         Update record if there some similarity.
         """
@@ -55,7 +56,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
                 if existing_entry[column] != entry[column]:
                     existing_entry[column] = "_"
 
-    def add_start_end_time(self, result: list, agg_time: float) -> None:
+    def add_start_end_time(self, result: List[Dict[str, Any]], agg_time: float) -> None:
         """
         Add start_time and end_time to each record.
         """
@@ -66,13 +67,13 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
             item.update({"end_time": end_time})
             del item["time"]
 
-    def records_to_str(self, results: list[dict]) -> list[str]:
+    def records_to_str(self, results: List[Dict[str, Any]]) -> List[str]:
         """
         Transform the records to str data.
         """
         return [str(result) for result in results]
 
-    def logs_aggregation(self, data: list[dict]) -> list[str]:
+    def logs_aggregation(self, data: List[Dict[str, Any]]) -> List[str]:
         """
         Aggregate logs by date, time, x-edge-location, cs-ip, cs-method, cs(Host)
         cs-uri-stem, sc-status and x-edge-result-type
@@ -94,7 +95,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
             ),
         ):
             group_list = list(group)
-            agg_results = []
+            agg_results: list[dict[str, Any]] = []
             if len(group_list) > 1:
                 for record in group_list:
                     existing_entry = next(
@@ -123,7 +124,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         return self.records_to_str(results)
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    def _parse_content(self, content: bytes) -> List[str]:
         """
         Parse content from S3 bucket.
 
