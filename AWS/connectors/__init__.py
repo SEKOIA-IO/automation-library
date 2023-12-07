@@ -89,18 +89,15 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                         )
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
-
-                    log_message = "No records to forward"
-                    if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
-
-                    self.log(message=log_message, level="info")
-
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                         processing_end - processing_start
                     )
 
-                    time.sleep(self.configuration.frequency)
+                    if len(message_ids) > 0:
+                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                    else:
+                        self.log(message="No records to forward", level="info")
+                        time.sleep(self.configuration.frequency)
 
             except Exception as e:
                 self.log_exception(e)

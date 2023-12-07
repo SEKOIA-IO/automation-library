@@ -75,12 +75,12 @@ def test_get_streams(trigger):
             },
         )
 
-        streams = trigger.get_streams()
+        streams = trigger.get_streams("sio-00000")
         assert streams == {"stream": {"dataFeedURL": "stream?q=1"}}
 
 
 def test_refresh_stream(trigger):
-    reader = EventStreamReader(trigger, "", {})
+    reader = EventStreamReader(trigger, "", {}, "sio-00000")
 
     refresh_url = "https://my.fake.sekoia/oauth2/token"
 
@@ -148,7 +148,9 @@ def test_read_stream(trigger):
     client_mock = MagicMock()
     client_mock.get.return_value.__enter__.return_value.status_code = 200
     client_mock.get.return_value.__enter__.return_value.iter_lines.return_value = [orjson.dumps(fake_event)]
-    reader = EventStreamReader(trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, 0, client_mock)
+    reader = EventStreamReader(
+        trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, 0, "sio-00000", client_mock
+    )
 
     reader.start()
 
@@ -201,6 +203,7 @@ def test_read_stream_call_verticles_collector(trigger):
         trigger,
         fake_stream["dataFeedURL"].split("?")[0],
         fake_stream,
+        "sio-00000",
         0,
         client_mock,
         verticles_collector,
@@ -237,7 +240,9 @@ def test_read_stream_fails_on_stream_error(trigger):
     trigger.auth_token_refreshed_at = datetime.utcnow()
     client_mock = MagicMock()
     client_mock.get.return_value.__enter__.return_value.status_code = 400
-    reader = EventStreamReader(trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, 0, client_mock)
+    reader = EventStreamReader(
+        trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, "sio-00000", 0, client_mock
+    )
 
     with pytest.raises(Exception):  # noqa: B017
         reader.run()
@@ -298,7 +303,9 @@ def test_read_stream_consider_offset(trigger):
     trigger.f_stop.set()
     client_mock = MagicMock()
     client_mock.get.return_value.__enter__.return_value.status_code = 200
-    reader = EventStreamReader(trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, 100, client_mock)
+    reader = EventStreamReader(
+        trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, "sio-00000", 100, client_mock
+    )
     reader.run()
 
     assert client_mock.get.call_args.kwargs.get("url") == (
@@ -338,8 +345,9 @@ def test_read_stream_integration(symphony_storage):
         trigger,
         stream_root_url,
         stream_info,
-        trigger.client,
-        trigger.verticles_collector,
+        "sio-00000",
+        client=trigger.client,
+        verticles_collector=trigger.verticles_collector,
     )
     read_stream_thread.start()
 
@@ -724,6 +732,7 @@ def test_read_stream_with_verticles(trigger):
             trigger,
             stream["dataFeedURL"].split("?")[0],
             stream,
+            "sio-00000",
             0,
             trigger.client,
             trigger.verticles_collector,

@@ -143,6 +143,7 @@ class EventStreamReader(threading.Thread):
         connector: "EventStreamTrigger",
         stream_root_url: str,
         stream_info: dict,
+        app_id: str,
         offset: int = 0,
         client: CrowdstrikeFalconClient | None = None,
         verticles_collector: VerticlesCollector | None = None,
@@ -154,7 +155,7 @@ class EventStreamReader(threading.Thread):
         self.offset = offset
         self.client = client or connector.client
         self.verticles_collector = verticles_collector
-        self.app_id = connector.app_id
+        self.app_id = app_id
         self.f_stop = connector.f_stop
         self.events_queue = connector.events_queue
 
@@ -169,6 +170,10 @@ class EventStreamReader(threading.Thread):
     @cached_property
     def __authorization(self):
         return EventStreamAuthentication(self.stream_info["sessionToken"]["token"])
+
+    @property
+    def refresh_interval(self) -> int:
+        return int(self.stream_info["refreshActiveSessionInterval"])
 
     def log(self, *args, **kwargs):
         self.connector.log(*args, **kwargs)
@@ -194,7 +199,7 @@ class EventStreamReader(threading.Thread):
         Read the events transported by the specified stream.
         """
 
-        next_refresh_at = datetime.utcnow() + timedelta(minutes=25)
+        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
         self.log(
             message=f"reading event stream {self.data_feed_url} starting on offset {self.offset}",
             level="info",
@@ -220,7 +225,7 @@ class EventStreamReader(threading.Thread):
                 while not self.f_stop.is_set():
                     if datetime.utcnow() >= next_refresh_at:
                         self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                        next_refresh_at = datetime.utcnow() + timedelta(minutes=25)
+                        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                     for line in http_response.iter_lines():
                         if line.strip():
@@ -241,11 +246,12 @@ class EventStreamReader(threading.Thread):
                                     level="error",
                                 )
                                 self.log_exception(any_exception)
+                                raise any_exception
 
-                        # we refresh the session every 25min
+                        # we refresh the session every 25min (by default)
                         if datetime.utcnow() >= next_refresh_at:
                             self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                            next_refresh_at = datetime.utcnow() + timedelta(minutes=25)
+                            next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                         # we exit the loop if the worker is stopping
                         if self.f_stop.is_set():
@@ -311,11 +317,13 @@ class EventStreamTrigger(Connector):
 
         self.auth_token = None
 
-        self.app_id = f"sio-{time.time()}"
         self.events_queue: queue.SimpleQueue = queue.SimpleQueue()
         self.f_stop = threading.Event()
 
         self._network_sleep_on_retry = 60
+
+    def generate_app_id(self):
+        return f"sio-{time.time()}"
 
     @cached_property
     def _http_default_headers(self) -> dict[str, str]:
@@ -414,7 +422,7 @@ class EventStreamTrigger(Connector):
             except queue.Empty:
                 pass
 
-    def get_streams(self) -> dict[str, dict]:
+    def get_streams(self, app_id: str) -> dict[str, dict]:
         """
         Query the CS EventStream API to retrieve the streams
         """
@@ -422,7 +430,7 @@ class EventStreamTrigger(Connector):
 
         self.log(message="fetch the available event streams", level="debug")
 
-        resources = self.client.list_streams(self.app_id)
+        resources = self.client.list_streams(app_id)
         for stream_info in resources:
             stream_root_url = stream_info["dataFeedURL"].split("?")[0]
             streams[stream_root_url] = stream_info
@@ -431,7 +439,7 @@ class EventStreamTrigger(Connector):
 
         return streams
 
-    def start_streams(self, streams: dict) -> dict:
+    def start_streams(self, streams: dict, app_id: str) -> dict:
         # start a stream thread for each stream
         stream_threads: dict[str, threading.Thread] = dict()
 
@@ -444,6 +452,7 @@ class EventStreamTrigger(Connector):
                 self,
                 stream_root_url,
                 stream_info,
+                app_id,
                 stream_offset,
                 self.client,
                 self.verticles_collector,
@@ -465,7 +474,8 @@ class EventStreamTrigger(Connector):
                 restart_stream_readers = True
 
         if restart_stream_readers:
-            streams = self.get_streams()
+            app_id = self.generate_app_id()
+            streams = self.get_streams(app_id)
             for stream_root_url, stream_info in streams.items():
                 if stream_root_url not in stream_threads or not stream_threads[stream_root_url].is_alive():
                     # read the stream offset
@@ -476,6 +486,7 @@ class EventStreamTrigger(Connector):
                         self,
                         stream_root_url,
                         stream_info,
+                        app_id,
                         stream_offset,
                         self.client,
                         self.verticles_collector,
@@ -488,8 +499,9 @@ class EventStreamTrigger(Connector):
             read_queue_thread = threading.Thread(target=self.read_queue)
             read_queue_thread.start()
 
-            streams: dict[str, dict] = self.get_streams()
-            stream_threads = self.start_streams(streams)
+            app_id: str = self.generate_app_id()
+            streams: dict[str, dict] = self.get_streams(app_id)
+            stream_threads = self.start_streams(streams, app_id)
 
             while True:
                 # if the read queue thread is down, we spawn a new one
