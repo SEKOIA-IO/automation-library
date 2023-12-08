@@ -96,6 +96,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         ):
             group_list = list(group)
             agg_results: list[dict[str, Any]] = []
+            count_agg = 1
             if len(group_list) > 1:
                 for record in group_list:
                     existing_entry = next(
@@ -114,8 +115,10 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
                     if existing_entry:
                         self.update_record(existing_entry, record)
+                        count_agg += 1
                     else:
                         agg_results.append(record)
+                agg_results[0]["count"] = count_agg
                 group_list = agg_results
             results.append(group_list[0])
         end_aggregation = time.time()
