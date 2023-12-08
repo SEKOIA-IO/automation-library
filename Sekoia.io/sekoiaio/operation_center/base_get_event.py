@@ -23,9 +23,10 @@ class BaseGetEvents(Action):
 
         # Configure http with retry strategy
         retry_strategy = Retry(
-            total=0,
+            total=10,
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
+            backoff_factor=0.2,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.http_session = requests.Session()
@@ -53,6 +54,7 @@ class BaseGetEvents(Action):
         response_start = self.http_session.post(
             f"{self.events_api_path}/search/jobs",
             json=data,
+            timeout=20,
         )
         response_start.raise_for_status()
 
@@ -63,12 +65,14 @@ class BaseGetEvents(Action):
         max_wait_search = 300
         start_wait = time.time()
 
-        response_get = self.http_session.get(f"{self.events_api_path}/search/jobs/{event_search_job_uuid}")
+        response_get = self.http_session.get(f"{self.events_api_path}/search/jobs/{event_search_job_uuid}", timeout=20)
         response_get.raise_for_status()
 
         while response_get.json()["status"] != 2:
             time.sleep(1)
-            response_get = self.http_session.get(f"{self.events_api_path}/search/jobs/{event_search_job_uuid}")
+            response_get = self.http_session.get(
+                f"{self.events_api_path}/search/jobs/{event_search_job_uuid}", timeout=20
+            )
             response_get.raise_for_status()
             if time.time() - start_wait > max_wait_search:
                 raise TimeoutError(f"Event search job took more than {max_wait_search}s to conclude")
