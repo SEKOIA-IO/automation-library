@@ -167,6 +167,10 @@ class Scope(str, Enum):
     MV_M_ADMIN = "mv:m:admin"
 
     @classmethod
+    def threats_set_of_scopes(cls) -> Set["Scope"]:
+        return {cls.SOC_ACT_TG}
+
+    @classmethod
     def complete_set_of_scopes(cls) -> Set["Scope"]:
         """
         Get complete list of scopes to work with all Trellix api endpoints.

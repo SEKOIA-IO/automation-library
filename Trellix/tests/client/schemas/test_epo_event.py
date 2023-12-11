@@ -1,18 +1,19 @@
 """Tests to handle EPO events."""
 import orjson
 import pytest
+from faker import Faker
 
 from client.schemas.attributes.epo_events import EpoEventAttributes
-from client.schemas.edr import TrellixEdrResponse
+from client.schemas.trellix_response import TrellixResponse
 
 
 @pytest.mark.asyncio
-async def test_epo_events(session_faker):
+async def test_epo_events(session_faker: Faker):
     """
     Test epo events attributes.
 
     Args:
-        session_faker:
+        session_faker: Faker
     """
     expected_response = {
         "type": session_faker.word(),
@@ -65,8 +66,8 @@ async def test_epo_events(session_faker):
         },
     }
 
-    response = TrellixEdrResponse[EpoEventAttributes](**orjson.loads(orjson.dumps(expected_response).decode("utf-8")))
+    response = TrellixResponse[EpoEventAttributes](**orjson.loads(orjson.dumps(expected_response).decode("utf-8")))
 
-    assert isinstance(response, TrellixEdrResponse)
+    assert isinstance(response, TrellixResponse)
     assert isinstance(response.attributes, EpoEventAttributes)
     assert response.dict() == expected_response
