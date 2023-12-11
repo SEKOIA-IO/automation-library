@@ -63,7 +63,7 @@ def test_handle_messages(trigger):
     messages: list[EventData] = [
         EventData('{"records": [{"name": "record1"}, null, {"name": "record2"}]}'),
         EventData('{"type": "heartbeat"}'),
-        EventData('{"records": [{"name": "record3"}, {"name": "record4"}, {"name": "record5"}]}'),
+        EventData('[{"name": "record3"}, {"name": "record4"}, {"name": "record5"}]'),
     ]
     partition_context = AsyncMock()
 
