@@ -70,14 +70,6 @@ class AzureEventsHubTrigger(AsyncConnector):
         self._stop_event = Event()
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
 
-    async def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:
-        self.log(message="Stopping Azure EventHub connector", level="info")
-        # Exit signal received, asking the processor to stop
-        self._stop_event.set()
-
-        # Close the azure EventHub client
-        await self.client.close()
-
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
@@ -138,21 +130,23 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     def run(self) -> None:  # pragma: no cover
         self.log(message="Azure EventHub Trigger has started", level="info")
-
         while self.running:
             try:
-                loop = asyncio.new_event_loop()
-                loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(self.stop()))
-                loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.stop()))
+                loop = asyncio.get_event_loop()
 
-                loop.run_until_complete(
-                    self.client.receive_batch(
-                        on_event_batch=self.handle_messages,
-                        on_error=self.handle_exception,
-                        max_wait_time=self._consumption_max_wait_time,
-                    )
-                )
+                while self.running:
+                    try:
+                        loop.run_until_complete(
+                            self.client.receive_batch(
+                                on_event_batch=self.handle_messages,
+                                on_error=self.handle_exception,
+                                max_wait_time=self._consumption_max_wait_time,
+                            )
+                        )
 
-            except Exception as ex:
-                self.log_exception(ex, message="Failed to consume messages")
-                raise ex
+                    except Exception as ex:
+                        self.log_exception(ex, message="Failed to consume messages")
+                        raise ex
+
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")

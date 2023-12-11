@@ -28,6 +28,7 @@ class GetEventFieldCommonValues(BaseGetEvents):
             response_fields = self.http_session.get(
                 f"{self.events_api_path}/search/jobs/{event_search_job_uuid}/fields",
                 params={"limit": limit, "offset": offset},
+                timeout=20,
             )
             response_fields.raise_for_status()
 

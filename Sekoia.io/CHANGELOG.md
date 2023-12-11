@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Action to add an IOC to an IOC Collection
 
+## 2023-12-08 - 2.54.1
+
+### Changed
+
+- Fix retry policy when getting events
+
 ## 2023-12-01 - 2.54.0
 
 ### Changed
