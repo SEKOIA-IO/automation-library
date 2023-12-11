@@ -84,24 +84,23 @@ def connector(
 
 def test_aws_s3_logs_trigger_parse_data(connector: AwsS3CloudFrontTrigger, test_data_3_1: bytes):
     assert len(connector._parse_content(test_data_3_1)) == 1
-    assert connector._parse_content(b"") == []
 
 
 def test_aws_s3_logs_trigger_parse_data_3_2_2(connector: AwsS3CloudFrontTrigger, test_data_3_2_2: bytes):
     assert len(connector._parse_content(test_data_3_2_2)) == 2
-    assert connector._parse_content(b"") == []
 
 
 def test_aws_s3_logs_trigger_parse_data_2_2(connector: AwsS3CloudFrontTrigger, test_data_2_2: bytes):
     assert len(connector._parse_content(test_data_2_2)) == 2
-    assert connector._parse_content(b"") == []
 
 
 def test_aws_s3_logs_trigger_parse_data_1_1(connector: AwsS3CloudFrontTrigger, test_data_1_1: bytes):
     assert len(connector._parse_content(test_data_1_1)) == 1
-    assert connector._parse_content(b"") == []
 
 
 def test_aws_s3_logs_trigger_parse_data_3_2_1_3(connector: AwsS3CloudFrontTrigger, test_data_3_2_1_3: bytes):
     assert len(connector._parse_content(test_data_3_2_1_3)) == 3
+
+
+def test_aws_s3_logs_trigger_without_records(connector: AwsS3CloudFrontTrigger):
     assert connector._parse_content(b"") == []
