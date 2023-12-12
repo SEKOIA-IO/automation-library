@@ -1,0 +1,37 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "indicators": {
+                "description": "List of indicators to add to an IOC collection",
+                "type": "array"
+            },
+            "indicators_path": {
+                "description": "Path of the indicators file to add to an IOC collection",
+                "type": "string"
+            },
+            "ioc_collection_id": {
+                "description": "Identifier of the IOC collection",
+                "type": "string"
+            },
+            "ioc_type": {
+                "description": "Type of IOC",
+                "example": "domain-name.value, ipv4-addr.value, ipv6-addr.value, url.value, email-addr.value or file.hashes",
+                "type": "string",
+                "enum": ["domain-name.value", "ipv4-addr.value", "ipv6-addr.value", "url.value", "email-addr.value", "file.hashes"]
+            }
+        },
+        "oneOf": [{"required": ["indicators"]}, {"required": ["indicators_path"]}],
+        "required": [
+            "ioc_collection_id",
+            "ioc_type"
+        ],
+        "title": "Arguments",
+        "type": "object"
+    },
+    "description": "Add indicators to an IOC Collection",
+    "docker_parameters": "add_ioc_to_ioc_collection",
+    "name": "Add IOC to IOC Collection",
+    "results": {},
+    "uuid": "0acabc04-43b4-4564-b9b2-08b80e0e1ecf"
+}

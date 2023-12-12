@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-07 - 2.55.0
+
+### Added
+
+- Action to add an IOC to an IOC Collection
+
 ## 2023-12-08 - 2.54.1
 
 ### Changed
