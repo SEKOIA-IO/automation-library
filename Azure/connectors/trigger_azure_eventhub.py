@@ -101,9 +101,9 @@ class AzureEventsHubTrigger(AsyncConnector):
         Return the records according to the body of the message
         """
         body = message.body_as_json()
-        if isinstance(body, list): # handle list of events
+        if isinstance(body, list):  # handle list of events
             return body
-        elif isinstance(body, dict) and "records" in body: # handle wrapped events
+        elif isinstance(body, dict) and "records" in body:  # handle wrapped events
             return cast(list[Any], body.get("records", []))
         elif body.get("type") == "heartbeat":  # exclude heartbeat messages
             return []
