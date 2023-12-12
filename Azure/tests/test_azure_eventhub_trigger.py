@@ -64,6 +64,7 @@ def test_handle_messages(trigger):
         EventData('{"records": [{"name": "record1"}, null, {"name": "record2"}]}'),
         EventData('{"type": "heartbeat"}'),
         EventData('[{"name": "record3"}, {"name": "record4"}, {"name": "record5"}]'),
+        EventData('{"name": "record6"}'),
     ]
     partition_context = AsyncMock()
 
@@ -73,7 +74,7 @@ def test_handle_messages(trigger):
     # assert
     assert partition_context.update_checkpoint.called
     calls = [record for call in trigger.push_data_to_intakes.await_args_list for record in call.kwargs["events"]]
-    assert len(calls) == 5
+    assert len(calls) == 6
 
 
 def test_client_receive_batch():
