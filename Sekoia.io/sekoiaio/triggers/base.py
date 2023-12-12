@@ -39,6 +39,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
     api_key: str
 
     seconds_without_events = 3600 * 24  # Force restart the pod every day if no events were received
+    last_heartbeat_threshold = 600  # Force restart the pod if no heartbeat was received for 10 minutes
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,6 +120,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
     def on_pong(self, _, __):
         self.log("Received pong from server", level="debug")
+        self.heartbeat()
 
     def on_close(self, *args, **kwargs):  # pragma: no cover
         # Reset teardown so we can run again the app from the start
@@ -132,6 +134,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         self.log("Socket closed", level="warning")
 
     def on_message(self, _, raw_message: str):
+        self.heartbeat()
         self._message_processor.push_message(raw_message)
 
     def handler_dispatcher(self, raw_message: str):
