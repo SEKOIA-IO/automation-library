@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-12 - 2.56.0
+
+### Added
+
+- Add heartbeat for triggers
+
 ## 2023-12-07 - 2.55.0
 
 ### Added
