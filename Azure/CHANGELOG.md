@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-12 - 2.2.3
+
+### Fixed
+
+- Fix the way to handle events in a message
+
 ## 2023-12-11 - 2.2.2
 
 ### Changed
