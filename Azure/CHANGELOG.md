@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-11 - 2.2.2
+
+### Changed
+
+- Change the way to extract records from the messages
+
 ## 2023-12-06 - 2.2.1
 
 ### Fixed

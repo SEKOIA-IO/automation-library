@@ -4,7 +4,7 @@ import signal
 import time
 from functools import cached_property
 from threading import Event
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import orjson
 from azure.eventhub import EventData
@@ -96,13 +96,23 @@ class AzureEventsHubTrigger(AsyncConnector):
         # acknowledge the messages
         await partition_context.update_checkpoint()
 
+    def get_records_from_message(self, message: EventData) -> list[Any]:
+        """
+        Return the records according to the body of the message
+        """
+        body = message.body_as_json()
+        if isinstance(body, list):
+            return body
+        else:
+            return cast(list[Any], body.get("records", []))
+
     async def forward_events(self, messages: list[EventData]) -> None:
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
         records = [
             orjson.dumps(record).decode("utf-8")
             for message in messages
-            for record in message.body_as_json().get("records", [])
+            for record in self.get_records_from_message(message)
             if record is not None
         ]
 
