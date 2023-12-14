@@ -4,15 +4,8 @@ import time
 from functools import cached_property
 from typing import AsyncIterator
 
-import orjson
 from google.cloud.pubsublite.cloudpubsub import AsyncSubscriberClient
-from google.cloud.pubsublite.types import (
-    CloudRegion,
-    CloudZone,
-    FlowControlSettings,
-    MessageMetadata,
-    SubscriptionPath,
-)
+from google.cloud.pubsublite.types import CloudRegion, CloudZone, FlowControlSettings, SubscriptionPath
 from pydantic import BaseModel
 
 from .base import AsyncGoogleTrigger
@@ -80,7 +73,7 @@ class PubSubLite(AsyncGoogleTrigger):
                     message=f"Forward {len(batch)} events to the intake",
                     level="info",
                 )
-                await self.push_data_to_intakes(events=[orjson.dumps(event).decode("utf-8") for event in batch])
+                await self.push_data_to_intakes(events=batch)
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch))
 
                 batch_end = time.time()
@@ -89,8 +82,6 @@ class PubSubLite(AsyncGoogleTrigger):
 
                 batch = []
                 batch_start = time.time()
-
-                # @todo wait some time to achieve set batch frequency?
 
     async def fetch_messages(self):
         subscription_path = SubscriptionPath(

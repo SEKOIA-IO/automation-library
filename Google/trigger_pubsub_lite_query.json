@@ -14,11 +14,6 @@
                 "description": "Intake key to use when sending events",
                 "type": "string"
             },
-            "frequency": {
-                "type": "integer",
-                "description": "Batch frequency in seconds",
-                "default": 20
-            },
             "intake_server": {
                 "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
                 "default": "https://intake.sekoia.io",
@@ -30,7 +25,7 @@
             },
             "cloud_region": {
                 "description": "Cloud Region",
-                "type": "string",
+                "type": "string"
             },
             "zone_id": {
                 "description": "Zone ID",
