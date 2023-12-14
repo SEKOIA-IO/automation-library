@@ -85,8 +85,8 @@ def connector(
 
 
 def test_aws_s3_logs_trigger_parse_data(connector: AwsS3CloudFrontTrigger, test_data_3_1: bytes):
-    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_3_1)]
-    
+    decoded_records = [json.loads(record.decode("utf-8")) for record in connector._parse_content(test_data_3_1)]
+
     assert len(decoded_records) == 1
     assert decoded_records[0]["start_time"]
     assert decoded_records[0]["end_time"]
@@ -94,7 +94,7 @@ def test_aws_s3_logs_trigger_parse_data(connector: AwsS3CloudFrontTrigger, test_
 
 
 def test_aws_s3_logs_trigger_parse_data_3_2_2(connector: AwsS3CloudFrontTrigger, test_data_3_2_2: bytes):
-    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_3_2_2)]
+    decoded_records = [json.loads(record.decode("utf-8")) for record in connector._parse_content(test_data_3_2_2)]
 
     assert len(decoded_records) == 2
     assert decoded_records[0]["start_time"]
@@ -104,7 +104,7 @@ def test_aws_s3_logs_trigger_parse_data_3_2_2(connector: AwsS3CloudFrontTrigger,
 
 
 def test_aws_s3_logs_trigger_parse_data_2_2(connector: AwsS3CloudFrontTrigger, test_data_2_2: bytes):
-    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_2_2)]
+    decoded_records = [json.loads(record.decode("utf-8")) for record in connector._parse_content(test_data_2_2)]
 
     assert len(decoded_records) == 2
     assert decoded_records[0]["start_time"]
@@ -113,7 +113,7 @@ def test_aws_s3_logs_trigger_parse_data_2_2(connector: AwsS3CloudFrontTrigger, t
 
 
 def test_aws_s3_logs_trigger_parse_data_1_1(connector: AwsS3CloudFrontTrigger, test_data_1_1: bytes):
-    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_1_1)]
+    decoded_records = [json.loads(record.decode("utf-8")) for record in connector._parse_content(test_data_1_1)]
 
     assert len(decoded_records) == 1
     assert decoded_records[0]["start_time"]
@@ -122,7 +122,7 @@ def test_aws_s3_logs_trigger_parse_data_1_1(connector: AwsS3CloudFrontTrigger, t
 
 
 def test_aws_s3_logs_trigger_parse_data_3_2_1_3(connector: AwsS3CloudFrontTrigger, test_data_3_2_1_3: bytes):
-    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_3_2_1_3)]
+    decoded_records = [json.loads(record.decode("utf-8")) for record in connector._parse_content(test_data_3_2_1_3)]
 
     assert len(decoded_records) == 3
     assert decoded_records[0]["start_time"]
