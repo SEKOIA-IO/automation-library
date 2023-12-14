@@ -8,6 +8,12 @@ RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 def format_datetime(date: datetime) -> str:
+    """
+    Format the date according to the RFC3339 representation
+
+    :rtype: str
+    :return: The RFC3339 representation of the datetime
+    """
     return date.astimezone(timezone.utc).strftime(RFC3339_STRICT_FORMAT)
 
 
@@ -17,6 +23,8 @@ def parse_user_date(user_date: str | None, default_tzinfo: tzinfo = timezone.utc
 
     :param str or None user_date: The date provided by the user
     :param tzinfo default_tzinfo: The default timezone to apply for offset-naive date
+    :rtype: datetime or None
+    :return: None for null or empty date. An offset-aware datetime, otherwise
     """
     if user_date is None or len(user_date) == 0:
         return None
@@ -30,6 +38,13 @@ def parse_user_date(user_date: str | None, default_tzinfo: tzinfo = timezone.utc
 
 
 def normalize_since_time(initial_since_time: str | None) -> datetime:
+    """
+    Parse and normalize the since_time datetime. This datetime cannot be older than 30 days from now.
+
+    :param str or None initial_since_time: The since_time datetime
+    :rtype: datetime
+    :return: The normalized datetime
+    """
     now = datetime.now(timezone.utc)
 
     # if the initial since time is undefined, return now
