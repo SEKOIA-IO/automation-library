@@ -7,6 +7,7 @@ from typing import Any, List, Dict
 import pandas as pd
 import time
 import datetime
+import orjson
 
 
 class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration):
@@ -67,11 +68,11 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
             item.update({"end_time": end_time})
             del item["time"]
 
-    def records_to_str(self, results: List[Dict[str, Any]]) -> List[str]:
+    def records_to_json(self, results: List[Dict[str, Any]]) -> List[str]:
         """
         Transform the records to str data.
         """
-        return [str(result) for result in results]
+        return [orjson.dumps(result).decode("utf-8") for result in results]
 
     def logs_aggregation(self, data: List[Dict[str, Any]]) -> List[str]:
         """
@@ -125,7 +126,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         aggregation_time = end_aggregation - start_aggregation
         self.add_start_end_time(results, aggregation_time)
 
-        return self.records_to_str(results)
+        return self.records_to_json(results)
 
     def _parse_content(self, content: bytes) -> List[str]:
         """
