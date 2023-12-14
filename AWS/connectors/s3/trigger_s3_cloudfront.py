@@ -7,7 +7,7 @@ from typing import Any, List, Dict
 import pandas as pd
 import time
 import datetime
-import json
+import orjson
 
 
 class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration):
@@ -72,7 +72,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         """
         Transform the records to str data.
         """
-        return [json.dumps(result) for result in results]
+        return [orjson.dumps(result) for result in results]
 
     def logs_aggregation(self, data: List[Dict[str, Any]]) -> List[str]:
         """

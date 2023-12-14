@@ -8,7 +8,7 @@ from faker import Faker
 from connectors import AwsModule
 from connectors.s3.trigger_s3_cloudfront import AwsS3CloudFrontConfiguration, AwsS3CloudFrontTrigger
 
-import ast
+import json
 
 
 @pytest.fixture
@@ -85,41 +85,51 @@ def connector(
 
 
 def test_aws_s3_logs_trigger_parse_data(connector: AwsS3CloudFrontTrigger, test_data_3_1: bytes):
-    assert len(connector._parse_content(test_data_3_1)) == 1
-    assert ast.literal_eval(connector._parse_content(test_data_3_1)[0])["start_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_3_1)[0])["end_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_3_1)[0])["count"] == 3
+    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_3_1)]
+    
+    assert len(decoded_records) == 1
+    assert decoded_records[0]["start_time"]
+    assert decoded_records[0]["end_time"]
+    assert decoded_records[0]["count"] == 3
 
 
 def test_aws_s3_logs_trigger_parse_data_3_2_2(connector: AwsS3CloudFrontTrigger, test_data_3_2_2: bytes):
-    assert len(connector._parse_content(test_data_3_2_2)) == 2
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_2)[0])["start_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_2)[0])["end_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_2)[0])["count"] == 3
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_2)[1])["count"] == 2
+    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_3_2_2)]
+
+    assert len(decoded_records) == 2
+    assert decoded_records[0]["start_time"]
+    assert decoded_records[0]["end_time"]
+    assert decoded_records[0]["count"] == 3
+    assert decoded_records[1]["count"] == 2
 
 
 def test_aws_s3_logs_trigger_parse_data_2_2(connector: AwsS3CloudFrontTrigger, test_data_2_2: bytes):
-    assert len(connector._parse_content(test_data_2_2)) == 2
-    assert ast.literal_eval(connector._parse_content(test_data_2_2)[0])["start_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_2_2)[0])["end_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_2_2)[0]).get("count") == 1
+    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_2_2)]
+
+    assert len(decoded_records) == 2
+    assert decoded_records[0]["start_time"]
+    assert decoded_records[0]["end_time"]
+    assert decoded_records[0]["count"] == 1
 
 
 def test_aws_s3_logs_trigger_parse_data_1_1(connector: AwsS3CloudFrontTrigger, test_data_1_1: bytes):
-    assert len(connector._parse_content(test_data_1_1)) == 1
-    assert ast.literal_eval(connector._parse_content(test_data_1_1)[0])["start_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_1_1)[0])["end_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_1_1)[0]).get("count") == 1
+    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_1_1)]
+
+    assert len(decoded_records) == 1
+    assert decoded_records[0]["start_time"]
+    assert decoded_records[0]["end_time"]
+    assert decoded_records[0]["count"] == 1
 
 
 def test_aws_s3_logs_trigger_parse_data_3_2_1_3(connector: AwsS3CloudFrontTrigger, test_data_3_2_1_3: bytes):
-    assert len(connector._parse_content(test_data_3_2_1_3)) == 3
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_1_3)[0])["start_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_1_3)[0])["end_time"]
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_1_3)[0]).get("count") == 3
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_1_3)[1]).get("count") == 2
-    assert ast.literal_eval(connector._parse_content(test_data_3_2_1_3)[2]).get("count") == 1
+    decoded_records = [json.loads(record.decode('utf-8')) for record in connector._parse_content(test_data_3_2_1_3)]
+
+    assert len(decoded_records) == 3
+    assert decoded_records[0]["start_time"]
+    assert decoded_records[0]["end_time"]
+    assert decoded_records[0]["count"] == 3
+    assert decoded_records[1]["count"] == 2
+    assert decoded_records[2]["count"] == 1
 
 
 def test_aws_s3_logs_trigger_without_records(connector: AwsS3CloudFrontTrigger):
