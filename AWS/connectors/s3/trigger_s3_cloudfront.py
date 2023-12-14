@@ -3,7 +3,7 @@
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from itertools import groupby, islice
 
-from typing import Any, List, Dict, Union
+from typing import Any, List, Dict
 import pandas as pd
 import time
 import datetime
