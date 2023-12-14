@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-14-29 - 1.2.0
+
+### Update
+
+- Improve the way to disable and enable account by getting the real userAccountControl.
+- Add an Exception if there's no permission to do some actions
+
 ## 2023-11-29 - 1.1.0
 
 ### Update
