@@ -3,7 +3,7 @@
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from itertools import groupby, islice
 
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Union
 import pandas as pd
 import time
 import datetime
@@ -72,7 +72,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         """
         Transform the records to str data.
         """
-        return [orjson.dumps(result) for result in results]
+        return [orjson.dumps(result).decode("utf-8") for result in results]
 
     def logs_aggregation(self, data: List[Dict[str, Any]]) -> List[str]:
         """
