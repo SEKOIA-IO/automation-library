@@ -37,7 +37,7 @@ def normalize_since_time(initial_since_time: str | None) -> datetime:
         return now
 
     # parse the date
-    date = parse(initial_since_time)
+    date = parse_user_date(initial_since_time)
 
     # check if the date is older than the 30 days ago
     thirsty_days_ago = now - timedelta(days=30)

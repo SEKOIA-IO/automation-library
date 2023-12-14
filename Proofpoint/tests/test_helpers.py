@@ -12,6 +12,7 @@ def test_normalize_since_time():
     assert normalize_since_time(None) >= now - timedelta(minutes=1)
     assert normalize_since_time("2050-09-01T13:45:23+01:00") == datetime(2050, 9, 1, 12, 45, 23, tzinfo=timezone.utc)
     assert normalize_since_time("2021-09-01T13:45:23+01:00") > now - timedelta(days=30)
+    assert normalize_since_time("2021-09-01") > now - timedelta(days=30)
 
 
 def test_parse_user_date():
