@@ -40,14 +40,16 @@ class MicrosoftADAction(Action):
             f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
         )
 
-        self.client.search(search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail"])
-        users_dn = []
+        self.client.search(
+            search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail", "userAccountControl"]
+        )
+        users_query = []
         for entry in self.client.response:
             if entry.get("dn") and entry.get("attributes"):
                 if entry.get("attributes").get("cn"):
-                    users_dn.append(entry.get("dn"))
+                    users_query.append([entry.get("dn"), entry.get("attributes").get("userAccountControl")])
 
-        return users_dn
+        return users_query
 
 
 class UserAccountArguments(BaseModel):

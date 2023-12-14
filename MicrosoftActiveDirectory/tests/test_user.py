@@ -24,14 +24,14 @@ def configured_action(action: MicrosoftADAction):
 
 @pytest.fixture
 def one_user_dn():
-    return ["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com"]
+    return [["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com", 512]]
 
 
 @pytest.fixture
 def two_users_dn():
     return [
-        "CN=integration_test,CN=Users,DC=lab,DC=test,DC=com",
-        "CN=integration test1,CN=Users,DC=lab,DC=test,DC=com",
+        ["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com", 512],
+        ["CN=integration test1,CN=Users,DC=lab,DC=test,DC=com", 514],
     ]
 
 
