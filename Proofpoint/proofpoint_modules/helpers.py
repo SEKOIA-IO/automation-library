@@ -47,12 +47,12 @@ def normalize_since_time(initial_since_time: str | None) -> datetime:
     """
     now = datetime.now(timezone.utc)
 
-    # if the initial since time is undefined, return now
-    if initial_since_time is None:
-        return now
-
     # parse the date
     date = parse_user_date(initial_since_time)
+
+    # if the initial since time is undefined, return now
+    if date is None:
+        return now
 
     # check if the date is older than the 30 days ago
     thirsty_days_ago = now - timedelta(days=30)
