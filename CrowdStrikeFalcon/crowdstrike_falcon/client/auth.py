@@ -47,7 +47,7 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
                 max_retries=Retry(
                     total=5,
                     backoff_factor=1,
-                )
+                ),
             ),
         )
 
