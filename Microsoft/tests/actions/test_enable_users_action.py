@@ -1,9 +1,8 @@
 """Tests for EnableUsersAction."""
 from pathlib import Path
-
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from faker import Faker
 from pydantic import ValidationError
 
@@ -37,16 +36,16 @@ async def test_enable_users_action_success(
             "username": session_faker.word(),
             "password": session_faker.word(),
             "server": session_faker.word(),
-            "users": [session_faker.word(), session_faker.word()]
+            "users": [session_faker.word(), session_faker.word()],
         }
 
-        result1 = action.run(arguments1)
+        action.run(arguments1)
 
         arguments2 = {
             "username": session_faker.word(),
             "password": session_faker.word(),
             "server": session_faker.word(),
-            "sids": [session_faker.word(), session_faker.word()]
+            "sids": [session_faker.word(), session_faker.word()],
         }
 
         result2 = action.run(arguments2)

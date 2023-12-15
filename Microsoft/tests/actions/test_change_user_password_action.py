@@ -1,9 +1,8 @@
 """Tests for ChangeUserPasswordAction."""
 from pathlib import Path
-
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from faker import Faker
 from pydantic import ValidationError
 
