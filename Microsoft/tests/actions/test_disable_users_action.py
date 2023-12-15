@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from faker import Faker
-from pydantic import ValidationError
 
+from actions import MicrosoftModule
 from actions.disable_users_action import DisableUsersAction
 from client.commands import PowershellCommand
 
@@ -14,6 +14,7 @@ from client.commands import PowershellCommand
 async def test_disable_users_action_run_success(
     symphony_storage: Path,
     mock_session: MagicMock,
+    module: MicrosoftModule,
     session_faker: Faker,
 ):
     """
@@ -22,6 +23,7 @@ async def test_disable_users_action_run_success(
     Args:
         symphony_storage: Path
         mock_session: MagicMock
+        module: MicrosoftModule
         session_faker: Faker
     """
     mock_response = MagicMock()
@@ -30,21 +32,15 @@ async def test_disable_users_action_run_success(
 
     compiled_command = session_faker.pystr()
     with patch.object(PowershellCommand, "compile", return_value=(compiled_command, [])):
-        action = DisableUsersAction(data_path=symphony_storage)
+        action = DisableUsersAction(data_path=symphony_storage, module=module)
 
         arguments1 = {
-            "username": session_faker.word(),
-            "password": session_faker.word(),
-            "server": session_faker.word(),
             "users": [session_faker.word(), session_faker.word()],
         }
 
         action.run(arguments1)
 
         arguments2 = {
-            "username": session_faker.word(),
-            "password": session_faker.word(),
-            "server": session_faker.word(),
             "sids": [session_faker.word(), session_faker.word()],
         }
 
@@ -54,17 +50,20 @@ async def test_disable_users_action_run_success(
 
 
 @pytest.mark.asyncio
-async def test_disable_users_action_run_validation_error(symphony_storage: Path, session_faker: Faker):
+async def test_disable_users_action_run_validation_error(
+    symphony_storage: Path, module: MicrosoftModule, session_faker: Faker
+):
     """
     Test run method of DisableUsersAction when invalid arguments are provided.
 
     Args:
         symphony_storage: Path
+        module: MicrosoftModule
         session_faker: Faker
     """
-    action = DisableUsersAction(data_path=symphony_storage)
+    action = DisableUsersAction(data_path=symphony_storage, module=module)
 
     invalid_arguments = session_faker.pydict()
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError):
         action.run(invalid_arguments)

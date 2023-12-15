@@ -1,9 +1,28 @@
 {
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {},
-        "required": [],
-        "secrets": [],
+        "properties": {
+            "server": {
+                "description": "Remote server dns name or IP address",
+                "type": "string"
+              },
+              "username": {
+                "description": "Username to do authentication on remote server",
+                "type": "string"
+              },
+              "password": {
+                "description": "Password to do authentication on remote server",
+                "type": "string"
+              }
+        },
+        "required": [
+            "server",
+            "username",
+            "password"
+        ],
+        "secrets": [
+            "password"
+        ],
         "title": "Microsoft Actions module Configuration",
         "type": "object"
     },

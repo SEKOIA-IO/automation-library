@@ -6,6 +6,7 @@ import pytest
 from faker import Faker
 from pydantic import ValidationError
 
+from actions import MicrosoftModule
 from actions.change_user_password_action import ChangeUserPasswordAction
 from client.commands import PowershellCommand
 
@@ -14,6 +15,7 @@ from client.commands import PowershellCommand
 async def test_change_user_password_action_run_success(
     symphony_storage: Path,
     mock_session: MagicMock,
+    module: MicrosoftModule,
     session_faker: Faker,
 ):
     """
@@ -22,6 +24,7 @@ async def test_change_user_password_action_run_success(
     Args:
         symphony_storage: Path
         mock_session: MagicMock
+        module: MicrosoftModule
         session_faker: Faker
     """
     mock_response = MagicMock()
@@ -30,13 +33,10 @@ async def test_change_user_password_action_run_success(
 
     compiled_command = session_faker.pystr()
     with patch.object(PowershellCommand, "compile", return_value=(compiled_command, [])):
-        action = ChangeUserPasswordAction(data_path=symphony_storage)
+        action = ChangeUserPasswordAction(data_path=symphony_storage, module=module)
 
         # Test run method
         arguments = {
-            "username": session_faker.word(),
-            "password": session_faker.word(),
-            "server": session_faker.word(),
             "user_to_update": session_faker.word(),
             "new_password": session_faker.word(),
         }
@@ -47,15 +47,18 @@ async def test_change_user_password_action_run_success(
 
 
 @pytest.mark.asyncio
-async def test_change_user_password_action_run_validation_error(symphony_storage: Path, session_faker: Faker):
+async def test_change_user_password_action_run_validation_error(
+    symphony_storage: Path, session_faker: Faker, module: MicrosoftModule
+):
     """
     Test run method of ChangeUserPasswordAction when invalid arguments are provided.
 
     Args:
         symphony_storage: Path
         session_faker: Faker
+        module: MicrosoftModule
     """
-    action = ChangeUserPasswordAction(data_path=symphony_storage)
+    action = ChangeUserPasswordAction(module=module, data_path=symphony_storage)
 
     invalid_arguments = session_faker.pydict()
 

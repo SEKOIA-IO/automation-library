@@ -12,7 +12,7 @@ sekoia-automation-sdk = { version = "^1.8.1", extras = ["all"] }
 async-lru = "^2.0.2"
 aiohttp = "^3.8.5"
 aiolimiter = "^1.1.0"
-pywinrm = {extras = ["credssp"], version = "^0.4.3"}
+pywinrm = { extras = ["credssp"], version = "^0.4.3" }
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

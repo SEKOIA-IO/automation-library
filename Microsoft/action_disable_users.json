@@ -2,18 +2,6 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "server": {
-        "description": "Remote server dns name or IP address",
-        "type": "string"
-      },
-      "username": {
-        "description": "Username to do authentication on remote server",
-        "type": "string"
-      },
-      "password": {
-        "description": "Password to do authentication on remote server",
-        "type": "string"
-      },
       "users": {
         "description": "List of user names to disable. `sids` or `users` must be specified",
         "items": {
@@ -29,14 +17,8 @@
         "type": "array"
       }
     },
-    "required": [
-      "server",
-      "username",
-      "password"
-    ],
-    "secrets": [
-      "password"
-    ],
+    "required": [],
+    "secrets": [],
     "title": "Arguments",
     "type": "object"
   },

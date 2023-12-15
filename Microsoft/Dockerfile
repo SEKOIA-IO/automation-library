@@ -2,6 +2,9 @@ FROM python:3.11
 
 WORKDIR /app
 
+# Explicitly install gcc and libssl-dev for cryptography
+RUN apt-get install -y gcc libssl-dev
+
 RUN pip install poetry
 
 # Install dependencies

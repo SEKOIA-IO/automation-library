@@ -10,6 +10,8 @@ import pytest
 from faker import Faker
 from sekoia_automation import constants
 
+from actions import MicrosoftModule, MicrosoftModuleConfiguration
+
 
 @pytest.fixture(scope="session")
 def faker_locale() -> List[str]:
@@ -94,3 +96,25 @@ def mock_session():
     """
     with patch("client.windows_client.Session") as mock_session:
         yield mock_session
+
+
+@pytest.fixture
+def module(session_faker: Faker) -> MicrosoftModule:
+    """
+    Create a MicrosoftModule with a random configuration.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        MicrosoftModule:
+    """
+    module = MicrosoftModule()
+    config = MicrosoftModuleConfiguration(
+        server=session_faker.word(),
+        username=session_faker.word(),
+        password=session_faker.word(),
+    )
+    module.configuration = config
+
+    return module
