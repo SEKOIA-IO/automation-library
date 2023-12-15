@@ -68,16 +68,6 @@ class PowershellCommand(object):
         )
 
     @staticmethod
-    def get_local_users() -> "PowershellCommand":
-        """
-        Get local users.
-
-        Returns:
-            PowershellCommand:
-        """
-        return PowershellCommand(command="Get-LocalUser")
-
-    @staticmethod
     def enable_users(usernames: list[str] | None = None, sids: list[str] | None = None) -> "PowershellCommand":
         """
         Enable local user.
