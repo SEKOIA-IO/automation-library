@@ -40,9 +40,13 @@ class MicrosoftADAction(Action):
             f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
         )
 
-        self.client.search(
-            search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail", "userAccountControl"]
-        )
+        try:
+            self.client.search(
+                search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail", "userAccountControl"]
+            )
+        except:
+            raise Exception(f"Failed to search in this base {basedn}")
+
         users_query = []
         for entry in self.client.response:
             if entry.get("dn") and entry.get("attributes"):
