@@ -1,0 +1,15 @@
+{
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {},
+        "required": [],
+        "secrets": [],
+        "title": "Microsoft Actions module Configuration",
+        "type": "object"
+    },
+    "description": "",
+    "name": "",
+    "uuid": "33ea4995-5454-4091-a19f-497cb213346a ",
+    "slug": "microsoft-server-actions",
+    "version": "1.0.0"
+}
