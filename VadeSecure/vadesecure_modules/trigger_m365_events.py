@@ -228,15 +228,10 @@ class M365EventsTrigger(Trigger):
         """
         Returns the next page of events produced by M365
         """
-        search_after_filter = [
-            last_message_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            last_message_id or ''
-        ]
-
         payload_json = {
             "limit": self.configuration.pagination_limit,
             "sort": [{"date": "asc"}, "id"],
-            "search_after": search_after_filter,
+            "search_after": [last_message_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"), last_message_id or ""],
         }
 
         url = urljoin(
