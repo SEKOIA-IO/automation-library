@@ -40,18 +40,25 @@ class M365EventsTrigger(Trigger):
 
     module: VadeSecureModule
     configuration: VadeSecureTriggerConfiguration
+    _http_session: requests.Session | None = None
 
     def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
 
-        self.http_session = requests.Session()
-        rate_limiter = LimiterAdapter(per_second=60)
-        self.http_session.mount("https://", rate_limiter)
-        self.http_session.mount("http://", rate_limiter)
-
         self.api_credentials: dict[str, Any] | None = None
-
         self.context = PersistentJSON("context.json", self._data_path)
+
+    @property
+    def http_session(self) -> requests.Session:
+        """Return the HTTP session."""
+        if self._http_session is None:
+            self._http_session = requests.Session()
+            rate_limiter = LimiterAdapter(per_second=self.configuration.rate_limit)
+
+            self._http_session.mount("https://", rate_limiter)
+            self._http_session.mount("http://", rate_limiter)
+
+        return self._http_session
 
     def get_event_type_context(self, event_type: EventType) -> Tuple[datetime, str | None]:
         """
