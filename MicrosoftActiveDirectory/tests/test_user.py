@@ -45,6 +45,7 @@ def test_disable_user(one_user_dn):
     ):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
+            mock_client.result.get.return_value = "success"
 
             results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
@@ -62,6 +63,7 @@ def test_disable_two_users(two_users_dn):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             with pytest.raises(Exception):
                 mock_client.modify.return_value = response
+                mock_client.result.get.return_value = "success"
 
                 results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
@@ -76,6 +78,7 @@ def test_enable_user(one_user_dn):
     ):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
+            mock_client.result.get.return_value = "success"
 
             results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
@@ -93,6 +96,7 @@ def test_enable_two_users(two_users_dn):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             with pytest.raises(Exception):
                 mock_client.modify.return_value = response
+                mock_client.result.get.return_value = "success"
 
                 results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
 
@@ -107,6 +111,7 @@ def test_reset_password_user(one_user_dn):
     ):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
+            mock_client.result.get.return_value = "success"
 
             results = action.run(
                 {
@@ -130,6 +135,7 @@ def test_reset_password_two_users(two_users_dn):
         with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
             with pytest.raises(Exception):
                 mock_client.modify.return_value = response
+                mock_client.result.get.return_value = "success"
 
                 results = action.run(
                     {
@@ -138,3 +144,21 @@ def test_reset_password_two_users(two_users_dn):
                         "new_password": "test_new_password",
                     }
                 )
+
+
+def test_unsuccess_query(one_user_dn):
+    action = configured_action(DisableUserAction)
+    response = True
+
+    with patch(
+        "microsoft_ad.base.MicrosoftADAction.search_userdn_query",
+        return_value=one_user_dn,
+    ):
+        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+            with pytest.raises(Exception):
+                mock_client.modify.return_value = response
+                mock_client.result.get.return_value = "insufficientAccessRights"
+
+                results = action.run({"username": "test_username", "basedn": "cn=test_basedn"})
+
+                assert results is None

@@ -21,7 +21,7 @@ class ResetUserPasswordAction(MicrosoftADAction):
             if self.client.result.get("description") != "success":
                 raise Exception(f"Reset password action failed : {self.client.result.get('description')}")
         except:
-            self.log(f"Failed to reset {arguments.username} password account!!!")
+            raise Exception(f"Failed to reset {arguments.username} password account!!!")
 
 
 class EnableUserAction(MicrosoftADAction):
@@ -46,7 +46,7 @@ class EnableUserAction(MicrosoftADAction):
             if self.client.result.get("description") != "success":
                 raise Exception(f"Enable action failed : {self.client.result.get('description')}")
         except:
-            self.log(f"Failed to Enable {arguments.username} account!!!")
+            raise Exception(f"Failed to Enable {arguments.username} account!!!")
 
 
 class DisableUserAction(MicrosoftADAction):
@@ -72,4 +72,4 @@ class DisableUserAction(MicrosoftADAction):
                 raise Exception(f"Disable action failed : {self.client.result.get('description')}")
 
         except:
-            self.log(f"Failed to Disable {arguments.username} account!!!")
+            raise Exception(f"Failed to Disable {arguments.username} account!!!")
