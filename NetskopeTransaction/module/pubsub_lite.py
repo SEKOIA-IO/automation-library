@@ -60,7 +60,7 @@ class PubSubLite(AsyncGoogleTrigger):
         return content[0:2] == b"\x1f\x8b"
 
     async def handle_queue(self):
-        batch_size = min(self.configuration.chunk_size, self.events_queue.maxsize)
+        batch_size = 50  # min(self.configuration.chunk_size, self.events_queue.maxsize)
         batch_max_wait = 30  # seconds to wait for batch to reach `batch_size`, otherwise - push available events
 
         batch_start = None
@@ -88,6 +88,8 @@ class PubSubLite(AsyncGoogleTrigger):
                 batch = []
                 batch_start = time.time()
 
+                await asyncio.sleep(30)
+
     async def fetch_messages(self):
         subscription_path = SubscriptionPath(
             self.configuration.project_id,
@@ -98,9 +100,6 @@ class PubSubLite(AsyncGoogleTrigger):
             messages_outstanding=1000,
             bytes_outstanding=10 * 1024 * 1024,
         )
-
-        # Forward events in the "background"
-        asyncio.create_task(self.handle_queue())
 
         async with AsyncSubscriberClient() as subscriber_client:
             subscriber: AsyncIterator = await subscriber_client.subscribe(
@@ -125,9 +124,15 @@ class PubSubLite(AsyncGoogleTrigger):
 
     def run(self) -> None:  # pragma: no cover
         self.log(message="PubSub Lite connector has started", level="info")
+
+        forwarder = None
         while self.running:
             try:
                 loop = asyncio.get_event_loop()
+
+                # Forward events in the "background"
+                if not forwarder:
+                    forwarder = loop.create_task(self.handle_queue())
 
                 while self.running:
                     try:

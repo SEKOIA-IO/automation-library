@@ -1,10 +1,9 @@
 import json
 import os
+from abc import ABC
 from pathlib import Path
 
-from sekoia_automation.action import Action
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.connector import Connector
 from sekoia_automation.module import ModuleItem
 
 
@@ -24,13 +23,5 @@ class GoogleBase(ModuleItem):
             json.dump(self.module.configuration["credentials"], fp)
 
 
-class GoogleAction(GoogleBase, Action):
-    pass
-
-
-class GoogleTrigger(GoogleBase, Connector):
-    pass
-
-
-class AsyncGoogleTrigger(GoogleBase, AsyncConnector):
+class AsyncGoogleTrigger(GoogleBase, AsyncConnector, ABC):
     pass
