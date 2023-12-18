@@ -2,8 +2,10 @@ from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
-from requests.adapters import HTTPAdapter, Retry
 from requests.auth import AuthBase
+from requests_ratelimiter import LimiterAdapter
+
+from crowdstrike_falcon.client.retry import Retry
 
 
 class CrowdStrikeFalconApiCredentials:
@@ -27,6 +29,7 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
         client_id: str,
         client_secret: str,
         default_headers: dict[str, str] | None = None,
+        ratelimit_per_second: int = 10,
     ):
         self.__authorization_url = urljoin(base_url, "/oauth2/token")
         self.__client_id = client_id
@@ -39,11 +42,12 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
 
         self.__http_session.mount(
             "https://",
-            HTTPAdapter(
+            LimiterAdapter(
+                per_second=ratelimit_per_second,
                 max_retries=Retry(
                     total=5,
                     backoff_factor=1,
-                )
+                ),
             ),
         )
 
