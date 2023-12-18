@@ -3,20 +3,27 @@ import time
 import uuid
 from collections.abc import Generator, Sequence
 from datetime import datetime, timedelta
-from typing import Deque
+from enum import Enum
+from typing import Any, Deque, Tuple
 from urllib.parse import urljoin
 
 import orjson
 import requests
 from dateutil import parser
-from dateutil.parser import ParserError
+from dateutil.parser import ParserError, isoparse
+from requests_ratelimiter import LimiterAdapter
+from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.trigger import Trigger
 
 from vadesecure_modules import VadeSecureModule
 from vadesecure_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from vadesecure_modules.models import VadeSecureTriggerConfiguration
 
-EVENT_TYPES: list[str] = ["emails", "remediations/auto", "remediations/manual"]
+
+class EventType(Enum):
+    EMAILS = "emails"
+    REMEDIATIONS_AUTO = "remediations/auto"
+    REMEDIATIONS_MANUAL = "remediations/manual"
 
 
 class M365EventsTrigger(Trigger):
@@ -29,30 +36,70 @@ class M365EventsTrigger(Trigger):
     - Pagination relies on local instance variables {last_message_id} and {last_message_date},
       hence last_message pointer is lost when the trigger stops.
     - A margin of 300sec is added to the expiration date of oauth2 token.
-
     """
 
     module: VadeSecureModule
     configuration: VadeSecureTriggerConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
 
         self.http_session = requests.Session()
-        self.api_credentials: dict | None = None
+        rate_limiter = LimiterAdapter(per_second=60)
+        self.http_session.mount("https://", rate_limiter)
+        self.http_session.mount("http://", rate_limiter)
 
-    def initializing(self):
-        self.last_message_id: dict[str, str] = {event_type: "" for event_type in EVENT_TYPES}
-        self.last_message_date: dict[str, datetime] = {
-            event_type: (datetime.utcnow() - timedelta(minutes=1)) for event_type in EVENT_TYPES
-        }
-        self.pagination_limit = 100
-        self.max_batch_size = self.configuration.chunk_size
-        self.log(message="M365 Events Trigger has started", level="info")
+        self.api_credentials: dict[str, Any] | None = None
 
-    def run(self):
-        self.initializing()
+        self.context = PersistentJSON("context.json", self._data_path)
 
+    def get_event_type_context(self, event_type: EventType) -> Tuple[datetime, str | None]:
+        """
+        Get last event date and id.
+
+        Returns:
+            Tuple[datetime, str | None]:
+        """
+        # no need to fetch events from more than 1 hour
+        # it happens when last received event was more than one hour ago
+        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+        with self.context as cache:
+            event_type_context = cache.get(event_type.value)
+            if not event_type_context:
+                event_type_context = {}
+
+            last_message_date_str = event_type_context.get("last_message_date")
+            last_message_id = event_type_context.get("last_message_id")
+
+            if last_message_date_str is None:
+                return one_hour_ago, last_message_id
+
+            last_event_date = isoparse(last_message_date_str)
+
+            if last_event_date < one_hour_ago:
+                return one_hour_ago, last_message_id
+
+            return last_event_date, last_message_id
+
+    def update_event_type_context(
+        self, last_message_date: datetime, last_message_id: str | None, event_type: EventType
+    ) -> None:
+        """
+        Set last event date.
+
+        Args:
+            last_message_date: datetime
+            last_message_id: str
+            event_type: EventType
+        """
+        with self.context as cache:
+            cache[event_type.value] = {"last_message_date": last_message_date.isoformat()}
+
+            if last_message_id:
+                cache[event_type.value]["last_message_id"] = last_message_id
+
+    def run(self) -> None:  # pragma: no cover
+        """Run the trigger."""
         while True:
             try:
                 self._fetch_events()
@@ -62,13 +109,13 @@ class M365EventsTrigger(Trigger):
 
             time.sleep(self.configuration.frequency)
 
-    def _chunk_events(self, events: Sequence, chunk_size: int) -> Generator[list, None, None]:
+    def _chunk_events(self, events: Sequence[Any], chunk_size: int) -> Generator[list[Any], None, None]:
         """
         Group events by chunk
         :param sequence events: The events to group
         :param int chunk_size: The size of the chunk
         """
-        chunk: list = []
+        chunk: list[Any] = []
 
         # iter over the events
         for event in events:
@@ -86,7 +133,7 @@ class M365EventsTrigger(Trigger):
             # yield the last chunk
             yield chunk
 
-    def _send_emails(self, emails: list, event_name: str):
+    def _send_emails(self, emails: list[dict[str, Any]], event_name: str) -> None:
         # save event in file
         work_dir = self.data_path.joinpath("vadesecure_m365_events").joinpath(str(uuid.uuid4()))
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -110,12 +157,11 @@ class M365EventsTrigger(Trigger):
         Successively queries the m365 events pages while more are available
         and the current batch is not too big.
         """
-        for event_type in EVENT_TYPES:
-            message_batch: Deque[dict] = collections.deque()
+        for event_type in EventType:
+            message_batch: Deque[dict[str, Any]] = collections.deque()
             has_more_message = True
 
-            last_message_id = self.last_message_id[event_type]
-            last_message_date = self.last_message_date[event_type]
+            last_message_date, last_message_id = self.get_event_type_context(event_type)
 
             self.log(
                 message=f"Fetching recent M365 {event_type} messages since {last_message_date}",
@@ -138,7 +184,7 @@ class M365EventsTrigger(Trigger):
                     message_batch.extend(next_events)
                     has_more_message = True
 
-                if len(message_batch) >= self.max_batch_size:
+                if len(message_batch) >= self.configuration.chunk_size:
                     break
 
             if message_batch:
@@ -154,7 +200,7 @@ class M365EventsTrigger(Trigger):
                 events_lag = int(time.time() - last_message_date.timestamp())
                 EVENTS_LAG.labels(type=event_type).observe(events_lag)
 
-                for emails in self._chunk_events(list(message_batch), self.max_batch_size):
+                for emails in self._chunk_events(list(message_batch), self.configuration.chunk_size):
                     self._send_emails(
                         emails=list(emails),
                         event_name=f"M365-events_{last_message_date}",
@@ -167,33 +213,27 @@ class M365EventsTrigger(Trigger):
             batch_duration = int(batch_end_time - batch_start_time)
             FORWARD_EVENTS_DURATION.labels(type=event_type).observe(batch_duration)
 
-            self.last_message_id[event_type] = last_message_id
-            self.last_message_date[event_type] = last_message_date
+            self.update_event_type_context(last_message_date, last_message_id, event_type)
 
-    def _fetch_next_events(self, last_message_id: str, last_message_date: datetime, event_type: str) -> list[dict]:
+    def _fetch_next_events(
+        self, last_message_id: str | None, last_message_date: datetime, event_type: EventType
+    ) -> list[dict[str, Any]]:
         """
         Returns the next page of events produced by M365
         """
-        if event_type not in EVENT_TYPES:
-            raise TypeError
-
-        # no need to fetch events from more than 1 hour
-        # it happens when last received event was more than one hour ago
-        if last_message_date < datetime.utcnow() - timedelta(hours=1):
-            last_message_date = datetime.utcnow() - timedelta(hours=1)
+        search_after_filter = [last_message_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")]
+        if last_message_id is not None:
+            search_after_filter.append(last_message_id)
 
         payload_json = {
-            "limit": self.pagination_limit,
+            "limit": self.configuration.pagination_limit,
             "sort": [{"date": "asc"}, "id"],
-            "search_after": [
-                last_message_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                last_message_id,
-            ],
+            "search_after": search_after_filter,
         }
 
         url = urljoin(
             base=self.module.configuration.api_host,
-            url=f"/api/v1/tenants/{self.configuration.tenant_id}/logs/{event_type}/search",
+            url=f"/api/v1/tenants/{self.configuration.tenant_id}/logs/{event_type.value}/search",
         )
 
         response = self.http_session.post(
@@ -201,6 +241,7 @@ class M365EventsTrigger(Trigger):
             json=payload_json,
             headers={"Authorization": self._get_authorization()},
         )
+
         if not response.ok:
             # Exit trigger if we can't authenticate against the server
             level = "critical" if response.status_code in [401, 403] else "error"
@@ -214,10 +255,13 @@ class M365EventsTrigger(Trigger):
 
             return []
         else:
-            if event_type == "emails":
-                return response.json()["result"]["messages"]
-            else:
-                return response.json()["result"]["campaigns"]
+            result: list[dict[str, Any]] = (
+                response.json()["result"]["messages"]
+                if event_type == EventType.EMAILS
+                else response.json()["result"]["campaigns"]
+            )
+
+            return result
 
     def _get_authorization(self) -> str:
         """
@@ -245,14 +289,14 @@ class M365EventsTrigger(Trigger):
                 )
             response.raise_for_status()
 
-            api_credentials: dict = response.json()
+            api_credentials: dict[str, Any] = response.json()
             # convert expirations into datetime
             api_credentials["expires_in"] = current_dt + timedelta(seconds=api_credentials["expires_in"])
             self.api_credentials = api_credentials
 
         return f"{self.api_credentials['token_type'].title()} {self.api_credentials['access_token']}"
 
-    def _get_last_message_date(self, events: list) -> datetime:
+    def _get_last_message_date(self, events: list[Any]) -> datetime:
         for event in reversed(events):
             try:
                 # Make the date timezone naive to support comparison with datetime.utcnow()

@@ -1,11 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, Mock
 
 import pytest
 import requests_mock
+from faker import Faker
 
 from vadesecure_modules import VadeSecureModule
-from vadesecure_modules.trigger_m365_events import EVENT_TYPES, M365EventsTrigger
+from vadesecure_modules.trigger_m365_events import EventType, M365EventsTrigger
 
 
 @pytest.fixture
@@ -27,8 +28,37 @@ def trigger(symphony_storage):
     trigger.send_event = Mock()
     trigger.log = Mock()
     trigger.log_exception = Mock()
-    trigger.initializing()
+
     return trigger
+
+
+def test_trigger_get_event_type_context(trigger: M365EventsTrigger, session_faker: Faker):
+    """
+    Test `get_event_type_context`.
+
+    Args:
+        trigger: M365EventsTrigger
+        session_faker: Faker
+    """
+    random_key = [value for value in EventType][session_faker.pyint(0, len(EventType) - 1)]
+    test_message_id = session_faker.pystr()
+    with trigger.context as cache:
+        cache[random_key.value] = None
+
+    current_date = datetime.utcnow()
+    one_hour_ago = current_date - timedelta(hours=1)
+
+    result1 = trigger.get_event_type_context(random_key)
+
+    assert (result1[0].replace(microsecond=0), result1[1]) == (one_hour_ago.replace(microsecond=0), None)
+
+    with trigger.context as cache:
+        cache[random_key.value] = {
+            "last_message_date": current_date.isoformat(),
+            "last_message_id": test_message_id,
+        }
+
+    assert trigger.get_event_type_context(random_key) == (current_date, test_message_id)
 
 
 def test_fetch_events(trigger):
@@ -37,7 +67,7 @@ def test_fetch_events(trigger):
 
     trigger._fetch_events()
     assert trigger.send_event.call_args_list == []
-    assert len(trigger._fetch_next_events.call_args_list) == len(EVENT_TYPES)
+    assert len(trigger._fetch_next_events.call_args_list) == len(EventType)
 
 
 def test_fetch_events_bad_url(trigger):
@@ -48,7 +78,9 @@ def test_fetch_events_bad_url(trigger):
             "https://api-test.vadesecure.com/api/v1/tenants/e49e7162-0df6-48e9-a75e-237d54871e8b/logs/emails/search",
             json={"result": {"total": 2, "messages": [{}, {}]}},
         )
-        trigger._fetch_next_events(last_message_id="1", last_message_date=datetime.utcnow(), event_type="emails")
+        trigger._fetch_next_events(
+            last_message_id="1", last_message_date=datetime.utcnow(), event_type=EventType.EMAILS
+        )
         assert mock.called_once
 
 
@@ -123,7 +155,7 @@ def test_fetch_next_emails_events(trigger):
         }
         mock.post(url, json={"result": {"total": 2, "messages": [message1, message2]}})
         assert trigger._fetch_next_events(
-            last_message_id="", last_message_date=datetime.utcnow(), event_type="emails"
+            last_message_id="", last_message_date=datetime.utcnow(), event_type=EventType.EMAILS
         ) == [message1, message2]
 
 
@@ -151,7 +183,7 @@ def test_fetch_next_auto_remediation_events(trigger):
         assert trigger._fetch_next_events(
             last_message_id="",
             last_message_date=datetime.utcnow(),
-            event_type="remediations/auto",
+            event_type=EventType.REMEDIATIONS_AUTO,
         ) == [campaign1]
 
 

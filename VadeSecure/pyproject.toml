@@ -6,14 +6,26 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.8.1"
+sekoia-automation-sdk = "^1.10.0"
 python-dateutil = "^2.8"
+requests = "^2.31.0"
+requests-ratelimiter = "^0.4.2"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
-requests = "*"
+pytest-xdist = "*"
+pytest-env = "*"
+pytest-flake8 = "*"
 requests-mock = "*"
+types-requests = "^2.31.0.10"
+Faker = "^13.12.0"
+autoflake = "^1.4"
+isort = "^5.10.1"
+black = "^23.12.0"
+mypy = "^0.960"
+poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
+poetry = "^1.5.1"
 
 [build-system]
 requires = [ "poetry-core>=1.0.0",]
@@ -33,3 +45,48 @@ omit = [
     "tests/*",
     "main.py",
 ]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore:.*unclosed.*:ResourceWarning",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=vadesecure_modules
+  --cov-branch
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=5
+  --numprocesses=auto
+  --asyncio-mode=auto
+  --capture=sys
+'''
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
+
+[tool.poe.tasks.lint]
+sequence = [
+    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
+    { cmd = "poetry run black ." },
+    { cmd = "poetry run isort ." },
+    { cmd = "poetry run mypy ." },
+]
+help = "Make code linting and formatting."
