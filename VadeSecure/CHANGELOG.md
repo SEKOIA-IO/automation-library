@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-18 - 1.48
+
+### Added
+
+- Use latest message datetime during next execution
+
 ## 2023-11-23 - 1.47
 
 ### Added
