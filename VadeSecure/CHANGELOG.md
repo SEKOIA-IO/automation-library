@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-18 - 1.49
+
+### Fixed
+
+- In case if there is no last message, empty string for ordering
+
 ## 2023-12-18 - 1.48
 
 ### Added
