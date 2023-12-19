@@ -14,7 +14,7 @@
                 "description": "Identifier of the IOC collection",
                 "type": "string"
             },
-            "ioc_type": {
+            "indicator_type": {
                 "description": "Type of IOC",
                 "example": "domain-name.value, ipv4-addr.value, ipv6-addr.value, url.value, email-addr.value or file.hashes",
                 "type": "string",
@@ -24,7 +24,7 @@
         "oneOf": [{"required": ["indicators"]}, {"required": ["indicators_path"]}],
         "required": [
             "ioc_collection_id",
-            "ioc_type"
+            "indicator_type"
         ],
         "title": "Arguments",
         "type": "object"
