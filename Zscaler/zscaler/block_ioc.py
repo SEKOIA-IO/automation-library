@@ -45,9 +45,7 @@ class ZscalerAction(Action):
         try:
             for object in stix_objects:
                 # Extract value and type from pattern
-                print(f"object {object}")
                 indicators = stix_to_indicators(stix_object=object, supported_types_map=ZSCALER_IOC_TYPE)
-                print(f"indicators {indicators}")
                 for indicator in indicators:
                     ioc_value = indicator["value"]
                     ioc_type = indicator["type"]
