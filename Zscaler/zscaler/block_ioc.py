@@ -62,7 +62,7 @@ class ZscalerAction(Action):
                         seen_values[ioc_type].append(ioc_value)
                         results["valid"].append(ioc_value)
         except Exception as e:
-            print(f"Build of IOC list failed: {str(e)}")
+            self.log_exception(e, message=f"Build of IOC list failed")
         return results
 
     def post_blacklist_iocs_to_add(self, IOC_list: list):
