@@ -49,7 +49,6 @@ class ZscalerAction(Action):
                 for indicator in indicators:
                     ioc_value = indicator["value"]
                     ioc_type = indicator["type"]
-                    print(f"ioc_value {ioc_value}, ioc_type {ioc_type}")
                     if ioc_type in ZSCALER_IOC_TYPE:
                         # Handle revoked objects
                         if object.get("revoked", False):
