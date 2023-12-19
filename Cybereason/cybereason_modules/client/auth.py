@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
@@ -21,7 +21,7 @@ class CybereasonApiAuthentication(AuthBase):
     """
 
     def __init__(self, base_url: str, username: str, password: str):
-        self.__authorization_url = urljoin(base_url, "/login.html")
+        self.__authorization_url = urljoin(base_url, "login.html")
         self.__username = username
         self.__password = password
         self.__api_credentials: CybereasonApiCredentials | None = None

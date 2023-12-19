@@ -5,7 +5,7 @@ from collections.abc import Generator
 from functools import cached_property
 from threading import Event
 from typing import Any
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import orjson
 import requests

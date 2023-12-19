@@ -2,7 +2,7 @@ import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from threading import Event
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -11,7 +11,7 @@ from withsecure.client.exceptions import AuthenticationError
 from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_AUTH_SECONDS_BETWEEN_ATTEMPTS, API_BASE_URL, API_TIMEOUT
 from withsecure.helpers import human_readable_api_exception
 
-API_AUTHENTICATION_URL = urljoin(API_BASE_URL, "/as/token.oauth2")
+API_AUTHENTICATION_URL = urljoin(API_BASE_URL, "as/token.oauth2")
 
 
 class OAuthAuthentication(AuthBase):

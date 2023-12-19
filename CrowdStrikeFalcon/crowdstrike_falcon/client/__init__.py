@@ -1,6 +1,6 @@
 from collections.abc import Generator
 from typing import Any
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -38,7 +38,7 @@ class ApiClient(requests.Session):
             self.headers.update(default_headers)
 
     def get_url(self, endpoint: str) -> str:
-        return urljoin(self._base_url, endpoint)
+        return urljoin(self._base_url, endpoint.lstrip("/"))
 
     def request_endpoint(self, method: str, endpoint: str, **kwargs) -> Generator[Any, None, None]:
         """

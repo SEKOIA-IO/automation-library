@@ -2,7 +2,7 @@
 
 from typing import Any
 from unittest.mock import MagicMock
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import pytest
 from aioresponses import aioresponses
@@ -140,7 +140,7 @@ async def test_next_batch_with_api_key(connector_with_api_key, github_response, 
         )
 
         mocked_responses.post(
-            urljoin(connector_with_api_key.configuration.intake_server, "/batch"),
+            urljoin(connector_with_api_key.configuration.intake_server, "batch"),
             status=200,
             payload=intake_response,
         )
@@ -182,7 +182,7 @@ async def test_next_batch_with_pem_file(connector_with_pem_file, github_response
         )
 
         mocked_responses.post(
-            urljoin(connector_with_pem_file.configuration.intake_server, "/batch"),
+            urljoin(connector_with_pem_file.configuration.intake_server, "batch"),
             status=200,
             payload=intake_response,
         )

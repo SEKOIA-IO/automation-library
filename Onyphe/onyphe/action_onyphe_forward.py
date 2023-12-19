@@ -1,4 +1,4 @@
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 from sekoia_automation.action import Action
 

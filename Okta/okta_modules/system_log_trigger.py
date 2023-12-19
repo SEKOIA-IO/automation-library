@@ -4,7 +4,7 @@ from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from threading import Event
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import orjson
 import requests
@@ -111,7 +111,7 @@ class SystemLogConnector(Connector):
 
         # get the first page of events
         headers = {"Accept": "application/json"}
-        url = urljoin(self.module.configuration.base_url, "/api/v1/logs")
+        url = urljoin(self.module.configuration.base_url, "api/v1/logs")
         response = self.client.get(url, params=params, headers=headers)
 
         while not self._stop_event.is_set():

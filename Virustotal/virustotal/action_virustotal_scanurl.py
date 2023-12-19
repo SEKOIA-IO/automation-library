@@ -1,5 +1,5 @@
 import time
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from requests import Response

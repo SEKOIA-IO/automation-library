@@ -2,7 +2,7 @@ import time
 import traceback
 from functools import cached_property
 from threading import Event, Thread
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import orjson
 import requests

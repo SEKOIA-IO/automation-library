@@ -1,7 +1,7 @@
 """Contains http client."""
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 from aiolimiter import AsyncLimiter
 from loguru import logger
@@ -72,7 +72,7 @@ class CheckpointHttpClient(HttpClient):
         Returns:
             AsyncGenerator[list[HarmonyMobileSchema]]:
         """
-        base_url = urljoin(self.base_url, "/app/SBM")
+        base_url = urljoin(self.base_url, "app/SBM")
         formatted_start_date = start_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         endpoint = f"/external_api/v3/alert/?backend_last_updated__gte={formatted_start_date}&limit={limit}"
         logger.info("Fetch events with limit {0} starting from: {1}", limit, formatted_start_date)

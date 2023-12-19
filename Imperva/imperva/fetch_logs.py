@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import cached_property
 from typing import Any
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 import urllib3
@@ -299,7 +299,7 @@ class LogsDownloader(Trigger):
         self._error_count = 0
         self._last_events_time = datetime.utcnow()
         intake_host = os.environ.get("SEKOIAIO_INTAKE_HOST", "https://intake.sekoia.io")
-        batch_api = urljoin(intake_host, "/batch")
+        batch_api = urljoin(intake_host, "batch")
 
         # Collect event_ids
         event_ids: list = []

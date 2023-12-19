@@ -1,5 +1,5 @@
 import json
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from sekoia_automation.action import Action
@@ -39,7 +39,7 @@ class PushEventToIntake(Action):
 
         # pushing the events
         intake_host = arguments.get("intake_server", "https://intake.sekoia.io")
-        batch_api = urljoin(intake_host, "/batch")
+        batch_api = urljoin(intake_host, "batch")
         content = {"intake_key": arguments["intake_key"], "jsons": events}
         res = requests.post(batch_api, json=content, headers={"User-Agent": user_agent()})
 

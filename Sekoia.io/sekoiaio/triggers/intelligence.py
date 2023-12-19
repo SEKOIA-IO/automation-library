@@ -1,7 +1,7 @@
 import signal
 import time
 from threading import Event
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from sekoia_automation.storage import PersistentJSON, write

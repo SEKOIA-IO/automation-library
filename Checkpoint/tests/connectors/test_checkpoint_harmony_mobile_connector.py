@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import pytest
 from aioresponses import aioresponses
@@ -155,9 +155,9 @@ async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
         # Right now it is default value in limit count when we get events
         limit = 100
 
-        base_url = urljoin(checkpoint_harmony_connector.module.configuration.base_url, "/app/SBM")
+        base_url = urljoin(checkpoint_harmony_connector.module.configuration.base_url, "app/SBM")
         auth_url = checkpoint_harmony_connector.module.configuration.authentication_url
-        intake_post_url = urljoin(checkpoint_harmony_connector.configuration.intake_server, "/batch")
+        intake_post_url = urljoin(checkpoint_harmony_connector.configuration.intake_server, "batch")
 
         half_hour_ago_str = (half_hour_ago + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         endpoints = [

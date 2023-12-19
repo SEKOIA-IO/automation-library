@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from requests.auth import AuthBase
@@ -31,7 +31,7 @@ class CrowdStrikeFalconApiAuthentication(AuthBase):
         default_headers: dict[str, str] | None = None,
         ratelimit_per_second: int = 10,
     ):
-        self.__authorization_url = urljoin(base_url, "/oauth2/token")
+        self.__authorization_url = urljoin(base_url, "oauth2/token")
         self.__client_id = client_id
         self.__client_secret = client_secret
         self.__api_credentials: CrowdStrikeFalconApiCredentials | None = None
