@@ -26,9 +26,9 @@
         "title": "Microsoft Actions module Configuration",
         "type": "object"
     },
-    "description": "",
-    "name": "",
+    "description": "Microsoft Windows Server is an operating system designed for server-based computing, offering robust server management, data storage, and networking capabilities for businesses and enterprises, facilitating diverse workloads and IT operations.",
+    "name": "Microsoft Windows Server",
     "uuid": "33ea4995-5454-4091-a19f-497cb213346a ",
-    "slug": "microsoft-server-actions",
+    "slug": "microsoft-windows-server",
     "version": "1.0.0"
 }
