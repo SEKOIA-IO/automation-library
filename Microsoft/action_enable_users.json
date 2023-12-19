@@ -1,0 +1,36 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "users": {
+        "description": "List of user names to enable. `sids` or `users` must be specified",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "sids": {
+        "description": "List of SID`s to enable. `sids` or `users` must be specified",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    "required": [],
+    "secrets": [],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Enable specified users on remote server",
+  "docker_parameters": "enable-users",
+  "name": "Enable Users",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "required": [],
+    "title": "Result",
+    "type": "object"
+  },
+  "uuid": "e72cadea-d1e2-4b05-ab4c-333cba2fb724"
+}
