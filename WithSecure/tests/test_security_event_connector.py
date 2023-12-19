@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import time
@@ -20,7 +20,7 @@ def message1():
     return {
         "severity": "info",
         "engine": "systemEventsLog",
-        "serverTimestamp": (datetime.datetime.utcnow() - datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "serverTimestamp": (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "organization": {"name": "Test", "id": "00000000-0000-0000-0000-000000000000"},
         "action": "reported",
         "details": {
@@ -62,7 +62,7 @@ def message1():
             "systemDataLevel": "Information",
             "userPrincipalName": "domainadmin",
         },
-        "persistenceTimestamp": "2023-03-30T16:52:20.354Z",
+        "persistenceTimestamp": (datetime(2023, 3, 30, 16, 52, 20, 354, tzinfo=timezone.utc).isoformat()),
         "id": "6c85ad33-de08-3156-9354-e235ebf96b93_0",
         "device": {"name": "DC", "id": "00000000-0000-0000-0000-000000000000"},
         "clientTimestamp": "2023-03-30T16:52:18.628Z",
@@ -74,7 +74,7 @@ def message2():
     return {
         "severity": "info",
         "engine": "edr",
-        "serverTimestamp": (datetime.datetime.utcnow() + datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "serverTimestamp": (datetime.utcnow() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "organization": {"name": "Test", "id": "00000000-0000-0000-0000-000000000000"},
         "action": "closed",
         "details": {
@@ -88,7 +88,7 @@ def message2():
             "resolution": "CONFIRMED",
             "userSam": "TEST\\Frank",
         },
-        "persistenceTimestamp": "2023-03-30T14:34:05.876Z",
+        "persistenceTimestamp": (datetime(2023, 3, 30, 14, 34, 5, 876, tzinfo=timezone.utc).isoformat()),
         "id": "00000000-0000-0000-0000-000000000000_0",
         "device": {"name": "WKS-10-PLAIN", "id": "00000000-0000-0000-0000-000000000000"},
         "clientTimestamp": "2023-03-30T14:12:56Z",
@@ -145,7 +145,7 @@ def test_next_batch_with_single_page(trigger, message1, message2):
                 "expires_in": 1799,
             },
         )
-        mock_requests.get(
+        mock_requests.post(
             API_SECURITY_EVENTS_URL,
             status_code=200,
             json={"items": [message1, message2]},
@@ -167,7 +167,7 @@ def test_next_batch_is_empty(trigger):
                 "expires_in": 1799,
             },
         )
-        mock_requests.get(
+        mock_requests.post(
             API_SECURITY_EVENTS_URL,
             status_code=200,
             json={"items": []},
@@ -224,7 +224,7 @@ def test_fetch_next_events_raises_an_exception(trigger):
                 "expires_in": 1799,
             },
         )
-        mock_requests.get(API_SECURITY_EVENTS_URL, exc=requests.exceptions.ConnectTimeout)
+        mock_requests.post(API_SECURITY_EVENTS_URL, exc=requests.exceptions.ConnectTimeout)
 
         trigger.next_batch()
 
@@ -257,8 +257,6 @@ def test_run_properly_handle_any_exception(trigger):
 
 def test_load_recent_date_seen(trigger):
     with trigger.context as c:
-        c["most_recent_date_seen"] = (
-            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=3)
-        ).isoformat()
+        c["most_recent_date_seen"] = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
 
-    assert trigger.most_recent_date_seen < datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=3)
+    assert trigger.most_recent_date_seen < datetime.now(timezone.utc) - timedelta(days=3)

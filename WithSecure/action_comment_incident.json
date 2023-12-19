@@ -1,0 +1,27 @@
+{
+  "name": "Add comment on Incident",
+  "description": "Add comment on Incident.",
+  "uuid": "97020883-a22b-49cc-97d0-73649bdc870a",
+  "docker_parameters": "comment_incident",
+  "arguments": {
+    "title": "Incident",
+    "type": "object",
+    "properties": {
+      "target": {
+        "title": "Incident ID",
+        "description": "Incident identifier to comment.",
+        "type": "string"
+      },
+      "comment": {
+        "title": "Comment",
+        "description": "Comment.",
+        "type": "string"
+      }
+    },
+    "required": [
+        "target",
+        "comment"
+    ]
+  },
+  "results": {}
+}
