@@ -14,4 +14,4 @@ class VadeSecureTriggerConfiguration(BaseModel):
     chunk_size: int = Field(10000, description="The max size of chunks for the batch processing")
 
     pagination_limit: int = Field(100, description="Limit of records to fetch from the API per request")
-    rate_limit: int = Field(1, description="Limit of requests per second to VadeSecure API")
+    rate_limit: int = Field(10, description="Limit of requests per second to VadeSecure API")
