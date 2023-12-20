@@ -6,7 +6,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from module.pubsub_lite import PubSubLite, PubSubLiteConfig
+from netskope_modules.connector_pubsub_lite import PubSubLite, PubSubLiteConfig
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - [%(levelname)s] - %(message)s", datefmt="%d-%b-%y %H:%M:%S"
