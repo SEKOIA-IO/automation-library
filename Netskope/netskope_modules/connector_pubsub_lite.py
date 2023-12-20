@@ -2,7 +2,6 @@ import asyncio
 import gzip
 import time
 from functools import cached_property
-from typing import AsyncIterator
 
 from google.cloud.pubsublite.cloudpubsub import AsyncSubscriberClient
 from google.cloud.pubsublite.types import CloudRegion, CloudZone, FlowControlSettings, SubscriptionPath
@@ -26,6 +25,8 @@ class PubSubLiteConfig(BaseModel):
 
 class PubSubLite(AsyncGoogleTrigger):
     configuration: PubSubLiteConfig
+
+    metric_label_type = "pubsublite"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,7 +61,7 @@ class PubSubLite(AsyncGoogleTrigger):
         return content[0:2] == b"\x1f\x8b"
 
     async def handle_queue(self):
-        batch_size = 50  # min(self.configuration.chunk_size, self.events_queue.maxsize)
+        batch_size = min(self.configuration.chunk_size, self.events_queue.maxsize)
         batch_max_wait = 30  # seconds to wait for batch to reach `batch_size`, otherwise - push available events
 
         batch_start = None
@@ -79,31 +80,24 @@ class PubSubLite(AsyncGoogleTrigger):
                     level="info",
                 )
                 await self.push_data_to_intakes(events=batch)
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).inc(len(batch))
 
                 batch_end = time.time()
                 batch_duration = batch_end - batch_start
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).observe(batch_duration)
 
                 batch = []
                 batch_start = time.time()
 
-                await asyncio.sleep(30)
-
     async def fetch_messages(self):
-        subscription_path = SubscriptionPath(
-            self.configuration.project_id,
-            self.location,
-            self.configuration.subscription_id,
-        )
         per_partition_flow_control_settings = FlowControlSettings(
             messages_outstanding=1000,
             bytes_outstanding=10 * 1024 * 1024,
         )
 
         async with AsyncSubscriberClient() as subscriber_client:
-            subscriber: AsyncIterator = await subscriber_client.subscribe(
-                subscription=subscription_path,
+            subscriber = await subscriber_client.subscribe(
+                subscription=self.subscription_path,
                 per_partition_flow_control_settings=per_partition_flow_control_settings,
             )
             async for message in subscriber:
