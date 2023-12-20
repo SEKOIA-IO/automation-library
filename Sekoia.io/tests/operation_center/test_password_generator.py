@@ -8,7 +8,7 @@ def arguments():
     return {"password_length": 20, "number_of_digits": 5, "number_of_special_characters": 2}
 
 
-def test_password_generator():
+def test_password_generator(arguments):
     action = PasswordGenerator()
 
     results = action.run(arguments)
