@@ -80,11 +80,15 @@ class PubSubLite(AsyncGoogleTrigger):
                     level="info",
                 )
                 await self.push_data_to_intakes(events=batch)
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).inc(len(batch))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).inc(
+                    len(batch)
+                )
 
                 batch_end = time.time()
                 batch_duration = batch_end - batch_start
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).observe(batch_duration)
+                FORWARD_EVENTS_DURATION.labels(
+                    intake_key=self.configuration.intake_key, type=self.metric_label_type
+                ).observe(batch_duration)
 
                 batch = []
                 batch_start = time.time()

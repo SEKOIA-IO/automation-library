@@ -12,12 +12,8 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from netskope_modules import NetskopeModule
 from netskope_modules.constants import MESSAGE_CANNOT_CONSUME_SERVICE
-from netskope_modules.helpers import (
-    get_index_name,
-    get_iterator_name,
-    get_tenant_hostname,
-)
-from netskope_modules.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, EVENTS_LAG
+from netskope_modules.helpers import get_index_name, get_iterator_name, get_tenant_hostname
+from netskope_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 

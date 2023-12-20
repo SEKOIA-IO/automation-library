@@ -1,7 +1,6 @@
 from netskope_modules import NetskopeModule
-from netskope_modules.connector_pull_events_v2 import NetskopeEventConnector
 from netskope_modules.connector_pubsub_lite import PubSubLite
-
+from netskope_modules.connector_pull_events_v2 import NetskopeEventConnector
 
 if __name__ == "__main__":
     module = NetskopeModule()
