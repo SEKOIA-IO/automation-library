@@ -1,6 +1,6 @@
 import pytest
 import string
-from sekoiaio.operation_center.password_generator import PasswordGenerator
+from utils.password_generator import PasswordGenerator
 
 
 @pytest.fixture
