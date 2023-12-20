@@ -16,7 +16,7 @@ def test_password_generator(arguments):
     digits = string.digits
     special_chars = string.punctuation
 
-    assert result is not None
+    assert results is not None
     assert len(results.get("password")) == 20
     assert sum(char in special_chars for char in results.get("password")) == 2
     assert sum(char in digits for char in results.get("password")) == 5
