@@ -45,10 +45,6 @@ def trigger(credentials):
     yield trigger
 
 
-# def test_configuration(trigger):
-#    assert trigger.CREDENTIALS_PATH.exists()
-
-
 def create_async_message(data: bytes, dt: datetime) -> Message:
     timestamp = Timestamp()
     timestamp.FromDatetime(dt)
@@ -60,13 +56,18 @@ def create_async_message(data: bytes, dt: datetime) -> Message:
     return message
 
 
+def test_configuration(trigger):
+    trigger.set_credentials()
+    assert trigger.CREDENTIALS_PATH.exists()
+
+
 def test_run(trigger, events_queue):
     trigger.configuration.chunk_size = 1
 
-    with patch("module.pubsub_lite.AsyncSubscriberClient") as mock, patch(
-        "module.pubsub_lite.PubSubLite.subscription_path", new_callable=PropertyMock
+    with patch("netskope_modules.connector_pubsub_lite.AsyncSubscriberClient") as mock, patch(
+        "netskope_modules.connector_pubsub_lite.PubSubLite.subscription_path", new_callable=PropertyMock
     ) as mock_sub_path, patch(
-        "module.pubsub_lite.AsyncSubscriberClient.subscribe", new_callable=AsyncMock
+        "netskope_modules.connector_pubsub_lite.AsyncSubscriberClient.subscribe", new_callable=AsyncMock
     ) as mock_subscribe:
         mock_sub_path.return_value = "projects/13212241/subscriptions/6"
         instance = mock.return_value

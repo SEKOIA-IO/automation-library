@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 from sekoia_automation.action import Action
-from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector
 from sekoia_automation.module import ModuleItem
 
@@ -29,8 +28,4 @@ class GoogleAction(GoogleBase, Action):
 
 
 class GoogleTrigger(GoogleBase, Connector):
-    pass
-
-
-class AsyncGoogleTrigger(GoogleBase, AsyncConnector):
     pass
