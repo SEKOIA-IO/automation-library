@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2023-12-20 - 2.57.0
-
-### Added
-
-- Add password generator action
-
 ## 2023-12-12 - 2.56.1
 
 ### Changed
