@@ -16,14 +16,14 @@ class PasswordGenerator(Action):
         alphabet = letters + digits + special_chars
 
         while True:
-            pasword = ""
+            password = ""
             for i in range(password_length):
-                pasword += "".join(secrets.choice(alphabet))
+                password += "".join(secrets.choice(alphabet))
 
             if (
-                sum(char in special_chars for char in pasword) >= number_of_special_characters
-                and sum(char in digits for char in pasword) >= number_of_digits
+                sum(char in special_chars for char in password) >= number_of_special_characters
+                and sum(char in digits for char in password) >= number_of_digits
             ):
                 break
 
-        return {"password": pasword}
+        return {"password": password}

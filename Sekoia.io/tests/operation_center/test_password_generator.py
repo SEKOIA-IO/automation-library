@@ -11,11 +11,12 @@ def arguments():
 def test_password_generator():
     action = PasswordGenerator()
 
-    results: dict = action.run(arguments)
+    results = action.run(arguments)
 
     digits = string.digits
     special_chars = string.punctuation
 
-    assert len(results["password"]) == 20
-    assert sum(char in special_chars for char in results["password"]) == 2
-    assert sum(char in digits for char in results["password"]) == 5
+    assert result is not None
+    assert len(results.get("password")) == 20
+    assert sum(char in special_chars for char in results.get("password")) == 2
+    assert sum(char in digits for char in results.get("password")) == 5
