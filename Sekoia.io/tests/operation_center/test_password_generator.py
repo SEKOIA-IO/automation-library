@@ -9,7 +9,7 @@ def arguments():
 
 
 def test_password_generator():
-    action = PasswordGenerator(arguments())
+    action = PasswordGenerator()
 
     results: dict = action.run(arguments)
 
