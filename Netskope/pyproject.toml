@@ -38,5 +38,12 @@ line_length = 119
 [tool.coverage.run]
 omit = [
     "tests/*",
+    "dev.py",
     "main.py",
+]
+
+[tool.mypy]
+exclude = [
+    "tests/*",
+    "dev.py"
 ]
