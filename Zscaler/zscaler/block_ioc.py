@@ -45,13 +45,10 @@ class ZscalerAction(Action):
         try:
             for object in stix_objects:
                 # Extract value and type from pattern
-                print(f"object {object}")
                 indicators = stix_to_indicators(stix_object=object, supported_types_map=ZSCALER_IOC_TYPE)
-                print(f"indicators {indicators}")
                 for indicator in indicators:
                     ioc_value = indicator["value"]
                     ioc_type = indicator["type"]
-                    print(f"ioc_value {ioc_value}, ioc_type {ioc_type}")
                     if ioc_type in ZSCALER_IOC_TYPE:
                         # Handle revoked objects
                         if object.get("revoked", False):
@@ -65,7 +62,7 @@ class ZscalerAction(Action):
                         seen_values[ioc_type].append(ioc_value)
                         results["valid"].append(ioc_value)
         except Exception as e:
-            print(f"Build of IOC list failed: {str(e)}")
+            self.log_exception(e, message=f"Build of IOC list failed")
         return results
 
     def post_blacklist_iocs_to_add(self, IOC_list: list):
