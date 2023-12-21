@@ -42,7 +42,9 @@ class PubSubLite(AsyncConnector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = asyncio.Lock()
 
-        self.last_seen_timestamp: datetime = datetime.datetime.now().astimezone() - datetime.timedelta(minutes=5)
+        self.last_seen_timestamp: datetime.datetime = datetime.datetime.now().astimezone() - datetime.timedelta(
+            minutes=5
+        )
         self.latest_event_lag: float = -1
 
     def execute(self) -> None:
