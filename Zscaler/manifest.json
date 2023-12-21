@@ -3,7 +3,7 @@
     "name": "Zscaler",
     "slug": "Zscaler",
     "description": "Integrates with Zscaler",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
