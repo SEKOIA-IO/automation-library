@@ -7,12 +7,6 @@ from unittest.mock import patch
 from zscaler.block_ioc import ZscalerBlockIOC, ZscalerUnBlockIOC, ZscalerPushIOCBlock, ZscalerListBLockIOC
 
 
-os.environ["ZSCALER_BASE_URL"] = "TO_UPDATE"
-os.environ["ZSCALER_API_KEY"] = "TO_UPDATE"
-os.environ["ZSCALER_USERNAME"] = "TO_UPDATE"
-os.environ["ZSCALER_PASSWORD"] = "TO_UPDATE"
-
-
 @pytest.mark.skipif(
     "{'ZSCALER_BASE_URL', 'ZSCALER_API_KEY', 'ZSCALER_USERNAME', 'ZSCALER_PASSWORD'}"
     ".issubset(os.environ.keys()) == False"
