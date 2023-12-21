@@ -6,7 +6,7 @@ import os
 import time
 from functools import cached_property
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from google.cloud.pubsublite import AdminClient
 from google.cloud.pubsublite.cloudpubsub import AsyncSubscriberClient
@@ -23,7 +23,7 @@ class PubSubLiteConfig(DefaultConnectorConfiguration):
     cloud_region: str
     zone_id: str | None = None
     subscription_id: str
-    credentials: dict[str, str]
+    credentials: Any | None = None
 
     chunk_size: int = 1000
 
