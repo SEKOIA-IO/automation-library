@@ -14,7 +14,7 @@
         "type": "object"
     },
     "description": "UnBlock the provided IOCs: IP / domain",
-    "docker_parameters": "zscaler_block_ioc",
+    "docker_parameters": "zscaler_unblock_ioc",
     "name": "Zscaler UnBlock IoC",
     "results": {},
     "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f2"
