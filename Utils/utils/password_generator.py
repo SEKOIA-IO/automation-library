@@ -1,13 +1,17 @@
 import secrets
 import string
+import random
 from sekoia_automation.action import Action
 
 
 class PasswordGenerator(Action):
     def run(self, arguments: dict):
-        password_length = self.json_argument("password_length", arguments)
-        number_of_digits = self.json_argument("number_of_digits", arguments)
-        number_of_special_characters = self.json_argument("number_of_special_characters", arguments)
+        password_length = arguments.get("password_length", 20)
+        number_of_digits = arguments.get("number_of_digits", 1)
+        number_of_special_characters = arguments.get("number_of_special_characters", 1)
+
+        if number_of_digits + number_of_special_characters > password_length:
+            raise ValueError("number_of_digits + number_of_special_characters must be lower than password_length")
 
         letters = string.ascii_letters
         digits = string.digits
@@ -15,15 +19,12 @@ class PasswordGenerator(Action):
 
         alphabet = letters + digits + special_chars
 
-        while True:
-            password = ""
-            for i in range(password_length):
-                password += "".join(secrets.choice(alphabet))
-
-            if (
-                sum(char in special_chars for char in password) >= number_of_special_characters
-                and sum(char in digits for char in password) >= number_of_digits
-            ):
-                break
+        chars = [secrets.choice(special_chars) for _ in range(number_of_special_characters)]  # n special chars
+        chars += [secrets.choice(digits) for _ in range(number_of_digits)]  # n digits
+        chars += [
+            secrets.choice(alphabet) for _ in range(password_length - number_of_special_characters - number_of_digits)
+        ]  # fill remaining with random
+        random.shuffle(chars)  # Shuffle it so char and digits are not always at the beginning
+        password = "".join(chars)
 
         return {"password": password}
