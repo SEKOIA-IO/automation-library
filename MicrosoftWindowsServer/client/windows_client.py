@@ -2,6 +2,7 @@
 
 from functools import cached_property
 
+from loguru import logger
 from winrm import Response, Session
 
 from .commands import PowershellCommand, PowershellCommandException
@@ -43,6 +44,7 @@ class WindowsRemoteClient(object):
         Returns:
             Response:
         """
+        logger.info("Start to execute command on remote server")
         compiled_command, arguments = command.compile()
 
         response = self._session.run_cmd(compiled_command, arguments)
