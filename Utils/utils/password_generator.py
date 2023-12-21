@@ -11,7 +11,8 @@ class PasswordGenerator(Action):
         number_of_special_characters = arguments.get("number_of_special_characters", 1)
 
         if number_of_digits + number_of_special_characters > password_length:
-            raise ValueError("number_of_digits + number_of_special_characters must be lower than password_length")
+            self.error("number_of_digits + number_of_special_characters must be lower than password_length")
+            return
 
         letters = string.ascii_letters
         digits = string.digits
