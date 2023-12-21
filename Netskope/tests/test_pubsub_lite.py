@@ -3,7 +3,6 @@ from datetime import datetime
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 from google.cloud.pubsub_v1.subscriber.message import Message
-from google.protobuf.timestamp_pb2 import Timestamp
 from pytest import fixture
 
 from netskope_modules.connector_pubsub_lite import PubSubLite
@@ -31,13 +30,13 @@ def events_queue():
 @fixture
 def trigger(credentials):
     trigger = PubSubLite()
-    trigger.module._configuration = dict(credentials=credentials)
     trigger.configuration = {
         "project_id": "project_id",
         "subject_id": "subject_id",
         "cloud_region": "cloud_region",
         "intake_key": "intake_key",
         "subscription_id": "subscription_id",
+        "credentials": credentials,
     }
     trigger.log = Mock()
     trigger.log_exception = Mock()
@@ -46,12 +45,9 @@ def trigger(credentials):
 
 
 def create_async_message(data: bytes, dt: datetime) -> Message:
-    timestamp = Timestamp()
-    timestamp.FromDatetime(dt)
-
     message = Mock()
     message.data = data
-    message.publish_time = timestamp
+    message.publish_time = dt
 
     return message
 
@@ -68,7 +64,14 @@ def test_run(trigger, events_queue):
         "netskope_modules.connector_pubsub_lite.PubSubLite.subscription_path", new_callable=PropertyMock
     ) as mock_sub_path, patch(
         "netskope_modules.connector_pubsub_lite.AsyncSubscriberClient.subscribe", new_callable=AsyncMock
-    ) as mock_subscribe:
+    ) as mock_subscribe, patch(
+        "netskope_modules.connector_pubsub_lite.PubSubLite.load_checkpoint", new_callable=AsyncMock
+    ) as mock_load, patch(
+        "netskope_modules.connector_pubsub_lite.PubSubLite.save_checkpoint", new_callable=AsyncMock
+    ) as mock_save, patch(
+        "netskope_modules.connector_pubsub_lite.AdminClient"
+    ) as mock_seek:
+        trigger.last_seen_timestamp = datetime(year=2023, month=3, day=11, hour=13, minute=21, second=23)
         mock_sub_path.return_value = "projects/13212241/subscriptions/6"
         instance = mock.return_value
 

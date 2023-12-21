@@ -44,6 +44,8 @@ if __name__ == "__main__":
         frequency: int = 60
         intake_key = args.intake_key
 
+        credentials = {}
+
         # https://intake.test.sekoia.io or https://intake.sekoia.io
         intake_server: str = "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
 
