@@ -1,6 +1,7 @@
 """Contains DisableUsersAction."""
 from typing import Any
 
+from loguru import logger
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
@@ -34,8 +35,12 @@ class DisableUsersAction(Action):
         config = DisableUsersActionConfig(**arguments)
         command = PowershellCommand.disable_users(usernames=config.users, sids=config.sids)
 
+        logger.info("Disabling users {0}", config.users)
+
         WindowsRemoteClient(
             self.module.configuration.server, self.module.configuration.username, self.module.configuration.password
         ).execute_command(command)
+
+        logger.info("Users {0} disabled", config.users)
 
         return {}

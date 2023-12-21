@@ -1,6 +1,7 @@
 """Contains the EnableUsersAction."""
 from typing import Any
 
+from loguru import logger
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
@@ -34,8 +35,12 @@ class EnableUsersAction(Action):
         config = EnableUsersActionConfig(**arguments)
         command = PowershellCommand.enable_users(usernames=config.users, sids=config.sids)
 
+        logger.info("Enabling users {0}", config.users)
+
         WindowsRemoteClient(
             self.module.configuration.server, self.module.configuration.username, self.module.configuration.password
         ).execute_command(command)
+
+        logger.info("Users {0} enabled", config.users)
 
         return {}

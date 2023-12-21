@@ -1,6 +1,7 @@
 """Contains ChangeUserPasswordAction."""
 from typing import Any
 
+from loguru import logger
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
@@ -34,8 +35,12 @@ class ChangeUserPasswordAction(Action):
         config = ChangeUserPasswordActionConfig(**arguments)
         command = PowershellCommand.change_user_password(config.user_to_update, config.new_password)
 
+        logger.info("Changing password for user {0}", config.user_to_update)
+
         WindowsRemoteClient(
             self.module.configuration.server, self.module.configuration.username, self.module.configuration.password
         ).execute_command(command)
+
+        logger.info("Password changed for user {0}", config.user_to_update)
 
         return {}
