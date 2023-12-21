@@ -30,7 +30,7 @@ def test_password_generator(arguments):
 def test_password_generator_failure(arguments_failure):
     action = PasswordGenerator()
 
-    results = action.run(arguments_failure)
-
-    assert results is None
-    assert action._error is not None
+    try:
+        results = action.run(arguments_failure)
+    except ValueError as e:
+        assert "number_of_digits + number_of_special_characters must be lower than password_length" in e
