@@ -112,7 +112,7 @@ class PubSubLite(AsyncConnector):
         batch_start = None
         batch = []
 
-        while self.running:
+        while self.running or self.events_queue.qsize() > 0:
             event = await self.events_queue.get()
             if not batch_start:
                 batch_start = time.time()  # for a correct cold start
