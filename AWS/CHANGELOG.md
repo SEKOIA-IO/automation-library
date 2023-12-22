@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Add
 
-- Add for the first time the Cloufront connector
+- Add for the first time the Cloudfront connector
 
 ## 2023-12-01 - 1.28.1
 
