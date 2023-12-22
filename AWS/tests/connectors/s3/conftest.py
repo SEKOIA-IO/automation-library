@@ -20,4 +20,5 @@ def aws_s3_queued_config(faker: Faker, intake_key: str) -> AwsS3QueuedConfigurat
     return AwsS3QueuedConfiguration(
         intake_key=intake_key,
         queue_name=faker.word(),
+        records_in_queue_per_batch=1,
     )

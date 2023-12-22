@@ -50,6 +50,7 @@ def connector_config(faker: Faker, intake_key: str) -> AwsSqsMessagesTriggerConf
         intake_key=intake_key,
         frequency=faker.pyint(),
         queue_name=faker.word(),
+        records_in_queue_per_batch=1,
     )
 
 

@@ -1,5 +1,6 @@
 """Tests related to AwsS3LogsTrigger."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -7,8 +8,6 @@ from faker import Faker
 
 from connectors import AwsModule
 from connectors.s3.trigger_s3_cloudfront import AwsS3CloudFrontConfiguration, AwsS3CloudFrontTrigger
-
-import json
 
 
 @pytest.fixture

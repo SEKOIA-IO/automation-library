@@ -88,54 +88,64 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return data
 
-    async def next_batch(self) -> tuple[list[str], list[int]]:
+    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[list[str], list[int]]:
         """
         Get next batch of messages.
 
         Contains main logic of the connector.
 
+        Args:
+            previous_processing_end: float | None
+
         Returns:
-            list[str]:
+            tuple[list[str], int]:
         """
-        result = []
-        async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
-            records = []
-            timestamps_to_log: list[int] = []
-            for message_data in messages:
-                message, message_timestamp = message_data
+        records = []
+        timestamps_to_log: list[int] = []
 
-                timestamps_to_log.append(message_timestamp)
-                try:
-                    # Records is a list of strings
-                    records.extend(orjson.loads(message).get("Records", []))
-                except ValueError as e:
-                    self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+        continue_receiving = True
 
-            for record in records:
-                try:
-                    s3_bucket = record.get("s3", {}).get("bucket", {}).get("name")
-                    s3_key = record.get("s3", {}).get("object", {}).get("key")
+        while continue_receiving:
+            async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
+                message_records = []
 
-                    if s3_bucket is None:
-                        raise ValueError("Bucket is undefined", record)
+                if not messages:
+                    continue_receiving = False
 
-                    if s3_key is None:
-                        raise ValueError("Key is undefined", record)
+                for message_data in messages:
+                    message, message_timestamp = message_data
 
-                    normalized_key = normalize_s3_key(s3_key)
+                    timestamps_to_log.append(message_timestamp)
+                    try:
+                        # Records is a list of strings
+                        message_records.extend(orjson.loads(message).get("Records", []))
+                    except ValueError as e:
+                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
-                    async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
-                        data = self._parse_content(self.decompress_content(content))
-                        if data:
-                            self.log(message=f"Forwarding {len(data)} records", level="info")
+                for record in message_records:
+                    try:
+                        s3_bucket = record.get("s3", {}).get("bucket", {}).get("name")
+                        s3_key = record.get("s3", {}).get("object", {}).get("key")
 
-                            result.extend(await self.push_data_to_intakes(events=data))
-                        else:
-                            self.log(message="No records to forward", level="info")
-                except Exception as e:
-                    self.log(
-                        message=f"Failed to fetch content of {record}: {str(e)}",
-                        level="warning",
-                    )
+                        if s3_bucket is None:
+                            raise ValueError("Bucket is undefined", record)
 
-            return result, timestamps_to_log
+                        if s3_key is None:
+                            raise ValueError("Key is undefined", record)
+
+                        normalized_key = normalize_s3_key(s3_key)
+
+                        async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
+                            records.extend(self._parse_content(self.decompress_content(content)))
+                    except Exception as e:
+                        self.log(
+                            message=f"Failed to fetch content of {record}: {str(e)}",
+                            level="warning",
+                        )
+
+            if len(records) >= self.configuration.records_in_queue_per_batch or not records:
+                continue_receiving = False
+
+        result = await self.push_data_to_intakes(events=records)
+
+        return result, timestamps_to_log
