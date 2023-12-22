@@ -6,7 +6,7 @@ import os
 import time
 from functools import cached_property
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from google.cloud.pubsublite import AdminClient
 from google.cloud.pubsublite.cloudpubsub import AsyncSubscriberClient
@@ -19,11 +19,10 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUT
 
 
 class PubSubLiteConfig(DefaultConnectorConfiguration):
-    project_id: str
     cloud_region: str
     zone_id: str | None = None
     subscription_id: str
-    credentials: Any | None = None
+    credentials: Any
 
     chunk_size: int = 1000
 
@@ -93,7 +92,7 @@ class PubSubLite(AsyncConnector):
     @cached_property
     def subscription_path(self) -> SubscriptionPath:
         return SubscriptionPath(
-            project=self.configuration.project_id,
+            project=self.configuration.credentials["project_id"],
             location=self.location,
             name=self.configuration.subscription_id,
         )
