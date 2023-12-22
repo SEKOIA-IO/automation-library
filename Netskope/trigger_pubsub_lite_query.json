@@ -5,9 +5,8 @@
     "type": "object",
     "required": [
       "credentials",
-      "project_id",
-      "subject_id",
       "cloud_region",
+      "subscription_id",
       "intake_key"
     ],
     "secrets": ["credentials"],
