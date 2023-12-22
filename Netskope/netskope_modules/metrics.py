@@ -3,6 +3,13 @@ from prometheus_client import Counter, Histogram
 # Declare prometheus metrics
 prom_namespace = "symphony_module_common"
 
+INCOMING_MESSAGES = Counter(
+    name="collected_messages",
+    documentation="Number of messages collected from Google PubSub Lite",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)
+
 OUTCOMING_EVENTS = Counter(
     name="forwarded_events",
     documentation="Number of events forwarded to Sekoia.io",

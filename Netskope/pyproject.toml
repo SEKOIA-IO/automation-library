@@ -6,8 +6,15 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.8.1"
 netskopesdk = "^0.0.34"
+sekoia-automation-sdk = { version="^1.8.2", extras=["all"] }
+google-cloud-pubsublite = "^1.8.3"
+google-api-python-client = "^2.95.0"
+google-auth-httplib2 = "^0.1.0"
+google-auth-oauthlib = "^1.0.0"
+google-api-core = "^2.11.1"
+google-auth = "^2.22.0"
+googleapis-common-protos = "^1.59.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -31,5 +38,12 @@ line_length = 119
 [tool.coverage.run]
 omit = [
     "tests/*",
+    "dev.py",
     "main.py",
+]
+
+[tool.mypy]
+exclude = [
+    "tests/*",
+    "dev.py"
 ]

@@ -8,10 +8,7 @@ import requests_mock
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
 
 from netskope_modules import NetskopeModule
-from netskope_modules.connector_pull_events_v2 import (
-    NetskopeEventConnector,
-    NetskopeEventConsumer,
-)
+from netskope_modules.connector_pull_events_v2 import NetskopeEventConnector, NetskopeEventConsumer
 from netskope_modules.constants import MESSAGE_CANNOT_CONSUME_SERVICE
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 

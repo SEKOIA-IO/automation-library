@@ -1,8 +1,4 @@
-from netskope_modules.helpers import (
-    get_index_name,
-    get_iterator_name,
-    get_tenant_hostname,
-)
+from netskope_modules.helpers import get_index_name, get_iterator_name, get_tenant_hostname
 from netskope_modules.types import NetskopeAlertType, NetskopeEventType
 
 
