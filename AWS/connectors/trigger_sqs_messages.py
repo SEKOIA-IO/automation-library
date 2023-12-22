@@ -50,23 +50,32 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
         Returns:
             tuple[list[str], list[int]]:
         """
-        async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
-            records = []
-            timestamps_to_log: list[int] = []
-            for data in messages:
-                message, message_timestamp = data
+        records = []
+        timestamps_to_log: list[int] = []
 
-                timestamps_to_log.append(message_timestamp)
-                try:
-                    # Records is a list of strings
-                    records.extend(orjson.loads(message).get("Records", []))
-                except ValueError as e:
-                    self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+        continue_receiving = True
+        while continue_receiving:
+            async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
+                if not messages:
+                    continue_receiving = False
 
-            self.log(message=f"Forwarding {len(records)} messages", level="info")
+                for data in messages:
+                    message, message_timestamp = data
 
-            result: list[str] = await self.push_data_to_intakes(
-                events=[orjson.dumps(record).decode("utf-8") for record in records],
-            )
+                    timestamps_to_log.append(message_timestamp)
+                    try:
+                        # Records is a list of strings
+                        records.extend(orjson.loads(message).get("Records", []))
+                    except ValueError as e:
+                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
-            return result, timestamps_to_log
+            if len(records) >= self.configuration.records_in_queue_per_batch or not records:
+                continue_receiving = False
+
+        self.log(message=f"Forwarding {len(records)} messages", level="info")
+
+        result: list[str] = await self.push_data_to_intakes(
+            events=[orjson.dumps(record).decode("utf-8") for record in records],
+        )
+
+        return result, timestamps_to_log

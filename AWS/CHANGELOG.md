@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-22 - 1.29.4
+
+### Add
+
+- Combine messages into batch before sending it to the intake
+
 ## 2023-12-07 - 1.29.3
 
 ### Add
 
 - Add beta flag to the Cloufront connector
-
 
 ## 2023-12-07 - 1.29.0
 

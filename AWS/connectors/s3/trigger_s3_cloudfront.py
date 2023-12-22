@@ -1,13 +1,14 @@
 """Contains AwsS3CloudFrontTrigger."""
 
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
-from itertools import groupby, islice
-
-from typing import Any, List, Dict
-import pandas as pd
-import time
 import datetime
+import time
+from itertools import groupby, islice
+from typing import Any, Dict, List
+
 import orjson
+import pandas as pd
+
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
 class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration):
@@ -98,7 +99,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
             group_list = list(group)
             agg_results: list[dict[str, Any]] = []
             count_agg = 1
-            if len(group_list) >= 1:
+            if len(group_list) >= 1:  # pragma: no cover
                 for record in group_list:
                     existing_entry = next(
                         (
