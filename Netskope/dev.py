@@ -36,7 +36,7 @@ if __name__ == "__main__":
     location = parts[3].split("-")
 
     class DumbConnectorConfiguration(PubSubLiteConfig):
-        project_id = parts[1]
+        credentials: dict = {"project_id": parts[1]}
         cloud_region = location[0] + "-" + location[1]
         zone_id = location[2] if len(location) > 2 else None
         subscription_id = parts[5]
