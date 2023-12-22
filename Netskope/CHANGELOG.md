@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2023-12-22
+
+### Added
+
+- New connector for the Netskope Transaction events
+
 ## [1.8] - 2023-11-22
 
 ### Changed
