@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.3] - 2024-01-02
+
+### Changed
+
+- Set `base_url` property as nullable and update the Netskope Events connector to check this property
+
 ## [1.9.0] - 2023-12-22
 
 ### Added
