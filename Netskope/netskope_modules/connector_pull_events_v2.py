@@ -9,6 +9,7 @@ from netskope_api.iterator.const import Const
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
 from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.exceptions import ModuleConfigurationError
 
 from netskope_modules import NetskopeModule
 from netskope_modules.constants import MESSAGE_CANNOT_CONSUME_SERVICE
@@ -279,6 +280,11 @@ class NetskopeEventConnector(Connector):
                 consumers[name].stop()
 
     def run(self):
+
+        # raise a configuration error if the base_url is not defined
+        if self.module.configuration.base_url is None:
+            raise ModuleConfigurationError("The base url is undefined. Please set the url of the netskope api")
+
         try:
             # create iterators from data exports
             iterators = self.create_iterators(self.dataexports)

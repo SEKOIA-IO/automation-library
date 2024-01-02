@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 import requests_mock
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
+from sekoia_automation.exceptions import ModuleConfigurationError
 
 from netskope_modules import NetskopeModule
 from netskope_modules.connector_pull_events_v2 import NetskopeEventConnector, NetskopeEventConsumer
@@ -300,6 +301,25 @@ def test_stop_consumers(trigger):
     incident_consumer = consumers.get("incident")
     assert incident_consumer is not None
     assert incident_consumer.stop.called
+
+
+def test_undefined_base_url_should_raise_exception(symphony_storage):
+    module = NetskopeModule()
+    module._community_uuid = "ec92e51c-d45e-47b1-b820-29b97721623f"
+    trigger = NetskopeEventConnector(module=module, data_path=symphony_storage)
+    # mock the log function of trigger that requires network access to the api for reporting
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+    trigger.push_events_to_intakes = MagicMock()
+    trigger.module.configuration = {
+        "base_url": None,
+    }
+    trigger.configuration = {
+        "api_token": "api_token",
+        "intake_key": "intake_key",
+    }
+    with pytest.raises(ModuleConfigurationError):
+        trigger.run()
 
 
 @pytest.mark.skipif("{'NETSKOPE_BASE_URL', 'NETSKOPE_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
