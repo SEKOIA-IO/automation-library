@@ -1,4 +1,3 @@
-import os
 import time
 from functools import cached_property
 from json.decoder import JSONDecodeError
@@ -280,7 +279,6 @@ class NetskopeEventConnector(Connector):
                 consumers[name].stop()
 
     def run(self):
-
         # raise a configuration error if the base_url is not defined
         if self.module.configuration.base_url is None:
             raise ModuleConfigurationError("The base url is undefined. Please set the url of the netskope api")
