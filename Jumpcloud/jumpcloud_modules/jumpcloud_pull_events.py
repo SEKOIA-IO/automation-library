@@ -4,7 +4,7 @@ from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import orjson
 import requests
@@ -109,7 +109,7 @@ failed with status {response.status_code} - {response.reason}"
 
         # get the first page of events
         headers = {"Accept": "application/json", "Content-type": "application/json"}
-        url = urljoin(self.module.configuration.base_url, "/insights/directory/v1/events")
+        url = urljoin(self.module.configuration.base_url, "insights/directory/v1/events")
         response = self.client.post(url, json=params, headers=headers)
 
         while self.running:

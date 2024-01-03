@@ -5,7 +5,7 @@ from collections.abc import Generator, Sequence
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Deque, Tuple
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import orjson
 import requests
@@ -235,8 +235,8 @@ class M365EventsTrigger(Trigger):
         }
 
         url = urljoin(
-            base=self.module.configuration.api_host,
-            url=f"/api/v1/tenants/{self.configuration.tenant_id}/logs/{event_type.value}/search",
+            self.module.configuration.api_host.rstrip("/"),
+            f"api/v1/tenants/{self.configuration.tenant_id}/logs/{event_type.value}/search",
         )
 
         response = self.http_session.post(

@@ -1,7 +1,7 @@
 """Tests related to http client."""
 from datetime import timezone
 from typing import Any
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import pytest
 from aioresponses import aioresponses
@@ -69,7 +69,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_empty(
         limit = session_faker.pyint(min_value=100, max_value=1000)
         get_events_url = urljoin(
             http_client.base_url,
-            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
+            f"app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
         )
 
         events_data = {
@@ -111,7 +111,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
         limit = session_faker.pyint(min_value=100, max_value=1000)
         get_events_url = urljoin(
             http_client.base_url,
-            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
+            f"app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
         )
 
         events = [
@@ -178,7 +178,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success_1(
         limit = session_faker.pyint(min_value=100, max_value=1000)
         get_events_url = urljoin(
             http_client.base_url,
-            f"/app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
+            f"app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
         )
 
         events_data = {
@@ -216,7 +216,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_with_pagination_
     with aioresponses() as mocked:
         mocked.post(http_client.auth_url, status=200, payload=token_data)
 
-        base_url = urljoin(http_client.base_url, "/app/SBM")
+        base_url = urljoin(http_client.base_url, "app/SBM")
         time_events_from = session_faker.date_time()
         time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)

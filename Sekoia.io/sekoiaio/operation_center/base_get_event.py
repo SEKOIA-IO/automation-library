@@ -1,5 +1,5 @@
 import time
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from requests import Session
@@ -19,7 +19,7 @@ class BaseGetEvents(Action):
         super().__init__(*args, **kwargs)
 
     def configure_http_session(self):
-        self.events_api_path = urljoin(self.module.configuration["base_url"], "/api/v1/sic/conf/events")
+        self.events_api_path = urljoin(self.module.configuration["base_url"], "api/v1/sic/conf/events")
 
         # Configure http with retry strategy
         retry_strategy = Retry(

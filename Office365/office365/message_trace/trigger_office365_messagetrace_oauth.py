@@ -1,5 +1,5 @@
 from datetime import datetime
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import msal
 import requests
@@ -35,7 +35,7 @@ class Office365MessageTraceTrigger(Office365MessageTraceBaseTrigger):
     def _get_access_token(self) -> str | None:  # pragma: no cover
         client_id: str = self.configuration.client_id
         client_secret: str = self.configuration.client_secret
-        authority = urljoin(self.base_url, self.configuration.tenant_id)
+        authority = urljoin(self.base_url, self.configuration.tenant_id.lstrip("/"))
 
         app = msal.ConfidentialClientApplication(
             client_id,

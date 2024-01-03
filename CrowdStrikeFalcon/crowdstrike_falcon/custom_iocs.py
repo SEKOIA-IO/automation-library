@@ -1,6 +1,6 @@
 from collections import defaultdict
 from typing import Dict, List
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 from crowdstrike_falcon.action import CrowdstrikeAction
 from crowdstrike_falcon.helpers import stix_to_indicators

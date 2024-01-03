@@ -5,7 +5,7 @@ import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Optional
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import orjson
 from aiohttp import ClientSession
@@ -158,7 +158,7 @@ class AuditLogConnector(Connector):
             list[str]:
         """
         self._last_events_time = datetime.utcnow()
-        batch_api = urljoin(self.configuration.intake_server, "/batch")
+        batch_api = urljoin(self.configuration.intake_server, "batch")
 
         logger.info("Pushing total: {count} events to intakes", count=len(events))
 
