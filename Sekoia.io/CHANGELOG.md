@@ -7,17 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-12 - 2.56.1
+
+### Changed
+
+- Fix parameter names for add an IOC to an IOC Collection action
+
 ## 2023-12-12 - 2.56.0
 
 ### Added
 
-- Add heartbeat for triggers
+- Action to add an IOC to an IOC Collection
+
 
 ## 2023-12-07 - 2.55.0
 
 ### Added
 
-- Action to add an IOC to an IOC Collection
+- Add heartbeat for triggers
 
 ## 2023-12-08 - 2.54.1
 
