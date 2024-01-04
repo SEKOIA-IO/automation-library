@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-04 - 2.57.0
+
 ### Changed
 
 - Read v2 notifications from Sekoia.io’s `liveapi`.
