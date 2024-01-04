@@ -152,7 +152,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
         # We can only manage v1 events
         if str(message.get("event_version")) != "1":
-            self.log("Invalid event version", level="error", event=message)
+            self.log("Received event with version not handled by the trigger", level="info", event=message)
             return
 
         event_type = message.get("event_type")
