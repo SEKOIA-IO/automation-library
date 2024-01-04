@@ -1,5 +1,5 @@
 import json
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
@@ -69,6 +69,17 @@ def test_securityalertstrigger_retrieve_alert_from_api(alert_trigger, sample_not
 
         alert = alert_trigger._retrieve_alert_from_alertapi(alert_uuid)
         assert sorted(alert) == sorted(sample_sicalertapi)
+
+
+def test_securityalertstrigger_retrieve_alert_from_api_exp_raised(
+    alert_trigger, samplenotif_alert_created, requests_mock
+):
+    alert_uuid = samplenotif_alert_created["attributes"]["uuid"]
+    requests_mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", status_code=500)
+
+    with patch("tenacity.nap.time"):
+        alert_trigger.handle_event(samplenotif_alert_created)
+        alert_trigger.log.assert_called()
 
 
 def test_securityalertstrigger_handle_alert_send_message(
