@@ -45,7 +45,11 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         if not self._filter_notifications(message):
             return
 
-        alert = self._retrieve_alert_from_alertapi(alert_uuid)
+        try:
+            alert = self._retrieve_alert_from_alertapi(alert_uuid)
+        except Exception as exp:
+            self.log_exception(exp, message="Failed to fetch alert from Alert API")
+            return
 
         if rule_filter := self.configuration.get("rule_filter"):
             if alert["rule"]["name"] != rule_filter and alert["rule"]["uuid"] != rule_filter:

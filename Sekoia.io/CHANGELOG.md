@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Log an error when Alert API is not available after 10 retries.
+
 ## 2024-01-04 - 2.57.0
 
 ### Changed
