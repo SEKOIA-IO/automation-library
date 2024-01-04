@@ -1,6 +1,4 @@
-import signal
 import time
-from threading import Event
 from posixpath import join as urljoin
 
 import requests

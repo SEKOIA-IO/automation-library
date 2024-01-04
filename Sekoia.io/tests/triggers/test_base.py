@@ -1,10 +1,8 @@
 import json
-from datetime import datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
 from requests import HTTPError
-from websocket import WebSocketBadStatusException
 
 from sekoiaio.triggers.alerts import _SEKOIANotificationBaseTrigger
 

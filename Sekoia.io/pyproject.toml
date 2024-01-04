@@ -39,3 +39,8 @@ omit = [
     "tests/*",
     "main.py",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 119
+fix = true
