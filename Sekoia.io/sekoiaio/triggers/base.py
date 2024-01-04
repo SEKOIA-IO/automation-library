@@ -90,6 +90,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         setdefaulttimeout(10)  # socket timeout
         self._websocket = WebSocketApp(
             self.liveapi_url,
+            on_open=self.on_open,
             on_message=self.on_message,
             on_close=self.on_close,
             on_error=self.on_error,
@@ -103,6 +104,10 @@ class _SEKOIANotificationBaseTrigger(Trigger):
                 self._websocket.run_forever(ping_interval=20, ping_timeout=5, sslopt=self.ssl_opt)
             except WebSocketTimeoutException:
                 self.log("The websocket timed out", level="error")
+
+    def on_open(self, ws):
+        # Ask `liveapi` to push v1 and v2 notifications.
+        ws.send('{"action": "upgrade"}')
 
     def on_error(self, _, error: Exception):
         now = datetime.utcnow()
@@ -150,23 +155,19 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             self.log("Invalid JSON message received from LiveAPI", level="error")
             return
 
-        # We can only manage v1 events
-        if str(message.get("event_version")) != "1":
+        # We can only manage v2 events
+        if str(message.get("metadata", {}).get("version")) != "2":
             self.log("Received event with version not handled by the trigger", level="info", event=message)
             return
 
-        event_type = message.get("event_type")
+        event_type = message.get("type")
 
         # We don’t know how to handle such messages.
         if event_type is None:
             self.log("Empty event type", level="error", event=message)
             return
 
-        try:
-            handler = getattr(self, f"handle_{event_type}")
-            handler(message)
-        except AttributeError:
-            return
+        self.handle_event(message)
 
     def stop(self, *args, **kwargs):
         super().stop(*args, **kwargs)

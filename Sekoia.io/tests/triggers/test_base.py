@@ -1,10 +1,8 @@
 import json
-from datetime import datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
 from requests import HTTPError
-from websocket import WebSocketBadStatusException
 
 from sekoiaio.triggers.alerts import _SEKOIANotificationBaseTrigger
 
@@ -67,6 +65,12 @@ def test_on_error(base_trigger):
     base_trigger.log_exception.reset_mock()
     base_trigger.on_error(None, Exception())
     base_trigger.log_exception.assert_not_called()
+
+
+def test_on_open(base_trigger):
+    ws = Mock()
+    base_trigger.on_open(ws)
+    ws.send.assert_called_with('{"action": "upgrade"}')
 
 
 def test_ping(base_trigger):

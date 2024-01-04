@@ -12,33 +12,37 @@ from .base import _SEKOIANotificationBaseTrigger
 
 class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = [
-        "alert-created",
-        "alert-updated",
-        "alert-status-changed",
-        "alert-comment-created",
-    ]
+    HANDLED_EVENT_SUB_TYPES = [("alert", "created"), ("alert", "updated"), ("alert-comment", "created")]
 
-    def handle_alert(self, message):
+    def handle_event(self, message):
         """Handle alert messages.
 
-        Only a few event are considered (`alert-created`,
-        `alert-updated`, `alert-status-changed`,
-        `alert-comment-created`). If a valid evnet is handled, then
-        enrich event from `sicalertapi` to retrieve its status, its
-        short id, etc. Finally, send message to the Symphony workflow.
+        Only a few event are considered (`alert:created`,
+        `alert:updated`, `alert-comment:created`). If a valid evnet is
+        handled, then enrich event from `sicalertapi` to retrieve its
+        status, its short id, etc. Finally, send message to the
+        Symphony workflow.
 
         """
         alert_attrs = message.get("attributes", {})
-        alert_event: str | None = alert_attrs.get("event")
-        alert_uuid: str | None = alert_attrs.get("alert_uuid")
-
-        # Is the notification in a format we can understand?
-        if not (alert_event and alert_uuid):
-            return
+        event_type: str | None = message.get("type")
+        event_action: str | None = message.get("action")
 
         # Ignore alert “sub event” types that we can’t (yet) handle.
-        if alert_event not in self.HANDLED_EVENT_SUB_TYPES:
+        if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
+            return
+
+        alert_uuid: str | None = None
+        if event_type == "alert":
+            alert_uuid = alert_attrs.get("uuid")
+        elif event_type == "alert-comment":
+            alert_uuid = alert_attrs.get("alert_uuid")
+
+        # Is the notification in a format we can understand?
+        if not alert_uuid:
+            return
+
+        if not self._filter_notifications(message):
             return
 
         alert = self._retrieve_alert_from_alertapi(alert_uuid)
@@ -60,7 +64,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
         alert_short_id = alert.get("short_id")
         event = {
             "file_path": file_path,
-            "event_type": alert_event,
+            "event_type": event_type,
             "alert_uuid": alert_uuid,
             "short_id": alert_short_id,
             "status": {
@@ -82,6 +86,9 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             directory=directory,
             remove_directory=True,
         )
+
+    def _filter_notifications(self, message) -> bool:
+        return True
 
     @retry(
         reraise=True,
@@ -113,19 +120,24 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
 
 class AlertCreatedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = ["alert-created"]
+    HANDLED_EVENT_SUB_TYPES = [("alert", "created")]
 
 
 class AlertUpdatedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = ["alert-updated"]
+    HANDLED_EVENT_SUB_TYPES = [("alert", "updated")]
 
 
 class AlertStatusChangedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = ["alert-status-changed"]
+    HANDLED_EVENT_SUB_TYPES = [("alert", "updated")]
+
+    def _filter_notifications(self, message) -> bool:
+        if message.get("attributes", {}).get("updated", {}).get("status"):
+            return True
+        return False
 
 
 class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
     # List of alert types we can handle.
-    HANDLED_EVENT_SUB_TYPES = ["alert-comment-created"]
+    HANDLED_EVENT_SUB_TYPES = [("alert-comment", "created")]
