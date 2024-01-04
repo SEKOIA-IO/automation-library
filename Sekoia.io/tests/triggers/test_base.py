@@ -67,6 +67,12 @@ def test_on_error(base_trigger):
     base_trigger.log_exception.assert_not_called()
 
 
+def test_on_open(base_trigger):
+    ws = Mock()
+    base_trigger.on_open(ws)
+    ws.send.assert_called_with('{"action": "upgrade"}')
+
+
 def test_ping(base_trigger):
     base_trigger.on_ping(None, None)
     base_trigger.log.assert_called_once()

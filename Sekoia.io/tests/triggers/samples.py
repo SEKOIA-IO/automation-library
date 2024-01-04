@@ -4,60 +4,95 @@ import pytest
 
 
 @pytest.fixture
-def sample_notifications():
-    yield [
-        {
-            "created_at": "2019-09-06T07:32:03.256679+00:00",
-            "event_version": 1,
-            "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
-            "created_by_type": "application",
-            "event_type": "alert",
-            "community_uuid": "cc93fe3f-c26b-4eb1-82f7-082209cf1892",
-            "attributes": {
-                "event": "alert-created",
-                "alert_uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
-            },
+def samplenotif_alert_created():
+    yield {
+        "metadata": {
+            "version": 2,
             "uuid": "a8fb31cb-7310-4f59-afc2-d52033b5cf78",
+            "created_at": "2019-09-06T07:32:03.256679+00:00",
+            "community_uuid": "cc93fe3f-c26b-4eb1-82f7-082209cf1892",
         },
-        {
+        "type": "alert",
+        "action": "created",
+        "attributes": {
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "short_id": "ALakbd8NXp9W",
+        },
+    }
+
+
+@pytest.fixture
+def samplenotif_alert_status_changed():
+    yield {
+        "metadata": {
+            "version": 2,
             "community_uuid": "6ffbe55b-d30a-4dc4-bc52-a213dce0af29",
-            "event_type": "alert",
-            "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+            "created_at": "2019-09-06T07:07:54.830677+00:00",
             "uuid": "02e10dca-e86e-462e-85cf-cd4c56b7d7e8",
-            "event_version": 1,
-            "attributes": {
-                "event": "alert-status-changed",
-                "alert_uuid": "90767578-2597-4d9d-ac1f-854fe2a41432",
-            },
-            "created_by_type": "application",
-            "created_at": "2019-09-06T07:07:54.830677+00:00",
         },
-        {
+        "type": "alert",
+        "action": "updated",
+        "attributes": {
+            "updated": {"status": "8f206505-af6d-433e-93f4-775d46dc7d0f", "status_name": "Acknowledged"},
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "short_id": "ALakbd8NXp9W",
+        },
+    }
+
+
+@pytest.fixture
+def samplenotif_alert_updated():
+    yield {
+        "metadata": {
+            "version": 2,
             "community_uuid": "6ffbe55b-d30a-4dc4-bc52-a213dce0af29",
-            "event_type": "alert",
-            "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+            "created_at": "2019-09-06T07:07:54.830677+00:00",
             "uuid": "b47e4dad-e1de-4f9d-b77c-1c0bb61b20fe",
-            "event_version": 1,
-            "attributes": {
-                "event": "alert-updated",
-                "alert_uuid": "90767578-2597-4d9d-ac1f-854fe2a41432",
-            },
-            "created_by_type": "application",
-            "created_at": "2019-09-06T07:07:54.830677+00:00",
         },
-        {
+        "type": "alert",
+        "action": "updated",
+        "attributes": {
+            "updated": {"dynamic_urgency_value": 20},
+            "uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "short_id": "ALakbd8NXp9W",
+        },
+    }
+
+
+@pytest.fixture
+def samplenotif_alert_comment_created():
+    yield {
+        "metadata": {
+            "version": 2,
             "community_uuid": "6ffbe55b-d30a-4dc4-bc52-a213dce0af29",
-            "event_type": "alert",
-            "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
             "uuid": "94ef1f9d-ebad-42ba-98d7-2be3447c6bd0",
-            "event_version": 1,
-            "attributes": {
-                "event": "alert-comment-created",
-                "alert_uuid": "90767578-2597-4d9d-ac1f-854fe2a41432",
-            },
-            "created_by_type": "application",
             "created_at": "2019-09-06T07:07:54.830677+00:00",
         },
+        "type": "alert-comment",
+        "action": "created",
+        "attributes": {
+            "content": "comment",
+            "created_by": "c110d686-0b45-4ae7-b917-f15486d0f8c7",
+            "created_by_type": "user",
+            "alert_uuid": "af0a370f-2e44-433c-99b2-2d0e4b348d0c",
+            "alert_short_id": "ALakbd8NXp9W",
+            "uuid": "5869b4d8-e3bb-4465-baad-95daf28267c7",
+        },
+    }
+
+
+@pytest.fixture
+def sample_notifications(
+    samplenotif_alert_created,
+    samplenotif_alert_updated,
+    samplenotif_alert_status_changed,
+    samplenotif_alert_comment_created,
+):
+    yield [
+        samplenotif_alert_created,
+        samplenotif_alert_updated,
+        samplenotif_alert_status_changed,
+        samplenotif_alert_comment_created,
     ]
 
 

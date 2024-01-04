@@ -4,7 +4,13 @@ from unittest.mock import MagicMock, Mock
 import pytest
 import requests_mock
 
-from sekoiaio.triggers.alerts import AlertCreatedTrigger, SecurityAlertsTrigger
+from sekoiaio.triggers.alerts import (
+    AlertCreatedTrigger,
+    SecurityAlertsTrigger,
+    AlertUpdatedTrigger,
+    AlertStatusChangedTrigger,
+    AlertCommentCreatedTrigger,
+)
 
 
 @pytest.fixture
@@ -33,11 +39,11 @@ def test_securityalertstrigger_init(alert_trigger):
 
 
 def test_securityalertstrigger_handler_dispatch_alert_message(alert_trigger, sample_notifications):
-    alert_trigger.handle_alert = Mock()
+    alert_trigger.handle_event = Mock()
 
     for message in sample_notifications:
         alert_trigger.handler_dispatcher(json.dumps(message))
-        alert_trigger.handle_alert.assert_called()
+        alert_trigger.handle_event.assert_called()
 
 
 def test_securityalertstrigger_handle_alert_invalid_message(alert_trigger):
@@ -75,7 +81,7 @@ def test_securityalertstrigger_handle_alert_send_message(
 
     with sample_sicalertapi_mock:
         notification = sample_notifications[0]
-        alert_trigger.handle_alert(notification)
+        alert_trigger.handle_event(notification)
 
         # `send_event()` should be called once with defined
         # arguments. We only test a subset of arguments send.
@@ -88,18 +94,18 @@ def test_securityalertstrigger_handle_alert_send_message(
 
         evt = kwargs.get("event")
         assert evt.get("file_path") == "alert.json"
-        assert evt.get("alert_uuid") == notification.get("attributes").get("alert_uuid")
+        assert evt.get("alert_uuid") == notification.get("attributes").get("uuid")
 
 
 @pytest.fixture
 def alert_created_trigger(module_configuration, symphony_storage):
-    alert_created_trigger = AlertCreatedTrigger()
-    alert_created_trigger.configuration = {}
-    alert_created_trigger._data_path = symphony_storage
-    alert_created_trigger.module.configuration = module_configuration
-    alert_created_trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger = AlertCreatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
 
-    yield alert_created_trigger
+    yield trigger
 
 
 def test_single_event_triggers(alert_created_trigger, sample_sicalertapi_mock, sample_notifications):
@@ -107,34 +113,118 @@ def test_single_event_triggers(alert_created_trigger, sample_sicalertapi_mock, s
 
     with sample_sicalertapi_mock:
         # Calling the trigger with an alert created notification should create an event
-        alert_created_trigger.handle_alert(sample_notifications[0])
+        alert_created_trigger.handle_event(sample_notifications[0])
         alert_created_trigger.send_event.assert_called_once()
 
         # All other notification types should not
         for notification in sample_notifications[1:]:
-            alert_created_trigger.handle_alert(notification)
+            alert_created_trigger.handle_event(notification)
 
         alert_created_trigger.send_event.assert_called_once()
 
 
+def test_single_event_triggers_updated(
+    alert_created_trigger,
+    sample_sicalertapi_mock,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_updated,
+    sample_notifications,
+):
+    trigger = AlertUpdatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    with sample_sicalertapi_mock:
+        # Calling the trigger with an alert updated notification should create an event
+        trigger.handle_event(samplenotif_alert_updated)
+        trigger.send_event.assert_called_once()
+
+        # All other notification types should not
+        for notification in sample_notifications:
+            if not (notification["action"] == "updated" and notification["type"] == "alert"):
+                trigger.handle_event(notification)
+
+        trigger.send_event.assert_called_once()
+
+
+def test_single_event_triggers_status_changed(
+    alert_created_trigger,
+    sample_sicalertapi_mock,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_status_changed,
+    sample_notifications,
+):
+    trigger = AlertStatusChangedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    with sample_sicalertapi_mock:
+        # Calling the trigger with an alert statuschanged notification should create an event
+        trigger.handle_event(samplenotif_alert_status_changed)
+        trigger.send_event.assert_called_once()
+
+        # All other notification types should not
+        for notification in sample_notifications:
+            if notification != samplenotif_alert_status_changed:
+                trigger.handle_event(notification)
+
+        trigger.send_event.assert_called_once()
+
+
+def test_single_event_triggers_comments_added(
+    alert_created_trigger,
+    sample_sicalertapi_mock,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_comment_created,
+    sample_notifications,
+):
+    trigger = AlertCommentCreatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    with sample_sicalertapi_mock:
+        # Calling the trigger with an alert commentadded notification should create an event
+        trigger.handle_event(samplenotif_alert_comment_created)
+        trigger.send_event.assert_called_once()
+
+        # All other notification types should not
+        for notification in sample_notifications:
+            if notification != samplenotif_alert_comment_created:
+                trigger.handle_event(notification)
+
+        trigger.send_event.assert_called_once()
+
+
 def test_alert_trigger_filter_by_rule(
-    alert_trigger, sample_notifications, sample_sicalertapi_mock, sample_sicalertapi
+    alert_trigger, samplenotif_alert_created, sample_sicalertapi_mock, sample_sicalertapi
 ):
     alert_trigger.send_event = MagicMock()
     with sample_sicalertapi_mock:
         # no match
         alert_trigger.configuration = {"rule_filter": "foo"}
-        alert_trigger.handle_alert(sample_notifications[0])
+        alert_trigger.handle_event(samplenotif_alert_created)
         assert not alert_trigger.send_event.called
 
         # match rule name
         alert_trigger.configuration = {"rule_filter": sample_sicalertapi["rule"]["name"]}
-        alert_trigger.handle_alert(sample_notifications[0])
+        alert_trigger.handle_event(samplenotif_alert_created)
         assert alert_trigger.send_event.called
 
         alert_trigger.send_event.reset_mock()
 
         # match rule uuid
         alert_trigger.configuration = {"rule_filter": sample_sicalertapi["rule"]["uuid"]}
-        alert_trigger.handle_alert(sample_notifications[0])
+        alert_trigger.handle_event(samplenotif_alert_created)
         assert alert_trigger.send_event.called

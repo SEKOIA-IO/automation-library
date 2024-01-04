@@ -4,7 +4,14 @@ from tempfile import mkdtemp
 import pytest
 from sekoia_automation import constants
 
-from .samples import sample_notifications, sample_sicalertapi  # noqa
+from .samples import (
+    sample_notifications,  # noqa: F401
+    sample_sicalertapi,  # noqa: F401
+    samplenotif_alert_created,  # noqa: F401
+    samplenotif_alert_updated,  # noqa: F401
+    samplenotif_alert_status_changed,  # noqa: F401
+    samplenotif_alert_comment_created,  # noqa: F401
+)
 
 
 @pytest.fixture

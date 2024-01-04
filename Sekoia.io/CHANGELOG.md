@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Read v2 notifications from Sekoia.io’s `liveapi`.
 
 ## 2024-01-04 - 2.56.3
 
 ### Changed
 
 - Change log level from error to info when receiving a non v1 event
-
 
 ## 2023-12-12 - 2.56.1
 
@@ -26,7 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Action to add an IOC to an IOC Collection
-
 
 ## 2023-12-07 - 2.55.0
 
