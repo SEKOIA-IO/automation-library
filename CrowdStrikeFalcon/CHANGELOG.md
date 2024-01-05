@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-05 - 1.15.3
+
+### Fixed
+
+- Catch errors in the event forwarder
+
 ## 2023-12-15 - 1.15.2
 
 ### Fixed
