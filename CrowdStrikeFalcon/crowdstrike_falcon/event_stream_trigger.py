@@ -421,6 +421,8 @@ class EventStreamTrigger(Connector):
                                 ).observe(lag)
             except queue.Empty:
                 pass
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")
 
     def get_streams(self, app_id: str) -> dict[str, dict]:
         """
