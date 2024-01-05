@@ -1,6 +1,7 @@
 import requests
 from sekoia_automation.action import Action
 from tenacity import Retrying, stop_after_attempt, wait_exponential
+from requests.exceptions import JSONDecodeError
 
 
 class RequestAction(Action):
@@ -44,8 +45,15 @@ class RequestAction(Action):
             self.error(f"HTTP Request failed: {url} with {response.status_code}")
 
         json_response = None
-        if "application/json" in response.headers.get("Content-Type", "").lower():
-            json_response = response.json()
+        if (
+            "application/json" in response.headers.get("Content-Type", "").lower()
+            and response.status_code != 204
+            and response.content
+        ):
+            try:
+                json_response = response.json()
+            except JSONDecodeError as e:
+                json_response = None
 
         return {
             "reason": response.reason,
