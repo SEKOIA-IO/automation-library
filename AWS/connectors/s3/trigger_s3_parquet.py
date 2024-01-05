@@ -1,5 +1,8 @@
 """Contains AwsS3ParquetRecordsTrigger."""
 import io
+import ipaddress
+from collections.abc import Sequence
+from typing import Any
 
 import orjson
 import pandas
@@ -11,6 +14,26 @@ class AwsS3ParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
     """Implementation of AwsS3ParquetRecordsTrigger."""
 
     name = "AWS S3 Parquet records"
+
+    def check_all_ips_are_private(self, record: dict[str, Any], names: Sequence[str]) -> bool:
+        """
+        Check if all IPs in a record are private
+
+        Args:
+            input_str: str
+
+        Returns:
+            bool:
+        """
+        ips = []
+        for name in names:
+            if name in record:
+                try:
+                    ips.append(ipaddress.ip_address(record[name]))
+                except ValueError:  # if substring is not IP then just omit it
+                    pass
+
+        return all([ip.is_private for ip in ips])
 
     def _parse_content(self, content: bytes) -> list[str]:
         """
@@ -31,7 +54,7 @@ class AwsS3ParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
 
         records = []
         for record in df.to_dict(orient="records"):
-            if len(record) > 0:
+            if len(record) > 0 and not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
                 records.append(orjson.dumps(record).decode("utf-8"))
 
         return records
