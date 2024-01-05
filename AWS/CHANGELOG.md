@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-05 - 1.29.5
+
+### Changed
+
+- Filter internal communications in Flowlogs parquet records
+
 ## 2023-12-22 - 1.29.4
 
 ### Add
