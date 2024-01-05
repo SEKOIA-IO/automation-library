@@ -10,7 +10,7 @@ import pandas
 from connectors.s3 import AbstractAwsS3QueuedConnector
 
 
-class AwsS3ParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
+class AwsS3FlowLogsParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
     """Implementation of AwsS3ParquetRecordsTrigger."""
 
     name = "AWS S3 Parquet records"
