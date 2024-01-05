@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-05 - 1.118
+
+- Support 204 response with application/json header
+
 ## 2023-11-22 - 1.116
 
 ### Changed
