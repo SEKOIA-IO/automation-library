@@ -1,9 +1,9 @@
 {
-    "uuid": "4fdbae70-e9cd-492e-9a39-24ce99325e3f",
+    "uuid": "0c97d665-e316-48ff-bcba-bbfbd4eaccc7",
     "name": "Zscaler",
     "slug": "zscaler",
     "description": "Integrates with Zscaler",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
