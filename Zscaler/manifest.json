@@ -1,7 +1,7 @@
 {
     "uuid": "4fdbae70-e9cd-492e-9a39-24ce99325e3f",
     "name": "Zscaler",
-    "slug": "Zscaler",
+    "slug": "zscaler",
     "description": "Integrates with Zscaler",
     "version": "0.1.0",
     "configuration": {
