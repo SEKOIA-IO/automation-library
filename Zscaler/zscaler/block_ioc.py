@@ -67,7 +67,11 @@ class ZscalerAction(Action):
 
     def post_blacklist_iocs_to_add(self, IOC_list: list):
         api = self.zia_auth()
-        response = api.add_security_blacklist_urls(urls=IOC_list)
+        raw_response = api.add_security_blacklist_urls(urls=IOC_list)
+        try:
+            response = raw_response.json()
+        except JSONDecodeError as e:
+            return None
         return response
 
     def post_blacklist_iocs_to_remove(self, IOC_list: list):
