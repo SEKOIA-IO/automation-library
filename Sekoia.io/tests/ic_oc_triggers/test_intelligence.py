@@ -1,11 +1,11 @@
 import os
 import time
 from threading import Thread
-from unittest.mock import MagicMock, patch
-
+from unittest.mock import MagicMock, patch, mock_open
 import pytest
 import requests_mock
 from requests import Response
+from sekoia_automation.storage import write
 
 from sekoiaio.triggers.intelligence import (
     FeedConsumptionTrigger,
@@ -32,7 +32,7 @@ def trigger(data_storage):
         "api_key": os.environ.get("SEKOIA_API_KEY", ""),
         "base_url": "https://api.sekoia.io",
     }
-    trigger.configuration = {"feed_id": "d6092c37-d8d7-45c3-8aff-c4dc26030608", "to_file": False}
+    trigger.configuration = {"feed_id": "d6092c37-d8d7-45c3-8aff-c4dc26030608"}
     yield trigger
 
 
@@ -65,7 +65,6 @@ def test_next_batch_with_data(trigger):
             json=message1,
         )
         trigger.next_batch()
-
         assert len(trigger.send_event.mock_calls) == 1
 
 
@@ -115,22 +114,4 @@ def test_run(trigger):
     main_thread.join(timeout=60)
 
     calls = [call.kwargs["event"] for call in trigger.send_event.call_args_list]
-    assert len(calls) > 0
-
-
-@pytest.mark.skipif(
-    os.environ.get("SEKOIA_API_KEY") is None,
-    reason="Missing SEKOIA_API_KEY environment variable",
-)
-def test_run_with_to_file_true(trigger):
-    trigger.configuration["to_file"] = True  # Set to_file to True
-    main_thread = Thread(target=trigger.run)
-    main_thread.start()
-
-    # wait few seconds
-    time.sleep(1)
-    trigger._stop_event.set()
-    main_thread.join(timeout=60)
-
-    calls = [call.kwargs["directory"] for call in trigger.send_event.call_args_list]
     assert len(calls) > 0
