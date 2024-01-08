@@ -1,0 +1,21 @@
+{
+  "name": "List Detections For Incident",
+  "description": "List Detections For Incident.",
+  "uuid": "378ec16f-7bd9-4086-bb71-89e5cabbf51b1",
+  "docker_parameters": "list_detections_for_incident",
+  "arguments": {
+    "title": "Incident",
+    "type": "object",
+    "properties": {
+      "target": {
+        "title": "Incident ID",
+        "description": "Incident identifier to list detections.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "target"
+    ]
+  },
+  "results": {}
+}

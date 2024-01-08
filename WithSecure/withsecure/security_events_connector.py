@@ -85,7 +85,7 @@ class SecurityEventsConnector(Connector):
         url = API_SECURITY_EVENTS_URL
 
         try:
-            response = self.client.get(url, timeout=API_TIMEOUT, params=params, headers=headers)
+            response = self.client.post(url, timeout=API_TIMEOUT, params=params, headers=headers)
             response.raise_for_status()
             payload = response.json()
         except Exception as any_exception:
@@ -110,7 +110,7 @@ class SecurityEventsConnector(Connector):
                 return
             params["anchor"] = anchor
             try:
-                response = self.client.get(url, timeout=API_TIMEOUT, params=params, headers=headers)
+                response = self.client.post(url, timeout=API_TIMEOUT, params=params, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
             except Exception as any_exception:

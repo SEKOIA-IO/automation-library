@@ -4,6 +4,9 @@ from withsecure.list_devices_action import ListDevicesAction
 from withsecure.release_device_from_network_isolation_action import ReleaseDeviceFromNetworkIsolationAction
 from withsecure.scan_device_for_malware import ScanDeviceForMalware
 from withsecure.security_events_connector import SecurityEventsConnector
+from withsecure.update_incident_status import UpdateStatusIncident
+from withsecure.list_detections_for_incident import ListDetectionForIncident
+from withsecure.comment_incident import CommentIncident
 
 if __name__ == "__main__":
     module = WithSecureModule()
@@ -12,4 +15,8 @@ if __name__ == "__main__":
     module.register(ReleaseDeviceFromNetworkIsolationAction, "release_device_from_network_isolation")
     module.register(ScanDeviceForMalware, "scan_device_for_malware")
     module.register(ListDevicesAction, "list_devices")
+    module.register(CommentIncident, "comment_incident")
+    module.register(ListDetectionForIncident, "list_detections_for_incident")
+    module.register(UpdateStatusIncident, "update_incident_status")
+
     module.run()
