@@ -2,8 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 from shutil import rmtree
-from tempfile import mkdtemp
+from tempfile import mkdtemp, NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock
+from gzip import GzipFile
 
 import aiofiles
 import pytest
@@ -170,6 +171,55 @@ async def test_azure_blob_get_azure_blob_data_2(
     async with aiofiles.tempfile.NamedTemporaryFile("wb", delete=False, dir="") as file:
         file_name = str(file.name)
         await file.write(blob_content)
+
+    azure_blob_storage_wrapper = MagicMock()
+
+    properties = BlobProperties()
+    properties.last_modified = current_date
+    properties.name = session_faker.word()
+
+    expected_blobs = [properties]
+
+    mock_list_blobs = MagicMock()
+    mock_list_blobs.__aiter__.return_value = expected_blobs
+
+    azure_blob_storage_wrapper.list_blobs.return_value = mock_list_blobs
+
+    download_blob_result = AsyncMock()
+    download_blob_result.return_value = (file_name, None)
+
+    azure_blob_storage_wrapper.download_blob = download_blob_result
+
+    connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
+
+    result = await connector.get_azure_blob_data()
+
+    assert result == pushed_events_ids
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_get_azure_blob_data_3(
+    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
+):
+    """
+    Test AzureBlobConnector get events.
+
+    Args:
+        connector: AzureBlobConnector
+        session_faker: Faker
+        symphony_storage: str
+        blob_content: bytes
+        pushed_events_ids: list[str]
+    """
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+
+    # Try to put last event date higher to be 1 day ahead of the log file date
+    with connector.context as cache:
+        cache["last_event_date"] = (current_date - timedelta(days=1)).isoformat()
+
+    with NamedTemporaryFile("wb", delete=False, dir="") as file, GzipFile(fileobj=file, mode="w+") as gfile:
+        file_name = str(file.name)
+        gfile.write(blob_content)
 
     azure_blob_storage_wrapper = MagicMock()
 
