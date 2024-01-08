@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-01 - 2.4.3
+
+### Changed
+
+- Add support for gzipped file in Azure Blob Storage
+
 ## 2024-02-13 - 2.4.2
 
 ### Changed
