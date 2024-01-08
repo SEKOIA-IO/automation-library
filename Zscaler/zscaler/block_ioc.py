@@ -11,6 +11,7 @@ class ZscalerAction(Action):
     def zia_auth(self):
         try:
             api = ZiaTalker(self.module.configuration["base_url"])
+            api.setup_logger(level="error")
             api.authenticate(
                 api_key=self.module.configuration["api_key"],
                 username=self.module.configuration["username"],
