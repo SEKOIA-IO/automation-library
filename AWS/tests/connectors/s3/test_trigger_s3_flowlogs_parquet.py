@@ -7,7 +7,7 @@ import pytest
 
 from connectors import AwsModule
 from connectors.s3 import AwsS3QueuedConfiguration
-from connectors.s3.trigger_s3_parquet import AwsS3ParquetRecordsTrigger
+from connectors.s3.trigger_s3_flowlogs_parquet import AwsS3FlowLogsParquetRecordsTrigger
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def connector(
     aws_module: AwsModule,
     symphony_storage: Path,
     aws_s3_queued_config: AwsS3QueuedConfiguration,
-) -> AwsS3ParquetRecordsTrigger:
+) -> AwsS3FlowLogsParquetRecordsTrigger:
     """
     Create a connector.
 
@@ -25,16 +25,16 @@ def connector(
         aws_s3_queued_config: AwsS3QueuedConfiguration
 
     Returns:
-        AwsS3ParquetRecordsTrigger:
+        AwsS3FlowLogsParquetRecordsTrigger:
     """
-    connector = AwsS3ParquetRecordsTrigger(module=aws_module, data_path=symphony_storage)
+    connector = AwsS3FlowLogsParquetRecordsTrigger(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = aws_s3_queued_config
 
     return connector
 
 
-def test_aws_s3_records_trigger_parse_content(connector: AwsS3ParquetRecordsTrigger):
+def test_aws_s3_flowlogs_records_trigger_parse_content(connector: AwsS3FlowLogsParquetRecordsTrigger):
     """
     Test AwsS3ParquetRecordsTrigger `_parse_content`.
 
