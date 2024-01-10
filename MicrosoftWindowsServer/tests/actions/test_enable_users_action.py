@@ -35,12 +35,14 @@ async def test_enable_users_action_success(
 
         arguments1 = {
             "users": [session_faker.word(), session_faker.word()],
+            "server": session_faker.word(),
         }
 
         action.run(arguments1)
 
         arguments2 = {
             "sids": [session_faker.word(), session_faker.word()],
+            "server": session_faker.word(),
         }
 
         result2 = action.run(arguments2)

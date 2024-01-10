@@ -39,6 +39,7 @@ async def test_change_user_password_action_run_success(
         arguments = {
             "user_to_update": session_faker.word(),
             "new_password": session_faker.word(),
+            "server": session_faker.word(),
         }
 
         result = action.run(arguments)

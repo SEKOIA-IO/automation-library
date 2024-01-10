@@ -15,6 +15,7 @@ class ChangeUserPasswordActionConfig(BaseModel):
 
     user_to_update: str
     new_password: str
+    server: str
 
 
 class ChangeUserPasswordAction(Action):
@@ -38,7 +39,7 @@ class ChangeUserPasswordAction(Action):
         logger.info("Changing password for user {0}", config.user_to_update)
 
         WindowsRemoteClient(
-            self.module.configuration.server, self.module.configuration.username, self.module.configuration.password
+            config.server, self.module.configuration.username, self.module.configuration.password
         ).execute_command(command)
 
         logger.info("Password changed for user {0}", config.user_to_update)

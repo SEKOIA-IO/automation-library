@@ -8,7 +8,6 @@ class MicrosoftModuleConfiguration(BaseModel):
 
     username: str = Field(required=True, description="Microsoft Remote Server username")
     password: str = Field(secret=True, required=True, description="Microsoft Remote Server password")
-    server: str = Field(required=True, description="Microsoft Remote Server dns/ip")
 
 
 class MicrosoftModule(Module):

@@ -111,7 +111,6 @@ def module(session_faker: Faker) -> MicrosoftModule:
     """
     module = MicrosoftModule()
     config = MicrosoftModuleConfiguration(
-        server=session_faker.word(),
         username=session_faker.word(),
         password=session_faker.word(),
     )

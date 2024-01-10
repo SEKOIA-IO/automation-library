@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-10 - 1.0.4
+
+### Change
+
+- move server configuration to trigger lvl
+
 ## 2023-12-21 - 1.0.3
 
 ### Fixed
