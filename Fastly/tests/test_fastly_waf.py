@@ -16,7 +16,10 @@ def trigger(data_storage):
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
     trigger.module.configuration = {
-        "email": "john.doe@example.com", "token": "aaabbb", "corp": "some_corp", "site": "some.site.com"
+        "email": "john.doe@example.com",
+        "token": "aaabbb",
+        "corp": "some_corp",
+        "site": "some.site.com",
     }
     trigger.configuration = {"intake_key": "intake_key", "frequency": 60}
     yield trigger

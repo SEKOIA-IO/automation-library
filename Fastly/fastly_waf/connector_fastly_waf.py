@@ -6,13 +6,11 @@ from typing import Generator
 import orjson
 from dateutil.parser import isoparse
 from pydantic import Field
-from sekoia_automation.connector import (Connector,
-                                         DefaultConnectorConfiguration)
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from .client import ApiClient
-from .metrics import (EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES,
-                      OUTCOMING_EVENTS)
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class FastlyWAFConnectorConfiguration(DefaultConnectorConfiguration):
@@ -64,9 +62,7 @@ class FastlyWAFConnector(Connector):
         with self.context as cache:
             cache["most_recent_date_seen"] = ts
 
-    def __fetch_next_events(
-        self, from_datetime: datetime.datetime
-    ) -> Generator[list, None, None]:
+    def __fetch_next_events(self, from_datetime: datetime.datetime) -> Generator[list, None, None]:
         from_timestamp = int(from_datetime.timestamp())
         next_url = (
             f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites/{self.configuration.site}/events?"
@@ -79,9 +75,7 @@ class FastlyWAFConnector(Connector):
 
             events = response_content["data"]
             if events:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
-                    len(events)
-                )
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
                 yield events
 
             else:
@@ -105,9 +99,9 @@ class FastlyWAFConnector(Connector):
                 if next_events:
                     last_event_datetime = isoparse(next_events[-1]["timestamp"])
                     if last_event_datetime > most_recent_date_seen:
-                        most_recent_date_seen = (
-                            last_event_datetime + datetime.timedelta(seconds=1)
-                        ).replace(microsecond=0)
+                        most_recent_date_seen = (last_event_datetime + datetime.timedelta(seconds=1)).replace(
+                            microsecond=0
+                        )
 
                     yield next_events
 
@@ -122,9 +116,7 @@ class FastlyWAFConnector(Connector):
 
         now = datetime.datetime.now(datetime.timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-            int(current_lag.total_seconds())
-        )
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
 
     def next_batch(self):
         # save the starting time
@@ -140,9 +132,7 @@ class FastlyWAFConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -157,9 +147,7 @@ class FastlyWAFConnector(Connector):
             message=f"Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
         )
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key
-        ).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

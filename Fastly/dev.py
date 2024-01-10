@@ -6,8 +6,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from fastly_waf.connector_fastly_waf import (FastlyWAFConnector,
-                                             FastlyWAFConnectorConfiguration)
+from fastly_waf.connector_fastly_waf import FastlyWAFConnector, FastlyWAFConnectorConfiguration
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,9 +39,7 @@ if __name__ == "__main__":
 
     class DumbConnectorConfiguration(FastlyWAFConnectorConfiguration):
         intake_key = args.intake_key
-        intake_server: str = (
-            "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
-        )
+        intake_server: str = "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
 
         email = args.email
         token = args.token
