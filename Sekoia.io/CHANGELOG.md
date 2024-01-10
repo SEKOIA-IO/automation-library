@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-04 - 2.58.1
+
+### Changed
+
+- Change description of rule filter to avoid confusion for users
+
 ## 2024-01-04 - 2.57.1
 
 ### Fixed
