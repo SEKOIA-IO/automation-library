@@ -1,6 +1,8 @@
-from unittest.mock import MagicMock
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
 
 import pytest
+import requests_mock
 from sekoia_automation.module import Module
 
 from fastly_waf.connector_fastly_waf import FastlyWAFConnector
@@ -15,11 +17,133 @@ def trigger(data_storage):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.module.configuration = {
+    trigger.configuration = {
         "email": "john.doe@example.com",
         "token": "aaabbb",
-        "corp": "some_corp",
-        "site": "some.site.com",
+        "corp": "testcorp",
+        "site": "www.example.com",
+        "intake_key": "intake_key",
+        "frequency": 60,
+        "chunk_size": 1,
     }
-    trigger.configuration = {"intake_key": "intake_key", "frequency": 60}
     yield trigger
+
+
+@pytest.fixture
+def message1():
+    return {
+        "totalCount": 5,
+        "next": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/events?limit=1&page=2"},
+        "data": [
+            {
+                "id": "54de69dcba53b02fbf000018",
+                "timestamp": "2015-02-13T21:17:16Z",
+                "source": "162.245.23.109",
+                "remoteCountryCode": "AU",
+                "remoteHostname": "",
+                "userAgents": ["Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)"],
+                "action": "flagged",
+                "type": "attack",
+                "reasons": {"SQLI": 99},
+                "requestCount": 1,
+                "tagCount": 1,
+                "window": 60,
+                "expires": "2015-02-14T21:17:16Z",
+                "expiredBy": "",
+            }
+        ],
+    }
+
+
+@pytest.fixture
+def message2():
+    return {
+        "totalCount": 5,
+        "data": [
+            {
+                "id": "54de69dcba53b02fbf000018",
+                "timestamp": "2015-02-13T21:17:16Z",
+                "source": "162.245.23.109",
+                "remoteCountryCode": "AU",
+                "remoteHostname": "",
+                "userAgents": ["Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)"],
+                "action": "flagged",
+                "type": "attack",
+                "reasons": {"SQLI": 99},
+                "requestCount": 1,
+                "tagCount": 1,
+                "window": 60,
+                "expires": "2015-02-14T21:17:16Z",
+                "expiredBy": "",
+            }
+        ],
+    }
+
+
+def test_fetch_events(trigger, message2):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
+            status_code=200,
+            json=message2,
+        )
+        events = trigger.fetch_events()
+        assert list(events) == [message2["data"]]
+
+
+def test_fetch_events_with_pagination(trigger, message1, message2):
+    trigger.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events?sort=asc&limit=1&from=1645660800",
+            status_code=200,
+            complete_qs=True,
+            json=message1,
+        )
+
+        mock_requests.get(
+            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events?limit=1&page=2",
+            status_code=200,
+            complete_qs=True,
+            json=message2,
+        )
+
+        events = trigger.fetch_events()
+        assert list(events) == [message1["data"], message2["data"]]
+
+
+def test_next_batch_sleep_until_next_round(trigger, message1, message2):
+    with patch("fastly_waf.connector_fastly_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
+            status_code=200,
+            json=message2,
+        )
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 1
+
+
+def test_long_next_batch_should_not_sleep(trigger, message1, message2):
+    with patch("fastly_waf.connector_fastly_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
+            status_code=200,
+            json=message2,
+        )
+        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 0

@@ -90,7 +90,7 @@ class FastlyWAFConnector(Connector):
             if not next_path:
                 return
 
-            next_url = "%s/%s" % (self.base_uri, next_path)
+            next_url = "%s%s" % (self.base_uri, next_path)
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_datetime
