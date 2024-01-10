@@ -15,6 +15,7 @@ class EnableUsersActionConfig(BaseModel):
 
     users: list[str] | None
     sids: list[str] | None
+    server: str
 
 
 class EnableUsersAction(Action):
@@ -38,7 +39,7 @@ class EnableUsersAction(Action):
         logger.info("Enabling users {0}", config.users)
 
         WindowsRemoteClient(
-            self.module.configuration.server, self.module.configuration.username, self.module.configuration.password
+            config.server, self.module.configuration.username, self.module.configuration.password
         ).execute_command(command)
 
         logger.info("Users {0} enabled", config.users)
