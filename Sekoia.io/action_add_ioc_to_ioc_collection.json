@@ -16,9 +16,9 @@
             },
             "indicator_type": {
                 "description": "Type of IOC",
-                "example": "domain-name.value, ipv4-addr.value, ipv6-addr.value, url.value, email-addr.value or file.hashes",
+                "example": "IP, domain, url, email or hash",
                 "type": "string",
-                "enum": ["domain-name.value", "ipv4-addr.value", "ipv6-addr.value", "url.value", "email-addr.value", "file.hashes"]
+                "enum": ["IP", "domain", "url", "email", "hash"]
             }
         },
         "oneOf": [{"required": ["indicators"]}, {"required": ["indicators_path"]}],
