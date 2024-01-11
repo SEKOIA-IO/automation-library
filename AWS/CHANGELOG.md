@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-11 - 1.29.6
+
+### Fixed
+
+- Set MessageVisibilty to 1 minutes in the SQS wrapper
+
 ## 2024-01-05 - 1.29.5
 
 ### Changed
