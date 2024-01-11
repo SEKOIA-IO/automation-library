@@ -19,6 +19,11 @@
                 "example": "IP, domain, url, email or hash",
                 "type": "string",
                 "enum": ["IP", "domain", "url", "email", "hash"]
+            },
+            "valid_for": {
+                "type": "integer",
+                "description": "Validity period for the created indicators (in days)",
+                "minimum": 1
             }
         },
         "oneOf": [{"required": ["indicators"]}, {"required": ["indicators_path"]}],
