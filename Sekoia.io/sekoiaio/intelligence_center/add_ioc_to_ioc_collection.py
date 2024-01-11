@@ -58,7 +58,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         if indicator_type == "IP":
             self.add_IP_action(indicators, ioc_collection_id, valid_for)
         else:
-            if indicator_type_mapping["indicator_type"]:
+            if indicator_type_mapping[indicator_type]:
                 self.perform_request(
                     indicators, ioc_collection_id, indicator_type_mapping["indicator_type"], valid_for
                 )
