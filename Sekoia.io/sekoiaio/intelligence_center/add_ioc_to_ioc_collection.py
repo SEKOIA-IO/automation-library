@@ -29,18 +29,18 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
                 ipaddress.IPv4Address(ip)
                 ipv4.append(ip)
             except ValueError:
-                continue
+                pass
 
             try:
                 ipaddress.IPv6Address(ip)
                 ipv6.append(ip)
             except ValueError:
-                continue
+                pass
 
         if ipv4:
             self.perform_request(ipv4, ioc_collection_id, "ipv4-addr.value", valid_for)
         if ipv6:
-            self.perform_request(ipv6, ioc_collection_id, "ipv4-addr.value", valid_for)
+            self.perform_request(ipv6, ioc_collection_id, "ipv6-addr.value", valid_for)
 
     def run(self, arguments: dict):
         indicator_type_mapping = {
