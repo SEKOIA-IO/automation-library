@@ -21,7 +21,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
                 f"Could not post indicators to IOC Collection: '{result.text}', status code: {result.status_code}"
             )
 
-    def add_IP_action(self, indicators: list, **kwargs):
+    def add_IP_action(self, indicators: list, ioc_collection_id, valid_for):
         ipv4 = []
         ipv6 = []
         for ip in indicators:
@@ -38,9 +38,21 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
                 continue
 
         if ipv4:
-            self.perform_request(self, indicators=ipv4, indicator_type="ipv4-addr.value", **kwargs)
+            self.perform_request(
+                self,
+                indicators=ipv4,
+                indicator_type="ipv4-addr.value",
+                ioc_collection_id=ioc_collection_id,
+                valid_for=valid_for,
+            )
         if ipv6:
-            self.perform_request(self, indicators=ipv6, indicator_type="ipv4-addr.value", **kwargs)
+            self.perform_request(
+                self,
+                indicators=ipv6,
+                indicator_type="ipv4-addr.value",
+                ioc_collection_id=ioc_collection_id,
+                valid_for=valid_for,
+            )
 
     def run(self, arguments: dict):
         indicator_type_mapping = {
