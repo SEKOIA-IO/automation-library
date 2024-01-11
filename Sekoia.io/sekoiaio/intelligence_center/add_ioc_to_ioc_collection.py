@@ -41,17 +41,17 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
             self.perform_request(
                 self,
                 ipv4,
-                indicator_type="ipv4-addr.value",
-                ioc_collection_id=ioc_collection_id,
-                valid_for=valid_for,
+                "ipv4-addr.value",
+                ioc_collection_id,
+                valid_for,
             )
         if ipv6:
             self.perform_request(
                 self,
                 ipv6,
-                indicator_type="ipv4-addr.value",
-                ioc_collection_id=ioc_collection_id,
-                valid_for=valid_for,
+                "ipv4-addr.value",
+                ioc_collection_id,
+                valid_for,
             )
 
     def run(self, arguments: dict):
@@ -68,7 +68,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         valid_for = self.json_argument("valid_for", arguments)
 
         if indicator_type == "IP":
-            self.add_IP_action(self, indicators, ioc_collection_id=ioc_collection_id, valid_for=valid_for)
+            self.add_IP_action(self, indicators, ioc_collection_id, valid_for)
         else:
             self.perform_request(
                 self,
