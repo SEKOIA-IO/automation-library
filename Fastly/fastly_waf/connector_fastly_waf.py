@@ -52,9 +52,9 @@ class FastlyWAFConnector(Connector):
         most_recent_date_seen = isoparse(most_recent_date_seen_str)
 
         # We don't retrieve messages older than one week
-        one_week_ago = now - datetime.timedelta(days=7)
-        if most_recent_date_seen < one_week_ago:
-            most_recent_date_seen = one_week_ago
+        one_month_ago = now - datetime.timedelta(days=30)
+        if most_recent_date_seen < one_month_ago:
+            most_recent_date_seen = one_month_ago
 
         return most_recent_date_seen
 
