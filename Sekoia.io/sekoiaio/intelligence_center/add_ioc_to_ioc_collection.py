@@ -51,9 +51,9 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         }
 
         indicators = self.json_argument("indicators", arguments)
-        ioc_collection_id = self.json_argument("ioc_collection_id", arguments)
-        indicator_type = self.json_argument("indicator_type", arguments)
-        valid_for = self.json_argument("valid_for", arguments)
+        ioc_collection_id = arguments.get("ioc_collection_id")
+        indicator_type = arguments.get("indicator_type")
+        valid_for = arguments.get("valid_for", 0)
 
         if indicator_type == "IP":
             self.add_IP_action(indicators, ioc_collection_id, valid_for)

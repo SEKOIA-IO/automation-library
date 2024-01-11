@@ -9,7 +9,7 @@ def arguments_success():
     return {
         "indicators": "8.8.8.8",
         "ioc_collection_id": "ioc-collection--00000000-0000-0000-0000-000000000000",
-        "indicator_type": "ipv4-addr.value",
+        "indicator_type": "IP",
     }
 
 
