@@ -106,7 +106,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                     WaitTimeSeconds=frequency,
                     MessageAttributeNames=["All"],
                     AttributeNames=["All"],
-                    VisibilityTimeout=0,
+                    VisibilityTimeout=60,
                 )
 
             except Exception as e:  # pragma: no cover
