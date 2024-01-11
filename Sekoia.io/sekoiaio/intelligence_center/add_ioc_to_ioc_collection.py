@@ -55,7 +55,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         indicator_type = arguments.get("indicator_type")
         valid_for = arguments.get("valid_for", 0)
 
-        if indicator_type == "IP":
+        if str(indicator_type) == "IP":
             self.add_IP_action(indicators, ioc_collection_id, valid_for)
         else:
             if indicator_type_mapping.get(str(indicator_type)):
