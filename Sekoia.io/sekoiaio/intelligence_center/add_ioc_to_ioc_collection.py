@@ -7,7 +7,7 @@ from sekoiaio.utils import datetime_to_str
 
 
 class AddIOCtoIOCCollectionAction(InThreatBaseAction):
-    def perform_request(self, indicators: list, ioc_collection_id, indicator_type, valid_for):
+    def perform_request(self, indicators, ioc_collection_id, indicator_type, valid_for):
         data = {"format": indicator_type, "indicators": "\n".join(indicators)}
         if valid_for:
             data["valid_until"] = datetime_to_str(datetime.now() + timedelta(days=valid_for))
@@ -21,7 +21,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
                 f"Could not post indicators to IOC Collection: '{result.text}', status code: {result.status_code}"
             )
 
-    def add_IP_action(self, indicators: list, ioc_collection_id, valid_for):
+    def add_IP_action(self, indicators, ioc_collection_id, valid_for):
         ipv4 = []
         ipv6 = []
         for ip in indicators:
@@ -38,21 +38,9 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
                 continue
 
         if ipv4:
-            self.perform_request(
-                self,
-                ipv4,
-                "ipv4-addr.value",
-                ioc_collection_id,
-                valid_for,
-            )
+            self.perform_request(self, ipv4, ioc_collection_id, "ipv4-addr.value", valid_for)
         if ipv6:
-            self.perform_request(
-                self,
-                ipv6,
-                "ipv4-addr.value",
-                ioc_collection_id,
-                valid_for,
-            )
+            self.perform_request(self, ipv6, ioc_collection_id, "ipv4-addr.value", valid_for)
 
     def run(self, arguments: dict):
         indicator_type_mapping = {
@@ -71,9 +59,5 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
             self.add_IP_action(self, indicators, ioc_collection_id, valid_for)
         else:
             self.perform_request(
-                self,
-                indicators,
-                ioc_collection_id=ioc_collection_id,
-                indicator_type=indicator_type_mapping["indicator_type"],
-                valid_for=valid_for,
+                self, indicators, ioc_collection_id, indicator_type_mapping["indicator_type"], valid_for
             )
