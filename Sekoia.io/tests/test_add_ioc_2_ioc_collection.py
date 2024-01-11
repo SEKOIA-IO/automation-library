@@ -7,7 +7,7 @@ from sekoiaio.intelligence_center.add_ioc_to_ioc_collection import AddIOCtoIOCCo
 @pytest.fixture
 def arguments_success():
     return {
-        "indicators": "8.8.8.8",
+        "indicators": ["8.8.8.8", "192.168.1.2", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"],
         "ioc_collection_id": "ioc-collection--00000000-0000-0000-0000-000000000000",
         "indicator_type": "IP",
     }
@@ -34,8 +34,8 @@ def test_add_ioc(arguments_success):
         )
         action.run(arguments_success)
 
-        assert mock.call_count == 1
         history = mock.request_history
+        assert mock.call_count == 2
         assert history[0].method == "POST"
 
 
