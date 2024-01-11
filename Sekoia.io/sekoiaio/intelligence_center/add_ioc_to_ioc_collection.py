@@ -7,7 +7,7 @@ from sekoiaio.utils import datetime_to_str
 
 
 class AddIOCtoIOCCollectionAction(InThreatBaseAction):
-    def perform_request(self, indicators, ioc_collection_id, indicator_type, valid_for):
+    def perform_request(self, indicators: dict, ioc_collection_id, indicator_type, valid_for):
         data = {"format": indicator_type, "indicators": "\n".join(indicators)}
         if valid_for:
             data["valid_until"] = datetime_to_str(datetime.now() + timedelta(days=valid_for))
@@ -21,7 +21,7 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
                 f"Could not post indicators to IOC Collection: '{result.text}', status code: {result.status_code}"
             )
 
-    def add_IP_action(self, indicators, **kwargs):
+    def add_IP_action(self, indicators: dict, **kwargs):
         ipv4 = []
         ipv6 = []
         for ip in indicators:
