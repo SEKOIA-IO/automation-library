@@ -68,7 +68,7 @@ def test_add_ioc_with_validity(arguments_with_valid_for):
             "http://fake.url/api/v2/inthreat/ioc-collections/ioc-collection--00000000-0000-0000-0000-000000000000/indicators/text",
             json=response,
         )
-        action.run(arguments_success)
+        action.run(arguments_with_valid_for)
 
         history = mock.request_history
         assert mock.call_count == 2
