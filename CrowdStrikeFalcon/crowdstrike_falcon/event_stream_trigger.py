@@ -2,6 +2,7 @@ import json
 import queue
 import threading
 import time
+import logging
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
@@ -258,6 +259,7 @@ class EventStreamReader(threading.Thread):
                             break
 
         except Exception as any_exception:
+            logging.exception(any_exception)
             self.log_exception(any_exception)
             raise
         finally:
@@ -422,6 +424,7 @@ class EventStreamTrigger(Connector):
             except queue.Empty:
                 pass
             except Exception as error:
+                logging.exception(error)
                 self.log_exception(error, message="Failed to forward events")
 
     def get_streams(self, app_id: str) -> dict[str, dict]:
