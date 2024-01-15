@@ -266,7 +266,7 @@ class VadeCloudLogsConnector(Connector):
     def supervise_consumers(self, consumers):
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restarting `{consumer_name}` consumer", level="info")
+                self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
 
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
@@ -276,9 +276,9 @@ class VadeCloudLogsConnector(Connector):
                 consumers[consumer_name].start()
 
     def stop_consumers(self, consumers):
-        for name, consumer in consumers.items():
+        for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(message=f"Stopping `{name}` consumer", level="info")
+                self.log(message=f"Stop consuming logs of `{consumer_name}` emails", level="info")
                 consumer.stop()
 
     def run(self):
