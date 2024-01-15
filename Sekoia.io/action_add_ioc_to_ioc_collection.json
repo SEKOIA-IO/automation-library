@@ -16,9 +16,9 @@
             },
             "indicator_type": {
                 "description": "Type of IOC",
-                "example": "IP, domain, url, email or hash",
+                "example": "IP address, domain, url, email or hash",
                 "type": "string",
-                "enum": ["IP", "domain", "url", "email", "hash"]
+                "enum": ["IP address", "domain", "url", "email", "hash"]
             },
             "valid_for": {
                 "type": "integer",
