@@ -19,7 +19,7 @@ def arguments_with_valid_for():
         "indicators": ["8.8.8.8", "192.168.1.2", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"],
         "ioc_collection_id": "ioc-collection--00000000-0000-0000-0000-000000000000",
         "indicator_type": "IP",
-        "valid_for": 90,
+        "valid_for": "90",
     }
 
 
