@@ -16,9 +16,14 @@
             },
             "indicator_type": {
                 "description": "Type of IOC",
-                "example": "domain-name.value, ipv4-addr.value, ipv6-addr.value, url.value, email-addr.value or file.hashes",
+                "example": "IP address, domain, url, email or hash",
                 "type": "string",
-                "enum": ["domain-name.value", "ipv4-addr.value", "ipv6-addr.value", "url.value", "email-addr.value", "file.hashes"]
+                "enum": ["IP address", "domain", "url", "email", "hash"]
+            },
+            "valid_for": {
+                "type": "integer",
+                "description": "Validity period for the created indicators (in days)",
+                "minimum": 1
             }
         },
         "oneOf": [{"required": ["indicators"]}, {"required": ["indicators_path"]}],
