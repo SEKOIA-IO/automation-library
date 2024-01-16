@@ -85,6 +85,9 @@ class VadeCloudConsumer(Thread):
             if http_error_code == 404:
                 self.log(message=f"Wrong password or login", level="error")
 
+            if http_error_code == 400 and error.response.json()['error']['trKey'] == "INVALID_USER":
+                self.log(message=f"Invalide account type, it should be User not Admin", level="error")
+
             raise error
 
         except TimeoutError:
@@ -266,7 +269,7 @@ class VadeCloudLogsConnector(Connector):
     def supervise_consumers(self, consumers):
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restarting `{consumer_name}` consumer", level="info")
+                self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
 
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
@@ -276,9 +279,9 @@ class VadeCloudLogsConnector(Connector):
                 consumers[consumer_name].start()
 
     def stop_consumers(self, consumers):
-        for name, consumer in consumers.items():
+        for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(message=f"Stopping `{name}` consumer", level="info")
+                self.log(message=f"Stop consuming logs of `{consumer_name}` emails", level="info")
                 consumer.stop()
 
     def run(self):

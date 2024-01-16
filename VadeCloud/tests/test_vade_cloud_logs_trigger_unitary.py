@@ -115,6 +115,27 @@ def test_auth_error(trigger: VadeCloudLogsConnector):
         with pytest.raises(requests.exceptions.HTTPError) as context:
             consumer.next_batch()
 
+def test_auth_user_invalid(trigger: VadeCloudLogsConnector):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+        return_value=0,
+    ) as mock_get_ts, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp"
+    ) as mock_set_ts, patch(
+        "vadecloud_modules.trigger_vade_cloud_logs.time"
+    ) as mock_time:
+
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
+            status_code=400,
+            json={"error": {"code": 400, "message": "ID specified is not a user account", "trKey": "INVALID_USER"}},
+        )
+
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
+
+        with pytest.raises(requests.exceptions.HTTPError) as context:
+            consumer.next_batch()
+
 
 def test_timeout_error(trigger: VadeCloudLogsConnector):
     with requests_mock.Mocker() as mock_requests, patch(
