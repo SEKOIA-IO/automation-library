@@ -213,6 +213,7 @@ class EventStreamReader(threading.Thread):
                 timeout=(3.05, 60),
                 auth=self.__authorization,
             ) as http_response:
+                logging.info(f"Got feed response status_code={response.status_code}")
                 if http_response.status_code >= 400:
                     self.log(
                         (
@@ -225,6 +226,7 @@ class EventStreamReader(threading.Thread):
 
                 while not self.f_stop.is_set():
                     if datetime.utcnow() >= next_refresh_at:
+                        logging.info("refresh the stream before consuming")
                         self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
                         next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
@@ -251,12 +253,16 @@ class EventStreamReader(threading.Thread):
 
                         # we refresh the session every 25min (by default)
                         if datetime.utcnow() >= next_refresh_at:
+                            logging.info("refresh the stream while consuming")
                             self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
                             next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                         # we exit the loop if the worker is stopping
                         if self.f_stop.is_set():
+                            logging.info("Stop reading the feed")
                             break
+                    
+                    logging.info("Exited the loop reader")
 
         except Exception as any_exception:
             logging.exception(any_exception)
@@ -379,17 +385,20 @@ class EventStreamTrigger(Connector):
 
         while not self.f_stop.is_set():
             try:
+                logging.info("read the first event in the queue")
                 (stream_root_url, event) = self.events_queue.get(block=True, timeout=5)
                 batch_of_events = [event]
                 last_event_per_stream: dict[str, str] = {stream_root_url: event}
 
                 try:
+                    logging.info("read the next events in the queue")
                     while len(batch_of_events) < MAX_EVENTS_PER_BATCH:
                         (stream_root_url, event) = self.events_queue.get(block=True, timeout=0.5)
                         last_event_per_stream[stream_root_url] = event
                         batch_of_events.append(event)
 
                 except queue.Empty:
+                    logging.info("Got all events from the queue")
                     pass
 
                 if batch_of_events:
@@ -422,6 +431,7 @@ class EventStreamTrigger(Connector):
                                     intake_key=self.configuration.intake_key, stream=stream_root_url
                                 ).observe(lag)
             except queue.Empty:
+                logging.info("No events in the queue")
                 pass
             except Exception as error:
                 logging.exception(error)
