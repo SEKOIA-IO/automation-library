@@ -128,3 +128,15 @@ def test_post_bundle_results(stix_bundle):
         )
 
         assert action.run(arguments) == {"content_proposal_id": "some_id"}
+
+
+def test_post_empty_bundle(stix_bundle):
+    stix_bundle["objects"] = []
+    arguments = {"bundle": stix_bundle}
+    action = PostBundleAction()
+
+    action.module.configuration = {
+        "base_url": "http://fake.url/",
+        "api_key": "fake_api_key",
+    }
+    assert action.run(arguments) is None
