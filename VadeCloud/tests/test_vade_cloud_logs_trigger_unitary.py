@@ -107,12 +107,10 @@ def test_auth_error(trigger: VadeCloudLogsConnector):
         mock_requests.post(
             "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
             status_code=404,
-            json={"error": {"code": 404, "message": "Not found",
-                            "reason": "USER_UNKNOWN", "trKey": "USER_UNKNOWN"}},
+            json={"error": {"code": 404, "message": "Not found", "reason": "USER_UNKNOWN", "trKey": "USER_UNKNOWN"}},
         )
 
-        consumer = VadeCloudConsumer(
-            connector=trigger, name="inbound", params={"stream": "Inbound"})
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
 
         with pytest.raises(requests.exceptions.HTTPError) as context:
             consumer.next_batch()
@@ -127,16 +125,13 @@ def test_auth_user_invalid(trigger: VadeCloudLogsConnector):
     ) as mock_set_ts, patch(
         "vadecloud_modules.trigger_vade_cloud_logs.time"
     ) as mock_time:
-
         mock_requests.post(
             "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
             status_code=400,
-            json={"error": {
-                "code": 400, "message": "ID specified is not a user account", "trKey": "INVALID_USER"}},
+            json={"error": {"code": 400, "message": "ID specified is not a user account", "trKey": "INVALID_USER"}},
         )
 
-        consumer = VadeCloudConsumer(
-            connector=trigger, name="inbound", params={"stream": "Inbound"})
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
 
         with pytest.raises(requests.exceptions.HTTPError) as context:
             consumer.next_batch()
@@ -157,8 +152,7 @@ def test_timeout_error(trigger: VadeCloudLogsConnector):
         )
 
         with pytest.raises(TimeoutError):
-            consumer = VadeCloudConsumer(
-                connector=trigger, name="inbound", params={"stream": "Inbound"})
+            consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
             client = consumer.client  # this will trigger authorization request
 
 
@@ -189,8 +183,7 @@ def test_request_error(trigger: VadeCloudLogsConnector, auth_message):
             ],
         )
 
-        consumer = VadeCloudConsumer(
-            connector=trigger, name="inbound", params={"stream": "Inbound"})
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
 
         with pytest.raises(FetchEventException):
             consumer.next_batch()
@@ -223,8 +216,7 @@ def test_fetch_event(trigger: VadeCloudLogsConnector, auth_message, response_mes
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
 
-        consumer = VadeCloudConsumer(
-            connector=trigger, name="inbound", params={"stream": "Inbound"})
+        consumer = VadeCloudConsumer(connector=trigger, name="inbound", params={"stream": "Inbound"})
         consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
