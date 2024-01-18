@@ -86,7 +86,8 @@ class VadeCloudConsumer(Thread):
                 self.log(message=f"Wrong password or login", level="error")
 
             if http_error_code == 400 and error.response.json()['error']['trKey'] == "INVALID_USER":
-                self.log(message=f"Invalide account type, it should be User not Admin", level="error")
+                self.log(
+                    message=f"Invalide account type, it should be User not Admin", level="error")
 
             raise error
 
@@ -125,8 +126,10 @@ class VadeCloudConsumer(Thread):
 
     def iterate_through_pages(self, from_timestamp: int) -> Generator[list, None, None]:
         page_num = 0
-        search_period = "DAYS_07"  # long period will allow us to capture events with big time gap between them
-        response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
+        # long period will allow us to capture events with big time gap between them
+        search_period = "DAYS_07"
+        response = self.request_logs_page(
+            start_date=from_timestamp, period=search_period, page=page_num)
         self._handle_response_error(response)
 
         while self.running:
@@ -139,7 +142,8 @@ class VadeCloudConsumer(Thread):
             else:
                 return
 
-            response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
+            response = self.request_logs_page(
+                start_date=from_timestamp, period=search_period, page=page_num)
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_timestamp_seen = self.get_last_timestamp()
@@ -179,7 +183,8 @@ class VadeCloudConsumer(Thread):
 
         # Fetch next batch
         for events in self.fetch_events():
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
+            batch_of_events = [orjson.dumps(event).decode(
+                "utf-8") for event in events]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
@@ -232,7 +237,8 @@ class VadeCloudConsumer(Thread):
                 self.next_batch()
 
         except Exception as error:
-            self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")
+            self.connector.log_exception(
+                error, message=f"{self.name}: Failed to forward events")
 
 
 class VadeCloudConnectorConfiguration(DefaultConnectorConfiguration):
@@ -261,7 +267,8 @@ class VadeCloudLogsConnector(Connector):
 
         for consumer_name, params in self.all_params.items():
             self.log(message=f"Start `{consumer_name}` consumer", level="info")
-            consumers[consumer_name] = VadeCloudConsumer(connector=self, name=consumer_name, params=params)
+            consumers[consumer_name] = VadeCloudConsumer(
+                connector=self, name=consumer_name, params=params)
             consumers[consumer_name].start()
 
         return consumers
@@ -269,7 +276,8 @@ class VadeCloudLogsConnector(Connector):
     def supervise_consumers(self, consumers):
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
+                self.log(
+                    message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
 
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
@@ -281,7 +289,8 @@ class VadeCloudLogsConnector(Connector):
     def stop_consumers(self, consumers):
         for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(message=f"Stop consuming logs of `{consumer_name}` emails", level="info")
+                self.log(
+                    message=f"Stop consuming logs of `{consumer_name}` emails", level="info")
                 consumer.stop()
 
     def run(self):
