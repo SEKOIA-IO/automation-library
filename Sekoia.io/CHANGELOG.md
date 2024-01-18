@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-18 - 2.58.3
+
+### Fixed
+
+- Do not push empty bundles to the IC
+
 ## 2024-01-15 - 2.58.2
 
 ### Changed
