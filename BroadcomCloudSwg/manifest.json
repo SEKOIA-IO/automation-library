@@ -1,0 +1,29 @@
+{
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+              "username": {
+                "description": "Username to do authentication on remote server",
+                "type": "string"
+              },
+              "password": {
+                "description": "Password to do authentication on remote server",
+                "type": "string"
+              }
+        },
+        "required": [
+            "username",
+            "password"
+        ],
+        "secrets": [
+            "password"
+        ],
+        "title": "Broadcom Cloud Secure Web Gateway",
+        "type": "object"
+    },
+    "description": "Broadcom Cloud Secure Web Gateway is a cloud-native security solution providing advanced threat protection, content filtering, and data loss prevention, ensuring secure internet access and compliance for organizations with flexible deployment options and comprehensive web security features.",
+    "name": "Broadcom Cloud Secure Web Gateway",
+    "uuid": "c56d64b8-b70f-4bab-a334-b4d5a4a25214",
+    "slug": "broadcom-cloud-swg",
+    "version": "1.0.0"
+}
