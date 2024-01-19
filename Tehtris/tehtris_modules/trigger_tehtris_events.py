@@ -53,7 +53,7 @@ class TehtrisEventConnector(Connector):
 
         headers = {"Accept": "application/json"}
         url = f"{self.module.configuration.base_url}/{EVENTS_ENDPOINT}"
-        response = self.client.get(url, params=params, headers=headers)
+        response = self.client.get(url, params=params, headers=headers, timeout=60)
 
         if not response.ok:
             # Exit trigger if we can't authenticate against the server
