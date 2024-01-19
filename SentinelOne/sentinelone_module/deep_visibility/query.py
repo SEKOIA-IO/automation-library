@@ -2,7 +2,8 @@ from datetime import datetime
 
 from management.mgmtsdk_v2.entities.deep_visibility_v2 import DvQuery
 from pydantic import BaseModel, Field
-from tenacity import Retrying, stop_after_delay, wait_exponential
+from tenacity import Retrying, stop_after_delay, wait_exponential, retry_if_not_exception_type
+from typing import Optional
 
 from sentinelone_module.base import SentinelOneAction
 from sentinelone_module.exceptions import (
@@ -10,6 +11,7 @@ from sentinelone_module.exceptions import (
     QueryDeepVisibilityError,
     QueryDeepVisibilityFailedError,
     QueryDeepVisibilityTimeoutError,
+    QueryDeepVisibilityRunningError,
 )
 from sentinelone_module.helpers import to_rfc3339
 
@@ -42,96 +44,96 @@ class QueryDeepVisibilityArguments(BaseModel):
 
 
 class DeepVisibilityEvent(BaseModel):
-    agentOs: str
-    srcIp: str
-    rpid: str
-    indicatorMetadata: str
-    tid: str
-    oldFileName: str
-    processIsMalicious: bool
-    processGroupId: str
-    oldFileSha256: str
-    processImagePath: str
-    processUserName: str
-    taskName: str
-    agentId: str
-    isAgentVersionFullySupportedForPgMessage: str
-    loginsBaseType: str
-    oldFileMd5: str
-    connectionStatus: str
-    parentPid: str
-    parentProcessStartTime: str
-    id: str
-    user: str
-    agentName: str
-    dstPort: int
-    parentProcessGroupId: str
-    networkSource: str
-    trueContext: str
-    fileId: str
-    taskPath: str
-    networkMethod: str
-    pid: str
-    agentUuid: str
-    srcPort: int
-    fileSha1: str
-    isAgentVersionFullySupportedForPg: bool
-    fileSize: str
-    processSessionId: str
-    oldFileSha1: str
-    parentProcessIsMalicious: bool
-    processSubSystem: str
-    signatureSignedInvalidReason: str
-    md5: str
-    processImageSha1Hash: str
-    indicatorName: str
-    threatStatus: str
-    agentMachineType: str
-    registryId: str
-    processDisplayName: str
-    dnsResponse: str
-    agentIsActive: bool
-    fileFullName: str
-    indicatorDescription: str
-    indicatorCategory: str
-    dstIp: str
-    signedStatus: str
-    processUniqueKey: str
-    srcProcDownloadToken: str
-    fileSha256: str
-    fileType: str
-    processIsWow64: str
-    agentVersion: str
-    processName: str
-    processCmd: str
-    relatedToThreat: str
-    parentProcessUniqueKey: str
-    sha256: str
-    agentIsDecommissioned: bool
-    forensicUrl: str
-    eventType: str
-    loginsUserName: str
-    processIntegrityLevel: str
-    direction: str
-    agentIp: str
-    processIsRedirectedCommandProcessor: str
-    objectType: str
-    processRoot: str
-    agentInfected: bool
-    registryPath: str
-    fileMd5: str
-    processStartTime: str
-    siteName: str
-    agentDomain: str
-    createdAt: datetime
-    parentProcessName: str
-    verifiedStatus: str
-    dnsRequest: str
-    agentGroupId: str
-    agentNetworkStatus: str
-    networkUrl: str
-    publisher: str
-    sha1: str
+    agentDomain: str = None
+    agentGroupId: str = None
+    agentId: str = None
+    agentInfected: bool = None
+    agentIp: str = None
+    agentIsActive: bool = None
+    agentIsDecommissioned: bool = None
+    agentMachineType: str = None
+    agentName: str = None
+    agentNetworkStatus: str = None
+    agentOs: str = None
+    agentUuid: str = None
+    agentVersion: str = None
+    createdAt: datetime = None
+    id: str = None
+    objectType: str = None
+    processName: str = None
+    siteName: str = None
+    user: str = None
+    connectionStatus: Optional[str]
+    direction: Optional[str]
+    dnsRequest: Optional[str]
+    dnsResponse: Optional[str]
+    dstIp: Optional[str]
+    dstPort: Optional[str]
+    eventType: Optional[str]
+    fileFullName: Optional[str]
+    fileId: Optional[str]
+    fileMd5: Optional[str]
+    fileSha1: Optional[str]
+    fileSha256: Optional[str]
+    fileSize: Optional[str]
+    fileType: Optional[str]
+    forensicUrl: Optional[str]
+    indicatorCategory: Optional[str]
+    indicatorDescription: Optional[str]
+    indicatorMetadata: Optional[str]
+    indicatorName: Optional[str]
+    isAgentVersionFullySupportedForPg: Optional[bool]
+    isAgentVersionFullySupportedForPgMessage: Optional[str]
+    loginsBaseType: Optional[str]
+    loginsUserName: Optional[str]
+    md5: Optional[str]
+    networkMethod: Optional[str]
+    networkSource: Optional[str]
+    networkUrl: Optional[str]
+    oldFileMd5: Optional[str]
+    oldFileName: Optional[str]
+    oldFileSha1: Optional[str]
+    oldFileSha256: Optional[str]
+    parentPid: Optional[str]
+    parentProcessGroupId: Optional[str]
+    parentProcessIsMalicious: Optional[bool]
+    parentProcessName: Optional[str]
+    parentProcessStartTime: Optional[str]
+    parentProcessUniqueKey: Optional[str]
+    pid: Optional[str]
+    processCmd: Optional[str]
+    processDisplayName: Optional[str]
+    processGroupId: Optional[str]
+    processImagePath: Optional[str]
+    processImageSha1Hash: Optional[str]
+    processIntegrityLevel: Optional[str]
+    processIsMalicious: Optional[bool]
+    processIsRedirectedCommandProcessor: Optional[str]
+    processIsWow64: Optional[str]
+    processRoot: Optional[str]
+    processSessionId: Optional[str]
+    processStartTime: Optional[str]
+    processSubSystem: Optional[str]
+    processUniqueKey: Optional[str]
+    processUserName: Optional[str]
+    publisher: Optional[str]
+    registryId: Optional[str]
+    registryPath: Optional[str]
+    relatedToThreat: Optional[str]
+    rpid: Optional[str]
+    sha1: Optional[str]
+    sha256: Optional[str]
+    signatureSignedInvalidReason: Optional[str]
+    signedStatus: Optional[str]
+    srcIp: Optional[str]
+    srcPort: Optional[int]
+    srcProcDownloadToken: Optional[str]
+    taskName: Optional[str]
+    taskPath: Optional[str]
+    threatStatus: Optional[str]
+    tid: Optional[str]
+    trueContext: Optional[str]
+    verifiedStatus: Optional[str]
 
 
 class DeepVisibilityEvents(BaseModel):
@@ -140,6 +142,7 @@ class DeepVisibilityEvents(BaseModel):
     events: list[DeepVisibilityEvent]
 
 
+IN_PROGRESS_QUERY_STATUSES = {"RUNNING", "EVENTS_RUNNING", "QUERY_RUNNING", "PROCESS_RUNNING"}
 FINALIZED_QUERY_STATUSES = {"EMPTY_RESULTS", "FINISHED"}
 CANCELED_QUERY_STATUSES = {"QUERY_CANCEL", "QUERY_EXPIRED", "TIMEOUT"}
 FAILED_QUERY_STATUSES = {"QUERY_NOT_FOUND", "FAILED", "FAILED_CLIENT"}
@@ -151,31 +154,33 @@ class QueryDeepVisibilityAction(SentinelOneAction):
     results_model = DeepVisibilityEvents
 
     def _wait_for_completion(self, query_id: str, timeout: int) -> None:
-        for attempt in Retrying(
-            stop=stop_after_delay(timeout),
-            wait=wait_exponential(multiplier=1, min=1, max=10),
-            reraise=True,
-        ):
-            with attempt:
-                result = self.client.deep_visibility_v2.get_query_status(query_id)
+        try:
+            for attempt in Retrying(
+                stop=stop_after_delay(timeout),
+                wait=wait_exponential(multiplier=1, min=1, max=10),
+                reraise=True,
+                retry=retry_if_not_exception_type(QueryDeepVisibilityCanceledError),
+            ):
+                with attempt:
+                    result = self.client.deep_visibility_v2.get_query_status(query_id)
 
-                if result.data.responseState in FINALIZED_QUERY_STATUSES:
-                    return
-                elif result.data.responseState in CANCELED_QUERY_STATUSES:
-                    raise QueryDeepVisibilityCanceledError(result.json["data"].get("responseError"))
-                elif result.data.responseState in FAILED_QUERY_STATUSES:
-                    raise QueryDeepVisibilityFailedError(result.json["data"].get("responseError"))
-
-        raise QueryDeepVisibilityTimeoutError(timeout)
+                    if result.data.responseState in FINALIZED_QUERY_STATUSES:
+                        return
+                    elif result.data.responseState in IN_PROGRESS_QUERY_STATUSES:
+                        raise QueryDeepVisibilityRunningError(f"status {result.data.responseState}")
+                    elif result.data.responseState in CANCELED_QUERY_STATUSES:
+                        raise QueryDeepVisibilityCanceledError(result.json["data"].get("responseError"))
+                    elif result.data.responseState in FAILED_QUERY_STATUSES:
+                        raise QueryDeepVisibilityFailedError(result.json["data"].get("responseError"))
+        except QueryDeepVisibilityRunningError:
+            raise QueryDeepVisibilityTimeoutError(timeout)
 
     def run(self, arguments: QueryDeepVisibilityArguments):
         result = self.client.deep_visibility_v2.create_query(arguments.to_query())
-
         try:
             self._wait_for_completion(result.data, arguments.timeout)
         except QueryDeepVisibilityError as error:
             return {"status": error.status, "status_reason": str(error), "events": []}
-
         result = self.client.deep_visibility_v2.get_all_events(queryId=result.data)
         return {
             "status": "succeed",
