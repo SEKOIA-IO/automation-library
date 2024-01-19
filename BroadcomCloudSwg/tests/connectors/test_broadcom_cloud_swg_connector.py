@@ -171,7 +171,7 @@ async def test_broadcom_cloud_swg_connector_get_events(
             headers={"X-sync-status": "done", "X-sync-token": session_faker.word()},
         )
 
-        result = await connector.get_events()
+        result, last_event_date = await connector.get_events()
 
         # Expect to push events to intakes 2 times
         expected_result = []

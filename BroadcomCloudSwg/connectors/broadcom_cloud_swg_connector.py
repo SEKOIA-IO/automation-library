@@ -22,7 +22,8 @@ from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EV
 class BroadcomCloudSwgConnectorConfig(DefaultConnectorConfiguration):
     """Configuration for BroadcomCloudSwgConnector."""
 
-    chunk_size: int = 1000
+    chunk_size: int = 10000
+    frequency: int = 60
 
 
 class BroadcomCloudSwgConnector(AsyncConnector):
@@ -101,7 +102,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         return self._broadcom_cloud_swg_client
 
-    async def get_events(self) -> list[str]:
+    async def get_events(self) -> tuple[list[str], datetime]:
         """
         Collects events from platform and push to intakes.
 
@@ -116,6 +117,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         data_to_push: list[dict[str, str]] = []
         result: list[str] = []
+        latest_date: datetime | None = None
 
         while continue_processing:
             continue_processing, token, file_name = await self.broadcom_cloud_swg_client.get_report_sync(
@@ -129,9 +131,20 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 async for line in file:
                     if line.startswith("#"):
                         headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
-                    else:
-                        data_to_push.append(BroadcomCloudSwgClient.parse_input_string(line, headers))
 
+                        if headers:  # pragma: no cover
+                            logger.info("Headers for current log: {0}".format(" ".join(headers)))
+                    else:
+                        line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
+
+                        line_date_time = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
+                        if latest_date is None:
+                            latest_date = line_date_time
+
+                        if line_date_time and latest_date and latest_date < line_date_time:
+                            latest_date = line_date_time
+
+                        data_to_push.append(line_as_dict)
                         data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
 
                         if len(data_to_push) >= self.configuration.chunk_size:
@@ -150,15 +163,16 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
             await delete_file(file_name)
 
+        result_latest_date = latest_date or end_date
         with self.context as cache:
             logger.info(
                 "New last event date now is {last_event_date}",
-                last_event_date=end_date.isoformat(),
+                last_event_date=result_latest_date.isoformat(),
             )
 
-            cache["last_event_date"] = end_date.isoformat()
+            cache["last_event_date"] = result_latest_date.isoformat()
 
-        return result
+        return result, result_latest_date
 
     def run(self) -> None:  # pragma: no cover
         """Runs BroadcomCloudSwgConnector."""
@@ -166,17 +180,16 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             try:
                 loop = asyncio.get_event_loop()
 
-                previous_processing_end = None
-
                 while self.running:
                     processing_start = time.time()
-                    if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                            processing_start - previous_processing_end
-                        )
 
-                    message_ids: list[str] = loop.run_until_complete(self.get_events())
+                    message_ids, last_event_date = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
+
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                        processing_end - last_event_date.timestamp()
+                    )
+
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
                     log_message = "No records to forward"
@@ -187,10 +200,14 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     self.log(message=log_message, level="info")
 
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
+                        last_event_date.timestamp() - processing_start
                     )
 
-                    previous_processing_end = processing_end
+                    if len(message_ids) > 0:
+                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                    else:
+                        self.log(message="No records to forward", level="info")
+                        time.sleep(self.configuration.frequency)
 
             except Exception as error:
                 logger.error("Error while running BroadcomCloudSwgConnector: {error}", error=error)

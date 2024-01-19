@@ -17,6 +17,7 @@ class BroadcomCloudSwgClient(object):
     _rate_limiter: AsyncLimiter | None = None
 
     _time_format = "%H:%M:%S"
+    _date_format = "%Y-%m-%d"
 
     def __init__(
         self,
@@ -186,8 +187,6 @@ class BroadcomCloudSwgClient(object):
             list[str] | None
         """
         if value.startswith("#") and "Fields:" in value:
-            print(value)
-            print(value.split("\t"))
             return [element for element in value.rstrip("\n").split("\t") if element in cls.full_list_of_elff_fields()]
 
         return None
@@ -401,3 +400,22 @@ class BroadcomCloudSwgClient(object):
                 )
 
         return result
+
+    @classmethod
+    def get_date_time_from_data(cls, data: dict[str, Any]) -> datetime | None:
+        """
+        Try to get datetime input data.
+
+        Args:
+            data: dict[str, Any]
+
+        Returns:
+            datetime | None
+        """
+        if data.get("date") and data.get("time"):
+            return datetime.strptime(
+                "{0} {1}".format(data.get("date"), data.get("time")),
+                "{0} {1}".format(cls._date_format, cls._time_format),
+            )
+
+        return None
