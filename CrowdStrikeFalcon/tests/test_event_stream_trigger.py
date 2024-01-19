@@ -11,7 +11,12 @@ import requests_mock
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
-from crowdstrike_falcon.event_stream_trigger import EventStreamReader, EventStreamTrigger, VerticlesCollector
+from crowdstrike_falcon.event_stream_trigger import (
+    EventStreamReader,
+    EventStreamTrigger,
+    VerticlesCollector,
+    EventForwarder,
+)
 
 
 @pytest.fixture
@@ -39,12 +44,12 @@ def test_read_queue(trigger):
     trigger.events_queue.put(("fake-stream-url", '{"metadata": {"offset": 10}, "foo": "bar"}'))
 
     trigger.push_events_to_intakes = MagicMock()
-    t = threading.Thread(target=trigger.read_queue)
+    t = EventForwarder(trigger)
     t.start()
 
     time.sleep(2)
 
-    trigger.stop()
+    t.stop()
     t.join()
 
     assert len(trigger.push_events_to_intakes.call_args.kwargs["events"]) == 1

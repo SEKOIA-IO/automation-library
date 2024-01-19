@@ -312,6 +312,86 @@ class EventStreamReader(threading.Thread):
         self.log(message=f"Collected {nb_verticles} vertex", level="info")
 
 
+class EventForwarder(threading.Thread):
+    def __init__(
+        self,
+        connector: "EventStreamTrigger",
+    ):
+        super().__init__()
+        self.connector = connector
+        self.events_queue = connector.events_queue
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    @property
+    def running(self):
+        return not self._stop_event.is_set()
+
+    def log(self, *args, **kwargs):
+        self.connector.log(*args, **kwargs)
+
+    def log_exception(self, *args, **kwargs):
+        self.connector.log_exception(*args, **kwargs)
+
+    def run(self) -> None:
+        """
+        Forward the queue to the intake
+        """
+
+        while self.running:
+            try:
+                (stream_root_url, event) = self.events_queue.get(block=True, timeout=5)
+                batch_of_events = [event]
+                last_event_per_stream: dict[str, str] = {stream_root_url: event}
+
+                try:
+                    while len(batch_of_events) < MAX_EVENTS_PER_BATCH:
+                        (stream_root_url, event) = self.events_queue.get(block=True, timeout=0.5)
+                        last_event_per_stream[stream_root_url] = event
+                        batch_of_events.append(event)
+
+                except queue.Empty:
+                    pass
+
+                if batch_of_events:
+                    self.log(
+                        message=f"Forward {len(batch_of_events)} events to the intake",
+                        level="info",
+                    )
+                    OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(
+                        len(batch_of_events)
+                    )
+                    self.connector.push_events_to_intakes(events=batch_of_events)
+
+                    now = time.time()
+
+                    # store the last offset for each stream
+                    with PersistentJSON("cache.json", self.connector._data_path) as cache:
+                        for (
+                            stream_root_url,
+                            last_event,
+                        ) in last_event_per_stream.items():
+                            metadata = orjson.loads(last_event).get("metadata", {})
+
+                            last_event_offset = metadata.get("offset")
+                            if last_event_offset:
+                                # update the offset in the cache file
+                                cache[stream_root_url] = last_event_offset
+
+                            creation_time = metadata.get("eventCreationTime")
+                            if creation_time:
+                                lag = now - (creation_time / 1000)
+                                EVENTS_LAG.labels(
+                                    intake_key=self.connector.configuration.intake_key, stream=stream_root_url
+                                ).observe(lag)
+            except queue.Empty:
+                pass
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")
+
+
 class EventStreamTrigger(Connector):
     """
     This trigger request new events from CrowdStrike Falcon event stream
@@ -379,60 +459,6 @@ class EventStreamTrigger(Connector):
         )
 
         return VerticlesCollector(self, tg_client, self.client)
-
-    def read_queue(self) -> None:
-        """
-        Forward the queue to the intake
-        """
-
-        while self.running:
-            try:
-                (stream_root_url, event) = self.events_queue.get(block=True, timeout=5)
-                batch_of_events = [event]
-                last_event_per_stream: dict[str, str] = {stream_root_url: event}
-
-                try:
-                    while len(batch_of_events) < MAX_EVENTS_PER_BATCH:
-                        (stream_root_url, event) = self.events_queue.get(block=True, timeout=0.5)
-                        last_event_per_stream[stream_root_url] = event
-                        batch_of_events.append(event)
-
-                except queue.Empty:
-                    pass
-
-                if batch_of_events:
-                    self.log(
-                        message=f"Forward {len(batch_of_events)} events to the intake",
-                        level="info",
-                    )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-                    self.push_events_to_intakes(events=batch_of_events)
-
-                    now = time.time()
-
-                    # store the last offset for each stream
-                    with PersistentJSON("cache.json", self._data_path) as cache:
-                        for (
-                            stream_root_url,
-                            last_event,
-                        ) in last_event_per_stream.items():
-                            metadata = orjson.loads(last_event).get("metadata", {})
-
-                            last_event_offset = metadata.get("offset")
-                            if last_event_offset:
-                                # update the offset in the cache file
-                                cache[stream_root_url] = last_event_offset
-
-                            creation_time = metadata.get("eventCreationTime")
-                            if creation_time:
-                                lag = now - (creation_time / 1000)
-                                EVENTS_LAG.labels(
-                                    intake_key=self.configuration.intake_key, stream=stream_root_url
-                                ).observe(lag)
-            except queue.Empty:
-                pass
-            except Exception as error:
-                self.log_exception(error, message="Failed to forward events")
 
     def get_streams(self, app_id: str) -> dict[str, dict]:
         """
@@ -511,7 +537,7 @@ class EventStreamTrigger(Connector):
     def run(self):
         try:
             # start a thread to consume the internal event queue
-            read_queue_thread = threading.Thread(target=self.read_queue)
+            read_queue_thread = EventForwarder(self)
             read_queue_thread.start()
 
             app_id: str = self.generate_app_id()
@@ -530,10 +556,7 @@ class EventStreamTrigger(Connector):
                     time.sleep(5)
             finally:
                 self.stop_streams(streams, stream_threads)
+                read_queue_thread.stop()
 
         except Exception as error:
             self.log_exception(error, message="Failed to fetch and forward events")
-
-        finally:
-            # just in case
-            self.stop()
