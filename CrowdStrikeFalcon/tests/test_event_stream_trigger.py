@@ -84,6 +84,15 @@ def test_get_streams(trigger):
         assert streams == {"stream": {"dataFeedURL": "stream?q=1"}}
 
 
+def test_authentication_exceed_ratelimit(trigger):
+    with requests_mock.Mocker() as mock, patch("crowdstrike_falcon.event_stream_trigger.time.sleep") as mock_time:
+        mock.register_uri("POST", "https://my.fake.sekoia/oauth2/token", status_code=429)
+
+        trigger.stop()
+        trigger.run()
+        mock_time.assert_called_once_with(60)
+
+
 def test_refresh_stream(trigger):
     reader = EventStreamReader(trigger, "", {}, "sio-00000")
 

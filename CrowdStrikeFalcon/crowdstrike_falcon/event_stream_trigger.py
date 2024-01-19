@@ -558,5 +558,11 @@ class EventStreamTrigger(Connector):
                 self.stop_streams(streams, stream_threads)
                 read_queue_thread.stop()
 
+        except HTTPError as error:
+            if error.response is not None and error.response.status_code == 429:
+                self.log(message="The connector was rate-limited, waiting 1 minute before retrying.", level="warning")
+                time.sleep(60)  # The authentication faces a ratelimit, sleep 1 minutes
+            else:
+                self.log_exception(error, message="Failed to fetch and forward events")
         except Exception as error:
             self.log_exception(error, message="Failed to fetch and forward events")
