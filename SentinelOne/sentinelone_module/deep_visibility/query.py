@@ -46,11 +46,11 @@ class QueryDeepVisibilityArguments(BaseModel):
 class DeepVisibilityEvent(BaseModel):
     agentDomain: str | None = None
     agentGroupId: str | None = None
-    agentId: str| None = None
-    agentInfected: bool| None = None
-    agentIp: str| None = None
+    agentId: str | None = None
+    agentInfected: bool | None = None
+    agentIp: str | None = None
     agentIsActive: bool | None = None
-    agentIsDecommissioned: bool| None = None
+    agentIsDecommissioned: bool | None = None
     agentMachineType: str | None = None
     agentName: str | None = None
     agentNetworkStatus: str | None = None
