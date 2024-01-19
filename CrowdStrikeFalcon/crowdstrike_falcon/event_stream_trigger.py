@@ -18,6 +18,9 @@ from crowdstrike_falcon.exceptions import StreamNotAvailable
 from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type
 from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
 from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
+from crowdstrike_falcon.logging import get_logger
+
+logger = get_logger()
 
 MAX_EVENTS_PER_BATCH = 1000
 
@@ -192,14 +195,14 @@ class EventStreamReader(threading.Thread):
         """
         Refresh the stream
         """
-        self.log(message=f"refresh the event stream {refresh_url}", level="debug")
+        logger.debug("refresh the event stream", refresh_url={refresh_url})
 
         self.client.post(
             url=refresh_url,
             json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
         )
 
-        self.log(message=f"succesfully refreshed event stream {refresh_url}", level="info")
+        logger.info("succesfully refreshed event stream", refresh_url=refresh_url)
 
     def run(self) -> None:
         """
@@ -208,7 +211,7 @@ class EventStreamReader(threading.Thread):
 
         next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
         self.log(
-            message=f"reading event stream {self.data_feed_url} starting on offset {self.offset}",
+            message=f"Readin event stream {self.data_feed_url} starting at offset {self.offset}",
             level="info",
         )
 
@@ -220,12 +223,11 @@ class EventStreamReader(threading.Thread):
                 auth=self.__authorization,
             ) as http_response:
                 if http_response.status_code >= 400:
-                    self.log(
-                        (
-                            f"Failed to connect on stream {self.data_feed_url}: "
-                            f"status code is {http_response.status_code}. " + str(http_response.content)
-                        ),
-                        level="error",
+                    logger.error(
+                        "Failed to connect on stream",
+                        data_feed_url=self.data_feed_url,
+                        status_code=http_response.status_code,
+                        content=http_response.content,
                     )
                     raise StreamNotAvailable(http_response)
 
@@ -248,9 +250,10 @@ class EventStreamReader(threading.Thread):
                                 self.collect_verticles(detection_id, event)
 
                             except Exception as any_exception:
-                                self.log(
-                                    message=f"failed to read line {line} from event stream {self.stream_root_url}",
-                                    level="error",
+                                logger.error(
+                                    "failed to read line from event stream",
+                                    line=line,
+                                    stream_root_url=self.stream_root_url,
                                 )
                                 self.log_exception(any_exception)
                                 raise any_exception
@@ -275,14 +278,14 @@ class EventStreamReader(threading.Thread):
 
     def collect_verticles(self, detection_id: str | None, detection_event: dict):
         if detection_id is None:
-            self.log(message="Not a detection", level="info")
+            logger.info("Not a detection")
             return
 
         if self.verticles_collector is None:
-            self.log(message="verticles collection disabled", level="info")
+            logger.info("verticles collection disabled")
             return
 
-        self.log(message=f"Collect verticles for detection :{detection_id}", level="info")
+        logger.info("Collect verticles for detection", detection_id=detection_id)
 
         event_content = detection_event.get("event", {})
         severity_name = event_content.get("SeverityName")
@@ -476,10 +479,7 @@ class EventStreamTrigger(Connector):
         for stream_root_url in streams.keys():
             stream_thread = stream_threads[stream_root_url]
             if not stream_thread.is_alive():
-                self.log(
-                    message=f"Stream reader on {stream_root_url} is down, restarting stream readers",
-                    level="warning",
-                )
+                logger.warning("Stream reader is down, restarting it", stream_root_url=stream_root_url)
                 restart_stream_readers = True
 
         if restart_stream_readers:
