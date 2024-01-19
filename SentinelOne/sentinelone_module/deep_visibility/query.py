@@ -44,25 +44,25 @@ class QueryDeepVisibilityArguments(BaseModel):
 
 
 class DeepVisibilityEvent(BaseModel):
-    agentDomain: str = None
-    agentGroupId: str = None
-    agentId: str = None
-    agentInfected: bool = None
-    agentIp: str = None
-    agentIsActive: bool = None
-    agentIsDecommissioned: bool = None
-    agentMachineType: str = None
-    agentName: str = None
-    agentNetworkStatus: str = None
-    agentOs: str = None
-    agentUuid: str = None
-    agentVersion: str = None
-    createdAt: datetime = None
-    id: str = None
-    objectType: str = None
-    processName: str = None
-    siteName: str = None
-    user: str = None
+    agentDomain: str | None = None
+    agentGroupId: str | None = None
+    agentId: str| None = None
+    agentInfected: bool| None = None
+    agentIp: str| None = None
+    agentIsActive: bool | None = None
+    agentIsDecommissioned: bool| None = None
+    agentMachineType: str | None = None
+    agentName: str | None = None
+    agentNetworkStatus: str | None = None
+    agentOs: str | None = None
+    agentUuid: str | None = None
+    agentVersion: str | None = None
+    createdAt: datetime | None = None
+    id: str | None = None
+    objectType: str | None = None
+    processName: str | None = None
+    siteName: str | None = None
+    user: str | None = None
     connectionStatus: Optional[str]
     direction: Optional[str]
     dnsRequest: Optional[str]
