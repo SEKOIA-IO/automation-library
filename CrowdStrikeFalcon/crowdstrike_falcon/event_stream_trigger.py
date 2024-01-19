@@ -156,8 +156,15 @@ class EventStreamReader(threading.Thread):
         self.client = client or connector.client
         self.verticles_collector = verticles_collector
         self.app_id = app_id
-        self.f_stop = connector.f_stop
+        self._stop_event = threading.Event()
         self.events_queue = connector.events_queue
+
+    def stop(self):
+        self._stop_event.set()
+
+    @property
+    def running(self):
+        return not self._stop_event.is_set()
 
     @cached_property
     def data_feed_url(self):
@@ -222,7 +229,7 @@ class EventStreamReader(threading.Thread):
                     )
                     raise StreamNotAvailable(http_response)
 
-                while not self.f_stop.is_set():
+                while self.running:
                     if datetime.utcnow() >= next_refresh_at:
                         self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
                         next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
@@ -254,7 +261,7 @@ class EventStreamReader(threading.Thread):
                             next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                         # we exit the loop if the worker is stopping
-                        if self.f_stop.is_set():
+                        if not self.running:
                             break
 
         except Exception as any_exception:
@@ -375,7 +382,7 @@ class EventStreamTrigger(Connector):
         Forward the queue to the intake
         """
 
-        while not self.f_stop.is_set():
+        while self.running:
             try:
                 (stream_root_url, event) = self.events_queue.get(block=True, timeout=5)
                 batch_of_events = [event]
@@ -495,6 +502,12 @@ class EventStreamTrigger(Connector):
                     )
                     stream_threads[stream_root_url].start()
 
+    def stop_streams(self, streams: dict, stream_threads: dict):
+        for stream_root_url in streams.keys():
+            stream_thread = stream_threads[stream_root_url]
+            if stream_thread.is_alive():
+                stream_thread.stop()
+
     def run(self):
         try:
             # start a thread to consume the internal event queue
@@ -505,23 +518,22 @@ class EventStreamTrigger(Connector):
             streams: dict[str, dict] = self.get_streams(app_id)
             stream_threads = self.start_streams(streams, app_id)
 
-            while True:
-                # if the read queue thread is down, we spawn a new one
-                if not read_queue_thread.is_alive():
-                    self.log(message="Event forwarder failed", level="error")
-                    read_queue_thread = threading.Thread(target=self.read_queue)
-                    read_queue_thread.start()
+            try:
+                while self.running:
+                    # if the read queue thread is down, we spawn a new one
+                    if not read_queue_thread.is_alive():
+                        self.log(message="Event forwarder failed", level="error")
+                        read_queue_thread = threading.Thread(target=self.read_queue)
+                        read_queue_thread.start()
 
-                self.supervise_streams(streams, stream_threads)
-
-                if self.f_stop.is_set():
-                    break
-
-                time.sleep(5)
+                    self.supervise_streams(streams, stream_threads)
+                    time.sleep(5)
+            finally:
+                self.stop_streams(streams, stream_threads)
 
         except Exception as error:
             self.log_exception(error, message="Failed to fetch and forward events")
 
         finally:
             # just in case
-            self.f_stop.set()
+            self.stop()

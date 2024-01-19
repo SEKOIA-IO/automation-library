@@ -44,7 +44,7 @@ def test_read_queue(trigger):
 
     time.sleep(2)
 
-    trigger.f_stop.set()
+    trigger.stop()
     t.join()
 
     assert len(trigger.push_events_to_intakes.call_args.kwargs["events"]) == 1
@@ -155,7 +155,7 @@ def test_read_stream(trigger):
     reader.start()
 
     time.sleep(1)
-    trigger.f_stop.set()
+    reader.stop()
     reader.join()
 
     assert trigger.events_queue.qsize() > 1
@@ -212,7 +212,7 @@ def test_read_stream_call_verticles_collector(trigger):
     reader.start()
 
     time.sleep(1)
-    trigger.f_stop.set()
+    reader.stop()
     reader.join()
 
     assert trigger.events_queue.qsize() > 1
@@ -270,7 +270,7 @@ def test_run(trigger, symphony_storage):
             }
         }
     )
-    trigger.f_stop.set()
+    trigger.stop()
 
     with patch("crowdstrike_falcon.event_stream_trigger.EventStreamReader"), requests_mock.Mocker() as mock:
         mock.register_uri(
@@ -300,12 +300,12 @@ def test_read_stream_consider_offset(trigger):
     }
 
     trigger.auth_token_refreshed_at = datetime.utcnow()
-    trigger.f_stop.set()
     client_mock = MagicMock()
     client_mock.get.return_value.__enter__.return_value.status_code = 200
     reader = EventStreamReader(
         trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, "sio-00000", 100, client_mock
     )
+    reader.stop()
     reader.run()
 
     assert client_mock.get.call_args.kwargs.get("url") == (
@@ -353,7 +353,7 @@ def test_read_stream_integration(symphony_storage):
 
     # wait few seconds
     time.sleep(5)
-    trigger.f_stop.set()
+    read_stream_thread.stop()
 
     assert trigger.events_queue.qsize() > 0
 
@@ -741,7 +741,7 @@ def test_read_stream_with_verticles(trigger):
         reader.start()
 
         time.sleep(1)
-        trigger.f_stop.set()
+        reader.stop()
         reader.join()
 
         expected_verticles = [
