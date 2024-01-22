@@ -528,9 +528,8 @@ class EventStreamTrigger(Connector):
                     )
                     stream_threads[stream_root_url].start()
 
-    def stop_streams(self, streams: dict, stream_threads: dict):
-        for stream_root_url in streams.keys():
-            stream_thread = stream_threads[stream_root_url]
+    def stop_streams(self, stream_threads: dict):
+        for stream_thread in stream_threads.values():
             if stream_thread.is_alive():
                 stream_thread.stop()
 
@@ -555,7 +554,7 @@ class EventStreamTrigger(Connector):
                     self.supervise_streams(streams, stream_threads)
                     time.sleep(5)
             finally:
-                self.stop_streams(streams, stream_threads)
+                self.stop_streams(stream_threads)
                 read_queue_thread.stop()
 
         except HTTPError as error:
