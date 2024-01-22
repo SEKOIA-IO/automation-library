@@ -211,7 +211,7 @@ class EventStreamReader(threading.Thread):
 
         next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
         self.log(
-            message=f"Readin event stream {self.data_feed_url} starting at offset {self.offset}",
+            message=f"Reading event stream {self.data_feed_url} starting at offset {self.offset}",
             level="info",
         )
 
