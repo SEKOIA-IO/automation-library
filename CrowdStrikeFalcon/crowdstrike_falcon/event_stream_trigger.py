@@ -535,12 +535,14 @@ class EventStreamTrigger(Connector):
 
     def run(self):
         try:
+            app_id: str = self.generate_app_id()
+            streams: dict[str, dict] = self.get_streams(app_id)
+
             # start a thread to consume the internal event queue
             read_queue_thread = EventForwarder(self)
             read_queue_thread.start()
 
-            app_id: str = self.generate_app_id()
-            streams: dict[str, dict] = self.get_streams(app_id)
+            # start threads to consume streams
             stream_threads = self.start_streams(streams, app_id)
 
             try:
@@ -548,7 +550,7 @@ class EventStreamTrigger(Connector):
                     # if the read queue thread is down, we spawn a new one
                     if not read_queue_thread.is_alive():
                         self.log(message="Event forwarder failed", level="error")
-                        read_queue_thread = threading.Thread(target=self.read_queue)
+                        read_queue_thread = EventForwarder(self)
                         read_queue_thread.start()
 
                     self.supervise_streams(streams, stream_threads)
