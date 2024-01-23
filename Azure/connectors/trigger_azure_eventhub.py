@@ -43,6 +43,7 @@ class Client(object):
             self.configuration.hub_consumer_group,
             eventhub_name=self.configuration.hub_name,
             checkpoint_store=self.checkpoint_store,
+            uamqp_transport=True,
         )
 
     async def receive_batch(self, *args: Any, **kwargs: Optional[Any]) -> None:
