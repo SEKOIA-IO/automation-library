@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-01-23 - 2.2.4
+
+### Changed
+
+- Use uamqp library instead of pyamqp for the EventHub connector
+
 ## 2023-12-12 - 2.2.3
 
 ### Fixed
