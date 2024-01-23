@@ -1,0 +1,253 @@
+from datetime import datetime, timedelta, timezone
+from freezegun import freeze_time
+
+import pytest
+import requests_mock
+from unittest.mock import Mock
+
+from cortex_module.base import CortexModule
+from cortex_module.cortex_edr_connector import CortexQueryEDRTrigger
+
+import orjson
+from sekoia_automation.storage import PersistentJSON
+
+
+@pytest.fixture
+def trigger(symphony_storage):
+    module = CortexModule()
+    trigger = CortexQueryEDRTrigger(module=module, data_path=symphony_storage)
+    trigger.module.configuration = {
+        "api_key": "72b9f5b1-5e9f-47aa-9912-2503bfc319e6",
+        "api_key_id": "99",
+        "fqdn": "XXXX.test.paloaltonetworks.com",
+    }
+
+    trigger.configuration = {
+        "frequency": 604800,
+        "tenant_id": "4feff6df-7454-4036-923d-7b2444462416",
+        "chunk_size": 2,
+        "intake_key": "0123456789",
+    }
+
+    trigger.push_events_to_intakes = Mock()
+    trigger.log_exception = Mock()
+    trigger.log = Mock()
+    return trigger
+
+
+@pytest.fixture
+def alert_query_2():
+    return {
+        "request_data": {
+            "filters": [{"field": "creation_time", "operator": "gte", "value": 1705831200}],
+            "search_from": 0,
+            "search_to": 2,
+            "sort": {"field": "creation_time", "keyword": "desc"},
+        }
+    }
+
+
+@pytest.fixture
+def alert_query_4():
+    return {
+        "request_data": {
+            "filters": [{"field": "creation_time", "operator": "gte", "value": 1705831200}],
+            "search_from": 2,
+            "search_to": 4,
+            "sort": {"field": "creation_time", "keyword": "desc"},
+        }
+    }
+
+
+@pytest.fixture
+def alert_response_2():
+    return {
+        "reply": {
+            "total_count": 2,
+            "result_count": 2,
+            "alerts": [
+                {
+                    "external_id": "5e60680403934d",
+                    "severity": "medium",
+                    "events": [
+                        {
+                            "agent_install_type": "STANDARD",
+                            "agent_host_boot_time": None,
+                            "event_sub_type": None,
+                        }
+                    ],
+                    "alert_id": "5930923",
+                    "detection_timestamp": 1705912900118,
+                },
+                {
+                    "external_id": "7317728957437371548",
+                    "severity": "medium",
+                    "events": [
+                        {
+                            "agent_install_type": "STANDARD",
+                            "agent_host_boot_time": None,
+                            "event_sub_type": None,
+                            "image_name": None,
+                        }
+                    ],
+                    "alert_id": "1",
+                    "detection_timestamp": 1705912686000,
+                },
+            ],
+        }
+    }
+
+
+@pytest.fixture
+def alert_response_3_2():
+    return {
+        "reply": {
+            "total_count": 3,
+            "result_count": 2,
+            "alerts": [
+                {
+                    "external_id": "5e60680403934d",
+                    "severity": "medium",
+                    "events": [
+                        {
+                            "agent_install_type": "STANDARD",
+                            "agent_host_boot_time": None,
+                            "event_sub_type": None,
+                        }
+                    ],
+                    "alert_id": "5930923",
+                    "detection_timestamp": 1705912900118,
+                },
+                {
+                    "external_id": "7317728957437371548",
+                    "severity": "medium",
+                    "events": [
+                        {
+                            "agent_install_type": "STANDARD",
+                            "agent_host_boot_time": None,
+                            "event_sub_type": None,
+                            "image_name": None,
+                        }
+                    ],
+                    "alert_id": "1",
+                    "detection_timestamp": 1705912686000,
+                },
+            ],
+        }
+    }
+
+
+@pytest.fixture
+def alert_response_3_1():
+    return {
+        "reply": {
+            "total_count": 3,
+            "result_count": 1,
+            "alerts": [
+                {
+                    "external_id": "7317728957437371548",
+                    "severity": "medium",
+                    "events": [
+                        {
+                            "agent_install_type": "STANDARD",
+                            "agent_host_boot_time": None,
+                            "event_sub_type": None,
+                            "image_name": None,
+                        }
+                    ],
+                    "alert_id": "1",
+                    "detection_timestamp": 1705912200,
+                },
+            ],
+        }
+    }
+
+
+@pytest.fixture
+def alert_response_0():
+    return {"reply": {"total_count": 0, "result_count": 0, "alerts": []}}
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_2(trigger, alert_response_2, alert_query_2):
+    fqdn = trigger.module.configuration.fqdn
+    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            alert_url,
+            status_code=200,
+            json=alert_response_2,
+            additional_matcher=lambda request: request.json() == alert_query_2,
+        )
+
+        trigger.get_all_alerts(2)
+        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        alerts_list = [orjson.loads(data) for data in calls[0]]
+        assert len(alerts_list) == 4
+
+        count_alerts = 0
+        count_events = 0
+        for data in alerts_list:
+            if data.get("severity"):
+                count_alerts += 1
+                assert data.get("events", []) == []
+            if data.get("agent_install_type"):
+                count_events += 1
+
+        assert count_alerts == 2
+        assert count_events == 2
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_3(trigger, alert_response_3_2, alert_response_3_1, alert_query_2, alert_query_4):
+    fqdn = trigger.module.configuration.fqdn
+    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            alert_url,
+            status_code=200,
+            json=alert_response_3_2,
+            additional_matcher=lambda request: request.json() == alert_query_2,
+        )
+
+        mock.post(
+            alert_url,
+            status_code=200,
+            json=alert_response_3_1,
+            additional_matcher=lambda request: request.json() == alert_query_4,
+        )
+
+        trigger.get_all_alerts(2)
+        calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+        alerts_list = [orjson.loads(data) for data in calls[0]]
+        assert len(alerts_list) == 6
+
+        count_alerts = 0
+        count_events = 0
+        for data in alerts_list:
+            if data.get("severity"):
+                count_alerts += 1
+                assert data.get("events", []) == []
+            if data.get("agent_install_type"):
+                count_events += 1
+
+        assert count_alerts == 3
+        assert count_events == 3
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_0(trigger, alert_response_0, alert_query_2):
+    fqdn = trigger.module.configuration.fqdn
+    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            alert_url,
+            status_code=200,
+            json=alert_response_0,
+            additional_matcher=lambda request: request.json() == alert_query_2,
+        )
+
+        assert trigger.get_alerts_events_by_offset(0, trigger.timestamp_cursor, 2) == (0, [])
