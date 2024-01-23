@@ -1,8 +1,10 @@
 import time
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import isoparse
+
 from functools import cached_property
 import orjson
+from typing import Optional, Dict, Any, Tuple, List
 
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
@@ -27,10 +29,10 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     configuration: CortexEDRConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.query: dict = {
+        self.query: Dict[str, Any] = {
             "request_data": {
                 "filters": [{"field": "creation_time", "operator": "gte", "value": 0}],
                 "search_from": 0,
@@ -38,10 +40,10 @@ class CortexQueryEDRTrigger(CortexConnector):
                 "sort": {"field": "creation_time", "keyword": "desc"},
             }
         }
-        self._timestamp_cursor = None
+        self._timestamp_cursor = ""
 
     @property
-    def timestamp_cursor(self):
+    def timestamp_cursor(self) -> int:
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
@@ -56,7 +58,7 @@ class CortexQueryEDRTrigger(CortexConnector):
             return timestamp_cursor
 
     @timestamp_cursor.setter
-    def timestamp_cursor(self, time) -> None:
+    def timestamp_cursor(self, time: int) -> None:
         if len(str(time)) == 13:
             time_to_iso8601 = datetime.utcfromtimestamp(time / 1000.0).isoformat()
         else:
@@ -80,7 +82,7 @@ class CortexQueryEDRTrigger(CortexConnector):
             self.module.configuration.api_key_id,
         )
 
-    def split_alerts_events(self, alerts: list):
+    def split_alerts_events(self, alerts: List[Any]) -> List[str]:
         """Split events from alerts and put them in the same list"""
 
         combined_data = []
@@ -95,7 +97,7 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         return combined_data
 
-    def get_alerts_events_by_offset(self, offset: int, creation_time: int, pagination: int):
+    def get_alerts_events_by_offset(self, offset: int, creation_time: int, pagination: int) -> Tuple[int, List[Any]]:
         """Requests the Cortex API using the offset"""
 
         search_from, serch_to = offset, offset + pagination
@@ -108,7 +110,7 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         return response_query.get("total_count"), combined_data
 
-    def get_all_alerts(self, pagination: int):
+    def get_all_alerts(self, pagination: int) -> None:
         """Get all Cortex alerts from the API"""
 
         total_alerts, combined_data = self.get_alerts_events_by_offset(0, self.timestamp_cursor, pagination)

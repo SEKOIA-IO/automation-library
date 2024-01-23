@@ -1,4 +1,5 @@
 from requests.auth import AuthBase
+from requests.models import PreparedRequest
 
 
 class CortexAuthentication(AuthBase):
@@ -10,7 +11,7 @@ class CortexAuthentication(AuthBase):
         self.__api_key = api_key
         self.__api_key_id = api_key_id
 
-    def __call__(self, request):
+    def __call__(self, request: PreparedRequest) -> PreparedRequest:
         """Create the corresponding header for requests"""
 
         request.headers["x-xdr-auth-id"] = self.__api_key_id
