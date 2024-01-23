@@ -13,7 +13,7 @@ class ApiClient(requests.Session):
         password: str,
         nb_retries: int = 5,
         ratelimit_per_minute: int = 20,
-    ):
+    ) -> None:
         super().__init__()
         self.auth: ApiKeyAuthentication = ApiKeyAuthentication(hostname, login, password)
         self.auth.authenticate()
@@ -30,5 +30,5 @@ class ApiClient(requests.Session):
         )
 
     @property
-    def account_id(self):
+    def account_id(self) -> int | None:
         return self.auth.account_id
