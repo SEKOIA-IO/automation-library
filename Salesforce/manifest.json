@@ -15,6 +15,10 @@
                 "description": "Client secret to interact with salesforce API",
                 "type": "string"
             },
+            "rate_limit": {
+                "type": "string",
+                "description": "Rate limit for requests to salesforce. Value should have next format {max_rate}/{time_period}. For example: 3/60. Sekoia will use default rate limits if value is empty or invalid. More information you can find in docs: https://developer.salesforce.com/docs/atlas.en-us.salesforce_app_limits_cheatsheet.meta/salesforce_app_limits_cheatsheet/salesforce_app_limits_platform_api.htm"
+            },
             "base_url": {
                 "description": "Url of salesforce instance. Consists of https://<instance>.salesforce.com",
                 "type": "string"
