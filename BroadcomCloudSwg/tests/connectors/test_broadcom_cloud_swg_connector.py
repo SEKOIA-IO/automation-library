@@ -1,3 +1,5 @@
+import os
+import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from shutil import rmtree
@@ -155,10 +157,25 @@ async def test_broadcom_cloud_swg_connector_get_events(
         first_url = client.get_real_time_log_data_url(start_date=start_from, end_date=end_date, token=None)
         response_token = session_faker.word()
 
+        file_name = "out.log"
+        with open(file_name, "w") as file:
+            file.write(logs_content)
+
+        zip_file_name = "output.zip"
+        with zipfile.ZipFile(zip_file_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.write(file_name)
+
+        os.remove(file_name)
+
+        with open(zip_file_name, "rb") as file:
+            compressed_data = file.read()
+
+        os.remove(zip_file_name)
+
         mocked_responses.get(
             first_url,
             status=200,
-            body=logs_content.encode("utf-8"),
+            body=compressed_data,
             headers={"X-sync-status": "more", "X-sync-token": response_token},
         )
 
@@ -167,7 +184,7 @@ async def test_broadcom_cloud_swg_connector_get_events(
         mocked_responses.get(
             second_url,
             status=200,
-            body=logs_content.encode("utf-8"),
+            body=compressed_data,
             headers={"X-sync-status": "done", "X-sync-token": session_faker.word()},
         )
 

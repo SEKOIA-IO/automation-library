@@ -14,7 +14,6 @@ aiofiles = "^23.2.0"
 aiolimiter = "^1.1.0"
 zipstream = "^1.1.4"
 aiozipstream = "^0.4"
-async-unzip = "^0.3.6"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
