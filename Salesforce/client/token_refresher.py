@@ -121,7 +121,7 @@ class SalesforceTokenRefresher(object):
                 )
             except Exception as e:
                 logger.info(
-                    "Cannot get token. Response contains {0} status {1}".format(response.status, response_data)
+                    "Cannot get token. Response contains {0} status {1}".format(response_data, response.status)
                 )
 
                 raise e
