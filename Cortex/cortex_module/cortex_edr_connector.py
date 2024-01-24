@@ -39,7 +39,7 @@ class CortexQueryEDRTrigger(CortexConnector):
                 "sort": {"field": "creation_time", "keyword": "desc"},
             }
         }
-        self._timestamp_cursor = ""
+        self._timestamp_cursor = 0
 
     @property
     def timestamp_cursor(self) -> int:
@@ -56,7 +56,7 @@ class CortexQueryEDRTrigger(CortexConnector):
             if timestamp_cursor < one_week_ago:
                 timestamp_cursor = one_week_ago
 
-            return timestamp_cursor
+            return int(timestamp_cursor)
 
     @timestamp_cursor.setter
     def timestamp_cursor(self, time: int) -> None:
