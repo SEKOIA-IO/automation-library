@@ -189,10 +189,10 @@ def test_getting_data_2(trigger, alert_response_2, alert_query_2):
         count_alerts = 0
         count_events = 0
         for data in alerts_list:
-            if data.get("severity"):
+            if data.get("alert_id"):
                 count_alerts += 1
                 assert data.get("events", []) == []
-            if data.get("agent_install_type"):
+            if data.get("event_id"):
                 count_events += 1
 
         assert count_alerts == 2
@@ -231,10 +231,10 @@ def test_getting_data_3(trigger, alert_response_3_2, alert_response_3_1, alert_q
         first_alerts_batch.extend(second_alerts_batch)
         all_alerts = first_alerts_batch
         for data in all_alerts:
-            if data.get("severity"):
+            if data.get("alert_id"):
                 count_alerts += 1
                 assert data.get("events", []) == []
-            if data.get("agent_install_type"):
+            if data.get("event_id"):
                 count_events += 1
 
         assert count_alerts == 3
