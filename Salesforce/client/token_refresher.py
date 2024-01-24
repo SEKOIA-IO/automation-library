@@ -8,6 +8,7 @@ from typing import AsyncGenerator, Optional
 from urllib.parse import urlencode
 
 from aiohttp import BasicAuth, ClientSession
+from loguru import logger
 from yarl import URL
 
 from .schemas.token import HttpToken, SalesforceToken
@@ -112,11 +113,18 @@ class SalesforceTokenRefresher(object):
         async with self.session().post(url, auth=BasicAuth(self.client_id, self.client_secret), json={}) as response:
             response_data = await response.json()
 
-            self._token = SalesforceToken(
-                token=HttpToken(**response_data),
-                created_at=time.time(),
-                ttl=self.token_ttl,
-            )
+            try:
+                self._token = SalesforceToken(
+                    token=HttpToken(**response_data),
+                    created_at=time.time(),
+                    ttl=self.token_ttl,
+                )
+            except Exception as e:
+                logger.info(
+                    "Cannot get token. Response contains {0} status {1}".format(response_data, response.status)
+                )
+
+                raise e
 
             await self._schedule_token_refresh(self._token.ttl)
 

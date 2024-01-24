@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2024-01-24 - 1.4.12
+
+#### Added
+
+- Configuration option for salesforce api rate limit.
+- Correct log message when is unable to authorize with salesforce api.
+
 ### 2023-11-21 - 1.4.11
 
 #### Fixed
