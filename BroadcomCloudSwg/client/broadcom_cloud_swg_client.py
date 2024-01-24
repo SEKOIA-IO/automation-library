@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator, Tuple
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
+from loguru import logger
 from sekoia_automation.aio.helpers.http.utils import save_aiohttp_response
 from yarl import URL
 
@@ -99,7 +100,7 @@ class BroadcomCloudSwgClient(object):
         params: dict[str, int | str] = {
             "endDate": int(end_date.timestamp()) * 1000,
             "startDate": int(start_date.timestamp()) * 1000,
-            "maxMb": max_mb,
+            "maxMB": max_mb,
             "token": (token or "none"),
         }
 
@@ -144,8 +145,12 @@ class BroadcomCloudSwgClient(object):
                 if response.status != 200:
                     raise ValueError("Cannot get data. Status code is {0}".format(response.status))
 
-                file_name = await save_aiohttp_response(response)
                 response_headers = response.headers
+                logger.info("Response from Broadcom have 200 status. Start to save log files archive.")
+
+                file_name = await save_aiohttp_response(response)
+
+                logger.info("Log files archive has been saved.")
 
                 more_data_is_available = response_headers.get("X-sync-status", "done") == "more"
                 response_token = response_headers.get("X-sync-token")
@@ -167,10 +172,38 @@ class BroadcomCloudSwgClient(object):
         Returns:
             dict[str, str]
         """
-
         _fields = fields or cls.full_list_of_elff_fields()
+        _str_to_work = value.rstrip("\n")
+        _values = []
 
-        return {_fields[index]: value for index, value in enumerate(value.rstrip("\n").split("\t"))}
+        delimiter = " "
+        while len(_str_to_work) > 1:
+            try:
+                end_index = _str_to_work.index(delimiter)
+            except ValueError:
+                end_index = len(_str_to_work)
+
+            if end_index == 0:
+                _str_to_work = _str_to_work[1:]
+
+                continue
+
+            _field_value = _str_to_work[0:end_index]
+            _str_to_work = _str_to_work[end_index + 1 :]
+
+            if _str_to_work.startswith('"'):
+                delimiter = '" '
+            else:
+                delimiter = " "
+
+            if _field_value.startswith('"'):
+                _values.append(_field_value[1:])
+            else:
+                _values.append(_field_value)
+
+        result = dict(zip(_fields, _values))
+
+        return {key: result.get(key, "") for key in result.keys() if result.get(key) != "-"}
 
     @classmethod
     def parse_string_as_headers(cls, value: str) -> list[str] | None:
@@ -187,7 +220,9 @@ class BroadcomCloudSwgClient(object):
             list[str] | None
         """
         if value.startswith("#") and "Fields:" in value:
-            return [element for element in value.rstrip("\n").split("\t") if element in cls.full_list_of_elff_fields()]
+            return [
+                element for element in value.rstrip("\n").split(" ") if "Fields:" not in element and "#" not in element
+            ]
 
         return None
 
@@ -205,9 +240,9 @@ class BroadcomCloudSwgClient(object):
         return [
             "application-name",
             "c-ip-subnet",
-            "cs(referer)",
-            "cs(user-agent)",
-            "cs(x-requested-with)",
+            "cs(Referer)",
+            "cs(User-Agent)",
+            "cs(X-Requested-With)",
             "cs-auth-group",
             "cs-auth-groups",
             "cs-bytes",
@@ -237,7 +272,7 @@ class BroadcomCloudSwgClient(object):
             "r-ip",
             "r-supplier-country",
             "risk-groups",
-            "rs(content-type)",
+            "rs(Content-Type)",
             "rs-icap-error-details",
             "rs-icap-service",
             "rs-icap-status",
@@ -300,8 +335,8 @@ class BroadcomCloudSwgClient(object):
             "x-exception-id",
             "x-http-connect-host",
             "x-http-connect-port",
-            "x-icap-reqmod-header(x-icap-metadata)",
-            "x-icap-respmod-header(x-icap-metadata)",
+            "x-icap-reqmod-header(X-ICAP-Metadata)",
+            "x-icap-respmod-header(X-ICAP-Metadata)",
             "x-random-ipv6",
             "x-request-origin",
             "x-rs-certificate-hostname",
@@ -338,18 +373,16 @@ class BroadcomCloudSwgClient(object):
             list[dict[str, Any]]:
         """
 
-        def _group_key(
-            item: dict[str, Any]
-        ) -> tuple[Any | None, Any | None, Any | None, Any | None, Any | None, Any | None, Any | None, Any | None]:
+        def _group_key(item: dict[str, Any]) -> tuple[Any, Any, Any, Any, Any, Any, Any, Any]:
             return (
-                item.get("c-ip"),
-                item.get("cs-userdn"),
-                item.get("s-action"),
-                item.get("s-ip"),
-                item.get("sc-status"),
-                item.get("cs-method"),
-                item.get("cs-host"),
-                item.get("cs-uri-path"),
+                item.get("c-ip", ""),
+                item.get("cs-userdn", ""),
+                item.get("s-action", ""),
+                item.get("s-ip", ""),
+                item.get("sc-status", ""),
+                item.get("cs-method", ""),
+                item.get("cs-host", ""),
+                item.get("cs-uri-path", ""),
             )
 
         # Sorting the data is important for the groupby to work correctly

@@ -10,13 +10,13 @@ from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.aio.helpers.files.utils import delete_file
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from client.broadcom_cloud_swg_client import BroadcomCloudSwgClient
 from connectors import BroadcomCloudModule
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from utils import files as file_utils
 
 
 class BroadcomCloudSwgConnectorConfig(DefaultConnectorConfiguration):
@@ -126,42 +126,55 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 token=token,
             )
 
-            async with aiofiles.open(file_name) as file:
-                headers = None
-                async for line in file:
-                    if line.startswith("#"):
-                        headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
+            temp_directory, unzipped_files = await file_utils.unzip(file_name)
 
-                        if headers:  # pragma: no cover
-                            logger.info("Headers for current log: {0}".format(" ".join(headers)))
-                    else:
-                        line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
+            try:
+                for file_name in unzipped_files:
+                    async with aiofiles.open(file_name) as file:
+                        headers = None
+                        async for line in file:
+                            if line.startswith("#") and headers is None:
+                                headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
 
-                        line_date_time = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
-                        if latest_date is None:
-                            latest_date = line_date_time
+                                if headers:  # pragma: no cover
+                                    logger.info("Headers for current log: {0}".format(" ".join(headers)))
+                            else:
+                                line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
 
-                        if line_date_time and latest_date and latest_date < line_date_time:
-                            latest_date = line_date_time
+                                line_date_time = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
+                                if latest_date is None:  # pragma: no cover
+                                    latest_date = line_date_time
 
-                        data_to_push.append(line_as_dict)
-                        data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
+                                if line_date_time and latest_date and latest_date < line_date_time:
+                                    latest_date = line_date_time
 
-                        if len(data_to_push) >= self.configuration.chunk_size:
-                            result.extend(
-                                await self.push_data_to_intakes(
-                                    [orjson.dumps(event).decode("utf-8") for event in data_to_push]
-                                )
-                            )
+                                data_to_push.append(line_as_dict)
+                                data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
+                                if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
+                                    logger.info("Pushing {0} records to intake".format(len(data_to_push)))
+                                    result.extend(
+                                        await self.push_data_to_intakes(
+                                            [orjson.dumps(event).decode("utf-8") for event in data_to_push]
+                                        )
+                                    )
 
-                            data_to_push = []
+                                    data_to_push = []
 
-            result.extend(
-                await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push])
-            )
-            data_to_push = []
+                    logger.info("Pushing {0} records to intake".format(len(data_to_push)))
+                    result.extend(
+                        await self.push_data_to_intakes(
+                            [orjson.dumps(event).decode("utf-8") for event in data_to_push]
+                        )
+                    )
+                    data_to_push = []
+            except Exception as e:  # pragma: no cover
+                logger.error("Exception during processing: {}".format(str(e)))
 
-            await delete_file(file_name)
+                await file_utils.cleanup_resources([temp_directory], [file_name, *unzipped_files])
+
+                raise e
+
+            await file_utils.cleanup_resources([temp_directory], [file_name, *unzipped_files])
 
         result_latest_date = latest_date or end_date
         with self.context as cache:
