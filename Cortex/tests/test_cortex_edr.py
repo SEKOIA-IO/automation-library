@@ -39,7 +39,7 @@ def trigger(symphony_storage):
 def alert_query_2():
     return {
         "request_data": {
-            "filters": [{"field": "creation_time", "operator": "gte", "value": 1705831200}],
+            "filters": [{"field": "creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 0,
             "search_to": 2,
             "sort": {"field": "creation_time", "keyword": "desc"},
@@ -51,7 +51,7 @@ def alert_query_2():
 def alert_query_4():
     return {
         "request_data": {
-            "filters": [{"field": "creation_time", "operator": "gte", "value": 1705831200}],
+            "filters": [{"field": "creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 2,
             "search_to": 4,
             "sort": {"field": "creation_time", "keyword": "desc"},
@@ -155,7 +155,7 @@ def alert_response_3_1():
                             "image_name": None,
                         }
                     ],
-                    "alert_id": "1",
+                    "alert_id": "2",
                     "detection_timestamp": 1705912200,
                 },
             ],
@@ -221,12 +221,16 @@ def test_getting_data_3(trigger, alert_response_3_2, alert_response_3_1, alert_q
 
         trigger.get_all_alerts(2)
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-        alerts_list = [orjson.loads(data) for data in calls[0]]
-        assert len(alerts_list) == 6
+        first_alerts_batch = [orjson.loads(data) for data in calls[0]]
+        second_alerts_batch = [orjson.loads(data) for data in calls[1]]
+        assert len(first_alerts_batch) == 4
+        assert len(second_alerts_batch) == 2
 
         count_alerts = 0
         count_events = 0
-        for data in alerts_list:
+        first_alerts_batch.extend(second_alerts_batch)
+        all_alerts = first_alerts_batch
+        for data in all_alerts:
             if data.get("severity"):
                 count_alerts += 1
                 assert data.get("events", []) == []

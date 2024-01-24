@@ -1,6 +1,5 @@
 import time
 from datetime import datetime, timedelta, timezone
-from dateutil.parser import isoparse
 
 from functools import cached_property
 import orjson
@@ -47,23 +46,21 @@ class CortexQueryEDRTrigger(CortexConnector):
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
-            timestamp_cursor_str = cache.get("timestamp_cursor")
+            timestamp_cursor = cache.get("timestamp_cursor")
 
-            if timestamp_cursor_str is None:
-                before_two_days = now - timedelta(days=2)
-                return int(before_two_days.timestamp())
+            if timestamp_cursor is None:
+                before_five_minutes = now - timedelta(minutes=5)
+                return int(before_five_minutes.timestamp())
 
-            timestamp_cursor = int(isoparse(timestamp_cursor_str).timestamp())
+            one_week_ago = int((now - timedelta(days=7)).timestamp())
+            if timestamp_cursor < one_week_ago:
+                timestamp_cursor = one_week_ago
 
             return timestamp_cursor
 
     @timestamp_cursor.setter
     def timestamp_cursor(self, time: int) -> None:
-        if len(str(time)) == 13:
-            time_to_iso8601 = datetime.utcfromtimestamp(time / 1000.0).isoformat()
-        else:
-            time_to_iso8601 = datetime.utcfromtimestamp(time).isoformat()
-        self._timestamp_cursor = time_to_iso8601
+        self._timestamp_cursor = time
         with self.context as cache:
             cache["timestamp_cursor"] = self._timestamp_cursor
 
@@ -92,7 +89,7 @@ class CortexQueryEDRTrigger(CortexConnector):
             del alert["events"]
             combined_data.append(orjson.dumps(alert).decode("utf-8"))
             for event in events:
-                event["external_id"] = shared_id
+                event["alert_id"] = shared_id
                 combined_data.append(orjson.dumps(event).decode("utf-8"))
 
         return combined_data
@@ -108,35 +105,31 @@ class CortexQueryEDRTrigger(CortexConnector):
         response_query = self.client.post(url=self.alert_url, json=self.query).json().get("reply")
         combined_data = self.split_alerts_events(response_query.get("alerts"))
 
-        return response_query.get("total_count"), combined_data
+        return response_query["total_count"], combined_data
 
     def get_all_alerts(self, pagination: int) -> None:
         """Get all Cortex alerts from the API"""
 
-        total_alerts, combined_data = self.get_alerts_events_by_offset(0, self.timestamp_cursor, pagination)
+        has_more_events = True
+        page_number = 0
+        events = []
 
-        if total_alerts > 0:
-            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(total_alerts)
-            self.log(message=f"Sending batch number 1 of {len(combined_data)} data", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(combined_data))
-            self.push_events_to_intakes(events=combined_data)
+        while has_more_events:
+            total_alerts, combined_data = self.get_alerts_events_by_offset(
+                page_number * pagination, self.timestamp_cursor, pagination
+            )
+            self.log(message=f"Sending batch of {len(combined_data)} events", level="info")
+            has_more_events = total_alerts > (page_number + 1) * pagination
+            page_number += 1
+            events.extend(combined_data)
 
-            if total_alerts > pagination:
-                count_batch = 2
-                offset = pagination
-                while total_alerts > offset:
-                    total_alerts, new_combined_data = self.get_alerts_events_by_offset(
-                        offset, self.timestamp_cursor, pagination
-                    )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(new_combined_data))
-                    self.log(
-                        message=f"Sending batch number {count_batch} of {len(new_combined_data)} events", level="info"
-                    )
-                    combined_data.extend(new_combined_data)
-                    offset += pagination
-                    count_batch += 1
+            # Not push empty data
+            if len(combined_data) > 0:
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(combined_data))
+                self.push_events_to_intakes(events=combined_data)
 
-            most_recent_timestamp = orjson.loads(combined_data[0]).get("detection_timestamp")
+        if len(events) > 0:
+            most_recent_timestamp = orjson.loads(events[0]).get("detection_timestamp")
             events_lag = int(time.time() - most_recent_timestamp)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
             self.timestamp_cursor = most_recent_timestamp

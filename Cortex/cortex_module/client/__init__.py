@@ -1,8 +1,8 @@
 import requests
 from requests_ratelimiter import LimiterAdapter
+from requests.adapters import Retry
 
 from cortex_module.client.auth import CortexAuthentication
-from cortex_module.client.retry import Retry
 
 
 class ApiClient(requests.Session):
