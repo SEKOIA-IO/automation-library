@@ -60,7 +60,13 @@ class BroadcomCloudSwgClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if cls._session is None:
-            cls._session = ClientSession(headers={"Accept-Encoding": "gzip"}, auto_decompress=True)
+            cls._session = ClientSession(
+                conn_timeout=None,
+                read_timeout=None,
+                timeout=None,
+                headers={"Accept-Encoding": "gzip"},
+                auto_decompress=True,
+            )
 
         if cls._rate_limiter:
             async with cls._rate_limiter:
