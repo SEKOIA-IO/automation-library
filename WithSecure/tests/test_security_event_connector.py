@@ -145,7 +145,7 @@ def test_next_batch_with_single_page(trigger, message1, message2):
                 "expires_in": 1799,
             },
         )
-        mock_requests.post(
+        mock_requests.get(
             API_SECURITY_EVENTS_URL,
             status_code=200,
             json={"items": [message1, message2]},
@@ -167,7 +167,7 @@ def test_next_batch_is_empty(trigger):
                 "expires_in": 1799,
             },
         )
-        mock_requests.post(
+        mock_requests.get(
             API_SECURITY_EVENTS_URL,
             status_code=200,
             json={"items": []},
@@ -224,7 +224,7 @@ def test_fetch_next_events_raises_an_exception(trigger):
                 "expires_in": 1799,
             },
         )
-        mock_requests.post(API_SECURITY_EVENTS_URL, exc=requests.exceptions.ConnectTimeout)
+        mock_requests.get(API_SECURITY_EVENTS_URL, exc=requests.exceptions.ConnectTimeout)
 
         trigger.next_batch()
 
