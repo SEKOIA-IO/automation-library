@@ -89,7 +89,7 @@ class CortexQueryEDRTrigger(CortexConnector):
             del alert["events"]
             combined_data.append(orjson.dumps(alert).decode("utf-8"))
             for event in events:
-                event["event_id"] = shared_id
+                event["alert_id"] = shared_id
                 combined_data.append(orjson.dumps(event).decode("utf-8"))
 
         return combined_data
