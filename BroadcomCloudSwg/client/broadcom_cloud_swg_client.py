@@ -62,7 +62,7 @@ class BroadcomCloudSwgClient(object):
         if cls._session is None:
             cls._session = ClientSession(
                 conn_timeout=None,
-                read_timeout=None,
+                read_timeout=0,
                 timeout=None,
                 headers={"Accept-Encoding": "gzip"},
                 auto_decompress=True,
