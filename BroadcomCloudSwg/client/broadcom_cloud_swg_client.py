@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from itertools import groupby
 from typing import Any, AsyncGenerator, Tuple
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from aiolimiter import AsyncLimiter
 from loguru import logger
 from sekoia_automation.aio.helpers.http.utils import save_aiohttp_response
@@ -60,10 +60,10 @@ class BroadcomCloudSwgClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if cls._session is None:
+            timeout = ClientTimeout(total=None, ceil_threshold=0)
+
             cls._session = ClientSession(
-                conn_timeout=None,
-                read_timeout=0,
-                timeout=None,
+                timeout=timeout,
                 headers={"Accept-Encoding": "gzip"},
                 auto_decompress=True,
             )
