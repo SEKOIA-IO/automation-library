@@ -1,0 +1,65 @@
+{
+  "description": "Fetch events from Skyhigh Security Secure Web Gateway (SWG) API",
+  "docker_parameters": "skyhigh_security_swg",
+  "name": "Fetch events from Skyhigh Security Secure Web Gateway (SWG) API",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "customer_id": {
+        "description": "Customer ID (e.g. 1234567890)",
+        "type": "integer"
+      },
+      "account_name": {
+        "description": "Username",
+        "type": "string"
+      },
+      "account_password": {
+        "description": "Password associated with the account",
+        "type": "string"
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
+        "default": 5
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried.",
+        "default": 1
+      },
+      "frequency": {
+        "description": "Batch frequency in seconds",
+        "type": "integer",
+        "default": 20
+      },
+      "api_domain_name": {
+        "description": "Domain name to use (Europe :eu.msg.mcafeesaas.com, North America: us.msg.mcafeesaas.com)",
+        "default": "eu.msg.mcafeesaas.com",
+        "type": "string"
+      },
+      "intake_server": {
+        "description": "Address of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing (max is 1000)",
+        "default": 1000
+      }
+    },
+    "required": [
+      "customer_id",
+      "account_name",
+      "account_password",
+      "intake_key"
+    ],
+    "title": "Fetch events from Skyhigh Security Secure Web Gateway (SWG) API",
+    "type": "object"
+  },
+  "uuid": "b30b9125-8dfd-4958-85b1-9a39d172d94c"
+}

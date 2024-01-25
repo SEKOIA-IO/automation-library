@@ -1,0 +1,40 @@
+{
+  "name": "[BETA] Jumpcloud Directory Insights Connector",
+  "description": "",
+  "uuid": "5de877fd-effb-5ebc-9358-8df26c06a140",
+  "docker_parameters": "JumpcloudDirectoryInsightsConnector",
+  "arguments": {
+    "title": "JumpcloudDirectoryInsightsConfiguration",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "title": "Intake Server",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "title": "Intake Key",
+        "type": "string"
+      },
+      "chunk_size": {
+        "title": "Chunk Size",
+        "default": 1000,
+        "type": "integer"
+      },
+      "frequency": {
+        "title": "Frequency",
+        "default": 60,
+        "type": "integer"
+      },
+      "service": {
+        "title": "Service",
+        "description": "Comma separated list of Jumpcloud services logs to collect",
+        "default": "all",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ]
+  }
+}

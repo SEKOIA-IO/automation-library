@@ -1,0 +1,55 @@
+{
+  "description": "Consume events from SentinelOne DeepVisibility\u2019s Kafka brokers",
+  "docker_parameters": "sentinelone_deep_visibility_consumer",
+  "name": "Consume events from SentinelOne DeepVisibility",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "bootstrap_servers": {
+        "description": "Kafka bootstrap servers (e.g. 'dv-exporter-kafka-eu-central-1-prod.sentinelone.net:9093')",
+        "type": "string"
+      },
+      "username": {
+        "description": "Kafka username",
+        "type": "string"
+      },
+      "password": {
+        "description": "Kafka password",
+        "type": "string"
+      },
+      "group_id": {
+        "description": "Kafka consumer group",
+        "type": "string"
+      },
+      "topic": {
+        "description": "Kafka topic",
+        "type": "string"
+      }
+    },
+    "required": [
+      "bootstrap_servers",
+      "username",
+      "password",
+      "group_id",
+      "topic",
+      "intake_key"
+    ],
+    "title": "DeepVisibility Consumer",
+    "type": "object"
+  },
+  "uuid": "988173de-019d-41f5-8125-d2c8b258a5ef"
+}
