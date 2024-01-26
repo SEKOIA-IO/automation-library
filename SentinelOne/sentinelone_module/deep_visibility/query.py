@@ -159,7 +159,7 @@ class QueryDeepVisibilityAction(SentinelOneAction):
                 stop=stop_after_delay(timeout),
                 wait=wait_exponential(multiplier=1, min=1, max=10),
                 reraise=True,
-                retry=retry_if_not_exception_type(QueryDeepVisibilityCanceledError),
+                retry=retry_if_not_exception_type(QueryDeepVisibilityCanceledError | QueryDeepVisibilityFailedError),
             ):
                 with attempt:
                     result = self.client.deep_visibility_v2.get_query_status(query_id)
