@@ -18,3 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Upgrade dependencies: Sekoia-automation-SDK 1.8.1
+
+## 2024-01-26 - 1.15
+
+### Changed
+- Fix tenacity loop not handling the case where the query is still running.
+- Fix tenacity loop retrying even if the query is failed or in error.
+- Update DeepVisibilityEvent pydantic basemodel according to DeepVisibility documentation and tests.
