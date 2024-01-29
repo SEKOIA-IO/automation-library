@@ -27,5 +27,5 @@
     "name": "Cortex EDR",
     "uuid": "2bb1aaf9-a90c-411d-8e5f-c72b1b46b3d7",
     "slug": "cortex_edr",
-    "version": "1.0.0"
+    "version": "1.0.1"
 }
