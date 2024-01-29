@@ -1,7 +1,7 @@
 {
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Cortex EDR",
+        "title": "Palo Alto Cortex XDR",
         "type": "object",
         "properties": {
             "api_key": {
@@ -24,8 +24,8 @@
         ]
     },
     "description": "Cortex XDR is the detection and response app that natively integrates network, endpoint and cloud data to stop sophisticated attacks.",
-    "name": "Cortex EDR",
+    "name": "Palo Alto Cortex XDR",
     "uuid": "2bb1aaf9-a90c-411d-8e5f-c72b1b46b3d7",
-    "slug": "cortex_edr",
-    "version": "1.0.1"
+    "slug": "paloalto_cortex_xdr",
+    "version": "1.0.0"
 }
