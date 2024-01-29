@@ -1,4 +1,5 @@
 """Contains BroadcomCloudSwgClient."""
+
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from itertools import groupby
