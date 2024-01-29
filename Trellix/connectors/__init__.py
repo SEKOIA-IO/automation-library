@@ -1,4 +1,5 @@
 """Module ad connector for Trellix."""
+
 from pydantic import BaseModel, HttpUrl
 from sekoia_automation.module import Module
 

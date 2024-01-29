@@ -1,4 +1,5 @@
 """Formatters tests."""
+
 import pytest
 
 from logger.formatters import format_record

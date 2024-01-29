@@ -1,4 +1,5 @@
 """Test CrowdStrike events schemas."""
+
 import pytest
 from pydantic import ValidationError
 

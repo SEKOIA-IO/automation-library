@@ -2,6 +2,7 @@
 The CloudTrail logs trigger reads the next batch of logs published on the S3 bucket
 and forward them to the playbook run.
 """
+
 from typing import Any
 
 import orjson

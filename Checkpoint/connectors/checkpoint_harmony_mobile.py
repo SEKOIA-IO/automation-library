@@ -1,4 +1,5 @@
 """Contains CheckpointHarmony connector."""
+
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone

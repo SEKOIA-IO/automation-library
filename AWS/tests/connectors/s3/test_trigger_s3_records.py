@@ -1,4 +1,5 @@
 """Tests related to AwsS3RecordsTrigger."""
+
 from pathlib import Path
 
 import orjson

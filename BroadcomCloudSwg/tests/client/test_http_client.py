@@ -1,4 +1,5 @@
 """Tests related to client."""
+
 from datetime import datetime, timedelta
 
 import aiofiles

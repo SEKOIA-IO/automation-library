@@ -1,4 +1,5 @@
 """Tests related to CheckpointHarmonyConnector."""
+
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any

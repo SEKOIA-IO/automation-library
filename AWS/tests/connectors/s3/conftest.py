@@ -1,4 +1,5 @@
 """Additional fixtures for this package."""
+
 import pytest
 from faker import Faker
 

@@ -1,4 +1,5 @@
 """Tests for http client."""
+
 import orjson
 import pytest
 from aioresponses import aioresponses
