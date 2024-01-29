@@ -1,4 +1,5 @@
 """Tests related to storage wrapper."""
+
 import datetime
 import os
 from unittest.mock import AsyncMock, MagicMock

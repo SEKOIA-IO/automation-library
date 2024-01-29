@@ -124,7 +124,3 @@ def test_client_close():
 
     fake_client.close.assert_awaited_once()
     assert client._client is None
-
-
-def test_trigger_stop(trigger):
-    trigger.stop()

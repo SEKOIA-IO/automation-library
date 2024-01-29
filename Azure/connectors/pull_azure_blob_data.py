@@ -1,4 +1,5 @@
 """Connector to pull data from Azure Blob Storage."""
+
 import asyncio
 import time
 from datetime import datetime, timedelta, timezone

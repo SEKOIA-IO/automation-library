@@ -1,4 +1,5 @@
 """Contains the prometheus metrics for the connector."""
+
 from prometheus_client import Counter, Histogram
 
 # Declare common prometheus metrics
