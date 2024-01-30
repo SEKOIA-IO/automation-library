@@ -1,4 +1,5 @@
 """Cato graphql client."""
+
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any, AsyncGenerator

@@ -1,4 +1,5 @@
 """Tests for trellix token and scopes."""
+
 from time import time
 from typing import List
 

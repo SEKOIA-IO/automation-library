@@ -1,4 +1,5 @@
 """Models for EDR data."""
+
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel

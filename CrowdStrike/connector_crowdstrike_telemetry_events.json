@@ -1,0 +1,54 @@
+{
+  "description": "Forward Crowdstrike Falcon Data Replication events to Sekoia.io",
+  "docker_parameters": "crowdstrike_telemetry",
+  "name": "Fetch new events from CrowdStrike Data replication",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of max number of messages for the batch processing (default: 20000)",
+        "default": 20000
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds. Should be greater than 0 and lower then 20 (default: 10)",
+        "default": 10
+      },
+      "delete_consumed_messages": {
+        "type": "boolean",
+        "description": "Flag to delete consuming messages (default: true)",
+        "default": true
+      },
+      "is_fifo": {
+        "type": "boolean",
+        "description": "Flag to determine if the queue is a FIFO queue (default: false)",
+        "default": false
+      },
+      "queue_name": {
+        "type": "string",
+        "description": "The name of the SQS queue that received messages with files information"
+      },
+      "queue_url": {
+        "type": "string",
+        "description": "The URL of the SQS queue that received messages with files information"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "queue_name",
+      "intake_key"
+    ],
+    "title": "connector configuration",
+    "type": "object"
+  },
+  "uuid": "1137c3e1-a0b3-4c3c-981e-be7c3249d64f"
+}

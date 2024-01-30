@@ -1,4 +1,5 @@
 """Config tests."""
+
 import pytest
 from pydantic import ValidationError
 

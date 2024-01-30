@@ -1,4 +1,5 @@
 """Contains schemas for sqs messages."""
+
 from pydantic import BaseModel
 
 

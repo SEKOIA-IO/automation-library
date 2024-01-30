@@ -1,0 +1,45 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Arguments",
+    "type": "object",
+    "required": [
+      "project_id",
+      "subject_id",
+      "intake_key"
+    ],
+    "properties": {
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 20
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "project_id": {
+        "description": "Project ID",
+        "type": "string"
+      },
+      "subject_id": {
+        "description": "Subscription ID",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing (max is 1000)",
+        "default": 1000
+      }
+    }
+  },
+  "description": "Connect to the Google Cloud Pub/Sub topic and return events",
+  "docker_parameters": "run-pubsub",
+  "name": "Connect to the specified project subscription",
+  "uuid": "a28a9363-a857-4521-8a29-12d43a5303a1"
+}

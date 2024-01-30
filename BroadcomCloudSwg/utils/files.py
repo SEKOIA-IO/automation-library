@@ -1,4 +1,5 @@
 """Useful utils to work with files."""
+
 import shutil
 import zlib
 from pathlib import Path, PurePath
@@ -33,7 +34,7 @@ async def unzip(file_path: str, directory: str = "/tmp", buffer_size: int = 64 *
 
         logger.info("Zip contains next files: {0}".format(files_info))
 
-        async with (aiofiles.open(file_path, mode="rb") as src):
+        async with aiofiles.open(file_path, mode="rb") as src:
             for zipped_file in files_info:
                 file_name = zipped_file.filename
                 result_file_path = Path(str(PurePath(temp_dir, file_name)))

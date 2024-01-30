@@ -1,4 +1,5 @@
 """Contains AwsS3RecordsTrigger."""
+
 from typing import Any
 
 import orjson

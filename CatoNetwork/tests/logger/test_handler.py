@@ -1,4 +1,5 @@
 """Tests related to logging."""
+
 import logging
 from logging import LogRecord
 

@@ -1,4 +1,5 @@
 """Aws base client wrapper with its config class."""
+
 from functools import cached_property
 from typing import Generic, TypeVar
 

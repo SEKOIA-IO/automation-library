@@ -163,9 +163,11 @@ class VadeCloudConsumer(Thread):
                     message="{0}: Last event timestamp is {1} which is {2}".format(
                         self.name,
                         last_event_timestamp,
-                        datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()
-                        if last_event_timestamp
-                        else 0,
+                        (
+                            datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()
+                            if last_event_timestamp
+                            else 0
+                        ),
                     ),
                     level="debug",
                 )

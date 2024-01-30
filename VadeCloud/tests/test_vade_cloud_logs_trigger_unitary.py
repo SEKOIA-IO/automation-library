@@ -175,14 +175,15 @@ def response_message():
 
 
 def test_auth_error(trigger: VadeCloudLogsConnector):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
-        return_value=0,
-    ) as mock_get_ts, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp"
-    ) as mock_set_ts, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as mock_get_ts,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as mock_set_ts,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as mock_time,
+    ):
         mock_requests.post(
             "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
             status_code=404,
@@ -196,12 +197,15 @@ def test_auth_error(trigger: VadeCloudLogsConnector):
 
 
 def test_auth_user_invalid(trigger: VadeCloudLogsConnector):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
-        return_value=0,
-    ) as _, patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.time"
-    ) as _:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as _,
+    ):
         mock_requests.post(
             "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
             status_code=400,
@@ -215,14 +219,15 @@ def test_auth_user_invalid(trigger: VadeCloudLogsConnector):
 
 
 def test_timeout_error(trigger: VadeCloudLogsConnector):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
-        return_value=0,
-    ) as mock_get_ts, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp"
-    ) as mock_set_ts, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as mock_get_ts,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as mock_set_ts,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as mock_time,
+    ):
         mock_requests.post(
             "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
             exc=requests.exceptions.Timeout,
@@ -264,12 +269,15 @@ def test_request_with_account_id_quarantine(
 
 
 def test_request_error(trigger: VadeCloudLogsConnector, auth_message):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
-        return_value=0,
-    ) as _, patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.time"
-    ) as _:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as _,
+    ):
         mock_requests.post(
             "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
             status_code=200,
@@ -295,14 +303,15 @@ def test_request_error(trigger: VadeCloudLogsConnector, auth_message):
 
 
 def test_fetch_event(trigger: VadeCloudLogsConnector, auth_message, response_message):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
-        return_value=0,
-    ) as mock_get_ts, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp"
-    ) as mock_set_ts, patch(
-        "vadecloud_modules.trigger_vade_cloud_logs.time"
-    ) as mock_time:
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as mock_get_ts,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as mock_set_ts,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as mock_time,
+    ):
         mock_requests.post(
             "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
             status_code=200,

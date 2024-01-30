@@ -1,4 +1,5 @@
 """All models related to auth token workflow."""
+
 from enum import Enum
 from time import time
 from typing import List, Set

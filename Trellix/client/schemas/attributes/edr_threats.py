@@ -3,6 +3,7 @@ Models for EDR Threat attributes.
 
 https://developer.manage.trellix.com/mvision/apis/threats
 """
+
 from typing import Any
 
 from pydantic import BaseModel

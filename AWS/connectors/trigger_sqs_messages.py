@@ -1,4 +1,5 @@
 """Contains AwsSqsMessagesTrigger."""
+
 from functools import cached_property
 
 import orjson

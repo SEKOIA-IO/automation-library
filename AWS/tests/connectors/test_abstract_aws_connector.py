@@ -1,4 +1,5 @@
 """Test abstract AWS connector."""
+
 from pathlib import Path
 
 from sekoia_automation.aio.helpers.aws.client import AwsClient

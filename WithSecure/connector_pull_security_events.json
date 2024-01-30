@@ -1,0 +1,25 @@
+{
+  "description": "Get last security events",
+  "docker_parameters": "security_events_connector",
+  "name": "Fetch security events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "The configuration to fetch new security events",
+    "type": "object"
+  },
+  "uuid": "c1f7f0b8-0f71-480a-a67f-0053af356c48"
+}

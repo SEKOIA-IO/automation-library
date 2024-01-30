@@ -1,4 +1,5 @@
 """All necessary metrics."""
+
 from prometheus_client import Counter, Histogram
 
 # Declare common prometheus metrics

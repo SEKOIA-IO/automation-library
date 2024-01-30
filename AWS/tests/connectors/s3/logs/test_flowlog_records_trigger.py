@@ -1,4 +1,5 @@
 """Tests related to FlowlogRecordsTrigger."""
+
 import re
 from pathlib import Path
 from unittest.mock import Mock

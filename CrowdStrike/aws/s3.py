@@ -1,4 +1,5 @@
 """Aws s3 client."""
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 

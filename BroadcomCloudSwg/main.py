@@ -1,4 +1,5 @@
 """Module to work with Broadcom."""
+
 from sekoia_automation.loguru.config import init_logging
 
 from connectors import BroadcomCloudModule

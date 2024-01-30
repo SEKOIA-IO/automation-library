@@ -1,4 +1,5 @@
 """Contains AwsS3FlowLogsTrigger."""
+
 import ipaddress
 from itertools import islice
 

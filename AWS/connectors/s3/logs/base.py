@@ -1,4 +1,5 @@
 """Contains base implementation of workers and threads."""
+
 import time
 from abc import ABCMeta, abstractmethod
 from collections.abc import Generator, Sequence

@@ -1,0 +1,35 @@
+{
+  "description": "Get last events from the Netskope platform through the API v2",
+  "docker_parameters": "netskope_events_connector_v2",
+  "name": "Fetch new events from Netskope",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_token": {
+        "type": "string",
+        "description": "The API token"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "consumer_group": {
+        "description": "A unique name to track event consumption (default empty for auto-generated one)",
+        "type": "string",
+        "default": ""
+      }
+    },
+    "required": [
+      "api_token",
+      "intake_key"
+    ],
+    "title": "The configuration to fetch new events",
+    "type": "object"
+  },
+  "uuid": "97edba63-7643-4232-91b9-2e7aafa232c8"
+}
