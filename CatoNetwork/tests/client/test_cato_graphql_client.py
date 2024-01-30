@@ -1,4 +1,5 @@
 """Tests for Cato graphql client."""
+
 from enum import Enum
 from unittest.mock import AsyncMock, MagicMock
 

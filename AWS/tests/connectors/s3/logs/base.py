@@ -1,4 +1,5 @@
 """Some useful wrappers for AWS services."""
+
 import io
 from pathlib import Path
 from unittest.mock import Mock

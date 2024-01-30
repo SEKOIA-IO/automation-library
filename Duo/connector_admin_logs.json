@@ -1,0 +1,36 @@
+{
+  "description": "Get last logs from the Duo platform",
+  "docker_parameters": "duo_admin_logs",
+  "name": "Fetch new logs from Duo",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
+    "title": "The configuration to fetch new logs",
+    "type": "object"
+  },
+  "uuid": "568258e6-2cc9-4a70-900f-73cca68691ee"
+}

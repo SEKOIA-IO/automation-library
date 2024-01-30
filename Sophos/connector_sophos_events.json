@@ -1,0 +1,43 @@
+{
+  "description": "Forward Sophos Events",
+  "docker_parameters": "sophos_events_trigger",
+  "name": "Get Sophos events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "exclude_types": {
+        "description": "A list of type to exclude from the pulling",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
+    "title": "Sophos Events",
+    "type": "object"
+  },
+  "uuid": "5728b8e3-ad1a-431a-bcbd-083f5fde3672"
+}

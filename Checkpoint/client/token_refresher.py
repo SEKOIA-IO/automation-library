@@ -1,4 +1,5 @@
 """Contains token refresher."""
+
 import asyncio
 import time
 from asyncio import Lock

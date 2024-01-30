@@ -3,6 +3,7 @@ Models for epo events attributes.
 
 https://developer.manage.trellix.com/mvision/apis/v2-events
 """
+
 from datetime import datetime
 
 from pydantic import BaseModel

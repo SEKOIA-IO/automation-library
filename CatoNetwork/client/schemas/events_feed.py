@@ -1,4 +1,5 @@
 """Schemas for the events feed."""
+
 from enum import Enum
 from typing import Any
 

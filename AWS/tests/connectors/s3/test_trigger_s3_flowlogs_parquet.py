@@ -1,4 +1,5 @@
 """Tests related to AwsS3ParquetRecordsTrigger."""
+
 from os import path
 from pathlib import Path
 

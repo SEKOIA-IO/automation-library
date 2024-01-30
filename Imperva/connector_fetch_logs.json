@@ -1,0 +1,29 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds, default 2s"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 500
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Fetch Imperva WAF logs",
+    "type": "object"
+  },
+  "description": "Fetch Imperva WAF logs",
+  "docker_parameters": "imperva_logs",
+  "name": "Imperva WAF logs",
+  "uuid": "7902efc5-a9c4-4ff1-9f82-b0551ec9d003"
+}

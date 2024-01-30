@@ -1,4 +1,5 @@
 """This module fetches audit logs from the Github API and pushes them to the intake."""
+
 import asyncio
 import time
 import traceback

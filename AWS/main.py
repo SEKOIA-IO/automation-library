@@ -1,4 +1,5 @@
 """Initialize module and all connectors."""
+
 from sekoia_automation.loguru.config import init_logging
 
 from connectors import AwsModule

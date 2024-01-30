@@ -1,4 +1,5 @@
 """Tests related to http client."""
+
 import csv
 import datetime
 from unittest.mock import MagicMock

@@ -134,9 +134,10 @@ def test_sleep_until_next_batch(event_collector):
     event_collector.configuration.timedelta = 0
     event_collector.end_date = end_date
 
-    with patch("gateway_cloud_services.trigger_skyhigh_security_swg.datetime") as mock_datetime, patch(
-        "gateway_cloud_services.trigger_skyhigh_security_swg.sleep"
-    ) as mock_sleep:
+    with (
+        patch("gateway_cloud_services.trigger_skyhigh_security_swg.datetime") as mock_datetime,
+        patch("gateway_cloud_services.trigger_skyhigh_security_swg.sleep") as mock_sleep,
+    ):
         mock_datetime.now.return_value = now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 

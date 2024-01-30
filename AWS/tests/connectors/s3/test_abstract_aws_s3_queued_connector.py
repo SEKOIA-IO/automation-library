@@ -1,4 +1,5 @@
 """Contains tests for AbstractAwsS3QueuedConnector."""
+
 from gzip import compress
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock

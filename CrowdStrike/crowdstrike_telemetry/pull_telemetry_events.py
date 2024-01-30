@@ -1,4 +1,5 @@
 """Contains connector, configuration and module."""
+
 import asyncio
 import time
 from functools import cached_property
