@@ -1,6 +1,6 @@
 {
   "description": "Get last events from the TEHTRIS XDR platform",
-  "docker_parameters": "tehtris_events_connector",
+  "docker_parameters": "tehtris_events_trigger",
   "name": "Fetch new events from TEHTRIS",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

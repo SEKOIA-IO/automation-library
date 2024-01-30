@@ -1,6 +1,6 @@
 {
   "description": "Get FlowLogs records from new S3 Parquet objects based on notifications",
-  "docker_parameters": "aws_s3_flowlogs_parquet_records_connector",
+  "docker_parameters": "aws_s3_flowlogs_parquet_records_trigger",
   "name": "Fetch new FlowLogs Parquet records on S3",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

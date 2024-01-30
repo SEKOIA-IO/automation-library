@@ -1,6 +1,6 @@
 {
   "description": "Get messages from SQS",
-  "docker_parameters": "aws_sqs_messages_connector",
+  "docker_parameters": "aws_sqs_messages_trigger",
   "name": "Fetch new messages from the SQS",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

@@ -1,6 +1,6 @@
 {
   "description": "Forward Sophos Events",
-  "docker_parameters": "sophos_events_connector",
+  "docker_parameters": "sophos_events_trigger",
   "name": "Get Sophos events",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

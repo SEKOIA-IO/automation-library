@@ -1,6 +1,6 @@
 {
   "description": "Consume messages from Microsoft Azure Eventhub",
-  "docker_parameters": "azure_eventhub_messages_connector",
+  "docker_parameters": "azure_eventhub_messages_trigger",
   "name": "Consume Eventhub messages",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

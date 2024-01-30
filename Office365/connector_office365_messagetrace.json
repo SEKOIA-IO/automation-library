@@ -1,6 +1,6 @@
 {
   "description": "Fetch events for MessageTrace API",
-  "docker_parameters": "office365_messagetrace_connector",
+  "docker_parameters": "office365_messagetrace_trigger",
   "name": "Fetch events from MessageTrace API (deprecated)",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

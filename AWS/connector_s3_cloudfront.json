@@ -1,6 +1,6 @@
 {
     "description": "Get all CloudFront records from S3",
-    "docker_parameters": "aws_s3_cloudfront_connector",
+    "docker_parameters": "aws_s3_cloudfront_trigger",
     "name": "[BETA] Fetch new CloudFront logs on S3",
     "arguments": {
       "$schema": "http://json-schema.org/draft-07/schema#",

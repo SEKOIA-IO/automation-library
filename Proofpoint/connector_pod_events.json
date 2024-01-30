@@ -1,6 +1,6 @@
 {
   "description": "Forward Proofpoint PoD Events",
-  "docker_parameters": "pod_events_connector",
+  "docker_parameters": "pod_events_trigger",
   "name": "Get Proofpoint PoD events",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
