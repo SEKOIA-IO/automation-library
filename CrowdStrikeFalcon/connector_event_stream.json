@@ -1,6 +1,6 @@
 {
   "description": "Get latest events from CrowdStrike Falcon",
-  "docker_parameters": "event_stream_connector",
+  "docker_parameters": "event_stream_trigger",
   "name": "Fetch CrowdStrike Falcon Events",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

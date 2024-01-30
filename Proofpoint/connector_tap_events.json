@@ -1,6 +1,6 @@
 {
   "description": "Forward Proofpoint TAP Events",
-  "docker_parameters": "tap_events_connector",
+  "docker_parameters": "tap_events_trigger",
   "name": "Get Proofpoint TAP events",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
