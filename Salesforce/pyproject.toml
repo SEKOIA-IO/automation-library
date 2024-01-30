@@ -11,7 +11,7 @@ python-dateutil = "^2.8.2"
 sekoia-automation-sdk = { version = "^1.8.1", extras = ["all"] }
 loguru = "^0.7.0"
 async-lru = "^2.0.2"
-aiohttp = "^3.8.5"
+aiohttp = "^3.9.2"
 aiofiles = "^23.1.0"
 aiolimiter = "^1.1.0"
 aiocsv = "^1.2.4"
