@@ -12,7 +12,7 @@ sekoia-automation-sdk = { version = "^1.8.1", extras = ["all"] }
 loguru = "^0.7.0"
 aiobotocore = "^2.5.0"
 async-lru = "^2.0.2"
-aiohttp = "^3.8.5"
+aiohttp = "^3.9.2"
 aiolimiter = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
