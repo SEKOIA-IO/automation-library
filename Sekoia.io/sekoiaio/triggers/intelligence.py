@@ -153,6 +153,7 @@ class FeedIOCConsumptionTrigger(FeedConsumptionTrigger):
         "match[type]=indicator",
     ]
 
+
 class IOCCollectionTrigger(Trigger):
     """
     This trigger fetches STIX objects from Sekoia.io IOC Collection API
@@ -224,7 +225,6 @@ class IOCCollectionTrigger(Trigger):
         # Get cursor for next API call
         if data.get("has_more", False):
             self.next_cursor += self.batch_size_limit
-
 
         return data.get("items", [])
 

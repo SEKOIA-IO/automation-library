@@ -2,9 +2,8 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from sekoiaio.triggers.intelligence import (
-    IOCCollectionTrigger
-)
+from sekoiaio.triggers.intelligence import IOCCollectionTrigger
+
 
 class TestIOCCollectionTrigger:
     @pytest.fixture
@@ -17,10 +16,7 @@ class TestIOCCollectionTrigger:
         # Mock the response from the API
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "has_more": False,
-            "items": [{"sample_key": "sample_value"}]
-        }
+        mock_response.json.return_value = {"has_more": False, "items": [{"sample_key": "sample_value"}]}
         mock_get.return_value = mock_response
 
         # Mock necessary configurations
