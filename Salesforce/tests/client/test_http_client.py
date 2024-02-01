@@ -9,10 +9,10 @@ import aiofiles
 import pytest
 from aiohttp import ClientResponse
 from aioresponses import aioresponses
+from sekoia_automation.aio.helpers.files.utils import delete_file
 
 from client.http_client import SalesforceHttpClient
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
-from utils.file_utils import delete_file
 
 
 @pytest.mark.asyncio
@@ -124,52 +124,61 @@ async def test_salesforce_http_client_request_headers(session_faker, http_token,
 
 
 @pytest.mark.asyncio
-async def test_salesforce_http_client_get_log_files(
-    session_faker, http_token, token_refresher_session, http_client_session
-):
+async def test_salesforce_http_client_get_log_files(session_faker, http_token):
     """
     Test SalesforceHttpClient.get_log_files.
 
     Args:
         session_faker: Faker
-        token_refresher_session: MagicMock
-        http_client_session: MagicMock
     """
-    client = SalesforceHttpClient(
-        client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=session_faker.uri()
-    )
+    with aioresponses() as mocked_responses:
+        client_id = session_faker.pystr()
+        client_secret = session_faker.pystr()
+        base_url = session_faker.uri()
 
-    token_data = http_token.dict()
-    token_data["id"] = token_data["tid"]
+        client = SalesforceHttpClient(client_id=client_id, client_secret=client_secret, base_url=base_url)
 
-    event_log_file = EventLogFile(
-        Id=session_faker.pystr(),
-        EventType=session_faker.pystr(),
-        LogFile=session_faker.pystr(),
-        LogDate=session_faker.date_time().isoformat(),
-        CreatedDate=session_faker.date_time().isoformat(),
-        LogFileLength=session_faker.pyfloat(),
-    )
+        token_data = http_token.dict()
+        token_data["id"] = token_data["tid"]
 
-    log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
+        event_log_file = EventLogFile(
+            Id=session_faker.pystr(),
+            EventType=session_faker.pystr(),
+            LogFile=session_faker.pystr(),
+            LogDate=session_faker.date_time().isoformat(),
+            CreatedDate=session_faker.date_time().isoformat(),
+            LogFileLength=session_faker.pyfloat(),
+        )
 
-    log_files_response_failed = SalesforceEventLogFilesResponse(totalSize=0, done=False, records=[])
+        log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
 
-    token_refresher_session.post = MagicMock()
-    token_refresher_session.post.return_value.__aenter__.return_value.status = 200
-    token_refresher_session.post.return_value.__aenter__.return_value.json.return_value = token_data
+        log_files_response_failed = SalesforceEventLogFilesResponse(totalSize=0, done=False, records=[])
 
-    http_client_session.get = MagicMock()
-    http_client_session.get.return_value.__aenter__.return_value.status = 200
-    http_client_session.get.return_value.__aenter__.return_value.json.return_value = log_files_response_success.dict()
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url),
+            status=200,
+            payload=token_data,
+        )
 
-    client_result = await client.get_log_files()
-    assert client_result == log_files_response_success
+        query = client._log_files_query()
+        url = client._request_url_with_query(query)
 
-    http_client_session.get.return_value.__aenter__.return_value.json.return_value = log_files_response_failed.dict()
+        mocked_responses.get(
+            url=url,
+            status=200,
+            payload=log_files_response_success.dict(),
+        )
 
-    with pytest.raises(ValueError):
-        await client.get_log_files()
+        client_result = await client.get_log_files()
+        assert client_result == log_files_response_success
+
+        mocked_responses.get(
+            url=url,
+            status=200,
+            payload=log_files_response_failed.dict(),
+        )
+        with pytest.raises(ValueError):
+            await client.get_log_files()
 
 
 @pytest.mark.asyncio

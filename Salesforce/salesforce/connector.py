@@ -9,13 +9,14 @@ import orjson
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.aio.helpers.files.csv import csv_file_as_rows
+from sekoia_automation.aio.helpers.files.utils import delete_file
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import SalesforceHttpClient
 from salesforce import SalesforceModule
 from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-from utils.file_utils import csv_file_as_rows, delete_file
 
 
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
@@ -67,8 +68,7 @@ class SalesforceConnector(AsyncConnector):
 
             return last_event_date
 
-    @property
-    def salesforce_client(self) -> SalesforceHttpClient:
+    async def get_salesforce_client(self) -> SalesforceHttpClient:
         """
         Get salesforce client.
 
@@ -85,6 +85,8 @@ class SalesforceConnector(AsyncConnector):
             rate_limiter=self.module.configuration.rate_limiter,
         )
 
+        await self._salesforce_client.update_limiters()
+
         return self._salesforce_client
 
     async def get_salesforce_events(self) -> list[str]:
@@ -94,8 +96,9 @@ class SalesforceConnector(AsyncConnector):
         Returns:
             datetime: last event date
         """
+        client = await self.get_salesforce_client()
         _last_event_date = self.last_event_date
-        log_files = await self.salesforce_client.get_log_files(_last_event_date)
+        log_files = await client.get_log_files(_last_event_date)
 
         logger.info(
             "Found {count} log files to process since {date}",
@@ -111,7 +114,7 @@ class SalesforceConnector(AsyncConnector):
             if _last_event_date < log_file_date:
                 _last_event_date = log_file_date
 
-            records, csv_path = await self.salesforce_client.get_log_file_content(
+            records, csv_path = await client.get_log_file_content(
                 log_file=log_file,
             )
 

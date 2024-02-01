@@ -3,25 +3,33 @@
 import csv
 from contextlib import asynccontextmanager
 from datetime import datetime
+from enum import Enum
 from typing import Any, AsyncGenerator, Dict, Tuple
 from urllib.parse import urlencode
 
 from aiohttp import ClientResponse, ClientSession
 from aiolimiter import AsyncLimiter
 from loguru import logger
+from sekoia_automation.aio.helpers.http.utils import save_aiohttp_response
 from yarl import URL
-
-from utils.file_utils import save_response_to_temp_file
 
 from .schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
 from .token_refresher import SalesforceTokenRefresher
 
 
+class LimiterType(Enum):
+    DEFAULT = 0
+    DAILY = 1
+    HOURLY_MANAGED = 2
+
+
 class SalesforceHttpClient(object):
     """Class for Salesforce Http client."""
 
-    _session: ClientSession | None = None
-    _rate_limiter: AsyncLimiter | None = None
+    _sessions: dict[str, ClientSession] = {}
+    _rate_limiters: dict[str, AsyncLimiter] = {}
+    _daily_rate_limiters: dict[str, AsyncLimiter] = {}
+    _hourly_managed_content_public_limiters: dict[str, AsyncLimiter] = {}
 
     def __init__(
         self,
@@ -42,37 +50,75 @@ class SalesforceHttpClient(object):
         self.client_id = client_id
         self.client_secret = client_secret
         self.base_url = base_url
+        self.connector_uuid = self.get_unique_client_key(client_id, client_secret)
 
         if rate_limiter:
-            self.set_rate_limiter(rate_limiter)
+            self.set_rate_limiter(self.connector_uuid, rate_limiter, LimiterType.DEFAULT)
 
     @classmethod
-    def set_rate_limiter(cls, rate_limiter: AsyncLimiter) -> None:
+    def get_unique_client_key(cls, client_id: str, client_secret: str) -> str:
+        return "{0}{1}".format(client_id, client_secret)
+
+    @classmethod
+    def set_rate_limiter(cls, client_uuid: str, rate_limiter: AsyncLimiter, limiter_type: LimiterType) -> None:
         """
         Set rate limiter.
 
         Args:
-            rate_limiter:
+            client_uuid: str
+            rate_limiter: AsyncLimiter
+            limiter_type: LimiterType
         """
-        cls._rate_limiter = rate_limiter
+        match limiter_type:
+            case LimiterType.DAILY:
+                cls._daily_rate_limiters[client_uuid] = rate_limiter
+                return
+
+            case LimiterType.HOURLY_MANAGED:
+                cls._hourly_managed_content_public_limiters[client_uuid] = rate_limiter
+                return
+
+            case _:
+                cls._rate_limiters[client_uuid] = rate_limiter
+                return
 
     @classmethod
     @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[ClientSession, None]:
+    async def session(cls, client_uuid: str) -> AsyncGenerator[ClientSession, None]:
         """
         Get configured session with rate limiter.
+
+        Args:
+            client_uuid: str
 
         Returns:
             AsyncGenerator[ClientSession, None]:
         """
-        if cls._session is None:
-            cls._session = ClientSession(headers={"Accept-Encoding": "gzip"}, auto_decompress=True)
+        if cls._sessions.get(client_uuid) is None:
+            cls._sessions[client_uuid] = ClientSession(headers={"Accept-Encoding": "gzip"}, auto_decompress=True)
 
-        if cls._rate_limiter:
-            async with cls._rate_limiter:
-                yield cls._session
+        default_limiter = cls._rate_limiters.get(client_uuid)
+        daily_rate_limiter = cls._daily_rate_limiters.get(client_uuid)
+        hourly_managed_limiter = cls._hourly_managed_content_public_limiters.get(client_uuid)
+
+        if default_limiter:
+            async with default_limiter:
+                if hourly_managed_limiter and daily_rate_limiter:
+                    async with daily_rate_limiter, hourly_managed_limiter:
+                        yield cls._sessions[client_uuid]
+
+                elif hourly_managed_limiter:
+                    async with hourly_managed_limiter:
+                        yield cls._sessions[client_uuid]
+
+                elif daily_rate_limiter:
+                    async with daily_rate_limiter:
+                        yield cls._sessions[client_uuid]
+
+                else:
+                    yield cls._sessions[client_uuid]
         else:
-            yield cls._session
+            yield cls._sessions[client_uuid]
 
     async def _get_token_refresher(self) -> SalesforceTokenRefresher:
         """
@@ -186,6 +232,44 @@ class SalesforceHttpClient(object):
 
             raise Exception(error_msg)
 
+    async def update_limiters(self) -> None:
+        """Updates dynamically limits."""
+
+        headers = await self._request_headers()
+        request_url = URL("{0}/services/data/v60.0/limits/".format(self.base_url))
+        logger.info("Try to get salesforce limits")
+
+        client_uuid = self.get_unique_client_key(self.client_id, self.client_secret)
+
+        # try:
+        async with (self.session(client_uuid) as session):
+            async with session.get(request_url, headers=headers, json={}) as response:
+                await self._handle_error_response(response)
+
+                result = await response.json()
+
+                daily_requests: int | None = result.get("DailyApiRequests", {}).get("Max")
+                logger.info("Found limits for DailyApiRequests {0}".format(daily_requests))
+                if daily_requests is not None:
+                    self.set_rate_limiter(client_uuid, AsyncLimiter(daily_requests, 60 * 60 * 24), LimiterType.DAILY)
+
+                hourly_managed_content_public_requests: int | None = result.get(
+                    "HourlyManagedContentPublicRequests", {}
+                ).get("Max")
+                logger.info(
+                    "Found limits for HourlyManagedContentPublicRequests {0}".format(
+                        hourly_managed_content_public_requests
+                    )
+                )
+                if hourly_managed_content_public_requests is not None:
+                    self.set_rate_limiter(
+                        client_uuid,
+                        AsyncLimiter(hourly_managed_content_public_requests, 60 * 60),
+                        LimiterType.HOURLY_MANAGED,
+                    )
+        # except Exception:
+        #     logger.info("Cannot update daily and hourly limits for connector")
+
     async def get_log_files(self, start_from: datetime | None = None) -> SalesforceEventLogFilesResponse:
         """
         Get log files from Salesforce.
@@ -205,8 +289,9 @@ class SalesforceHttpClient(object):
 
         url = self._request_url_with_query(query)
         headers = await self._request_headers()
+        client_uuid = self.get_unique_client_key(self.client_id, self.client_secret)
 
-        async with self.session() as session:
+        async with self.session(client_uuid) as session:
             async with session.get(url, headers=headers, json={}) as response:
                 await self._handle_error_response(response)
 
@@ -252,10 +337,11 @@ class SalesforceHttpClient(object):
         headers = await self._request_headers()
         url = "{0}{1}".format(self.base_url, log_file.LogFile)
         _tmp_dir = temp_dir if temp_dir is not None else "/tmp"
+        client_uuid = self.get_unique_client_key(self.client_id, self.client_secret)
 
         logger.info("Start to process log file from Salesforce. Log file is {0}", log_file.Id)
 
-        async with self.session() as session:
+        async with self.session(client_uuid) as session:
             async with session.get(url, headers=headers) as response:
                 await self._handle_error_response(response)
 
@@ -284,7 +370,7 @@ class SalesforceHttpClient(object):
                 if save_to_file:
                     logger.info("Persist log file {0} to local file", log_file.Id)
 
-                    file_name = await save_response_to_temp_file(response, chunk_size=chunk_size, temp_dir=_tmp_dir)
+                    file_name = await save_aiohttp_response(response, chunk_size=chunk_size, temp_dir=_tmp_dir)
 
                     return None, file_name
                 else:
