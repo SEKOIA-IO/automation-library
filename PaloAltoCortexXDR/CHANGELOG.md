@@ -7,13 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-01-23 - 1.14.0
+## 2024-01-23 - 1.0.0
 
 ### Added
 
 - Add for the first time Cortex Query alerts
 
-## 2024-02-01 - 1.14.0
+## 2024-02-01 - 1.0.1
 
 ### Change
 
