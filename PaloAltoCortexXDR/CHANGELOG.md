@@ -12,3 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add for the first time Cortex Query alerts
+
+## 2024-02-01 - 1.14.0
+
+### Change
+
+- Improve the timestamp setter ( Add one seconde to the last timestamp )
