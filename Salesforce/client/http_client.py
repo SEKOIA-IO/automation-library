@@ -241,34 +241,36 @@ class SalesforceHttpClient(object):
 
         client_uuid = self.get_unique_client_key(self.client_id, self.client_secret)
 
-        # try:
-        async with (self.session(client_uuid) as session):
-            async with session.get(request_url, headers=headers, json={}) as response:
-                await self._handle_error_response(response)
+        try:
+            async with self.session(client_uuid) as session:
+                async with session.get(request_url, headers=headers, json={}) as response:
+                    await self._handle_error_response(response)
 
-                result = await response.json()
+                    result = await response.json()
 
-                daily_requests: int | None = result.get("DailyApiRequests", {}).get("Max")
-                logger.info("Found limits for DailyApiRequests {0}".format(daily_requests))
-                if daily_requests is not None:
-                    self.set_rate_limiter(client_uuid, AsyncLimiter(daily_requests, 60 * 60 * 24), LimiterType.DAILY)
+                    daily_requests: int | None = result.get("DailyApiRequests", {}).get("Max")
+                    logger.info("Found limits for DailyApiRequests {0}".format(daily_requests))
+                    if daily_requests is not None:
+                        self.set_rate_limiter(
+                            client_uuid, AsyncLimiter(daily_requests, 60 * 60 * 24), LimiterType.DAILY
+                        )
 
-                hourly_managed_content_public_requests: int | None = result.get(
-                    "HourlyManagedContentPublicRequests", {}
-                ).get("Max")
-                logger.info(
-                    "Found limits for HourlyManagedContentPublicRequests {0}".format(
-                        hourly_managed_content_public_requests
+                    hourly_managed_content_public_requests: int | None = result.get(
+                        "HourlyManagedContentPublicRequests", {}
+                    ).get("Max")
+                    logger.info(
+                        "Found limits for HourlyManagedContentPublicRequests {0}".format(
+                            hourly_managed_content_public_requests
+                        )
                     )
-                )
-                if hourly_managed_content_public_requests is not None:
-                    self.set_rate_limiter(
-                        client_uuid,
-                        AsyncLimiter(hourly_managed_content_public_requests, 60 * 60),
-                        LimiterType.HOURLY_MANAGED,
-                    )
-        # except Exception:
-        #     logger.info("Cannot update daily and hourly limits for connector")
+                    if hourly_managed_content_public_requests is not None:
+                        self.set_rate_limiter(
+                            client_uuid,
+                            AsyncLimiter(hourly_managed_content_public_requests, 60 * 60),
+                            LimiterType.HOURLY_MANAGED,
+                        )
+        except Exception:
+            logger.info("Cannot update daily and hourly limits for connector")
 
     async def get_log_files(self, start_from: datetime | None = None) -> SalesforceEventLogFilesResponse:
         """
