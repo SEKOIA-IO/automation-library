@@ -12,7 +12,7 @@ from urllib3.exceptions import HTTPError as BaseHTTPError
 
 from cortex_module.base import CortexConnector
 from cortex_module.client import ApiClient
-from cortex_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from cortex_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class CortexEDRConfiguration(DefaultConnectorConfiguration):
@@ -60,7 +60,9 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     @timestamp_cursor.setter
     def timestamp_cursor(self, time: int) -> None:
-        self._timestamp_cursor = time
+        time_to_utc = datetime.fromtimestamp(time / 1000)
+        add_one_seconde = int((time_to_utc + timedelta(seconds=1)).timestamp() * 1000)
+        self._timestamp_cursor = add_one_seconde
         with self.context as cache:
             cache["timestamp_cursor"] = self._timestamp_cursor
 
