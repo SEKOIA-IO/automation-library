@@ -60,8 +60,8 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     @timestamp_cursor.setter
     def timestamp_cursor(self, time: int) -> None:
-        time_to_utc = datetime.fromtimestamp(time/ 1000)
-        add_one_seconde = int((time_to_utc + timedelta(seconds=1)).timestamp()*1000)
+        time_to_utc = datetime.fromtimestamp(time / 1000)
+        add_one_seconde = int((time_to_utc + timedelta(seconds=1)).timestamp() * 1000)
         self._timestamp_cursor = add_one_seconde
         with self.context as cache:
             cache["timestamp_cursor"] = self._timestamp_cursor
