@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2023-12-20 - 1.49.1
+
+### Fixed
+
+- Declare pagination_limit and rate_limit parameters in the trigger configuration
+
 ## 2023-12-18 - 1.49
 
 ### Fixed
