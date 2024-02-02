@@ -20,6 +20,7 @@ from utils.file_utils import csv_file_as_rows, delete_file
 
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     """SalesforceConnector configuration."""
+
     frequency: int = 600
 
 
