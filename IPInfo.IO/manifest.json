@@ -1,0 +1,24 @@
+{
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Arguments",
+        "type": "object",
+        "properties": {
+            "api_token": {
+                "description": "ipinfo.io token",
+                "type": "string"
+            }
+        },
+        "required": [
+            "api_token"
+        ],
+        "secrets": [
+            "api_token"
+        ]
+    },
+    "description": "[IPINFO.IO](https://ipinfo.io//) is a database that gives access to daily updates for IP to country and IP to ASN",
+    "name": "IPInfo.IO",
+    "uuid": "92d8bb47-7c51-445d-81de-ae04edbb6f0a",
+    "slug": "ipinfo.io",
+    "version": "0.1"
+}

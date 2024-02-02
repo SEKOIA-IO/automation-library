@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "ipinfo-io"
+version = "0.1.0"
+authors = []
+description = ""
+readme = "README.md"
+packages = [{include = "ipinfo"}]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.11.0"
+iso3166 = "^2.1.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+pytest-mock = "^3.12.0"
+pytest-cov = "^4.1.0"
+requests-mock = "^1.11.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
