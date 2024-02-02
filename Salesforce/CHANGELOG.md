@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2024-02-02 - 1.5.2
+
+#### Fixed
+
+- Fix on the configuration option for frequency
+
 ### 2024-02-02 - 1.5.1
 
 #### Added
