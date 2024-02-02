@@ -173,7 +173,7 @@ class SalesforceConnector(AsyncConnector):
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
                     # If no records were fetched
-                    if len(mesage_id) == 0:
+                    if len(message_ids) == 0:
                         # compute the remaining sleeping time. If greater than 0, sleep
                         delta_sleep = self.configuration.frequency - batch_duration
                         if delta_sleep > 0:
