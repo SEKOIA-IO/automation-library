@@ -117,14 +117,13 @@ class TriggerFetchIPInfoDatabase(Trigger):
             yield list(location_chunk.values()), chunk_offset
 
     def _get_observable_for_asn(
-        self, asn_cache: dict, asn_number: int, asn_name: str, tags: list
+        self, asn_cache: dict, asn_number: int, asn_name: str
     ) -> dict:
         asn_cache[asn_number] = {
             "type": "autonomous-system",
             "id": f"autonomous-system--{str(uuid.uuid4())}",
             "number": asn_number,
             "name": asn_name,
-            "x_inthreat_tags": tags.copy(),
             "x_inthreat_sources_refs": [self.identity["id"]],
         }
         return asn_cache[asn_number]
@@ -182,7 +181,7 @@ class TriggerFetchIPInfoDatabase(Trigger):
             autonomous_system = asn_cache[asn_number]
         else:
             autonomous_system = self._get_observable_for_asn(
-                asn_cache, asn_number, asn_name, tags
+                asn_cache, asn_number, asn_name
             )
 
         # yield observables for IP segments

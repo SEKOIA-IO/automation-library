@@ -71,13 +71,6 @@ def test_parse_db_rows_ipv4(trigger, mocked_uuid):
                 "x_inthreat_sources_refs": [
                     "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
                 ],
-                "x_inthreat_tags": [
-                    {
-                        "name": "country:CA",
-                        "valid_from": "2024-01-30T09:04:38Z",
-                        "valid_until": "2024-01-30T09:04:38Z",
-                    }
-                ],
             },
             {
                 "id": "observable-relationship--00000000-0000-0000-0000-000000000000",
@@ -129,13 +122,6 @@ def test_parse_db_rows_ipv4(trigger, mocked_uuid):
                 "type": "autonomous-system",
                 "x_inthreat_sources_refs": [
                     "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
-                ],
-                "x_inthreat_tags": [
-                    {
-                        "name": "country:CZ",
-                        "valid_from": "2024-01-30T09:11:34Z",
-                        "valid_until": "2024-01-30T09:11:34Z",
-                    }
                 ],
             },
             {
