@@ -2,6 +2,7 @@ import time
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from typing import Any, Optional
 
 import orjson
 from pydantic import Field
@@ -37,13 +38,13 @@ class SecurityEventsConnector(Connector):
     module: WithSecureModule
     configuration: SecurityEventsConnectorConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.from_date = self.most_recent_date_seen
 
     @property
-    def most_recent_date_seen(self):
+    def most_recent_date_seen(self) -> datetime:
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
@@ -58,7 +59,7 @@ class SecurityEventsConnector(Connector):
             return most_recent_date_seen
 
     @cached_property
-    def client(self):
+    def client(self) -> ApiClient:
         return ApiClient(
             client_id=self.module.configuration.client_id,
             secret=self.module.configuration.secret,
@@ -67,12 +68,12 @@ class SecurityEventsConnector(Connector):
             log_cb=self.log,
         )
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch all the events that occurred after the specified from date
         """
         # set parameters
-        params = {
+        params: dict[str, str | bool | int | None] = {
             "persistenceTimestampStart": from_date.isoformat(),
             "exclusiveStart": True,
             "limit": API_FETCH_EVENTS_PAGE_SIZE,
@@ -116,7 +117,7 @@ class SecurityEventsConnector(Connector):
             except Exception as any_exception:
                 raise FetchEventsException(human_readable_api_exception(any_exception))
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         most_recent_date_seen = self.from_date
 
         try:
@@ -146,7 +147,7 @@ class SecurityEventsConnector(Connector):
         current_lag = now - most_recent_date_seen
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
 
-    def next_batch(self):
+    def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time.time()
 
@@ -175,7 +176,7 @@ class SecurityEventsConnector(Connector):
             logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
             time.sleep(delta_sleep)
 
-    def run(self):
+    def run(self) -> None:
         self.log(message="Start fetching WithSecure security events", level="info")
 
         while self.running:

@@ -1,4 +1,5 @@
 from threading import Event
+from typing import Any
 
 from pydantic import BaseModel
 from sekoia_automation.action import Action
@@ -24,7 +25,7 @@ class ActionResults(BaseModel):
 class ListDevicesAction(Action):
     results_model = ActionResults
 
-    def run(self, arguments: ActionArguments):
+    def run(self, arguments: ActionArguments) -> ActionResults:
         # set request params
         params = {}
         if arguments.organization_id:
@@ -60,5 +61,5 @@ class ListDevicesAction(Action):
 
         return ActionResults(devices=devices)
 
-    def build_device_details(self, device):
+    def build_device_details(self, device: dict[str, Any]) -> Device:
         return Device(id=device["id"], type=device["type"], name=device["name"])

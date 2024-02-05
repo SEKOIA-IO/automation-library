@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta, timezone
 import json
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from signal import SIGINT
 from threading import Thread
 from unittest.mock import MagicMock

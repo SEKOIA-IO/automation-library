@@ -9,7 +9,7 @@ class ActionArguments(BaseModel):
 
 
 class IsolateDeviceFromNetworkAction(DeviceOperationAction):
-    def run(self, arguments: ActionArguments):
+    def run(self, arguments: ActionArguments) -> None:
         parameters = {}
         if arguments.message:
             parameters["message"] = arguments.message

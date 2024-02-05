@@ -10,7 +10,7 @@ class ActionArguments(BaseModel):
 
 
 class UpdateStatusIncident(IncidentOperationAction):
-    def run(self, arguments: ActionArguments):
+    def run(self, arguments: ActionArguments) -> None:
         parameters = {}
         parameters["status"] = arguments.status
         if arguments.resolution:

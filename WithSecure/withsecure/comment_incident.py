@@ -9,7 +9,7 @@ class ActionArguments(BaseModel):
 
 
 class CommentIncident(IncidentOperationAction):
-    def run(self, arguments: ActionArguments):
+    def run(self, arguments: ActionArguments) -> None:
         parameters = {}
         parameters["comment"] = arguments.comment
 
