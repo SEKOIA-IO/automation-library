@@ -66,8 +66,6 @@ addopts = '''
   --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=5
-  --numprocesses=auto
-  --asyncio-mode=auto
 '''
 
 [tool.poe.tasks.lint]
