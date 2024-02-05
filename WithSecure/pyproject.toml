@@ -76,9 +76,3 @@ sequence = [
     { cmd = "poetry run mypy ." },
 ]
 help = "Make code linting and formatting."
-
-[tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
