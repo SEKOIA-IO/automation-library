@@ -150,7 +150,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                                     latest_date = line_date_time
 
                                 data_to_push.append(line_as_dict)
-                                data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
+                                # data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
                                 if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
                                     logger.info("Pushing {0} records to intake".format(len(data_to_push)))
                                     result.extend(
