@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-07 - 1.0.1
+
+### Fix
+
+- Remove group by before push data to intake
+
 ## 2024-01-29 - 1.0.0
 
 ### Added
