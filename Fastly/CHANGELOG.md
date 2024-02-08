@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-01-10 - 1.1.0
+## 2024-02-08 - 0.1.1
+
+### Changed
+
+- Add beta flag to the connector
+- Update the description and the name of the connector
+
+## 2024-01-10 - 0.1.0
 
 ### Added
 
