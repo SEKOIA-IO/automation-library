@@ -89,7 +89,7 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                     processing_end = time.time()
                     for message_timestamp in messages_timestamp:
                         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
-                            processing_end - message_timestamp
+                            processing_end - (message_timestamp / 1000)
                         )
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
