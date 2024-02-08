@@ -88,6 +88,9 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             if requests_limit is not None and int(requests_limit) > 0:
                 cls._rate_limiter = AsyncLimiter(int(requests_limit), 1)
 
+            if requests_limit is None:
+                cls._rate_limiter = AsyncLimiter(1, 1)
+
         return cls._rate_limiter
 
     @classmethod
