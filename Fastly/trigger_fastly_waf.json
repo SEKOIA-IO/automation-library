@@ -1,7 +1,7 @@
 {
-  "description": "Get last events from Fastly WAF",
+  "description": "Get last alerts from Fastly WAF",
   "docker_parameters": "fastly_waf",
-  "name": "Fetch new events from Fastly WAF",
+  "name": "Fetch new alerts from Fastly WAF",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -49,7 +49,7 @@
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {},
-    "title": "The events"
+    "title": "The alerts"
   },
   "uuid": "46dcb5cc-d238-4449-89e7-322178e35b16"
 }
