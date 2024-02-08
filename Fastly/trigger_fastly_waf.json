@@ -1,7 +1,7 @@
 {
   "description": "Get last alerts from Fastly WAF",
   "docker_parameters": "fastly_waf",
-  "name": "Fetch new alerts from Fastly WAF",
+  "name": "Fetch new alerts from Fastly WAF [BETA]",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
