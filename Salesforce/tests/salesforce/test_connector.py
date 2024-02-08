@@ -10,9 +10,8 @@ from aioresponses import aioresponses
 from sekoia_automation import constants
 
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
-from salesforce import SalesforceModule
+from salesforce import SalesforceModule, SalesforceModuleConfig
 from salesforce.connector import SalesforceConnector, SalesforceConnectorConfig
-from salesforce.models import SalesforceModuleConfig
 
 
 @pytest.fixture
@@ -143,7 +142,7 @@ async def test_salesforce_connector_last_event_date(connector):
 
 
 @pytest.mark.asyncio
-async def test_salesforce_connector_salesforce_client(connector):
+async def test_salesforce_connector_salesforce_client(connector, salesforce_url, http_token):
     """
     Test salesforce client initialization.
 
@@ -151,9 +150,27 @@ async def test_salesforce_connector_salesforce_client(connector):
         connector: SalesforceConnector
     """
     assert connector._salesforce_client is None
+    token_data = http_token.dict()
+    token_data["id"] = token_data["tid"]
 
-    client1 = connector.salesforce_client
-    client2 = connector.salesforce_client
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            status=200,
+            payload=token_data,
+        )
+
+        mocked_responses.get(
+            "{0}/services/data/v60.0/limits/".format(salesforce_url),
+            status=200,
+            payload={
+                "DailyApiRequests": {"Max": 1000},
+                "HourlyManagedContentPublicRequests": {"Max": 1000},
+            },
+        )
+
+        client1 = await connector.get_salesforce_client()
+        client2 = await connector.get_salesforce_client()
 
     assert client1 is client2 is connector._salesforce_client
 
@@ -253,8 +270,19 @@ async def test_salesforce_connector_get_salesforce_events(
             payload=token_data,
         )
 
-        query = connector.salesforce_client._log_files_query(connector.last_event_date)
-        get_log_files_url = connector.salesforce_client._request_url_with_query(query)
+        mocked_responses.get(
+            "{0}/services/data/v60.0/limits/".format(salesforce_url),
+            status=200,
+            payload={
+                "DailyApiRequests": {"Max": 1000},
+                "HourlyManagedContentPublicRequests": {"Max": 1000},
+            },
+        )
+
+        client = await connector.get_salesforce_client()
+
+        query = client._log_files_query(connector.last_event_date)
+        get_log_files_url = client._request_url_with_query(query)
 
         log_file_response_dict = log_files_response_success.dict()
         log_file_response_dict["records"] = [token_data]
@@ -318,8 +346,97 @@ async def test_salesforce_connector_get_salesforce_events_1(
             payload=token_data,
         )
 
-        query = connector.salesforce_client._log_files_query(connector.last_event_date)
-        get_log_files_url = connector.salesforce_client._request_url_with_query(query)
+        mocked_responses.get(
+            "{0}/services/data/v60.0/limits/".format(salesforce_url),
+            status=200,
+            payload={
+                "DailyApiRequests": {"Max": 1000},
+            },
+        )
+
+        client = await connector.get_salesforce_client()
+
+        query = client._log_files_query(connector.last_event_date)
+        get_log_files_url = client._request_url_with_query(query)
+
+        log_file_response_dict = log_files_response_success.dict()
+        log_file_response_dict["records"] = [token_data]
+
+        mocked_responses.get(
+            get_log_files_url,
+            payload=log_files_response_success.dict(),
+        )
+
+        # We try to return too large file to process it memory at this place, putting Content-Length to 1GB
+        mocked_responses.get(
+            url="{0}{1}".format(salesforce_url, event_log_file.LogFile),
+            status=200,
+            body=csv_content.encode("utf-8"),
+            headers={"Content-Length": "{0}".format(1024 * 1024 * 1024)},
+        )
+
+        result = await connector.get_salesforce_events()
+
+        expected_result = []
+        [expected_result.extend(pushed_events_ids) for _ in range(1, len(csv_content.splitlines()))]
+
+        assert result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_get_salesforce_events_2(
+    connector: SalesforceConnector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
+):
+    """
+    Test salesforce connector get salesforce events.
+
+    Args:
+        connector: SalesforceConnector
+        session_faker: Faker
+        http_token: HttpToken
+        csv_content: str
+        salesforce_url: str
+    """
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    log_file_date = current_date - timedelta(days=1)
+
+    # Try to put last event date higher to be 1 day ahead of the log file date
+    with connector.context as cache:
+        cache["last_event_date"] = (current_date + timedelta(days=1)).isoformat()
+
+    event_log_file = EventLogFile(
+        Id=session_faker.pystr(),
+        EventType=session_faker.pystr(),
+        LogFile=session_faker.pystr(),
+        LogDate=log_file_date.isoformat(),
+        CreatedDate=log_file_date.isoformat(),
+        LogFileLength=1024 * 1024 * 1024,
+    )
+
+    log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
+
+    token_data = http_token.dict()
+    token_data["id"] = token_data["tid"]
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            status=200,
+            payload=token_data,
+        )
+
+        mocked_responses.get(
+            "{0}/services/data/v60.0/limits/".format(salesforce_url),
+            status=200,
+            payload={
+                "HourlyManagedContentPublicRequests": {"Max": 1000},
+            },
+        )
+
+        client = await connector.get_salesforce_client()
+
+        query = client._log_files_query(connector.last_event_date)
+        get_log_files_url = client._request_url_with_query(query)
 
         log_file_response_dict = log_files_response_success.dict()
         log_file_response_dict["records"] = [token_data]

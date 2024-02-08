@@ -73,7 +73,7 @@ def http_client_session():
     Yields:
         MagicMock:
     """
-    with patch.object(SalesforceHttpClient, "_session") as session_mock:
+    with patch.object(SalesforceHttpClient, "_sessions") as session_mock:
         yield session_mock
 
 
