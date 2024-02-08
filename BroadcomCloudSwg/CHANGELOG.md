@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-08 - 1.0.2
+
+### Fix
+
+- Update rate limiter settings
+- Handle empty zip file 
+
 ## 2024-02-07 - 1.0.1
 
 ### Fix
