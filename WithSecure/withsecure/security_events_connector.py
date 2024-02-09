@@ -75,7 +75,7 @@ class SecurityEventsConnector(Connector):
         # Create body of request
         # More information is here:
         # https://connect.withsecure.com/api-reference/elements#post-/security-events/v1/security-events
-        data: dict[str, str | bool | int | None] = {
+        data: dict[str, Any] = {
             "persistenceTimestampStart": from_date.isoformat(),
             "exclusiveStart": True,
             "limit": API_FETCH_EVENTS_PAGE_SIZE,
@@ -84,10 +84,7 @@ class SecurityEventsConnector(Connector):
             "organizationId": self.configuration.organization_id,
         }
 
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+        headers = {"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
 
         url = API_SECURITY_EVENTS_URL
 
