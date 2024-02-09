@@ -108,8 +108,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         rate_limiter = cls.rate_limiter()
 
         if rate_limiter:
-            async with cls.get_rate_limiter():
-                logger.info("Initialized session with rate limiter : {0} r/s".format(cls._rate_limiter.max_rate))
+            async with rate_limiter:
+                logger.info("Initialized session with rate limiter : {0} r/s".format(rate_limiter.max_rate))
                 yield cls._session
         else:
             logger.info("Initialized session with empty rate limiter.")
