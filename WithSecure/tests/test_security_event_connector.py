@@ -178,7 +178,7 @@ def test_next_batch_is_empty(trigger):
 
 
 def test_next_batch_with_anchor(trigger, message1, message2):
-    def custom_matcher(request: requests.Request):
+    def custom_matcher(request: requests.PreparedRequest):
         if request.url == API_AUTHENTICATION_URL:
             resp = requests.Response()
             resp._content = json.dumps(
@@ -191,17 +191,17 @@ def test_next_batch_with_anchor(trigger, message1, message2):
             resp.status_code = 200
 
             return resp
-        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "anchor" not in request.url:
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "anchor" not in request.body:
             resp = requests.Response()
             resp._content = json.dumps({"items": [message1], "nextAnchor": "next-anchor1"}).encode()
             resp.status_code = 200
             return resp
-        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor1" in request.url:
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor1" in request.body:
             resp = requests.Response()
             resp._content = json.dumps({"items": [message2], "nextAnchor": "next-anchor2"}).encode()
             resp.status_code = 200
             return resp
-        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor2" in request.url:
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor2" in request.body:
             resp = requests.Response()
             resp.status_code = 409
             return resp

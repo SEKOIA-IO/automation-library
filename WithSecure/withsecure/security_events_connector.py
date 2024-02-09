@@ -72,21 +72,27 @@ class SecurityEventsConnector(Connector):
         """
         Fetch all the events that occurred after the specified from date
         """
-        # set parameters
-        params: dict[str, str | bool | int | None] = {
+        # Create body of request
+        # More information is here:
+        # https://connect.withsecure.com/api-reference/elements#post-/security-events/v1/security-events
+        data: dict[str, str | bool | int | None] = {
             "persistenceTimestampStart": from_date.isoformat(),
             "exclusiveStart": True,
             "limit": API_FETCH_EVENTS_PAGE_SIZE,
             "order": "asc",
+            "engineGroup": ["epp", "edr", "ecp"],
             "organizationId": self.configuration.organization_id,
         }
 
-        # get the first page of events
-        headers = {"Accept": "application/json"}
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
         url = API_SECURITY_EVENTS_URL
 
         try:
-            response = self.client.post(url, timeout=API_TIMEOUT, params=params, headers=headers)
+            response = self.client.post(url, data=data, timeout=API_TIMEOUT, headers=headers)
             response.raise_for_status()
             payload = response.json()
         except Exception as any_exception:
@@ -109,9 +115,9 @@ class SecurityEventsConnector(Connector):
             anchor = payload.get("nextAnchor")
             if not anchor:
                 return
-            params["anchor"] = anchor
+            data["anchor"] = anchor
             try:
-                response = self.client.post(url, timeout=API_TIMEOUT, params=params, headers=headers)
+                response = self.client.post(url, data=data, timeout=API_TIMEOUT, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
             except Exception as any_exception:
