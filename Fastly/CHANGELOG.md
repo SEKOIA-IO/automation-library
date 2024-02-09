@@ -7,21 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-02-08 - 1.0.2
+## 2024-02-08 - 0.1.1
 
-### Fix
+### Changed
 
-- Update rate limiter settings
-- Handle empty zip file 
+- Add beta flag to the connector
+- Update the description and the name of the connector
 
-## 2024-02-07 - 1.0.1
-
-### Fix
-
-- Remove group by before push data to intake
-
-## 2024-01-29 - 1.0.0
+## 2024-01-10 - 0.1.0
 
 ### Added
 
-- The initial version of the module
+- initial version of the connector

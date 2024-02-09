@@ -1,12 +1,16 @@
 """Contains connector, configuration and module."""
 
 import asyncio
+import os
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional
+from zipfile import BadZipFile
 
 import aiofiles
 import orjson
+from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
@@ -72,7 +76,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             return last_event_date
 
     @classmethod
-    def rate_limiter(cls) -> AsyncLimiter:  # pragma: no cover
+    def rate_limiter(cls) -> AsyncLimiter | None:  # pragma: no cover
         """
         Get or initialize rate limiter.
 
@@ -80,9 +84,34 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             AsyncLimiter:
         """
         if cls._rate_limiter is None:
-            cls._rate_limiter = AsyncLimiter(1, 1)
+            requests_limit = os.getenv("REQUESTS_PER_SECOND_TO_INTAKE")
+            if requests_limit is not None and int(requests_limit) > 0:
+                cls._rate_limiter = AsyncLimiter(int(requests_limit), 1)
+
+            if requests_limit is None:
+                cls._rate_limiter = AsyncLimiter(1, 1)
 
         return cls._rate_limiter
+
+    @classmethod
+    @asynccontextmanager
+    async def session(cls) -> AsyncGenerator[ClientSession, None]:  # pragma: no cover
+        """
+        Get or initialize client session if it is not initialized yet.
+
+        Returns:
+            ClientSession:
+        """
+        if cls._session is None:
+            cls._session = ClientSession()
+
+        rate_limiter = cls.rate_limiter()
+
+        if rate_limiter:
+            async with cls.get_rate_limiter():
+                yield cls._session
+        else:
+            yield cls._session
 
     @property
     def broadcom_cloud_swg_client(self) -> BroadcomCloudSwgClient:
@@ -127,7 +156,12 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 token=token,
             )
 
-            temp_directory, unzipped_files = await file_utils.unzip(file_name)
+            try:
+                temp_directory, unzipped_files = await file_utils.unzip(file_name)
+            except BadZipFile:  # pragma: no cover
+                logger.info("Empty zip file. No data to process")
+
+                return [], start_date
 
             try:
                 for file_name in unzipped_files:
@@ -150,7 +184,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                                     latest_date = line_date_time
 
                                 data_to_push.append(line_as_dict)
-                                data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
+                                # data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
                                 if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
                                     logger.info("Pushing {0} records to intake".format(len(data_to_push)))
                                     result.extend(
@@ -178,7 +212,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             await file_utils.cleanup_resources([temp_directory], [file_name, *unzipped_files])
 
         result_latest_date = latest_date or end_date
-        with self.context as cache:
+        with self.context as cache:  # pragma: no cover
             logger.info(
                 "New last event date now is {last_event_date}",
                 last_event_date=result_latest_date.isoformat(),

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-08 - 1.17.2
+
+### Fixed
+
+- Fix the shutdown method on the PubSub Connector
+
 ## 2023-11-22 - 1.16
 
 ### Changed
