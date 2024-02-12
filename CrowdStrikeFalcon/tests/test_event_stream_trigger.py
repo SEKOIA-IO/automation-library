@@ -94,8 +94,6 @@ def test_authentication_exceed_ratelimit(trigger):
 
 
 def test_refresh_stream(trigger):
-    reader = EventStreamReader(trigger, "", {}, "sio-00000")
-
     refresh_url = "https://my.fake.sekoia/oauth2/token"
 
     with requests_mock.Mocker() as mock:
@@ -112,6 +110,12 @@ def test_refresh_stream(trigger):
                 },
                 {"json": {}},
             ],
+        )
+        reader = EventStreamReader(
+            trigger,
+            "",
+            {"refreshActiveSessionInterval": "50", "refreshActiveSessionURL": "https://my.fake.sekoia/oauth2/token"},
+            "sio-00000",
         )
 
         reader.refresh_stream(refresh_url)
