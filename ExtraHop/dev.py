@@ -43,7 +43,7 @@ if __name__ == "__main__":
         client_secret = args.client_secret
 
     module = ExtraHopModule()
-    module.configuration = DumbModuleConfiguration()
+    module.configuration = DumbModuleConfiguration(client_id=args.client_id, client_secret=args.client_secret)
 
     class DumbConnectorConfiguration(ExtraHopReveal360Configuration):
         frequency: int = 10
