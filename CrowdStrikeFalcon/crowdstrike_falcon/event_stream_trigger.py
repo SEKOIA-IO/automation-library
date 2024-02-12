@@ -216,7 +216,9 @@ class EventStreamReader(threading.Thread):
         Read the events transported by the specified stream.
         """
 
-        self.refresh_timer = RepeatedTimer(self.refresh_interval, self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"]))
+        self.refresh_timer = RepeatedTimer(
+            self.refresh_interval, self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
+        )
         self.refresh_timer.start()
         self.log(
             message=f"Reading event stream {self.data_feed_url} starting at offset {self.offset}",
@@ -240,7 +242,6 @@ class EventStreamReader(threading.Thread):
                     raise StreamNotAvailable(http_response)
 
                 while self.running:
-
                     for line in http_response.iter_lines():
                         if line.strip():
                             try:

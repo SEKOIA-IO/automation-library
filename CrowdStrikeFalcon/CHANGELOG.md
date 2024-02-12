@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-12 - 1.17.2
+
+### Fixed
+
+- Add timer thread to EventStreamReader
+
 ## 2024-01-19 - 1.16.1
 
 ### Fixed

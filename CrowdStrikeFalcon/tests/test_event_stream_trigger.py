@@ -322,7 +322,7 @@ def test_read_stream_consider_offset(trigger):
     )
     reader.stop()
     reader.run()
-    
+
     reader.stop_refresh()
 
     assert client_mock.get.call_args.kwargs.get("url") == (
