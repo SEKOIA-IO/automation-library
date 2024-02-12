@@ -27,7 +27,7 @@ def connector(symphony_storage):
     connector.module.configuration = {}
     connector.configuration = {
         "intake_key": "baz",
-        "ws_url": "https://web.socket",
+        "ws_url": "wss://web.socket",
         "ws_key": "secret",
     }
     connector.log = Mock()

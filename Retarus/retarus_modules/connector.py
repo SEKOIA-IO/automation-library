@@ -16,7 +16,7 @@ class RetarusConnector(Connector):
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
-        
+
         # create the events queue
         self.events_queue: queue.Queue = queue.Queue(maxsize=int(os.environ.get("QUEUE_SIZE", 10000)))
 
