@@ -261,6 +261,7 @@ def test_read_stream_fails_on_stream_error(trigger):
     with pytest.raises(Exception):  # noqa: B017
         reader.run()
 
+    reader.stop_refresh()
     assert trigger.events_queue.qsize() == 0
 
 
@@ -321,6 +322,8 @@ def test_read_stream_consider_offset(trigger):
     )
     reader.stop()
     reader.run()
+    
+    reader.stop_refresh()
 
     assert client_mock.get.call_args.kwargs.get("url") == (
         "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/0?appId=sio-00000&offset=100"
@@ -740,6 +743,12 @@ def test_read_stream_with_verticles(trigger):
                 "meta": {},
                 "resources": [verticle3],
             },
+        )
+
+        mock.register_uri(
+            "POST",
+            f"https://my.fake.sekoia/sensors/entities/datafeed-actions/v1/0?appId=sio-00000&action_name=refresh_active_stream_session",
+            json={},
         )
 
         reader = EventStreamReader(

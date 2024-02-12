@@ -11,6 +11,7 @@ from requests.auth import AuthBase
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import Connector
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.timer import RepeatedTimer
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
@@ -161,8 +162,14 @@ class EventStreamReader(threading.Thread):
         self.app_id = app_id
         self._stop_event = threading.Event()
         self.events_queue = connector.events_queue
+        self.refresh_timer = None
+
+    def stop_refresh(self):
+        self.refresh_timer.stop()
 
     def stop(self):
+        if self.refresh_timer:
+            self.stop_refresh()
         self._stop_event.set()
 
     @property
@@ -209,7 +216,8 @@ class EventStreamReader(threading.Thread):
         Read the events transported by the specified stream.
         """
 
-        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
+        self.refresh_timer = RepeatedTimer(self.refresh_interval, self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"]))
+        self.refresh_timer.start()
         self.log(
             message=f"Reading event stream {self.data_feed_url} starting at offset {self.offset}",
             level="info",
@@ -232,9 +240,6 @@ class EventStreamReader(threading.Thread):
                     raise StreamNotAvailable(http_response)
 
                 while self.running:
-                    if datetime.utcnow() >= next_refresh_at:
-                        self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                     for line in http_response.iter_lines():
                         if line.strip():
@@ -257,11 +262,6 @@ class EventStreamReader(threading.Thread):
                                 )
                                 self.log_exception(any_exception)
                                 raise any_exception
-
-                        # we refresh the session every 25min (by default)
-                        if datetime.utcnow() >= next_refresh_at:
-                            self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                            next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
 
                         # we exit the loop if the worker is stopping
                         if not self.running:
