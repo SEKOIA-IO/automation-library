@@ -22,8 +22,8 @@ class ApiClient(requests.Session):
 class LaceworkApiClient(ApiClient):
     auth: LaceworkAuthentication
 
-    def __init__(self, auth: LaceworkAuthentication, nb_retries: int = 5, ratelimit_per_hour: int = 480):
-        super().__init__(auth=auth, nb_retries=nb_retries, ratelimit_per_hour=ratelimit_per_hour)
+    def __init__(self, base_url: str, auth: LaceworkAuthentication, nb_retries: int = 5, ratelimit_per_hour: int = 480):
+        super().__init__(base_url=base_url, auth=auth, nb_retries=nb_retries, ratelimit_per_hour=ratelimit_per_hour)
 
     def list_alerts(self, parameters: dict | None = None) -> requests.Response:
         return self.get(
