@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-13 - 1.0.4
+
+### Changed
+
+- Change event_lags metrics from Histogram to Gauge
+
 ## 2024-02-09 - 1.0.3
 
 ### Added

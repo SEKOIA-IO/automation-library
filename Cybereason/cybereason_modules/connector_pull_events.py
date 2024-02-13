@@ -320,7 +320,7 @@ class CybereasonEventConnector(Connector):
         # compute the lag
         now = int(time.time())
         current_lag = now - int(most_recent_date_seen / 1000)
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(current_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def next_batch(self):
         """

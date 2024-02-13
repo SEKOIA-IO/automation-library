@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Histogram, Gauge
 
 # Declare common prometheus metrics
 prom_namespace = "symphony_module_common"
@@ -17,7 +17,7 @@ FORWARD_EVENTS_DURATION = Histogram(
     labelnames=["intake_key"],
 )
 
-EVENTS_LAG = Histogram(
+EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,

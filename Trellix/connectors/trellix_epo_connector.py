@@ -118,7 +118,7 @@ class TrellixEpoConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
                             processing_start - previous_processing_end
                         )
 

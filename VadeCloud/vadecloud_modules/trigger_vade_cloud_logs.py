@@ -174,7 +174,7 @@ class VadeCloudConsumer(Thread):
 
                 if last_event_timestamp:  # pragma: no cover
                     event_lag = int(time.time()) - last_event_timestamp // 1000
-                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
+                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
                         event_lag
                     )
 

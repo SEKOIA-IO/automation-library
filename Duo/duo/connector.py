@@ -146,9 +146,9 @@ class DuoLogsConsumer(Thread):
 
                 current_timestamp = int(time.time())
                 events_lag = current_timestamp - most_recent_timestamp
-                EVENTS_LAG.labels(
-                    intake_key=self.connector.configuration.intake_key, type=self._log_type.value
-                ).observe(events_lag)
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self._log_type.value).set(
+                    events_lag
+                )
 
             # Add `eventtype` field
             for event in events:
