@@ -25,7 +25,7 @@
             "client_secret"
         ]
     },
-    "description": "",
+    "description": "ExtraHop is a leading provider of network detection and response (NDR) solutions.",
     "name": "ExtraHop",
     "slug": "extrahop",
     "uuid": "7fbcf1fc-55d3-4fcd-9907-e491e234e9c0",

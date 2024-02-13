@@ -24,10 +24,7 @@ class ExtraHopReveal360Connector(Connector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-
         self.from_date = self.get_last_timestamp()
-
-        self.__dev_processed = set()
 
     @cached_property
     def client(self) -> ApiClient:
@@ -149,5 +146,11 @@ class ExtraHopReveal360Connector(Connector):
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
     def run(self) -> None:
+        self.log(message="Start fetching ExtraHop Reveal 360 alerts", level="info")
+
         while self.running:
-            self.next_batch()
+            try:
+                self.next_batch()
+
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")
