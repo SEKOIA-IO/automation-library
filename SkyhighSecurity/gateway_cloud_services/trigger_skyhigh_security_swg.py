@@ -107,9 +107,7 @@ class EventCollector(Thread):
             message=f"Skyhigh API took {time_elapsed} to answer our query",
             level="info",
         )
-        COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).set(
-            int(time_elapsed.total_seconds())
-        )
+        COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).set(int(time_elapsed.total_seconds()))
 
         if not response.ok:
             self.log(

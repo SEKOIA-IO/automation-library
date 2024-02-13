@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Histogram, Gauge
 
 # Declare google prometheus metrics
 prom_namespace_google = "symphony_module_google"

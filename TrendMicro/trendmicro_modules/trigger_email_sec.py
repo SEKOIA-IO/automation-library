@@ -202,7 +202,7 @@ class TrendMicroWorker(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).observe(
             batch_duration
         )
 
