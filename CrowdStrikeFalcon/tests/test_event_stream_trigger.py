@@ -94,8 +94,6 @@ def test_authentication_exceed_ratelimit(trigger):
 
 
 def test_refresh_stream(trigger):
-    reader = EventStreamReader(trigger, "", {}, "sio-00000")
-
     refresh_url = "https://my.fake.sekoia/oauth2/token"
 
     with requests_mock.Mocker() as mock:
@@ -112,6 +110,12 @@ def test_refresh_stream(trigger):
                 },
                 {"json": {}},
             ],
+        )
+        reader = EventStreamReader(
+            trigger,
+            "",
+            {"refreshActiveSessionInterval": "50", "refreshActiveSessionURL": "https://my.fake.sekoia/oauth2/token"},
+            "sio-00000",
         )
 
         reader.refresh_stream(refresh_url)
@@ -261,6 +265,7 @@ def test_read_stream_fails_on_stream_error(trigger):
     with pytest.raises(Exception):  # noqa: B017
         reader.run()
 
+    reader.stop_refresh()
     assert trigger.events_queue.qsize() == 0
 
 
@@ -321,6 +326,8 @@ def test_read_stream_consider_offset(trigger):
     )
     reader.stop()
     reader.run()
+
+    reader.stop_refresh()
 
     assert client_mock.get.call_args.kwargs.get("url") == (
         "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/0?appId=sio-00000&offset=100"
@@ -740,6 +747,12 @@ def test_read_stream_with_verticles(trigger):
                 "meta": {},
                 "resources": [verticle3],
             },
+        )
+
+        mock.register_uri(
+            "POST",
+            f"https://my.fake.sekoia/sensors/entities/datafeed-actions/v1/0?appId=sio-00000&action_name=refresh_active_stream_session",
+            json={},
         )
 
         reader = EventStreamReader(
