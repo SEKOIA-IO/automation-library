@@ -149,7 +149,7 @@ class LaceworkEventsTrigger(LaceworkConnector):
             if len(items) > 0:
                 most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
                 events_lag = int(time.time() - most_recent_timestamp_seen)
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
             for message in items:
