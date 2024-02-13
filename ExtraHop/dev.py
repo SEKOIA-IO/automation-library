@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--client_id", type=str, required=True)
     parser.add_argument("--client_secret", type=str, required=True)
     parser.add_argument("--intake_key", type=str, required=True)
+    parser.add_argument("--test", action="store_true")
 
     args = parser.parse_args()
 
@@ -46,10 +47,12 @@ if __name__ == "__main__":
     module.configuration = DumbModuleConfiguration(client_id=args.client_id, client_secret=args.client_secret)
 
     class DumbConnectorConfiguration(ExtraHopReveal360Configuration):
-        frequency: int = 10
-        chunk_size: int = 10
+        frequency: int = 60
+        chunk_size: int = 100
         intake_key = args.intake_key
-        intake_server: str = "https://intake.sekoia.io"
+
+        # https://intake.test.sekoia.io or https://intake.sekoia.io
+        intake_server: str = "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"
 
     connector_conf = DumbConnectorConfiguration()
     conn = ExtraHopReveal360Connector(module=module, data_path=Path("."))
