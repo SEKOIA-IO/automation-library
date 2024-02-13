@@ -256,11 +256,11 @@ class TrellixEdrConnector(AsyncConnector):
 
                     message_ids = message_alerts_ids + message_threats_ids
 
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").observe(
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
                         processing_end - most_recent_threat_date.timestamp()
                     )
 
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="alerts").observe(
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="alerts").set(
                         processing_end - most_recent_alert_date.timestamp()
                     )
 

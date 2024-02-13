@@ -103,7 +103,7 @@ class MessagesConsumer(Worker):
                     else:
                         now = datetime.now(timezone.utc)
                         current_lag = now - most_recent_date_seen
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
                             int(current_lag.total_seconds())
                         )
 

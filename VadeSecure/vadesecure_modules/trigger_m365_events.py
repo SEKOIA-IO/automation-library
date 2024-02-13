@@ -205,7 +205,7 @@ class M365EventsTrigger(Trigger):
                 last_message = message_batch[-1]
                 last_message_date = self._get_last_message_date([last_message])
                 events_lag = int(time.time() - last_message_date.timestamp())
-                EVENTS_LAG.labels(type=event_type).observe(events_lag)
+                EVENTS_LAG.labels(type=event_type).set(events_lag)
 
                 for emails in self._chunk_events(list(message_batch), self.configuration.chunk_size):
                     self._send_emails(

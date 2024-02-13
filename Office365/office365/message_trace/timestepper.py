@@ -39,7 +39,7 @@ class TimeStepper:
                 message=f"Current lag {int(current_lag.total_seconds())} seconds.",
                 level="info",
             )
-            EVENTS_LAG.labels(intake_key=self.trigger.configuration.intake_key).observe(
+            EVENTS_LAG.labels(intake_key=self.trigger.configuration.intake_key).set(
                 int(current_lag.total_seconds())
             )
 

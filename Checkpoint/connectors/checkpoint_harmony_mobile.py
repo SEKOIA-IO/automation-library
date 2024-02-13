@@ -137,7 +137,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
                     processing_end = time.time()
 
                     lag = processing_end - latest_event_date
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(lag)
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 

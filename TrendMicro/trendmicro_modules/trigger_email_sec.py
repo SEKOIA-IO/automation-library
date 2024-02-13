@@ -158,7 +158,7 @@ class TrendMicroWorker(Thread):
                     self.set_last_timestamp(most_recent_timestamp_seen)
 
                 events_lag = int(time.time()) - most_recent_timestamp_seen
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).observe(
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
                     events_lag
                 )
 
@@ -202,7 +202,7 @@ class TrendMicroWorker(Thread):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
 
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).observe(
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
             batch_duration
         )
 

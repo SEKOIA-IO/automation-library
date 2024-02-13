@@ -133,7 +133,7 @@ class CortexQueryEDRTrigger(CortexConnector):
         if len(events) > 0:
             most_recent_timestamp = orjson.loads(events[0]).get("detection_timestamp")
             events_lag = int(time.time() - most_recent_timestamp)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
             self.timestamp_cursor = most_recent_timestamp
 
         else:

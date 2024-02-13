@@ -385,7 +385,7 @@ class EventForwarder(threading.Thread):
                                 lag = now - (creation_time / 1000)
                                 EVENTS_LAG.labels(
                                     intake_key=self.connector.configuration.intake_key, stream=stream_root_url
-                                ).observe(lag)
+                                ).set(lag)
             except queue.Empty:
                 pass
             except Exception as error:

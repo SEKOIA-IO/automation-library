@@ -143,7 +143,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         most_recent_timestamp = _extract_timestamp(most_recent_item)
 
         events_lag = int(time.time() - most_recent_timestamp)
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
     def getting_results(self, pagination: str):
         now = datetime.now(timezone.utc)

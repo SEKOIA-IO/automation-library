@@ -236,7 +236,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     message_ids, last_event_date = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
 
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
                         processing_end - last_event_date.timestamp()
                     )
 
