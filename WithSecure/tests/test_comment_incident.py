@@ -3,8 +3,8 @@ import requests_mock
 
 from withsecure import WithSecureModule
 from withsecure.client.auth import API_AUTHENTICATION_URL
-from withsecure.constants import API_COMMENT_INCIDENT_URL
 from withsecure.comment_incident import ActionArguments, CommentIncident
+from withsecure.constants import API_COMMENT_INCIDENT_URL
 
 
 @pytest.fixture

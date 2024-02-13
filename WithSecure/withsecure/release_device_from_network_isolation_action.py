@@ -8,6 +8,6 @@ class ActionArguments(BaseModel):
 
 
 class ReleaseDeviceFromNetworkIsolationAction(DeviceOperationAction):
-    def run(self, arguments: ActionArguments):
+    def run(self, arguments: ActionArguments) -> None:
         # execute the operation
         self._execute_operation_on_device(operation_name="releaseFromNetworkIsolation", target=arguments.target)

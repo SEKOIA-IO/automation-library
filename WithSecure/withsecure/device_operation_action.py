@@ -11,7 +11,9 @@ class DeviceOperationAction(Action):
     def run(self, arguments: Any) -> Any:
         raise NotImplementedError()
 
-    def _execute_operation_on_device(self, operation_name: str, target: str, parameters: dict | None = None):
+    def _execute_operation_on_device(
+        self, operation_name: str, target: str, parameters: dict[str, Any] | None = None
+    ) -> None:
         self.log(f"Execute the operation '{operation_name}' on device '{target}'", level="debug")
 
         request_payload: dict[str, Any] = {"operation": operation_name, "targets": [target]}
