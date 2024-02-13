@@ -18,7 +18,7 @@ OUTCOMING_EVENTS = Counter(
     labelnames=["intake_key"],
 )
 
-EVENTS_LAG = Histogram(
+EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,
