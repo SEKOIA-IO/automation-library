@@ -7,8 +7,9 @@ from lacework_module.client.auth import LaceworkAuthentication
 
 
 class ApiClient(requests.Session):
-    def __init__(self, auth: AuthBase, nb_retries: int = 5, ratelimit_per_hour: int = 480):
+    def __init__(self, base_url: str, auth: AuthBase, nb_retries: int = 5, ratelimit_per_hour: int = 480):
         super().__init__()
+        self.base_url = base_url
         self.auth = auth
         adapter = LimiterAdapter(
             per_hour=ratelimit_per_hour,
