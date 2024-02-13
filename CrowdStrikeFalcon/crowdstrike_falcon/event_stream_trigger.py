@@ -162,7 +162,7 @@ class EventStreamReader(threading.Thread):
         self.app_id = app_id
         self._stop_event = threading.Event()
         self.events_queue = connector.events_queue
-        self.refresh_timer = RepeatedTimer(self.refresh_interval, self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"]))  # type: ignore
+        self.refresh_timer = RepeatedTimer(self.refresh_interval, self.refresh_stream_timer)
 
     def stop_refresh(self):
         self.refresh_timer.stop()
@@ -210,6 +210,9 @@ class EventStreamReader(threading.Thread):
         )
 
         logger.info("succesfully refreshed event stream", refresh_url=refresh_url)
+
+    def refresh_stream_timer(self):
+        return self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
 
     def run(self) -> None:
         """
