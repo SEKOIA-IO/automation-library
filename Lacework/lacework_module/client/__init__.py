@@ -27,7 +27,7 @@ class LaceworkApiClient(ApiClient):
 
     def list_alerts(self, parameters: dict | None = None) -> requests.Response:
         return self.get(
-            url=(f"https://{self.auth.__lacework_url}.lacework.net/api/v2/Alerts"),
+            url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts"),
             params=parameters,
         )
 
