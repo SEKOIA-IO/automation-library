@@ -142,7 +142,7 @@ class LaceworkEventsTrigger(Connector):
                 break
 
             if batch.get("content", {}).get("paging", {}).get("urls", {}).get("nextPage") != None:
-                has_more_messages = True,
+                has_more_messages = True
                 cursor = max(item.get("startTime") for item in self.get_next_events(cursor).data)
 
             items = batch.get("data", [])
