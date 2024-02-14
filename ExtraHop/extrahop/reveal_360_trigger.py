@@ -117,7 +117,7 @@ class ExtraHopReveal360Connector(Connector):
                         most_recent_timestamp_seen = last_event_timestamp
 
                     events_lag = int((time.time() - most_recent_timestamp_seen) / 1000.0)
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(events_lag)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
                 yield next_events
 
