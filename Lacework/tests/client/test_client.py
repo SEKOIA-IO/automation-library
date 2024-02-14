@@ -25,8 +25,8 @@ def test_list_alerts():
                     "Content-Type": "application/json"
                 },
             json={
-                    "keyId": access_key,
-                    "expiryTime": 3600
+                    "token": "foo-token",
+                    "expiresAt": datetime.utcnow() + timedelta(seconds=3600)
                 }
         )
 
