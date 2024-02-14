@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "Sekoia.io Automation Module for ExtraHop"
+version = "0.0"
+description = ""
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+orjson = "^3.7.7"
+sekoia-automation-sdk = "^1.8.1"
+requests = "^2.31.0"
+requests-ratelimiter = "^0.5.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+isort = "*"
+black = "*"
+mypy = "*"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.mypy]
+exclude = ["tests/*", "dev.py"]
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+    "dev.py"
+]
