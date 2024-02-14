@@ -8,7 +8,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
-from lacework_module.base import LaceworkConnector
+from lacework_module.base import LaceworkModule
 from lacework_module.client import LaceworkApiClient
 from lacework_module.client.auth import LaceworkAuthentication
 from lacework_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
