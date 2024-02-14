@@ -4,7 +4,7 @@ from functools import cached_property
 
 import orjson
 from requests.exceptions import HTTPError
-from sekoia_automation.connector import DefaultConnectorConfiguration
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
