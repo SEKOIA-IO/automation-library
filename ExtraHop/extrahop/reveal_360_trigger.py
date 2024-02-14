@@ -42,11 +42,12 @@ class ExtraHopReveal360Connector(Connector):
         with self.context as cache:
             most_recent_ts_seen = cache.get("last_timestamp")
 
+        one_week_ago = now - 7 * 24 * 60 * 60 * 1000
+
         # if undefined, retrieve events from the last 7 days
         if most_recent_ts_seen is None:
-            return now - 7 * 24 * 60 * 60 * 1000
+            return one_week_ago
 
-        one_week_ago = now - 7 * 24 * 60 * 60 * 1000
         if most_recent_ts_seen < one_week_ago:
             most_recent_ts_seen = one_week_ago
 
@@ -89,12 +90,6 @@ class ExtraHopReveal360Connector(Connector):
         while self.running:
             events = self.fetch_page(from_time=from_time, offset=offset)
             if not events:
-                self.log(
-                    message=f"No events to forward. Waiting {self.configuration.frequency} seconds",
-                    level="info",
-                )
-                time.sleep(self.configuration.frequency)
-
                 return
 
             yield events
@@ -123,6 +118,7 @@ class ExtraHopReveal360Connector(Connector):
 
         if most_recent_timestamp_seen > self.from_date:
             self.from_date = most_recent_timestamp_seen + 1
+            self.set_last_timestamp(last_timestamp=self.from_date)
 
     def next_batch(self) -> None:
         batch_start_time = time.time()
@@ -142,8 +138,13 @@ class ExtraHopReveal360Connector(Connector):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+
+        # compute the remaining sleeping time. If greater than 0, sleep
+        delta_sleep = self.configuration.frequency - batch_duration
+        if delta_sleep > 0:
+            self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+            time.sleep(delta_sleep)
 
     def run(self) -> None:
         self.log(message="Start fetching ExtraHop Reveal 360 alerts", level="info")
