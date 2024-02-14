@@ -20,7 +20,7 @@ class LaceworkConfiguration(DefaultConnectorConfiguration):
     chunk_size: int = 1000
 
 
-class LaceworkEventsTrigger(LaceworkConnector):
+class LaceworkEventsTrigger(Connector):
     """
     The Lacework trigger reads the next batch of messages and forward it to the playbook run.
 
@@ -29,7 +29,7 @@ class LaceworkEventsTrigger(LaceworkConnector):
     - A margin of 300sec is added to the expiration date of oauth2 token.
 
     """
-
+    module: LaceworkModule
     configuration: LaceworkConfiguration
 
     def __init__(self, *args, **kwargs):
