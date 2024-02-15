@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-13 - 1.5.3
+
+### Changed
+
+- Change event_lags metrics from Histogram to Gauge
+
+### 2024-02-02 - 1.5.2
+
+#### Fixed
+
+- Fix on the configuration option for frequency
+
+### 2024-02-02 - 1.5.1
+
+#### Added
+
+- Configuration option for frequency
+
+### 2024-01-24 - 1.4.12
+
+#### Added
+
+- Configuration option for salesforce api rate limit.
+- Correct log message when is unable to authorize with salesforce api.
+
 ### 2023-11-21 - 1.4.11
 
 #### Fixed

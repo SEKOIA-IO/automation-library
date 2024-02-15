@@ -1,4 +1,5 @@
 """Package for the Checkpoint module and connectors."""
+
 from pydantic import BaseModel, Field
 from sekoia_automation.module import Module
 

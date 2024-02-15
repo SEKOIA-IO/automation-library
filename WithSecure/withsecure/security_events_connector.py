@@ -2,6 +2,7 @@ import time
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from typing import Any, Optional
 
 import orjson
 from pydantic import Field
@@ -37,13 +38,13 @@ class SecurityEventsConnector(Connector):
     module: WithSecureModule
     configuration: SecurityEventsConnectorConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.from_date = self.most_recent_date_seen
 
     @property
-    def most_recent_date_seen(self):
+    def most_recent_date_seen(self) -> datetime:
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
@@ -58,7 +59,7 @@ class SecurityEventsConnector(Connector):
             return most_recent_date_seen
 
     @cached_property
-    def client(self):
+    def client(self) -> ApiClient:
         return ApiClient(
             client_id=self.module.configuration.client_id,
             secret=self.module.configuration.secret,
@@ -67,25 +68,28 @@ class SecurityEventsConnector(Connector):
             log_cb=self.log,
         )
 
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch all the events that occurred after the specified from date
         """
-        # set parameters
-        params = {
+        # Create body of request
+        # More information is here:
+        # https://connect.withsecure.com/api-reference/elements#post-/security-events/v1/security-events
+        data: dict[str, Any] = {
             "persistenceTimestampStart": from_date.isoformat(),
             "exclusiveStart": True,
             "limit": API_FETCH_EVENTS_PAGE_SIZE,
             "order": "asc",
+            "engineGroup": ["epp", "edr", "ecp"],
             "organizationId": self.configuration.organization_id,
         }
 
-        # get the first page of events
-        headers = {"Accept": "application/json"}
+        headers = {"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
+
         url = API_SECURITY_EVENTS_URL
 
         try:
-            response = self.client.post(url, timeout=API_TIMEOUT, params=params, headers=headers)
+            response = self.client.post(url, data=data, timeout=API_TIMEOUT, headers=headers)
             response.raise_for_status()
             payload = response.json()
         except Exception as any_exception:
@@ -108,15 +112,15 @@ class SecurityEventsConnector(Connector):
             anchor = payload.get("nextAnchor")
             if not anchor:
                 return
-            params["anchor"] = anchor
+            data["anchor"] = anchor
             try:
-                response = self.client.post(url, timeout=API_TIMEOUT, params=params, headers=headers)
+                response = self.client.post(url, data=data, timeout=API_TIMEOUT, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
             except Exception as any_exception:
                 raise FetchEventsException(human_readable_api_exception(any_exception))
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         most_recent_date_seen = self.from_date
 
         try:
@@ -144,9 +148,9 @@ class SecurityEventsConnector(Connector):
         # Compute the current lag
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
-    def next_batch(self):
+    def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time.time()
 
@@ -175,7 +179,7 @@ class SecurityEventsConnector(Connector):
             logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
             time.sleep(delta_sleep)
 
-    def run(self):
+    def run(self) -> None:
         self.log(message="Start fetching WithSecure security events", level="info")
 
         while self.running:

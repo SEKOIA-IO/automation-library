@@ -11,7 +11,12 @@ import requests_mock
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
-from crowdstrike_falcon.event_stream_trigger import EventStreamReader, EventStreamTrigger, VerticlesCollector
+from crowdstrike_falcon.event_stream_trigger import (
+    EventStreamReader,
+    EventStreamTrigger,
+    VerticlesCollector,
+    EventForwarder,
+)
 
 
 @pytest.fixture
@@ -39,12 +44,12 @@ def test_read_queue(trigger):
     trigger.events_queue.put(("fake-stream-url", '{"metadata": {"offset": 10}, "foo": "bar"}'))
 
     trigger.push_events_to_intakes = MagicMock()
-    t = threading.Thread(target=trigger.read_queue)
+    t = EventForwarder(trigger)
     t.start()
 
     time.sleep(2)
 
-    trigger.f_stop.set()
+    t.stop()
     t.join()
 
     assert len(trigger.push_events_to_intakes.call_args.kwargs["events"]) == 1
@@ -79,9 +84,16 @@ def test_get_streams(trigger):
         assert streams == {"stream": {"dataFeedURL": "stream?q=1"}}
 
 
-def test_refresh_stream(trigger):
-    reader = EventStreamReader(trigger, "", {}, "sio-00000")
+def test_authentication_exceed_ratelimit(trigger):
+    with requests_mock.Mocker() as mock, patch("crowdstrike_falcon.event_stream_trigger.time.sleep") as mock_time:
+        mock.register_uri("POST", "https://my.fake.sekoia/oauth2/token", status_code=429)
 
+        trigger.stop()
+        trigger.run()
+        mock_time.assert_called_once_with(60)
+
+
+def test_refresh_stream(trigger):
     refresh_url = "https://my.fake.sekoia/oauth2/token"
 
     with requests_mock.Mocker() as mock:
@@ -98,6 +110,12 @@ def test_refresh_stream(trigger):
                 },
                 {"json": {}},
             ],
+        )
+        reader = EventStreamReader(
+            trigger,
+            "",
+            {"refreshActiveSessionInterval": "50", "refreshActiveSessionURL": "https://my.fake.sekoia/oauth2/token"},
+            "sio-00000",
         )
 
         reader.refresh_stream(refresh_url)
@@ -155,7 +173,7 @@ def test_read_stream(trigger):
     reader.start()
 
     time.sleep(1)
-    trigger.f_stop.set()
+    reader.stop()
     reader.join()
 
     assert trigger.events_queue.qsize() > 1
@@ -212,7 +230,7 @@ def test_read_stream_call_verticles_collector(trigger):
     reader.start()
 
     time.sleep(1)
-    trigger.f_stop.set()
+    reader.stop()
     reader.join()
 
     assert trigger.events_queue.qsize() > 1
@@ -247,6 +265,7 @@ def test_read_stream_fails_on_stream_error(trigger):
     with pytest.raises(Exception):  # noqa: B017
         reader.run()
 
+    reader.stop_refresh()
     assert trigger.events_queue.qsize() == 0
 
 
@@ -270,7 +289,7 @@ def test_run(trigger, symphony_storage):
             }
         }
     )
-    trigger.f_stop.set()
+    trigger.stop()
 
     with patch("crowdstrike_falcon.event_stream_trigger.EventStreamReader"), requests_mock.Mocker() as mock:
         mock.register_uri(
@@ -300,13 +319,15 @@ def test_read_stream_consider_offset(trigger):
     }
 
     trigger.auth_token_refreshed_at = datetime.utcnow()
-    trigger.f_stop.set()
     client_mock = MagicMock()
     client_mock.get.return_value.__enter__.return_value.status_code = 200
     reader = EventStreamReader(
         trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, "sio-00000", 100, client_mock
     )
+    reader.stop()
     reader.run()
+
+    reader.stop_refresh()
 
     assert client_mock.get.call_args.kwargs.get("url") == (
         "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/0?appId=sio-00000&offset=100"
@@ -353,7 +374,7 @@ def test_read_stream_integration(symphony_storage):
 
     # wait few seconds
     time.sleep(5)
-    trigger.f_stop.set()
+    read_stream_thread.stop()
 
     assert trigger.events_queue.qsize() > 0
 
@@ -728,6 +749,12 @@ def test_read_stream_with_verticles(trigger):
             },
         )
 
+        mock.register_uri(
+            "POST",
+            f"https://my.fake.sekoia/sensors/entities/datafeed-actions/v1/0?appId=sio-00000&action_name=refresh_active_stream_session",
+            json={},
+        )
+
         reader = EventStreamReader(
             trigger,
             stream["dataFeedURL"].split("?")[0],
@@ -741,7 +768,7 @@ def test_read_stream_with_verticles(trigger):
         reader.start()
 
         time.sleep(1)
-        trigger.f_stop.set()
+        reader.stop()
         reader.join()
 
         expected_verticles = [

@@ -150,7 +150,7 @@ class ThreatVisualizerLogConsumer(Thread):
                 # compute the lag
                 now = time.time()
                 current_lag = now - self.last_ts / 1000
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).observe(int(current_lag))
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(int(current_lag))
             else:  # pragma: no cover
                 self.connector.log(
                     message="No events to forward",

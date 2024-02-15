@@ -1,4 +1,5 @@
 """Configs and wrapper to work with Azure Blob Storage."""
+
 from typing import Tuple
 
 import aiofiles

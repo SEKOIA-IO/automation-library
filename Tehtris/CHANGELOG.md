@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-13 - 1.14.2
+
+### Changed
+
+- Change event_lags metrics from Histogram to Gauge
+
+## 2024-01-19 - 1.13.1
+
+### Fixed
+
+- Add timeout to HTTP requests
+
 ## 2023-11-22 - 1.13
 
 ### Changed

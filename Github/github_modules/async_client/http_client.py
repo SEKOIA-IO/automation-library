@@ -1,4 +1,5 @@
 """Contains client to interact with Github API."""
+
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 

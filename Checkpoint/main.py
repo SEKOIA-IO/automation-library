@@ -1,4 +1,5 @@
 """Entry point for Check Point Harmony."""
+
 from connectors import CheckpointModule
 from connectors.checkpoint_harmony_mobile import CheckpointHarmonyMobileConnector
 

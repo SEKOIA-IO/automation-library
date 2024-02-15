@@ -1,4 +1,5 @@
 """Tests for CrowdStrike Telemetry connector."""
+
 import json
 from gzip import compress
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -172,9 +173,10 @@ async def test_get_crowdstrike_events(crowdstrike_connector, session_faker, push
         {"data": session_faker.sentence()},
     ]
 
-    with patch("aws.sqs.SqsWrapper.get_client") as mock_client, patch.object(
-        crowdstrike_connector.s3_wrapper, "read_key"
-    ) as mock_read_key:
+    with (
+        patch("aws.sqs.SqsWrapper.get_client") as mock_client,
+        patch.object(crowdstrike_connector.s3_wrapper, "read_key") as mock_read_key,
+    ):
         mock_sqs = MagicMock()
 
         mock_sqs.receive_message = AsyncMock()

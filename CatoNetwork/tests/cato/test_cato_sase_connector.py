@@ -1,4 +1,5 @@
 """Tests for Cato SASE connector."""
+
 from shutil import rmtree
 from tempfile import mkdtemp
 from unittest.mock import AsyncMock, MagicMock

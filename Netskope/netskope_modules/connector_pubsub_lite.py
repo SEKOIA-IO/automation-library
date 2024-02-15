@@ -137,7 +137,7 @@ class PubSubLite(AsyncConnector):
                     intake_key=self.configuration.intake_key, type=self.metric_label_type
                 ).observe(batch_duration)
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).observe(
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.metric_label_type).set(
                     self.latest_event_lag
                 )
 

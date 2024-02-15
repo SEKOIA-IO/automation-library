@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## 2024-02-13 - 1.17.3
+
+### Changed
+
+- Change event_lags metrics from Histogram to Gauge
+
+## 2024-02-12 - 1.17.2
+
+### Fixed
+
+- Add timer thread to EventStreamReader
+
+
+## 2024-01-19 - 1.16.1
+
+### Fixed
+
+- Change the way to handle graceful shutdown
+- Change the way to consume events in the queue
+
 ## 2024-01-05 - 1.15.3
 
 ### Fixed

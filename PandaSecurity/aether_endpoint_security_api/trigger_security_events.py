@@ -116,7 +116,7 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
             # compute the events lag
             last_message_timestamp = datetime.strptime(last_message_date, self.RFC3339_STRICT_FORMAT)
             events_lag = (datetime.utcnow() - last_message_timestamp).total_seconds()
-            EVENTS_LAG.labels(type=event_type_name).observe(events_lag)
+            EVENTS_LAG.labels(type=event_type_name).set(events_lag)
 
             self.log(
                 message=f"Set last_message_date for Aether '{event_type_name}' to {last_message_date}",

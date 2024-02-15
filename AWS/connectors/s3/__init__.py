@@ -1,4 +1,5 @@
 """Package for all s3 connectors impl."""
+
 from abc import ABCMeta
 from functools import cached_property
 from gzip import decompress

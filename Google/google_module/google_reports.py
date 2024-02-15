@@ -51,7 +51,6 @@ class GoogleReportsConfig(DefaultConnectorConfiguration):
 
 
 class GoogleReports(GoogleTrigger):
-
     """
     Connect to Google Reports API and return the results
 

@@ -103,7 +103,7 @@ class MessagesConsumer(Worker):
                     else:
                         now = datetime.now(timezone.utc)
                         current_lag = now - most_recent_date_seen
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
                             int(current_lag.total_seconds())
                         )
 
@@ -189,7 +189,7 @@ class PubSub(GoogleTrigger):
 
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Google Cloud PubSub connector", level="info")
-        super.stop(*args, **kwargs)
+        super().stop(*args, **kwargs)
 
     def create_workers(self, nb_workers: int, klass: type[Worker], *args, **kwargs) -> list[Worker]:
         return [klass(*args, **kwargs) for _ in range(nb_workers)]

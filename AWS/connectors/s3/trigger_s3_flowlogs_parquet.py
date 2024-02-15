@@ -1,4 +1,5 @@
 """Contains AwsS3ParquetRecordsTrigger."""
+
 import io
 import ipaddress
 from collections.abc import Sequence

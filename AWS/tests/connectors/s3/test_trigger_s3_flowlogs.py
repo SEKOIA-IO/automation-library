@@ -1,4 +1,5 @@
 """Tests related to AwsS3FlowLogsTrigger."""
+
 from pathlib import Path
 
 import pytest

@@ -1,4 +1,5 @@
 """Configurations and fixtures for the tests in this directory."""
+
 from shutil import rmtree
 from tempfile import mkdtemp
 

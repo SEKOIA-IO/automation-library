@@ -6,7 +6,7 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version="^1.8.2", extras=["all"] }
+sekoia-automation-sdk = { version="^1.11.1", extras=["all"] }
 orjson = "^3.9.10"
 azure-eventhub-checkpointstoreblob-aio = "^1.1.4"
 azure-storage-blob = "^12.19.0"
@@ -15,9 +15,10 @@ azure-identity = "^1.15.0"
 async-lru = "^2.0.4"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
+uamqp = "^1.6.6"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "*"
+pytest = "<8"
 pytest-cov = "*"
 pytest-asyncio = "*"
 pytest-xdist = "*"
@@ -86,7 +87,6 @@ addopts = '''
   --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=5
-  --numprocesses=auto
   --asyncio-mode=auto
 '''
 

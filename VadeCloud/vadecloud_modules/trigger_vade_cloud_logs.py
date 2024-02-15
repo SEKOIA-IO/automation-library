@@ -2,10 +2,11 @@ import time
 from datetime import datetime
 from functools import cached_property
 from threading import Event, Lock, Thread
-from typing import Any, Generator
+from typing import Any, Generator, Optional
 
 import orjson
 import requests
+from requests import Response
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -24,7 +25,7 @@ class VadeCloudConsumer(Thread):
         connector: "VadeCloudLogsConnector",
         name: str,
         params: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         super().__init__()
 
         self.connector = connector
@@ -32,14 +33,14 @@ class VadeCloudConsumer(Thread):
         self.name = name
         self._stop_event = Event()
 
-    def stop(self):
+    def stop(self) -> None:
         self._stop_event.set()
 
     @property
-    def running(self):
+    def running(self) -> bool:
         return not self._stop_event.is_set()
 
-    def log(self, *args, **kwargs):
+    def log(self, *args: Any, **kwargs: Optional[Any]) -> None:
         self.connector.log(*args, **kwargs)
 
     def get_last_timestamp(self) -> int:
@@ -47,7 +48,8 @@ class VadeCloudConsumer(Thread):
 
         self.connector.context_lock.acquire()
         with self.connector.context as cache:
-            most_recent_ts_seen = cache.get("last_ts")
+            most_recent_ts_seen = int(cache.get("last_ts", 0))
+
         self.connector.context_lock.release()
 
         # if undefined, retrieve events from the last 5 minutes
@@ -70,28 +72,35 @@ class VadeCloudConsumer(Thread):
         self.connector.context_lock.release()
 
     @cached_property
-    def client(self):
+    def client(self) -> ApiClient:
         try:
-            client = ApiClient(
+            return ApiClient(
                 hostname=self.connector.module.configuration.hostname,
                 login=self.connector.module.configuration.login,
                 password=self.connector.module.configuration.password,
                 ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
             )
-            return client
 
         except requests.exceptions.HTTPError as error:
-            http_error_code = error.response.status_code
+            error_response = error.response
+            if error_response is None:
+                raise ValueError("Response does not contain any valid data")
+
+            http_error_code = error_response.status_code
             if http_error_code == 404:
                 self.log(message=f"Wrong password or login", level="error")
 
+            if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
+                self.log(message=f"Invalide account type, it should be User not Admin", level="error")
+
             raise error
 
-        except TimeoutError:
+        except TimeoutError as error:
             self.log(message="Failed to authorize due to timeout", level="error")
-            raise
 
-    def request_logs_page(self, start_date: int, period: str, page: int = 0):
+            raise error
+
+    def request_logs_page(self, start_date: int, period: str, page: int = 0) -> Response:
         params = {
             "userId": self.client.account_id,
             "pageSize": self.connector.configuration.chunk_size,
@@ -105,9 +114,10 @@ class VadeCloudConsumer(Thread):
         response = self.client.post(
             f"{self.connector.module.configuration.hostname}/rest/v3.0/filteringlog/getReport", json=params, timeout=60
         )
+
         return response
 
-    def _handle_response_error(self, response: requests.Response):
+    def _handle_response_error(self, response: Response) -> None:
         if not response.ok:
             message = f"Request on Vade Cloud API to fetch `{self.name}` logs failed with status {response.status_code} - {response.reason}"
 
@@ -115,14 +125,15 @@ class VadeCloudConsumer(Thread):
                 error = response.json()
                 message = f"{message}: {error['error']}"
 
-            except Exception:
-                pass
+            except requests.exceptions.JSONDecodeError as e:  # pragma: no cover
+                self.log(message="Cannot parse not 200 response as json {0}".format(str(e)), level="debug")
 
             raise FetchEventException(message)
 
-    def iterate_through_pages(self, from_timestamp: int) -> Generator[list, None, None]:
+    def iterate_through_pages(self, from_timestamp: int) -> Generator[list[dict[str, Any]], None, None]:
         page_num = 0
-        search_period = "DAYS_07"  # long period will allow us to capture events with big time gap between them
+        # long period will allow us to capture events with big time gap between them
+        search_period = "DAYS_07"
         response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
         self._handle_response_error(response)
 
@@ -138,30 +149,38 @@ class VadeCloudConsumer(Thread):
 
             response = self.request_logs_page(start_date=from_timestamp, period=search_period, page=page_num)
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         most_recent_timestamp_seen = self.get_last_timestamp()
 
         for next_events in self.iterate_through_pages(most_recent_timestamp_seen):
             if next_events:
                 # get the greater date seen in this list of events
 
-                last_event = max(next_events, key=lambda x: x.get("date"))
-                last_event_timestamp = last_event.get("date")
+                last_event = max(next_events, key=lambda x: int(x.get("date", 0)))
+                last_event_timestamp: int | None = last_event.get("date")
 
                 self.log(
-                    message=f"{self.name}: Last event timestamp is {last_event_timestamp} which is "
-                    f"{datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()}",
+                    message="{0}: Last event timestamp is {1} which is {2}".format(
+                        self.name,
+                        last_event_timestamp,
+                        (
+                            datetime.fromtimestamp(last_event_timestamp // 1000).isoformat()
+                            if last_event_timestamp
+                            else 0
+                        ),
+                    ),
                     level="debug",
                 )
 
-                event_lag = int(time.time()) - last_event_timestamp // 1000
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).observe(
-                    event_lag
-                )
+                if last_event_timestamp:  # pragma: no cover
+                    event_lag = int(time.time()) - last_event_timestamp // 1000
+                    EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
+                        event_lag
+                    )
 
-                # save the greater date ever seen
-                if last_event_timestamp > most_recent_timestamp_seen:
-                    most_recent_timestamp_seen = last_event_timestamp + 1000
+                    # save the greater date ever seen
+                    if last_event_timestamp > most_recent_timestamp_seen:
+                        most_recent_timestamp_seen = last_event_timestamp + 1000
 
                 # forward current events
                 yield next_events
@@ -170,7 +189,7 @@ class VadeCloudConsumer(Thread):
         if most_recent_timestamp_seen > self.get_last_timestamp():
             self.set_last_timestamp(most_recent_timestamp_seen)
 
-    def next_batch(self):
+    def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time.time()
 
@@ -221,9 +240,10 @@ class VadeCloudConsumer(Thread):
                 message=f"{self.name}: Next batch in the future. Waiting {delta_sleep} seconds",
                 level="info",
             )
+
             time.sleep(delta_sleep)
 
-    def run(self):
+    def run(self) -> None:  # pragma: no cover
         try:
             while self.running:
                 self.next_batch()
@@ -247,13 +267,13 @@ class VadeCloudLogsConnector(Connector):
         "outbound": {"streamType": "Outbound"},
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
-        self.consumers = {}
+        self.consumers: dict[str, VadeCloudConsumer] = {}
 
-    def start_consumers(self):
+    def start_consumers(self) -> dict[str, VadeCloudConsumer]:
         consumers = {}
 
         for consumer_name, params in self.all_params.items():
@@ -263,10 +283,10 @@ class VadeCloudLogsConnector(Connector):
 
         return consumers
 
-    def supervise_consumers(self, consumers):
+    def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer]) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
-                self.log(message=f"Restarting `{consumer_name}` consumer", level="info")
+                self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
 
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
@@ -275,13 +295,13 @@ class VadeCloudLogsConnector(Connector):
                 )
                 consumers[consumer_name].start()
 
-    def stop_consumers(self, consumers):
-        for name, consumer in consumers.items():
+    def stop_consumers(self, consumers: dict[str, VadeCloudConsumer]) -> None:
+        for consumer_name, consumer in consumers.items():
             if consumer is not None and consumer.is_alive():
-                self.log(message=f"Stopping `{name}` consumer", level="info")
+                self.log(message=f"Stop consuming logs of `{consumer_name}` emails", level="info")
                 consumer.stop()
 
-    def run(self):
+    def run(self) -> None:  # pragma: no cover
         consumers = self.start_consumers()
 
         while self.running:

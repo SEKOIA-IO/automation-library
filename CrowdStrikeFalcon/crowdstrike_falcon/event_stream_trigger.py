@@ -11,6 +11,7 @@ from requests.auth import AuthBase
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import Connector
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.timer import RepeatedTimer
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
@@ -18,6 +19,9 @@ from crowdstrike_falcon.exceptions import StreamNotAvailable
 from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type
 from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
 from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
+from crowdstrike_falcon.logging import get_logger
+
+logger = get_logger()
 
 MAX_EVENTS_PER_BATCH = 1000
 
@@ -156,8 +160,21 @@ class EventStreamReader(threading.Thread):
         self.client = client or connector.client
         self.verticles_collector = verticles_collector
         self.app_id = app_id
-        self.f_stop = connector.f_stop
+        self._stop_event = threading.Event()
         self.events_queue = connector.events_queue
+        self.refresh_timer = RepeatedTimer(self.refresh_interval, self.refresh_stream_timer)
+
+    def stop_refresh(self):
+        self.refresh_timer.stop()
+
+    def stop(self):
+        if self.refresh_timer:
+            self.stop_refresh()
+        self._stop_event.set()
+
+    @property
+    def running(self):
+        return not self._stop_event.is_set()
 
     @cached_property
     def data_feed_url(self):
@@ -185,23 +202,26 @@ class EventStreamReader(threading.Thread):
         """
         Refresh the stream
         """
-        self.log(message=f"refresh the event stream {refresh_url}", level="debug")
+        logger.debug("refresh the event stream", refresh_url={refresh_url})
 
         self.client.post(
             url=refresh_url,
             json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
         )
 
-        self.log(message=f"succesfully refreshed event stream {refresh_url}", level="info")
+        logger.info("succesfully refreshed event stream", refresh_url=refresh_url)
+
+    def refresh_stream_timer(self):
+        return self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
 
     def run(self) -> None:
         """
         Read the events transported by the specified stream.
         """
 
-        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
+        self.refresh_timer.start()
         self.log(
-            message=f"reading event stream {self.data_feed_url} starting on offset {self.offset}",
+            message=f"Reading event stream {self.data_feed_url} starting at offset {self.offset}",
             level="info",
         )
 
@@ -213,20 +233,15 @@ class EventStreamReader(threading.Thread):
                 auth=self.__authorization,
             ) as http_response:
                 if http_response.status_code >= 400:
-                    self.log(
-                        (
-                            f"Failed to connect on stream {self.data_feed_url}: "
-                            f"status code is {http_response.status_code}. " + str(http_response.content)
-                        ),
-                        level="error",
+                    logger.error(
+                        "Failed to connect on stream",
+                        data_feed_url=self.data_feed_url,
+                        status_code=http_response.status_code,
+                        content=http_response.content,
                     )
                     raise StreamNotAvailable(http_response)
 
-                while not self.f_stop.is_set():
-                    if datetime.utcnow() >= next_refresh_at:
-                        self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                        next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
-
+                while self.running:
                     for line in http_response.iter_lines():
                         if line.strip():
                             try:
@@ -241,20 +256,16 @@ class EventStreamReader(threading.Thread):
                                 self.collect_verticles(detection_id, event)
 
                             except Exception as any_exception:
-                                self.log(
-                                    message=f"failed to read line {line} from event stream {self.stream_root_url}",
-                                    level="error",
+                                logger.error(
+                                    "failed to read line from event stream",
+                                    line=line,
+                                    stream_root_url=self.stream_root_url,
                                 )
                                 self.log_exception(any_exception)
                                 raise any_exception
 
-                        # we refresh the session every 25min (by default)
-                        if datetime.utcnow() >= next_refresh_at:
-                            self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
-                            next_refresh_at = datetime.utcnow() + timedelta(seconds=self.refresh_interval)
-
                         # we exit the loop if the worker is stopping
-                        if self.f_stop.is_set():
+                        if not self.running:
                             break
 
         except Exception as any_exception:
@@ -268,14 +279,14 @@ class EventStreamReader(threading.Thread):
 
     def collect_verticles(self, detection_id: str | None, detection_event: dict):
         if detection_id is None:
-            self.log(message="Not a detection", level="info")
+            logger.info("Not a detection")
             return
 
         if self.verticles_collector is None:
-            self.log(message="verticles collection disabled", level="info")
+            logger.info("verticles collection disabled")
             return
 
-        self.log(message=f"Collect verticles for detection :{detection_id}", level="info")
+        logger.info("Collect verticles for detection", detection_id=detection_id)
 
         event_content = detection_event.get("event", {})
         severity_name = event_content.get("SeverityName")
@@ -300,6 +311,86 @@ class EventStreamReader(threading.Thread):
             self.events_queue.put((self.stream_root_url, orjson.dumps(event).decode()))
 
         self.log(message=f"Collected {nb_verticles} vertex", level="info")
+
+
+class EventForwarder(threading.Thread):
+    def __init__(
+        self,
+        connector: "EventStreamTrigger",
+    ):
+        super().__init__()
+        self.connector = connector
+        self.events_queue = connector.events_queue
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    @property
+    def running(self):
+        return not self._stop_event.is_set()
+
+    def log(self, *args, **kwargs):
+        self.connector.log(*args, **kwargs)
+
+    def log_exception(self, *args, **kwargs):
+        self.connector.log_exception(*args, **kwargs)
+
+    def run(self) -> None:
+        """
+        Forward the queue to the intake
+        """
+
+        while self.running:
+            try:
+                (stream_root_url, event) = self.events_queue.get(block=True, timeout=5)
+                batch_of_events = [event]
+                last_event_per_stream: dict[str, str] = {stream_root_url: event}
+
+                try:
+                    while len(batch_of_events) < MAX_EVENTS_PER_BATCH:
+                        (stream_root_url, event) = self.events_queue.get(block=True, timeout=0.5)
+                        last_event_per_stream[stream_root_url] = event
+                        batch_of_events.append(event)
+
+                except queue.Empty:
+                    pass
+
+                if batch_of_events:
+                    self.log(
+                        message=f"Forward {len(batch_of_events)} events to the intake",
+                        level="info",
+                    )
+                    OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(
+                        len(batch_of_events)
+                    )
+                    self.connector.push_events_to_intakes(events=batch_of_events)
+
+                    now = time.time()
+
+                    # store the last offset for each stream
+                    with PersistentJSON("cache.json", self.connector._data_path) as cache:
+                        for (
+                            stream_root_url,
+                            last_event,
+                        ) in last_event_per_stream.items():
+                            metadata = orjson.loads(last_event).get("metadata", {})
+
+                            last_event_offset = metadata.get("offset")
+                            if last_event_offset:
+                                # update the offset in the cache file
+                                cache[stream_root_url] = last_event_offset
+
+                            creation_time = metadata.get("eventCreationTime")
+                            if creation_time:
+                                lag = now - (creation_time / 1000)
+                                EVENTS_LAG.labels(
+                                    intake_key=self.connector.configuration.intake_key, stream=stream_root_url
+                                ).set(lag)
+            except queue.Empty:
+                pass
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")
 
 
 class EventStreamTrigger(Connector):
@@ -370,60 +461,6 @@ class EventStreamTrigger(Connector):
 
         return VerticlesCollector(self, tg_client, self.client)
 
-    def read_queue(self) -> None:
-        """
-        Forward the queue to the intake
-        """
-
-        while not self.f_stop.is_set():
-            try:
-                (stream_root_url, event) = self.events_queue.get(block=True, timeout=5)
-                batch_of_events = [event]
-                last_event_per_stream: dict[str, str] = {stream_root_url: event}
-
-                try:
-                    while len(batch_of_events) < MAX_EVENTS_PER_BATCH:
-                        (stream_root_url, event) = self.events_queue.get(block=True, timeout=0.5)
-                        last_event_per_stream[stream_root_url] = event
-                        batch_of_events.append(event)
-
-                except queue.Empty:
-                    pass
-
-                if batch_of_events:
-                    self.log(
-                        message=f"Forward {len(batch_of_events)} events to the intake",
-                        level="info",
-                    )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-                    self.push_events_to_intakes(events=batch_of_events)
-
-                    now = time.time()
-
-                    # store the last offset for each stream
-                    with PersistentJSON("cache.json", self._data_path) as cache:
-                        for (
-                            stream_root_url,
-                            last_event,
-                        ) in last_event_per_stream.items():
-                            metadata = orjson.loads(last_event).get("metadata", {})
-
-                            last_event_offset = metadata.get("offset")
-                            if last_event_offset:
-                                # update the offset in the cache file
-                                cache[stream_root_url] = last_event_offset
-
-                            creation_time = metadata.get("eventCreationTime")
-                            if creation_time:
-                                lag = now - (creation_time / 1000)
-                                EVENTS_LAG.labels(
-                                    intake_key=self.configuration.intake_key, stream=stream_root_url
-                                ).observe(lag)
-            except queue.Empty:
-                pass
-            except Exception as error:
-                self.log_exception(error, message="Failed to forward events")
-
     def get_streams(self, app_id: str) -> dict[str, dict]:
         """
         Query the CS EventStream API to retrieve the streams
@@ -469,10 +506,7 @@ class EventStreamTrigger(Connector):
         for stream_root_url in streams.keys():
             stream_thread = stream_threads[stream_root_url]
             if not stream_thread.is_alive():
-                self.log(
-                    message=f"Stream reader on {stream_root_url} is down, restarting stream readers",
-                    level="warning",
-                )
+                logger.warning("Stream reader is down, restarting it", stream_root_url=stream_root_url)
                 restart_stream_readers = True
 
         if restart_stream_readers:
@@ -495,33 +529,42 @@ class EventStreamTrigger(Connector):
                     )
                     stream_threads[stream_root_url].start()
 
+    def stop_streams(self, stream_threads: dict):
+        for stream_thread in stream_threads.values():
+            if stream_thread.is_alive():
+                stream_thread.stop()
+
     def run(self):
         try:
-            # start a thread to consume the internal event queue
-            read_queue_thread = threading.Thread(target=self.read_queue)
-            read_queue_thread.start()
-
             app_id: str = self.generate_app_id()
             streams: dict[str, dict] = self.get_streams(app_id)
+
+            # start a thread to consume the internal event queue
+            read_queue_thread = EventForwarder(self)
+            read_queue_thread.start()
+
+            # start threads to consume streams
             stream_threads = self.start_streams(streams, app_id)
 
-            while True:
-                # if the read queue thread is down, we spawn a new one
-                if not read_queue_thread.is_alive():
-                    self.log(message="Event forwarder failed", level="error")
-                    read_queue_thread = threading.Thread(target=self.read_queue)
-                    read_queue_thread.start()
+            try:
+                while self.running:
+                    # if the read queue thread is down, we spawn a new one
+                    if not read_queue_thread.is_alive():
+                        self.log(message="Event forwarder failed", level="error")
+                        read_queue_thread = EventForwarder(self)
+                        read_queue_thread.start()
 
-                self.supervise_streams(streams, stream_threads)
+                    self.supervise_streams(streams, stream_threads)
+                    time.sleep(5)
+            finally:
+                self.stop_streams(stream_threads)
+                read_queue_thread.stop()
 
-                if self.f_stop.is_set():
-                    break
-
-                time.sleep(5)
-
+        except HTTPError as error:
+            if error.response is not None and error.response.status_code == 429:
+                self.log(message="The connector was rate-limited, waiting 1 minute before retrying.", level="warning")
+                time.sleep(60)  # The authentication faces a ratelimit, sleep 1 minutes
+            else:
+                self.log_exception(error, message="Failed to fetch and forward events")
         except Exception as error:
             self.log_exception(error, message="Failed to fetch and forward events")
-
-        finally:
-            # just in case
-            self.f_stop.set()

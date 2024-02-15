@@ -1,0 +1,55 @@
+{
+  "description": "Fetch events for MessageTrace API",
+  "docker_parameters": "office365_messagetrace_trigger",
+  "name": "Fetch events from MessageTrace API (deprecated)",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 5 minutes ago)",
+        "default": 5
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried.",
+        "default": 1
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000
+      },
+      "account_name": {
+        "description": "The account name to use",
+        "type": "string"
+      },
+      "account_password": {
+        "description": "The password associated with the account",
+        "type": "string"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "account_name",
+      "account_password",
+      "intake_key"
+    ],
+    "title": "MessageTrace Events",
+    "type": "object"
+  },
+  "uuid": "431acc24-4496-4ef0-b3c7-00d2f99bf2cf"
+}

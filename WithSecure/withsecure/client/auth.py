@@ -1,10 +1,11 @@
 import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from threading import Event
 from posixpath import join as urljoin
+from threading import Event
 
 import requests
+from requests import PreparedRequest
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from withsecure.client.exceptions import AuthenticationError
@@ -35,7 +36,7 @@ class OAuthAuthentication(AuthBase):
         scope: str,
         stop_event: Event,
         log_cb: Callable[[str, str], None],
-    ):
+    ) -> None:
         self.client_id = client_id
         self.secret = secret
         self.grant_type = grant_type
@@ -48,7 +49,7 @@ class OAuthAuthentication(AuthBase):
         self.log_cb = log_cb
         self._stop_event = stop_event
 
-    def __call__(self, request):
+    def __call__(self, request: PreparedRequest) -> PreparedRequest:
         request.headers["Authorization"] = f"Bearer {self._get_access_token()}"
         return request
 

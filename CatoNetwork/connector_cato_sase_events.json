@@ -1,0 +1,25 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "connector Cato SASE configuration",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ]
+  },
+  "description": "connector playbook to get Cato SASE information",
+  "docker_parameters": "cato_sase",
+  "name": "Collect Cato SASE events",
+  "uuid": "cc29cc08-3182-11ee-be56-0242ac120002"
+}

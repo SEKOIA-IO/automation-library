@@ -1,4 +1,5 @@
 """Contains the models for configuration of the github connector."""
+
 from pydantic import BaseModel, Field
 
 

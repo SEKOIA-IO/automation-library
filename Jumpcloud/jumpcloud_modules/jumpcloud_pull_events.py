@@ -179,7 +179,7 @@ failed with status {response.status_code} - {response.reason}"
                 message=f"Current lag {int(current_lag.total_seconds())} seconds.",
                 level="info",
             )
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
     def next_batch(self):
         # save the starting time

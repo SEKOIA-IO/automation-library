@@ -8,6 +8,6 @@ class ActionArguments(BaseModel):
 
 
 class ListDetectionForIncident(IncidentOperationAction):
-    def run(self, arguments: ActionArguments):
+    def run(self, arguments: ActionArguments) -> None:
         # execute the operation
         self._execute_operation_on_incident(operation_name="ListDetectionForIncident", target=arguments.target)

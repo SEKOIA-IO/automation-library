@@ -1,4 +1,5 @@
 """Contains http client."""
+
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from posixpath import join as urljoin

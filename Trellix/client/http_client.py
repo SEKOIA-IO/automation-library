@@ -1,4 +1,5 @@
 """Trellix http client."""
+
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Optional, Set

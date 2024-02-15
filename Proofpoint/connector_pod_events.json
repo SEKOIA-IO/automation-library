@@ -1,0 +1,64 @@
+{
+  "description": "Forward Proofpoint PoD Events",
+  "docker_parameters": "pod_events_trigger",
+  "name": "Get Proofpoint PoD events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_host": {
+        "description": "API Url of the ProofPoint PoD",
+        "type": "string",
+        "default": "wss://logstream.proofpoint.com/",
+        "format": "uri"
+      },
+      "api_key": {
+        "description": "The APIKey that authenticate the request",
+        "type": "string"
+      },
+      "cluster_id": {
+        "description": "The cluster ID",
+        "type": "string"
+      },
+      "type": {
+        "description": "The type of messages to collect",
+        "type": "string",
+        "enum": [
+          "message",
+          "maillog"
+        ]
+      },
+      "since_time": {
+        "description": "The starting time (up to 30 days ago) to collect log data, as ISO8601 format",
+        "type": [
+          "string",
+          "null"
+        ],
+        "default": null
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 10000
+      }
+    },
+    "required": [
+      "api_host",
+      "api_key",
+      "cluster_id",
+      "type",
+      "intake_key"
+    ],
+    "title": "PoD Events",
+    "type": "object"
+  },
+  "uuid": "44c665c2-f0f9-4069-86de-22c06bc8146a"
+}

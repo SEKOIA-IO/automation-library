@@ -1,4 +1,5 @@
 """Contains AwsS3LogsTrigger."""
+
 from itertools import islice
 
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration

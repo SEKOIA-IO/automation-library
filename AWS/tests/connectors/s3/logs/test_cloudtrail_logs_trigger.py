@@ -1,4 +1,5 @@
 """Tests related to CloudTrailLogsTrigger."""
+
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 

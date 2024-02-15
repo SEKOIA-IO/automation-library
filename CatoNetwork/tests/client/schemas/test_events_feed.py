@@ -1,4 +1,5 @@
 """Tests for events feed schemas."""
+
 from typing import Any
 
 import pytest

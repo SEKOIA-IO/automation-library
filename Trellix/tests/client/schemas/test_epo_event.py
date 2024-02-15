@@ -1,4 +1,5 @@
 """Tests to handle EPO events."""
+
 import orjson
 import pytest
 from faker import Faker

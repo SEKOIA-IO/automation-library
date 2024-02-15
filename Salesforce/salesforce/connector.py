@@ -21,6 +21,8 @@ from utils.file_utils import csv_file_as_rows, delete_file
 class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     """SalesforceConnector configuration."""
 
+    frequency: int = 600
+
 
 class SalesforceConnector(AsyncConnector):
     """SalesforceConnector class to work with salesforce events."""
@@ -154,7 +156,7 @@ class SalesforceConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
                     if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
                             processing_start - previous_processing_end
                         )
 
@@ -169,9 +171,19 @@ class SalesforceConnector(AsyncConnector):
                     logger.info(log_message)
                     self.log(message=log_message, level="info")
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
-                    )
+                    batch_duration = processing_end - processing_start
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+
+                    # If no records were fetched
+                    if len(message_ids) == 0:
+                        # compute the remaining sleeping time. If greater than 0, sleep
+                        delta_sleep = self.configuration.frequency - batch_duration
+                        if delta_sleep > 0:
+                            self.log(
+                                message=f"Next batch of events in the future. " f"Waiting {delta_sleep} seconds",
+                                level="info",
+                            )
+                            time.sleep(delta_sleep)
 
                     previous_processing_end = processing_end
 

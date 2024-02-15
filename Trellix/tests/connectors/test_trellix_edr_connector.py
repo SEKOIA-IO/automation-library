@@ -1,4 +1,5 @@
 """Tests for Trellix EDR connector."""
+
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock

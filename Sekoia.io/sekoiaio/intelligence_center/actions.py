@@ -8,17 +8,27 @@ from sekoia_automation.action import GenericAPIAction
 from sekoiaio.intelligence_center import base_url
 
 
+class EmptyBundleError(Exception):
+    pass
+
+
 class PostBundleAction(GenericAPIAction):
     verb = "post"
     endpoint = base_url + "bundles"
     query_parameters = ["auto_merge", "name", "enrich", "assigned_to"]
 
     def get_body(self, arguments):
+        data = self.json_argument("bundle", arguments)
+        if not data.get("objects"):
+            raise EmptyBundleError("No objects in bundle")
         return {"data": self.json_argument("bundle", arguments)}
 
     def run(self, arguments) -> dict | None:
-        if results := super().run(arguments):
-            return results.get("data")
+        try:
+            if results := super().run(arguments):
+                return results.get("data")
+        except EmptyBundleError:
+            pass
 
         return None
 

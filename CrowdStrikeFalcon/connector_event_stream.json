@@ -1,0 +1,42 @@
+{
+  "description": "Get latest events from CrowdStrike Falcon",
+  "docker_parameters": "event_stream_trigger",
+  "name": "Fetch CrowdStrike Falcon Events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "tg_base_url": {
+        "description": "The base_url for the ThreatGraphAPI",
+        "type": "string",
+        "default": "https://falconapi.eu-1.crowdstrike.com",
+        "format": "uri"
+      },
+      "tg_username": {
+        "description": "The username for the ThreatGraphAPI",
+        "type": [
+          "string",
+          "null"
+        ],
+        "default": null
+      },
+      "tg_password": {
+        "description": "The password for the ThreatGraphAPI",
+        "type": [
+          "string",
+          "null"
+        ],
+        "default": null
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "CrowdStrike Falcon connector",
+    "type": "object"
+  },
+  "uuid": "5258c493-3624-4301-a368-198e03df5d27"
+}

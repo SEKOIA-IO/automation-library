@@ -1,4 +1,5 @@
 """Test the SqsWrapper class."""
+
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest

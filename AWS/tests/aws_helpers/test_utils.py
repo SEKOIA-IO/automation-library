@@ -1,4 +1,5 @@
 """Test utils module."""
+
 from gzip import compress
 from unittest.mock import MagicMock
 

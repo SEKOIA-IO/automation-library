@@ -2,6 +2,7 @@
 The Flowlog records trigger reads the next batch of logs published on the S3 bucket
 and forward them to the playbook run.
 """
+
 from .base import AwsS3FetcherTrigger, AwsS3Worker
 
 

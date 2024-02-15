@@ -158,7 +158,7 @@ class TrendMicroWorker(Thread):
                     self.set_last_timestamp(most_recent_timestamp_seen)
 
                 events_lag = int(time.time()) - most_recent_timestamp_seen
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).observe(
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
                     events_lag
                 )
 

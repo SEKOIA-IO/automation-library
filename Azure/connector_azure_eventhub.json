@@ -1,0 +1,55 @@
+{
+  "description": "Consume messages from Microsoft Azure Eventhub",
+  "docker_parameters": "azure_eventhub_messages_trigger",
+  "name": "Consume Eventhub messages",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "hub_connection_string": {
+        "description": "The connection string to connect the eventhub on Microsoft Azure eventHub",
+        "type": "string"
+      },
+      "storage_connection_string": {
+        "description": "The connection string to connect the Microsoft Azure Storage blob",
+        "type": "string"
+      },
+      "storage_container_name": {
+        "description": "The name of the container to use",
+        "type": "string"
+      },
+      "hub_name": {
+        "description": "The name of the hub",
+        "type": "string"
+      },
+      "hub_consumer_group": {
+        "description": "The consumergroup to supplied to the hub",
+        "type": "string",
+        "default": "sekoiaio"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      }
+    },
+    "required": [
+      "hub_connection_string",
+      "storage_connection_string",
+      "storage_container_name",
+      "hub_name",
+      "intake_key"
+    ],
+    "title": "Hub Events",
+    "type": "object"
+  },
+  "uuid": "57f8f587-18ee-434b-a4ed-b5459f5b0fef"
+}

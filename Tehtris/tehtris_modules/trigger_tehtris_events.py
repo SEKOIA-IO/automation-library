@@ -53,7 +53,7 @@ class TehtrisEventConnector(Connector):
 
         headers = {"Accept": "application/json"}
         url = f"{self.module.configuration.base_url}/{EVENTS_ENDPOINT}"
-        response = self.client.get(url, params=params, headers=headers)
+        response = self.client.get(url, params=params, headers=headers, timeout=60)
 
         if not response.ok:
             # Exit trigger if we can't authenticate against the server
@@ -118,7 +118,7 @@ class TehtrisEventConnector(Connector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).observe(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
     def next_batch(self):
         # save the starting time

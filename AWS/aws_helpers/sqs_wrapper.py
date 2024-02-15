@@ -1,4 +1,5 @@
 """Aws sqs client wrapper with its config class."""
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 

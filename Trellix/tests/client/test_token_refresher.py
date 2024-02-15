@@ -1,4 +1,5 @@
 """Tests related to token refresher."""
+
 from unittest.mock import MagicMock
 
 import pytest

@@ -1,4 +1,5 @@
 """Tests related to token refresher."""
+
 from typing import Any
 
 import pytest
