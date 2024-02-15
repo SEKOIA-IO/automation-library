@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgrade dependencies: Sekoia-automation-SDK 1.8.1
 
-## 2024-01-26 - 1.15
+## 2024-01-26 - 1.15.0
 
 ### Changed
 - Fix tenacity loop not handling the case where the query is still running.
