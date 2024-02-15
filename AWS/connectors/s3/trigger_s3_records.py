@@ -27,6 +27,10 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
             # If it is one of the unsupported events, we should skip it
             "unsupported": ["GetObjectTagging"],
         },
+        "ec2.amazonaws.com": {
+            # If it is one of the unsupported events, we should skip it
+            "unsupported": ["AssignPrivateIpAddresses", "CreateTags", "DeleteTags", "DescribeTags", "GetEbsDefaultKmsKeyId", "GetIpamPoolCidrs", "GetManagedPrefixListEntries"],
+        },
         "default": {"unsupported": ["List", "Describe", "GetRecords"]},
     }
 

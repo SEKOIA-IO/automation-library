@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-15 - 1.30.4
+
+### Changed
+
+- Removing ec2 events with the unsupported lists and allowing otherwise
+
 ## 2024-02-13 - 1.30.3
 
 ### Changed
