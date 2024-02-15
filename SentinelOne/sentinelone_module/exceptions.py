@@ -24,6 +24,13 @@ class QueryDeepVisibilityCanceledError(QueryDeepVisibilityError):
         super().__init__(f"The query was cancelled: {reason}")
 
 
+class QueryDeepVisibilityRunningError(QueryDeepVisibilityError):
+    status = "running"
+
+    def __init__(self, reason: str):
+        super().__init__(f"The query is in progress: {reason}")
+
+
 class QueryDeepVisibilityTimeoutError(QueryDeepVisibilityError):
     status = "timeout"
 
