@@ -169,9 +169,7 @@ class QueryDeepVisibilityAction(SentinelOneAction):
                 stop=stop_after_delay(timeout),
                 wait=wait_exponential(multiplier=1, min=1, max=10),
                 reraise=True,
-                retry=retry_if_not_exception_type((
-                    QueryDeepVisibilityCanceledError, QueryDeepVisibilityFailedError
-                )),
+                retry=retry_if_not_exception_type((QueryDeepVisibilityCanceledError, QueryDeepVisibilityFailedError)),
             ):
                 with attempt:
                     result = self.client.deep_visibility_v2.get_query_status(query_id)
@@ -179,17 +177,11 @@ class QueryDeepVisibilityAction(SentinelOneAction):
                     if result.data.responseState in FINALIZED_QUERY_STATUSES:
                         return
                     elif result.data.responseState in IN_PROGRESS_QUERY_STATUSES:
-                        raise QueryDeepVisibilityRunningError(
-                            f"status {result.data.responseState}"
-                        )
+                        raise QueryDeepVisibilityRunningError(f"status {result.data.responseState}")
                     elif result.data.responseState in CANCELED_QUERY_STATUSES:
-                        raise QueryDeepVisibilityCanceledError(
-                            result.json["data"].get("responseError")
-                        )
+                        raise QueryDeepVisibilityCanceledError(result.json["data"].get("responseError"))
                     elif result.data.responseState in FAILED_QUERY_STATUSES:
-                        raise QueryDeepVisibilityFailedError(
-                            result.json["data"].get("responseError")
-                        )
+                        raise QueryDeepVisibilityFailedError(result.json["data"].get("responseError"))
         except QueryDeepVisibilityRunningError:
             raise QueryDeepVisibilityTimeoutError(timeout)
 
