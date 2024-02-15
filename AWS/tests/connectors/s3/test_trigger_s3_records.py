@@ -107,6 +107,11 @@ def test_check_if_payload_is_valid_1(connector: AwsS3RecordsTrigger, session_fak
     assert connector.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "Random"}) is True
     assert connector.is_valid_payload({"eventSource": "random.amazonaws.com", "eventName": "GetRecords"}) is False
 
+    assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "DescribeInstances"}) is True
+    assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "CreateImage"}) is True
+    assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "DescribeTags"}) is False
+    assert connector.is_valid_payload({"eventSource": "ec2.amazonaws.com", "eventName": "CreateTags"}) is False
+
 
 def test_check_if_payload_is_valid_2(connector: AwsS3RecordsTrigger, session_faker: Faker):
     """
