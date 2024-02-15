@@ -62,7 +62,7 @@ class DeepVisibilityEvent(BaseModel):
     agentOs: str | None = None
     agentUuid: str | None = None
     agentVersion: str | None = None
-    createdAt: datetime | None = None
+    createdAt: str | None = None
     id: str | None = None
     objectType: str | None = None
     processName: str | None = None
@@ -192,6 +192,7 @@ class QueryDeepVisibilityAction(SentinelOneAction):
         except QueryDeepVisibilityError as error:
             return {"status": error.status, "status_reason": str(error), "events": []}
         result = self.client.deep_visibility_v2.get_all_events(queryId=result.data)
+        print(result)
         return {
             "status": "succeed",
             "status_reason": "The query was successfully executed",
