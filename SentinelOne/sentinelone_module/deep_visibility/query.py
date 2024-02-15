@@ -62,7 +62,7 @@ class DeepVisibilityEvent(BaseModel):
     agentOs: str | None = None
     agentUuid: str | None = None
     agentVersion: str | None = None
-    createdAt: datetime | None = None
+    createdAt: str | None = None
     id: str | None = None
     objectType: str | None = None
     processName: str | None = None
