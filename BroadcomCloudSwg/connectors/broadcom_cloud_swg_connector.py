@@ -5,7 +5,9 @@ import os
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from typing import Any, AsyncGenerator, Optional
+from functools import reduce
+from typing import Any, AsyncGenerator, Coroutine, Optional
+from urllib.parse import urljoin
 from zipfile import BadZipFile
 
 import aiofiles
@@ -134,12 +136,59 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         return self._broadcom_cloud_swg_client
 
-    async def get_events(self) -> tuple[list[str], datetime]:
+    async def push_broadcom_data_to_intakes(self, events: list[str]) -> int:  # pragma: no cover
+        """
+        Custom method to push events to intakes.
+
+        Args:
+            events: list[str]
+
+        Returns:
+            list[str]:
+        """
+        self._last_events_time = datetime.utcnow()
+        batch_api = urljoin(self.configuration.intake_server, "batch")
+
+        result_count = 0
+
+        chunks = self._chunk_events(events)
+        logger.info("Pushing {0} records to intake".format(len(events)))
+
+        async with self.session() as session:
+            for chunk_index, chunk in enumerate(chunks):
+                request_body = {
+                    "intake_key": self.configuration.intake_key,
+                    "jsons": chunk,
+                }
+
+                for attempt in self._retry():
+                    with attempt:
+                        async with session.post(
+                            batch_api,
+                            headers={"User-Agent": self._connector_user_agent},
+                            json=request_body,
+                        ) as response:
+                            if response.status >= 300:
+                                error = await response.text()
+                                error_message = f"Chunk {chunk_index} error: {error}"
+                                exception = RuntimeError(error_message)
+
+                                self.log_exception(exception)
+
+                                raise exception
+
+                            result = await response.json()
+
+                            result_count += len(result.get("event_ids", []))
+
+        return result_count
+
+    async def get_events(self) -> tuple[int, datetime]:
         """
         Collects events from platform and push to intakes.
 
         Returns:
-            list[str]:
+            list[int, datetime]:
         """
         end_date = datetime.utcnow()
         start_date = self.last_event_date
@@ -148,7 +197,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         continue_processing = True
 
         data_to_push: list[dict[str, str]] = []
-        result: list[str] = []
+        result = 0
         latest_date: datetime | None = None
 
         while continue_processing:
@@ -163,12 +212,13 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             except BadZipFile:  # pragma: no cover
                 logger.info("Empty zip file. No data to process")
 
-                return [], start_date
+                return result, start_date
 
             try:
                 for file_name in unzipped_files:
                     async with aiofiles.open(file_name) as file:
                         headers = None
+                        coroutines_list: list[Coroutine[Any, Any, int]] = []
                         async for line in file:
                             if line.startswith("#") and headers is None:
                                 headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
@@ -188,21 +238,22 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                                 data_to_push.append(line_as_dict)
                                 # data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
                                 if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
-                                    logger.info("Pushing {0} records to intake".format(len(data_to_push)))
-                                    result.extend(
-                                        await self.push_data_to_intakes(
+                                    coroutines_list.append(
+                                        self.push_broadcom_data_to_intakes(
                                             [orjson.dumps(event).decode("utf-8") for event in data_to_push]
                                         )
                                     )
 
                                     data_to_push = []
 
-                    logger.info("Pushing {0} records to intake".format(len(data_to_push)))
-                    result.extend(
-                        await self.push_data_to_intakes(
-                            [orjson.dumps(event).decode("utf-8") for event in data_to_push]
-                        )
+                                if len(coroutines_list) > 100:
+                                    result += reduce(lambda x, y: x + y, list(await asyncio.gather(*coroutines_list)))
+                                    coroutines_list = []
+
+                    result += await self.push_broadcom_data_to_intakes(
+                        [orjson.dumps(event).decode("utf-8") for event in data_to_push]
                     )
+
                     data_to_push = []
             except Exception as e:  # pragma: no cover
                 logger.error("Exception during processing: {}".format(str(e)))
@@ -233,18 +284,18 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 while self.running:
                     processing_start = time.time()
 
-                    message_ids, last_event_date = loop.run_until_complete(self.get_events())
+                    result_count, last_event_date = loop.run_until_complete(self.get_events())
                     processing_end = time.time()
 
                     EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
                         processing_end - last_event_date.timestamp()
                     )
 
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
 
                     log_message = "No records to forward"
-                    if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
+                    if result_count > 0:
+                        log_message = "Pushed {0} records".format(result_count)
 
                     logger.info(log_message)
                     self.log(message=log_message, level="info")
@@ -253,8 +304,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                         last_event_date.timestamp() - processing_start
                     )
 
-                    if len(message_ids) > 0:
-                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                    if result_count > 0:
+                        self.log(message="Pushed {0} records".format(result_count), level="info")
                     else:
                         self.log(message="No records to forward", level="info")
                         time.sleep(self.configuration.frequency)
