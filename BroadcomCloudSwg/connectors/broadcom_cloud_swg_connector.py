@@ -136,12 +136,13 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         return self._broadcom_cloud_swg_client
 
-    async def push_broadcom_data_to_intakes(self, events: list[str]) -> int:  # pragma: no cover
+    async def push_broadcom_data_to_intakes(self, events: list[str], index: int) -> int:  # pragma: no cover
         """
         Custom method to push events to intakes.
 
         Args:
             events: list[str]
+            index: int
 
         Returns:
             list[str]:
@@ -152,7 +153,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         result_count = 0
 
         chunks = self._chunk_events(events)
-        logger.info("Pushing {0} records to intake".format(len(events)))
+        logger.info("Pushing {0} records to intake with index {1}".format(len(events), index))
 
         async with self.session() as session:
             for chunk_index, chunk in enumerate(chunks):
@@ -180,6 +181,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                             result = await response.json()
 
                             result_count += len(result.get("event_ids", []))
+        logger.info("Push to intake completed with index {0}".format(index))
 
         return result_count
 
@@ -240,18 +242,22 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                                 if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
                                     coroutines_list.append(
                                         self.push_broadcom_data_to_intakes(
-                                            [orjson.dumps(event).decode("utf-8") for event in data_to_push]
+                                            [orjson.dumps(event).decode("utf-8") for event in data_to_push],
+                                            len(coroutines_list) + 1,
                                         )
                                     )
 
                                     data_to_push = []
 
                                 if len(coroutines_list) > 100:
-                                    result += reduce(lambda x, y: x + y, list(await asyncio.gather(*coroutines_list)))
+                                    result += reduce(
+                                        lambda x, y: x + y, list(await asyncio.gather(*coroutines_list)), 0
+                                    )
                                     coroutines_list = []
 
+                    result += reduce(lambda x, y: x + y, list(await asyncio.gather(*coroutines_list)), 0)
                     result += await self.push_broadcom_data_to_intakes(
-                        [orjson.dumps(event).decode("utf-8") for event in data_to_push]
+                        [orjson.dumps(event).decode("utf-8") for event in data_to_push], 0
                     )
 
                     data_to_push = []
