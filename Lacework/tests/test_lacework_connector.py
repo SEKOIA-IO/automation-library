@@ -12,12 +12,11 @@ from lacework_module.lacework_connector import LaceworkConfiguration, LaceworkEv
 
 @pytest.fixture
 def trigger(symphony_storage: Path):
-    module = LaceworkModule()
-    trigger = LaceworkEventsTrigger(module=module, data_path=symphony_storage)
-    trigger.module.configuration = {"secret_key": "my-secret", "access_key": "my-id", "lacework_url": "api"}
-    trigger.configuration = {
-        "intake_key": "0123456789",
-    }
+    trigger = LaceworkEventsTrigger(data_path=symphony_storage)
+    trigger.configuration.secret_key = "my-secret"
+    trigger.configuration.access_key = "my-id"
+    trigger.configuration.lacework_url = "api"
+    trigger.configuration.intake_key = "0123456789"
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
@@ -92,12 +91,11 @@ def test_get_next_events(trigger: LaceworkEventsTrigger):
 def test_forward_next_batches_integration(symphony_storage: Path):
     module = LaceworkModule()
     trigger = LaceworkEventsTrigger(module=module, data_path=symphony_storage)
-    trigger.module.configuration = {
-        "lacework_url": os.environ["LACEWORK_URL"],
-        "access_key": os.environ["LACEWORK_ACCESS_KEY"],
-        "secret_key": os.environ["LACEWORK_SECRET_KEY"],
-    }
-    trigger.configuration = {"frequency": 0, "intake_key": "0123456789"}
+    trigger.configuration.lacework_url = (os.environ["LACEWORK_URL"],)
+    trigger.configuration.access_key = (os.environ["LACEWORK_ACCESS_KEY"],)
+    trigger.configuration.secret_key = (os.environ["LACEWORK_SECRET_KEY"],)
+    trigger.configuration.frequency = 0
+    trigger.configuration.intake_key = "0123456789"
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()

@@ -7,7 +7,7 @@ from requests.auth import AuthBase
 
 class LaceworkCredentials:
     token: str
-    expiresAt: datetime
+    expiresAt: datetime.datetime
 
     @property
     def authorization(self) -> str:

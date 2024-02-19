@@ -42,9 +42,3 @@ class LaceworkApiClient(ApiClient):
         return self.get(
             url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts/{alertId}?scope={scope}"),
         )
-
-    def get_query_results_next_page(self, runID: str, pageSize: str, fromKey: str) -> requests.Response:
-        next_url = self.get(
-            url=(f"https://{self.auth.__lacework_url}.lacework.net/api/v2/Alerts")
-        ).content.paging.urls.get("nextPage")
-        return self.get(url=(next_url))
