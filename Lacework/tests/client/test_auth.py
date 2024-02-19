@@ -23,7 +23,7 @@ def test_get_credentials():
                 },
             json={
                     "token": "foo-token",
-                    "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))
+                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
                 }
         )
 
