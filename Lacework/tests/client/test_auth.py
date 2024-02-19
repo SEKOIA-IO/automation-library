@@ -50,7 +50,7 @@ def test_get_credentials_request_new_token_only_when_needed():
                 },
             json={
                     "token": "123456",
-                    "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))
+                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
                 }
         )
 
