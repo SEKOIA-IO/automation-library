@@ -78,8 +78,8 @@ def connector(
     connector.log = MagicMock()
     connector.log_exception = MagicMock()
 
-    # Mock the push_events_to_intakes function
-    connector.push_data_to_intakes = AsyncMock(return_value=pushed_events_ids)
+    # Mock the push_broadcom_data_to_intakes function
+    connector.push_broadcom_data_to_intakes = AsyncMock(return_value=len(pushed_events_ids))
 
     connector.module.configuration = BroadcomCloudModuleConfig(
         username=session_faker.word(),
@@ -195,4 +195,4 @@ async def test_broadcom_cloud_swg_connector_get_events(
         expected_result.extend(pushed_events_ids)
         expected_result.extend(pushed_events_ids)
 
-        assert expected_result == result
+        assert len(expected_result) == result
