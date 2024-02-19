@@ -123,9 +123,11 @@ class LaceworkEventsTrigger(Connector):
             RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
             return datetime.datetime.strptime(item["startTime"], RFC3339_STRICT_FORMAT).timestamp()
 
-        latest_message = max(items, key=lambda item: item["startTime"])
-        latest_message_timestamp = _extract_timestamp(latest_message)
-        return latest_message_timestamp
+        later = 0.0
+        for item in items:
+            if _extract_timestamp(item) > later:
+                later = _extract_timestamp(item)
+        return later
 
     def forward_next_batches(self) -> None:
         """
