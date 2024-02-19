@@ -45,7 +45,7 @@ class LaceworkAuthentication(AuthBase):
         """
         Return Lacework Credentials for the API
         """
-        current_dt = datetime.datetime.utcnow
+        current_dt = datetime.datetime.utcnow()
 
         if self.__api_credentials is None or current_dt + datetime.timedelta(seconds=3600) >= self.__api_credentials.expiresAt:
             response = self.__http_session.post(
@@ -66,7 +66,7 @@ class LaceworkAuthentication(AuthBase):
 
             api_credentials: dict = response.json()
             credentials.token = api_credentials["token"]
-            credentials.expiresAt = api_credentials["expiresAt"]
+            credentials.expiresAt = datetime.datetime.strptime(api_credentials["expiresAt"], "%Y-%m-%d %H:%M:%S.%f")
             self.__api_credentials = credentials
 
         return self.__api_credentials

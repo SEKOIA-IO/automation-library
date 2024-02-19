@@ -26,7 +26,7 @@ def test_list_alerts():
                 },
             json={
                     "token": "foo-token",
-                    "expiresAt": datetime.utcnow() + timedelta(seconds=3600)
+                    "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))
                 }
         )
 
