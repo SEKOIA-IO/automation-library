@@ -23,7 +23,7 @@ def test_get_credentials():
                 },
             json={
                     "token": "foo-token",
-                    "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))
+                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
                 }
         )
 
@@ -50,7 +50,7 @@ def test_get_credentials_request_new_token_only_when_needed():
                 },
             json={
                     "token": "123456",
-                    "expiresAt": str(datetime.utcnow() + timedelta(seconds=10))
+                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
                 }
         )
 
@@ -65,7 +65,7 @@ def test_get_credentials_request_new_token_only_when_needed():
                 },
             json={
                     "token": "78910",
-                    "expiresAt": str(datetime.utcnow() + timedelta(seconds=10000))
+                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
                 }
         )
         credentials = auth.get_credentials()
@@ -78,8 +78,8 @@ def test_get_credentials_request_new_token_only_when_needed():
                     "Content-Type": "application/json"
                 },
             json={
-                    "token": "11111",
-                    "expiresAt": str(datetime.utcnow() + timedelta(seconds=10000))
+                    "token": "78910",
+                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
                 }
         )
 
