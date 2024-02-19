@@ -29,6 +29,7 @@ class LaceworkEventsTrigger(Connector):
     - A margin of 300sec is added to the expiration date of oauth2 token.
 
     """
+
     module: LaceworkModule
     configuration: LaceworkConfiguration
 
@@ -55,7 +56,7 @@ class LaceworkEventsTrigger(Connector):
         auth = LaceworkAuthentication(
             lacework_url=self.module.configuration.lacework_url,
             access_key=self.module.configuration.access_key,
-            secret_key=self.module.configuration.secret_key
+            secret_key=self.module.configuration.secret_key,
         )
         return LaceworkApiClient(base_url=self.module.configuration.lacework_url, auth=auth)
 

@@ -22,7 +22,9 @@ class ApiClient(requests.Session):
 class LaceworkApiClient(ApiClient):
     auth: LaceworkAuthentication
 
-    def __init__(self, base_url: str, auth: LaceworkAuthentication, nb_retries: int = 5, ratelimit_per_hour: int = 480):
+    def __init__(
+        self, base_url: str, auth: LaceworkAuthentication, nb_retries: int = 5, ratelimit_per_hour: int = 480
+    ):
         super().__init__(base_url=base_url, auth=auth, nb_retries=nb_retries, ratelimit_per_hour=ratelimit_per_hour)
 
     def list_alerts(self, parameters: dict | None = None) -> requests.Response:
@@ -33,20 +35,16 @@ class LaceworkApiClient(ApiClient):
 
     def get_alerts_from_date(self, startTime: str) -> requests.Response:
         return self.get(
-            url=(
-                f"https://{self.base_url}.lacework.net/api/v2/Alerts?startTime={startTime}"
-            ),
+            url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts?startTime={startTime}"),
         )
 
     def get_alerts_details(self, alertId: str, scope: str) -> requests.Response:
         return self.get(
-            url=(
-                f"https://{self.base_url}.lacework.net/api/v2/Alerts/{alertId}?scope={scope}"
-            ),
+            url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts/{alertId}?scope={scope}"),
         )
 
     def get_query_results_next_page(self, runID: str, pageSize: str, fromKey: str) -> requests.Response:
-        next_url = self.get(url=(f"https://{self.auth.__lacework_url}.lacework.net/api/v2/Alerts")).content.paging.urls.get("nextPage")
-        return self.get(
-            url=(next_url)
-        )
+        next_url = self.get(
+            url=(f"https://{self.auth.__lacework_url}.lacework.net/api/v2/Alerts")
+        ).content.paging.urls.get("nextPage")
+        return self.get(url=(next_url))

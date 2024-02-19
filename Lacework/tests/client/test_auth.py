@@ -8,23 +8,17 @@ from lacework_module.client.auth import LaceworkAuthentication
 
 
 def test_get_credentials():
-    lacework_url="api"
-    access_key="foo"
-    secret_key="bar"
+    lacework_url = "api"
+    access_key = "foo"
+    secret_key = "bar"
     auth = LaceworkAuthentication(lacework_url, access_key, secret_key)
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
-            headers={
-                    "X-LW-UAKS": secret_key,
-                    "Content-Type": "application/json"
-                },
-            json={
-                    "token": "foo-token",
-                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
-                }
+            headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
+            json={"token": "foo-token", "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()},
         )
 
         current_dt = datetime.utcnow()
@@ -36,22 +30,16 @@ def test_get_credentials():
 
 
 def test_get_credentials_request_new_token_only_when_needed():
-    lacework_url="api"
-    access_key="foo"
-    secret_key="bar"
+    lacework_url = "api"
+    access_key = "foo"
+    secret_key = "bar"
     auth = LaceworkAuthentication(lacework_url, access_key, secret_key)
 
     with requests_mock.Mocker() as mock:
         p1 = mock.post(
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
-            headers={
-                    "X-LW-UAKS": secret_key,
-                    "Content-Type": "application/json"
-                },
-            json={
-                    "token": "123456",
-                    "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()
-                }
+            headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
+            json={"token": "123456", "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()},
         )
 
         credentials = auth.get_credentials()
@@ -59,28 +47,16 @@ def test_get_credentials_request_new_token_only_when_needed():
 
         p2 = mock.post(
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
-            headers={
-                    "X-LW-UAKS": secret_key,
-                    "Content-Type": "application/json"
-                },
-            json={
-                    "token": "78910",
-                    "expiresAt": (datetime.utcnow() + timedelta(seconds=10000)).isoformat()
-                }
+            headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
+            json={"token": "78910", "expiresAt": (datetime.utcnow() + timedelta(seconds=10000)).isoformat()},
         )
         credentials = auth.get_credentials()
         assert credentials.authorization == "Bearer 78910"
 
         p3 = mock.post(
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
-            headers={
-                    "X-LW-UAKS": secret_key,
-                    "Content-Type": "application/json"
-                },
-            json={
-                    "token": "78910",
-                    "expiresAt": (datetime.utcnow() + timedelta(seconds=10000)).isoformat()
-                }
+            headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
+            json={"token": "78910", "expiresAt": (datetime.utcnow() + timedelta(seconds=10000)).isoformat()},
         )
 
         credentials = auth.get_credentials()
@@ -93,9 +69,9 @@ def test_get_credentials_request_new_token_only_when_needed():
 
 @pytest.mark.skipif("{'LACEWORK_ID', 'LACEWORK_SECRET'}.issubset(os.environ.keys()) == False")
 def test_authentication_integration(symphony_storage):
-    lacework_url=os.environ["LACEWORK_URL"]
-    access_key= os.environ["LACEWORK_ACCESS_KEY"]
-    secret_key=os.environ["LACEWORK_SECRET_KEY"]
+    lacework_url = os.environ["LACEWORK_URL"]
+    access_key = os.environ["LACEWORK_ACCESS_KEY"]
+    secret_key = os.environ["LACEWORK_SECRET_KEY"]
     auth = LaceworkAuthentication(lacework_url, access_key, secret_key)
 
     credentials = auth.get_credentials()

@@ -1,5 +1,5 @@
 from lacework_module.base import LaceworkModule
-from lacework_module.lacework_connector import  LaceworkEventsTrigger
+from lacework_module.lacework_connector import LaceworkEventsTrigger
 
 if __name__ == "__main__":
     module = LaceworkModule()
