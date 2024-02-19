@@ -66,7 +66,7 @@ class LaceworkAuthentication(AuthBase):
 
             api_credentials: dict = response.json()
             credentials.token = api_credentials["token"]
-            credentials.expiresAt = datetime.datetime.strptime(api_credentials["expiresAt"], "%Y-%m-%d %H:%M:%S.%f")
+            credentials.expiresAt = isoparse(api_credentials["expiresAt"])
             self.__api_credentials = credentials
 
         return self.__api_credentials
