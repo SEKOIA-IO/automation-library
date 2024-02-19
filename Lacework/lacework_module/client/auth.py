@@ -1,8 +1,9 @@
 import datetime
 from dateutil.parser import isoparse
-from requests_ratelimiter import LimiterAdapter
+from requests_ratelimiter import LimiterAdapter, PreparedRequest
 import requests
 from requests.auth import AuthBase
+from typing import Any
 
 
 class LaceworkCredentials:
@@ -63,14 +64,14 @@ class LaceworkAuthentication(AuthBase):
 
             credentials = LaceworkCredentials()
 
-            api_credentials: dict = response.json()
+            api_credentials: dict[Any, Any] = response.json()
             credentials.token = api_credentials["token"]
             credentials.expiresAt = isoparse(api_credentials["expiresAt"])
             self.__api_credentials = credentials
 
         return self.__api_credentials
 
-    def __call__(self, request):
+    def __call__(self, request: PreparedRequest) -> PreparedRequest:
         request.headers["Authorization"] = self.get_credentials().authorization
         request.headers["Content-Type"] = "application/json"
         return request

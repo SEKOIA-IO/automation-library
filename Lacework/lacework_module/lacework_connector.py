@@ -1,6 +1,7 @@
 import datetime
 import time
 from functools import cached_property
+from typing import Any
 
 import orjson
 from requests.exceptions import HTTPError
@@ -33,26 +34,26 @@ class LaceworkEventsTrigger(Connector):
     module: LaceworkModule
     configuration: LaceworkConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
     def cursor(self) -> str | None:
         with self.context as cache:
-            return cache.get("cursor")
+            return str(cache.get("cursor"))
 
     @cursor.setter
-    def cursor(self, cursor: str):
+    def cursor(self, cursor: str) -> None:
         with self.context as cache:
             cache["cursor"] = cursor
 
     @cached_property
-    def pagination_limit(self):
+    def pagination_limit(self) -> Any:
         return max(self.configuration.chunk_size, 1000)
 
     @cached_property
-    def client(self):
+    def client(self) -> LaceworkApiClient:
         auth = LaceworkAuthentication(
             lacework_url=self.module.configuration.lacework_url,
             access_key=self.module.configuration.access_key,
@@ -60,7 +61,7 @@ class LaceworkEventsTrigger(Connector):
         )
         return LaceworkApiClient(base_url=self.module.configuration.lacework_url, auth=auth)
 
-    def run(self):
+    def run(self) -> None:
         self.log(message="Lacework Events Trigger has started", level="info")
 
         try:
@@ -87,7 +88,7 @@ class LaceworkEventsTrigger(Connector):
         finally:
             self.log(message="Lacework Events Trigger has stopped", level="info")
 
-    def get_next_events(self, cursor: str | None) -> dict | None:
+    def get_next_events(self, cursor: str | None) -> Any | None:
         # set parameters
         parameters = {
             "limit": self.pagination_limit,
@@ -117,8 +118,8 @@ class LaceworkEventsTrigger(Connector):
 
         return response.json()
 
-    def _get_most_recent_timestamp_from_items(self, items: list[dict]):
-        def _extract_timestamp(item: dict) -> float:
+    def _get_most_recent_timestamp_from_items(self, items: list[dict[Any, Any]]) -> float:
+        def _extract_timestamp(item: dict[Any, Any]) -> float:
             RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
             return datetime.datetime.strptime(item["startTime"], RFC3339_STRICT_FORMAT).timestamp()
 

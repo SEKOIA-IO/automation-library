@@ -2,6 +2,7 @@ import requests
 from requests.adapters import Retry
 from requests.auth import AuthBase
 from requests_ratelimiter import LimiterAdapter
+from typing import Any
 
 from lacework_module.client.auth import LaceworkAuthentication
 
@@ -27,7 +28,7 @@ class LaceworkApiClient(ApiClient):
     ):
         super().__init__(base_url=base_url, auth=auth, nb_retries=nb_retries, ratelimit_per_hour=ratelimit_per_hour)
 
-    def list_alerts(self, parameters: dict | None = None) -> requests.Response:
+    def list_alerts(self, parameters: dict[Any,Any] | None = None) -> requests.Response:
         return self.get(
             url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts"),
             params=parameters,
