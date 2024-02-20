@@ -188,7 +188,9 @@ class QueryDeepVisibilityAction(SentinelOneAction):
         try:
             self._wait_for_completion(result.data, arguments.timeout)
         except QueryDeepVisibilityError as error:
-            return DeepVisibilityEvents(status=error.status, status_reason=str(error), events= []).dict(exclude_none=True)
+            return DeepVisibilityEvents(status=error.status, status_reason=str(error), events=[]).dict(
+                exclude_none=True
+            )
         result = self.client.deep_visibility_v2.get_all_events(queryId=result.data)
         return DeepVisibilityEvents(
             status="succeed",
