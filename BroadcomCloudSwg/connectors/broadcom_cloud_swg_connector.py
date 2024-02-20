@@ -249,7 +249,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
                                     data_to_push = []
 
-                                if len(coroutines_list) > 100:
+                                if len(coroutines_list) > int(os.getenv("PUSH_DATA_TO_INTAKES_COUNT", 100)):
                                     result += reduce(
                                         lambda x, y: x + y, list(await asyncio.gather(*coroutines_list)), 0
                                     )
