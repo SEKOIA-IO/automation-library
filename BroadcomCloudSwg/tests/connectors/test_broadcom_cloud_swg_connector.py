@@ -110,10 +110,11 @@ async def test_broadcom_cloud_swg_connector_last_event_date(connector: BroadcomC
 
     assert connector.last_event_date == current_date
 
+    one_day_ago = current_date - timedelta(days=1)
     with connector.context as cache:
-        cache["last_event_date"] = (one_hour_ago - timedelta(minutes=20)).isoformat()
+        cache["last_event_date"] = (one_day_ago - timedelta(hours=6)).isoformat()
 
-    assert connector.last_event_date == one_hour_ago
+    assert connector.last_event_date == one_day_ago
 
 
 @pytest.mark.asyncio
