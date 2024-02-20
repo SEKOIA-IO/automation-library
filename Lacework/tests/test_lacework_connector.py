@@ -14,9 +14,9 @@ from lacework_module.lacework_connector import LaceworkConfiguration, LaceworkEv
 def trigger(symphony_storage: Path):
     trigger = LaceworkEventsTrigger(data_path=symphony_storage)
     trigger.module.configuration = {
-           "secret_key": "my-secret",
-           "access_key": "my-id",
-           "lacework_url": "api",
+        "secret_key": "my-secret",
+        "access_key": "my-id",
+        "lacework_url": "api",
     }
     trigger.configuration.intake_key = "0123456789"
     trigger.push_events_to_intakes = Mock()
