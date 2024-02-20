@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-20 - 1.0.6
+
+### Fixed
+
+- Use env variable as configuration for push events to intake parallelism
+
 ## 2024-02-13 - 1.0.5
 
 ### Fixed
