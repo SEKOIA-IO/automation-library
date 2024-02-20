@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from management.mgmtsdk_v2.entities.deep_visibility_v2 import DvQuery
 from pydantic import BaseModel, Field
@@ -68,77 +67,77 @@ class DeepVisibilityEvent(BaseModel):
     processName: str | None = None
     siteName: str | None = None
     user: str | None = None
-    connectionStatus: Optional[str]
-    direction: Optional[str]
-    dnsRequest: Optional[str]
-    dnsResponse: Optional[str]
-    dstIp: Optional[str]
-    dstPort: Optional[str]
-    eventType: Optional[str]
-    fileFullName: Optional[str]
-    fileId: Optional[str]
-    fileMd5: Optional[str]
-    fileSha1: Optional[str]
-    fileSha256: Optional[str]
-    fileSize: Optional[str]
-    fileType: Optional[str]
-    forensicUrl: Optional[str]
-    indicatorCategory: Optional[str]
-    indicatorDescription: Optional[str]
-    indicatorMetadata: Optional[str]
-    indicatorName: Optional[str]
-    isAgentVersionFullySupportedForPg: Optional[bool]
-    isAgentVersionFullySupportedForPgMessage: Optional[str]
-    loginsBaseType: Optional[str]
-    loginsUserName: Optional[str]
-    md5: Optional[str]
-    networkMethod: Optional[str]
-    networkSource: Optional[str]
-    networkUrl: Optional[str]
-    oldFileMd5: Optional[str]
-    oldFileName: Optional[str]
-    oldFileSha1: Optional[str]
-    oldFileSha256: Optional[str]
-    parentPid: Optional[str]
-    parentProcessGroupId: Optional[str]
-    parentProcessIsMalicious: Optional[bool]
-    parentProcessName: Optional[str]
-    parentProcessStartTime: Optional[str]
-    parentProcessUniqueKey: Optional[str]
-    pid: Optional[str]
-    processCmd: Optional[str]
-    processDisplayName: Optional[str]
-    processGroupId: Optional[str]
-    processImagePath: Optional[str]
-    processImageSha1Hash: Optional[str]
-    processIntegrityLevel: Optional[str]
-    processIsMalicious: Optional[bool]
-    processIsRedirectedCommandProcessor: Optional[str]
-    processIsWow64: Optional[str]
-    processRoot: Optional[str]
-    processSessionId: Optional[str]
-    processStartTime: Optional[str]
-    processSubSystem: Optional[str]
-    processUniqueKey: Optional[str]
-    processUserName: Optional[str]
-    publisher: Optional[str]
-    registryId: Optional[str]
-    registryPath: Optional[str]
-    relatedToThreat: Optional[str]
-    rpid: Optional[str]
-    sha1: Optional[str]
-    sha256: Optional[str]
-    signatureSignedInvalidReason: Optional[str]
-    signedStatus: Optional[str]
-    srcIp: Optional[str]
-    srcPort: Optional[int]
-    srcProcDownloadToken: Optional[str]
-    taskName: Optional[str]
-    taskPath: Optional[str]
-    threatStatus: Optional[str]
-    tid: Optional[str]
-    trueContext: Optional[str]
-    verifiedStatus: Optional[str]
+    connectionStatus: str | None
+    direction: str | None
+    dnsRequest: str | None
+    dnsResponse: str | None
+    dstIp: str | None
+    dstPort: str | None
+    eventType: str | None
+    fileFullName: str | None
+    fileId: str | None
+    fileMd5: str | None
+    fileSha1: str | None
+    fileSha256: str | None
+    fileSize: str | None
+    fileType: str | None
+    forensicUrl: str | None
+    indicatorCategory: str | None
+    indicatorDescription: str | None
+    indicatorMetadata: str | None
+    indicatorName: str | None
+    isAgentVersionFullySupportedForPg: bool | None
+    isAgentVersionFullySupportedForPgMessage: str | None
+    loginsBaseType: str | None
+    loginsUserName: str | None
+    md5: str | None
+    networkMethod: str | None
+    networkSource: str | None
+    networkUrl: str | None
+    oldFileMd5: str | None
+    oldFileName: str | None
+    oldFileSha1: str | None
+    oldFileSha256: str | None
+    parentPid: str | None
+    parentProcessGroupId: str | None
+    parentProcessIsMalicious: bool | None
+    parentProcessName: str | None
+    parentProcessStartTime: str | None
+    parentProcessUniqueKey: str | None
+    pid: str | None
+    processCmd: str | None
+    processDisplayName: str | None
+    processGroupId: str | None
+    processImagePath: str | None
+    processImageSha1Hash: str | None
+    processIntegrityLevel: str | None
+    processIsMalicious: bool | None
+    processIsRedirectedCommandProcessor: str | None
+    processIsWow64: str | None
+    processRoot: str | None
+    processSessionId: str | None
+    processStartTime: str | None
+    processSubSystem: str | None
+    processUniqueKey: str | None
+    processUserName: str | None
+    publisher: str | None
+    registryId: str | None
+    registryPath: str | None
+    relatedToThreat: str | None
+    rpid: str | None
+    sha1: str | None
+    sha256: str | None
+    signatureSignedInvalidReason: str | None
+    signedStatus: str | None
+    srcIp: str | None
+    srcPort: int | None
+    srcProcDownloadToken: str | None
+    taskName: str | None
+    taskPath: str | None
+    threatStatus: str | None
+    tid: str | None
+    trueContext: str | None
+    verifiedStatus: str | None
 
 
 class DeepVisibilityEvents(BaseModel):
@@ -161,7 +160,6 @@ FAILED_QUERY_STATUSES = {"QUERY_NOT_FOUND", "FAILED", "FAILED_CLIENT"}
 class QueryDeepVisibilityAction(SentinelOneAction):
     name = "Query events in Deep Visibility"
     description = "Create a query in Deep Visibility and get the events"
-    results_model = DeepVisibilityEvents
 
     def _wait_for_completion(self, query_id: str, timeout: int) -> None:
         try:
@@ -190,10 +188,10 @@ class QueryDeepVisibilityAction(SentinelOneAction):
         try:
             self._wait_for_completion(result.data, arguments.timeout)
         except QueryDeepVisibilityError as error:
-            return {"status": error.status, "status_reason": str(error), "events": []}
+            return DeepVisibilityEvents(status=error.status, status_reason=str(error), events= []).dict(exclude_none=True)
         result = self.client.deep_visibility_v2.get_all_events(queryId=result.data)
-        return {
-            "status": "succeed",
-            "status_reason": "The query was successfully executed",
-            "events": result.json["data"],
-        }
+        return DeepVisibilityEvents(
+            status="succeed",
+            status_reason="The query was successfully executed",
+            events=result.json["data"],
+        ).dict(exclude_none=True)
