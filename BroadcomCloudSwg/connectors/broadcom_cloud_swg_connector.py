@@ -59,21 +59,21 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             datetime:
         """
         now = datetime.utcnow()
-        one_hour_ago = (now - timedelta(hours=1)).replace(microsecond=0)
 
         with self.context as cache:
             last_event_date_str = cache.get("last_event_date")
 
             # If undefined, retrieve events from the last 1 hour
             if last_event_date_str is None:
-                return one_hour_ago
+                return (now - timedelta(hours=1)).replace(microsecond=0)
 
             # Parse the most recent date seen
             last_event_date = isoparse(last_event_date_str)
 
-            # We don't retrieve messages older than 1 hour
-            if last_event_date < one_hour_ago:
-                return one_hour_ago
+            one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
+            # We don't retrieve messages older than 1 days
+            if last_event_date < one_day_ago:
+                return one_day_ago
 
             return last_event_date
 

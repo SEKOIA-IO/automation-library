@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-20 - 1.0.7
+
+### Changed
+
+- increase the lower limit of the authorized date, in the past, of the last event to 24h
+
 ## 2024-02-20 - 1.0.6
 
 ### Fixed
