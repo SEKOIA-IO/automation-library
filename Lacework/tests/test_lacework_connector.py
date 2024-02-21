@@ -18,7 +18,7 @@ def trigger(symphony_storage: Path):
         "access_key": "my-id",
         "lacework_url": "api",
     }
-    trigger.configuration.intake_key = "0123456789"
+    trigger.configuration = {"intake_key": "0123456789"}
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
