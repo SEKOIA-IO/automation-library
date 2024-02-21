@@ -242,31 +242,41 @@ class EventStreamReader(threading.Thread):
                     raise StreamNotAvailable(http_response)
 
                 while self.running:
-                    for line in http_response.iter_lines():
-                        if line.strip():
-                            try:
-                                decoded_line = line.strip().decode()
-                                # check the line is json
-                                event = json.loads(decoded_line)
-                                # store the new event in the queue along with it stream root url
-                                self.events_queue.put((self.stream_root_url, decoded_line))
-                                INCOMING_DETECTIONS.labels(intake_key=self.connector.configuration.intake_key).inc()
+                    try:
+                        for line in http_response.iter_lines():
+                            if line.strip():
+                                try:
+                                    decoded_line = line.strip().decode()
+                                    # check the line is json
+                                    event = json.loads(decoded_line)
+                                    # store the new event in the queue along with it stream root url
+                                    self.events_queue.put((self.stream_root_url, decoded_line))
+                                    INCOMING_DETECTIONS.labels(
+                                        intake_key=self.connector.configuration.intake_key
+                                    ).inc()
 
-                                detection_id = get_detection_id(event)
-                                self.collect_verticles(detection_id, event)
+                                    detection_id = get_detection_id(event)
+                                    self.collect_verticles(detection_id, event)
 
-                            except Exception as any_exception:
-                                logger.error(
-                                    "failed to read line from event stream",
-                                    line=line,
-                                    stream_root_url=self.stream_root_url,
-                                )
-                                self.log_exception(any_exception)
-                                raise any_exception
+                                except Exception as any_exception:
+                                    logger.error(
+                                        "failed to read line from event stream",
+                                        line=line,
+                                        stream_root_url=self.stream_root_url,
+                                    )
+                                    self.log_exception(any_exception)
+                                    raise any_exception
 
-                        # we exit the loop if the worker is stopping
-                        if not self.running:
-                            break
+                            # we exit the loop if the worker is stopping
+                            if not self.running:
+                                break
+                    except Exception as any_exception:
+                        logger.error(
+                            "failed to read line from event stream",
+                            line=line,
+                            stream_root_url=self.stream_root_url,
+                        )
+                        break
 
         except Exception as any_exception:
             self.log_exception(any_exception)
