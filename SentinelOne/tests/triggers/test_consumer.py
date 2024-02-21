@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 
 import pytest
@@ -22,7 +22,7 @@ def trigger(symphony_storage):
         "intake_key": "intake",
     }
     trigger.push_events_to_intakes = Mock()
-    trigger.trigger_activation: datetime = datetime.now(timezone.utc)
+    trigger.trigger_activation: datetime = datetime.now(UTC)
     yield trigger
 
 
