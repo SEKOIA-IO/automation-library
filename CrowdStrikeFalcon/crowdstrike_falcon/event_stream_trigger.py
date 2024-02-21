@@ -8,7 +8,7 @@ from functools import cached_property
 
 import orjson
 from requests.auth import AuthBase
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, StreamConsumedError
 from sekoia_automation.connector import Connector
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.timer import RepeatedTimer
@@ -270,10 +270,9 @@ class EventStreamReader(threading.Thread):
                             # we exit the loop if the worker is stopping
                             if not self.running:
                                 break
-                    except Exception as any_exception:
-                        logger.error(
-                            "failed to read line from event stream",
-                            line=line,
+                    except StreamConsumedError:
+                        logger.warn(
+                            "The datafeed was closed. Reopen it",
                             stream_root_url=self.stream_root_url,
                         )
                         break
