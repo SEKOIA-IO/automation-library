@@ -12,7 +12,8 @@ from lacework_module.lacework_connector import LaceworkConfiguration, LaceworkEv
 
 @pytest.fixture
 def trigger(symphony_storage: Path):
-    trigger = LaceworkEventsTrigger(data_path=symphony_storage)
+    module = LaceworkModule()
+    trigger = LaceworkEventsTrigger(module=module, data_path=symphony_storage)
     trigger.module.configuration = {
         "secret_key": "my-secret",
         "access_key": "my-id",
