@@ -200,13 +200,21 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         data_to_push: list[dict[str, str]] = []
         result = 0
-        latest_date: datetime | None = None
+        previous_latest_date: datetime = start_date
+
+        logger.info("Start processing: start date is {0}".format(previous_latest_date))
 
         while continue_processing:
             continue_processing, token, file_name = await self.broadcom_cloud_swg_client.get_report_sync(
-                start_date=start_date,
+                start_date=previous_latest_date,
                 end_date=end_date,
                 token=token,
+            )
+
+            logger.info(
+                "Continue broadcom processing {0}. Previous latest date is {1}".format(
+                    continue_processing, previous_latest_date
+                )
             )
 
             try:
@@ -217,6 +225,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 return result, start_date
 
             try:
+                # We truncate all events that might have datetime lower then filter datetime in request
+                latest_date = previous_latest_date
                 for file_name in unzipped_files:
                     async with aiofiles.open(file_name) as file:
                         headers = None
@@ -233,10 +243,10 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                                 line_date_time = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
 
                                 if line_date_time:  # pragma: no cover
-                                    if line_date_time < start_date:
+                                    if line_date_time < previous_latest_date:
                                         continue
 
-                                    if (latest_date and latest_date < line_date_time) or latest_date is None:
+                                    if latest_date < line_date_time:
                                         latest_date = line_date_time
 
                                 data_to_push.append(line_as_dict)
@@ -263,6 +273,10 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     )
 
                     data_to_push = []
+
+                # We update previous_latest_date because we might continue processing events in next iteration
+                # so request should filter logs based on this datetime
+                previous_latest_date = latest_date
             except Exception as e:  # pragma: no cover
                 logger.error("Exception during processing: {}".format(str(e)))
 
@@ -272,16 +286,17 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
             await file_utils.cleanup_resources([temp_directory], [file_name, *unzipped_files])
 
-        result_latest_date = latest_date or end_date
+        # After processing finish we update latest event date with what we found in records
+        # Se we use `previous_latest_date` as after processing it should contain the latest event datetime
         with self.context as cache:  # pragma: no cover
             logger.info(
                 "New last event date now is {last_event_date}",
-                last_event_date=result_latest_date.isoformat(),
+                last_event_date=previous_latest_date.isoformat(),
             )
 
-            cache["last_event_date"] = result_latest_date.isoformat()
+            cache["last_event_date"] = previous_latest_date.isoformat()
 
-        return result, result_latest_date
+        return result, previous_latest_date
 
     def run(self) -> None:  # pragma: no cover
         """Runs BroadcomCloudSwgConnector."""
