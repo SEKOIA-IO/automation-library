@@ -206,7 +206,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         while continue_processing:
             continue_processing, token, file_name = await self.broadcom_cloud_swg_client.get_report_sync(
-                start_date=previous_latest_date,
+                start_date=start_date,
                 end_date=end_date,
                 token=token,
             )

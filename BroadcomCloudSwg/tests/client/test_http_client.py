@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 import aiofiles
 import pytest
+import pytz
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
 from aioresponses import aioresponses
@@ -68,7 +69,8 @@ async def test_broadcom_cloud_swg_client_get_real_time_log_data_url(
     first_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&maxMB=100&token=none".format(
         client.base_url,
         int(end_date_now.timestamp()) * 1000,
-        int(first_start_date.timestamp()) * 1000,
+        first_start_date.astimezone(pytz.UTC).strftime("%Y%m%d%H"),
+        # int(first_start_date.timestamp()) * 1000,
     )
 
     assert str(first_result) == first_expected_result
@@ -82,7 +84,12 @@ async def test_broadcom_cloud_swg_client_get_real_time_log_data_url(
     )
 
     second_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&maxMB={3}&token={4}".format(
-        client.base_url, int(end_date_now.timestamp()) * 1000, int(second_start_date.timestamp()) * 1000, max_mb, token
+        client.base_url,
+        int(end_date_now.timestamp()) * 1000,
+        second_start_date.astimezone(pytz.UTC).strftime("%Y%m%d%H"),
+        # int(second_start_date.timestamp()) * 1000,
+        max_mb,
+        token
     )
 
     assert str(second_result) == second_expected_result

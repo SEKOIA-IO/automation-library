@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from itertools import groupby
 from typing import Any, AsyncGenerator, Tuple
 
+import pytz
 from aiohttp import ClientSession, ClientTimeout
 from aiolimiter import AsyncLimiter
 from loguru import logger
@@ -106,7 +107,10 @@ class BroadcomCloudSwgClient(object):
         """
         params: dict[str, int | str] = {
             "endDate": int(end_date.timestamp()) * 1000,
-            "startDate": int(start_date.timestamp()) * 1000,
+            # Try to convert date into YYYYMMDDHH format according to this
+            # https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about.html
+            "startDate": start_date.astimezone(pytz.UTC).strftime("%Y%m%d%H"),
+            # "startDate": int(start_date.timestamp()) * 1000,
             "maxMB": max_mb,
             "token": (token or "none"),
         }
