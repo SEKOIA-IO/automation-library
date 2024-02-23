@@ -231,11 +231,13 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                                 line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
 
                                 line_date_time = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
-                                if latest_date is None:  # pragma: no cover
-                                    latest_date = line_date_time
 
-                                if line_date_time and latest_date and latest_date < line_date_time:
-                                    latest_date = line_date_time
+                                if line_date_time:  # pragma: no cover
+                                    if line_date_time < start_date:
+                                        continue
+
+                                    if (latest_date and latest_date < line_date_time) or latest_date is None:
+                                        latest_date = line_date_time
 
                                 data_to_push.append(line_as_dict)
                                 # data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
