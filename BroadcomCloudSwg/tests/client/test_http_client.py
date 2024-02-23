@@ -89,7 +89,7 @@ async def test_broadcom_cloud_swg_client_get_real_time_log_data_url(
         second_start_date.astimezone(pytz.UTC).strftime("%Y%m%d%H"),
         # int(second_start_date.timestamp()) * 1000,
         max_mb,
-        token
+        token,
     )
 
     assert str(second_result) == second_expected_result

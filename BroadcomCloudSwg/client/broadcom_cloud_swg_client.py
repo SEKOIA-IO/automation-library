@@ -162,6 +162,7 @@ class BroadcomCloudSwgClient(object):
                 file_name = await save_aiohttp_response(response)
 
                 logger.info("Log files archive has been saved.")
+                logger.info("Response headers are: {0}".format(response_headers))
 
                 more_data_is_available = response_headers.get("X-sync-status", "done") == "more"
                 response_token = response_headers.get("X-sync-token")
