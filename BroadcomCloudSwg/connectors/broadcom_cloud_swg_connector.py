@@ -222,7 +222,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             except BadZipFile:  # pragma: no cover
                 logger.info("Empty zip file. No data to process")
 
-                return result, start_date
+                return result, previous_latest_date
 
             try:
                 # We truncate all events that might have datetime lower then filter datetime in request
