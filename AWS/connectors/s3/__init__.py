@@ -3,6 +3,7 @@
 from abc import ABCMeta
 from functools import cached_property
 from gzip import decompress
+from typing import Any
 
 import orjson
 
@@ -147,6 +148,4 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             if len(records) >= self.configuration.records_in_queue_per_batch or not records:
                 continue_receiving = False
 
-        result = await self.push_data_to_intakes(events=records)
-
-        return result, timestamps_to_log
+        return records, timestamps_to_log
