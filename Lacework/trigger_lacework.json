@@ -1,7 +1,7 @@
 {
     "description": "Get last system logs from the Lacework platform",
     "docker_parameters": "lacework_query_alerts",
-    "name": "Fetch new logs from Lacework",
+    "name": "[BETA] Fetch new logs from Lacework",
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
