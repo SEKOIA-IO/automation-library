@@ -1,0 +1,34 @@
+{   "configuration": {
+           "$schema": "http://json-schema.org/draft-07/schema#",
+           "title": "Lacework",
+           "type": "object",
+           "properties": {
+               "access_key": {
+                   "description": "Client Identifier",
+                   "type": "string"
+               },
+               "secret_key": {
+                   "description": "Client Secret",
+                   "type": "string"
+               },
+               "lacework_url": {
+                   "description": "Client Lacework application name",
+                   "type": "string"
+               }
+           },
+           "required": [
+               "access_key",
+               "secret_key",
+               "lacework_url"
+           ],
+           "secrets": [
+               "secret_key"
+           ]
+       },
+    "description": "[Lacework](https://www.lacework.com/) is a cybersecurity company specializing in cloud security and compliance, offering automated threat detection and response solutions for modern cloud environments.",
+    "name": "Lacework",
+    "uuid": "5803f97d-b324-4452-b861-0253b15de650",
+    "slug": "lacework",
+    "version": "0.1.0"
+    
+}
