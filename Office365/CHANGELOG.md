@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-28- 2.15.0
+
+### Added
+
+- Added `management_api` logs collector
+
+### Changed
+
+- Splited the module into two submodules to separate `management_api` from `message_trace`
+
 ## 2024-02-13 - 2.14.2
 
 ### Changed
