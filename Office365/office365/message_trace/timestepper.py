@@ -31,7 +31,7 @@ class TimeStepper:
 
             # compute the next time range
             next_end = self.end + self.frequency
-            now = datetime.datetime.now(datetime.timezone.utc) - self.timedelta
+            now = datetime.datetime.now(datetime.UTC) - self.timedelta
 
             # Compute current lag
             current_lag = now - next_end
@@ -71,9 +71,9 @@ class TimeStepper:
         t_timedelta = datetime.timedelta(minutes=timedelta)
 
         if start_time == 0:
-            end = datetime.datetime.now(datetime.timezone.utc) - t_timedelta
+            end = datetime.datetime.now(datetime.UTC) - t_timedelta
         else:
-            end = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=start_time)
+            end = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=start_time)
 
         start = end - t_frequency
 

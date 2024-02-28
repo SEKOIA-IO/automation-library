@@ -1,16 +1,15 @@
 import json
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from time import sleep
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from prometheus_client import Counter
 import pytest
-from office365.management_api.connector import FORWARD_EVENTS_DURATION
+from prometheus_client import Counter
 
+from office365.management_api.connector import FORWARD_EVENTS_DURATION
 from office365.management_api.errors import FailedToActivateO365Subscription
-from freezegun import freeze_time
 
 
 @patch.object(Counter, "inc")
@@ -47,7 +46,7 @@ def test_activate_subscriptions_fail(connector):
 
     connector.activate_subscriptions()
     connector.client.activate_subscriptions.assert_called_once_with(content_types={"xml", "json"})
-    connector.log.assert_called_once_with(message=f"Subscription xml failed to activate", level="error")
+    connector.log.assert_called_once_with(message="Subscription xml failed to activate", level="error")
 
 
 def test_pull_content(connector, event):
@@ -70,7 +69,7 @@ def test_split_date_range(connector):
 
 
 def test_last_pull_date(connector):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     now_not_utc = datetime.now()
 
     # Not set
@@ -93,14 +92,14 @@ def test_last_pull_date(connector):
     connector._last_pull_date.write_text(now_not_utc.isoformat())
     with pytest.raises(
         ValueError,
-        match=f"Last pull date timezone should be {timezone.utc} but is {now_not_utc.tzinfo} instead",
+        match=f"Last pull date timezone should be {UTC} but is {now_not_utc.tzinfo} instead",
     ):
         connector.last_pull_date
 
     # Non-UTC write
     with pytest.raises(
         ValueError,
-        match=f"Last pull date timezone should be {timezone.utc} but is {now_not_utc.tzinfo} instead",
+        match=f"Last pull date timezone should be {UTC} but is {now_not_utc.tzinfo} instead",
     ):
         connector.last_pull_date = now_not_utc
 
@@ -112,7 +111,6 @@ def test_run(connector, freezer, event):
         patch.object(connector, "forward_events") as forward_events,
         patch.object(FORWARD_EVENTS_DURATION, "labels") as prometheus_labels,
     ):
-
         t = threading.Thread(target=connector.run)
         t.start()
         sleep(5)
@@ -120,7 +118,7 @@ def test_run(connector, freezer, event):
 
         activate_subscriptions.assert_called_once()
         pull_content.assert_called_once_with(
-            datetime.now(tz=timezone.utc) - timedelta(days=7), datetime.now(tz=timezone.utc)
+            datetime.now(tz=UTC) - timedelta(days=7), datetime.now(tz=UTC)
         )
         forward_events.assert_called_once_with(event)
         prometheus_labels.assert_called_once_with(

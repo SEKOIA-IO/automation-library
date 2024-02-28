@@ -10,9 +10,9 @@ import msal
 import requests
 
 from .constants import (
+    OFFICE365_ACTIVE_SUBSCRIPTION_STATUS,
     OFFICE365_AUTHORITY_DEFAULT,
     OFFICE365_URL_BASE,
-    OFFICE365_ACTIVE_SUBSCRIPTION_STATUS,
 )
 from .errors import (
     ApplicationAuthenticationFailed,

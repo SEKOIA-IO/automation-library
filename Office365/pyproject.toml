@@ -21,7 +21,7 @@ requests = "*"
 requests-mock = "*"
 
 [build-system]
-requires = [ "poetry-core>=1.0.0",]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.isort]
@@ -31,10 +31,27 @@ line_length = 119
 [tool.black]
 line-length = 119
 target-version = ['py311']
-include = '\.pyi?$'
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
+omit = ["tests/*", "main.py"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 119
+fix = true
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "FIX", # flake8-fixme
+    "T20", # flake8-print
+]
+ignore = [
+    "FIX003", # line-contains-xxx
+    "FIX004", # line-contains-hack
+    "C901",   # complex-structure
 ]

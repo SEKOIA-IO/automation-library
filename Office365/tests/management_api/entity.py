@@ -1,6 +1,6 @@
 import random
 from typing import Any
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
 from faker import Faker
 

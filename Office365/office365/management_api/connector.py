@@ -1,18 +1,17 @@
-from datetime import datetime, timedelta, timezone
-from functools import cached_property
-from time import sleep
-import time
-
 import json
+import time
+from datetime import UTC, datetime, timedelta
+from functools import cached_property
+from pathlib import Path
+from time import sleep
+
+from prometheus_client import Counter, Histogram
 from sekoia_automation.connector import Connector
 from sekoia_automation.storage import get_data_path
 
+from .configuration import Office365Configuration
 from .errors import FailedToActivateO365Subscription
 from .office365_client import Office365API
-from .configuration import Office365Configuration
-from pathlib import Path
-
-from prometheus_client import Counter, Histogram
 
 # Declare prometheus metrics
 prom_namespace = "office365_intakes"
@@ -57,13 +56,11 @@ class Office365Connector(Connector):
         try:
             last_pull_date = datetime.fromisoformat(self._last_pull_date.read_text())
         except FileNotFoundError:
-            return datetime.now(timezone.utc) - timedelta(days=7)
-        if last_pull_date.tzinfo != timezone.utc:
-            raise ValueError(
-                f"Last pull date timezone should be {timezone.utc} but is {last_pull_date.tzinfo} instead"
-            )
-        elif not last_pull_date or datetime.now(timezone.utc) - last_pull_date > timedelta(days=7):
-            return datetime.now(timezone.utc) - timedelta(days=7)
+            return datetime.now(UTC) - timedelta(days=7)
+        if last_pull_date.tzinfo != UTC:
+            raise ValueError(f"Last pull date timezone should be {UTC} but is {last_pull_date.tzinfo} instead")
+        elif not last_pull_date or datetime.now(UTC) - last_pull_date > timedelta(days=7):
+            return datetime.now(UTC) - timedelta(days=7)
         else:
             return last_pull_date
 
@@ -79,10 +76,8 @@ class Office365Connector(Connector):
         Raises:
             ValueError: If the user tries to store a timezone-naive date or not in UTC
         """
-        if new_last_pull_date.tzinfo != timezone.utc:
-            raise ValueError(
-                f"Last pull date timezone should be {timezone.utc} but is {new_last_pull_date.tzinfo} instead"
-            )
+        if new_last_pull_date.tzinfo != UTC:
+            raise ValueError(f"Last pull date timezone should be {UTC} but is {new_last_pull_date.tzinfo} instead")
         self._last_pull_date.write_text(new_last_pull_date.isoformat())
 
     @cached_property
@@ -185,7 +180,7 @@ class Office365Connector(Connector):
         while self.running:
             start_time = time.time()
             start_pull_date = self.last_pull_date
-            end_pull_date = datetime.now(timezone.utc)
+            end_pull_date = datetime.now(UTC)
 
             events = self.pull_content(start_pull_date, end_pull_date)
             self.forward_events(events)

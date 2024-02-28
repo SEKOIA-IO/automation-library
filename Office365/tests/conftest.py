@@ -1,15 +1,15 @@
-from datetime import datetime, timedelta, timezone
+import uuid
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
 from unittest.mock import Mock
-import uuid
-from sekoia_automation.storage import get_data_path
-import requests_mock
+
 import pytest
 from sekoia_automation import constants
-from office365.management_api.configuration import Office365Configuration
+from sekoia_automation.storage import get_data_path
 
+from office365.management_api.configuration import Office365Configuration
 from office365.management_api.connector import Office365Connector
 
 
@@ -98,7 +98,7 @@ def message_trace_report() -> dict:
 
 @pytest.fixture
 def trigger_activation() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @pytest.fixture
