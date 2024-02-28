@@ -13,20 +13,9 @@
                 "description": "",
                 "type": "string"
             },
-            "publisher_id": {
-                "description": "",
-                "type": "string "
-            },
             "tenant_id": {
                 "description": "",
                 "type": "string"
-            },
-            "content_types": {
-                "description": "",
-                "type": "array",
-                "items": {
-                    "type": "str"
-                }
             }
         },
         "required": [

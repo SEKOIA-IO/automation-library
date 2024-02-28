@@ -12,12 +12,6 @@ class Office365Configuration(DefaultConnectorConfiguration):
 
     """
 
-    intake_key: str
-    client_secret: str
-    uuid: str
-    intake_uuid: str
-    community_uuid: str
     client_id: str
-    publisher_id: str
+    client_secret: str
     tenant_id: str
-    content_types: set[str]
