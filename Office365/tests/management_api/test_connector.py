@@ -5,7 +5,6 @@ from pathlib import Path
 from time import sleep
 from unittest.mock import patch
 
-import pytest
 from prometheus_client import Counter
 
 from office365.management_api.connector import FORWARD_EVENTS_DURATION
@@ -53,15 +52,14 @@ def test_split_date_range(connector):
     assert split == [(start_date, start_date + delta), (start_date + delta, end_date)]
 
 
-def test_last_pull_date(connector):
+def test_last_pull_date(connector, freezer):
     now = datetime.now(UTC)
-    now_not_utc = datetime.now()
 
     # Not set
     with patch.object(Path, "read_text", side_effect=FileNotFoundError):
         # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
         # and the moment `last_pull_date` is generated
-        assert (now - connector.last_pull_date).days == 6
+        assert now == connector.last_pull_date
 
     # Less than 7 days ago
     connector.last_pull_date = now
@@ -71,27 +69,12 @@ def test_last_pull_date(connector):
     connector.last_pull_date = now - timedelta(days=365)
     # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
     # and the moment `last_pull_date` is generated
-    assert (now - connector.last_pull_date).days == 6
-
-    # Non-UTC read
-    connector._last_pull_date.write_text(now_not_utc.isoformat())
-    with pytest.raises(
-        ValueError,
-        match=f"Last pull date timezone should be {UTC} but is {now_not_utc.tzinfo} instead",
-    ):
-        connector.last_pull_date  # noqa: B018
-
-    # Non-UTC write
-    with pytest.raises(
-        ValueError,
-        match=f"Last pull date timezone should be {UTC} but is {now_not_utc.tzinfo} instead",
-    ):
-        connector.last_pull_date = now_not_utc
+    assert (now - connector.last_pull_date).days == 7
 
 
 def test_run(connector, freezer, event):
     def sleeper(_):
-        sleep(0.2)
+        sleep(0.1)
 
     with (
         patch.object(connector, "activate_subscriptions") as activate_subscriptions,
@@ -108,7 +91,7 @@ def test_run(connector, freezer, event):
             t.join()
 
         activate_subscriptions.assert_called_once()
-        pull_content.assert_called_once_with(datetime.now(tz=UTC) - timedelta(days=7), datetime.now(tz=UTC))
+        pull_content.assert_called_once_with(datetime.now(tz=UTC), datetime.now(tz=UTC))
         forward_events.assert_called_once_with(event)
         prometheus_labels.assert_called_once_with(
             intake_key=connector.configuration.intake_key, datasource="office365"

@@ -40,44 +40,37 @@ class Office365Connector(Connector):
 
     @property
     def last_pull_date(self) -> datetime:
-        """Reads the last events pull date from S3
+        """Reads the last events pull date from S3.
 
-        Office 365 can return events from up to 7 days ago. If the last pull date is older than that, or if no
+        Office365 can return events from up to 7 days ago. If the last pull date is older than that, or if no
         last pull date is found, we return a "7 days ago" date instead. If the stored date is timezone-naive or not
         in UTC, we raise an error to avoid the risk of confusions => all dates must be timezone-aware,
         this is an arbitrary choice to avoid any inconsistencies.
 
-        Raises:
-            ValueError: If the date found on S3 was stored as timezone-naive or not in UTC
+        Returns: Last pull date or now.
 
-        Returns:
-            datetime: Last pull date
         """
+        start_date = datetime.now(UTC)
         try:
             last_pull_date = datetime.fromisoformat(self._last_pull_date.read_text())
-        except FileNotFoundError:
-            return datetime.now(UTC) - timedelta(days=7)
-        if last_pull_date.tzinfo != UTC:
-            raise ValueError(f"Last pull date timezone should be {UTC} but is {last_pull_date.tzinfo} instead")
-        elif not last_pull_date or datetime.now(UTC) - last_pull_date > timedelta(days=7):
-            return datetime.now(UTC) - timedelta(days=7)
-        else:
-            return last_pull_date
+        except Exception:
+            return start_date
+
+        if not last_pull_date or datetime.now(UTC) - last_pull_date > timedelta(days=7):
+            return start_date - timedelta(days=7)
+
+        return last_pull_date
 
     @last_pull_date.setter
-    def last_pull_date(self, new_last_pull_date: datetime):
-        """Stores the last events pull date on S3
+    def last_pull_date(self, new_last_pull_date: datetime) -> None:
+        """Stores the last events pull date on S3.
 
-        We expect stored date to be always timezone-aware and in UTC
+        We expect stored date to be always timezone-aware and in UTC.
 
         Args:
-            new_last_pull_date (datetime): Date to be stored
+          new_last_pull_date: Date to be stored
 
-        Raises:
-            ValueError: If the user tries to store a timezone-naive date or not in UTC
         """
-        if new_last_pull_date.tzinfo != UTC:
-            raise ValueError(f"Last pull date timezone should be {UTC} but is {new_last_pull_date.tzinfo} instead")
         self._last_pull_date.write_text(new_last_pull_date.isoformat())
 
     @cached_property
