@@ -20,33 +20,18 @@ def test_forward_events(mock_prometheus, connector, event):
     connector.push_events_to_intakes.assert_called_once_with([event])
 
 
-def test_activate_subscriptions(connector):
-    connector.client.activate_subscriptions.return_value = {"json": True, "xml": True}
-
-    connector.activate_subscriptions()
-    connector.client.activate_subscriptions.assert_called_once_with(content_types={"xml", "json"})
-
-
 def test_activate_subscriptions_client_exception(connector):
     connector.client.activate_subscriptions.side_effect = FailedToActivateO365Subscription()
 
     connector.activate_subscriptions()
 
-    connector.client.activate_subscriptions.assert_called_once_with(content_types={"xml", "json"})
+    connector.client.activate_subscriptions.assert_called_once()
     connector.log_exception.assert_called_once()
 
     call_args = connector.log_exception.call_args_list[0].kwargs
     assert len(call_args) == 2
     assert call_args["message"] == "An exception occurred when trying to subscribe to Office365 events."
     assert isinstance(call_args["exception"], FailedToActivateO365Subscription)
-
-
-def test_activate_subscriptions_fail(connector):
-    connector.client.activate_subscriptions.return_value = {"json": True, "xml": False}
-
-    connector.activate_subscriptions()
-    connector.client.activate_subscriptions.assert_called_once_with(content_types={"xml", "json"})
-    connector.log.assert_called_once_with(message="Subscription xml failed to activate", level="error")
 
 
 def test_pull_content(connector, event):
@@ -94,7 +79,7 @@ def test_last_pull_date(connector):
         ValueError,
         match=f"Last pull date timezone should be {UTC} but is {now_not_utc.tzinfo} instead",
     ):
-        connector.last_pull_date
+        connector.last_pull_date  # noqa: B018
 
     # Non-UTC write
     with pytest.raises(
@@ -105,21 +90,25 @@ def test_last_pull_date(connector):
 
 
 def test_run(connector, freezer, event):
+    def sleeper(_):
+        sleep(0.2)
+
     with (
         patch.object(connector, "activate_subscriptions") as activate_subscriptions,
         patch.object(connector, "pull_content", return_value=event) as pull_content,
         patch.object(connector, "forward_events") as forward_events,
         patch.object(FORWARD_EVENTS_DURATION, "labels") as prometheus_labels,
     ):
-        t = threading.Thread(target=connector.run)
-        t.start()
-        sleep(5)
-        connector.stop()
+        with patch("office365.management_api.connector.sleep") as sleep2:
+            sleep2.side_effect = sleeper
+            t = threading.Thread(target=connector.run)
+            t.start()
+            sleep(0.1)
+            connector.stop()
+            t.join()
 
         activate_subscriptions.assert_called_once()
-        pull_content.assert_called_once_with(
-            datetime.now(tz=UTC) - timedelta(days=7), datetime.now(tz=UTC)
-        )
+        pull_content.assert_called_once_with(datetime.now(tz=UTC) - timedelta(days=7), datetime.now(tz=UTC))
         forward_events.assert_called_once_with(event)
         prometheus_labels.assert_called_once_with(
             intake_key=connector.configuration.intake_key, datasource="office365"

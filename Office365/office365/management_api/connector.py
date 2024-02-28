@@ -90,7 +90,6 @@ class Office365Connector(Connector):
             client_id=str(self.configuration.client_id),
             client_secret=self.configuration.client_secret,
             tenant_id=self.configuration.tenant_id,
-            publisher_id=str(self.configuration.publisher_id),
         )
 
     def _split_date_range(
@@ -157,10 +156,7 @@ class Office365Connector(Connector):
     def activate_subscriptions(self):
         """Activates an Office 365 subscriptions"""
         try:
-            subscriptions_status = self.client.activate_subscriptions(content_types=self.configuration.content_types)
-            for content_type, status in subscriptions_status.items():
-                if not status:
-                    self.log(message=f"Subscription {content_type} failed to activate", level="error")
+            self.client.activate_subscriptions()
         except FailedToActivateO365Subscription as exp:
             self.log_exception(
                 exception=exp,

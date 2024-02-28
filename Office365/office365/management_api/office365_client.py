@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Any
 from urllib.parse import urlparse, urlunsplit
 
-# Third parties
 import msal
 import requests
 
@@ -70,7 +69,7 @@ class Office365API:
 
         yield self._session
 
-    def activate_subscriptions(self, content_types: set[str]) -> dict[str, bool]:
+    def activate_subscriptions(self) -> None:
         """
         Activate subscriptions for a tenant
 
@@ -78,16 +77,16 @@ class Office365API:
         :return: A dict matching content types to the result of their subscription attempt
         :rtype: dict[str, bool]
         """
-        base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
+        EXPECTED_SUBSCRIPTIONS = {"Audit.AzureActiveDirectory", "Audit.SharePoint", "Audit.General", "Audit.Exchange"}
+
         already_enabled_types = set(self.list_subscriptions())
-        missing_types = content_types - already_enabled_types
-        enabled_types = []
-        subscriptions_status = {}
+        missing_types = EXPECTED_SUBSCRIPTIONS - already_enabled_types
 
         # Activate missing types
-        for content_type in missing_types:
-            with self._fresh_session() as session:
+        with self._fresh_session() as session:
+            for content_type in missing_types:
                 # activate the subscription
+                base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
                 response = session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
 
                 # check HTTP status code
@@ -101,10 +100,6 @@ class Office365API:
                         error_code=subscription["error"].get("code"),
                         error_message=subscription["error"].get("message"),
                     )
-            enabled_types.append(content_type)
-            subscriptions_status[content_type] = subscription["status"] == OFFICE365_ACTIVE_SUBSCRIPTION_STATUS
-
-        return subscriptions_status
 
     def list_subscriptions(self) -> list[str]:
         """

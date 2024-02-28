@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import pytest
 
-import requests_mock
 from office365.management_api.errors import (
     ApplicationAuthenticationFailed,
     FailedToActivateO365Subscription,
@@ -17,7 +16,6 @@ def test_active_subscription_should_succeed(requests_mock, mock_azure_authentica
     # arrange
     client_id = "client_id"
     client_secret = "client_secret"
-    content_types = {"Audit.SharePoint"}
 
     requests_mock.post(
         f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/start",
@@ -46,14 +44,13 @@ def test_active_subscription_should_succeed(requests_mock, mock_azure_authentica
     )
 
     # act
-    assert client.activate_subscriptions(content_types)
+    client.activate_subscriptions()
 
 
 def test_office_365_auth_fail_no_token(requests_mock, mock_azure_authentication_no_access_token, tenant_id):
     # arrange
     client_id = "client_id"
     client_secret = "client_secret"
-    content_types = {"Audit.SharePoint"}
 
     requests_mock.post(
         f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/start",
@@ -78,14 +75,13 @@ def test_office_365_auth_fail_no_token(requests_mock, mock_azure_authentication_
 
     # act
     with pytest.raises(ApplicationAuthenticationFailed, match="Failed to get access token"):
-        client.activate_subscriptions(content_types)
+        client.activate_subscriptions()
 
 
 def test_office_365_auth_fail_bad_token(requests_mock, mock_azure_authentication_wrong_token_type, tenant_id):
     # arrange
     client_id = "client_id"
     client_secret = "client_secret"
-    content_types = {"Audit.SharePoint"}
 
     requests_mock.post(
         f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/start",
@@ -110,7 +106,7 @@ def test_office_365_auth_fail_bad_token(requests_mock, mock_azure_authentication
 
     # act
     with pytest.raises(ApplicationAuthenticationFailed, match="Bearer Authentication not supported"):
-        client.activate_subscriptions(content_types)
+        client.activate_subscriptions()
 
 
 def test_list_subscriptions(requests_mock, mock_azure_authentication, tenant_id):
@@ -237,7 +233,7 @@ def test_activate_subscription_should_exception_when_handling_business_error(
 
     # act
     with pytest.raises(FailedToActivateO365Subscription):
-        client.activate_subscriptions(content_types)
+        client.activate_subscriptions()
 
 
 def test_activate_subscription_should_exception_on_http_error(requests_mock, mock_azure_authentication, tenant_id):
@@ -264,7 +260,7 @@ def test_activate_subscription_should_exception_on_http_error(requests_mock, moc
 
     # act
     with pytest.raises(FailedToActivateO365Subscription):
-        client.activate_subscriptions(content_types)
+        client.activate_subscriptions()
 
 
 def test_list_subscriptions_should_succeed(requests_mock, mock_azure_authentication, tenant_id):
