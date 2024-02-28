@@ -16,8 +16,8 @@
       },
       "delete_consumed_messages": {
         "type": "boolean",
-        "description": "Flag to delete consuming messages (default: false)",
-        "default": false
+        "description": "Flag to delete consuming messages (default: true)",
+        "default": true
       },
       "chunk_size": {
         "type": "integer",

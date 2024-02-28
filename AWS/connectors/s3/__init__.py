@@ -17,7 +17,7 @@ class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
 
     sqs_frequency: int = 10
     chunk_size: int = 10000
-    delete_consumed_messages: bool = False
+    delete_consumed_messages: bool = True
     queue_name: str
 
 
