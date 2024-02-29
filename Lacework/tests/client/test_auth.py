@@ -18,7 +18,10 @@ def test_get_credentials():
             "POST",
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
             headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
-            json={"token": "foo-token", "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=3600)).isoformat()},
+            json={
+                "token": "foo-token",
+                "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=3600)).isoformat(),
+            },
         )
 
         current_dt = datetime.now(timezone.utc)
