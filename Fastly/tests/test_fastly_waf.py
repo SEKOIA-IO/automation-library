@@ -114,7 +114,7 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
 
 
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
-    with patch("fastly_waf.connector_fastly_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly_waf.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
             status_code=200,
@@ -132,7 +132,7 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
 
 
 def test_long_next_batch_should_not_sleep(trigger, message1, message2):
-    with patch("fastly_waf.connector_fastly_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly_waf.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
             status_code=200,
