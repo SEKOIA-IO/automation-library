@@ -5,10 +5,12 @@ from datetime import datetime, timedelta
 from itertools import groupby
 from typing import Any, AsyncGenerator, Tuple
 
+import orjson
 import pytz
 from aiohttp import ClientSession, ClientTimeout
 from aiolimiter import AsyncLimiter
 from loguru import logger
+from multidict import CIMultiDictProxy
 from sekoia_automation.aio.helpers.http.utils import save_aiohttp_response
 from yarl import URL
 
@@ -76,69 +78,106 @@ class BroadcomCloudSwgClient(object):
         else:
             yield cls._session
 
-    def get_real_time_log_data_url(
+    def list_of_files_to_process_url(
         self,
         start_date: datetime,
         end_date: datetime,
-        token: str | None = None,
-        max_mb: int = 100,
-    ) -> URL:
+    ) -> str:
         """
-        Creates url to fetch reports.
-
-        Notes:
-            * Timestamp should be in milliseconds that is why we perform * 1000.
-            * date fields should be in utc zone
-            * token is required to be present in url, but might have "none" string value
-            * max_mb cannot be higher than 512 according docs. If it is > 512 api will use 512 as max value
-
-        Docs:
-        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about.html
-        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about/report-sync-api.html#topic.dita_4509cfa5-a73d-4ebc-8a12-9e398dc2e8f5_section_5
+        Based on start date and end date creates url that we can use to determine files list.
 
         Args:
             start_date: datetime
             end_date: datetime
-            token: str | None
-            max_mb: int
 
         Returns:
             URL:
         """
-        params: dict[str, int | str] = {
-            "endDate": int(end_date.timestamp()) * 1000,
-            # Try to convert date into YYYYMMDDHH format according to this
-            # https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about.html
-            "startDate": start_date.astimezone(pytz.UTC).strftime("%Y%m%d%H"),
-            # "startDate": int(start_date.timestamp()) * 1000,
-            "maxMB": max_mb,
-            "token": (token or "none"),
+        _start_date = start_date.replace(minute=0, second=0, microsecond=0)
+        if _start_date.tzinfo != pytz.utc:
+            _start_date = _start_date.astimezone(pytz.utc)
+
+        _end_date = end_date.replace(minute=0, second=0, microsecond=0)
+        if _end_date.tzinfo != pytz.utc:
+            _end_date = _end_date.astimezone(pytz.utc)
+
+        params: dict[str, str | int] = {
+            "type": "hour",
+            "start": 0,
+            "endDate": int(_end_date.timestamp()) * 1000,
+            "startDate": int(_start_date.timestamp()) * 1000,
+            "limit": 1000,
         }
 
-        return URL("{0}/reportpod/logs/sync".format(self.base_url)).with_query(params)
+        return str(URL("{0}/reportpod/logs/list".format(self.base_url)).with_query(params)) + "&api"
 
-    async def get_report_sync(
+    async def list_of_files(
         self,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
-        token: str | None = None,
-    ) -> Tuple[bool, str | None, str]:
+    ) -> dict[str, Any]:
         """
-        Get report as zipped file.
-
-        Along with file_path this function also produce token from header
-        and boolean result that determines if we should continue processing.
-
-        Docs:
-        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about/report-sync-api.html
+        Get list of available files for specified start date and end date.
 
         Args:
             start_date: datetime | None
             end_date: datetime | None
-            token: str | None
 
         Returns:
-            Tuple[bool, str | None, str]
+            dict[str, Any]
+        """
+        headers = {
+            "X-APIUsername": self.username,
+            "X-APIPassword": self.password,
+        }
+
+        _start_date = start_date or datetime.now(pytz.utc) - timedelta(days=1)
+        _end_date = end_date or datetime.now(pytz.utc)
+
+        url = self.list_of_files_to_process_url(start_date=_start_date, end_date=_end_date)
+
+        logger.info("Getting list of available files for download : {0}".format(url))
+
+        async with self.session() as session:
+            async with session.get(url, headers=headers) as response:
+                result: bytes = await response.content.read()
+
+        decoded: dict[str, Any] = orjson.loads(result.decode("utf-8"))
+
+        return decoded
+
+    def download_file_url(self, items: list[int]) -> str:
+        """
+        Creates download url based on list of file ids we want to download.
+
+        Docs:
+        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/api-download.html
+
+        Args:
+            items: list[int]
+
+        Returns:
+            URL:
+        """
+        params: dict[str, str | list[int]] = {
+            "type": "hour",
+            "items": ",".join([str(v) for v in items]),
+        }
+
+        return str(URL("{0}/reportpod/logs/download".format(self.base_url)).with_query(params)) + "&api"
+
+    async def download_file(self, file_id: int) -> str:
+        """
+        Downloads file based on file_id.
+
+        Docs:
+        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/api-download.html
+
+        Args:
+            file_id: int
+
+        Returns:
+            str:
         """
         headers = {
             "X-APIUsername": self.username,
@@ -146,28 +185,111 @@ class BroadcomCloudSwgClient(object):
             "Content-Encoding": "gzip",
         }
 
-        _start_date = start_date or datetime.utcnow() - timedelta(days=30)
-        _end_date = end_date or datetime.utcnow()
+        # It requires additional standalone parameter `api`
+        url = self.download_file_url(items=[file_id])
 
-        url = self.get_real_time_log_data_url(start_date=_start_date, end_date=_end_date, token=token)
+        file_name, _ = await self.perform_download_file_request(url, headers)
 
-        async with self.session() as session:
-            async with session.get(url, headers=headers) as response:
-                if response.status != 200:
-                    raise ValueError("Cannot get data. Status code is {0}".format(response.status))
+        return file_name
 
-                response_headers = response.headers
-                logger.info("Response from Broadcom have 200 status. Start to save log files archive.")
+    def get_real_time_log_data_url(
+        self,
+        start_date: datetime,
+        token: str | None = None,
+        max_mb: int = 100,
+    ) -> tuple[URL, int]:
+        """
+        Creates url to fetch reports near realtime reports.
 
-                file_name = await save_aiohttp_response(response)
+        Notes:
+            * Timestamp should be in ms that is why we perform * 1000.
+            * Timestamp should be truncated to hours.
+            * date fields should be in utc zone
+            * This endpoint should use only to fetch data for last two hours.
+                Broadcom does not guarantee that file archive is completed and contains all available logs for
+                specified period.
 
-                logger.info("Log files archive has been saved.")
-                logger.info("Response headers are: {0}".format(response_headers))
+            * token is required to be present in url, but might have "none" string value
+            * max_mb cannot be higher than 512 according docs. If it is > 512 api will use 512 as max value
+                But this configuration does not work at all
 
-                more_data_is_available = response_headers.get("X-sync-status", "done") == "more"
-                response_token = response_headers.get("X-sync-token")
+        As result we will get URL for download and file id that represent timestamp of startdate.
 
-                return more_data_is_available, response_token, file_name
+        Docs:
+        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about.html
+        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about/report-sync-api.html#topic.dita_4509cfa5-a73d-4ebc-8a12-9e398dc2e8f5_section_5
+
+        Args:
+            start_date: datetime
+            token: str | None
+            max_mb: int
+
+        Returns:
+            tuple[URL, datetime]:
+        """
+        current_date = datetime.now(pytz.utc).replace(minute=0, second=0, microsecond=0)
+
+        _start_date = start_date.replace(minute=0, second=0, microsecond=0)
+
+        if _start_date.tzinfo != pytz.utc:
+            _start_date = _start_date.astimezone(pytz.utc)
+
+        if (current_date - _start_date) > timedelta(hours=2):
+            raise ValueError("Start date should not be less the 2 hours ago in UTC timezone.")
+
+        _end_time = (_start_date + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0).timestamp()
+        if _start_date == current_date:
+            _end_time = 0
+
+        params: dict[str, int | str] = {
+            "endDate": int(_end_time * 1000),
+            "startDate": int(_start_date.timestamp() * 1000),
+            # maxMb does not work at all so will comment next line.
+            # "maxmb": max_mb,
+            "token": (token or "none"),
+        }
+
+        return (
+            URL("{0}/reportpod/logs/sync".format(self.base_url)).with_query(params),
+            int(_start_date.timestamp() * 1000),
+        )
+
+    async def get_near_realtime_report(
+        self,
+        start_date: datetime | None = None,
+        token: str | None = None,
+    ) -> Tuple[str, int]:
+        """
+        Get report as zipped file.
+
+        Along with result file path this function produce file id ( timestamp hour basis logs in file should belong to )
+
+        Docs:
+        https://techdocs.broadcom.com/us/en/symantec-security-software/web-and-network-security/cloud-swg/help/cloudswg-api-reference/report-sync-about/report-sync-api.html
+
+        Args:
+            start_date: datetime | None
+            token: str | None
+
+        Returns:
+            Tuple[str, int]:
+        """
+        headers = {
+            "X-APIUsername": self.username,
+            "X-APIPassword": self.password,
+            "Content-Encoding": "gzip",
+        }
+
+        _start_date = start_date if start_date is not None else datetime.now(pytz.utc) - timedelta(hours=2)
+
+        logger.info("Try to use near realtime sync report with next start date: {0}".format(_start_date))
+
+        url, file_id = self.get_real_time_log_data_url(start_date=_start_date, token=token)
+
+        file_name, response_headers = await self.perform_download_file_request(str(url), headers)
+        logger.info("Response headers are: {0}".format(response_headers))
+
+        return file_name, file_id
 
     @classmethod
     def parse_input_string(cls, value: str, fields: list[str] | None = None) -> dict[str, str]:
@@ -216,6 +338,37 @@ class BroadcomCloudSwgClient(object):
         result = dict(zip(_fields, _values))
 
         return {key: result.get(key, "") for key in result.keys() if result.get(key) != "-"}
+
+    async def perform_download_file_request(
+        self, url: str, headers: dict[str, str]
+    ) -> tuple[str, CIMultiDictProxy[str]]:
+        """
+        Runs Get Request and save a response into file.
+
+        As a result we get a file path and response headers.
+
+        Args:
+            url: str
+            headers: dict[str, str]
+
+        Returns:
+            str:
+            CIMultiDictProxy[str]:
+        """
+        logger.info("Request url to get archive file is: {0}".format(url))
+        async with self.session() as session:
+            async with session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    raise ValueError("Cannot get data. Status code is {0}".format(response.status))
+
+                logger.info("Response from Broadcom have 200 status. Start to process archive.")
+
+                response_headers = response.headers
+                file_name = await save_aiohttp_response(response)
+
+                logger.info("Log files archive has been transferred.")
+
+        return file_name, response_headers
 
     @classmethod
     def parse_string_as_headers(cls, value: str) -> list[str] | None:
