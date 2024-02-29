@@ -1,7 +1,6 @@
-import os
 import time
 from abc import abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from json.decoder import JSONDecodeError
 from threading import Event
@@ -13,8 +12,8 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from office365.message_trace.timestepper import TimeStepper
-from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from .timestepper import TimeStepper
 
 
 class O365BaseConfig(DefaultConnectorConfiguration):
@@ -62,7 +61,7 @@ class Office365MessageTraceBaseTrigger(Connector):
             # We don't retrieve messages older than 30 days
             # see https://learn.microsoft.com/en-us/previous-versions/office/developer/o365-enterprise-developers/↵
             # jj984335(v=office.15)?redirectedfrom=MSDN#data-granularity-persistence-and-availability
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             one_month_ago = now - timedelta(days=30)
             if most_recent_date_requested < one_month_ago:
                 most_recent_date_requested = one_month_ago
