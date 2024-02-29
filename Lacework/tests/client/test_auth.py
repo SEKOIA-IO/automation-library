@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import requests_mock
@@ -18,10 +18,10 @@ def test_get_credentials():
             "POST",
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
             headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
-            json={"token": "foo-token", "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()},
+            json={"token": "foo-token", "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=3600)).isoformat()},
         )
 
-        current_dt = datetime.utcnow()
+        current_dt = datetime.now(timezone.utc)
         credentials = auth.get_credentials()
         assert credentials.token == "foo-token"
         assert credentials.expiresAt > current_dt + timedelta(seconds=3550)
@@ -39,7 +39,7 @@ def test_get_credentials_request_new_token_only_when_needed():
         p1 = mock.post(
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
             headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
-            json={"token": "123456", "expiresAt": (datetime.utcnow() + timedelta(seconds=3600)).isoformat()},
+            json={"token": "123456", "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=3600)).isoformat()},
         )
 
         credentials = auth.get_credentials()
@@ -48,7 +48,7 @@ def test_get_credentials_request_new_token_only_when_needed():
         p2 = mock.post(
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
             headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
-            json={"token": "78910", "expiresAt": (datetime.utcnow() + timedelta(seconds=10000)).isoformat()},
+            json={"token": "78910", "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=10000)).isoformat()},
         )
         credentials = auth.get_credentials()
         assert credentials.authorization == "Bearer 78910"
@@ -56,7 +56,7 @@ def test_get_credentials_request_new_token_only_when_needed():
         p3 = mock.post(
             url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
             headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
-            json={"token": "78910", "expiresAt": (datetime.utcnow() + timedelta(seconds=10000)).isoformat()},
+            json={"token": "78910", "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=10000)).isoformat()},
         )
 
         credentials = auth.get_credentials()

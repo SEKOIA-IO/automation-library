@@ -48,7 +48,7 @@ class LaceworkAuthentication(AuthBase):
         """
         Return Lacework Credentials for the API
         """
-        current_dt = datetime.datetime.utcnow()
+        current_dt = datetime.datetime.now(datetime.timezone.utc)
 
         if (
             self.__api_credentials is None
