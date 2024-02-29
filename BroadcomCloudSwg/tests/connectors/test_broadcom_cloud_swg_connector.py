@@ -345,13 +345,6 @@ async def test_broadcom_cloud_swg_connector_get_events(
             headers={"X-sync-status": "done", "X-sync-token": session_faker.word()},
         )
 
-        print("-----------------------------------")
-        print("first url is {0}".format(first_url))
-        print("second url is {0}".format(second_url))
-        print("third url is {0}".format(third_url))
-        print("list of files url is {0}".format(list_of_files_url))
-        print("-----------------------------------")
-
         with connector.context as cache:
             cache["offsets"] = {
                 str(
