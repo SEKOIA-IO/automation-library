@@ -6,7 +6,7 @@ import requests_mock
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
-from fastly_waf.connector_fastly_audit import FastlyAuditConnector
+from fastly.connector_fastly_audit import FastlyAuditConnector
 
 
 @pytest.fixture
@@ -128,7 +128,7 @@ def test_fetch_site_events(trigger, message_site):
 
 def test_next_batch_sleep_until_next_round(trigger, message_corpo, message_site):
     trigger.configuration.site = "www.example.com"
-    with patch("fastly_waf.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
             status_code=200,
@@ -147,7 +147,7 @@ def test_next_batch_sleep_until_next_round(trigger, message_corpo, message_site)
 
 def test_long_next_batch_should_not_sleep(trigger, message_corpo, message_site):
     trigger.configuration.site = "www.example.com"
-    with patch("fastly_waf.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
             status_code=200,
@@ -171,7 +171,7 @@ def test_load_without_cursor(trigger, data_storage):
     with context as cache:
         cache["most_recent_date_seen"] = "2022-01-01T16:02:50+00:00"
 
-    with patch("fastly_waf.connector_fastly_base.datetime.datetime") as mock_datetime:
+    with patch("fastly.connector_fastly_base.datetime.datetime") as mock_datetime:
         datetime_now = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
         datetime_expected = datetime_now - timedelta(days=30)
 
