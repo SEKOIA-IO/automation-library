@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -169,10 +169,13 @@ def test_load_without_cursor(trigger, data_storage):
 
     # ensure that the cursor is None
     with context as cache:
-        cache["most_recent_date_seen"] = None
+        cache["most_recent_date_seen"] = "2022-01-01T16:02:50+00:00"
 
     with patch("fastly_waf.connector_fastly_base.datetime.datetime") as mock_datetime:
-        mock_datetime.now.return_value = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+        datetime_now = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
+        datetime_expected = datetime_now - timedelta(days=30)
+
+        mock_datetime.now.return_value = datetime_now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        assert trigger.most_recent_date_seen.isoformat() == "2023-03-22T11:55:28+00:00"
+        assert trigger.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
