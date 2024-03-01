@@ -126,6 +126,7 @@ def test_fetch_site_events(trigger, message_site):
 
 
 def test_next_batch_sleep_until_next_round(trigger, message_corpo, message_site):
+    trigger.configuration.site = "www.example.com"
     with patch("fastly_waf.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
@@ -144,6 +145,7 @@ def test_next_batch_sleep_until_next_round(trigger, message_corpo, message_site)
 
 
 def test_long_next_batch_should_not_sleep(trigger, message_corpo, message_site):
+    trigger.configuration.site = "www.example.com"
     with patch("fastly_waf.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
