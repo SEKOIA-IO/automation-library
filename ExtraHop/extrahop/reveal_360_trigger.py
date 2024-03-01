@@ -69,7 +69,7 @@ class ExtraHopReveal360Connector(Connector):
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        url = urljoin(self.module.configuration.base_url.lstrip("/"), "api/v1/detections/search")
+        url = urljoin(self.module.configuration.base_url.rstrip("/"), "api/v1/detections/search")
         response = self.client.post(url, json=params, headers=headers, timeout=60)
 
         if not response.ok:
