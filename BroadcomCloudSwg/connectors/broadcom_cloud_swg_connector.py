@@ -17,6 +17,7 @@ from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.aio.helpers.files.utils import delete_file
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -268,7 +269,6 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
                 data_to_push = []
 
-        logger.info("TOTAL EVENTS {0}".format(len(data_to_push)))
         result += len(await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push]))
 
         logger.info("{0}: Stop getting new messages. Total events pushed to intake {1}".format(consumer_name, result))
@@ -426,6 +426,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     total_processed_events,
                 )
             )
+
+            await delete_file(local_file_name)
 
         return file_id, updated_date_time_range, total_processed_events
 
