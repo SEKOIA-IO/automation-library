@@ -4,6 +4,7 @@ import asyncio
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
+from gzip import decompress
 
 import aiofiles
 import orjson
@@ -17,6 +18,7 @@ from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
 from azure_helpers.storage import AzureBlobStorageConfig, AzureBlobStorageWrapper
+from azure_helpers.io import is_gzip_compressed
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
@@ -105,9 +107,15 @@ class AzureBlobConnector(AsyncConnector):
                 )
 
                 if file:
-                    async with aiofiles.open(file, encoding="utf-8") as file_data:
+                    async with aiofiles.open(file, "rb") as file_data:
                         file_content = await file_data.read()
-                        records.extend(self.format_blob_data(orjson.loads(file_content), self.last_event_date))
+
+                        if is_gzip_compressed(file_content):
+                            file_content = decompress(file_content)
+
+                        records.extend(
+                            self.format_blob_data(orjson.loads(file_content.decode("utf-8")), self.last_event_date)
+                        )
 
                     await delete_file(file)
 
