@@ -1,5 +1,7 @@
+import asyncio
 import os
 import zipfile
+from asyncio import Queue
 from datetime import datetime, timedelta
 from pathlib import Path
 from shutil import rmtree
@@ -7,12 +9,17 @@ from tempfile import mkdtemp
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import pytz
 from aioresponses import aioresponses
 from faker import Faker
 from sekoia_automation import constants
 
 from connectors import BroadcomCloudModule, BroadcomCloudModuleConfig
-from connectors.broadcom_cloud_swg_connector import BroadcomCloudSwgConnector, BroadcomCloudSwgConnectorConfig
+from connectors.broadcom_cloud_swg_connector import (
+    BroadcomCloudSwgConnector,
+    BroadcomCloudSwgConnectorConfig,
+    DatetimeRange,
+)
 
 
 @pytest.fixture
@@ -47,10 +54,37 @@ def pushed_events_ids(session_faker: Faker) -> list[str]:
 
 
 @pytest.fixture
+def mock_push_data_to_intakes() -> AsyncMock:
+    """
+    Mocked push_data_to_intakes method.
+
+    Returns:
+        AsyncMock:
+    """
+
+    def side_effect_return_input(events: list[str]) -> list[str]:
+        """
+        Return input value.
+
+        Uses in side_effect to return input value from mocked function.
+
+        Args:
+            events: list[str]
+
+        Returns:
+            list[str]:
+        """
+        return events
+
+    return AsyncMock(side_effect=side_effect_return_input)
+
+
+@pytest.fixture
 def connector(
     symphony_storage: Path,
     pushed_events_ids: list[str],
     session_faker: Faker,
+    mock_push_data_to_intakes: AsyncMock,
 ) -> BroadcomCloudSwgConnector:
     """
     Creates BroadcomCloudSwgConnector.
@@ -59,6 +93,7 @@ def connector(
         symphony_storage: Path
         pushed_events_ids: list[str]
         session_faker: Faker
+        mock_push_data_to_intakes: AsyncMock
 
     Returns:
 
@@ -79,7 +114,7 @@ def connector(
     connector.log_exception = MagicMock()
 
     # Mock the push_broadcom_data_to_intakes function
-    connector.push_broadcom_data_to_intakes = AsyncMock(return_value=len(pushed_events_ids))
+    connector.push_data_to_intakes = mock_push_data_to_intakes
 
     connector.module.configuration = BroadcomCloudModuleConfig(
         username=session_faker.word(),
@@ -90,9 +125,9 @@ def connector(
 
 
 @pytest.mark.asyncio
-async def test_broadcom_cloud_swg_connector_last_event_date(connector: BroadcomCloudSwgConnector):
+async def test_broadcom_cloud_swg_connector_work_with_latest_offsets(connector: BroadcomCloudSwgConnector):
     """
-    Test `last_event_date`.
+    Test `get_latest_offsets`.
 
     Args:
         connector: BroadcomCloudSwgConnector
@@ -100,21 +135,117 @@ async def test_broadcom_cloud_swg_connector_last_event_date(connector: BroadcomC
     with connector.context as cache:
         cache["last_event_date"] = None
 
-    current_date = datetime.utcnow().replace(microsecond=0)
-    one_hour_ago = current_date - timedelta(hours=1)
+    current_date = datetime.now(pytz.utc).replace(microsecond=0)
 
-    assert connector.last_event_date == one_hour_ago
+    assert connector.get_latest_offsets == {}
 
     with connector.context as cache:
         cache["last_event_date"] = current_date.isoformat()
 
-    assert connector.last_event_date == current_date
+    assert connector.get_latest_offsets == {
+        int(current_date.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            end_date=current_date
+        )
+    }
 
-    one_day_ago = current_date - timedelta(days=1)
+    first_value = current_date - timedelta(hours=2)
+    second_value = current_date - timedelta(hours=3)
+    third_value = current_date - timedelta(hours=4)
+    fourth_value = current_date - timedelta(hours=5)
+
     with connector.context as cache:
-        cache["last_event_date"] = (one_day_ago - timedelta(hours=6)).isoformat()
+        cache["offsets"] = {
+            str(int(first_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000)): {
+                "start_date": first_value.isoformat(),
+                "end_date": second_value.isoformat(),
+            },
+            str(int(second_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000)): {
+                "start_date": second_value.isoformat(),
+                "end_date": third_value.isoformat(),
+            },
+        }
 
-    assert connector.last_event_date == one_day_ago
+    assert connector.get_latest_offsets == {
+        int(current_date.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            end_date=current_date
+        ),
+        int(first_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            **{
+                "start_date": first_value,
+                "end_date": second_value,
+            }
+        ),
+        int(second_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            **{
+                "start_date": second_value,
+                "end_date": third_value,
+            }
+        ),
+    }
+
+    with connector.context as cache:
+        cache["last_event_date"] = None
+
+    assert connector.get_latest_offsets == {
+        int(first_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            **{
+                "start_date": first_value,
+                "end_date": second_value,
+            }
+        ),
+        int(second_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            **{
+                "start_date": second_value,
+                "end_date": third_value,
+            }
+        ),
+    }
+
+    new_offsets = {
+        int(second_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            **{
+                "start_date": third_value,
+                "end_date": fourth_value,
+            }
+        ),
+        int(fourth_value.replace(minute=0, second=0, microsecond=0).timestamp() * 1000): DatetimeRange(
+            **{
+                "start_date": second_value,
+                "end_date": fourth_value,
+            }
+        ),
+    }
+
+    connector.update_latest_offsets(new_offsets)
+
+    assert connector.get_latest_offsets == new_offsets
+
+
+@pytest.mark.asyncio
+async def test_produce_file_to_queue(
+    connector: BroadcomCloudSwgConnector,
+    session_faker: Faker,
+    logs_content: str,
+):
+    queue = Queue()
+    file_name = "{0}.log".format(session_faker.word())
+    with open(file_name, "w") as file:
+        file.write(logs_content)
+
+    zip_file_name = "{0}.zip".format(session_faker.word())
+    with zipfile.ZipFile(zip_file_name, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.write(file_name)
+
+    os.remove(file_name)
+
+    result = await asyncio.gather(
+        connector.produce_file_to_queue(zip_file_name, queue, DatetimeRange()), connector.consume_file_events(queue)
+    )
+
+    os.remove(zip_file_name)
+
+    assert result[0] == DatetimeRange()
+    assert result[1] == len([line for line in logs_content.split("\n") if not line.startswith("#")])
 
 
 @pytest.mark.asyncio
@@ -146,8 +277,7 @@ async def test_broadcom_cloud_swg_connector_get_events(
         logs_content: str
         pushed_events_ids: list[str]
     """
-    start_from = datetime.utcnow() - timedelta(minutes=session_faker.random.randint(1, 10))
-    end_date = datetime.utcnow()
+    start_from = datetime.now(pytz.utc) - timedelta(minutes=session_faker.random.randint(1, 10))
 
     with aioresponses() as mocked_responses:
         client = connector.broadcom_cloud_swg_client
@@ -155,7 +285,7 @@ async def test_broadcom_cloud_swg_connector_get_events(
         with connector.context as cache:
             cache["last_event_date"] = start_from.isoformat()
 
-        first_url = client.get_real_time_log_data_url(start_date=start_from, end_date=end_date, token=None)
+        first_url, _ = client.get_real_time_log_data_url(start_date=start_from)
         response_token = session_faker.word()
 
         file_name = "out.log"
@@ -180,7 +310,9 @@ async def test_broadcom_cloud_swg_connector_get_events(
             headers={"X-sync-status": "more", "X-sync-token": response_token},
         )
 
-        second_url = client.get_real_time_log_data_url(start_date=start_from, end_date=end_date, token=response_token)
+        second_url, _ = client.get_real_time_log_data_url(
+            start_date=start_from - timedelta(hours=1),
+        )
 
         mocked_responses.get(
             second_url,
@@ -189,11 +321,50 @@ async def test_broadcom_cloud_swg_connector_get_events(
             headers={"X-sync-status": "done", "X-sync-token": session_faker.word()},
         )
 
+        third_file_id = int(
+            (start_from - timedelta(hours=2)).replace(minute=0, second=0, microsecond=0).timestamp() * 1000
+        )
+        third_url = client.download_file_url([third_file_id])
+
+        mocked_responses.get(
+            third_url,
+            status=200,
+            body=compressed_data,
+            headers={"X-sync-status": "done", "X-sync-token": session_faker.word()},
+        )
+
+        list_of_files_url = client.list_of_files_to_process_url(
+            start_from - timedelta(hours=3),
+            start_from - timedelta(hours=2),
+        )
+
+        mocked_responses.get(
+            list_of_files_url,
+            status=200,
+            payload={"items": [{"date": third_file_id}]},
+            headers={"X-sync-status": "done", "X-sync-token": session_faker.word()},
+        )
+
+        with connector.context as cache:
+            cache["offsets"] = {
+                str(
+                    int(
+                        (start_from - timedelta(hours=2)).replace(minute=0, second=0, microsecond=0).timestamp() * 1000
+                    )
+                ): {},
+                str(
+                    int(
+                        (start_from - timedelta(hours=1)).replace(minute=0, second=0, microsecond=0).timestamp() * 1000
+                    )
+                ): {},
+            }
+
         result, last_event_date = await connector.get_events()
 
-        # Expect to push events to intakes 2 times
+        # Expect to push events to intakes 3 times
         expected_result = []
-        expected_result.extend(pushed_events_ids)
-        expected_result.extend(pushed_events_ids)
+        expected_result.extend(logs_content.split("\n"))
+        expected_result.extend(logs_content.split("\n"))
+        expected_result.extend(logs_content.split("\n"))
 
-        assert len(expected_result) == result
+        assert len([v for v in expected_result if not v.startswith("#")]) == result

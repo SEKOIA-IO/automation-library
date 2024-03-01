@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-02-20 - 1.0.8
+
+### Fixed
+
+- exclude lines that already processed
+- perform processing during decompressing
+- unblock main execution io when we push to intake
+
 ## 2024-02-20 - 1.0.7
 
 ### Changed

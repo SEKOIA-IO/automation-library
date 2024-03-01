@@ -8,12 +8,13 @@ authors = []
 python = ">=3.10,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
-sekoia-automation-sdk = { version = "^1.10.0", extras = ["all"] }
+sekoia-automation-sdk = { version = "^1.12.0", extras = ["all"] }
 aiohttp = "^3.8.5"
 aiofiles = "^23.2.0"
 aiolimiter = "^1.1.0"
 zipstream = "^1.1.4"
 aiozipstream = "^0.4"
+pytz = "^2024.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -32,6 +33,7 @@ types-aiofiles = "^23.1.0.4"
 types-python-dateutil = "^2.8.19.13"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
 poetry = "^1.5.1"
+types-pytz = "^2024.1.0.20240203"
 
 [tool.black]
 line-length = 119

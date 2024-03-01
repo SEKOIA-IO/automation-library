@@ -3,15 +3,15 @@
 import asyncio
 import os
 import time
+from asyncio import Queue
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from functools import reduce
+from functools import cached_property, reduce
 from typing import Any, AsyncGenerator, Coroutine, Optional
-from urllib.parse import urljoin
-from zipfile import BadZipFile
 
-import aiofiles
 import orjson
+import pytz
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
@@ -33,6 +33,89 @@ class BroadcomCloudSwgConnectorConfig(DefaultConnectorConfiguration):
     frequency: int = 60
 
 
+@dataclass
+class DatetimeRange(object):
+
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+
+    @cached_property
+    def utc_start_date(self) -> datetime | None:
+        if self.start_date and self.start_date.tzinfo != pytz.utc:
+            return self.start_date.astimezone(pytz.utc)
+
+        return self.start_date
+
+    @cached_property
+    def utc_end_date(self) -> datetime | None:
+        if self.end_date and self.end_date.tzinfo != pytz.utc:
+            return self.end_date.astimezone(pytz.utc)
+
+        return self.end_date
+
+    def contains(self, value: datetime) -> bool:
+        _value = value
+        if _value.tzinfo != pytz.utc:
+            _value.astimezone(pytz.utc)
+
+        if self.utc_end_date and self.utc_start_date and self.utc_start_date < _value < self.utc_end_date:
+            return True
+
+        if self.utc_start_date and self.utc_end_date is None and self.utc_start_date < _value:
+            return True
+
+        if self.utc_end_date and self.utc_start_date is None and self.utc_end_date > _value:
+            return True
+
+        return False
+
+    def update_with(self, value: datetime) -> "DatetimeRange":
+        _value = value
+        if value.tzinfo != pytz.utc:
+            _value = _value.astimezone(pytz.utc)
+
+        new_end_date = _value
+        if self.utc_end_date and self.utc_end_date > new_end_date:
+            new_end_date = self.utc_end_date
+
+        new_start_date = _value
+        if self.utc_start_date and self.utc_start_date < new_start_date:
+            new_start_date = self.utc_start_date
+
+        return DatetimeRange(
+            start_date=new_start_date + timedelta(microseconds=1), end_date=new_end_date - timedelta(microseconds=1)
+        )
+
+    def duplicate(self) -> "DatetimeRange":
+        return DatetimeRange(start_date=self.start_date, end_date=self.end_date)
+
+    def to_dict(self) -> dict[str, str]:
+        result = {}
+        if self.utc_start_date:
+            result["start_date"] = self.utc_start_date.isoformat()
+
+        if self.utc_end_date:
+            result["end_date"] = self.utc_end_date.isoformat()
+
+        return result
+
+    @staticmethod
+    def from_dict(value: dict[str, str]) -> "DatetimeRange":
+        _end_parsed = None
+        _start_parsed = None
+        if value.get("start_date"):
+            _start_parsed = isoparse(value["start_date"])
+            if _start_parsed.tzinfo != pytz.utc:
+                _start_parsed.astimezone(pytz.utc)
+
+        if value.get("end_date"):
+            _end_parsed = isoparse(value["end_date"])
+            if _end_parsed.tzinfo != pytz.utc:
+                _end_parsed.astimezone(pytz.utc)
+
+        return DatetimeRange(start_date=_start_parsed, end_date=_end_parsed)
+
+
 class BroadcomCloudSwgConnector(AsyncConnector):
     """BroadcomCloudSwgConnector."""
 
@@ -51,31 +134,37 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
-    def last_event_date(self) -> datetime:
-        """
-        Get last event date.
-
-        Returns:
-            datetime:
-        """
-        now = datetime.utcnow()
+    def get_latest_offsets(self) -> dict[int, DatetimeRange]:
+        offsets = {}
 
         with self.context as cache:
             last_event_date_str = cache.get("last_event_date")
 
-            # If undefined, retrieve events from the last 1 hour
-            if last_event_date_str is None:
-                return (now - timedelta(hours=1)).replace(microsecond=0)
+            if last_event_date_str is not None:
+                last_event_date = isoparse(last_event_date_str)
+                if last_event_date.tzinfo != pytz.utc:
+                    last_event_date = last_event_date.astimezone(pytz.utc)
 
-            # Parse the most recent date seen
-            last_event_date = isoparse(last_event_date_str)
+                file_id = int(last_event_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000
+                date_range = DatetimeRange(start_date=None, end_date=last_event_date)
+                offsets = {file_id: date_range}
 
-            one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
-            # We don't retrieve messages older than 1 days
-            if last_event_date < one_day_ago:
-                return one_day_ago
+            current_offsets: dict[str, dict[str, str]] = cache.get("offsets", {})
+            offsets = {
+                **offsets,
+                **{int(key): DatetimeRange.from_dict(value) for key, value in current_offsets.items()},
+            }
 
-            return last_event_date
+        return offsets
+
+    def update_latest_offsets(self, offsets: dict[int, DatetimeRange]) -> None:
+        logger.info("Updating offsets with {0}".format(offsets))
+
+        result = {str(key): value.to_dict() for key, value in offsets.items()}
+
+        with self.context as cache:
+            cache["last_event_date"] = None
+            cache["offsets"] = result
 
     @classmethod
     def rate_limiter(cls) -> AsyncLimiter | None:  # pragma: no cover
@@ -136,150 +225,247 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         return self._broadcom_cloud_swg_client
 
-    async def push_broadcom_data_to_intakes(self, events: list[str], index: int) -> int:  # pragma: no cover
+    async def consume_file_events(self, queue: Queue[dict[str, str] | None], tag: str | None = None) -> int:
         """
-        Custom method to push events to intakes.
+        Consumer function for specified queue with optional index of consumer.
+
+        Tag is used only to determine consumer name.
+
+        Provides total amount of messages that where pushed to intake.
 
         Args:
-            events: list[str]
-            index: int
+            queue: Queue[dict[str, str] | None]
+            tag: str | None = None
 
         Returns:
-            list[str]:
+            int:
         """
-        self._last_events_time = datetime.utcnow()
-        batch_api = urljoin(self.configuration.intake_server, "batch")
+        consumer_name = tag if tag and tag != "" else "Consumer[0]"
 
-        result_count = 0
+        data_to_push: list[dict[str, str]] = []
+        result = 0
 
-        chunks = self._chunk_events(events)
-        logger.info("Pushing {0} records to intake with index {1}".format(len(events), index))
+        while True:
+            item = await queue.get()
+            queue.task_done()
 
-        async with self.session() as session:
-            for chunk_index, chunk in enumerate(chunks):
-                request_body = {
-                    "intake_key": self.configuration.intake_key,
-                    "jsons": chunk,
-                }
+            # It means that producer finished with producing messages.
+            if item is None:
+                break
 
-                for attempt in self._retry():
-                    with attempt:
-                        async with session.post(
-                            batch_api,
-                            headers={"User-Agent": self._connector_user_agent},
-                            json=request_body,
-                        ) as response:
-                            if response.status >= 300:
-                                error = await response.text()
-                                error_message = f"Chunk {chunk_index} error: {error}"
-                                exception = RuntimeError(error_message)
+            data_to_push.append(item)
 
-                                self.log_exception(exception)
+            if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
+                result += len(
+                    await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push])
+                )
 
-                                raise exception
+                logger.info(
+                    "{0}: New batch with events pushed to intake. Total processed events {1}".format(
+                        consumer_name, result
+                    )
+                )
 
-                            result = await response.json()
+                data_to_push = []
 
-                            result_count += len(result.get("event_ids", []))
-        logger.info("Push to intake completed with index {0}".format(index))
+        logger.info("TOTAL EVENTS {0}".format(len(data_to_push)))
+        result += len(await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push]))
 
-        return result_count
+        logger.info("{0}: Stop getting new messages. Total events pushed to intake {1}".format(consumer_name, result))
+
+        return result
+
+    @staticmethod
+    async def produce_file_to_queue(
+        file_path: str, queue: Queue[dict[str, str] | None], date_range: DatetimeRange, consumers_count: int = 1
+    ) -> DatetimeRange:
+        """
+        Reads zipped archive line by line and produce parsed messages to queue.
+
+        As result after producing we get new lowest and highest datetime.
+
+        Args:
+            file_path: str
+            queue: Queue
+            consumers_count: int
+            date_range: DatetimeRange
+
+        Returns:
+            DatetimeRange:
+        """
+        headers = None
+        total_produced = 0
+        total_skipped = 0
+
+        new_date_time_range: DatetimeRange = date_range.duplicate()
+
+        logger.info(
+            """
+                File {0}: Start producing data for. Should skip all events that does not match criteria:
+                    * Event datetime should be lower then {1}
+                    * Event datetime should be higher then {2}
+            """.format(
+                file_path, new_date_time_range.utc_start_date, new_date_time_range.utc_end_date
+            )
+        )
+
+        async for line in file_utils.read_zip_lines(file_path):
+            if line.startswith("#") and headers is None:
+                headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
+
+                if headers:  # pragma: no cover
+                    logger.debug("File {0}: Headers for current log file: {0}".format(" ".join(headers)))
+            else:
+                line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
+
+                # Bug: sometimes it does not have correct direction based on date time
+                event_date = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
+
+                if event_date:
+                    if date_range.contains(event_date):
+                        total_skipped += 1
+                        continue
+
+                    new_date_time_range = new_date_time_range.update_with(event_date)
+
+                await queue.put(line_as_dict)
+                total_produced += 1
+
+        # Before pushing to queue None we should wait until all messages in queue are processed
+        await queue.join()
+
+        logger.info(
+            "File {0}: Finished to produce events. Total produced: {1}. Total skipped: {2} ".format(
+                file_path,
+                total_produced,
+                total_skipped,
+            )
+        )
+
+        for _ in range(0, consumers_count):
+            # We will push None for each consumer based on their count
+            await queue.put(None)
+
+        return new_date_time_range
+
+    async def process_datetime(
+        self, date_to_process: datetime, date_range: DatetimeRange | None = None
+    ) -> tuple[int, DatetimeRange, int]:
+        """
+        Processing datetime with applying date range filter.
+
+        Args:
+            date_to_process:
+            date_range:
+
+        Returns:
+            tuple[int, DatetimeRange, int]:
+        """
+        current_date = datetime.now(pytz.utc)
+        _date_to_process = date_to_process.replace(minute=0, second=0, microsecond=0)
+        file_id = int(_date_to_process.timestamp()) * 1000
+
+        _date_range = date_range or DatetimeRange(
+            start_date=_date_to_process + timedelta(hours=1), end_date=_date_to_process
+        )
+
+        updated_date_time_range = _date_range.duplicate()
+
+        local_file_name: str | None = None
+        total_processed_events = 0
+
+        if (current_date - _date_to_process) > timedelta(hours=2):
+            result = await self.broadcom_cloud_swg_client.list_of_files(
+                _date_to_process - timedelta(hours=1),
+                _date_to_process,
+            )
+
+            logger.info(
+                "List of files is {0}. Trying to find {1} (file id is {2})".format(result, _date_to_process, file_id)
+            )
+
+            is_available = False
+
+            for data in result.get("items", []):
+                if int(data.get("date", 0)) == file_id:
+                    is_available = True
+
+            if is_available:
+                local_file_name = await self.broadcom_cloud_swg_client.download_file(file_id)
+
+        else:
+            local_file_name, _ = await self.broadcom_cloud_swg_client.get_near_realtime_report(_date_to_process)
+
+        if local_file_name is not None:
+            logger.info("Start to process large zip file {0}".format(local_file_name))
+
+            queue: Queue[dict[str, str] | None] = Queue()
+            consumers_amount = 4
+            processed_result: Any = await asyncio.gather(
+                self.produce_file_to_queue(local_file_name, queue, DatetimeRange(), consumers_amount),
+                *[
+                    self.consume_file_events(queue, "{0}: Consumer[{1}]".format(local_file_name, i))
+                    for i in range(1, consumers_amount)
+                ],
+            )
+
+            updated_date_time_range = processed_result[0]
+            list_of_ids: list[int] = list(processed_result[1:])
+            total_processed_events = reduce(lambda x, y: x + y, list_of_ids, 0)
+
+            logger.info(
+                """
+                    Processing large zip file {0} result:
+                        lowest date: {1}
+                        latest date: {2}
+                        total events: {3}
+                """.format(
+                    local_file_name,
+                    updated_date_time_range.utc_start_date,
+                    updated_date_time_range.utc_end_date,
+                    total_processed_events,
+                )
+            )
+
+        return file_id, updated_date_time_range, total_processed_events
 
     async def get_events(self) -> tuple[int, datetime]:
         """
         Collects events from platform and push to intakes.
 
         Returns:
-            list[int, datetime]:
+            tuple[int, datetime]:
         """
-        end_date = datetime.utcnow()
-        start_date = self.last_event_date
+        current_date = datetime.now(pytz.utc)
+        current_file = int(current_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000
+        delta = int(timedelta(hours=1).total_seconds()) * 1000
 
-        token = None
-        continue_processing = True
+        one_hour_ago = current_file - delta
+        two_hours_ago = one_hour_ago - delta
 
-        data_to_push: list[dict[str, str]] = []
-        result = 0
-        latest_date: datetime | None = None
+        offsets = self.get_latest_offsets
 
-        while continue_processing:
-            continue_processing, token, file_name = await self.broadcom_cloud_swg_client.get_report_sync(
-                start_date=start_date,
-                end_date=end_date,
-                token=token,
-            )
+        tasks: list[Coroutine[Any, Any, tuple[int, DatetimeRange, int]]] = [
+            self.process_datetime(datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file))
+        ]
 
-            try:
-                temp_directory, unzipped_files = await file_utils.unzip(file_name)
-            except BadZipFile:  # pragma: no cover
-                logger.info("Empty zip file. No data to process")
+        for file_id in [one_hour_ago, two_hours_ago]:
+            file_date_range = offsets.get(file_id)
+            if file_date_range is not None:
+                tasks.append(self.process_datetime(datetime.fromtimestamp(file_id / 1000, pytz.utc), file_date_range))
 
-                return result, start_date
+        result: list[tuple[int, DatetimeRange, int]] = list(await asyncio.gather(*tasks))
 
-            try:
-                for file_name in unzipped_files:
-                    async with aiofiles.open(file_name) as file:
-                        headers = None
-                        coroutines_list: list[Coroutine[Any, Any, int]] = []
-                        async for line in file:
-                            if line.startswith("#") and headers is None:
-                                headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
+        new_offsets = {}
 
-                                if headers:  # pragma: no cover
-                                    logger.info("Headers for current log: {0}".format(" ".join(headers)))
-                            else:
-                                line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
+        total_events = 0
+        for data in result:
+            new_offsets[data[0]] = data[1]
+            total_events += data[2]
 
-                                line_date_time = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
-                                if latest_date is None:  # pragma: no cover
-                                    latest_date = line_date_time
+        self.update_latest_offsets(new_offsets)
 
-                                if line_date_time and latest_date and latest_date < line_date_time:
-                                    latest_date = line_date_time
-
-                                data_to_push.append(line_as_dict)
-                                # data_to_push = BroadcomCloudSwgClient.reduce_list(data_to_push)
-                                if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
-                                    coroutines_list.append(
-                                        self.push_broadcom_data_to_intakes(
-                                            [orjson.dumps(event).decode("utf-8") for event in data_to_push],
-                                            len(coroutines_list) + 1,
-                                        )
-                                    )
-
-                                    data_to_push = []
-
-                                if len(coroutines_list) > int(os.getenv("PUSH_DATA_TO_INTAKES_COUNT", 100)):
-                                    result += reduce(
-                                        lambda x, y: x + y, list(await asyncio.gather(*coroutines_list)), 0
-                                    )
-                                    coroutines_list = []
-
-                    result += reduce(lambda x, y: x + y, list(await asyncio.gather(*coroutines_list)), 0)
-                    result += await self.push_broadcom_data_to_intakes(
-                        [orjson.dumps(event).decode("utf-8") for event in data_to_push], 0
-                    )
-
-                    data_to_push = []
-            except Exception as e:  # pragma: no cover
-                logger.error("Exception during processing: {}".format(str(e)))
-
-                await file_utils.cleanup_resources([temp_directory], [file_name, *unzipped_files])
-
-                raise e
-
-            await file_utils.cleanup_resources([temp_directory], [file_name, *unzipped_files])
-
-        result_latest_date = latest_date or end_date
-        with self.context as cache:  # pragma: no cover
-            logger.info(
-                "New last event date now is {last_event_date}",
-                last_event_date=result_latest_date.isoformat(),
-            )
-
-            cache["last_event_date"] = result_latest_date.isoformat()
-
-        return result, result_latest_date
+        return total_events, datetime.now(pytz.utc)
 
     def run(self) -> None:  # pragma: no cover
         """Runs BroadcomCloudSwgConnector."""

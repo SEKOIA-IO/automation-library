@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 import aiofiles
 import pytest
+import pytz
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
 from aioresponses import aioresponses
@@ -57,35 +58,41 @@ async def test_broadcom_cloud_swg_client_get_real_time_log_data_url(
         client: BroadcomCloudSwgClient
         session_faker: Faker
     """
-    end_date_now = datetime.utcnow()
-    first_start_date = end_date_now - timedelta(days=session_faker.random.randint(1, 30))
+    end_date_now = datetime.now(tz=pytz.utc)
+    first_start_date = end_date_now - timedelta(seconds=session_faker.random.randint(1, 30))
 
-    first_result = client.get_real_time_log_data_url(
+    first_result, first_result_timestamp = client.get_real_time_log_data_url(
         start_date=first_start_date,
-        end_date=end_date_now,
     )
 
-    first_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&maxMB=100&token=none".format(
+    first_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&token=none".format(
         client.base_url,
-        int(end_date_now.timestamp()) * 1000,
-        int(first_start_date.timestamp()) * 1000,
+        0,
+        int(first_start_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000,
     )
 
     assert str(first_result) == first_expected_result
 
-    second_start_date = end_date_now - timedelta(days=session_faker.random.randint(1, 30))
+    second_start_date = end_date_now - timedelta(hours=1)
     token = session_faker.word()
     max_mb = session_faker.random.randint(1, 100)
 
-    second_result = client.get_real_time_log_data_url(
-        start_date=second_start_date, end_date=end_date_now, token=token, max_mb=max_mb
+    second_result, second_result_timestamp = client.get_real_time_log_data_url(
+        start_date=second_start_date, token=token, max_mb=max_mb
     )
 
-    second_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&maxMB={3}&token={4}".format(
-        client.base_url, int(end_date_now.timestamp()) * 1000, int(second_start_date.timestamp()) * 1000, max_mb, token
+    second_expected_result = "{0}/reportpod/logs/sync?endDate={1}&startDate={2}&token={3}".format(
+        client.base_url,
+        int(end_date_now.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000,
+        int(second_start_date.replace(minute=0, second=0, microsecond=0).timestamp()) * 1000,
+        token,
     )
 
     assert str(second_result) == second_expected_result
+
+    third_start_date = end_date_now - timedelta(days=session_faker.random.randint(1, 30))
+    with pytest.raises(ValueError):
+        client.get_real_time_log_data_url(start_date=third_start_date, token=token, max_mb=max_mb)
 
 
 @pytest.mark.asyncio
@@ -102,10 +109,9 @@ async def test_broadcom_cloud_swg_client_get_report_sync_exception(
         session_faker: Faker
     """
     with aioresponses() as mocked_responses:
-        end_date = datetime.utcnow()
-        start_date = end_date - timedelta(days=session_faker.random.randint(1, 29))
+        start_date = datetime.utcnow() - timedelta(seconds=session_faker.random.randint(1, 29))
 
-        requested_url = client.get_real_time_log_data_url(start_date=start_date, end_date=end_date)
+        requested_url, _ = client.get_real_time_log_data_url(start_date=start_date)
         token = session_faker.word()
 
         mocked_responses.get(
@@ -116,9 +122,8 @@ async def test_broadcom_cloud_swg_client_get_report_sync_exception(
         )
 
         with pytest.raises(ValueError):
-            await client.get_report_sync(
+            await client.get_near_realtime_report(
                 start_date=start_date,
-                end_date=end_date,
                 token=None,
             )
 
@@ -141,9 +146,9 @@ async def test_broadcom_cloud_swg_client_get_report_sync_1(
     with aioresponses() as mocked_responses:
         end_date = datetime.utcnow()
         # If start date is < 30 days ago it should limit to 30 days ago
-        start_date = end_date - timedelta(days=session_faker.random.randint(1, 29))
+        start_date = end_date - timedelta(seconds=session_faker.random.randint(1, 29))
 
-        first_url = client.get_real_time_log_data_url(start_date=start_date, end_date=end_date)
+        first_url, _ = client.get_real_time_log_data_url(start_date=start_date)
         token = session_faker.word()
 
         mocked_responses.get(
@@ -154,9 +159,8 @@ async def test_broadcom_cloud_swg_client_get_report_sync_1(
         )
 
         # Do not pass token
-        continue_work, result_token, result_file = await client.get_report_sync(
+        result_file, _ = await client.get_near_realtime_report(
             start_date=start_date,
-            end_date=end_date,
             token=None,
         )
 
@@ -169,8 +173,6 @@ async def test_broadcom_cloud_swg_client_get_report_sync_1(
         await delete_file(result_file)
 
         assert "".join(file_content) == logs_content
-        assert continue_work is False
-        assert result_token == token
 
 
 @pytest.mark.asyncio
@@ -193,12 +195,10 @@ async def test_broadcom_cloud_swg_client_get_report_sync_2(
     client.set_rate_limiter(async_limiter)
 
     with aioresponses() as mocked_responses:
-        end_date = datetime.utcnow()
-
-        expected_start_date = end_date - timedelta(days=30)
+        expected_start_date = datetime.now(pytz.utc) - timedelta(hours=2)
         input_token = session_faker.word()
 
-        url = client.get_real_time_log_data_url(start_date=expected_start_date, end_date=end_date, token=input_token)
+        url, _ = client.get_real_time_log_data_url(start_date=expected_start_date, token=input_token)
 
         response_token = session_faker.word()
 
@@ -210,9 +210,8 @@ async def test_broadcom_cloud_swg_client_get_report_sync_2(
         )
 
         # Do not pass token
-        continue_work, result_token, result_file = await client.get_report_sync(
+        result_file, result_file_id = await client.get_near_realtime_report(
             start_date=None,
-            end_date=end_date,
             token=input_token,
         )
 
@@ -224,9 +223,81 @@ async def test_broadcom_cloud_swg_client_get_report_sync_2(
 
         await delete_file(result_file)
 
-        assert continue_work is True
-        assert result_token == response_token
         assert "".join(file_content) == logs_content
+
+
+@pytest.mark.asyncio
+async def test_download_file_url(
+    client: BroadcomCloudSwgClient,
+    session_faker: Faker,
+):
+    url_1 = client.download_file_url(items=[1])
+    url_2 = client.download_file_url(items=[1, 2, 3])
+
+    assert url_1 == "{0}/reportpod/logs/download?type=hour&items=1&api".format(
+        client.base_url,
+    )
+
+    assert url_2 == "{0}/reportpod/logs/download?type=hour&items=1,2,3&api".format(
+        client.base_url,
+    )
+
+
+@pytest.mark.asyncio
+async def test_list_of_files_url(
+    client: BroadcomCloudSwgClient,
+    session_faker: Faker,
+):
+    url_1 = client.download_file_url(items=[1])
+    url_2 = client.download_file_url(items=[1, 2, 3])
+
+    assert url_1 == "{0}/reportpod/logs/download?type=hour&items=1&api".format(
+        client.base_url,
+    )
+
+    assert url_2 == "{0}/reportpod/logs/download?type=hour&items=1,2,3&api".format(
+        client.base_url,
+    )
+
+
+@pytest.mark.asyncio
+async def test_list_of_files(
+    client: BroadcomCloudSwgClient,
+    session_faker: Faker,
+):
+    with aioresponses() as mocked_responses:
+        start_date = datetime.utcnow() - timedelta(hours=3)
+        end_date = datetime.utcnow() - timedelta(hours=10)
+        first_url = client.list_of_files_to_process_url(start_date, end_date)
+        data = {
+            session_faker.word(): session_faker.word(),
+            session_faker.word(): session_faker.word(),
+            session_faker.word(): session_faker.word(),
+            session_faker.word(): session_faker.word(),
+        }
+
+        data1 = {
+            session_faker.word(): session_faker.word(),
+            session_faker.word(): session_faker.word(),
+        }
+
+        mocked_responses.get(
+            first_url,
+            status=200,
+            payload=data,
+        )
+
+        result = await client.list_of_files(start_date, end_date)
+        assert result == data
+
+        second_start_date = datetime.now(pytz.utc) - timedelta(days=1)
+        second_end_date = datetime.now(pytz.utc)
+        mocked_responses.get(
+            client.list_of_files_to_process_url(second_start_date, second_end_date), status=200, payload=data1
+        )
+
+        result1 = await client.list_of_files()
+        assert result1 == data1
 
 
 @pytest.mark.asyncio
