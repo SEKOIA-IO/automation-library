@@ -1,6 +1,7 @@
 import time
 from functools import cached_property
 from typing import Generator
+from posixpath import join as urljoin
 
 import orjson
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -68,7 +69,7 @@ class ExtraHopReveal360Connector(Connector):
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        url = f"{self.module.configuration.base_url}/api/v1/detections/search"
+        url = urljoin(self.module.configuration.base_url.lstrip("/"), "api/v1/detections/search")
         response = self.client.post(url, json=params, headers=headers, timeout=60)
 
         if not response.ok:
