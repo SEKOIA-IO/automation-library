@@ -8,6 +8,7 @@ from typing import Any, AsyncGenerator, Tuple
 import orjson
 import pytz
 from aiohttp import ClientSession, ClientTimeout
+from aiohttp_retry import ExponentialRetry, RetryClient
 from aiolimiter import AsyncLimiter
 from loguru import logger
 from multidict import CIMultiDictProxy
@@ -19,6 +20,8 @@ class BroadcomCloudSwgClient(object):
     """BroadcomCloudSwgClient."""
 
     _session: ClientSession | None = None
+    _retry_client: RetryClient | None = None
+
     _rate_limiter: AsyncLimiter | None = None
 
     _time_format = "%H:%M:%S"
@@ -56,7 +59,7 @@ class BroadcomCloudSwgClient(object):
 
     @classmethod
     @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[ClientSession, None]:
+    async def session(cls) -> AsyncGenerator[RetryClient, None]:
         """
         Get configured session with rate limiter.
 
@@ -72,11 +75,16 @@ class BroadcomCloudSwgClient(object):
                 auto_decompress=True,
             )
 
+        if cls._retry_client is None:
+            cls._retry_client = RetryClient(
+                client_session=cls._session, retry_options=ExponentialRetry(attempts=5, start_timeout=5)
+            )
+
         if cls._rate_limiter:
             async with cls._rate_limiter:
-                yield cls._session
+                yield cls._retry_client
         else:
-            yield cls._session
+            yield cls._retry_client
 
     def list_of_files_to_process_url(
         self,
@@ -235,7 +243,7 @@ class BroadcomCloudSwgClient(object):
             _start_date = _start_date.astimezone(pytz.utc)
 
         if (current_date - _start_date) > timedelta(hours=2):
-            raise ValueError("Start date should not be less the 2 hours ago in UTC timezone.")
+            raise ValueError("Start date should not be less then 2 hours ago in UTC timezone.")
 
         _end_time = (_start_date + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0).timestamp()
         if _start_date == current_date:

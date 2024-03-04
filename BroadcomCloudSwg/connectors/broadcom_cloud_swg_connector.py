@@ -17,6 +17,7 @@ from aiolimiter import AsyncLimiter
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.aio.helpers.files.utils import delete_file
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -200,10 +201,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         if rate_limiter:
             async with rate_limiter:
-                logger.info("Initialized session with rate limiter : {0} r/s".format(rate_limiter.max_rate))
                 yield cls._session
         else:
-            logger.info("Initialized session with empty rate limiter.")
             yield cls._session
 
     @property
@@ -220,7 +219,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         self._broadcom_cloud_swg_client = BroadcomCloudSwgClient(
             username=self.module.configuration.username,
             password=self.module.configuration.password,
-            rate_limiter=self.rate_limiter(),
+            rate_limiter=AsyncLimiter(1, 5),  # 1 request per 5 seconds for external API
         )
 
         return self._broadcom_cloud_swg_client
@@ -268,7 +267,6 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
                 data_to_push = []
 
-        logger.info("TOTAL EVENTS {0}".format(len(data_to_push)))
         result += len(await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push]))
 
         logger.info("{0}: Stop getting new messages. Total events pushed to intake {1}".format(consumer_name, result))
@@ -427,6 +425,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                 )
             )
 
+            await delete_file(local_file_name)
+
         return file_id, updated_date_time_range, total_processed_events
 
     async def get_events(self) -> tuple[int, datetime]:
@@ -503,5 +503,5 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                         time.sleep(self.configuration.frequency)
 
             except Exception as error:
-                logger.error("Error while running BroadcomCloudSwgConnector: {error}", error=error)
-                self.log_exception(error, message="Failed to forward events")
+                self.log_exception(error, message="Error while running BroadcomCloudSwgConnector")
+                time.sleep(self.configuration.frequency)
