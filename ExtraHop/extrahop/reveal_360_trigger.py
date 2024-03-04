@@ -31,7 +31,7 @@ class ExtraHopReveal360Connector(Connector):
     def client(self) -> ApiClient:
         return ApiClient(
             auth=ExtraHopApiAuthentication(
-                base_url=self.module.configuration.base_url,
+                base_url=self.module.configuration.tenant_url,
                 client_id=self.module.configuration.client_id,
                 client_secret=self.module.configuration.client_secret,
             )
@@ -69,7 +69,7 @@ class ExtraHopReveal360Connector(Connector):
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        url = urljoin(self.module.configuration.base_url.rstrip("/"), "api/v1/detections/search")
+        url = urljoin(self.module.configuration.tenant_url, "api/v1/detections/search")
         response = self.client.post(url, json=params, headers=headers, timeout=60)
 
         if not response.ok:

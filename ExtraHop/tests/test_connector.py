@@ -173,3 +173,38 @@ def test_clear_base_url_slash(data_storage, message_1, message_2):
         # events = trigger.fetch_events()
         trigger.next_batch()
         assert trigger.push_events_to_intakes.call_count == 1
+
+
+def test_clear_base_url_without_scheme(data_storage, message_1, message_2):
+    module = ExtraHopModule()
+
+    trigger = ExtraHopReveal360Connector(module=module, data_path=data_storage)
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+    trigger.push_events_to_intakes = MagicMock()
+    trigger.module.configuration = {
+        "base_url": "some-test-cloud.extrahop.com",
+        "client_id": "user123",
+        "client_secret": "some-secret",
+    }
+    trigger.configuration = {"intake_key": "intake_key", "frequency": 60}
+    trigger.get_last_timestamp = MagicMock()
+    trigger.from_date = 1645668000000
+
+    messages = [message_1, message_2]
+    with requests_mock.Mocker() as mock_requests, patch("extrahop.reveal_360_trigger.time") as mock_time:
+        mock_requests.post(
+            f"https://some-test-cloud.extrahop.com/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock_requests.post(
+            "https://some-test-cloud.extrahop.com/api/v1/detections/search",
+            [{"json": messages}, {"json": []}],
+        )
+        # events = trigger.fetch_events()
+        trigger.next_batch()
+        assert trigger.push_events_to_intakes.call_count == 1
