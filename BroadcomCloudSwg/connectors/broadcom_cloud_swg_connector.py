@@ -201,10 +201,8 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         if rate_limiter:
             async with rate_limiter:
-                logger.info("Initialized session with rate limiter : {0} r/s".format(rate_limiter.max_rate))
                 yield cls._session
         else:
-            logger.info("Initialized session with empty rate limiter.")
             yield cls._session
 
     @property
@@ -221,7 +219,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         self._broadcom_cloud_swg_client = BroadcomCloudSwgClient(
             username=self.module.configuration.username,
             password=self.module.configuration.password,
-            rate_limiter=self.rate_limiter(),
+            rate_limiter=AsyncLimiter(1, 5),  # 1 request per 5 seconds for external API
         )
 
         return self._broadcom_cloud_swg_client
@@ -505,5 +503,5 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                         time.sleep(self.configuration.frequency)
 
             except Exception as error:
-                logger.error("Error while running BroadcomCloudSwgConnector: {error}", error=error)
-                self.log_exception(error, message="Failed to forward events")
+                self.log_exception(error, message="Error while running BroadcomCloudSwgConnector")
+                time.sleep(self.configuration.frequency)

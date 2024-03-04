@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import aiofiles
 import pytest
 import pytz
-from aiohttp import ClientSession
+from aiohttp_retry import RetryClient
 from aiolimiter import AsyncLimiter
 from aioresponses import aioresponses
 from faker import Faker
@@ -41,7 +41,7 @@ async def test_broadcom_cloud_swg_client_session(client: BroadcomCloudSwgClient)
 
     assert BroadcomCloudSwgClient._session is None
     async with client.session() as session:
-        assert isinstance(session, ClientSession)
+        assert isinstance(session, RetryClient)
 
     assert BroadcomCloudSwgClient._session is not None
 
