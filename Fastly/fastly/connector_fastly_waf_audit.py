@@ -6,12 +6,12 @@ from pydantic import Field
 from .connector_fastly_base import FastlyBasicConnectorConfiguration, FastlyConnectorBase
 
 
-class FastlyAuditConnectorConfiguration(FastlyBasicConnectorConfiguration):
+class FastlyWAFAuditConnectorConfiguration(FastlyBasicConnectorConfiguration):
     site: str | None = Field(None, description="Site name", pattern=r"^[0-9a-z_.-]+$")
 
 
-class FastlyAuditConnector(FastlyConnectorBase):
-    configuration: FastlyAuditConnectorConfiguration
+class FastlyWAFAuditConnector(FastlyConnectorBase):
+    configuration: FastlyWAFAuditConnectorConfiguration
 
     def get_datetime_from_item(self, item: dict) -> datetime.datetime:
         return isoparse(item["created"])

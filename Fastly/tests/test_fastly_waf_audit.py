@@ -6,13 +6,13 @@ import requests_mock
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
-from fastly.connector_fastly_audit import FastlyAuditConnector
+from fastly.connector_fastly_waf_audit import FastlyWAFAuditConnector
 
 
 @pytest.fixture
 def trigger(data_storage):
     module = Module()
-    trigger = FastlyAuditConnector(module=module, data_path=data_storage)
+    trigger = FastlyWAFAuditConnector(module=module, data_path=data_storage)
 
     # mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()

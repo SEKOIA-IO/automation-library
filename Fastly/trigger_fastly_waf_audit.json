@@ -1,7 +1,7 @@
 {
-  "description": "Get last events from Fastly Audit logs",
-  "docker_parameters": "fastly_audit",
-  "name": "Fetch new audit logs from Fastly [BETA]",
+  "description": "Get last events from Fastly WAF Audit logs",
+  "docker_parameters": "fastly_waf_audit",
+  "name": "Fetch new audit logs from Fastly WAF [BETA]",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
