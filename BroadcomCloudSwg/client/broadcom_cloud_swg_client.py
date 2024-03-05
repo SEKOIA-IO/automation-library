@@ -77,7 +77,9 @@ class BroadcomCloudSwgClient(object):
 
         if cls._retry_client is None:
             cls._retry_client = RetryClient(
-                client_session=cls._session, retry_options=ExponentialRetry(attempts=5, start_timeout=5)
+                client_session=cls._session,
+                retry_options=ExponentialRetry(attempts=5, start_timeout=60, max_timeout=360, statuses={423}),
+                logger=logger,
             )
 
         if cls._rate_limiter:
@@ -363,18 +365,23 @@ class BroadcomCloudSwgClient(object):
             str:
             CIMultiDictProxy[str]:
         """
-        logger.info("Request url to get archive file is: {0}".format(url))
+        logger.info("URL {0}: Request to get archive file".format(url))
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:
                 if response.status != 200:
                     raise ValueError("Cannot get data. Status code is {0}".format(response.status))
 
-                logger.info("Response from Broadcom have 200 status. Start to process archive.")
+                logger.info("URL {0}: Response from Broadcom for have 200 status. Start to save archive.".format(url))
 
                 response_headers = response.headers
                 file_name = await save_aiohttp_response(response)
 
-                logger.info("Log files archive has been transferred.")
+                logger.info(
+                    "File {0}: Log files archive has been transferred from URL {1}.".format(
+                        file_name,
+                        url,
+                    )
+                )
 
         return file_name, response_headers
 
