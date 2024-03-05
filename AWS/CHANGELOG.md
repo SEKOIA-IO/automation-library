@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-05 - 1.30.7
+
+### Changed
+
+- Filtering some ec2 events
+
 ## 2024-02-28 - 1.30.6
 
 ### Changed
