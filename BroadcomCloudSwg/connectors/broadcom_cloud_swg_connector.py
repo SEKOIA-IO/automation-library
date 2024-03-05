@@ -256,10 +256,12 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
             if len(data_to_push) >= self.configuration.chunk_size:  # pragma: no cover
                 result += len(
-                    await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push])
+                    await self.push_data_to_intakes(
+                        [orjson.dumps(event).decode("utf-8") for event in data_to_push if event != {}]
+                    )
                 )
 
-                logger.info(
+                logger.debug(
                     "{0}: New batch with events pushed to intake. Total processed events {1}".format(
                         consumer_name, result
                     )
@@ -267,7 +269,11 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
                 data_to_push = []
 
-        result += len(await self.push_data_to_intakes([orjson.dumps(event).decode("utf-8") for event in data_to_push]))
+        result += len(
+            await self.push_data_to_intakes(
+                [orjson.dumps(event).decode("utf-8") for event in data_to_push if event != {}]
+            )
+        )
 
         logger.info("{0}: Stop getting new messages. Total events pushed to intake {1}".format(consumer_name, result))
 
@@ -299,35 +305,43 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         logger.info(
             """
-                File {0}: Start producing data for. Should skip all events that does not match criteria:
+                File {0}: Start producing data. Should skip all events that does not match criteria:
                     * Event datetime should be lower then {1}
                     * Event datetime should be higher then {2}
+                Current datetime in utc is: {3}
             """.format(
-                file_path, new_date_time_range.utc_start_date, new_date_time_range.utc_end_date
+                file_path,
+                new_date_time_range.utc_start_date,
+                new_date_time_range.utc_end_date,
+                datetime.now(pytz.utc),
             )
         )
 
-        async for line in file_utils.read_zip_lines(file_path):
-            if line.startswith("#") and headers is None:
-                headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
+        try:
+            async for line in file_utils.read_zip_lines(file_path):
+                if line.startswith("#") and headers is None:
+                    headers = BroadcomCloudSwgClient.parse_string_as_headers(line)
 
-                if headers:  # pragma: no cover
-                    logger.debug("File {0}: Headers for current log file: {0}".format(" ".join(headers)))
-            else:
-                line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
+                    if headers:  # pragma: no cover
+                        logger.debug("File {0}: Headers for current log file: {0}".format(" ".join(headers)))
+                else:
+                    line_as_dict = BroadcomCloudSwgClient.parse_input_string(line, headers)
 
-                # Bug: sometimes it does not have correct direction based on date time
-                event_date = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
+                    # Bug: sometimes it does not have correct direction based on date time
+                    event_date = BroadcomCloudSwgClient.get_date_time_from_data(line_as_dict)
 
-                if event_date:
-                    if date_range.contains(event_date):
-                        total_skipped += 1
-                        continue
+                    if event_date:
+                        if date_range.contains(event_date):
+                            total_skipped += 1
+                            continue
 
-                    new_date_time_range = new_date_time_range.update_with(event_date)
+                        new_date_time_range = new_date_time_range.update_with(event_date)
 
-                await queue.put(line_as_dict)
-                total_produced += 1
+                    await queue.put(line_as_dict)
+                    total_produced += 1
+
+        except Exception as e:  # pragma: no cover
+            logger.error("File {0}: Error during zip file processing: {1}".format(file_path, str(e)))
 
         # Before pushing to queue None we should wait until all messages in queue are processed
         await queue.join()
@@ -361,6 +375,9 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         """
         current_date = datetime.now(pytz.utc)
         _date_to_process = date_to_process.replace(minute=0, second=0, microsecond=0)
+        if _date_to_process.tzinfo != pytz.utc:
+            _date_to_process.astimezone(pytz.utc)
+
         file_id = int(_date_to_process.timestamp()) * 1000
 
         _date_range = date_range or DatetimeRange(
@@ -372,30 +389,46 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         local_file_name: str | None = None
         total_processed_events = 0
 
-        if (current_date - _date_to_process) > timedelta(hours=2):
-            result = await self.broadcom_cloud_swg_client.list_of_files(
-                _date_to_process - timedelta(hours=1),
-                _date_to_process,
+        try:
+            if (current_date - _date_to_process) > timedelta(hours=2):
+                result = await self.broadcom_cloud_swg_client.list_of_files(
+                    _date_to_process - timedelta(hours=2),
+                    _date_to_process,
+                )
+
+                logger.info(
+                    "List of files is {0}. Trying to find {1} (file id is {2})".format(
+                        result, _date_to_process, file_id
+                    )
+                )
+
+                is_available = False
+
+                for data in result.get("items", []):
+                    if int(data.get("date", 0)) == file_id:
+                        is_available = True
+
+                if is_available:
+                    local_file_name = await self.broadcom_cloud_swg_client.download_file(file_id)
+
+            else:
+                local_file_name, _ = await self.broadcom_cloud_swg_client.get_near_realtime_report(_date_to_process)
+
+        except Exception as e:
+            logger.error(
+                """
+                    Error while getting file:
+                     Date: {0}
+                     File id: {1}
+                     Offsets: {2}
+                     Exception: {3}
+                """.format(
+                    date_to_process, file_id, _date_range, e
+                )
             )
-
-            logger.info(
-                "List of files is {0}. Trying to find {1} (file id is {2})".format(result, _date_to_process, file_id)
-            )
-
-            is_available = False
-
-            for data in result.get("items", []):
-                if int(data.get("date", 0)) == file_id:
-                    is_available = True
-
-            if is_available:
-                local_file_name = await self.broadcom_cloud_swg_client.download_file(file_id)
-
-        else:
-            local_file_name, _ = await self.broadcom_cloud_swg_client.get_near_realtime_report(_date_to_process)
 
         if local_file_name is not None:
-            logger.info("Start to process large zip file {0}".format(local_file_name))
+            logger.info("File {0}: Start to decompress and process zip file".format(local_file_name))
 
             queue: Queue[dict[str, str] | None] = Queue()
             consumers_amount = 4
@@ -485,19 +518,12 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
 
-                    log_message = "No records to forward"
-                    if result_count > 0:
-                        log_message = "Pushed {0} records".format(result_count)
-
-                    logger.info(log_message)
-                    self.log(message=log_message, level="info")
-
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                         last_event_date.timestamp() - processing_start
                     )
 
                     if result_count > 0:
-                        self.log(message="Pushed {0} records".format(result_count), level="info")
+                        self.log(message="Total forwarded {0} records".format(result_count), level="info")
                     else:
                         self.log(message="No records to forward", level="info")
                         time.sleep(self.configuration.frequency)
