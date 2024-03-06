@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import cached_property, reduce
-from typing import Any, AsyncGenerator, Coroutine, Optional
+from typing import Any, AsyncGenerator, Optional
 
 import orjson
 import pytz
@@ -161,7 +161,11 @@ class BroadcomCloudSwgConnector(AsyncConnector):
     def update_latest_offsets(self, offsets: dict[int, DatetimeRange]) -> None:
         logger.info("Updating offsets with {0}".format(offsets))
 
-        result = {str(key): value.to_dict() for key, value in offsets.items()}
+        current_time = datetime.utcnow().replace(minute=0, second=0, microsecond=0).timestamp() * 1000
+        delta = int(timedelta(hours=1).total_seconds()) * 1000
+
+        # Save offsets for last 24 hours for debug purposed
+        result = {str(key): value.to_dict() for key, value in offsets.items() if key > current_time - delta * 24}
 
         with self.context as cache:
             cache["last_event_date"] = None
@@ -431,7 +435,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             logger.info("File {0}: Start to decompress and process zip file".format(local_file_name))
 
             queue: Queue[dict[str, str] | None] = Queue()
-            consumers_amount = 4
+            consumers_amount = int(os.getenv("BROADCOM_CONSUMERS_COUNT", 4))
             processed_result: Any = await asyncio.gather(
                 self.produce_file_to_queue(local_file_name, queue, DatetimeRange(), consumers_amount),
                 *[
@@ -478,16 +482,32 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         offsets = self.get_latest_offsets
 
-        tasks: list[Coroutine[Any, Any, tuple[int, DatetimeRange, int]]] = [
-            self.process_datetime(datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file))
-        ]
+        result: list[tuple[int, DatetimeRange, int]] = list()
 
-        for file_id in [one_hour_ago, two_hours_ago]:
+        for file_id in [two_hours_ago, one_hour_ago]:
             file_date_range = offsets.get(file_id)
             if file_date_range is not None:
-                tasks.append(self.process_datetime(datetime.fromtimestamp(file_id / 1000, pytz.utc), file_date_range))
+                result.append(
+                    await self.process_datetime(datetime.fromtimestamp(file_id / 1000, pytz.utc), file_date_range)
+                )
 
-        result: list[tuple[int, DatetimeRange, int]] = list(await asyncio.gather(*tasks))
+        result.append(
+            await self.process_datetime(
+                datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file)
+            )
+        )
+
+        # #
+        # tasks: list[Coroutine[Any, Any, tuple[int, DatetimeRange, int]]] = [
+        #     self.process_datetime(datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file))
+        # ]
+        #
+        # for file_id in [one_hour_ago, two_hours_ago]:
+        #     file_date_range = offsets.get(file_id)
+        #     if file_date_range is not None:
+        #         tasks.append(self.process_datetime(datetime.fromtimestamp(file_id / 1000, pytz.utc), file_date_range))
+        #
+        # result: list[tuple[int, DatetimeRange, int]] = list(await asyncio.gather(*tasks))
 
         new_offsets = {}
 
@@ -496,7 +516,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             new_offsets[data[0]] = data[1]
             total_events += data[2]
 
-        self.update_latest_offsets(new_offsets)
+        self.update_latest_offsets({**offsets, **new_offsets})
 
         return total_events, datetime.now(pytz.utc)
 
