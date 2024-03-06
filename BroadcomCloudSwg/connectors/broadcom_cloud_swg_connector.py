@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import cached_property, reduce
-from typing import Any, AsyncGenerator, Coroutine, Optional
+from typing import Any, AsyncGenerator, Optional
 
 import orjson
 import pytz
@@ -165,11 +165,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         delta = int(timedelta(hours=1).total_seconds()) * 1000
 
         # Save offsets for last 24 hours for debug purposed
-        result = {
-            str(key): value.to_dict()
-            for key, value in offsets.items()
-            if key > current_time - delta * 24
-        }
+        result = {str(key): value.to_dict() for key, value in offsets.items() if key > current_time - delta * 24}
 
         with self.context as cache:
             cache["last_event_date"] = None
@@ -497,8 +493,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
 
         result.append(
             await self.process_datetime(
-                datetime.fromtimestamp(current_file / 1000, pytz.utc),
-                offsets.get(current_file)
+                datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file)
             )
         )
 
