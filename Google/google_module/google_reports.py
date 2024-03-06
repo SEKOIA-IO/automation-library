@@ -76,7 +76,7 @@ class GoogleReports(GoogleTrigger):
 
         with self.context as cache:
             app_key_name_in_cache = "most_recent_date_seen_" + self.configuration.application_name.value
-            most_recent_date_seen_str = cache.get(app_key_name_in_cache)
+            most_recent_date_seen_str = cache.get(app_key_name_in_cache) or cache.get("most_recent_date_seen")
 
             # if undefined, retrieve events from the last day
             if most_recent_date_seen_str is None:
