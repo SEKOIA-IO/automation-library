@@ -435,7 +435,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
             logger.info("File {0}: Start to decompress and process zip file".format(local_file_name))
 
             queue: Queue[dict[str, str] | None] = Queue()
-            consumers_amount = 4
+            consumers_amount = int(os.getenv("BROADCOM_CONSUMERS_COUNT", 4))
             processed_result: Any = await asyncio.gather(
                 self.produce_file_to_queue(local_file_name, queue, DatetimeRange(), consumers_amount),
                 *[
