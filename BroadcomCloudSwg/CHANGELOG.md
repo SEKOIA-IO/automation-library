@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-05 - 1.0.11
+
+### Added
+
+- save offsets for last 24 hour.
+
 ## 2024-03-05 - 1.0.10
 
 ### Fixed
