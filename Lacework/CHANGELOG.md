@@ -12,3 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Added
 
 - First time to add the Lacework connector with query
+
+### 2024-03-06 - 1.0.1
+
+#### Changed
+
+- Addition of timezone in timestamp
