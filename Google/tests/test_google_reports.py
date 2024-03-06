@@ -88,15 +88,13 @@ def drive_response_NK():
 
 
 def test_get_google_reports_data(trigger, drive_response):
-    mock_service = Mock()
-    mock_service.activities.return_value.list.return_value.execute.return_value = drive_response
-
-    with patch("google_module.google_reports.build", return_value=mock_service):
+    with patch("google_module.google_reports.build", return_value=Mock()):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
-            trigger.get_reports_events()
-            results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-            assert len(results[0]) != 0
-            assert trigger.events_sum == 3
+            with patch("google_module.google_reports.GoogleReports.get_activities", return_value=drive_response):
+                trigger.get_reports_events()
+                results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
+                assert len(results[0]) != 0
+                assert trigger.events_sum == 3
 
 
 def test_drive_connector_NK(trigger, drive_response_NK, drive_response):

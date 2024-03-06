@@ -62,41 +62,48 @@ class GoogleReports(GoogleTrigger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.from_date = self.most_recent_date_seen
         self.service_account_path = self.CREDENTIALS_PATH
         self.scopes = [
             "https://www.googleapis.com/auth/admin.reports.audit.readonly",
             "https://www.googleapis.com/auth/admin.reports.usage.readonly",
         ]
         self.events_sum = 0
+        self.from_date = ""
 
     @property
     def most_recent_date_seen(self):
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
-            most_recent_date_seen_str = cache.get("most_recent_date_seen")
+            app_key_name_in_cache = "most_recent_date_seen_" + self.configuration.application_name.value
+            most_recent_date_seen_str = cache.get(app_key_name_in_cache)
 
             # if undefined, retrieve events from the last day
             if most_recent_date_seen_str is None:
-                return now - timedelta(days=1)
+                before_one_day = now - timedelta(days=1)
+                return before_one_day.strftime("%Y-%m-%dT%H:%M:%SZ")
 
             # parse the most recent date seen
-            most_recent_date_seen = isoparse(most_recent_date_seen_str)
+            most_recent_date_seen = datetime.strptime(most_recent_date_seen_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=timezone.utc
+            )
 
             # We don't retrieve messages older than almost 6 months
-            six_months = now - timedelta(days=180)
-            if most_recent_date_seen < six_months:
-                most_recent_date_seen = six_months
+            six_months_ago = now - timedelta(days=180)
+            if most_recent_date_seen < six_months_ago:
+                most_recent_date_seen = six_months_ago
 
-            return most_recent_date_seen
+            return most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @most_recent_date_seen.setter
     def most_recent_date_seen(self, recent_date):
-        most_recent_date_seen = recent_date
-        self.from_date = most_recent_date_seen
+        add_one_seconde = datetime.strptime(recent_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+            tzinfo=timezone.utc
+        ) + timedelta(seconds=1)
+        self.from_date = add_one_seconde.strftime("%Y-%m-%dT%H:%M:%SZ")
         with self.context as cache:
-            cache["most_recent_date_seen"] = most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+            app_key_name_in_cache = "most_recent_date_seen_" + self.configuration.application_name.value
+            cache[app_key_name_in_cache] = self.from_date
 
     @cached_property
     def pagination_limit(self):
@@ -104,7 +111,7 @@ class GoogleReports(GoogleTrigger):
 
     def run(self):
         self.log(
-            message=f"Starting Google Reports api for {self.configuration.application_name.value} application at {self.from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+            message=f"Starting Google Reports api for {self.configuration.application_name.value} application at {self.most_recent_date_seen}",
             level="info",
         )
 
@@ -161,7 +168,7 @@ class GoogleReports(GoogleTrigger):
                 userKey="all",
                 applicationName=self.configuration.application_name.value,
                 maxResults=self.pagination_limit,
-                startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                startTime=self.most_recent_date_seen,
             )
             .execute()
         )
@@ -183,7 +190,7 @@ class GoogleReports(GoogleTrigger):
                 applicationName=self.configuration.application_name.value,
                 maxResults=self.pagination_limit,
                 pageToken=next_key,
-                startTime=self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                startTime=self.most_recent_date_seen,
             )
             .execute()
         )
@@ -207,7 +214,7 @@ class GoogleReports(GoogleTrigger):
                 self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                 self.push_events_to_intakes(events=grouped_data)
-                self.most_recent_date_seen = isoparse(recent_date)
+                self.most_recent_date_seen = recent_date
                 self.log(
                     message=f"Changing recent date in get next activities to  {self.most_recent_date_seen}",
                     level="info",
@@ -231,7 +238,7 @@ class GoogleReports(GoogleTrigger):
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
         if len(items) == 0:
-            self.most_recent_date_seen = now
+            self.most_recent_date_seen = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         if len(items) > 0:
             recent_date = items[0].get("id").get("time")
@@ -239,7 +246,7 @@ class GoogleReports(GoogleTrigger):
             self.log(message=f"Sending the first batch of {len(messages)} elements", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
             self.push_events_to_intakes(events=messages)
-            self.most_recent_date_seen = isoparse(recent_date)
+            self.most_recent_date_seen = recent_date
             self.log(
                 message=f"Changing recent date in get reports events to  {self.most_recent_date_seen}", level="info"
             )
