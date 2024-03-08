@@ -1,67 +1,65 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Configuration",
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Configuration",
+    "type": "object",
+    "properties": {
+      "credentials": {
+        "description": "Credentials to use. You can find them in the credentials file",
         "type": "object",
-        "properties": {
-            "credentials": {
-                "description": "Credentials to use. You can find them in the credentials file",
-                "type": "object",
-                "required": [
-                    "type",
-                    "project_id",
-                    "private_key_id",
-                    "private_key",
-                    "client_email",
-                    "client_id",
-                    "auth_uri",
-                    "token_uri",
-                    "auth_provider_x509_cert_url",
-                    "client_x509_cert_url"
-                ],
-                "properties": {
-                    "type": {
-                        "type": "string"
-                    },
-                    "project_id": {
-                        "type": "string"
-                    },
-                    "private_key_id": {
-                        "type": "string"
-                    },
-                    "private_key": {
-                        "type": "string"
-                    },
-                    "client_email": {
-                        "type": "string"
-                    },
-                    "client_id": {
-                        "type": "string"
-                    },
-                    "auth_uri": {
-                        "type": "string"
-                    },
-                    "token_uri": {
-                        "type": "string"
-                    },
-                    "auth_provider_x509_cert_url": {
-                        "type": "string",
-                        "format": "uri"
-                    },
-                    "client_x509_cert_url": {
-                        "type": "string",
-                        "format": "uri"
-                    }
-                }
-            }
-        },
         "required": [
-            "credentials"
-        ]
+          "type",
+          "project_id",
+          "private_key_id",
+          "private_key",
+          "client_email",
+          "client_id",
+          "auth_uri",
+          "token_uri",
+          "auth_provider_x509_cert_url",
+          "client_x509_cert_url"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "private_key_id": {
+            "type": "string"
+          },
+          "private_key": {
+            "type": "string"
+          },
+          "client_email": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "auth_uri": {
+            "type": "string"
+          },
+          "token_uri": {
+            "type": "string"
+          },
+          "auth_provider_x509_cert_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "client_x509_cert_url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
     },
-    "description": "Google module",
-    "name": "Google",
-    "uuid": "4f682a9e-9a25-43a5-8a48-cd9bd7fade7e",
-    "slug": "google",
-    "version": "1.18.0"
+    "required": ["credentials"]
+  },
+  "description": "Google module",
+  "name": "Google",
+  "uuid": "4f682a9e-9a25-43a5-8a48-cd9bd7fade7e",
+  "slug": "google",
+  "version": "1.18.1"
 }
