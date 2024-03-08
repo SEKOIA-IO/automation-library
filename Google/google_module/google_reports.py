@@ -17,6 +17,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from requests.exceptions import HTTPError
 from urllib3.exceptions import HTTPError as BaseHTTPError
+from google.auth.exceptions import TransportError
 
 
 class ApplicationName(str, Enum):
@@ -162,18 +163,22 @@ class GoogleReports(GoogleTrigger):
 
         self.log(message=f"Start requesting the Google reports with credential object created", level="info")
 
-        activities = (
-            reports_service.activities()
-            .list(
-                userKey="all",
-                applicationName=self.configuration.application_name.value,
-                maxResults=self.pagination_limit,
-                startTime=self.most_recent_date_seen,
+        try:
+            activities = (
+                reports_service.activities()
+                .list(
+                    userKey="all",
+                    applicationName=self.configuration.application_name.value,
+                    maxResults=self.pagination_limit,
+                    startTime=self.most_recent_date_seen,
+                )
+                .execute()
             )
-            .execute()
-        )
 
-        return activities
+            return activities
+
+        except TransportError as ex:
+            self.log(message=f"Can't reach the google api server", level="warning")
 
     def get_next_activities(self, next_key):
         reports_service = self.get_build_object()

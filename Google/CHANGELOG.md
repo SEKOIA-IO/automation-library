@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-03-06 - 1.17.3
+## 2024-03-07 - 1.18.1
+
+### Add
+
+- Add some exceptions
+- Update google api sdk library
+
+## 2024-03-06 - 1.18.0
 
 ### Changed
 
