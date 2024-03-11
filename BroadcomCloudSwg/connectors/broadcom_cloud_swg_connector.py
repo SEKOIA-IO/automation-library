@@ -453,7 +453,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
                     Processing large zip file {0} result:
                         lowest date: {1}
                         latest date: {2}
-                        total events: {3}
+                    Total events: {3}
                 """.format(
                     local_file_name,
                     updated_date_time_range.utc_start_date,
@@ -487,15 +487,17 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         for file_id in [two_hours_ago, one_hour_ago]:
             file_date_range = offsets.get(file_id)
             if file_date_range is not None:
-                result.append(
-                    await self.process_datetime(datetime.fromtimestamp(file_id / 1000, pytz.utc), file_date_range)
+                process_result = await self.process_datetime(
+                    datetime.fromtimestamp(file_id / 1000, pytz.utc), file_date_range
                 )
+                self.update_latest_offsets({**offsets, process_result[0]: process_result[1]})
+                result.append(process_result)
 
-        result.append(
-            await self.process_datetime(
-                datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file)
-            )
+        process_result = await self.process_datetime(
+            datetime.fromtimestamp(current_file / 1000, pytz.utc), offsets.get(current_file)
         )
+        self.update_latest_offsets({**offsets, process_result[0]: process_result[1]})
+        result.append(process_result)
 
         # #
         # tasks: list[Coroutine[Any, Any, tuple[int, DatetimeRange, int]]] = [
@@ -509,14 +511,7 @@ class BroadcomCloudSwgConnector(AsyncConnector):
         #
         # result: list[tuple[int, DatetimeRange, int]] = list(await asyncio.gather(*tasks))
 
-        new_offsets = {}
-
-        total_events = 0
-        for data in result:
-            new_offsets[data[0]] = data[1]
-            total_events += data[2]
-
-        self.update_latest_offsets({**offsets, **new_offsets})
+        total_events = int(sum([data[2] for data in result]))
 
         return total_events, datetime.now(pytz.utc)
 

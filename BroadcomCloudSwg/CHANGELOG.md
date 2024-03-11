@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-08 - 1.0.12
+
+### Fixed
+
+- update offsets each time after processing file
+
 ## 2024-03-05 - 1.0.11
 
 ### Added
