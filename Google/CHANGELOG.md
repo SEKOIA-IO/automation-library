@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-07 - 1.18.2
+
+### Add
+
+- Add the nextkey condition
+
 ## 2024-03-07 - 1.18.1
 
 ### Add

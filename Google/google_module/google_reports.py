@@ -257,7 +257,8 @@ class GoogleReports(GoogleTrigger):
             )
             self.events_sum += len(messages)
 
-            self.get_next_activities_with_next_key(next_key)
+            if next_key:
+                self.get_next_activities_with_next_key(next_key)
 
         else:
             self.log(message="No messages to forward", level="info")
