@@ -39,14 +39,14 @@ class LaceworkEventsTrigger(Connector):
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
-    def cursor(self) -> str | None:
+    def startTime(self) -> str | None:
         with self.context as cache:
-            return str(cache.get("cursor"))
+            return str(cache.get("startTime"))
 
-    @cursor.setter
-    def cursor(self, cursor: str) -> None:
+    @startTime.setter
+    def startTime(self, startTime: str) -> None:
         with self.context as cache:
-            cache["cursor"] = cursor
+            cache["startTime"] = startTime
 
     @cached_property
     def pagination_limit(self) -> Any:
@@ -88,21 +88,19 @@ class LaceworkEventsTrigger(Connector):
         finally:
             self.log(message="Lacework Events Trigger has stopped", level="info")
 
-    def get_next_events(self, cursor: str | None) -> Any | None:
+    def get_next_events(self, url: str | None) -> Any | None:
         # set parameters
         parameters = {
             "limit": self.pagination_limit,
         }
 
-        # if defined, set the cursor
-        if cursor:
-            parameters["cursor"] = cursor
-        # otherwise, get events starting from the last 5 minutes
-        else:
-            parameters["startTime"] = int(time.time()) - 300
+        # if defined, set the next page url
+        if url:
+            response = self.client.get(url=url, params=parameters)
 
-        # Get the events
-        response = self.client.list_alerts(parameters=parameters)
+        # otherwise, display the first page of alerts
+        else:
+            response = self.client.list_alerts(parameters)
 
         # Something failed
         if not response.ok:
@@ -135,19 +133,17 @@ class LaceworkEventsTrigger(Connector):
         and the current batch is not too big.
         """
         has_more_messages = True
-        cursor = self.cursor
-
+        nextPage = None
         messages = []
         while has_more_messages and self.running:
             has_more_messages = False
-
-            batch = self.get_next_events(cursor)
+            batch = self.get_next_events(nextPage)
             if batch is None:
                 break
 
             if batch.get("content", {}).get("paging", {}).get("urls", {}).get("nextPage") != None:
                 has_more_messages = True
-                cursor = max(item.get("startTime") for item in batch.get("data", []))
+                nextPage = batch.get("content", {}).get("paging", {}).get("urls", {}).get("nextPage")
 
             items = batch.get("data", [])
             if len(items) > 0:
@@ -164,8 +160,6 @@ class LaceworkEventsTrigger(Connector):
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
                 self.push_events_to_intakes(events=messages)
                 messages = []
-
-        self.cursor = cursor
 
         if messages:
             self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
