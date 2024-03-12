@@ -1,6 +1,8 @@
 import datetime
 import time
 from functools import cached_property
+
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import orjson
@@ -9,6 +11,8 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
+import sys
+sys.path.append("../")
 from lacework_module.base import LaceworkModule
 from lacework_module.client import LaceworkApiClient
 from lacework_module.client.auth import LaceworkAuthentication
@@ -36,17 +40,8 @@ class LaceworkEventsTrigger(Connector):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
-
-    @property
-    def startTime(self) -> str | None:
-        with self.context as cache:
-            return str(cache.get("startTime"))
-
-    @startTime.setter
-    def startTime(self, startTime: str) -> None:
-        with self.context as cache:
-            cache["startTime"] = startTime
+        self.from_date = ""
+        self.context = PersistentJSON("context.json", "./")
 
     @cached_property
     def pagination_limit(self) -> Any:
@@ -60,6 +55,40 @@ class LaceworkEventsTrigger(Connector):
             secret_key=self.module.configuration.secret_key,
         )
         return LaceworkApiClient(base_url=self.module.configuration.lacework_url, auth=auth)
+
+    @property
+    def most_recent_date_seen(self):
+        now = datetime.now(timezone.utc)
+
+        with self.context as cache:
+            most_recent_date_seen_str = cache.get("most_recent_date_seen")
+
+            # if undefined, retrieve events from the last day
+            if most_recent_date_seen_str is None:
+                before_one_day = now - timedelta(days=1)
+                return before_one_day.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            # parse the most recent date seen
+            most_recent_date_seen = datetime.strptime(most_recent_date_seen_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=timezone.utc
+            )
+
+            # We don't retrieve messages older than almost 6 months
+            one_month_ago = now - timedelta(days=30)
+            if most_recent_date_seen < one_month_ago:
+                most_recent_date_seen = one_month_ago
+
+            return most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @most_recent_date_seen.setter
+    def most_recent_date_seen(self, recent_date):
+        add_one_seconde = datetime.strptime(recent_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+            tzinfo=timezone.utc
+        ) + timedelta(seconds=1)
+        self.from_date = add_one_seconde.strftime("%Y-%m-%dT%H:%M:%SZ")
+        with self.context as cache:
+            cache["most_recent_date_seen"] = self.from_date
+
 
     def run(self) -> None:
         self.log(message="Lacework Events Trigger has started", level="info")
@@ -89,18 +118,13 @@ class LaceworkEventsTrigger(Connector):
             self.log(message="Lacework Events Trigger has stopped", level="info")
 
     def get_next_events(self, url: str | None) -> Any | None:
-        # set parameters
-        parameters = {
-            "limit": self.pagination_limit,
-        }
-
         # if defined, set the next page url
         if url:
-            response = self.client.get(url=url, params=parameters)
+            response = self.client.get(url=url)
 
         # otherwise, display the first page of alerts
         else:
-            response = self.client.list_alerts(parameters)
+            response = self.client.list_alerts()
 
         # Something failed
         if not response.ok:
@@ -119,7 +143,7 @@ class LaceworkEventsTrigger(Connector):
     def _get_most_recent_timestamp_from_items(self, items: list[dict[Any, Any]]) -> float:
         def _extract_timestamp(item: dict[Any, Any]) -> float:
             RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-            return datetime.datetime.strptime(item["startTime"], RFC3339_STRICT_FORMAT).timestamp()
+            return datetime.strptime(item["startTime"], RFC3339_STRICT_FORMAT).timestamp()
 
         later = 0.0
         for item in items:
@@ -147,8 +171,8 @@ class LaceworkEventsTrigger(Connector):
 
             items = batch.get("data", [])
             if len(items) > 0:
-                most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
-                events_lag = int(time.time() - most_recent_timestamp_seen)
+                self.most_recent_date_seen = str(datetime.fromtimestamp(self._get_most_recent_timestamp_from_items(items)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+                events_lag = int(time.time() - datetime.strptime(self.most_recent_date_seen,"%Y-%m-%dT%H:%M:%SZ").timestamp())
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
@@ -162,6 +186,7 @@ class LaceworkEventsTrigger(Connector):
                 messages = []
 
         if messages:
+            print(messages)
             self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
             self.push_events_to_intakes(events=messages)
