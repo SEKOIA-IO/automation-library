@@ -1,4 +1,3 @@
-import datetime
 import time
 from functools import cached_property
 
@@ -11,9 +10,6 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
-import sys
-
-sys.path.append("../")
 from lacework_module.base import LaceworkModule
 from lacework_module.client import LaceworkApiClient
 from lacework_module.client.auth import LaceworkAuthentication
@@ -58,7 +54,7 @@ class LaceworkEventsTrigger(Connector):
         return LaceworkApiClient(base_url=self.module.configuration.lacework_url, auth=auth)
 
     @property
-    def most_recent_date_seen(self):
+    def most_recent_date_seen(self) -> str:
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
@@ -82,7 +78,7 @@ class LaceworkEventsTrigger(Connector):
             return most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @most_recent_date_seen.setter
-    def most_recent_date_seen(self, recent_date):
+    def most_recent_date_seen(self, recent_date:str) -> None:
         add_one_seconde = datetime.strptime(recent_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
             tzinfo=timezone.utc
         ) + timedelta(seconds=1)
