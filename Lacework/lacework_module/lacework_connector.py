@@ -78,7 +78,7 @@ class LaceworkEventsTrigger(Connector):
             return most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @most_recent_date_seen.setter
-    def most_recent_date_seen(self, recent_date:str) -> None:
+    def most_recent_date_seen(self, recent_date: str) -> None:
         add_one_seconde = datetime.strptime(recent_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
             tzinfo=timezone.utc
         ) + timedelta(seconds=1)
