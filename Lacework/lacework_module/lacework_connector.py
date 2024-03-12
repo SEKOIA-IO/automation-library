@@ -12,6 +12,7 @@ from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
 
 import sys
+
 sys.path.append("../")
 from lacework_module.base import LaceworkModule
 from lacework_module.client import LaceworkApiClient
@@ -88,7 +89,6 @@ class LaceworkEventsTrigger(Connector):
         self.from_date = add_one_seconde.strftime("%Y-%m-%dT%H:%M:%SZ")
         with self.context as cache:
             cache["most_recent_date_seen"] = self.from_date
-
 
     def run(self) -> None:
         self.log(message="Lacework Events Trigger has started", level="info")
@@ -171,8 +171,14 @@ class LaceworkEventsTrigger(Connector):
 
             items = batch.get("data", [])
             if len(items) > 0:
-                self.most_recent_date_seen = str(datetime.fromtimestamp(self._get_most_recent_timestamp_from_items(items)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
-                events_lag = int(time.time() - datetime.strptime(self.most_recent_date_seen,"%Y-%m-%dT%H:%M:%SZ").timestamp())
+                self.most_recent_date_seen = str(
+                    datetime.fromtimestamp(self._get_most_recent_timestamp_from_items(items)).strftime(
+                        "%Y-%m-%dT%H:%M:%S.%fZ"
+                    )
+                )
+                events_lag = int(
+                    time.time() - datetime.strptime(self.most_recent_date_seen, "%Y-%m-%dT%H:%M:%SZ").timestamp()
+                )
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
