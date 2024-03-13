@@ -1,0 +1,46 @@
+{
+    "description": "SentinelOne logs connector",
+    "docker_parameters": "sentinelone_log_connector",
+    "name": "SentinelOne logs connector",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "api_key": {
+                "description": "",
+                "type": "string"
+            },
+            "management_domain": {
+                "description": "",
+                "type": "string"
+            },
+            "uuid": {
+                "description": "",
+                "type": "string"
+            },
+            "intake_key": {
+                "description": "",
+                "type": "string"
+            },
+            "last_activity_created_at": {
+                "description": "",
+                "type": "string",
+                "default": ""
+            },
+            "last_threat_created_at": {
+                "description": "",
+                "type": "string",
+                "default": ""
+            }
+        },
+        "required": [
+            "api_key",
+            "management_domain",
+            "uuid",
+            "intake_key"
+        ],
+        "secrets": [],
+        "title": "SentinelOne logs connector",
+        "type": "object"
+    },
+    "uuid": "09b4d451-0445-4a4a-91ac-1241550cdbfd"
+}

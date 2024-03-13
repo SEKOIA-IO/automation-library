@@ -8,10 +8,12 @@ authors = []
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.8.1"
 orjson = "^3.7.7"
-sentinelone-management-sdk = {path = "sentinel-mgmt-sdk.tar.gz"}
+sentinelone-management-sdk = { path = "sentinel-mgmt-sdk.tar.gz" }
 confluent-kafka = "^2.1.1"
 certifi = "^2023.7.22"
 protobuf = "^4.21.9"
+ruff = "^0.3.0"
+freezegun = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -23,12 +25,12 @@ requests-mock = "*"
 mypy = "^0.990"
 
 [build-system]
-requires = [ "poetry-core>=1.0.0",]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 119
-target-version = ['py38']
+target-version = ['py311']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -36,7 +38,26 @@ profile = "black"
 line_length = 119
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
+omit = ["tests/*", "main.py"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 119
+fix = true
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "FIX", # flake8-fixme
+    "T20", # flake8-print
+]
+ignore = [
+    "FIX003", # line-contains-xxx
+    "FIX004", # line-contains-hack
+    "C901",   # complex-structure
 ]

@@ -1,7 +1,7 @@
 import re
 import secrets
 import string
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def camelize(string: str) -> str:
@@ -16,7 +16,7 @@ def to_rfc3339(date: datetime):
     Return the datetime as RFC3339 strict format
     """
     assert date.tzinfo is not None and date.tzinfo.utcoffset(date) is not None
-    return date.astimezone(timezone.utc).strftime(RFC3339_STRICT_FORMAT)
+    return date.astimezone(UTC).strftime(RFC3339_STRICT_FORMAT)
 
 
 def generate_password(length: int = 64) -> str:

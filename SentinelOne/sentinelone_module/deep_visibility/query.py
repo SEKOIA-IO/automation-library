@@ -2,12 +2,7 @@ from datetime import datetime
 
 from management.mgmtsdk_v2.entities.deep_visibility_v2 import DvQuery
 from pydantic import BaseModel, Field
-from tenacity import (
-    Retrying,
-    retry_if_not_exception_type,
-    stop_after_delay,
-    wait_exponential,
-)
+from tenacity import Retrying, retry_if_not_exception_type, stop_after_delay, wait_exponential
 
 from sentinelone_module.base import SentinelOneAction
 from sentinelone_module.exceptions import (

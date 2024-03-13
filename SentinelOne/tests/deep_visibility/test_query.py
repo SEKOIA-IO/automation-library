@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import requests_mock
@@ -223,7 +223,7 @@ def test_list_remote_scripts_integration(symphony_storage):
         hostname=os.environ["SENTINELONE_HOSTNAME"],
         api_token=os.environ["SENTINELONE_API_TOKEN"],
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     arguments = QueryDeepVisibilityArguments(
         site_ids=[os.environ["SENTINELONE_SITE_ID"]],
         query="EndpointName exists",
