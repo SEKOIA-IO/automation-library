@@ -18,3 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 
 - Addition of timezone in timestamp
+
+### 2024-03-13 - 1.0.2
+
+#### Changed
+
+- Fix on pagination
