@@ -61,7 +61,9 @@ class LaceworkEventsTrigger(Connector):
 
     @most_recent_date_seen.setter
     def most_recent_date_seen(self, recent_date: str) -> None:
-        self.from_date = recent_date
+        # save the greatest date
+        if self.from_date < recent_date:
+                self.from_date = recent_date
         with self.context as cache:
             cache["most_recent_date_seen"] = self.from_date
 
