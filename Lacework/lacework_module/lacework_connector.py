@@ -63,7 +63,7 @@ class LaceworkEventsTrigger(Connector):
     def most_recent_date_seen(self, recent_date: str) -> None:
         self.from_date = recent_date
         with self.context as cache:
-            cache["timestamp_cursor"] = self.from_date
+            cache["most_recent_date_seen"] = self.from_date
 
     @cached_property
     def pagination_limit(self) -> Any:
