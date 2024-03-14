@@ -16,9 +16,9 @@ class IncidentOperationAction(Action):
     ) -> None:
         self.log(f"Execute the operation '{operation_name}' on incident '{target}'", level="debug")
 
-        params: dict[str, Any] = {"targets": [target]}
+        payload: dict[str, Any] = {"targets": [target]}
         if parameters:
-            params.update(parameters)
+            payload.update(parameters)
         headers = {"Accept": "application/json"}
         # create the API client
         client = ApiClient(
@@ -30,10 +30,10 @@ class IncidentOperationAction(Action):
         )
         if operation_name == "CommentIncident":
             client.post(
-                API_COMMENT_INCIDENT_URL, timeout=API_TIMEOUT, params=params, headers=headers
+                API_COMMENT_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers
             ).raise_for_status()
         if operation_name == "UpdateStatusIncident":
-            client.patch(API_LIST_INCIDENT_URL, timeout=API_TIMEOUT, params=params, headers=headers).raise_for_status()
+            client.patch(API_LIST_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers).raise_for_status()
         if operation_name == "ListDetectionForIncident":
             params = {"incidentId": target}
             client.get(API_LIST_DETECTION_URL, timeout=API_TIMEOUT, params=params, headers=headers).raise_for_status()
