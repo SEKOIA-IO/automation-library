@@ -161,6 +161,7 @@ class LaceworkEventsTrigger(Connector):
             last_date = self._get_most_recent_timestamp_from_items(items)
             events_lag = int(time.time() - last_date)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+            self.most_recent_date_seen = last_date
 
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
             self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
