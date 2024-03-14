@@ -153,7 +153,6 @@ class LaceworkEventsTrigger(Connector):
         Successively queries the Lacework Central API while more are available
         and the current batch is not too big.
         """
-        now = datetime.now(timezone.utc)
 
         first_batch = self.get_response_by_timestamp()
         if first_batch:
