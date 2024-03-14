@@ -193,7 +193,6 @@ class LaceworkEventsTrigger(Connector):
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                 self.push_events_to_intakes(events=grouped_data)
 
-            self.most_recent_date_seen = now
 
         else:
             self.log(message="No messages to forward", level="info")
