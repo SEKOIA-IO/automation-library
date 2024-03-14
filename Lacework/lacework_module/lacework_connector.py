@@ -177,6 +177,10 @@ class LaceworkEventsTrigger(Connector):
                     next_page_items = response_next_page.get("items", [])
                     next_page_items = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                     grouped_data.extend(next_page_items)
+                     last_date = self._get_most_recent_timestamp_from_items(next_page_items)
+                    events_lag = int(time.time() - last_date)
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+                    self.most_recent_date_seen = last_date
 
                     if len(grouped_data) > self.pagination_limit:
                         self.log(message=f"Sending a batch of {len(grouped_data)} messages", level="info")
