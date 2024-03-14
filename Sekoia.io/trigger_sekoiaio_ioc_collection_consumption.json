@@ -1,0 +1,40 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "ioc_collection_id": {
+                "type": "string",
+                "description": "ID of the Sekoia.io IOC collection to get data from"
+            },
+            "batch_size_limit": {
+                "type": "integer",
+                "description": "Size of the batch of elements to get from the Sekoia.io IOC collection in one time",
+                "default": 20,
+                "maximum": 100
+            }
+        },
+        "required": [
+            "ioc_collection_id"
+        ],
+        "type": "object",
+        "title": "IOC collection consumption configuration"
+    },
+    "description": "Get all IOCs from Sekoia.io IOC collection",
+    "docker_parameters": "ioc_collection_consumption_trigger",
+    "name": "IOC collection Consumption",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "objects_path": {
+                "description": "Filepath of the objects fetched from the collection",
+                "type": "string"
+            }
+        },
+        "required": [
+            "objects_path"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "16baba0f-d0c6-4a05-9543-9d17aa0b1423"
+}
