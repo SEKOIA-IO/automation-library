@@ -39,7 +39,7 @@ class LaceworkEventsTrigger(Connector):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.from_date = ""
-        self.context = PersistentJSON("context.json", "./")
+        self.context = PersistentJSON("context.json", self._data_path)
 
     @property
     def most_recent_date_seen(self) -> datetime:
@@ -110,7 +110,7 @@ class LaceworkEventsTrigger(Connector):
         if not response.ok:
             self.log(
                 message=(
-                    "Request on Lacework Central API to fetch events of failed with"
+                    "Request on Lacework Central API to fetch next page events failed with"
                     f" status {response.status_code} - {response.reason}"
                 ),
                 level="error",
@@ -125,7 +125,7 @@ class LaceworkEventsTrigger(Connector):
         if not response.ok:
             self.log(
                 message=(
-                    "Request on Lacework Central API to fetch events of failed with"
+                    "Request on Lacework Central API to fetch events failed with"
                     f" status {response.status_code} - {response.reason}"
                 ),
                 level="error",
@@ -151,7 +151,6 @@ class LaceworkEventsTrigger(Connector):
         Successively queries the Lacework Central API while more are available
         and the current batch is not too big.
         """
-        print("start forward_next_batches")
         now = datetime.now(timezone.utc)
 
         first_batch = self.get_response_by_timestamp()
