@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-14 - 1.15.3
+
+### Changed
+
+- Upgrade the SentinelOne logo
+
 ## 2023-12-14 - 1.14.1
 
 ### Changed
