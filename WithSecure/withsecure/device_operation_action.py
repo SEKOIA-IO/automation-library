@@ -28,6 +28,6 @@ class DeviceOperationAction(Action):
             stop_event=Event(),
             log_cb=self.log,
         )
-        client.post(
+        client.get(
             API_DEVICES_OPERATION_URL, timeout=API_TIMEOUT, json=request_payload, headers=headers
         ).raise_for_status()
