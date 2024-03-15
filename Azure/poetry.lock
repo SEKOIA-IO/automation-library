@@ -2628,13 +2628,13 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.11.1"
+version = "1.12.0"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = ">=3.10,<3.12"
 files = [
-    {file = "sekoia_automation_sdk-1.11.1-py3-none-any.whl", hash = "sha256:9f847e14b441b60b1a53d0eb1f48ec7792662a0dda9909afc290b9df05a45a39"},
-    {file = "sekoia_automation_sdk-1.11.1.tar.gz", hash = "sha256:4cef73ecd7ba4b68d496e76b0f18b797425de87ff4cc58a7fffc03482bcbed69"},
+    {file = "sekoia_automation_sdk-1.12.0-py3-none-any.whl", hash = "sha256:db3ff18b96f1beabef5716597233f3e1d6ccb86e4ac92b3b11b1168ed1cee8b9"},
+    {file = "sekoia_automation_sdk-1.12.0.tar.gz", hash = "sha256:b1b430f86253a0861f30a46aed0ec8e5d2416c845f796740aff3fa3e68b317f7"},
 ]
 
 [package.dependencies]
@@ -3237,4 +3237,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "b526a6e777be3dcde2d2683fcaee2c64cd3e3ca119dba20c8a8ef310a1e80375"
+content-hash = "291c923afbd83255628417e0641f470f4721d9dffcb47c79b76987f8a9ec1ad3"

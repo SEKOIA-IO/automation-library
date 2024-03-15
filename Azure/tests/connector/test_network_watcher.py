@@ -1,10 +1,10 @@
 """Tests related to connector."""
 
 from datetime import datetime, timedelta, timezone
-from shutil import rmtree
-from tempfile import mkdtemp, NamedTemporaryFile
-from unittest.mock import AsyncMock, MagicMock
 from gzip import GzipFile
+from shutil import rmtree
+from tempfile import NamedTemporaryFile, mkdtemp
+from unittest.mock import AsyncMock, MagicMock
 
 import aiofiles
 import pytest
@@ -12,7 +12,7 @@ from azure.storage.blob import BlobProperties
 from sekoia_automation import constants
 from sekoia_automation.module import Module
 
-from connectors.pull_azure_blob_data import AzureBlobConnector, AzureBlobConnectorConfig
+from connectors.network_watcher import AzureNetworkWatcherConnector, AzureNetworkWatcherConnectorConfig
 
 
 @pytest.fixture
@@ -50,14 +50,14 @@ def pushed_events_ids(session_faker) -> list[str]:
 def connector(symphony_storage, container_name, account_name, account_key, pushed_events_ids, session_faker):
     module = Module()
 
-    config = AzureBlobConnectorConfig(
+    config = AzureNetworkWatcherConnectorConfig(
         intake_key=session_faker.word(),
         container_name=container_name,
         account_name=account_name,
         account_key=account_key,
     )
 
-    trigger = AzureBlobConnector(
+    trigger = AzureNetworkWatcherConnector(
         module=module,
         data_path=symphony_storage,
     )
@@ -78,12 +78,12 @@ def connector(symphony_storage, container_name, account_name, account_key, pushe
 
 
 @pytest.mark.asyncio
-async def test_azure_blob_connector_last_event_date(connector):
+async def test_network_watcher_last_event_date(connector):
     """
     Test `last_event_date`.
 
     Args:
-        connector: AzureBlobConnector
+        connector: AzureNetworkWatcherConnector
     """
     with connector.context as cache:
         cache["last_event_date"] = None
@@ -105,14 +105,14 @@ async def test_azure_blob_connector_last_event_date(connector):
 
 
 @pytest.mark.asyncio
-async def test_azure_blob_get_azure_blob_data_1(
-    connector: AzureBlobConnector, session_faker, blob_content, pushed_events_ids
+async def test_network_watcher_get_network_watcher_data_1(
+    connector: AzureNetworkWatcherConnector, session_faker, blob_content, pushed_events_ids
 ):
     """
-    Test AzureBlobConnector get events.
+    Test AzureNetworkWatcherConnector get events.
 
     Args:
-        connector: AzureBlobConnector
+        connector: AzureNetworkWatcherConnector
         session_faker: Faker
         blob_content: bytes
         pushed_events_ids: list[str]
@@ -143,20 +143,20 @@ async def test_azure_blob_get_azure_blob_data_1(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await connector.get_azure_network_watcher_data()
 
     assert result == pushed_events_ids
 
 
 @pytest.mark.asyncio
-async def test_azure_blob_get_azure_blob_data_2(
-    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
+async def test_network_watcher_get_network_watcher_data_2(
+    connector: AzureNetworkWatcherConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
 ):
     """
-    Test AzureBlobConnector get events.
+    Test AzureNetworkWatcherConnector get events.
 
     Args:
-        connector: AzureBlobConnector
+        connector: AzureNetworkWatcherConnector
         session_faker: Faker
         symphony_storage: str
         blob_content: bytes
@@ -192,20 +192,20 @@ async def test_azure_blob_get_azure_blob_data_2(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await connector.get_azure_network_watcher_data()
 
     assert result == pushed_events_ids
 
 
 @pytest.mark.asyncio
-async def test_azure_blob_get_azure_blob_data_3(
-    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
+async def test_network_watcher_get_network_watcher_data_3(
+    connector: AzureNetworkWatcherConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
 ):
     """
-    Test AzureBlobConnector get events.
+    Test AzureNetworkWatcherConnector get events.
 
     Args:
-        connector: AzureBlobConnector
+        connector: AzureNetworkWatcherConnector
         session_faker: Faker
         symphony_storage: str
         blob_content: bytes
@@ -241,6 +241,6 @@ async def test_azure_blob_get_azure_blob_data_3(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    result = await connector.get_azure_blob_data()
+    result = await connector.get_azure_network_watcher_data()
 
     assert result == pushed_events_ids

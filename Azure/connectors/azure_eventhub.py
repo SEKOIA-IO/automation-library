@@ -1,6 +1,5 @@
 import asyncio
 import os
-import signal
 import time
 from functools import cached_property
 from threading import Event

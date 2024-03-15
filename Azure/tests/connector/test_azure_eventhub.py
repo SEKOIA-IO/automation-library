@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 from azure.eventhub import EventData
 
-from connectors.trigger_azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
+from connectors.azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
 
 
 @pytest.mark.skipif(

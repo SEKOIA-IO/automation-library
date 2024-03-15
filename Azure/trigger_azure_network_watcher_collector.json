@@ -1,19 +1,19 @@
 {
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Trigger Azure Blob Storage configuration",
+        "title": "Trigger Azure Network Watcher configuration",
         "type": "object",
         "properties": {
             "container_name": {
-                "description": "Container name to interact with Azure Blob Storage",
+                "description": "Container name to interact with Azure Network Watcher",
                 "type": "string"
             },
             "account_name": {
-                "description": "Account name of the Azure Blob Storage",
+                "description": "Account name of the Azure Network Watcher",
                 "type": "string"
             },
             "account_key": {
-                "description": "Account key of the Azure Blob Storage",
+                "description": "Account key of the Azure Network Watcher",
                 "type": "string"
             },
             "intake_server": {
@@ -41,13 +41,13 @@
             "account_key"
         ]
     },
-    "description": "Trigger playbook to get Azure Blob Storage events information",
-    "docker_parameters": "azure_blob_storage",
-    "name": "[BETA] Collect Azure Blob Storage events",
+    "description": "Trigger playbook to get Azure Network Watcher events information",
+    "docker_parameters": "azure_network_watcher",
+    "name": "[BETA] Fetch new Azure Network Watcher events from Blob Storage",
     "results": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {},
         "title": "The records"
     },
-    "uuid": "626f4d84-5ab7-11ee-8c99-0242ac120002"
+    "uuid": "3e5ff414-f54a-4c3e-8127-82177b31e3c4"
 }
