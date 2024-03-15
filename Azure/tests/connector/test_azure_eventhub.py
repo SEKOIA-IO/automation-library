@@ -1,4 +1,3 @@
-import asyncio
 import os
 import time
 from threading import Thread
@@ -58,7 +57,8 @@ def trigger(symphony_storage):
     yield trigger
 
 
-def test_handle_messages(trigger):
+@pytest.mark.asyncio
+async def test_handle_messages(trigger):
     # arrange
     messages: list[EventData] = [
         EventData('{"records": [{"name": "record1"}, null, {"name": "record2"}]}'),
@@ -69,7 +69,7 @@ def test_handle_messages(trigger):
     partition_context = AsyncMock()
 
     # act
-    asyncio.run(trigger.handle_messages(partition_context, messages))
+    await trigger.handle_messages(partition_context, messages)
 
     # assert
     assert partition_context.update_checkpoint.called
@@ -77,7 +77,8 @@ def test_handle_messages(trigger):
     assert len(calls) == 6
 
 
-def test_client_receive_batch():
+@pytest.mark.asyncio
+async def test_client_receive_batch():
     client = Client(
         AzureEventsHubConfiguration.parse_obj(
             {
@@ -94,14 +95,15 @@ def test_client_receive_batch():
     consumer = AsyncMock()
     client._new_client = MagicMock(return_value=consumer)
 
-    asyncio.run(client.receive_batch())
+    await client.receive_batch()
 
     assert client._new_client.called
     consumer.receive_batch.assert_awaited_once()
     consumer.close.assert_awaited_once()
 
 
-def test_client_close():
+@pytest.mark.asyncio
+async def test_client_close():
     client = Client(
         AzureEventsHubConfiguration.parse_obj(
             {
@@ -115,12 +117,12 @@ def test_client_close():
             }
         )
     )
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(client.close())  # nothing happens
+
+    await client.close()  # nothing happens
 
     fake_client = AsyncMock()
     client._client = fake_client
-    loop.run_until_complete(client.close())
+    await client.close()
 
     fake_client.close.assert_awaited_once()
     assert client._client is None

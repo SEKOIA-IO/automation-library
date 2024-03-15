@@ -2,34 +2,15 @@
 
 from datetime import datetime, timedelta, timezone
 from gzip import GzipFile
-from shutil import rmtree
-from tempfile import NamedTemporaryFile, mkdtemp
+from tempfile import NamedTemporaryFile
 from unittest.mock import AsyncMock, MagicMock
 
 import aiofiles
 import pytest
 from azure.storage.blob import BlobProperties
-from sekoia_automation import constants
 from sekoia_automation.module import Module
 
 from connectors.network_watcher import AzureNetworkWatcherConnector, AzureNetworkWatcherConnectorConfig
-
-
-@pytest.fixture
-def symphony_storage() -> str:
-    """
-    Fixture for symphony temporary storage.
-
-    Yields:
-        str:
-    """
-    original_storage = constants.DATA_STORAGE
-    constants.DATA_STORAGE = mkdtemp()
-
-    yield constants.DATA_STORAGE
-
-    rmtree(constants.DATA_STORAGE)
-    constants.SYMPHONY_STORAGE = original_storage
 
 
 @pytest.fixture
