@@ -7,7 +7,6 @@ from gzip import decompress
 from typing import Any, Optional
 
 import aiofiles
-import orjson
 from dateutil.parser import isoparse
 from loguru import logger
 from pydantic import Field
@@ -110,18 +109,14 @@ class AzureBlobConnector(AsyncConnector):
                         if is_gzip_compressed(file_content):
                             file_content = decompress(file_content)
 
-                        records.extend(
-                            self.filter_blob_data(orjson.loads(file_content.decode("utf-8")), self.last_event_date)
-                        )
+                        records.extend(file_content.decode("utf-8").split("\n"))
 
                     await delete_file(file)
 
                 if content:
-                    records.extend(self.filter_blob_data(orjson.loads(content), self.last_event_date))
+                    records.extend(content.decode("utf-8").split("\n"))
 
-        result: list[str] = await self.push_data_to_intakes(
-            [orjson.dumps(event).decode("utf-8") for event in records],
-        )
+        result: list[str] = await self.push_data_to_intakes(events=records)
 
         with self.context as cache:
             logger.info(
@@ -130,30 +125,6 @@ class AzureBlobConnector(AsyncConnector):
             )
 
             cache["last_event_date"] = _last_modified_date.isoformat()
-
-        return result
-
-    @staticmethod
-    def filter_blob_data(data: dict[Any, Any], time_filter: datetime | None) -> list[dict[Any, Any]]:
-        """
-        Filter blob data.
-
-        Args:
-            data: dict[Any, Any]
-            time_filter: datetime | None
-
-        Returns:
-            list[dict[Any, Any]]:
-        """
-        result = []
-        for line in data.get("records", []):
-            line_time = isoparse(line["time"]).astimezone(timezone.utc)
-
-            # If the record is too old, ignore it.
-            if time_filter and line_time < time_filter:
-                continue
-
-            result.append(line)
 
         return result
 
@@ -169,7 +140,7 @@ class AzureBlobConnector(AsyncConnector):
                     processing_start = time.time()
                     if previous_processing_end is not None:
                         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                            processing_start - previous_processing_end
+                            processing_start - self.last_event_date.timestamp()
                         )
 
                     message_ids: list[str] = loop.run_until_complete(self.get_azure_blob_data())
