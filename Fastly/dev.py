@@ -6,7 +6,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from fastly_waf.connector_fastly_waf import FastlyWAFConnector, FastlyWAFConnectorConfiguration
+from fastly.connector_fastly_waf import FastlyWAFConnector, FastlyWAFConnectorConfiguration
 
 logging.basicConfig(
     level=logging.INFO,

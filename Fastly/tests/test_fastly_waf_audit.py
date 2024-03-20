@@ -7,6 +7,7 @@ from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
 from fastly.connector_fastly_waf_audit import FastlyWAFAuditConnector
+from fastly.connector_fastly_waf_base import FastlyWAFConsumer
 
 
 @pytest.fixture
@@ -106,11 +107,17 @@ def test_fetch_corp_events(trigger, message_corpo):
     trigger.configuration.site = None
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
-            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/activity",
+            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/activity?sort=asc&limit=1&from=1645660800",
             status_code=200,
             json=message_corpo,
         )
-        events = trigger.fetch_events()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="corp:testcorp",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/activity",
+        )
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        events = consumer.fetch_events()
         assert list(events) == [message_corpo["data"]]
 
 
@@ -122,13 +129,19 @@ def test_fetch_site_events(trigger, message_site):
             status_code=200,
             json=message_site,
         )
-        events = trigger.fetch_events()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
+        )
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        events = consumer.fetch_events()
         assert list(events) == [message_site["data"]]
 
 
 def test_next_batch_sleep_until_next_round(trigger, message_corpo, message_site):
     trigger.configuration.site = "www.example.com"
-    with patch("fastly.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly.connector_fastly_waf_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
             status_code=200,
@@ -139,7 +152,12 @@ def test_next_batch_sleep_until_next_round(trigger, message_corpo, message_site)
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time]
 
-        trigger.next_batch()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
+        )
+        consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 1
@@ -147,7 +165,7 @@ def test_next_batch_sleep_until_next_round(trigger, message_corpo, message_site)
 
 def test_long_next_batch_should_not_sleep(trigger, message_corpo, message_site):
     trigger.configuration.site = "www.example.com"
-    with patch("fastly.connector_fastly_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly.connector_fastly_waf_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
             status_code=200,
@@ -158,7 +176,12 @@ def test_long_next_batch_should_not_sleep(trigger, message_corpo, message_site):
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time]
 
-        trigger.next_batch()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
+        )
+        consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
@@ -169,13 +192,18 @@ def test_load_without_cursor(trigger, data_storage):
 
     # ensure that the cursor is None
     with context as cache:
-        cache["most_recent_date_seen"] = "2022-01-01T16:02:50+00:00"
+        cache["most_recent_date_seen"] = None
 
-    with patch("fastly.connector_fastly_base.datetime.datetime") as mock_datetime:
+    with patch("fastly.connector_fastly_waf_base.datetime.datetime") as mock_datetime:
         datetime_now = datetime(2023, 3, 22, 11, 56, 28, tzinfo=timezone.utc)
-        datetime_expected = datetime_now - timedelta(days=30)
+        datetime_expected = datetime_now - timedelta(minutes=1)
 
         mock_datetime.now.return_value = datetime_now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        assert trigger.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
+        )
+        assert consumer.most_recent_date_seen.isoformat() == datetime_expected.isoformat()

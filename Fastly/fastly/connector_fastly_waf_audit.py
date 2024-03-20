@@ -3,30 +3,21 @@ import datetime
 from dateutil.parser import isoparse
 from pydantic import Field
 
-from .connector_fastly_base import FastlyBasicConnectorConfiguration, FastlyConnectorBase
+from .connector_fastly_waf_base import FastlyWAFBaseConnector, FastlyWAFBasicConnectorConfiguration
 
 
-class FastlyWAFAuditConnectorConfiguration(FastlyBasicConnectorConfiguration):
+class FastlyWAFAuditConnectorConfiguration(FastlyWAFBasicConnectorConfiguration):
     site: str | None = Field(None, description="Site name", pattern=r"^[0-9a-z_.-]+$")
 
 
-class FastlyWAFAuditConnector(FastlyConnectorBase):
-    configuration: FastlyWAFAuditConnectorConfiguration
-
+class FastlyWAFAuditConnector(FastlyWAFBaseConnector):
     def get_datetime_from_item(self, item: dict) -> datetime.datetime:
         return isoparse(item["created"])
 
-    def get_next_url(self, from_datetime: datetime.datetime) -> str:
-        from_timestamp = int(from_datetime.timestamp())
+    configuration: FastlyWAFAuditConnectorConfiguration
 
-        if self.configuration.site:
-            return (
-                f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites/{self.configuration.site}/activity?"
-                f"sort=asc&limit={self.configuration.chunk_size}&from={from_timestamp}"
-            )
+    def get_url_for_site(self, site_name: str) -> str:
+        return f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/sites/{site_name}/activity"
 
-        else:
-            return (
-                f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/activity?"
-                f"sort=asc&limit={self.configuration.chunk_size}&from={from_timestamp}"
-            )
+    def get_url_for_corp(self) -> str:
+        return f"{self.base_uri}/api/v0/corps/{self.configuration.corp}/activity"
