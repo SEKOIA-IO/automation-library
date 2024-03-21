@@ -44,5 +44,5 @@
   "description": "connector playbook to get Azure Blob Storage events information",
   "docker_parameters": "azure_blob_storage",
   "name": "[BETA] Collect Azure Blob Storage events",
-  "uuid": "626f4d84-5ab7-11ee-8c99-0242ac120002"
+  "uuid": "d75861b5-03a6-4857-b2b6-40f04a4255a8"
 }

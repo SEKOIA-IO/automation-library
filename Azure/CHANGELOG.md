@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-21 - 2.4.4
+
+### Changed
+
+- Azure Blob Storage does not perform additional actions on events.
+- New Azure Network Watcher contains logic of old Azure Blob Storage connector.
+
 ## 2024-03-01 - 2.4.3
 
 ### Changed
