@@ -103,6 +103,36 @@ def message_site():
     }
 
 
+@pytest.fixture
+def message_sites():
+    return {
+        "data": [
+            {
+                "name": "www.example.com",
+                "displayName": "My Website",
+                "agentLevel": "block",
+                "blockHTTPCode": 406,
+                "blockDurationSeconds": 86400,
+                "created": "2014-12-09T10:43:54-08:00",
+                "whitelist": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/whitelist"},
+                "blacklist": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/blacklist"},
+                "events": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/events"},
+                "requests": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/requests"},
+                "redactions": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/redactions"},
+                "suspiciousIPs": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/suspiciousIPs"},
+                "monitors": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/monitors"},
+                "integrations": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/integrations"},
+                "headerLinks": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/headerLinks"},
+                "agents": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/agents"},
+                "alerts": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/alerts"},
+                "analyticsEvents": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/analytics/events"},
+                "topAttacks": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/top/attacks"},
+                "members": {"uri": "/api/v0/corps/testcorp/sites/www.example.com/members"},
+            }
+        ]
+    }
+
+
 def test_fetch_corp_events(trigger, message_corpo):
     trigger.configuration.site = None
     with requests_mock.Mocker() as mock_requests:
@@ -207,3 +237,15 @@ def test_load_without_cursor(trigger, data_storage):
             url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
         )
         assert consumer.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
+
+
+def test_get_sites(trigger, message_sites):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites",
+            status_code=200,
+            json=message_sites,
+        )
+
+        result = trigger.get_sites()
+        assert len(result) == 1
