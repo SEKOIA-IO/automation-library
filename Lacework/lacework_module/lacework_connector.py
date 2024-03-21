@@ -39,7 +39,7 @@ class LaceworkEventsTrigger(Connector):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.from_date = ""
-        self.context = PersistentJSON("context.json", self._data_path)
+        self.context = PersistentJSON("context.json", "./")
 
     @property
     def most_recent_date_seen(self) -> datetime:
@@ -48,7 +48,7 @@ class LaceworkEventsTrigger(Connector):
         with self.context as cache:
             most_recent_date_seen_str = str(cache.get("most_recent_date_seen"))
 
-            if most_recent_date_seen_str is None:
+            if most_recent_date_seen_str == "None":
                 return now - timedelta(days=1)
 
             most_recent_date_seen = isoparse(most_recent_date_seen_str)
@@ -97,7 +97,6 @@ class LaceworkEventsTrigger(Connector):
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - start)
-                print("duration :" + str(duration))
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
                 # Compute the remaining sleeping time
@@ -128,7 +127,6 @@ class LaceworkEventsTrigger(Connector):
 
     def get_response_by_timestamp(self) -> Any | None:
         response = self.client.get_alerts_from_date(self.most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ"))
-        print(response.content)
         if not response.ok:
             self.log(
                 message=(
