@@ -270,13 +270,15 @@ class FastlyWAFBaseConnector(Connector):
     def get_datetime_from_item(self, item: dict) -> datetime.datetime:
         return isoparse(item["timestamp"])
 
-    def get_url_by_consumer_name(self, name: str) -> str:
+    def get_url_by_consumer_name(self, name: str) -> str | None:
         level, label = name.split(":")
         if level == "site":
             return self.get_url_for_site(site_name=name)
 
         elif level == "corp":
             return self.get_url_for_corp()
+
+        return None
 
     def supervise_consumers(self, consumers):
         for consumer_name, consumer in consumers.items():
