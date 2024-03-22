@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-22 - 1.30.8
+
+### Changed
+
+- Update `sekoia-automation-sdk` to the latest version (1.12.1) to fix
+  support for connectors (Batch URL) (not yet released).
+
 ## 2024-03-05 - 1.30.7
 
 ### Changed
