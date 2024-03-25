@@ -10,7 +10,6 @@ from requests.exceptions import HTTPError
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
-
 from lacework_module.base import LaceworkModule
 from lacework_module.client import LaceworkApiClient
 from lacework_module.client.auth import LaceworkAuthentication
@@ -39,16 +38,16 @@ class LaceworkEventsTrigger(Connector):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.from_date = ""
-        self.context = PersistentJSON("context.json", "./")
+        self.context = PersistentJSON("context.json", self._data_path)
 
     @property
     def most_recent_date_seen(self) -> datetime:
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
-            most_recent_date_seen_str = str(cache.get("most_recent_date_seen"))
+            most_recent_date_seen_str = cache.get("most_recent_date_seen")
 
-            if most_recent_date_seen_str == "None":
+            if most_recent_date_seen_str == None:
                 return now - timedelta(days=1)
 
             most_recent_date_seen = isoparse(most_recent_date_seen_str)
@@ -60,10 +59,10 @@ class LaceworkEventsTrigger(Connector):
             return most_recent_date_seen
 
     @most_recent_date_seen.setter
-    def most_recent_date_seen(self, recent_date: str) -> None:
+    def most_recent_date_seen(self, recent_date: datetime) -> None:
         # save the greatest date
-        if self.from_date == "" or self.from_date < recent_date:
-            self.from_date = recent_date
+        if self.from_date == "" or isoparse(self.from_date) < recent_date:
+            self.from_date = str(recent_date)
         with self.context as cache:
             cache["most_recent_date_seen"] = self.from_date
 
@@ -166,7 +165,6 @@ class LaceworkEventsTrigger(Connector):
         if first_batch and first_batch != "":
             next_page_url = first_batch.get("content", {}).get("paging", {}).get("urls", {}).get("nextPage")
             items = first_batch.get("data", [])
-
             last_date = self._get_most_recent_timestamp_from_items(items)
             events_lag = int(time.time() - last_date)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
