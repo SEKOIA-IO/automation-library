@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-01 - 0.2.0
+
+### Added
+
+- Add connector for Fastly WAF Audit logs
+
 ## 2024-02-13 - 0.1.2
 
 ### Changed

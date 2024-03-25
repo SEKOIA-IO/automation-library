@@ -5,7 +5,8 @@ import pytest
 import requests_mock
 from sekoia_automation.module import Module
 
-from fastly_waf.connector_fastly_waf import FastlyWAFConnector
+from fastly.connector_fastly_waf import FastlyWAFConnector
+from fastly.connector_fastly_waf_base import FastlyWAFConsumer
 
 
 @pytest.fixture
@@ -87,13 +88,17 @@ def test_fetch_events(trigger, message2):
             status_code=200,
             json=message2,
         )
-        events = trigger.fetch_events()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
+        )
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        events = consumer.fetch_events()
         assert list(events) == [message2["data"]]
 
 
 def test_fetch_events_with_pagination(trigger, message1, message2):
-    trigger.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
-
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events?sort=asc&limit=1&from=1645660800",
@@ -109,12 +114,18 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
             json=message2,
         )
 
-        events = trigger.fetch_events()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
+        )
+        consumer.from_datetime = datetime(year=2022, month=2, day=24, tzinfo=timezone.utc)
+        events = consumer.fetch_events()
         assert list(events) == [message1["data"], message2["data"]]
 
 
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
-    with patch("fastly_waf.connector_fastly_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly.connector_fastly_waf_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
             status_code=200,
@@ -125,14 +136,19 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time]
 
-        trigger.next_batch()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
+        )
+        consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 1
 
 
 def test_long_next_batch_should_not_sleep(trigger, message1, message2):
-    with patch("fastly_waf.connector_fastly_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch("fastly.connector_fastly_waf_base.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
             status_code=200,
@@ -143,7 +159,12 @@ def test_long_next_batch_should_not_sleep(trigger, message1, message2):
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time]
 
-        trigger.next_batch()
+        consumer = FastlyWAFConsumer(
+            connector=trigger,
+            name="site:www.example.com",
+            url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/events",
+        )
+        consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
