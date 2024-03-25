@@ -139,7 +139,7 @@ class LaceworkEventsTrigger(Connector):
         try:
             return response.json()
         except ValueError as ex:
-            self.log_exception(
+            self.log(
                 message=("No more messages to forward"),
                 level="info",
             )
