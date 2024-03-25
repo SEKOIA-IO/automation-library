@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-21 - 2.4.4
+
+### Added
+
+- Add new Azure Blob Storage connector. This connector is generic and do no actions on events
+
+### Changed
+
+- Rebrand the previous Azure Blob Storage connector into one specific for Azure Network Watcher.
+
 ## 2024-03-01 - 2.4.3
 
 ### Changed
