@@ -245,7 +245,6 @@ class FastlyWAFBaseConnector(Connector):
 
         else:
             sites = self.get_sites()
-            print("sites", sites)
 
         for site in sites:
             consumers[f"site:{site}"] = FastlyWAFConsumer(
