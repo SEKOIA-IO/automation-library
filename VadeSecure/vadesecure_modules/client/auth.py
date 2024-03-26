@@ -46,6 +46,7 @@ class ApiKeyAuthentication(AuthBase):
                     "client_id": self.__client_id,
                     "client_secret": self.__client_secret,
                 },
+                timeout=60,
             )
             response.raise_for_status()
 
