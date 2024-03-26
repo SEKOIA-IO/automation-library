@@ -121,7 +121,10 @@ class LaceworkEventsTrigger(Connector):
         try:
             return response.json()
         except ValueError as ex:
-            self.log_exception(ex, message=("No more messages to forward"))
+            self.log(
+                message=("No more messages to forward"),
+                level="info",
+            )
             return None
 
     def get_response_by_timestamp(self) -> Any | None:
@@ -198,6 +201,3 @@ class LaceworkEventsTrigger(Connector):
                 self.log(message=f"Sending a batch of {len(grouped_data)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                 self.push_events_to_intakes(events=grouped_data)
-
-        else:
-            self.log(message="No messages to forward", level="info")
