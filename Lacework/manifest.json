@@ -3,32 +3,32 @@
            "title": "Lacework",
            "type": "object",
            "properties": {
-               "access_key": {
-                   "description": "Client Identifier",
+               "key_id": {
+                   "description": "The KeyId of your API Key",
                    "type": "string"
                },
-               "secret_key": {
-                   "description": "Client Secret",
+               "secret": {
+                   "description": "The secret of your API Key",
                    "type": "string"
                },
-               "lacework_url": {
-                   "description": "Client Lacework application name",
+               "account": {
+                   "description": "The account of your API Key (e.g: `YourLaceworkTenant.lacework.net`)",
                    "type": "string"
                }
            },
            "required": [
-               "access_key",
-               "secret_key",
-               "lacework_url"
+               "key_id",
+               "secret",
+               "account"
            ],
            "secrets": [
-               "secret_key"
+               "secret"
            ]
        },
     "description": "[Lacework](https://www.lacework.com/) is a cybersecurity company specializing in cloud security and compliance, offering automated threat detection and response solutions for modern cloud environments.",
     "name": "Lacework",
     "uuid": "5803f97d-b324-4452-b861-0253b15de650",
     "slug": "lacework",
-    "version": "0.1.4"
+    "version": "0.1.5"
     
 }

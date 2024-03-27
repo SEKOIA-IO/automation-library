@@ -30,16 +30,16 @@ class LaceworkApiClient(ApiClient):
 
     def list_alerts(self, parameters: dict[Any, Any] | None = None) -> requests.Response:
         return self.get(
-            url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts"),
+            url=(f"https://{self.base_url}/api/v2/Alerts"),
             params=parameters,
         )
 
     def get_alerts_from_date(self, startTime: str) -> requests.Response:
         return self.get(
-            url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts?startTime={startTime}"),
+            url=(f"https://{self.base_url}/api/v2/Alerts?startTime={startTime}"),
         )
 
     def get_alerts_details(self, alertId: str, scope: str) -> requests.Response:
         return self.get(
-            url=(f"https://{self.base_url}.lacework.net/api/v2/Alerts/{alertId}?scope={scope}"),
+            url=(f"https://{self.base_url}/api/v2/Alerts/{alertId}?scope={scope}"),
         )

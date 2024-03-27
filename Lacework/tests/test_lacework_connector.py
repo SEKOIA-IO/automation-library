@@ -15,9 +15,9 @@ def trigger(symphony_storage: Path):
     module = LaceworkModule()
     trigger = LaceworkEventsTrigger(module=module, data_path=symphony_storage)
     trigger.module.configuration = {
-        "secret_key": "my-secret",
-        "access_key": "my-id",
-        "lacework_url": "api",
+        "secret": "my-secret",
+        "key_id": "my-id",
+        "account": "example.lacework.net",
     }
     trigger.configuration = {"intake_key": "0123456789"}
     trigger.push_events_to_intakes = Mock()
@@ -27,7 +27,7 @@ def trigger(symphony_storage: Path):
 
 
 def test_get_next_events(trigger: LaceworkEventsTrigger):
-    host = f"https://{trigger.module.configuration.lacework_url}.lacework.net"
+    host = f"https://{trigger.module.configuration.account}"
     params = {"token": "foo-token", "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))}
     with requests_mock.Mocker() as mock:
         mock.post(
@@ -42,7 +42,7 @@ def test_get_next_events(trigger: LaceworkEventsTrigger):
             "paging": {
                 "rows": 1000,
                 "totalRows": 3120,
-                "urls": {"nextPage": "https://api-test.lacework.net/api/v2/Alerts/AbcdEfgh123..."},
+                "urls": {"nextPage": "https://example.lacework.net/api/v2/Alerts/AbcdEfgh123..."},
             },
             "data": [
                 {
@@ -94,9 +94,9 @@ def test_get_next_events(trigger: LaceworkEventsTrigger):
 def test_forward_next_batches_integration(symphony_storage: Path):
     module = LaceworkModule()
     trigger = LaceworkEventsTrigger(module=module, data_path=symphony_storage)
-    trigger.configuration.lacework_url = (os.environ["LACEWORK_URL"],)
-    trigger.configuration.access_key = (os.environ["LACEWORK_ACCESS_KEY"],)
-    trigger.configuration.secret_key = (os.environ["LACEWORK_SECRET_KEY"],)
+    trigger.configuration.account = (os.environ["LACEWORK_URL"],)
+    trigger.configuration.key_id = (os.environ["LACEWORK_ACCESS_KEY"],)
+    trigger.configuration.secret = (os.environ["LACEWORK_SECRET_KEY"],)
     trigger.configuration.frequency = 0
     trigger.configuration.intake_key = "0123456789"
     trigger.push_events_to_intakes = Mock()
