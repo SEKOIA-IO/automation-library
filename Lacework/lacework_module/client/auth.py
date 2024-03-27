@@ -55,7 +55,7 @@ class LaceworkAuthentication(AuthBase):
             or current_dt + datetime.timedelta(seconds=3600) >= self.__api_credentials.expiresAt
         ):
             response = self.__http_session.post(
-                url=f"https://{self.__lacework_url}.lacework.net/api/v2/access/tokens",
+                url=f"https://{self.__lacework_url}/api/v2/access/tokens",
                 headers={"X-LW-UAKS": self.__secret_key, "Content-Type": "application/json"},
                 json={"keyId": self.__access_key, "expiryTime": 3600},
             )

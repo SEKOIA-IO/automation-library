@@ -10,17 +10,17 @@ from lacework_module.client.auth import LaceworkAuthentication
 
 
 def test_list_alerts():
-    lacework_url = "api"
-    access_key = "foo"
-    secret_key = "bar"
-    auth = LaceworkAuthentication(lacework_url, access_key, secret_key)
-    client = LaceworkApiClient(lacework_url, auth=auth)
+    account = "example.lacework.net"
+    key_id = "foo"
+    secret = "bar"
+    auth = LaceworkAuthentication(account, key_id, secret)
+    client = LaceworkApiClient(account, auth=auth)
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
-            url=f"https://{lacework_url}.lacework.net/api/v2/access/tokens",
-            headers={"X-LW-UAKS": secret_key, "Content-Type": "application/json"},
+            url=f"https://{account}/api/v2/access/tokens",
+            headers={"X-LW-UAKS": secret, "Content-Type": "application/json"},
             json={"token": "foo-token", "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))},
         )
 
@@ -29,7 +29,7 @@ def test_list_alerts():
             "paging": {
                 "rows": 1000,
                 "totalRows": 3120,
-                "urls": {"nextPage": "https://{lacework_url}.lacework.net/api/v2/Alerts/AbcdEfgh123..."},
+                "urls": {"nextPage": "https://{account}/api/v2/Alerts/AbcdEfgh123..."},
             },
             "data": [
                 {
@@ -70,18 +70,18 @@ def test_list_alerts():
             ],
         }
         # flake8: qa
-        mock.get(f"https://{lacework_url}.lacework.net/api/v2/Alerts", json=response)
+        mock.get(f"https://{account}/api/v2/Alerts", json=response)
         list_events_response = client.list_alerts()
         assert list_events_response is not None
 
 
 @pytest.mark.skipif("{'LACEWORK_ID', 'LACEWORK_SECRET'}.issubset(os.environ.keys()) == False")
 def test_authentication_integration(symphony_storage):
-    lacework_url = os.environ["LACEWORK_URL"]
-    access_key = os.environ["LACEWORK_ACCESS_KEY"]
-    secret_key = os.environ["LACEWORK_SECRET_KEY"]
-    auth = LaceworkAuthentication(lacework_url, access_key, secret_key)
-    client = LaceworkApiClient(lacework_url, auth=auth)
+    account = os.environ["LACEWORK_URL"]
+    key_id = os.environ["LACEWORK_ACCESS_KEY"]
+    secret = os.environ["LACEWORK_SECRET_KEY"]
+    auth = LaceworkAuthentication(account, key_id, secret)
+    client = LaceworkApiClient(account, auth=auth)
 
     response = client.list_alerts()
     assert response.status_code < 300

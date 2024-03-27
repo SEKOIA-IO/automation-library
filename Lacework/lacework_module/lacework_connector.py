@@ -73,11 +73,11 @@ class LaceworkEventsTrigger(Connector):
     @cached_property
     def client(self) -> LaceworkApiClient:
         auth = LaceworkAuthentication(
-            lacework_url=self.module.configuration.lacework_url,
-            access_key=self.module.configuration.access_key,
-            secret_key=self.module.configuration.secret_key,
+            lacework_url=self.module.configuration.account,
+            access_key=self.module.configuration.key_id,
+            secret_key=self.module.configuration.secret,
         )
-        return LaceworkApiClient(base_url=self.module.configuration.lacework_url, auth=auth)
+        return LaceworkApiClient(base_url=self.module.configuration.account, auth=auth)
 
     def run(self) -> None:
         self.log(message="Lacework Events Trigger has started", level="info")
