@@ -12,7 +12,7 @@
                    "type": "string"
                },
                "account": {
-                   "description": "The account of your API Key",
+                   "description": "The account of your API Key (e.g: `YourLaceworkTenant.lacework.net`)",
                    "type": "string"
                }
            },
