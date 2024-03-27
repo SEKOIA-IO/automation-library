@@ -13,7 +13,7 @@ from urllib3.exceptions import HTTPError as BaseHTTPError
 from lacework_module.base import LaceworkModule
 from lacework_module.client import LaceworkApiClient
 from lacework_module.client.auth import LaceworkAuthentication
-from lacework_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from lacework_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class LaceworkConfiguration(DefaultConnectorConfiguration):
@@ -47,7 +47,7 @@ class LaceworkEventsTrigger(Connector):
         with self.context as cache:
             most_recent_date_seen_str = cache.get("most_recent_date_seen")
 
-            if most_recent_date_seen_str == None:
+            if most_recent_date_seen_str is None:
                 return now - timedelta(days=1)
 
             most_recent_date_seen = isoparse(most_recent_date_seen_str)
@@ -120,7 +120,7 @@ class LaceworkEventsTrigger(Connector):
             return None
         try:
             return response.json()
-        except ValueError as ex:
+        except ValueError:
             self.log(
                 message=("No more messages to forward"),
                 level="info",
@@ -141,7 +141,7 @@ class LaceworkEventsTrigger(Connector):
             return None
         try:
             return response.json()
-        except ValueError as ex:
+        except ValueError:
             self.log(
                 message=("No more messages to forward"),
                 level="info",
