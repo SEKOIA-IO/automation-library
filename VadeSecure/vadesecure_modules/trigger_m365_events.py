@@ -4,18 +4,19 @@ import uuid
 from collections.abc import Generator, Sequence
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Deque, Tuple
+from functools import cached_property
 from posixpath import join as urljoin
+from typing import Any, Deque, Tuple
 
 import orjson
 import requests
 from dateutil import parser
 from dateutil.parser import ParserError, isoparse
-from requests_ratelimiter import LimiterAdapter
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.trigger import Trigger
 
 from vadesecure_modules import VadeSecureModule
+from vadesecure_modules.client import ApiClient
 from vadesecure_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from vadesecure_modules.models import VadeSecureTriggerConfiguration
 
@@ -48,17 +49,26 @@ class M365EventsTrigger(Trigger):
         self.api_credentials: dict[str, Any] | None = None
         self.context = PersistentJSON("context.json", self._data_path)
 
-    @property
-    def http_session(self) -> requests.Session:
-        """Return the HTTP session."""
-        if self._http_session is None:
-            self._http_session = requests.Session()
-            rate_limiter = LimiterAdapter(per_second=self.configuration.rate_limit)
+    @cached_property
+    def client(self) -> ApiClient:
+        try:
+            return ApiClient(
+                auth_url=self.module.configuration.oauth2_authorization_url,
+                client_id=self.module.configuration.client_id,
+                client_secret=self.module.configuration.client_secret,
+            )
 
-            self._http_session.mount("https://", rate_limiter)
-            self._http_session.mount("http://", rate_limiter)
+        except requests.exceptions.HTTPError as error:
+            response = error.response
+            self.log(
+                f"OAuth2 server responded {response.status_code} - {response.reason}",
+                level="error",
+            )
+            raise error
 
-        return self._http_session
+        except TimeoutError as error:
+            self.log(message="Failed to authorize due to timeout", level="error")
+            raise error
 
     def get_event_type_context(self, event_type: EventType) -> Tuple[datetime, str | None]:
         """
@@ -239,11 +249,7 @@ class M365EventsTrigger(Trigger):
             f"api/v1/tenants/{self.configuration.tenant_id}/logs/{event_type.value}/search",
         )
 
-        response = self.http_session.post(
-            url=url,
-            json=payload_json,
-            headers={"Authorization": self._get_authorization()},
-        )
+        response = self.client.post(url=url, json=payload_json, timeout=60)
 
         if not response.ok:
             # Exit trigger if we can't authenticate against the server
@@ -265,39 +271,6 @@ class M365EventsTrigger(Trigger):
             )
 
             return result
-
-    def _get_authorization(self) -> str:
-        """
-        Returns the access token and uses the OAuth2 to compute it if required
-        """
-
-        if (
-            self.api_credentials is None
-            or datetime.utcnow() + timedelta(seconds=300) >= self.api_credentials["expires_in"]
-        ):
-            current_dt = datetime.utcnow()
-            response = self.http_session.post(
-                url=self.module.configuration.oauth2_authorization_url,
-                data={
-                    "grant_type": "client_credentials",
-                    "scope": "m365.api.read",
-                    "client_id": self.module.configuration.client_id,
-                    "client_secret": self.module.configuration.client_secret,
-                },
-            )
-            if not response.ok:
-                self.log(
-                    f"OAuth2 server responded {response.status_code} - {response.reason}",
-                    level="error",
-                )
-            response.raise_for_status()
-
-            api_credentials: dict[str, Any] = response.json()
-            # convert expirations into datetime
-            api_credentials["expires_in"] = current_dt + timedelta(seconds=api_credentials["expires_in"])
-            self.api_credentials = api_credentials
-
-        return f"{self.api_credentials['token_type'].title()} {self.api_credentials['access_token']}"
 
     def _get_last_message_date(self, events: list[Any]) -> datetime:
         for event in reversed(events):
