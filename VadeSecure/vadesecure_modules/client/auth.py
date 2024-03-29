@@ -12,7 +12,7 @@ class ApiKeyAuthentication(AuthBase):
         self.__auth_url = auth_url
         self.__client_id = client_id
         self.__client_secret = client_secret
-        self.api_credentials: dict[str, Any] | None = None
+        self.__api_credentials: dict[str, Any] | None = None
 
         self.__http_session = requests.Session()
         self.__http_session.mount(
@@ -25,17 +25,14 @@ class ApiKeyAuthentication(AuthBase):
             ),
         )
 
-        self._token: str | None = None
-        self._account_id: int | None = None
-
     def get_authorization(self) -> str:
         """
         Returns the access token and uses the OAuth2 to compute it if required
         """
 
         if (
-            self.api_credentials is None
-            or datetime.utcnow() + timedelta(seconds=300) >= self.api_credentials["expires_in"]
+            self.__api_credentials is None
+            or datetime.utcnow() + timedelta(seconds=300) >= self.__api_credentials["expires_in"]
         ):
             current_dt = datetime.utcnow()
             response = self.__http_session.post(
@@ -53,9 +50,9 @@ class ApiKeyAuthentication(AuthBase):
             api_credentials: dict[str, Any] = response.json()
             # convert expirations into datetime
             api_credentials["expires_in"] = current_dt + timedelta(seconds=api_credentials["expires_in"])
-            self.api_credentials = api_credentials
+            self.__api_credentials = api_credentials
 
-        return f"{self.api_credentials['token_type'].title()} {self.api_credentials['access_token']}"
+        return f"{self.__api_credentials['token_type'].title()} {self.__api_credentials['access_token']}"
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         request.headers["Authorization"] = self.get_authorization()
