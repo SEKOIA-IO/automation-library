@@ -4,6 +4,7 @@ import os
 from abc import ABCMeta
 from functools import cached_property
 from gzip import decompress
+from typing import Any, Optional
 
 import orjson
 
@@ -26,6 +27,12 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
     """All connectors that use SQS to trigger S3 events."""
 
     configuration: AwsS3QueuedConfiguration
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        """Init AzureBlobConnector."""
+
+        super().__init__(*args, **kwargs)
+        self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
 
     @cached_property
     def s3_wrapper(self) -> S3Wrapper:
@@ -103,7 +110,6 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             tuple[list[str], int]:
         """
         records = []
-        limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
@@ -147,7 +153,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                             level="warning",
                         )
 
-            if len(records) >= limit_of_events_to_push or not records:
+            if len(records) >= self.limit_of_events_to_push or not records:
                 continue_receiving = False
 
         result = await self.push_data_to_intakes(events=records)

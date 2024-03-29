@@ -45,6 +45,7 @@ class AzureBlobConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self.limit_of_events_to_push = int(os.getenv("AZURE_BATCH_SIZE", 10000))
 
     @property
     def last_event_date(self) -> datetime:
@@ -96,7 +97,6 @@ class AzureBlobConnector(AsyncConnector):
         blob_list = self.azure_blob_wrapper().list_blobs()
         _last_modified_date = self.last_event_date
         records: list[Any] = []
-        limit_of_events_to_push = int(os.getenv("AZURE_BATCH_SIZE", 10000))
         async for blob in blob_list:
             if blob.last_modified > self.last_event_date:
                 if _last_modified_date is None or blob.last_modified > _last_modified_date:
@@ -113,7 +113,7 @@ class AzureBlobConnector(AsyncConnector):
 
                         records.extend(file_content.decode("utf-8").split("\n"))
 
-                        if len(records) >= limit_of_events_to_push:
+                        if len(records) >= self.limit_of_events_to_push:
                             await self.push_data_to_intakes(events=records)
                             records = []
 
