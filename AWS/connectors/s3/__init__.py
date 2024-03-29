@@ -1,5 +1,5 @@
 """Package for all s3 connectors impl."""
-
+import os
 from abc import ABCMeta
 from functools import cached_property
 from gzip import decompress
@@ -102,6 +102,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             tuple[list[str], int]:
         """
         records = []
+        limit_of_events_to_push = os.getenv("AWS_BATCH_SIZE", 10000)
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
@@ -138,13 +139,14 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
                         async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
                             records.extend(self._parse_content(self.decompress_content(content)))
+
                     except Exception as e:
                         self.log(
                             message=f"Failed to fetch content of {record}: {str(e)}",
                             level="warning",
                         )
 
-            if len(records) >= self.configuration.records_in_queue_per_batch or not records:
+            if len(records) >= limit_of_events_to_push or not records:
                 continue_receiving = False
 
         result = await self.push_data_to_intakes(events=records)
