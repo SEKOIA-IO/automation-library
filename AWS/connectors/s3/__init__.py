@@ -29,7 +29,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
     configuration: AwsS3QueuedConfiguration
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
-        """Init AzureBlobConnector."""
+        """Init AbstractAwsS3QueuedConnector."""
 
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))

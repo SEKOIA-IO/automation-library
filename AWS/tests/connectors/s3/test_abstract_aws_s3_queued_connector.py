@@ -89,6 +89,7 @@ def abstract_queued_connector(
     Returns:
         AbstractAwsS3QueuedConnector:
     """
+    os.environ["AWS_BATCH_SIZE"] = "1"
     connector = AbstractAwsS3QueuedConnector(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = aws_s3_queued_config
@@ -161,7 +162,6 @@ async def test_abstract_aws_s3_queued_connector_next_batch(
         abstract_queued_connector: AbstractAwsS3QueuedConnector
         sqs_message: str
     """
-    os.environ["AWS_BATCH_SIZE"] = "1"
     amount_of_messages = session_faker.pyint(min_value=5, max_value=100)
 
     sqs_messages = [(sqs_message, session_faker.pyint(min_value=5, max_value=100)) for _ in range(amount_of_messages)]
@@ -201,7 +201,6 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message(
         abstract_queued_connector: AbstractAwsS3QueuedConnector
         sqs_message: str
     """
-    os.environ["AWS_BATCH_SIZE"] = "1"
     amount_of_messages = session_faker.pyint(min_value=5, max_value=100)
 
     valid_messages = [
