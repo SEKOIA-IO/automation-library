@@ -1,4 +1,5 @@
 """Contains tests for AbstractAwsS3QueuedConnector."""
+
 import os
 from gzip import compress
 from pathlib import Path
