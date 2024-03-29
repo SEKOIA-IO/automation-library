@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-29 - 1.9.0
+
+### Changed
+
+- Update `sekoia-automation-sdk` to the latest version (1.12.2) and
+  make use of SDK features to forward events to Sekoia.io.
+
 ## 2024-02-13 - 1.8.2
 
 ### Changed
