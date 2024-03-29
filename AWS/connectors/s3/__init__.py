@@ -102,7 +102,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             tuple[list[str], int]:
         """
         records = []
-        limit_of_events_to_push = os.getenv("AWS_BATCH_SIZE", 10000)
+        limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
