@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-29 - 1.30.10
+
+### Changed
+
+- Use environment variable instead of configuration for batch size.
+
 ## 2024-03-29 - 1.30.9
 
 ### Changed
