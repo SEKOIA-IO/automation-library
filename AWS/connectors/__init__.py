@@ -33,9 +33,6 @@ class AbstractAwsConnectorConfiguration(DefaultConnectorConfiguration):
 
     frequency: int = 60
 
-    # The number of records that connector should process at once.
-    records_in_queue_per_batch: int = 10000
-
 
 class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
     """The abstract connector."""

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-21 - 2.4.5
+
+### Added
+
+- Add chunk size usage to Azure Blob Storage connector
+
 ## 2024-03-21 - 2.4.4
 
 ### Added
