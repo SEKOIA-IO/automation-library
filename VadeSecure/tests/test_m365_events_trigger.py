@@ -62,7 +62,7 @@ def test_trigger_get_event_type_context(trigger: M365EventsTrigger, session_fake
 
 
 def test_fetch_events(trigger):
-    trigger._get_authorization = MagicMock(return_value="Bearer 123456")
+    trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
     trigger._fetch_next_events = MagicMock(return_value=[])
 
     trigger._fetch_events()
@@ -72,7 +72,7 @@ def test_fetch_events(trigger):
 
 def test_fetch_events_bad_url(trigger):
     trigger.module.configuration.api_host = "https://api-test.vadesecure.com/////"
-    trigger._get_authorization = MagicMock(return_value="Bearer 123456")
+    trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
     with requests_mock.Mocker() as mock:
         mock.post(
             "https://api-test.vadesecure.com/api/v1/tenants/e49e7162-0df6-48e9-a75e-237d54871e8b/logs/emails/search",
@@ -91,7 +91,7 @@ def test_fetch_next_emails_events(trigger):
     )
 
     with requests_mock.Mocker() as mock:
-        trigger._get_authorization = MagicMock(return_value="Bearer 123456")
+        trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
 
         message1 = {
             "id": "c70589clfoov78sdpoa0",
@@ -166,7 +166,7 @@ def test_fetch_next_auto_remediation_events(trigger):
     )
 
     with requests_mock.Mocker() as mock:
-        trigger._get_authorization = MagicMock(return_value="Bearer 123456")
+        trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
 
         campaign1 = {
             "action": ["DELETE"],
@@ -201,7 +201,7 @@ def test_get_authorization_request_new_token_only_when_needed(trigger):
             },
         )
 
-        token = trigger._get_authorization()
+        token = trigger.client.auth.get_authorization()
         assert token == "Bearer 123456"
 
         mock.post(
@@ -213,7 +213,7 @@ def test_get_authorization_request_new_token_only_when_needed(trigger):
                 "token_type": "bearer",
             },
         )
-        token = trigger._get_authorization()
+        token = trigger.client.auth.get_authorization()
         assert token == "Bearer 78910"
 
         mock.post(
@@ -226,7 +226,7 @@ def test_get_authorization_request_new_token_only_when_needed(trigger):
             },
         )
 
-        token = trigger._get_authorization()
+        token = trigger.client.auth.get_authorization()
         assert token == "Bearer 78910"
 
         assert mock.call_count == 2
@@ -247,7 +247,7 @@ def test_fetch_events_should_chunk_events(trigger):
     )
 
     with requests_mock.Mocker() as mock:
-        trigger._get_authorization = MagicMock(return_value="Bearer 123456")
+        trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
 
         message1 = {
             "id": "c70589clfoov78sdpoa0",

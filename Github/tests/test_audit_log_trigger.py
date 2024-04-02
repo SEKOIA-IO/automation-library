@@ -1,8 +1,8 @@
 """Contains tests for AuditLogConnector."""
 
+from posixpath import join as urljoin
 from typing import Any
 from unittest.mock import MagicMock
-from posixpath import join as urljoin
 
 import pytest
 from aioresponses import aioresponses
@@ -45,6 +45,7 @@ def connector_with_api_key(symphony_storage, session_faker, intake_response):
     )
 
     trigger.configuration = {
+        "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
     }
 
@@ -76,30 +77,11 @@ def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake
     )
 
     trigger.configuration = {
+        "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
     }
 
     yield trigger
-
-
-@pytest.mark.asyncio
-async def test_connector_session_and_rate_limiter(symphony_storage):
-    """
-    Test AuditLogConnector session and rate limiter.
-
-    Args:
-        symphony_storage: str
-    """
-    assert AuditLogConnector._session is None
-    assert AuditLogConnector._rate_limiter is None
-
-    rate_limiter = AuditLogConnector.rate_limiter()
-
-    assert AuditLogConnector._rate_limiter == rate_limiter
-
-    async with AuditLogConnector.session() as session:
-        assert AuditLogConnector._rate_limiter == rate_limiter
-        assert AuditLogConnector._session == session
 
 
 @pytest.mark.asyncio
