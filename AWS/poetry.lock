@@ -22,47 +22,6 @@ awscli = ["awscli (>=1.32.41,<1.32.52)"]
 boto3 = ["boto3 (>=1.34.41,<1.34.52)"]
 
 [[package]]
-name = "aiocsv"
-version = "1.3.1"
-description = ""
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "aiocsv-1.3.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:8ccdaa76dad067f0b7cf214ac339d6fe87b1ba2829d5e6f9b1843bcb1edb8ca5"},
-    {file = "aiocsv-1.3.1-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cb363df4b03d30ea06c781ac71b368e7a82b8de3e12be007036da72cdde33d2c"},
-    {file = "aiocsv-1.3.1-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:5ca282365f3c2f756d7f90777bd8f4a4f0ece4f48f3dd5ad1edf1aac5cee26f6"},
-    {file = "aiocsv-1.3.1-cp310-cp310-win_amd64.whl", hash = "sha256:5c15ed2efa83bf09df8f4fbe7d881a813782430d36a466ce86c4eb39c8b8c68d"},
-    {file = "aiocsv-1.3.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:951464245b9a1f95021deb58202521b2c7d71510b1bf267b9beffab4f5e7110e"},
-    {file = "aiocsv-1.3.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:be053212f3bfa2a2cc2c82e377bcbc84442b89c15f4dbc8f3a364dd7f8514c8a"},
-    {file = "aiocsv-1.3.1-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:652d53f011172191b2afd3d363970a1e02138a0b733798c3df51eff51f48b0b8"},
-    {file = "aiocsv-1.3.1-cp311-cp311-win_amd64.whl", hash = "sha256:35b11ff73730e32e5055cd9b3d69282345a0e251d18b687be8bb56376a2413ed"},
-    {file = "aiocsv-1.3.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:5a748bc56b57fe5b6ad03146c979a1111a8e9bed5235aa86bacc0fc9fec6ff03"},
-    {file = "aiocsv-1.3.1-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:404e8397e2dedd9a9347342f0717d111606d5beeb400d1b11b7d9e51e39fcd6e"},
-    {file = "aiocsv-1.3.1-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:40d9c2d7674fcf5c84bc9fc0814527fb18cc2c6a3e6d5472fb7c130a2253053f"},
-    {file = "aiocsv-1.3.1-cp312-cp312-win_amd64.whl", hash = "sha256:206a23e96d4bb4f7d0082ec24a0e788c969b1f367f7bae31b3f9190253af5a4e"},
-    {file = "aiocsv-1.3.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:648795a5e9591b29db8340631a889d772bdd4b21905e95d004288eb06c020bb7"},
-    {file = "aiocsv-1.3.1-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f220ae4bfc57f3a2b3b5ab02c56bc03cc2e4fff8bdeb94aaddd20d8df386018e"},
-    {file = "aiocsv-1.3.1-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:989e1b0ad421e449cdf9e9cb2e60f057e1e4c63a91aeb857469204a4ce89e9cf"},
-    {file = "aiocsv-1.3.1-cp38-cp38-win_amd64.whl", hash = "sha256:b606902e756d05dfdf6e2a391097c832a2ff4bf9bb51966811f21d1edea1112d"},
-    {file = "aiocsv-1.3.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:fef03c966832962c5dea0c2bc975d40645c772933d07c57f6b865715f79be145"},
-    {file = "aiocsv-1.3.1-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f2a03adc15771145bd1bf1240e15f6dbb761c29edf917d53a5da451ade29f3d9"},
-    {file = "aiocsv-1.3.1-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:7fa4d6481a84f722ed9a642723a3b2bf476e19065ae834909fac509a72c2f1cc"},
-    {file = "aiocsv-1.3.1-cp39-cp39-win_amd64.whl", hash = "sha256:9b4f1417c757f63ae8fdd3ae6f4d2a5cf0dbc59cfe02c985d698234cc513b060"},
-    {file = "aiocsv-1.3.1.tar.gz", hash = "sha256:0fd2efbb5a327e1e6de5e9d97040e13e86e30420eecffbebb50b399bde4e144e"},
-]
-
-[[package]]
-name = "aiofiles"
-version = "23.2.1"
-description = "File support for asyncio."
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "aiofiles-23.2.1-py3-none-any.whl", hash = "sha256:19297512c647d4b27a2cf7c34caa7e405c0d60b5560618a29a9fe027b18b0107"},
-    {file = "aiofiles-23.2.1.tar.gz", hash = "sha256:84ec2218d8419404abcb9f0c02df3f34c6e0a68ed41072acfb1cef5cbc29051a"},
-]
-
-[[package]]
 name = "aiohttp"
 version = "3.9.3"
 description = "Async http client/server framework (asyncio)"
@@ -167,17 +126,6 @@ python-versions = ">=3.6"
 files = [
     {file = "aioitertools-0.11.0-py3-none-any.whl", hash = "sha256:04b95e3dab25b449def24d7df809411c10e62aab0cbe31a50ca4e68748c43394"},
     {file = "aioitertools-0.11.0.tar.gz", hash = "sha256:42c68b8dd3a69c2bf7f2233bf7df4bb58b557bca5252ac02ed5187bbc67d6831"},
-]
-
-[[package]]
-name = "aiolimiter"
-version = "1.1.0"
-description = "asyncio rate limiter, a leaky bucket implementation"
-optional = false
-python-versions = ">=3.7,<4.0"
-files = [
-    {file = "aiolimiter-1.1.0-py3-none-any.whl", hash = "sha256:0b4997961fc58b8df40279e739f9cf0d3e255e63e9a44f64df567a8c17241e24"},
-    {file = "aiolimiter-1.1.0.tar.gz", hash = "sha256:461cf02f82a29347340d031626c92853645c099cb5ff85577b831a7bd21132b5"},
 ]
 
 [[package]]
@@ -2689,16 +2637,10 @@ files = [
 ]
 
 [package.dependencies]
-aiobotocore = {version = ">=2.5.2,<3.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-aws\""}
-aiocsv = {version = ">=1.2.4,<2.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-files\""}
-aiofiles = {version = ">=23.1.0,<24.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-http\" or extra == \"async-files\""}
-aiohttp = {version = ">=3.8.4,<4.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-http\""}
-aiolimiter = {version = ">=1.1.0,<2.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-http\""}
 black = "*"
 boto3 = ">=1.28,<2.0"
 cookiecutter = ">=2.1,<3.0"
 Jinja2 = ">=3.0.3,<4.0.0"
-loguru = {version = ">=0.7.0,<0.8.0", optional = true, markers = "extra == \"all\" or extra == \"logging\""}
 orjson = ">=3.8,<4.0"
 poetry = "*"
 prometheus-client = ">=0.16.0,<0.17.0"
@@ -3250,4 +3192,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "a2f6f59b3c0f48faf02e46558aab270d47fb25f72bb9d477168412568b25e7a0"
+content-hash = "df00d6066c18dd8d0dcde1f116c1cf7c362e84b811f9a08b843dad3d10a0f562"
