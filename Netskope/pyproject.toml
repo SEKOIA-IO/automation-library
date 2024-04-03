@@ -7,7 +7,7 @@ authors = []
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 netskopesdk = "^0.0.34"
-sekoia-automation-sdk = { version="^1.8.2", extras=["all"] }
+sekoia-automation-sdk = "^1.12.2"
 google-cloud-pubsublite = "^1.8.3"
 google-api-python-client = "^2.95.0"
 google-auth-httplib2 = "^0.1.0"

@@ -2,14 +2,14 @@
     "configuration": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
-              "username": {
+            "username": {
                 "description": "Username to do authentication on remote server",
                 "type": "string"
-              },
-              "password": {
+            },
+            "password": {
                 "description": "Password to do authentication on remote server",
                 "type": "string"
-              }
+            }
         },
         "required": [
             "username",
@@ -25,5 +25,5 @@
     "name": "Broadcom Cloud Secure Web Gateway",
     "uuid": "c56d64b8-b70f-4bab-a334-b4d5a4a25214",
     "slug": "broadcom-cloud-swg",
-    "version": "1.0.12"
+    "version": "1.1"
 }

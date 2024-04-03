@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version="^1.10.0", extras=["all"] }
+sekoia-automation-sdk = "^1.12.2"
 requests-ratelimiter = "^0.4.2"
 freezegun = "^1.4.0"
 
