@@ -77,7 +77,6 @@ jobs:
         with:
           options: "--check --verbose"
           src: ./"${{ matrix.module }}"
-          version: "~= 24.0"
 
       - name: Execute Mypy
         run: |
