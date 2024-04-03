@@ -141,7 +141,7 @@ class DeepVisibilityEvent(BaseModel):
 
 
 class DeepVisibilityEvents(BaseModel):
-    status: str  | None
+    status: str | None
     status_reason: str
     events: list[DeepVisibilityEvent]
 
