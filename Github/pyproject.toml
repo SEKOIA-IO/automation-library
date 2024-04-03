@@ -61,9 +61,7 @@ exclude = ["tests/*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
@@ -83,14 +81,8 @@ addopts = '''
 '''
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-    "github_modules/metrics.py"
-]
-concurrency = [
-    "gevent",
-]
+omit = ["tests/*", "main.py", "github_modules/metrics.py"]
+concurrency = ["gevent"]
 
 [tool.poe.tasks.lint]
 sequence = [

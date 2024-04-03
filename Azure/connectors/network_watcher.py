@@ -1,6 +1,7 @@
 """Connector to pull data from Azure Blob Storage."""
 
 import asyncio
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from gzip import decompress
@@ -45,6 +46,7 @@ class AzureNetworkWatcherConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self.limit_of_events_to_push = int(os.getenv("AZURE_BATCH_SIZE", 10000))
 
     @property
     def last_event_date(self) -> datetime:
@@ -116,6 +118,10 @@ class AzureNetworkWatcherConnector(AsyncConnector):
                         records.extend(
                             self.format_blob_data(orjson.loads(file_content.decode("utf-8")), self.last_event_date)
                         )
+
+                        if len(records) >= self.limit_of_events_to_push:
+                            await self.push_data_to_intakes(events=records)
+                            records = []
 
                     await delete_file(file)
 
