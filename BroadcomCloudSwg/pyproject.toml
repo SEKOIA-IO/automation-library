@@ -16,6 +16,7 @@ zipstream = "^1.1.4"
 aiozipstream = "^0.4"
 pytz = "^2024.1"
 aiohttp-retry = "^2.8.3"
+loguru = "^0.7.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

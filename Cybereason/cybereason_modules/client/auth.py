@@ -11,7 +11,7 @@ from cybereason_modules.helpers import validate_response_not_login_failure
 
 
 class CybereasonApiCredentials:
-    session_id: str
+    session_id: str | None
     expires_at: datetime
 
 

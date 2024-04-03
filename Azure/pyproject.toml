@@ -16,6 +16,7 @@ async-lru = "^2.0.4"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
 uamqp = "^1.6.6"
+aiolimiter = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "<8"
