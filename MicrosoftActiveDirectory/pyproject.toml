@@ -16,7 +16,7 @@ pytest-cov = "*"
 requests-mock = "*"
 black = {version = "^22.6.0", allow-prereleases = true}
 flake8 = "^4.0.1"
-mypy = "^0.961"
+mypy = "^1.9.0"
 pytest-clarity = "^1.0.1"
 
 [build-system]

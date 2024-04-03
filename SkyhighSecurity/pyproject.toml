@@ -16,7 +16,7 @@ requests = "*"
 requests-mock = "*"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^0.991"
+mypy = "^1.9.0"
 isort = "^5.10.1"
 black = "^22.10.0"
 

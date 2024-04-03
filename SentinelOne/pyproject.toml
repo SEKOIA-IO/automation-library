@@ -20,7 +20,7 @@ requests = "*"
 requests-mock = "*"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^0.990"
+mypy = "^1.9.0"
 
 [build-system]
 requires = [ "poetry-core>=1.0.0",]
