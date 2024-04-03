@@ -2,13 +2,13 @@
 
 [[package]]
 name = "aiobotocore"
-version = "2.12.1"
+version = "2.12.2"
 description = "Async client for aws services using botocore and aiohttp"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "aiobotocore-2.12.1-py3-none-any.whl", hash = "sha256:6a9a3d646cf422f45fdc1e4256e78563ebffba64733bc9b8ca9123614e8ba9af"},
-    {file = "aiobotocore-2.12.1.tar.gz", hash = "sha256:8706b28f16f93c541f6ed50352115a79d8f3499539f8d0bb70aa0f7a5379c1fe"},
+    {file = "aiobotocore-2.12.2-py3-none-any.whl", hash = "sha256:eb595362cfa6cd70e2940766e3945b114e2522168b67096b0dbc3067f7fd60ad"},
+    {file = "aiobotocore-2.12.2.tar.gz", hash = "sha256:41160f33cdada96815be7d180d1a2405fbf03f0364bac88c03d6ff1ad2cd83d7"},
 ]
 
 [package.dependencies]
@@ -20,6 +20,47 @@ wrapt = ">=1.10.10,<2.0.0"
 [package.extras]
 awscli = ["awscli (>=1.32.41,<1.32.52)"]
 boto3 = ["boto3 (>=1.34.41,<1.34.52)"]
+
+[[package]]
+name = "aiocsv"
+version = "1.3.1"
+description = ""
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "aiocsv-1.3.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:8ccdaa76dad067f0b7cf214ac339d6fe87b1ba2829d5e6f9b1843bcb1edb8ca5"},
+    {file = "aiocsv-1.3.1-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cb363df4b03d30ea06c781ac71b368e7a82b8de3e12be007036da72cdde33d2c"},
+    {file = "aiocsv-1.3.1-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:5ca282365f3c2f756d7f90777bd8f4a4f0ece4f48f3dd5ad1edf1aac5cee26f6"},
+    {file = "aiocsv-1.3.1-cp310-cp310-win_amd64.whl", hash = "sha256:5c15ed2efa83bf09df8f4fbe7d881a813782430d36a466ce86c4eb39c8b8c68d"},
+    {file = "aiocsv-1.3.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:951464245b9a1f95021deb58202521b2c7d71510b1bf267b9beffab4f5e7110e"},
+    {file = "aiocsv-1.3.1-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:be053212f3bfa2a2cc2c82e377bcbc84442b89c15f4dbc8f3a364dd7f8514c8a"},
+    {file = "aiocsv-1.3.1-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:652d53f011172191b2afd3d363970a1e02138a0b733798c3df51eff51f48b0b8"},
+    {file = "aiocsv-1.3.1-cp311-cp311-win_amd64.whl", hash = "sha256:35b11ff73730e32e5055cd9b3d69282345a0e251d18b687be8bb56376a2413ed"},
+    {file = "aiocsv-1.3.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:5a748bc56b57fe5b6ad03146c979a1111a8e9bed5235aa86bacc0fc9fec6ff03"},
+    {file = "aiocsv-1.3.1-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:404e8397e2dedd9a9347342f0717d111606d5beeb400d1b11b7d9e51e39fcd6e"},
+    {file = "aiocsv-1.3.1-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:40d9c2d7674fcf5c84bc9fc0814527fb18cc2c6a3e6d5472fb7c130a2253053f"},
+    {file = "aiocsv-1.3.1-cp312-cp312-win_amd64.whl", hash = "sha256:206a23e96d4bb4f7d0082ec24a0e788c969b1f367f7bae31b3f9190253af5a4e"},
+    {file = "aiocsv-1.3.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:648795a5e9591b29db8340631a889d772bdd4b21905e95d004288eb06c020bb7"},
+    {file = "aiocsv-1.3.1-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f220ae4bfc57f3a2b3b5ab02c56bc03cc2e4fff8bdeb94aaddd20d8df386018e"},
+    {file = "aiocsv-1.3.1-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:989e1b0ad421e449cdf9e9cb2e60f057e1e4c63a91aeb857469204a4ce89e9cf"},
+    {file = "aiocsv-1.3.1-cp38-cp38-win_amd64.whl", hash = "sha256:b606902e756d05dfdf6e2a391097c832a2ff4bf9bb51966811f21d1edea1112d"},
+    {file = "aiocsv-1.3.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:fef03c966832962c5dea0c2bc975d40645c772933d07c57f6b865715f79be145"},
+    {file = "aiocsv-1.3.1-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f2a03adc15771145bd1bf1240e15f6dbb761c29edf917d53a5da451ade29f3d9"},
+    {file = "aiocsv-1.3.1-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:7fa4d6481a84f722ed9a642723a3b2bf476e19065ae834909fac509a72c2f1cc"},
+    {file = "aiocsv-1.3.1-cp39-cp39-win_amd64.whl", hash = "sha256:9b4f1417c757f63ae8fdd3ae6f4d2a5cf0dbc59cfe02c985d698234cc513b060"},
+    {file = "aiocsv-1.3.1.tar.gz", hash = "sha256:0fd2efbb5a327e1e6de5e9d97040e13e86e30420eecffbebb50b399bde4e144e"},
+]
+
+[[package]]
+name = "aiofiles"
+version = "23.2.1"
+description = "File support for asyncio."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "aiofiles-23.2.1-py3-none-any.whl", hash = "sha256:19297512c647d4b27a2cf7c34caa7e405c0d60b5560618a29a9fe027b18b0107"},
+    {file = "aiofiles-23.2.1.tar.gz", hash = "sha256:84ec2218d8419404abcb9f0c02df3f34c6e0a68ed41072acfb1cef5cbc29051a"},
+]
 
 [[package]]
 name = "aiohttp"
@@ -126,6 +167,17 @@ python-versions = ">=3.6"
 files = [
     {file = "aioitertools-0.11.0-py3-none-any.whl", hash = "sha256:04b95e3dab25b449def24d7df809411c10e62aab0cbe31a50ca4e68748c43394"},
     {file = "aioitertools-0.11.0.tar.gz", hash = "sha256:42c68b8dd3a69c2bf7f2233bf7df4bb58b557bca5252ac02ed5187bbc67d6831"},
+]
+
+[[package]]
+name = "aiolimiter"
+version = "1.1.0"
+description = "asyncio rate limiter, a leaky bucket implementation"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "aiolimiter-1.1.0-py3-none-any.whl", hash = "sha256:0b4997961fc58b8df40279e739f9cf0d3e255e63e9a44f64df567a8c17241e24"},
+    {file = "aiolimiter-1.1.0.tar.gz", hash = "sha256:461cf02f82a29347340d031626c92853645c099cb5ff85577b831a7bd21132b5"},
 ]
 
 [[package]]
@@ -1303,20 +1355,20 @@ colors = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "jaraco-classes"
-version = "3.3.1"
+version = "3.4.0"
 description = "Utility functions for Python class constructs"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jaraco.classes-3.3.1-py3-none-any.whl", hash = "sha256:86b534de565381f6b3c1c830d13f931d7be1a75f0081c57dff615578676e2206"},
-    {file = "jaraco.classes-3.3.1.tar.gz", hash = "sha256:cb28a5ebda8bc47d8c8015307d93163464f9f2b91ab4006e09ff0ce07e8bfb30"},
+    {file = "jaraco.classes-3.4.0-py3-none-any.whl", hash = "sha256:f662826b6bed8cace05e7ff873ce0f9283b5c924470fe664fff1c2f00f581790"},
+    {file = "jaraco.classes-3.4.0.tar.gz", hash = "sha256:47a024b51d0239c0dd8c8540c6c7f484be3b8fcf0b2d85c13825780d3b3f3acd"},
 ]
 
 [package.dependencies]
 more-itertools = "*"
 
 [package.extras]
-docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (<7.2.5)", "sphinx (>=3.5)", "sphinx-lint"]
+docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
 testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [[package]]
@@ -2081,13 +2133,13 @@ files = [
 
 [[package]]
 name = "pycparser"
-version = "2.21"
+version = "2.22"
 description = "C parser in Python"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.8"
 files = [
-    {file = "pycparser-2.21-py2.py3-none-any.whl", hash = "sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9"},
-    {file = "pycparser-2.21.tar.gz", hash = "sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206"},
+    {file = "pycparser-2.22-py3-none-any.whl", hash = "sha256:c3702b6d3dd8c7abc1afa565d7e63d53a1d0bd86cdc24edd75470f4de499cfcc"},
+    {file = "pycparser-2.22.tar.gz", hash = "sha256:491c8be9c040f5390f5bf44a5b07752bd07f56edf992381b05c701439eec10f6"},
 ]
 
 [[package]]
@@ -2371,6 +2423,7 @@ files = [
     {file = "PyYAML-6.0.1-cp311-cp311-win_amd64.whl", hash = "sha256:bf07ee2fef7014951eeb99f56f39c9bb4af143d8aa3c21b1677805985307da34"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:855fb52b0dc35af121542a76b9a84f8d1cd886ea97c84703eaa6d88e37a2ad28"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:40df9b996c2b73138957fe23a16a4f0ba614f4c0efce1e9406a184b6d07fa3a9"},
+    {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a08c6f0fe150303c1c6b71ebcd7213c2858041a7e01975da3a99aed1e7a378ef"},
     {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6c22bec3fbe2524cde73d7ada88f6566758a8f7227bfbf93a408a9d86bcc12a0"},
     {file = "PyYAML-6.0.1-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:8d4e9c88387b0f5c7d5f281e55304de64cf7f9c0021a3525bd3b1c542da3b0e4"},
     {file = "PyYAML-6.0.1-cp312-cp312-win32.whl", hash = "sha256:d483d2cdf104e7c9fa60c544d92981f12ad66a457afae824d146093b8c294c54"},
@@ -2636,10 +2689,16 @@ files = [
 ]
 
 [package.dependencies]
+aiobotocore = {version = ">=2.5.2,<3.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-aws\""}
+aiocsv = {version = ">=1.2.4,<2.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-files\""}
+aiofiles = {version = ">=23.1.0,<24.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-http\" or extra == \"async-files\""}
+aiohttp = {version = ">=3.8.4,<4.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-http\""}
+aiolimiter = {version = ">=1.1.0,<2.0.0", optional = true, markers = "extra == \"all\" or extra == \"async-http\""}
 black = "*"
 boto3 = ">=1.28,<2.0"
 cookiecutter = ">=2.1,<3.0"
 Jinja2 = ">=3.0.3,<4.0.0"
+loguru = {version = ">=0.7.0,<0.8.0", optional = true, markers = "extra == \"all\" or extra == \"logging\""}
 orjson = ">=3.8,<4.0"
 poetry = "*"
 prometheus-client = ">=0.16.0,<0.17.0"
@@ -2836,13 +2895,13 @@ test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.
 
 [[package]]
 name = "types-aiofiles"
-version = "23.2.0.20240311"
+version = "23.2.0.20240403"
 description = "Typing stubs for aiofiles"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-aiofiles-23.2.0.20240311.tar.gz", hash = "sha256:208e6b090de732739ef74ab8f133c954479c8e77e614f276f9e475a0cc986430"},
-    {file = "types_aiofiles-23.2.0.20240311-py3-none-any.whl", hash = "sha256:ed10a8002d88c94220597b77304cf1a1d8cf489c7143fc3ffa2c96488b20fec7"},
+    {file = "types-aiofiles-23.2.0.20240403.tar.gz", hash = "sha256:1ffcf8f5f72b81f71139f754ea2610ab0017f27ba4fd771e187b07840ee49c0f"},
+    {file = "types_aiofiles-23.2.0.20240403-py3-none-any.whl", hash = "sha256:adeeb4b999f19fda2dfe91c07857ff54701b6ee9b227b523a5a7be92125a2c5f"},
 ]
 
 [[package]]
@@ -3191,4 +3250,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "28fa79b4852e97cb68457bbc97989c2e1d8d0749ec51ab35dc3258d33c947ccc"
+content-hash = "a2f6f59b3c0f48faf02e46558aab270d47fb25f72bb9d477168412568b25e7a0"
