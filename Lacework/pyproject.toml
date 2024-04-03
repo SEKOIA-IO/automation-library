@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version="^1.10.0", extras=["all"] }
+sekoia-automation-sdk = "^1.12.2"
 requests-ratelimiter = "^0.4.2"
 freezegun = "^1.4.0"
 
@@ -25,7 +25,7 @@ aioresponses = "^0.7.4"
 autoflake = "^1.4"
 isort = "^5.10.1"
 black = { version = "^23.9.1", extras = ["colorama"] }
-mypy = "^0.991"
+mypy = "^1.9.0"
 types-aiofiles = "^23.1.0.4"
 types-python-dateutil = "^2.8.19.13"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }

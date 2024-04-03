@@ -6,7 +6,7 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.8.1"
+sekoia-automation-sdk = "^1.12.2"
 orjson = "^3.7.7"
 sentinelone-management-sdk = {path = "sentinel-mgmt-sdk.tar.gz"}
 confluent-kafka = "^2.1.1"
@@ -20,7 +20,7 @@ requests = "*"
 requests-mock = "*"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^0.990"
+mypy = "^1.9.0"
 
 [build-system]
 requires = [ "poetry-core>=1.0.0",]

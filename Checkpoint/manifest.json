@@ -31,9 +31,9 @@
         "title": "Check Point module Configuration",
         "type": "object"
     },
-    "description": "Check Point Harmony is the industry’s first unified security solution for users devices and access.",
+    "description": "Check Point Harmony is the industry's first unified security solution for users devices and access.",
     "name": "Check Point",
     "uuid": "096f4eda-68dd-11ee-8c99-0242ac120002",
     "slug": "checkpoint",
-    "version": "1.2.1"
+    "version": "1.3"
 }

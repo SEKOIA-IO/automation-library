@@ -6,7 +6,7 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.8.1"
+sekoia-automation-sdk = "^1.12.2"
 requests = "^2.31.0"
 requests-ratelimiter = "^0.4.0"
 requests-mock = "^1.11.0"

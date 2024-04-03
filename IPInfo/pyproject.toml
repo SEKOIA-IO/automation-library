@@ -8,7 +8,7 @@ packages = [{include = "ipinfo"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.11.0"
+sekoia-automation-sdk = "^1.12.2"
 iso3166 = "^2.1.1"
 
 [tool.poetry.group.dev.dependencies]

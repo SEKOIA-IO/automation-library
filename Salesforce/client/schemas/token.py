@@ -20,7 +20,7 @@ class SalesforceToken(BaseModel):
     """Model to work with auth token with additional info."""
 
     token: HttpToken
-    created_at: int
+    created_at: float
     ttl: int
 
     def is_valid(self) -> bool:

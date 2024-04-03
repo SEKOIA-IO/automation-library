@@ -9,7 +9,7 @@ python = ">=3.10,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 structlog = "^22.3.0"
-sekoia-automation-sdk = "^1.8.1"
+sekoia-automation-sdk = "^1.12.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -19,7 +19,7 @@ requests-mock = "*"
 pytest-env = "*"
 black = {version = "^22.6.0", allow-prereleases = true}
 flake8 = "^4.0.1"
-mypy = "^0.961"
+mypy = "^1.9.0"
 pytest-clarity = "^1.0.1"
 
 [build-system]

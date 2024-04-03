@@ -6,7 +6,7 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version = "^1.12.0", extras = ["all"] }
+sekoia-automation-sdk = "^1.12.2"
 orjson = "^3.9.10"
 azure-eventhub-checkpointstoreblob-aio = "^1.1.4"
 azure-storage-blob = "^12.19.0"
@@ -16,6 +16,7 @@ async-lru = "^2.0.4"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
 uamqp = "^1.6.6"
+aiolimiter = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "<8"
@@ -31,7 +32,7 @@ aioresponses = "^0.7.4"
 autoflake = "^1.4"
 isort = "^5.10.1"
 black = { version = "^24.3.0", extras = ["colorama"] }
-mypy = "^0.991"
+mypy = "^1.9.0"
 types-aiofiles = "^23.1.0.4"
 types-python-dateutil = "^2.8.19.13"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }

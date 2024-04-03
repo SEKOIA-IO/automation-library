@@ -1,14 +1,14 @@
 {
-  "configuration": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Fastly",
-    "type": "object",
-    "properties": {},
-    "required": []
-  },
-  "description": "Fastly is a content delivery network (CDN) and edge cloud platform.",
-  "name": "Fastly",
-  "uuid": "d8d68a10-622d-4ed9-97e4-d1a34ff3d6f8",
-  "slug": "fastly",
-  "version": "0.2.0"
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Fastly",
+        "type": "object",
+        "properties": {},
+        "required": []
+    },
+    "description": "Fastly is a content delivery network (CDN) and edge cloud platform.",
+    "name": "Fastly",
+    "uuid": "d8d68a10-622d-4ed9-97e4-d1a34ff3d6f8",
+    "slug": "fastly",
+    "version": "0.3"
 }
