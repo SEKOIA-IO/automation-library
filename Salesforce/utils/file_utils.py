@@ -41,7 +41,7 @@ async def save_response_to_temp_file(response: ClientResponse, chunk_size: int =
 
             await file.write(chunk)
 
-        file_name: str = file.name
+        file_name: str = str(file.name)
 
         return file_name
 

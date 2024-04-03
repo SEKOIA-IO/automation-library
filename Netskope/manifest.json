@@ -1,22 +1,24 @@
 {
-  "configuration": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Netskope",
-    "type": "object",
-    "properties": {
-      "base_url": {
-        "description": "API base URL",
-        "type": "string",
-        "format": "uri",
-	"nullable": true,
-	"default": null
-      }
+    "configuration": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Netskope",
+        "type": "object",
+        "properties": {
+            "base_url": {
+                "description": "API base URL",
+                "type": "string",
+                "format": "uri",
+                "nullable": true,
+                "default": null
+            }
+        },
+        "required": [
+            "base_url"
+        ]
     },
-    "required": ["base_url"]
-  },
-  "description": "[Netskope](https://www.netskope.com/) is a cybersecurity company, providing solutions to protect data in cloud apps and network security applying zero trust principles.",
-  "name": "Netskope",
-  "uuid": "1e3f2e33-fb9c-4387-bcf7-8d7ece37f913",
-  "slug": "netskope",
-  "version": "1.10.1"
+    "description": "[Netskope](https://www.netskope.com/) is a cybersecurity company, providing solutions to protect data in cloud apps and network security applying zero trust principles.",
+    "name": "Netskope",
+    "uuid": "1e3f2e33-fb9c-4387-bcf7-8d7ece37f913",
+    "slug": "netskope",
+    "version": "1.11"
 }

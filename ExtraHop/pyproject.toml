@@ -7,7 +7,7 @@ authors = []
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 orjson = "^3.7.7"
-sekoia-automation-sdk = "^1.8.1"
+sekoia-automation-sdk = "^1.12.2"
 requests = "^2.31.0"
 requests-ratelimiter = "^0.5.1"
 
@@ -18,7 +18,7 @@ requests = "*"
 requests-mock = "*"
 isort = "*"
 black = "*"
-mypy = "*"
+mypy = "^1.9.0"
 
 
 [build-system]

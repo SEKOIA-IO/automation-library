@@ -6,7 +6,7 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.6.0"
+sekoia-automation-sdk = "^1.12.2"
 requests-ratelimiter = "^0.4.0"
 stix2-patterns = "^2.0.0"
 zscaler_api_talkers = { git = "https://github.com/sergitopereira/zscaler_api_talkers.git", rev = "cd6dc359fd10db88a72334f70523f1433299d817" }

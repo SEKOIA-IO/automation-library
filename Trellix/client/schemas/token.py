@@ -331,7 +331,7 @@ class TrellixToken(BaseModel):
     token: HttpToken
 
     scopes: Set[Scope]
-    created_at: int
+    created_at: float
 
     def is_valid(self, scopes: List[Scope] | None = None) -> bool:
         """

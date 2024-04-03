@@ -8,7 +8,7 @@ authors = []
 python = ">=3.10,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
-sekoia-automation-sdk = { version = "^1.8.1", extras = ["all"] }
+sekoia-automation-sdk = "^1.12.2"
 loguru = "^0.7.0"
 async-lru = "^2.0.2"
 aiohttp = "^3.8.5"
@@ -28,7 +28,7 @@ aioresponses = "^0.7.4"
 autoflake = "^1.4"
 isort = "^5.10.1"
 black = "^22.3.0"
-mypy = "^0.960"
+mypy = "^1.9.0"
 types-aiofiles = "^23.1.0.4"
 types-python-dateutil = "^2.8.19.13"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }

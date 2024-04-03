@@ -105,7 +105,12 @@ class CheckpointTokenRefresher(GenericTokenRefresher[RefreshedToken[CheckpointTo
                 raise ValueError("Failed to get token from server. Invalid response : {0}".format(result))
 
             return RefreshedToken(
-                token=CheckpointToken(**data),
+                token=CheckpointToken(
+                    token=data["token"],
+                    csrf=data["csrf"],
+                    expires=data["expires"],
+                    expiresIn=int(data["expiresIn"]),
+                ),
                 created_at=int(time.time()),
                 ttl=int(data.get("expiresIn", 0)),
             )

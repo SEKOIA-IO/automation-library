@@ -1,4 +1,5 @@
 """Contains tests for WindowsRemoteClient."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
