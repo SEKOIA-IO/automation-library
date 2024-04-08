@@ -24,7 +24,7 @@ class IncidentOperationAction(Action):
         client = ApiClient(
             client_id=self.module.configuration.client_id,
             secret=self.module.configuration.secret,
-            scope="connect.api.write",
+            scope="connect.api.read connect.api.write",
             stop_event=Event(),
             log_cb=self.log,
         )
