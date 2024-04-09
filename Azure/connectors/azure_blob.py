@@ -157,7 +157,9 @@ class AzureBlobConnector(AsyncConnector):
                 result.extend(await self.push_data_to_intakes(events=records))
                 records = []
 
-        result: list[str] = await self.push_data_to_intakes(events=records)
+        # Push the remaining events
+        if records:
+            result.extend(await self.push_data_to_intakes(events=records))
 
         with self.context as cache:
             logger.info(
