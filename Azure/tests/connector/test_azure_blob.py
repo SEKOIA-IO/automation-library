@@ -291,3 +291,52 @@ async def test_azure_blob_get_azure_blob_data_4(
     result = await connector.get_azure_blob_data()
 
     assert result == [blob_content.decode("utf-8") for _ in range(3)]
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_get_most_recent_blob(
+    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
+):
+    """
+    Test AzureBlobConnector get events.
+
+    Args:
+        connector: AzureBlobConnector
+        session_faker: Faker
+        symphony_storage: str
+        blob_content: bytes
+        pushed_events_ids: list[str]
+    """
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+
+    # Try to put last event date higher to be 1 day ahead of the log file date
+    with connector.context as cache:
+        cache["last_event_date"] = (current_date - timedelta(days=1)).isoformat()
+
+    azure_blob_storage_wrapper = MagicMock()
+
+    properties1 = BlobProperties()
+    properties1.last_modified = current_date
+    properties1.name = session_faker.word()
+
+    properties2 = BlobProperties()
+    properties2.last_modified = current_date + timedelta(minutes=5)
+    properties2.name = session_faker.word()
+
+    properties3 = BlobProperties()
+    properties3.last_modified = current_date + timedelta(minutes=7)
+    properties3.name = session_faker.word()
+
+    expected_blobs = [properties1, properties2, properties3]
+
+    mock_list_blobs = MagicMock()
+    mock_list_blobs.__aiter__.return_value = expected_blobs
+
+    azure_blob_storage_wrapper.list_blobs.return_value = mock_list_blobs
+
+    connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
+
+    blobs_iter = await connector.get_most_recent_blobs(lower_bound=current_date + timedelta(minutes=2))
+    blobs_list = [n async for n in blobs_iter]
+
+    assert blobs_list == [properties2, properties3]
