@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-04-09 - 2.4.7
+
+### Changed
+
+- Add more logs
+- Refactor get_azure_blob_data with a new method that get the most recent blobs
+
 ## 2024-04-08 - 2.4.6
 
 ### Fixed
