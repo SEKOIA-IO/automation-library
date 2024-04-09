@@ -29,7 +29,12 @@
                 "type": "integer",
                 "description": "The max size of chunks for the batch processing",
                 "default": 1000
-            }
+            },
+	    "frequency": {
+	        "type": "integer",
+		"description": "Batch frequency in seconds",
+		"default": 60
+	    }
         },
         "required": [
             "container_name",
