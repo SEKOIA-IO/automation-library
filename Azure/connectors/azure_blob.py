@@ -111,7 +111,7 @@ class AzureBlobConnector(AsyncConnector):
                         if is_gzip_compressed(file_content):
                             file_content = decompress(file_content)
 
-                        records.extend(file_content.decode("utf-8").split("\n"))
+                        records.extend([line for line in file_content.decode("utf-8").split("\n") if line != ""])
 
                         if len(records) >= self.limit_of_events_to_push:
                             await self.push_data_to_intakes(events=records)
@@ -120,7 +120,7 @@ class AzureBlobConnector(AsyncConnector):
                     await delete_file(file)
 
                 if content:
-                    records.extend(content.decode("utf-8").split("\n"))
+                    records.extend([line for line in content.decode("utf-8").split("\n") if line != ""])
 
         result: list[str] = await self.push_data_to_intakes(events=records)
 
