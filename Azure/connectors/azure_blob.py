@@ -6,8 +6,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from gzip import decompress
 from typing import Any, Optional
+from collections.abc import AsyncGenerator
 
 import aiofiles
+from azure.storage.blob import BlobProperties
 from dateutil.parser import isoparse
 from loguru import logger
 from pydantic import Field
@@ -87,6 +89,20 @@ class AzureBlobConnector(AsyncConnector):
 
         return self._azure_blob_storage_wrapper
 
+    async def get_most_recent_blobs(self, lower_bound: datetime) -> AsyncGenerator[BlobProperties, None]:
+        """
+        Return the list of blobs, more recent than lower_bound
+
+        Args:
+            lower_bound: datetime
+
+        Returns:
+            AsyncGenerator[BlobProperties, None]
+        """
+
+        blob_list = self.azure_blob_wrapper().list_blobs()
+        return (blob async for blob in blob_list if blob.last_modified > lower_bound)
+
     async def get_azure_blob_data(self) -> list[str]:
         """
         Get Azure Blob Storage data.
@@ -94,35 +110,56 @@ class AzureBlobConnector(AsyncConnector):
         Returns:
             list[str]:
         """
-        blob_list = self.azure_blob_wrapper().list_blobs()
         _last_modified_date = self.last_event_date
-        records: list[Any] = []
-        async for blob in blob_list:
-            if blob.last_modified > self.last_event_date:
-                if _last_modified_date is None or blob.last_modified > _last_modified_date:
-                    _last_modified_date = blob.last_modified
 
-                file, content = await self.azure_blob_wrapper().download_blob(blob.name, download=True)
+        # Get the blobs more recent than _last_modified_date
+        logger.info(
+            "From blobs from {lower_bound}",
+            lower_bound=_last_modified_date.isoformat(),
+        )
+        most_recent_blobs = await self.get_most_recent_blobs(_last_modified_date)
 
-                if file:
-                    async with aiofiles.open(file, "rb") as file_data:
-                        file_content = await file_data.read()
+        records: list[str] = []
+        result: list[str] = []
 
-                        if is_gzip_compressed(file_content):
-                            file_content = decompress(file_content)
+        # For each blob
+        async for blob in most_recent_blobs:
+            logger.info(
+                "Process blob {name} modified at {modified_at}",
+                name=blob.name,
+                modified_at=blob.last_modified.isoformat(),
+            )
+            # Save the most recent date seen
+            if _last_modified_date is None or blob.last_modified > _last_modified_date:
+                _last_modified_date = blob.last_modified
 
-                        records.extend([line for line in file_content.decode("utf-8").split("\n") if line != ""])
+            # Get the content of the current blob
+            file, content = await self.azure_blob_wrapper().download_blob(blob.name, download=True)
 
-                        if len(records) >= self.limit_of_events_to_push:
-                            await self.push_data_to_intakes(events=records)
-                            records = []
+            # process the downloaded blob
+            if file:
+                async with aiofiles.open(file, "rb") as file_data:
+                    file_content = await file_data.read()
 
-                    await delete_file(file)
+                    if is_gzip_compressed(file_content):
+                        file_content = decompress(file_content)
 
-                if content:
-                    records.extend([line for line in content.decode("utf-8").split("\n") if line != ""])
+                    records.extend([line for line in file_content.decode("utf-8").split("\n") if line != ""])
 
-        result: list[str] = await self.push_data_to_intakes(events=records)
+                await delete_file(file)
+
+            # process the content of the blob
+            if content:
+                records.extend([line for line in content.decode("utf-8").split("\n") if line != ""])
+
+            # Push the events if exceed the defined threshold
+            if len(records) >= self.limit_of_events_to_push:
+                result.extend(await self.push_data_to_intakes(events=records))
+                records = []
+
+        # Push the remaining events
+        if records:
+            result.extend(await self.push_data_to_intakes(events=records))
 
         with self.context as cache:
             logger.info(
