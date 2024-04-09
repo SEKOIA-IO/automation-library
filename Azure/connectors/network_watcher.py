@@ -30,6 +30,7 @@ class AzureNetworkWatcherConnectorConfig(DefaultConnectorConfiguration):
     container_name: str
     account_name: str
     account_key: str = Field(secret=True)
+    frequency: int = 60
 
 
 class AzureNetworkWatcherConnector(AsyncConnector):
@@ -200,12 +201,6 @@ class AzureNetworkWatcherConnector(AsyncConnector):
                     processing_end = time.time()
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
-                    log_message = "No records to forward"
-                    if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
-
-                    self.log(message=log_message, level="info")
-
                     logger.info(
                         "Processing took {processing_time} seconds",
                         processing_time=(processing_end - processing_start),
@@ -216,6 +211,12 @@ class AzureNetworkWatcherConnector(AsyncConnector):
                     )
 
                     previous_processing_end = processing_end
+
+                    if len(message_ids) > 0:
+                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                    else:
+                        self.log(message="No records to forward", level="info")
+                        time.sleep(self.configuration.frequency)
 
             except Exception as e:
                 logger.error("Error while running Azure Network Watcher collector: {error}", error=e)
