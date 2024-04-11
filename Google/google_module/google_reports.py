@@ -2,7 +2,6 @@ import orjson
 from functools import cached_property
 
 from datetime import datetime, timedelta, timezone
-from dateutil.parser import isoparse
 from enum import Enum
 import time
 
@@ -11,13 +10,13 @@ from googleapiclient.discovery import build
 from google_module.base import GoogleTrigger
 from google_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
-from pydantic import BaseModel
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
 from requests.exceptions import HTTPError
 from urllib3.exceptions import HTTPError as BaseHTTPError
 from google.auth.exceptions import TransportError
+from httplib2.error import ServerNotFoundError
 
 
 class ApplicationName(str, Enum):
@@ -177,7 +176,7 @@ class GoogleReports(GoogleTrigger):
 
             return activities
 
-        except TransportError as ex:
+        except (TransportError, ServerNotFoundError) as ex:
             self.log(message=f"Can't reach the google api server", level="warning")
 
     def get_next_activities(self, next_key):
@@ -188,67 +187,69 @@ class GoogleReports(GoogleTrigger):
             level="info",
         )
 
-        activities = (
-            reports_service.activities()
-            .list(
-                userKey="all",
-                applicationName=self.configuration.application_name.value,
-                maxResults=self.pagination_limit,
-                pageToken=next_key,
-                startTime=self.most_recent_date_seen,
+        try:
+            activities = (
+                reports_service.activities()
+                .list(
+                    userKey="all",
+                    applicationName=self.configuration.application_name.value,
+                    maxResults=self.pagination_limit,
+                    pageToken=next_key,
+                    startTime=self.most_recent_date_seen,
+                )
+                .execute()
             )
-            .execute()
-        )
 
-        return activities
+            return activities
+
+        except (TransportError, ServerNotFoundError) as ex:
+            self.log(message=f"Can't reach the google api server", level="warning")
 
     def get_next_activities_with_next_key(self, next_key):
         const_next_key = next_key
         self.log(
-            message=f"Start looping for all next activities with the next key {const_next_key}",
+            message=f"Start looping for all next activities with the first next key {const_next_key}",
             level="info",
         )
         while const_next_key:
-            grouped_data = []
-            response_next_page = self.get_next_activities(next_key)
+            next_messages = []
+            response_next_page = self.get_next_activities(next_key) or {}
 
             next_page_items = response_next_page.get("items", [])
             if next_page_items:
                 recent_date = next_page_items[0].get("id").get("time")
-                grouped_data.extend(next_page_items)
-                self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
-                self.push_events_to_intakes(events=grouped_data)
+                next_messages.extend(next_page_items)
+                self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
+                self.push_events_to_intakes(events=next_messages)
                 self.most_recent_date_seen = recent_date
                 self.log(
-                    message=f"Changing recent date in get next activities to  {self.most_recent_date_seen}",
+                    message=f"Updated recent date (get_next_activities) to  {self.most_recent_date_seen}",
                     level="info",
                 )
-                self.events_sum += len(grouped_data)
+                self.events_sum += len(next_messages)
                 const_next_key = response_next_page.get("nextPageToken")
+                self.log(
+                    message=f"Updated nextKey to the new value: {const_next_key}",
+                    level="info",
+                )
             else:
                 const_next_key = ""
-                self.log(message=f"There's no items even there's next key!!", level="info")
+                self.log(message=f"There's no items even if there's a next key!!", level="info")
 
     def get_reports_events(self):
-        now = datetime.now(timezone.utc)
-
         self.log(message=f"Creating a google credentials objects", level="info")
 
-        activities = self.get_activities()
-        items = activities.get("items", [])
-        next_key = activities.get("nextPageToken")
+        activities = self.get_activities() or {}
+        items, next_key = activities.get("items", []), activities.get("nextPageToken")
 
         self.log(message=f"Getting activities with {len(items)} elements", level="info")
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
-        if len(items) == 0:
-            self.most_recent_date_seen = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
         if len(items) > 0:
             recent_date = items[0].get("id").get("time")
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
-            self.log(message=f"Sending the first batch of {len(messages)} elements", level="info")
+            self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
             self.push_events_to_intakes(events=messages)
             self.most_recent_date_seen = recent_date

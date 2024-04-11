@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-03-07 - 1.18.2
 
+### Changed
+
+- Add http exception
+- Update google package
+- Change timestamp storage 
+
+## 2024-03-07 - 1.18.2
+
 ### Add
 
 - Add the nextkey condition
