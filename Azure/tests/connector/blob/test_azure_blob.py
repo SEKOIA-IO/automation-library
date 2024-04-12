@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock
 import aiofiles
 import pytest
 from azure.storage.blob import BlobProperties
-from orjson import orjson
 from sekoia_automation.module import Module
 
-from connectors.azure_key_vault import AzureKeyVaultConnector, AzureKeyVaultConnectorConfig
+from connectors.blob import AzureBlobConnectorConfig
+from connectors.blob.azure_blob import AzureBlobConnector
 
 
 @pytest.fixture
@@ -39,14 +39,14 @@ def connector(
 ):
     module = Module()
 
-    config = AzureKeyVaultConnectorConfig(
+    config = AzureBlobConnectorConfig(
         intake_key=session_faker.word(),
         container_name=container_name,
         account_name=account_name,
         account_key=account_key,
     )
 
-    trigger = AzureKeyVaultConnector(
+    trigger = AzureBlobConnector(
         module=module,
         data_path=symphony_storage,
     )
@@ -63,12 +63,12 @@ def connector(
 
 
 @pytest.mark.asyncio
-async def test_azure_key_vault_connector_last_event_date(connector):
+async def test_azure_blob_connector_last_event_date(connector):
     """
     Test `last_event_date`.
 
     Args:
-        connector: AzureKeyVaultConnector
+        connector: AzureBlobConnector
     """
     with connector.context as cache:
         cache["last_event_date"] = None
@@ -90,14 +90,17 @@ async def test_azure_key_vault_connector_last_event_date(connector):
 
 
 @pytest.mark.asyncio
-async def test_azure_key_vault_get_azure_blob_data_1(connector: AzureKeyVaultConnector, session_faker, blob_content):
+async def test_azure_blob_get_azure_blob_data_1(
+    connector: AzureBlobConnector, session_faker, blob_content, pushed_events_ids
+):
     """
-    Test AzureKeyVaultConnector get events.
+    Test AzureBlobConnector get events.
 
     Args:
-        connector: AzureKeyVaultConnector
+        connector: AzureBlobConnector
         session_faker: Faker
         blob_content: bytes
+        pushed_events_ids: list[str]
     """
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
 
@@ -127,23 +130,22 @@ async def test_azure_key_vault_get_azure_blob_data_1(connector: AzureKeyVaultCon
 
     result = await connector.get_azure_blob_data()
 
-    assert result == [
-        orjson.dumps(event).decode("utf-8") for event in orjson.loads(blob_content.decode("utf-8")).get("records")
-    ]
+    assert result == [blob_content.decode("utf-8")]
 
 
 @pytest.mark.asyncio
-async def test_azure_key_vault_get_azure_blob_data_2(
-    connector: AzureKeyVaultConnector, session_faker, symphony_storage, blob_content
+async def test_azure_blob_get_azure_blob_data_2(
+    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
 ):
     """
-    Test AzureKeyVaultConnector get events.
+    Test AzureBlobConnector get events.
 
     Args:
-        connector: AzureKeyVaultConnector
+        connector: AzureBlobConnector
         session_faker: Faker
         symphony_storage: str
         blob_content: bytes
+        pushed_events_ids: list[str]
     """
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
 
@@ -177,23 +179,22 @@ async def test_azure_key_vault_get_azure_blob_data_2(
 
     result = await connector.get_azure_blob_data()
 
-    assert result == [
-        orjson.dumps(event).decode("utf-8") for event in orjson.loads(blob_content.decode("utf-8")).get("records")
-    ]
+    assert result == [blob_content.decode("utf-8")]
 
 
 @pytest.mark.asyncio
-async def test_azure_key_vault_get_azure_blob_data_3(
-    connector: AzureKeyVaultConnector, session_faker, symphony_storage, blob_content
+async def test_azure_blob_get_azure_blob_data_3(
+    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
 ):
     """
-    Test AzureKeyVaultConnector get events.
+    Test AzureBlobConnector get events.
 
     Args:
-        connector: AzureKeyVaultConnector
+        connector: AzureBlobConnector
         session_faker: Faker
         symphony_storage: str
         blob_content: bytes
+        pushed_events_ids: list[str]
     """
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
 
@@ -227,23 +228,80 @@ async def test_azure_key_vault_get_azure_blob_data_3(
 
     result = await connector.get_azure_blob_data()
 
-    assert result == [
-        orjson.dumps(event).decode("utf-8") for event in orjson.loads(blob_content.decode("utf-8")).get("records")
-    ]
+    assert result == [blob_content.decode("utf-8")]
 
 
 @pytest.mark.asyncio
-async def test_azure_key_vault_get_most_recent_blob(
-    connector: AzureKeyVaultConnector, session_faker, symphony_storage, blob_content
+async def test_azure_blob_get_azure_blob_data_4(
+    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
 ):
     """
-    Test AzureKeyVaultConnector get events.
+    Test AzureBlobConnector get events.
 
     Args:
-        connector: AzureKeyVaultConnector
+        connector: AzureBlobConnector
         session_faker: Faker
         symphony_storage: str
         blob_content: bytes
+        pushed_events_ids: list[str]
+    """
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+
+    # Try to put last event date higher to be 1 day ahead of the log file date
+    with connector.context as cache:
+        cache["last_event_date"] = (current_date - timedelta(days=1)).isoformat()
+
+    with NamedTemporaryFile("wb", delete=False, dir="") as file, GzipFile(fileobj=file, mode="w+") as gfile:
+        file_name = str(file.name)
+        gfile.write(blob_content)
+        gfile.write(b"\n")
+        gfile.write(b"\n")
+        gfile.write(b"\n")
+        gfile.write(b"\n")
+        gfile.write(b"\n")
+        gfile.write(blob_content)
+        gfile.write(b"\n")
+        gfile.write(blob_content)
+        gfile.write(b"\n")
+
+    azure_blob_storage_wrapper = MagicMock()
+
+    properties = BlobProperties()
+    properties.last_modified = current_date
+    properties.name = session_faker.word()
+
+    expected_blobs = [properties]
+
+    mock_list_blobs = MagicMock()
+    mock_list_blobs.__aiter__.return_value = expected_blobs
+
+    azure_blob_storage_wrapper.list_blobs.return_value = mock_list_blobs
+
+    download_blob_result = AsyncMock()
+    download_blob_result.return_value = (file_name, None)
+
+    azure_blob_storage_wrapper.download_blob = download_blob_result
+
+    connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
+
+    result = await connector.get_azure_blob_data()
+
+    assert result == [blob_content.decode("utf-8") for _ in range(3)]
+
+
+@pytest.mark.asyncio
+async def test_azure_blob_get_most_recent_blob(
+    connector: AzureBlobConnector, session_faker, symphony_storage, blob_content, pushed_events_ids
+):
+    """
+    Test AzureBlobConnector get events.
+
+    Args:
+        connector: AzureBlobConnector
+        session_faker: Faker
+        symphony_storage: str
+        blob_content: bytes
+        pushed_events_ids: list[str]
     """
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
 

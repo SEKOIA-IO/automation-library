@@ -3,10 +3,10 @@
 from sekoia_automation.loguru.config import init_logging
 from sekoia_automation.module import Module
 
-from connectors.azure_blob import AzureBlobConnector
 from connectors.azure_eventhub import AzureEventsHubTrigger
-from connectors.azure_key_vault import AzureKeyVaultConnector
-from connectors.network_watcher import AzureNetworkWatcherConnector
+from connectors.blob.azure_blob import AzureBlobConnector
+from connectors.blob.azure_key_vault import AzureKeyVaultConnector
+from connectors.blob.azure_network_watcher import AzureNetworkWatcherConnector
 
 if __name__ == "__main__":
     init_logging()
