@@ -96,10 +96,10 @@ class AzureNetworkWatcherConnector(AsyncConnector):
         Returns:
             list[str]:
         """
-        blob_list = self.azure_blob_wrapper().list_blobs()
         _last_modified_date = self.last_event_date
         records: list[Any] = []
-        async for blob in blob_list:
+
+        async for blob in self.azure_blob_wrapper().list_blobs():
             if blob.last_modified > self.last_event_date:
                 if _last_modified_date is None or blob.last_modified > _last_modified_date:
                     _last_modified_date = blob.last_modified

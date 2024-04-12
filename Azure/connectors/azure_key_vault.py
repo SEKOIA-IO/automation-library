@@ -1,4 +1,4 @@
-"""Connector to pull data from Azure Blob Storage."""
+"""Connector to pull data from Azure Blob Storage for Key Vault."""
 
 import asyncio
 import os
@@ -9,6 +9,7 @@ from gzip import decompress
 from typing import Any, Optional
 
 import aiofiles
+import orjson
 from azure.storage.blob import BlobProperties
 from dateutil.parser import isoparse
 from loguru import logger
@@ -25,7 +26,7 @@ from azure_helpers.storage import AzureBlobStorageConfig, AzureBlobStorageWrappe
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
-class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
+class AzureKeyVaultConnectorConfig(DefaultConnectorConfiguration):
     """Connector configuration."""
 
     container_name: str
@@ -34,12 +35,12 @@ class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
     frequency: int = 60
 
 
-class AzureBlobConnector(AsyncConnector):
-    """AzureBlobConnector."""
+class AzureKeyVaultConnector(AsyncConnector):
+    """AzureKeyVaultConnector."""
 
-    name = "AzureBlobConnector"
+    name = "AzureKeyVaultConnector"
     module: Module
-    configuration: AzureBlobConnectorConfig
+    configuration: AzureKeyVaultConnectorConfig
 
     _azure_blob_storage_wrapper: AzureBlobStorageWrapper | None = None
 
@@ -104,6 +105,21 @@ class AzureBlobConnector(AsyncConnector):
             if blob.last_modified > lower_bound:
                 yield blob
 
+    def get_data_from_file_content(self, content: str) -> list[dict[str, Any]]:
+        """
+        Get data from file content.
+
+        Args:
+            content:
+
+        Returns:
+            list[dict[str, Any]]:
+        """
+        # Add logic in case of additional filtering
+        result: list[dict[str, Any]] = orjson.loads(content).get("records", [])
+
+        return result
+
     async def get_azure_blob_data(self) -> list[str]:
         """
         Get Azure Blob Storage data.
@@ -115,11 +131,10 @@ class AzureBlobConnector(AsyncConnector):
 
         # Get the blobs more recent than _last_modified_date
         logger.info(
-            "From blobs from {lower_bound}",
+            "Get blobs from {lower_bound}",
             lower_bound=_last_modified_date.isoformat(),
         )
-
-        records: list[str] = []
+        records: list[dict[str, Any]] = []
         result: list[str] = []
 
         # For each blob
@@ -144,22 +159,28 @@ class AzureBlobConnector(AsyncConnector):
                     if is_gzip_compressed(file_content):
                         file_content = decompress(file_content)
 
-                    records.extend([line for line in file_content.decode("utf-8").split("\n") if line != ""])
+                    records.extend(self.get_data_from_file_content(file_content.decode("utf-8")))
 
                 await delete_file(file)
 
             # process the content of the blob
             if content:
-                records.extend([line for line in content.decode("utf-8").split("\n") if line != ""])
+                records.extend(self.get_data_from_file_content(content.decode("utf-8")))
 
             # Push the events if exceed the defined threshold
             if len(records) >= self.limit_of_events_to_push:
-                result.extend(await self.push_data_to_intakes(events=records))
+                result.extend(
+                    await self.push_data_to_intakes(
+                        events=[orjson.dumps(record).decode("utf-8") for record in records]
+                    )
+                )
                 records = []
 
         # Push the remaining events
         if records:
-            result.extend(await self.push_data_to_intakes(events=records))
+            result.extend(
+                await self.push_data_to_intakes(events=[orjson.dumps(record).decode("utf-8") for record in records])
+            )
 
         with self.context as cache:
             logger.info(
@@ -172,7 +193,7 @@ class AzureBlobConnector(AsyncConnector):
         return result
 
     def run(self) -> None:  # pragma: no cover
-        """Runs Azure Blob Storage."""
+        """Runs Azure Key Vault."""
         previous_processing_end = None
 
         while self.running:
@@ -208,4 +229,4 @@ class AzureBlobConnector(AsyncConnector):
                         time.sleep(self.configuration.frequency)
 
             except Exception as e:
-                logger.error("Error while running Azure Blob Storage: {error}", error=e)
+                logger.error("Error while running Azure Key Vault: {error}", error=e)
