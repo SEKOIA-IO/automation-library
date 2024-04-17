@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import Dict, List
 from posixpath import join as urljoin
+from datetime import datetime, timedelta
 
 from crowdstrike_falcon.action import CrowdstrikeAction
 from crowdstrike_falcon.helpers import stix_to_indicators
@@ -44,7 +45,20 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
     def remove_expired_indicators(self):
         ids_to_remove = []
 
-        for result in self.client.find_indicators(fql_filter="expired: true"):
+        for result in self.client.find_indicators(fql_filter=f"source:{self.DEFAULT_SOURCE}+expired: true"):
+            ids_to_remove.append(result)
+
+        # Delete the IOCs in Crowdstrike
+        if len(ids_to_remove) > 0:
+            self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
+            next(self.client.delete_indicators(ids_to_remove))
+
+    def remove_old_indicators(self, valid_for):
+        ids_to_remove = []
+
+        for result in self.client.find_indicators(
+            fql_filter=f"source:{self.DEFAULT_SOURCE}+modified_on: <='{datetime.now() - timedelta(days=valid_for)}'"
+        ):
             ids_to_remove.append(result)
 
         # Delete the IOCs in Crowdstrike
@@ -118,6 +132,14 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
     def run(self, arguments):
         if arguments.get("sekoia_base_url"):
             self.sekoia_base_url = arguments.get("sekoia_base_url")
+
+        # Cleanup expired and old indicators before proceeding with adding new ones
+        # in case we are near the limit in CrowdStrike
+        valid_for = arguments.get("valid_for", 0)
+        self.remove_expired_indicators()
+        if valid_for > 0:
+            self.remove_old_indicators(valid_for)
+
         stix_objects = self.json_argument("stix_objects", arguments)
         if stix_objects is None or len(stix_objects) == 0:
             self.log("Received stix_objects were empty")
@@ -125,8 +147,10 @@ class CrowdstrikeActionPushIOCs(CrowdstrikeActionIOC):
         if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
             self.log("Received indicators were not valid and/or not supported")
             return
-        self.create_indicators(indicators["valid"])
+        # Remove revoked indicators before proceeding with adding new ones
+        # in case we are near the limit in CrowdStrike
         self.remove_indicators(indicators["revoked"])
+        self.create_indicators(indicators["valid"])
 
 
 class CrowdstrikeActionPushIOCsBlock(CrowdstrikeActionPushIOCs):
