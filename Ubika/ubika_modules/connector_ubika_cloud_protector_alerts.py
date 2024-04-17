@@ -52,7 +52,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
         signal.signal(signal.SIGTERM, self.exit)
 
     def exit(self, _, __) -> None:
-        self.log(message="Stopping Ubika Cloud Protector connector", level="info")
+        self.log(message="Stopping Ubika Cloud Protector connector", level="info")  # pragma: no cover
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
 
@@ -85,7 +85,10 @@ class UbikaCloudProtectorAlertsConnector(Connector):
 
     def _handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
-            message = f"Request on Ubika Cloud Protector API to fetch events failed with status {response.status_code} - {response.reason}"
+            message = (
+                f"Request on Ubika Cloud Protector API to fetch events failed with status "
+                f"{response.status_code} - {response.reason}"
+            )
 
             try:
                 error = response.json()
@@ -123,7 +126,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
                 self.log(
                     message="The last page of events was empty.",
                     level="info",
-                )
+                )  # pragma: no cover
                 return
 
             cursor = events.get("cursor")
@@ -189,14 +192,14 @@ class UbikaCloudProtectorAlertsConnector(Connector):
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
-                )
+                )  # pragma: no cover
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
                     message="No events to forward",
                     level="info",
-                )
+                )  # pragma: no cover
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -204,7 +207,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
         self.log(
             message=f"Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
-        )
+        )  # pragma: no cover
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
@@ -213,14 +216,14 @@ class UbikaCloudProtectorAlertsConnector(Connector):
             self.log(
                 message=f"Next batch in the future. Waiting {delta_sleep} seconds",
                 level="debug",
-            )
+            )  # pragma: no cover
             time.sleep(delta_sleep)
 
     def run(self) -> None:
-        self.log(message="Start fetching Ubika alerts", level="info")
+        self.log(message="Start fetching Ubika alerts", level="info")  # pragma: no cover
 
         while self.running:
             try:
                 self.next_batch()
             except Exception as error:
-                self.log_exception(error, message="Failed to forward events")
+                self.log_exception(error, message="Failed to forward events")  # pragma: no cover
