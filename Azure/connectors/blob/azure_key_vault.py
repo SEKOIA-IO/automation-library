@@ -22,6 +22,12 @@ class AzureKeyVaultConnector(AbstractAzureBlobConnector):
         Returns:
             list[dict[str, Any]]:
         """
-        result: list[dict[str, Any]] = orjson.loads(data).get("records", [])
+        try:
+            result: list[dict[str, Any]] = orjson.loads(data).get("records", [])
+        except orjson.JSONDecodeError:
+            result: list[dict[str, Any]] = [
+                orjson.loads(value)
+                for value in data.split("\n")
+            ]
 
         return [orjson.dumps(value).decode("utf-8") for value in result]
