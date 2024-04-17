@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-04-09 - 2.4.10
+
+### Fixed
+
+- Fix the way to handle the Azure Key Vault Events
+
 ## 2024-04-09 - 2.4.9
 
 ### Added
