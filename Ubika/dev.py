@@ -46,9 +46,7 @@ if __name__ == "__main__":
         # https://intake.test.sekoia.io or https://intake.sekoia.io
         intake_server: str = "https://intake.sekoia.io"
 
-    connector_conf = DumbConnectorConfiguration(
-        provider=args.provider, tenant=args.tenant, token=args.token
-    )
+    connector_conf = DumbConnectorConfiguration(provider=args.provider, tenant=args.tenant, token=args.token)
 
     module = UbikaModule()
 

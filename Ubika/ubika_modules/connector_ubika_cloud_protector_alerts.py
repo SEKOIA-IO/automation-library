@@ -116,9 +116,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
 
             # yielding events if defined
             if events and len(events["items"]) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
-                    len(events)
-                )
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
                 yield events["items"]
 
             else:
@@ -159,14 +157,10 @@ class UbikaCloudProtectorAlertsConnector(Connector):
                     # save the greatest date ever seen
                     last_event = max(next_events, key=lambda x: x["timestamp"])
                     last_event_timestamp = last_event["timestamp"]
-                    last_event_datetime = datetime.fromtimestamp(
-                        last_event_timestamp
-                    ).astimezone(timezone.utc)
+                    last_event_datetime = datetime.fromtimestamp(last_event_timestamp).astimezone(timezone.utc)
 
                     if last_event_datetime > most_recent_date_seen:
-                        most_recent_date_seen = self.get_upper_second(
-                            last_event_datetime
-                        )
+                        most_recent_date_seen = self.get_upper_second(last_event_datetime)
 
                     yield next_events
         finally:
@@ -180,9 +174,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-            int(current_lag.total_seconds())
-        )
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:
         # save the starting time
@@ -198,9 +190,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(
-                    len(batch_of_events)
-                )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -215,9 +205,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
             message=f"Fetched and forwarded events in {batch_duration} seconds",
             level="debug",
         )
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=self.configuration.intake_key
-        ).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration

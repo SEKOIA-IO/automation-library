@@ -19,9 +19,7 @@ def fake_time():
 
 @pytest.fixture
 def patch_datetime_now(fake_time):
-    with patch(
-        "ubika_modules.connector_ubika_cloud_protector_alerts.datetime"
-    ) as mock_datetime:
+    with patch("ubika_modules.connector_ubika_cloud_protector_alerts.datetime") as mock_datetime:
         mock_datetime.now.return_value = fake_time
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
         mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
@@ -168,9 +166,7 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
             json=message2,
         )
 
-        batch_duration = (
-            trigger.configuration.frequency + 20
-        )  # the batch lasts more than the frequency
+        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
         start_time = 1666711174.0
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time]
@@ -189,6 +185,5 @@ def test_handle_response_error(trigger):
         trigger._handle_response_error(response)
 
     assert (
-        str(m.value)
-        == "Request on Ubika Cloud Protector API to fetch events failed with status 500 - Internal Error"
+        str(m.value) == "Request on Ubika Cloud Protector API to fetch events failed with status 500 - Internal Error"
     )
