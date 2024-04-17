@@ -457,6 +457,37 @@ def test_remove_indicators():
         assert result is None
 
 
+def test_remove_expired_indicators():
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                    "4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+                ]
+            },
+        )
+        mock.register_uri(
+            "DELETE",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1",
+            json={"resources": ["0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716"]},
+        )
+        result = action.remove_expired_indicators()
+        assert result is None
+
+
 def test_create_indicators():
     action = configured_action(CrowdstrikeActionPushIOCsBlock)
     with requests_mock.Mocker() as mock:
