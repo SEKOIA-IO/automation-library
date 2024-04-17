@@ -10,7 +10,8 @@ import pytest
 from azure.storage.blob import BlobProperties
 from sekoia_automation.module import Module
 
-from connectors.azure_blob import AzureBlobConnector, AzureBlobConnectorConfig
+from connectors.blob import AzureBlobConnectorConfig
+from connectors.blob.azure_blob import AzureBlobConnector
 
 
 @pytest.fixture
@@ -33,7 +34,6 @@ def connector(
     container_name,
     account_name,
     account_key,
-    pushed_events_ids,
     mock_push_data_to_intakes,
     session_faker,
 ):
@@ -54,10 +54,6 @@ def connector(
     # Mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
-
-    # Mock the push_events_to_intakes function
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.push_events_to_intakes.return_value = pushed_events_ids
 
     trigger.push_data_to_intakes = mock_push_data_to_intakes
 
@@ -336,7 +332,6 @@ async def test_azure_blob_get_most_recent_blob(
 
     connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
 
-    blobs_iter = await connector.get_most_recent_blobs(lower_bound=current_date + timedelta(minutes=2))
-    blobs_list = [n async for n in blobs_iter]
+    blobs_list = [n async for n in connector.get_most_recent_blobs(lower_bound=current_date + timedelta(minutes=2))]
 
     assert blobs_list == [properties2, properties3]

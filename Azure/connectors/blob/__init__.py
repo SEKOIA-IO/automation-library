@@ -1,12 +1,12 @@
-"""Connector to pull data from Azure Blob Storage."""
+"""Connectors relates to Azure Blob Storage."""
 
 import asyncio
 import os
 import time
+from abc import ABCMeta
 from datetime import datetime, timedelta, timezone
 from gzip import decompress
-from typing import Any, Optional
-from collections.abc import AsyncGenerator
+from typing import Any, AsyncGenerator, Optional
 
 import aiofiles
 from azure.storage.blob import BlobProperties
@@ -21,8 +21,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from azure_helpers.io import is_gzip_compressed
 from azure_helpers.storage import AzureBlobStorageConfig, AzureBlobStorageWrapper
-
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
@@ -34,10 +33,9 @@ class AzureBlobConnectorConfig(DefaultConnectorConfiguration):
     frequency: int = 60
 
 
-class AzureBlobConnector(AsyncConnector):
-    """AzureBlobConnector."""
+class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
+    """"""
 
-    name = "AzureBlobConnector"
     module: Module
     configuration: AzureBlobConnectorConfig
 
@@ -49,6 +47,31 @@ class AzureBlobConnector(AsyncConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.limit_of_events_to_push = int(os.getenv("AZURE_BATCH_SIZE", 10000))
+
+    def azure_blob_wrapper(self) -> AzureBlobStorageWrapper:
+        """
+        Get Azure blob wrapper.
+
+        Returns:
+            AzureBlobStorageWrapper:
+        """
+        if not self._azure_blob_storage_wrapper:
+            config = AzureBlobStorageConfig(**self.configuration.dict(exclude_unset=True, exclude_none=True))
+            self._azure_blob_storage_wrapper = AzureBlobStorageWrapper(config)
+
+        return self._azure_blob_storage_wrapper
+
+    def filter_blob_data(self, data: str) -> list[str]:
+        """
+        Abstract method to filter or format blob data. Input is a decoded blob string.
+
+        Args:
+            data: str
+
+        Returns:
+            list[dict[str, Any]]:
+        """
+        raise NotImplementedError
 
     @property
     def last_event_date(self) -> datetime:
@@ -77,22 +100,9 @@ class AzureBlobConnector(AsyncConnector):
 
             return last_event_date
 
-    def azure_blob_wrapper(self) -> AzureBlobStorageWrapper:
-        """
-        Get Azure blob wrapper.
-
-        Returns:
-            AzureBlobStorageWrapper:
-        """
-        if not self._azure_blob_storage_wrapper:
-            config = AzureBlobStorageConfig(**self.configuration.dict(exclude_unset=True, exclude_none=True))
-            self._azure_blob_storage_wrapper = AzureBlobStorageWrapper(config)
-
-        return self._azure_blob_storage_wrapper
-
     async def get_most_recent_blobs(self, lower_bound: datetime) -> AsyncGenerator[BlobProperties, None]:
         """
-        Return the list of blobs, more recent than lower_bound
+        Return the list of blobs, more recent than lower_bound.
 
         Args:
             lower_bound: datetime
@@ -100,9 +110,9 @@ class AzureBlobConnector(AsyncConnector):
         Returns:
             AsyncGenerator[BlobProperties, None]
         """
-
-        blob_list = self.azure_blob_wrapper().list_blobs()
-        return (blob async for blob in blob_list if blob.last_modified > lower_bound)
+        async for blob in self.azure_blob_wrapper().list_blobs():
+            if blob.last_modified > lower_bound:
+                yield blob
 
     async def get_azure_blob_data(self) -> list[str]:
         """
@@ -118,13 +128,12 @@ class AzureBlobConnector(AsyncConnector):
             "From blobs from {lower_bound}",
             lower_bound=_last_modified_date.isoformat(),
         )
-        most_recent_blobs = await self.get_most_recent_blobs(_last_modified_date)
 
         records: list[str] = []
         result: list[str] = []
 
         # For each blob
-        async for blob in most_recent_blobs:
+        async for blob in self.get_most_recent_blobs(_last_modified_date):
             logger.info(
                 "Process blob {name} modified at {modified_at}",
                 name=blob.name,
@@ -145,13 +154,13 @@ class AzureBlobConnector(AsyncConnector):
                     if is_gzip_compressed(file_content):
                         file_content = decompress(file_content)
 
-                    records.extend([line for line in file_content.decode("utf-8").split("\n") if line != ""])
+                    records.extend(self.filter_blob_data(file_content.decode("utf-8")))
 
                 await delete_file(file)
 
             # process the content of the blob
             if content:
-                records.extend([line for line in content.decode("utf-8").split("\n") if line != ""])
+                records.extend(self.filter_blob_data(content.decode("utf-8")))
 
             # Push the events if exceed the defined threshold
             if len(records) >= self.limit_of_events_to_push:
@@ -209,4 +218,4 @@ class AzureBlobConnector(AsyncConnector):
                         time.sleep(self.configuration.frequency)
 
             except Exception as e:
-                logger.error("Error while running Azure Blob Storage: {error}", error=e)
+                logger.error("Error while running connector: {error}", error=e)
