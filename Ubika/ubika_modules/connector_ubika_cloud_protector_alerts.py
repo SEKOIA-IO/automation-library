@@ -28,11 +28,11 @@ class FetchEventsException(Exception):
 
 class UbikaCloudProtectorConnectorConfiguration(DefaultConnectorConfiguration):
     provider: str = Field(..., description="Id of cirrus provider")
-    tenant: str = Field(..., description="Id of cirrus Tenant")
+    tenant: str = Field(..., description="Id of cirrus tenant")
     token: str = Field(..., description="API token", secret=True)
 
     frequency: int = 60
-    chunk_size: int = 1
+    chunk_size: int = 1000
 
 
 class UbikaCloudProtectorAlertsConnector(Connector):
