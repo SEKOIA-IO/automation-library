@@ -492,7 +492,7 @@ def test_remove_expired_indicators():
         result = action.remove_expired_indicators()
         assert result is None
         history = mock.request_history
-        assert mock.call_count == 1
+        assert mock.call_count == 3  # One call to OAUTH2 token, one call to search and one to delete
         assert (
             "ids=0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716&ids=4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b"
             in history[0].qs
