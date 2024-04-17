@@ -1,7 +1,5 @@
 """Default Azure Key Vault connector."""
 
-from typing import Any
-
 import orjson
 
 from connectors.blob import AbstractAzureBlobConnector
@@ -23,11 +21,8 @@ class AzureKeyVaultConnector(AbstractAzureBlobConnector):
             list[dict[str, Any]]:
         """
         try:
-            result: list[dict[str, Any]] = orjson.loads(data).get("records", [])
+            result = orjson.loads(data).get("records", [])
         except orjson.JSONDecodeError:
-            result: list[dict[str, Any]] = [
-                orjson.loads(value)
-                for value in data.split("\n")
-            ]
+            result = [orjson.loads(value) for value in data.split("\n") if value != ""]
 
         return [orjson.dumps(value).decode("utf-8") for value in result]

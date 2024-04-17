@@ -152,6 +152,49 @@ def blob_content(session_faker) -> bytes:
     return orjson.dumps(result)
 
 
+@pytest.fixture
+def blob_content_simple_format(session_faker) -> bytes:
+    result = orjson.dumps(
+        {
+            "time": datetime.now().isoformat(),
+            "systemId": "systemId",
+            "macAddress": "123123123",
+            "category": "Category",
+            "resourceId": "resourceId",
+            "operationName": "NetworkSecurityGroupFlowEvents",
+            "properties": {
+                "Version": 2,
+                "flows": [
+                    {
+                        "rule": "DefaultRule_AllowInternetOutBound",
+                        "flows": [
+                            {
+                                "mac": "123123",
+                                "flowTuples": [
+                                    "1695023147,1.2.3.4,5.6.7.8,123,123,U,O,A,B,,,,",
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "rule": "DefaultRule_DenyAllInBound",
+                        "flows": [
+                            {
+                                "mac": "123123",
+                                "flowTuples": [
+                                    "1695023164,1.2.3.4,5.6.7.8,123,123,T,I,D,B,,,,",
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            },
+        }
+    ).decode("utf-8")
+
+    return "\n".join([result, result]).encode("utf-8")
+
+
 @pytest.fixture(scope="session")
 def event_loop():
     """

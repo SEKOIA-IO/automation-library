@@ -234,6 +234,54 @@ async def test_azure_key_vault_get_azure_blob_data_3(
 
 
 @pytest.mark.asyncio
+async def test_azure_key_vault_get_azure_blob_data_4(
+    connector: AzureKeyVaultConnector, session_faker, symphony_storage, blob_content_simple_format
+):
+    """
+    Test AzureKeyVaultConnector get events.
+
+    Args:
+        connector: AzureKeyVaultConnector
+        session_faker: Faker
+        symphony_storage: str
+        blob_content_simple_format: bytes
+    """
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+
+    # Try to put last event date higher to be 1 day ahead of the log file date
+    with connector.context as cache:
+        cache["last_event_date"] = (current_date - timedelta(days=1)).isoformat()
+
+    with NamedTemporaryFile("wb", delete=False, dir="") as file, GzipFile(fileobj=file, mode="w+") as gfile:
+        file_name = str(file.name)
+        gfile.write(blob_content_simple_format)
+
+    azure_blob_storage_wrapper = MagicMock()
+
+    properties = BlobProperties()
+    properties.last_modified = current_date
+    properties.name = session_faker.word()
+
+    expected_blobs = [properties]
+
+    mock_list_blobs = MagicMock()
+    mock_list_blobs.__aiter__.return_value = expected_blobs
+
+    azure_blob_storage_wrapper.list_blobs.return_value = mock_list_blobs
+
+    download_blob_result = AsyncMock()
+    download_blob_result.return_value = (file_name, None)
+
+    azure_blob_storage_wrapper.download_blob = download_blob_result
+
+    connector._azure_blob_storage_wrapper = azure_blob_storage_wrapper
+
+    result = await connector.get_azure_blob_data()
+
+    assert result == [event for event in blob_content_simple_format.decode("utf-8").split("\n") if event != ""]
+
+
+@pytest.mark.asyncio
 async def test_azure_key_vault_get_most_recent_blob(
     connector: AzureKeyVaultConnector, session_faker, symphony_storage, blob_content
 ):
