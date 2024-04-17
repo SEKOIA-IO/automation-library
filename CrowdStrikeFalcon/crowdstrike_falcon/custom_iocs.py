@@ -44,11 +44,8 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
     def remove_expired_indicators(self):
         ids_to_remove = []
 
-        result = next(self.client.find_indicators(fql_filter="expired: true"))
-        if result:
+        for result in self.client.find_indicators(fql_filter="expired: true"):
             ids_to_remove.append(result)
-        else:
-            self.log(f"No expired indicator found, skipping delete")
 
         # Delete the IOCs in Crowdstrike
         if len(ids_to_remove) > 0:
