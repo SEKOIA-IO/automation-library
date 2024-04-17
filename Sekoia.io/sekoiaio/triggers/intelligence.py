@@ -32,6 +32,10 @@ class FeedConsumptionTrigger(Trigger):
         return self.configuration.get("batch_size_limit", 200)
 
     @property
+    def modified_after(self) -> str | None:
+        return self.configuration.get("modified_after")
+
+    @property
     def url(self):
         url = (
             urljoin(
@@ -48,6 +52,8 @@ class FeedConsumptionTrigger(Trigger):
             cursor = cache.get("cursors", {}).get(self.feed_id)
             if cursor:
                 return f"{url}&cursor={cursor}"
+            elif self.modified_after:
+                return f"{url}&modified_after={self.modified_after}"
             else:
                 return url
 

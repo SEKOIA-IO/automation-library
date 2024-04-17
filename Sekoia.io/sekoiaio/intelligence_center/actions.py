@@ -2,7 +2,6 @@
 Module for actions that are not fully generic
 """
 
-
 from sekoia_automation.action import GenericAPIAction
 
 from sekoiaio.intelligence_center import base_url
