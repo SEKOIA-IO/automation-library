@@ -1,7 +1,7 @@
 {
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "",
+    "title": "Ubika",
     "type": "object",
     "properties": {},
     "required": [],
