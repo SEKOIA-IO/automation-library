@@ -11,6 +11,10 @@
                 "type": "integer",
                 "description": "Size of the batch of elements to get from the Sekoia.io feed in one time",
                 "default": 200
+            },
+            "modified_after": {
+                "type": "string",
+                "description": "Date from which IOCs should be retrieved. It must be a valid RFC-3339 date-time string (i.e. 2024-04-12T23:20:50.52Z)"
             }
         },
         "type": "object",
