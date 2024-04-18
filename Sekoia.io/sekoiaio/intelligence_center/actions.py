@@ -31,7 +31,6 @@ class PostBundleAction(GenericAPIAction):
 
         return None
 
-
 class GetContextAction(GenericAPIAction):
     verb = "post"
     endpoint = base_url + "objects/search"
