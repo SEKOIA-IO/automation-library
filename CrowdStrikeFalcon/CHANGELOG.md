@@ -7,16 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-02-21 - 1.18.0
+## 2024-03-17 - 1.18.0
 
-### Add
+### Added
 
 - Add method to remove expired indicators
 - Add method to remove old indicators
 
 ## 2024-02-21 - 1.17.4
 
-### Add
+### Added
 
 - Add some logs for http response
 
