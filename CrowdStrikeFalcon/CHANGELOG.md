@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-03-18 - 1.18.1
+
+### Fixed
+
+- Change the way to paginate CrowdStrike responses
+- Add intermediate steps when deleting indicators
+
 ## 2024-03-17 - 1.18.0
 
 ### Added
