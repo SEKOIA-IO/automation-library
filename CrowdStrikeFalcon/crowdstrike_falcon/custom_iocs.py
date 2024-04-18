@@ -48,6 +48,12 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
         for result in self.client.find_indicators(fql_filter=f"source:'{self.DEFAULT_SOURCE}'+expired:true"):
             ids_to_remove.append(result)
 
+            # Delete the IOCs in Crowdstrike
+            if len(ids_to_remove) > 1000:
+                self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
+                next(self.client.delete_indicators(ids_to_remove))
+                ids_to_remove = []
+
         # Delete the IOCs in Crowdstrike
         if len(ids_to_remove) > 0:
             self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
@@ -60,6 +66,12 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
             fql_filter=f"source:'{self.DEFAULT_SOURCE}'+modified_on:<='{date.today() - timedelta(days=valid_for)}'"
         ):
             ids_to_remove.append(result)
+
+            # Delete the IOCs in Crowdstrike
+            if len(ids_to_remove) > 1000:
+                self.log(f"Removing {len(ids_to_remove)} existing indicators from Crowdstrike Falcon")
+                next(self.client.delete_indicators(ids_to_remove))
+                ids_to_remove = []
 
         # Delete the IOCs in Crowdstrike
         if len(ids_to_remove) > 0:
