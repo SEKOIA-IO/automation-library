@@ -10,6 +10,11 @@
                 "description": "[Optional] Sekoia base url, used to generate direct links to IOCs",
                 "default": "https://app.sekoia.io",
                 "type": "string"
+            },
+            "valid_for": {
+                "type": "integer",
+                "description": "If set, the playbook will remove IOCs that are older than valid_for days based on the Last modified date in CrowdStrike",
+                "minimum": 1
             }
         },
         "required": [
