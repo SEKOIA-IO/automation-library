@@ -1,0 +1,15 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Ubika",
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "secrets": []
+  },
+  "description": "Ubika is a cybersecurity company offering products to protect web applications and APIs",
+  "name": "Ubika",
+  "uuid": "0c82ee9b-f645-47f9-8e16-a689cfc246c4",
+  "slug": "ubika",
+  "version": "0.1.0"
+}
