@@ -146,3 +146,57 @@ def test_list_streams_integration():
     )
     streams = client.list_streams("sio-integration-{time.time()}")
     assert len(list(streams)) > 0
+
+
+def test_find_indicators():
+    base_url = "https://my.fake.sekoia"
+    client_id = "foo"
+    client_secret = "bar"
+    client = CrowdstrikeFalconClient(base_url, client_id, client_secret)
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            f"{base_url}/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1?filter=source%3ASekoia.io",
+            json={
+                "errors": [],
+                "meta": {
+                    "query_time": 0.008346086,
+                    "trace_id": "56d6393d-91c9-4df1-9767-9498c013e620",
+                    "pagination": {
+                        "limit": 100,
+                        "total": 1,
+                        "offset": "1658342945857000000:3867296750",
+                        "after": "ZDI2ZWMxZmUtODg2NS00MWUzLWJiMWItZDQxMzU3NGI3ZmFh",
+                    },
+                },
+                "resources": ["519b7236-8ed2-4c63-b5c4-0f72dc3f187e"],
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1"
+            "?filter=source%3ASekoia.io&after=ZDI2ZWMxZmUtODg2NS00MWUzLWJiMWItZDQxMzU3NGI3ZmFh",
+            json={
+                "errors": [],
+                "meta": {
+                    "query_time": 0.008346086,
+                    "trace_id": "13787250-fc0f-49a6-9191-d809e30afdfb",
+                },
+                "resources": ["f6d85700-1b5b-450f-8df1-a8317fe7f137"],
+            },
+        )
+
+        indicators = client.find_indicators(fql_filter=f"source:Sekoia.io")
+        assert list(indicators) == ["519b7236-8ed2-4c63-b5c4-0f72dc3f187e", "f6d85700-1b5b-450f-8df1-a8317fe7f137"]
