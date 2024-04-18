@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Dict, List
 from posixpath import join as urljoin
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 
 from crowdstrike_falcon.action import CrowdstrikeAction
 from crowdstrike_falcon.helpers import stix_to_indicators
@@ -45,7 +45,7 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
     def remove_expired_indicators(self):
         ids_to_remove = []
 
-        for result in self.client.find_indicators(fql_filter=f"source:{self.DEFAULT_SOURCE}+expired: true"):
+        for result in self.client.find_indicators(fql_filter=f"source:'{self.DEFAULT_SOURCE}'+expired:true"):
             ids_to_remove.append(result)
 
         # Delete the IOCs in Crowdstrike
@@ -57,7 +57,7 @@ class CrowdstrikeActionIOC(CrowdstrikeAction):
         ids_to_remove = []
 
         for result in self.client.find_indicators(
-            fql_filter=f"source:{self.DEFAULT_SOURCE}+modified_on: <='{datetime.now() - timedelta(days=valid_for)}'"
+            fql_filter=f"source:'{self.DEFAULT_SOURCE}'+modified_on:<='{date.today() - timedelta(days=valid_for)}'"
         ):
             ids_to_remove.append(result)
 
