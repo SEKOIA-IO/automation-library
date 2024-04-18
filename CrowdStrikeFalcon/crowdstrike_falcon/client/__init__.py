@@ -78,7 +78,7 @@ class ApiClient(requests.Session):
             yield from content.get("resources") or []
 
             pagination = content.get("meta", {}).get("pagination")
-            still_fetching_items = pagination is not None and pagination.get("offset") > 0
+            still_fetching_items = pagination is not None and pagination.get("offset", 0) > 0
 
 
 class CrowdstrikeFalconClient(ApiClient):
