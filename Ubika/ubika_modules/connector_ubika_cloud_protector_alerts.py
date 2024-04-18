@@ -115,12 +115,13 @@ class UbikaCloudProtectorAlertsConnector(Connector):
             self._handle_response_error(response)
 
             # get events from the response
-            events = response.json()
+            data = response.json()
+            events = data["items"]
 
             # yielding events if defined
-            if events and len(events["items"]) > 0:
+            if data and len(events) > 0:
                 INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
-                yield events["items"]
+                yield events
 
             else:
                 self.log(
@@ -129,7 +130,7 @@ class UbikaCloudProtectorAlertsConnector(Connector):
                 )  # pragma: no cover
                 return
 
-            cursor = events.get("cursor")
+            cursor = data.get("cursor")
             if cursor is None:
                 return
 
