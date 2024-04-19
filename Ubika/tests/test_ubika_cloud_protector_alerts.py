@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
-from requests import Response
+from requests import Response, Request
 
 from ubika_modules import UbikaModule
 from ubika_modules.connector_ubika_cloud_protector_alerts import (
@@ -179,11 +179,14 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
 
 def test_handle_response_error(trigger):
     response = Response()
+    response.request = Request()
+    response.request.url = "https://sekoia.io"
     response.status_code = 500
     response.reason = "Internal Error"
     with pytest.raises(FetchEventsException) as m:
         trigger._handle_response_error(response)
 
     assert (
-        str(m.value) == "Request on Ubika Cloud Protector API to fetch events failed with status 500 - Internal Error"
+        str(m.value)
+        == "Request on Ubika Cloud Protector API to fetch events failed with status 500 - Internal Error on https://sekoia.io"
     )

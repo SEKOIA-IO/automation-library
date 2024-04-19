@@ -14,12 +14,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import UbikaModule
 from .client import ApiClient
-from .metrics import (
-    EVENTS_LAG,
-    FORWARD_EVENTS_DURATION,
-    INCOMING_MESSAGES,
-    OUTCOMING_EVENTS,
-)
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class FetchEventsException(Exception):
@@ -87,15 +82,8 @@ class UbikaCloudProtectorAlertsConnector(Connector):
         if not response.ok:
             message = (
                 f"Request on Ubika Cloud Protector API to fetch events failed with status "
-                f"{response.status_code} - {response.reason}"
+                f"{response.status_code} - {response.reason} on {response.request.url}"
             )
-
-            try:
-                error = response.json()
-                message = f"{message}: {error['errorCode']} - {error['errorSummary']}"
-
-            except Exception:
-                pass
 
             raise FetchEventsException(message)
 

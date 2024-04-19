@@ -1,7 +1,5 @@
 from ubika_modules import UbikaModule
-from ubika_modules.connector_ubika_cloud_protector_alerts import (
-    UbikaCloudProtectorAlertsConnector,
-)
+from ubika_modules.connector_ubika_cloud_protector_alerts import UbikaCloudProtectorAlertsConnector
 
 if __name__ == "__main__":
     module = UbikaModule()
