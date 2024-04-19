@@ -54,8 +54,13 @@ class ApiClient(requests.Session):
         while still_fetching_items:
             new_params = dict(params)
 
-            if pagination and "offset" in pagination:
-                new_params["offset"] = pagination["offset"]
+            if pagination:
+                # If after parameter is defined in the response, use it for the pagination
+                if "after" in pagination:
+                    new_params["after"] = pagination["after"]
+                # Otherwise, fallback on the offset parameter if defined
+                elif "offset" in pagination:
+                    new_params["offset"] = pagination["offset"]
 
             response = self.request(method=method, url=url, params=new_params, **kwargs)
 
@@ -73,7 +78,9 @@ class ApiClient(requests.Session):
             yield from content.get("resources") or []
 
             pagination = content.get("meta", {}).get("pagination")
-            still_fetching_items = pagination is not None
+            still_fetching_items = pagination is not None and (
+                bool(pagination.get("offset")) or bool(pagination.get("after"))
+            )
 
 
 class CrowdstrikeFalconClient(ApiClient):
