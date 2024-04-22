@@ -7,10 +7,9 @@ import logging
 from pathlib import Path
 
 from ubika_modules import UbikaModule
-from ubika_modules.connector_ubika_cloud_protector_alerts import (
-    UbikaCloudProtectorAlertsConnector,
-    UbikaCloudProtectorConnectorConfiguration,
-)
+from ubika_modules.connector_ubika_cloud_protector_alerts import UbikaCloudProtectorAlertsConnector
+from ubika_modules.connector_ubika_cloud_protector_base import UbikaCloudProtectorConnectorConfiguration
+from ubika_modules.connector_ubika_cloud_protector_traffic import UbikaCloudProtectorTrafficConnector
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -50,7 +49,8 @@ if __name__ == "__main__":
 
     module = UbikaModule()
 
-    conn = UbikaCloudProtectorAlertsConnector(data_path=Path("."))
+    # conn = UbikaCloudProtectorAlertsConnector(data_path=Path("."))
+    conn = UbikaCloudProtectorTrafficConnector(data_path=Path("."))
     conn.configuration = connector_conf
 
     # Replace logging methods to make them work locally

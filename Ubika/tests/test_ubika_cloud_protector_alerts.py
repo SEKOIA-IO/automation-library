@@ -3,13 +3,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
-from requests import Response, Request
+from requests import Request, Response
 
 from ubika_modules import UbikaModule
-from ubika_modules.connector_ubika_cloud_protector_alerts import (
-    FetchEventsException,
-    UbikaCloudProtectorAlertsConnector,
-)
+from ubika_modules.connector_ubika_cloud_protector_alerts import UbikaCloudProtectorAlertsConnector
+from ubika_modules.connector_ubika_cloud_protector_base import FetchEventsException
 
 
 @pytest.fixture
@@ -19,7 +17,7 @@ def fake_time():
 
 @pytest.fixture
 def patch_datetime_now(fake_time):
-    with patch("ubika_modules.connector_ubika_cloud_protector_alerts.datetime") as mock_datetime:
+    with patch("ubika_modules.connector_ubika_cloud_protector_base.datetime") as mock_datetime:
         mock_datetime.now.return_value = fake_time
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
         mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
@@ -124,7 +122,7 @@ def message2():
 
 def test_fetch_events_with_pagination(trigger, message1, message2):
     with requests_mock.Mocker() as mock_requests, patch(
-        "ubika_modules.connector_ubika_cloud_protector_alerts.time"
+        "ubika_modules.connector_ubika_cloud_protector_base.time"
     ) as mock_time:
         mock_time.sleep = MagicMock()
         mock_requests.get(
@@ -148,7 +146,7 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
 
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
     with requests_mock.Mocker() as mock_requests, patch(
-        "ubika_modules.connector_ubika_cloud_protector_alerts.time"
+        "ubika_modules.connector_ubika_cloud_protector_base.time"
     ) as mock_time:
         mock_time.sleep = MagicMock()
 
@@ -188,5 +186,5 @@ def test_handle_response_error(trigger):
 
     assert (
         str(m.value)
-        == "Request on Ubika Cloud Protector API to fetch events failed with status 500 - Internal Error on https://sekoia.io"
+        == "Request on Ubika Cloud Protector Alerts API to fetch events failed with status 500 - Internal Error on https://sekoia.io"
     )
