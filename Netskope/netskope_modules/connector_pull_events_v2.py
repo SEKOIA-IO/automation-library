@@ -7,6 +7,7 @@ import orjson
 from netskope_api.iterator.const import Const
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
 from pydantic import Field
+from requests.exceptions import ConnectionError
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.exceptions import ModuleConfigurationError
 
@@ -42,7 +43,14 @@ class NetskopeEventConsumer(Thread):
         batch_start_time = time.time()
 
         # Fetch next events
-        response = self.iterator.next()
+        try:
+            response = self.iterator.next()
+        except ConnectionError as error:
+            if "connection aborted" in str(error).lower():
+                return
+
+            raise error
+
         if response.status_code == 204:
             self.connector.log(message=f"No events to forward for {self.name}", level="info")
         if response.status_code == 403:

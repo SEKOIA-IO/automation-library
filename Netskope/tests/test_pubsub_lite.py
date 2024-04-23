@@ -60,17 +60,22 @@ def test_configuration(trigger):
 def test_run(trigger, events_queue):
     trigger.configuration.chunk_size = 1
 
-    with patch("netskope_modules.connector_pubsub_lite.AsyncSubscriberClient") as mock, patch(
-        "netskope_modules.connector_pubsub_lite.PubSubLite.subscription_path", new_callable=PropertyMock
-    ) as mock_sub_path, patch(
-        "netskope_modules.connector_pubsub_lite.AsyncSubscriberClient.subscribe", new_callable=AsyncMock
-    ) as mock_subscribe, patch(
-        "netskope_modules.connector_pubsub_lite.PubSubLite.load_checkpoint", new_callable=AsyncMock
-    ) as mock_load, patch(
-        "netskope_modules.connector_pubsub_lite.PubSubLite.save_checkpoint", new_callable=AsyncMock
-    ) as mock_save, patch(
-        "netskope_modules.connector_pubsub_lite.AdminClient"
-    ) as mock_seek:
+    with (
+        patch("netskope_modules.connector_pubsub_lite.AsyncSubscriberClient") as mock,
+        patch(
+            "netskope_modules.connector_pubsub_lite.PubSubLite.subscription_path", new_callable=PropertyMock
+        ) as mock_sub_path,
+        patch(
+            "netskope_modules.connector_pubsub_lite.AsyncSubscriberClient.subscribe", new_callable=AsyncMock
+        ) as mock_subscribe,
+        patch(
+            "netskope_modules.connector_pubsub_lite.PubSubLite.load_checkpoint", new_callable=AsyncMock
+        ) as mock_load,
+        patch(
+            "netskope_modules.connector_pubsub_lite.PubSubLite.save_checkpoint", new_callable=AsyncMock
+        ) as mock_save,
+        patch("netskope_modules.connector_pubsub_lite.AdminClient") as mock_seek,
+    ):
         trigger.last_seen_timestamp = datetime(year=2023, month=3, day=11, hour=13, minute=21, second=23)
         mock_sub_path.return_value = "projects/13212241/subscriptions/6"
         instance = mock.return_value
