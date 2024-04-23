@@ -1,7 +1,7 @@
 {
-  "description": "Ubika Cloud Protector - Alerts",
-  "docker_parameters": "ubika_cloud_protector_alerts",
-  "name": "[BETA] Fetch new alerts from Ubika Cloud Protector",
+  "description": "Ubika Cloud Protector - Traffic",
+  "docker_parameters": "ubika_cloud_protector_traffic",
+  "name": "[BETA] Fetch new traffic events from Ubika Cloud Protector",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -49,5 +49,5 @@
     "properties": {},
     "title": "The events"
   },
-  "uuid": "9a92d17c-6740-476f-8cec-621de2e853c5"
+  "uuid": "60b3ed59-e7e4-45fa-84e8-5a52695116c1"
 }
