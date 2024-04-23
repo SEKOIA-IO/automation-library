@@ -14,9 +14,15 @@ class DeviceOperationAction(Action):
     def _execute_operation_on_device(
         self, operation_name: str, target: str, parameters: dict[str, Any] | None = None
     ) -> None:
-        self.log(f"Execute the operation '{operation_name}' on device '{target}'", level="debug")
+        self.log(
+            f"Execute the operation '{operation_name}' on device '{target}'",
+            level="debug",
+        )
 
-        request_payload: dict[str, Any] = {"operation": operation_name, "targets": [target]}
+        request_payload: dict[str, Any] = {
+            "operation": operation_name,
+            "targets": [target],
+        }
         if parameters:
             request_payload["parameters"] = parameters
         headers = {"Accept": "application/json"}
@@ -24,10 +30,13 @@ class DeviceOperationAction(Action):
         client = ApiClient(
             client_id=self.module.configuration.client_id,
             secret=self.module.configuration.secret,
-            scope="connect.api.write",
+            scope="connect.api.read connect.api.write",
             stop_event=Event(),
             log_cb=self.log,
         )
         client.get(
-            API_DEVICES_OPERATION_URL, timeout=API_TIMEOUT, json=request_payload, headers=headers
+            API_DEVICES_OPERATION_URL,
+            timeout=API_TIMEOUT,
+            json=request_payload,
+            headers=headers,
         ).raise_for_status()
