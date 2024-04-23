@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
 from requests import Request, Response
+from sekoia_automation.storage import PersistentJSON
 
 from ubika_modules import UbikaModule
 from ubika_modules.connector_ubika_cloud_protector_base import FetchEventsException
@@ -185,3 +186,15 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
 
         assert list(events) == [message1["items"]]
         assert trigger.from_date.isoformat() == "2024-04-09T16:16:46+00:00"
+
+
+def test_load_without_checkpoint(trigger, data_storage, fake_time):
+    context = PersistentJSON("context.json", data_storage)
+
+    # ensure that the cursor is None
+    with context as cache:
+        cache["most_recent_date_seen"] = None
+
+    datetime_expected = fake_time - timedelta(hours=1)
+
+    assert trigger.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
