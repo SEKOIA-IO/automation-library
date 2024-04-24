@@ -1,7 +1,7 @@
 {
     "description": "Get the newest logs from Darktrace Threat Visualizer",
     "docker_parameters": "darktrace_threat_visualizer_logs",
-    "name": "[BETA] Fetch new logs from Darktrace",
+    "name": "Fetch new logs from Darktrace",
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {
