@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-04-24 - 1.18.3
+
+### Changed
+
+- Remove the beta flag from the connector
+
 ## 2024-03-07 - 1.18.2
 
 ### Changed
