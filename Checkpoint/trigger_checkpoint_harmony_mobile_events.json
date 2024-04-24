@@ -35,7 +35,7 @@
     },
     "description": "Trigger playbook to get Checkpoint Harmony Mobile events",
     "docker_parameters": "checkpoint_harmony_mobile",
-    "name": "[BETA] Collect Checkpoint Harmony Mobile events",
+    "name": "Collect Checkpoint Harmony Mobile events",
     "results": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "properties": {},

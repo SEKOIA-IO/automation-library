@@ -35,6 +35,6 @@
   },
   "description": "connector playbook to get Checkpoint Harmony Mobile events",
   "docker_parameters": "checkpoint_harmony_mobile",
-  "name": "[BETA] Collect Checkpoint Harmony Mobile events",
+  "name": "Collect Checkpoint Harmony Mobile events",
   "uuid": "ff092b32-68dc-11ee-8c99-0242ac120002"
 }
