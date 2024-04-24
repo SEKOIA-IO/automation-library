@@ -41,7 +41,7 @@
   },
   "description": "Trigger playbook to get Azure Network Watcher events information",
   "docker_parameters": "azure_network_watcher",
-  "name": "[BETA] Fetch new Azure Network Watcher events from Blob Storage",
+  "name": "Fetch new Azure Network Watcher events from Blob Storage",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {},
