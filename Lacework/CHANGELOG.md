@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 2024-02-23 - 1.0.0
+## 2024-04-24 - 1.0.3
 
-#### Added
+### Changed
 
-- First time to add the Lacework connector with query
+- Remove the beta flag from the connector
+
+### 2024-03-13 - 1.0.2
+
+#### Changed
+
+- Fix on pagination
 
 ### 2024-03-06 - 1.0.1
 
@@ -19,8 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Addition of timezone in timestamp
 
-### 2024-03-13 - 1.0.2
+### 2024-02-23 - 1.0.0
 
-#### Changed
+#### Added
 
-- Fix on pagination
+- First time to add the Lacework connector with query
