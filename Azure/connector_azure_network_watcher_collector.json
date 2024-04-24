@@ -41,6 +41,6 @@
   },
   "description": "connector playbook to get Azure Network Watcher events information",
   "docker_parameters": "azure_network_watcher",
-  "name": "[BETA] Collect Azure Network Watcher events",
+  "name": "Collect Azure Network Watcher events",
   "uuid": "626f4d84-5ab7-11ee-8c99-0242ac120002"
 }

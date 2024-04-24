@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-04-24 - 1.30.11
+
+### Changed
+
+- Remove beta flag on AWS CLoudfront connector
+
 ## 2024-03-29 - 1.30.10
 
 ### Changed

@@ -1,7 +1,7 @@
 {
   "description": "Get user activities using google reports",
   "docker_parameters": "run-google_reports_trigger",
-  "name": "[BETA] Get user activities",
+  "name": "Get user activities",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {

@@ -25,6 +25,6 @@
   },
   "description": "connector playbook to get Salesforce information",
   "docker_parameters": "salesforce",
-  "name": "[BETA] Collect Salesforce events",
+  "name": "Collect Salesforce events",
   "uuid": "ea8a9a1a-2548-11ee-be56-0242ac120002"
 }

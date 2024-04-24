@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-04-24 - 2.4.12
+
+### Changed
+
+- Remove beta flag from azure blob storage and azure network watcher connectors
+
 ## 2024-04-22 - 2.4.11
 
 ### Changed
