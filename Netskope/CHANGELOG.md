@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.2] - 2024-04-23
+
+### Fixed
+
+- Add interceptor on connection timeout for Netskope Events connector.
+
+
 ## [1.10.1] - 2024-02-13
 
 ### Changed

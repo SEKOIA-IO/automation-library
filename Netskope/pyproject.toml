@@ -7,7 +7,7 @@ authors = []
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 netskopesdk = "^0.0.34"
-sekoia-automation-sdk = { version="^1.8.2", extras=["all"] }
+sekoia-automation-sdk = { version="^1.13.0", extras=["all"] }
 google-cloud-pubsublite = "^1.8.3"
 google-api-python-client = "^2.95.0"
 google-auth-httplib2 = "^0.1.0"
@@ -21,6 +21,9 @@ pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
+autoflake = "^1.4"
+isort = "^5.10.1"
+black = { version = "^24.3.0", extras = ["colorama"] }
 
 [build-system]
 requires = ["poetry-core"]
@@ -28,7 +31,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 119
-target-version = ['py38']
+target-version = ['py310']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -41,6 +44,14 @@ omit = [
     "dev.py",
     "main.py",
 ]
+
+[tool.poe.tasks.lint]
+sequence = [
+    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
+    { cmd = "poetry run black ." },
+    { cmd = "poetry run isort ." },
+]
+help = "Make code linting and formatting."
 
 [tool.mypy]
 exclude = [
