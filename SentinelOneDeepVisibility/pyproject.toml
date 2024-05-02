@@ -10,7 +10,7 @@ packages = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.8.1"
-"Automation Module for AWS" = {path = "../AWS", develop = false}
+"aws-automation" = {path = "../AWS", develop = false}
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
