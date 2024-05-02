@@ -1,6 +1,3 @@
-from functools import cached_property
-
-import boto3
 from pydantic import BaseModel, Field
 from sekoia_automation.connector import Connector
 from sekoia_automation.module import Module
