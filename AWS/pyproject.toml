@@ -3,6 +3,10 @@ name = "Automation Module for AWS"
 description = ""
 version = "0.0"
 authors = []
+packages = [
+    {include = "connectors"},
+    {include = "aws_helpers"}
+]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
