@@ -79,7 +79,7 @@ def test_aws_s3_logs_trigger_parse_data(connector: DeepVisibilityConnector, test
         test_data: bytes
     """
 
-    assert (
-        connector._parse_content(test_data) == [[line for line in test_data.decode("utf-8").split("\n") if line != "" ][1]]
-    )
+    assert connector._parse_content(test_data) == [
+        [line for line in test_data.decode("utf-8").split("\n") if line != ""][1]
+    ]
     assert connector._parse_content(b"") == []

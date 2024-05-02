@@ -1,7 +1,14 @@
 import json
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
-EXCLUDED_EVENT_TYPES = ["File Modification", "File Scan", "Open Remote Process Handle", "Duplicate Process Handle", "Not Reported"]
+EXCLUDED_EVENT_TYPES = [
+    "File Modification",
+    "File Scan",
+    "Open Remote Process Handle",
+    "Duplicate Process Handle",
+    "Not Reported",
+]
+
 
 class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
     """Implementation of DeepVisibilityConnector."""

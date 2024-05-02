@@ -7,6 +7,7 @@ from sekoia_automation import constants
 from faker import Faker
 from connectors import AwsModule, AwsModuleConfiguration
 
+
 @pytest.fixture
 def symphony_storage():
     original_storage = constants.DATA_STORAGE
@@ -34,6 +35,7 @@ def aws_configuration(faker: Faker) -> dict[str, str]:
         "aws_secret_access_key": faker.word(),
         "aws_region_name": "us-west-2",
     }
+
 
 @pytest.fixture
 def aws_module(symphony_storage: Path, aws_configuration) -> AwsModule:

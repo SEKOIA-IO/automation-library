@@ -12,5 +12,6 @@ class SentinelOneDeepVisibilityConfiguration(BaseModel):
 class SentinelOneDeepVisibilityModule(Module):
     configuration: SentinelOneDeepVisibilityConfiguration
 
+
 class SentinelOneDeepVisibilityConnector(Connector):
     module: SentinelOneDeepVisibilityModule
