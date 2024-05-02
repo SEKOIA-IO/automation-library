@@ -2,13 +2,19 @@ FROM python:3.11
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y git nano
+
 RUN pip install poetry
 
-# Install dependencies
-COPY poetry.lock pyproject.toml /app/
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+# To retrieve the AWS package locally 
+RUN git clone https://github.com/SEKOIA-IO/automation-library
+
+WORKDIR /app/automation-library/build/
 
 COPY . .
+
+# Install dependencies
+RUN poetry config virtualenvs.create false && poetry install --no-dev
 
 RUN useradd -ms /bin/bash sekoiaio-runtime
 USER sekoiaio-runtime

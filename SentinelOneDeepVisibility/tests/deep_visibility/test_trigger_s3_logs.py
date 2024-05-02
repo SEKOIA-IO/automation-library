@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-import json
 from faker import Faker
 
 from connectors import AwsModule
