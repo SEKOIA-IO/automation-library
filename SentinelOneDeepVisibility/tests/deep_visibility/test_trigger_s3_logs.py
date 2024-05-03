@@ -5,10 +5,8 @@ from pathlib import Path
 import pytest
 from faker import Faker
 
-from connectors import AwsModule
 from deep_visibility.connector_s3_logs import DeepVisibilityConnector
-from connectors.s3 import AwsS3QueuedConfiguration
-
+from deep_visibility import SentinelOneDeepVisibilityModule, SentinelOneDeepVisibilityConfiguration
 
 @pytest.fixture
 def test_data() -> bytes:
@@ -26,30 +24,10 @@ def test_data() -> bytes:
 
 
 @pytest.fixture
-def deepvisibility_s3_logs_trigger_config(faker: Faker) -> AwsS3QueuedConfiguration:
-    """
-    Create a configuration.
-
-    Args:
-        faker: Faker
-
-    Returns:
-        DeepVisibilityConfiguration:
-    """
-    config = {
-        "frequency": 0,
-        "queue_name": faker.word(),
-        "intake_key": faker.word(),
-    }
-
-    return AwsS3QueuedConfiguration(**config)
-
-
-@pytest.fixture
 def connector(
-    aws_module: AwsModule,
+    deepvisibility_module: SentinelOneDeepVisibilityModule,
     symphony_storage: Path,
-    deepvisibility_s3_logs_trigger_config: AwsS3QueuedConfiguration,
+    deepvisibility_configuration: SentinelOneDeepVisibilityConfiguration,
 ) -> DeepVisibilityConnector:
     """
     Create a connector.
@@ -57,15 +35,15 @@ def connector(
     Args:
         aws_module: AwsModule
         symphony_storage: Path
-        deepvisibility_s3_logs_trigger_config: DeepVisibilityConfiguration
+        deepvisibility_configuration: SentinelOneDeepVisibilityConfiguration
 
     Returns:
         DeepVisibilityConnector:
     """
-    connector = DeepVisibilityConnector(module=aws_module, data_path=symphony_storage)
+    connector = DeepVisibilityConnector(module=deepvisibility_module, data_path=symphony_storage)
 
-    connector.module = aws_module
-    connector.configuration = deepvisibility_s3_logs_trigger_config
+    connector.module = deepvisibility_module
+    connector.configuration = deepvisibility_configuration
 
     return connector
 

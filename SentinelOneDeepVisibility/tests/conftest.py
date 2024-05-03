@@ -5,7 +5,7 @@ from tempfile import mkdtemp
 import pytest
 from sekoia_automation import constants
 from faker import Faker
-from connectors import AwsModule, AwsModuleConfiguration
+from deep_visibility import SentinelOneDeepVisibilityConfiguration, SentinelOneDeepVisibilityModule
 
 
 @pytest.fixture
@@ -20,9 +20,9 @@ def symphony_storage():
 
 
 @pytest.fixture
-def aws_configuration(faker: Faker) -> dict[str, str]:
+def deepvisibility_configuration(faker: Faker) -> dict[str, str]:
     """
-    Create a configuration for the AWS module.
+    Create a configuration for the SentinelOne DeepVisibility module.
 
     Args:
         faker: Faker
@@ -34,22 +34,24 @@ def aws_configuration(faker: Faker) -> dict[str, str]:
         "aws_access_key": faker.word(),
         "aws_secret_access_key": faker.word(),
         "aws_region_name": "us-west-2",
+        "intake_key": faker.word(),
+        "queue_name": faker.word(),
     }
 
 
 @pytest.fixture
-def aws_module(symphony_storage: Path, aws_configuration) -> AwsModule:
+def deepvisibility_module(symphony_storage: Path, deepvisibility_configuration) -> SentinelOneDeepVisibilityModule:
     """
-    Create an AWS module.
+    Create an SentinelOne DeepVisibility module.
 
     Args:
         symphony_storage: Path
         aws_configuration: dict[str, str]
 
     Returns:
-        AwsModule: The AWS module.
+        AwsModule: The S1 DeepVisibility module.
     """
-    module = AwsModule()
-    module.configuration = AwsModuleConfiguration(**aws_configuration)
+    module = SentinelOneDeepVisibilityModule()
+    module.configuration = SentinelOneDeepVisibilityConfiguration(**deepvisibility_configuration)
 
     return module
