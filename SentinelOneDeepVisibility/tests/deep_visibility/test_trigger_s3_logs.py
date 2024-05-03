@@ -8,6 +8,7 @@ from faker import Faker
 from deep_visibility.connector_s3_logs import DeepVisibilityConnector
 from deep_visibility import SentinelOneDeepVisibilityModule, SentinelOneDeepVisibilityConfiguration
 
+
 @pytest.fixture
 def test_data() -> bytes:
     return """
