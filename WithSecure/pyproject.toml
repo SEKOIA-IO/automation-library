@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Sekoia.io Automation Module for WithSecure"
-version = "2.3"
+version = "2.4"
 description = ""
 authors = []
 
