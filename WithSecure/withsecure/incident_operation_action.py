@@ -13,7 +13,7 @@ class IncidentOperationAction(Action):
 
     def _execute_operation_on_incident(
         self, operation_name: str, target: str, parameters: dict[str, Any] | None = None
-    ) -> None:
+    ) -> dict:
         self.log(f"Execute the operation '{operation_name}' on incident '{target}'", level="debug")
 
         payload: dict[str, Any] = {"targets": [target]}
@@ -29,11 +29,26 @@ class IncidentOperationAction(Action):
             log_cb=self.log,
         )
         if operation_name == "CommentIncident":
-            client.post(
-                API_COMMENT_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers
-            ).raise_for_status()
+            response = client.post(API_COMMENT_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers)
+            response.raise_for_status()
+            return response.json()
         if operation_name == "UpdateStatusIncident":
-            client.patch(API_LIST_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers).raise_for_status()
+            response = client.patch(API_LIST_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers)
+            response.raise_for_status()
+            return response.json()
         if operation_name == "ListDetectionForIncident":
             params = {"incidentId": target}
-            client.get(API_LIST_DETECTION_URL, timeout=API_TIMEOUT, params=params, headers=headers).raise_for_status()
+            detections = []
+            response = client.get(API_LIST_DETECTION_URL, timeout=API_TIMEOUT, params=params, headers=headers)
+            response.raise_for_status()
+            jsonify_response = response.json()
+            detections.extend(jsonify_response.get("items", []))
+
+            while jsonify_response.get("nextAnchor"):
+                params["anchor"] = payload["nextAnchor"]
+                response = client.get(API_LIST_DETECTION_URL, timeout=API_TIMEOUT, params=params, headers=headers)
+                response.raise_for_status()
+                jsonify_response = response.json()
+                detections.extend(jsonify_response["items"])
+
+            return detections

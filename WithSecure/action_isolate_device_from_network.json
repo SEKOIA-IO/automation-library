@@ -22,5 +22,22 @@
         "target"
     ]
   },
-  "results": {}
+  "results": {
+    "title": "IsolateDeviceFromNetwork",
+    "type": "object",
+    "properties": {
+        "multistatus": {
+            "title": "Multistatus",
+            "type": "array"
+        },
+        "transactionId":{
+          "title": "transactionId",
+          "type": "string"
+        }
+    },
+    "required": [
+        "multistatus",
+        "transactionId"
+    ]
+  }
 }

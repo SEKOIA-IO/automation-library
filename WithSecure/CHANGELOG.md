@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-04-22 
 
+- Add response field classes
+- Update some methods
+
+## 2024-04-22 
+
 - Add missing read rights when creating WithSecure API client
 
 ## 2024-04-03 

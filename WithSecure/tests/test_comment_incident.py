@@ -26,10 +26,10 @@ def action(data_storage):
 
 def test_run_to_comment_an_incident(action):
     response_payload = {
-        "multistatus": [
-            {"target": "e297cbf5-ba53-4e66-909c-6d87527c4e98", "status": 202, "operationId": "1766423938040964633"}
-        ],
-        "transactionId": "0000-981c1d1730764143",
+        "items": [
+            {"incidentId": "2c902c73-e2a6-40fd-9532-257ee102e1c1", "comment": "example comment"},
+            {"incidentId": "cc8b996f-1d50-40cc-a942-686f82fcd3fc", "comment": "example comment"},
+        ]
     }
 
     with requests_mock.Mocker() as mock_requests:

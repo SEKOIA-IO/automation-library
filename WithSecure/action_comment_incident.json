@@ -23,5 +23,20 @@
         "comment"
     ]
   },
-  "results": {}
+  "results": {
+    "title": "CommentIncident",
+    "type": "object",
+    "properties": {
+        "items": {
+            "title": "Items",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/ItemKeys"
+            }
+        }
+    },
+    "required": [
+        "items"
+    ]
+  }
 }

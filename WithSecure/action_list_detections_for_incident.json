@@ -17,5 +17,20 @@
       "target"
     ]
   },
-  "results": {}
+  "results": {
+    "title": "ListDetectionForIncident",
+    "type": "object",
+    "properties": {
+        "detections": {
+            "title": "Detections",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/Detection"
+            }
+        }
+    },
+    "required": [
+        "detections"
+    ]
+  }
 }

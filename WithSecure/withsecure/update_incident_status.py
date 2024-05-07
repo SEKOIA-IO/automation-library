@@ -9,6 +9,11 @@ class ActionArguments(BaseModel):
     resolution: str | None = None
 
 
+class UpdateStatus(BaseModel):
+    multistatus: list
+    transactionId: str | None = None
+
+
 class UpdateStatusIncident(IncidentOperationAction):
     def run(self, arguments: ActionArguments) -> None:
         parameters = {}
@@ -17,6 +22,10 @@ class UpdateStatusIncident(IncidentOperationAction):
             parameters["resolution"] = arguments.resolution
 
         # execute the operation
-        self._execute_operation_on_incident(
+        response = self._execute_operation_on_incident(
             operation_name="UpdateStatusIncident", target=arguments.target, parameters=parameters
+        )
+
+        return UpdateStatus(
+            multistatus=response.get("multistatus", []), transactionId=response.get("transactionId", "")
         )
