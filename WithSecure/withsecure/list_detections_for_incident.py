@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Any
 
 from withsecure.incident_operation_action import IncidentOperationAction
 
@@ -22,7 +22,7 @@ class Detection(BaseModel):
     pid: int | None = None
     exeHash: str | None = None
     deviceId: str | None = None
-    activityContext: list | None = None
+    activityContext: list[Any] | None = None
     exeName: str | None = None
     name: str | None = None
     cmdl: str | None = None

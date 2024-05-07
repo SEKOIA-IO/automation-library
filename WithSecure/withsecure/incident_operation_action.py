@@ -13,7 +13,7 @@ class IncidentOperationAction(Action):
 
     def _execute_operation_on_incident(
         self, operation_name: str, target: str, parameters: dict[str, Any] | None = None
-    ) -> dict:
+    ) -> Any:
         self.log(f"Execute the operation '{operation_name}' on incident '{target}'", level="debug")
 
         payload: dict[str, Any] = {"targets": [target]}
@@ -28,14 +28,15 @@ class IncidentOperationAction(Action):
             stop_event=Event(),
             log_cb=self.log,
         )
+        operation_result = []
         if operation_name == "CommentIncident":
             response = client.post(API_COMMENT_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers)
             response.raise_for_status()
-            return response.json()
+            operation_result = response.json()
         if operation_name == "UpdateStatusIncident":
             response = client.patch(API_LIST_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers)
             response.raise_for_status()
-            return response.json()
+            operation_result = response.json()
         if operation_name == "ListDetectionForIncident":
             params = {"incidentId": target}
             detections = []
@@ -51,4 +52,6 @@ class IncidentOperationAction(Action):
                 jsonify_response = response.json()
                 detections.extend(jsonify_response["items"])
 
-            return detections
+            operation_result = detections
+
+        return operation_result

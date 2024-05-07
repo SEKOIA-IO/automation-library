@@ -13,7 +13,7 @@ class DeviceOperationAction(Action):
 
     def _execute_operation_on_device(
         self, operation_name: str, target: str, parameters: dict[str, Any] | None = None
-    ) -> None:
+    ) -> Any:
         self.log(
             f"Execute the operation '{operation_name}' on device '{target}'",
             level="debug",
@@ -41,4 +41,5 @@ class DeviceOperationAction(Action):
             headers=headers,
         )
         response.raise_for_status()
+
         return response.json()

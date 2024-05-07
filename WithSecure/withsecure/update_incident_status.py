@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Any
 
 from withsecure.incident_operation_action import IncidentOperationAction
 
@@ -10,12 +11,12 @@ class ActionArguments(BaseModel):
 
 
 class UpdateStatus(BaseModel):
-    multistatus: list
+    multistatus: list[Any]
     transactionId: str | None = None
 
 
 class UpdateStatusIncident(IncidentOperationAction):
-    def run(self, arguments: ActionArguments) -> None:
+    def run(self, arguments: ActionArguments) -> UpdateStatus:
         parameters = {}
         parameters["status"] = arguments.status
         if arguments.resolution:
