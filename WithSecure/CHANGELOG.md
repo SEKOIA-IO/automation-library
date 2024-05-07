@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-07
+
+- Add exponential backoff retry strategy on authentication requests
+
 ## 2024-04-22 
 
 - Add missing read rights when creating WithSecure API client
