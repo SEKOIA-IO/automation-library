@@ -16,7 +16,7 @@ defaults:
     working-directory: _utils
 
 jobs:
-  check_intakes:
+  check_modules:
     runs-on: ubuntu-latest
 
     steps:

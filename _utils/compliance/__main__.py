@@ -129,7 +129,8 @@ if __name__ == "__main__":
 
     check_module_uuids_and_slugs([item.result for item in all_validators])
     for res in sorted(all_validators, key=lambda x: x.path):
-        print(format_errors(res))
+        if len(res.result.errors) > 0:
+            print(format_errors(res))
 
     if args.action == "check":
         if len(errors_to_fix) > 0:

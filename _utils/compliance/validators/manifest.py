@@ -94,11 +94,11 @@ class ManifestValidator(Validator):
                 )
             )
 
-        if Version.is_valid(module_version):
+        if not Version.is_valid(module_version):
             result.errors.append(
                 CheckError(
                     filepath=manifest_path,
-                    error=f"'{module_version}' is not valid SemVer version. Read more: https://semver.org/",
+                    error=f"'{module_version}' is not valid semantic version. Read more: https://semver.org/",
                 )
             )
         # @todo perhaps, we can fix "2.0" by adding another zero?
