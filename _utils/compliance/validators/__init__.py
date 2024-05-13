@@ -1,8 +1,5 @@
-import argparse
-from abc import ABC
 from pathlib import Path
 
-from pydantic import BaseModel
 
 from .actions_json import ActionsJSONValidator
 from .changelog import ChangelogValidator

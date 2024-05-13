@@ -1,12 +1,12 @@
 import argparse
 import os
-from pathlib import Path
 from functools import partial
+from pathlib import Path
 
 from PIL import Image
 
 from .base import Validator
-from .helpers import square_canvas, transparent_background, resize_canvas, lighten_image
+from .helpers import lighten_image, resize_canvas, square_canvas, transparent_background
 from .models import CheckError, CheckResult
 
 

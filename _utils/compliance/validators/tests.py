@@ -1,5 +1,4 @@
 import argparse
-import os
 from pathlib import Path
 
 from .base import Validator
@@ -17,8 +16,14 @@ class TestsValidator(Validator):
 
         if not tests_path.is_dir():
             result.errors.append(
-                CheckError(filepath=tests_path, error="Tests are missing")
+                CheckError(filepath=tests_path, error="Tests folder is missing")
             )
             return
 
-        result.options["testa_path"] = tests_path
+        result.options["tests_path"] = tests_path
+
+        test_files = list(tests_path.glob("test_*.py"))
+        if len(test_files) == 0:
+            result.errors.append(
+                CheckError(filepath=tests_path, error="There are no tests")
+            )

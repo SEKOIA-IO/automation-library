@@ -5,18 +5,13 @@ from pathlib import Path
 
 from jsonschema import Draft7Validator
 from jsonschema.exceptions import SchemaError
+from semver import Version
 
 from .base import Validator
 from .models import CheckError, CheckResult
 
 
 class ManifestValidator(Validator):
-    SEMVER_REGEX = (
-        r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|["
-        r"1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+("
-        r"?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$ "
-    )
-
     @classmethod
     def validate(cls, result: CheckResult, args: argparse.Namespace) -> None:
         if not result.options.get("path"):
@@ -99,7 +94,7 @@ class ManifestValidator(Validator):
                 )
             )
 
-        if not re.match(cls.SEMVER_REGEX, module_version):
+        if Version.is_valid(module_version):
             result.errors.append(
                 CheckError(
                     filepath=manifest_path,
