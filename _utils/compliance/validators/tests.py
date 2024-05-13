@@ -22,7 +22,7 @@ class TestsValidator(Validator):
 
         result.options["tests_path"] = tests_path
 
-        test_files = list(tests_path.glob("test_*.py"))
+        test_files = list(tests_path.rglob("test_*.py"))
         if len(test_files) == 0:
             result.errors.append(
                 CheckError(filepath=tests_path, error="There are no tests")
