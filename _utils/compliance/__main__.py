@@ -48,7 +48,13 @@ def find_changed_modules(root_path: Path) -> list[Path]:
         changed_file = changed_file.decode()
         module_folder = changed_file.split("/")[0]
         module_path = root_path / module_folder
-        changed_modules.add(module_path)
+        if (
+            module_path.is_dir()
+            and not module_path.name.startswith("_")
+            and not module_path.name.startswith(".")
+            and module_path.name not in ("docs",)
+        ):
+            changed_modules.add(module_path)
 
     return sorted(list(changed_modules))
 
@@ -102,6 +108,8 @@ if __name__ == "__main__":
         # check all modules by default
         modules = find_modules(MODULES_PATH)
 
+    print(f"🔎 {len(modules)} module(s) found")
+
     all_validators = []
     errors_to_fix = []
     has_any_errors = False
@@ -120,10 +128,13 @@ if __name__ == "__main__":
         print(format_errors(res))
 
     if args.action == "check":
-        print()
-        print("Available automatic fixes (run with `fix` command):")
-        for error in errors_to_fix:
-            print(f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}")
+        if len(errors_to_fix) > 0:
+            print()
+            print("Available automatic fixes (run with `fix` command):")
+            for error in errors_to_fix:
+                print(
+                    f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}"
+                )
 
         if has_any_errors:
             exit(1)
@@ -133,4 +144,4 @@ if __name__ == "__main__":
         print("Fixing...")
         for error in errors_to_fix:
             print(f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}")
-            # @todo call actual function
+            error.fix()
