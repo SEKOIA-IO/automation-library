@@ -34,11 +34,6 @@
         "description": "Flag to ignore commented lines (starting with the character `#`; default: false)",
         "default": false
       },
-      "delete_consumed_messages": {
-        "type": "boolean",
-        "description": "Flag to delete consuming messages (default: true)",
-        "default": true
-      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",
