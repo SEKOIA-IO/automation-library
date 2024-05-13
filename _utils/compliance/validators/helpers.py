@@ -39,16 +39,11 @@ def resize_canvas(
     x1 = int(math.floor((canvas_width - old_width) / 2))
     y1 = int(math.floor((canvas_height - old_height) / 2))
 
-    # Compute background according the image mode
-    mode = image.mode
-    match mode:
-        case "L" | "1":
-            new_background = 255
-        case "RGB" | "RGBA" | "CMYK":
-            new_background = (255, 255, 255, 0)
+    image = image.convert('RGBA')
+    new_background = (255, 255, 255, 0)
 
     # Create new image and paste the original into
-    new_image = Image.new(mode, (canvas_width, canvas_height), new_background)
+    new_image = Image.new(image.mode, (canvas_width, canvas_height), new_background)
     new_image.paste(image, (x1, y1, x1 + old_width, y1 + old_height))
     return new_image
 
