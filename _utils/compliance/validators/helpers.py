@@ -39,7 +39,7 @@ def resize_canvas(
     x1 = int(math.floor((canvas_width - old_width) / 2))
     y1 = int(math.floor((canvas_height - old_height) / 2))
 
-    image = image.convert('RGBA')
+    image = image.convert("RGBA")
     new_background = (255, 255, 255, 0)
 
     # Create new image and paste the original into

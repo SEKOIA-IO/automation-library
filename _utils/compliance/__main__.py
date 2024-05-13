@@ -48,6 +48,10 @@ def find_changed_modules(root_path: Path) -> list[Path]:
         changed_file = changed_file.decode()
         module_folder = changed_file.split("/")[0]
         module_path = root_path / module_folder
+        if "_utils" in str(module_path):
+            print("Compliance code folder is changed - check all modules")
+            return sorted(find_modules(root_path))
+
         if (
             module_path.is_dir()
             and not module_path.name.startswith("_")
@@ -140,8 +144,14 @@ if __name__ == "__main__":
             exit(1)
 
     elif args.action == "fix":
-        print()
-        print("Fixing...")
-        for error in errors_to_fix:
-            print(f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}")
-            error.fix()
+        if len(errors_to_fix) == 0:
+            print("No errors found - nothing to fix")
+
+        else:
+            print()
+            print("Fixing...")
+            for error in errors_to_fix:
+                print(
+                    f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}"
+                )
+                error.fix()
