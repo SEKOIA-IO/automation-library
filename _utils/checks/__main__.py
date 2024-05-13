@@ -104,12 +104,13 @@ if __name__ == "__main__":
 
     all_validators = []
     errors_to_fix = []
+    has_any_errors = False
     for module in modules:
         r = check_module(module, args)
         all_validators.append(r)
 
         if r.result.errors:
-            # print(format_errors(r))
+            has_any_errors = True
             for item in r.result.errors:
                 if item.fix is not None:
                     errors_to_fix.append(item)
@@ -120,9 +121,12 @@ if __name__ == "__main__":
 
     if args.action == "check":
         print()
-        print("Possible automatic fixes (run with `fix` command):")
+        print("Available automatic fixes (run with `fix` command):")
         for error in errors_to_fix:
             print(f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}")
+
+        if has_any_errors:
+            exit(1)
 
     elif args.action == "fix":
         print()
