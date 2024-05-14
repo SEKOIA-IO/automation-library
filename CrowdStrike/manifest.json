@@ -1,33 +1,27 @@
 {
-    "configuration": {
-        "title": "CrowdStrike",
-        "type": "object",
-        "properties": {
-            "aws_access_key_id": {
-                "description": "The identifier of the access key",
-                "type": "string"
-            },
-            "aws_secret_access_key": {
-                "description": "The secret associated to the access key",
-                "type": "string"
-            },
-            "aws_region": {
-                "description": "The area hosting the AWS resources",
-                "type": "string"
-            }
-        },
-        "required": [
-            "aws_access_key_id",
-            "aws_secret_access_key",
-            "aws_region"
-        ],
-        "secrets": [
-            "aws_secret_access_key"
-        ]
+  "configuration": {
+    "title": "CrowdStrike",
+    "type": "object",
+    "properties": {
+      "aws_access_key_id": {
+        "description": "The identifier of the access key",
+        "type": "string"
+      },
+      "aws_secret_access_key": {
+        "description": "The secret associated to the access key",
+        "type": "string"
+      },
+      "aws_region": {
+        "description": "The area hosting the AWS resources",
+        "type": "string"
+      }
     },
-    "description": "[CrowdStrike] CrowdStrike provides cloud workload and endpoint security, threat intelligence, and cyberattack response services and products.\n This module provides triggers to collect events from CrowdStrike",
-    "name": "CrowdStrike",
-    "uuid": "4ffe6bd9-6693-414d-ade0-5ec9fb1b8b2c",
-    "slug": "crowdstrike",
-    "version": "1.9.1"
+    "required": ["aws_access_key_id", "aws_secret_access_key", "aws_region"],
+    "secrets": ["aws_secret_access_key"]
+  },
+  "description": "[CrowdStrike] CrowdStrike provides cloud workload and endpoint security, threat intelligence, and cyberattack response services and products.\n This module provides triggers to collect events from CrowdStrike",
+  "name": "CrowdStrike",
+  "uuid": "4ffe6bd9-6693-414d-ade0-5ec9fb1b8b2c",
+  "slug": "crowdstrike",
+  "version": "1.9.1"
 }

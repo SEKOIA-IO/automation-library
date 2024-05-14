@@ -1,723 +1,706 @@
 {
-    "uuid": "8d189665-5401-4098-8d60-944de9a6199a",
-    "name": "Get Alert",
-    "docker_parameters": "get-alerts/{uuid}",
-    "description": "Retrieve the definition of an alert",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "get_an_alert",
-        "properties": {
-            "uuid": {
-                "type": "string",
-                "in": "path"
-            },
-            "stix": {
-                "in": "query",
-                "type": "boolean"
-            }
-        },
-        "required": [
-            "uuid"
-        ]
+  "uuid": "8d189665-5401-4098-8d60-944de9a6199a",
+  "name": "Get Alert",
+  "docker_parameters": "get-alerts/{uuid}",
+  "description": "Retrieve the definition of an alert",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_an_alert",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "stix": {
+        "in": "query",
+        "type": "boolean"
+      }
     },
-    "results": {
+    "required": ["uuid"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "urgency": {
         "type": "object",
         "properties": {
+          "severity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "current_value": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "criticity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "display": {
+            "type": "string"
+          }
+        }
+      },
+      "history": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
             "urgency": {
+              "type": "object",
+              "properties": {
+                "previous_value": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "value": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            },
+            "created_by": {
+              "type": "string"
+            },
+            "kill_chain": {
+              "type": "object",
+              "properties": {
+                "previous_short_id": {
+                  "type": "string"
+                },
+                "uuid": {
+                  "type": "string"
+                },
+                "short_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            },
+            "countermeasure_action_step": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            },
+            "entry_type": {
+              "type": "string"
+            },
+            "comment": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "uuid": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "display_name": {
+                  "type": "string"
+                }
+              }
+            },
+            "created_at": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "previous_value": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "alert_type": {
+              "type": "object",
+              "properties": {
+                "previous_category": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "previous_value": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            },
+            "alert": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "previous_status": {
+                  "type": "string"
+                }
+              }
+            },
+            "created_by_type": {
+              "type": "string"
+            },
+            "history_comments": {
+              "type": "array",
+              "items": {
                 "type": "object",
                 "properties": {
-                    "severity": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "current_value": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "value": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "criticity": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "display": {
-                        "type": "string"
-                    }
-                }
-            },
-            "history": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "urgency": {
-                            "type": "object",
-                            "properties": {
-                                "previous_value": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                },
-                                "value": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                }
-                            }
-                        },
-                        "created_by": {
-                            "type": "string"
-                        },
-                        "kill_chain": {
-                            "type": "object",
-                            "properties": {
-                                "previous_short_id": {
-                                    "type": "string"
-                                },
-                                "uuid": {
-                                    "type": "string"
-                                },
-                                "short_id": {
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "countermeasure_action_step": {
-                            "type": "object",
-                            "properties": {
-                                "status": {
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "entry_type": {
-                            "type": "string"
-                        },
-                        "comment": {
-                            "type": "object",
-                            "properties": {
-                                "status": {
-                                    "type": "string"
-                                },
-                                "uuid": {
-                                    "type": "string"
-                                },
-                                "content": {
-                                    "type": "string"
-                                },
-                                "display_name": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "created_at": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "details": {
-                            "type": "object",
-                            "properties": {
-                                "previous_value": {
-                                    "type": "string"
-                                },
-                                "value": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "alert_type": {
-                            "type": "object",
-                            "properties": {
-                                "previous_category": {
-                                    "type": "string"
-                                },
-                                "category": {
-                                    "type": "string"
-                                },
-                                "previous_value": {
-                                    "type": "string"
-                                },
-                                "value": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "alert": {
-                            "type": "object",
-                            "properties": {
-                                "status": {
-                                    "type": "string"
-                                },
-                                "previous_status": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "created_by_type": {
-                            "type": "string"
-                        },
-                        "history_comments": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "created_by": {
-                                        "type": "string",
-                                        "description": "The identifier of the creator of the comment"
-                                    },
-                                    "content": {
-                                        "type": "string",
-                                        "description": "Content of the comment"
-                                    },
-                                    "author": {
-                                        "type": "string",
-                                        "description": "Author of the comment"
-                                    },
-                                    "date": {
-                                        "type": "integer",
-                                        "format": "int32"
-                                    },
-                                    "created_by_type": {
-                                        "type": "string",
-                                        "description": "The type of the creator of the comment"
-                                    },
-                                    "uuid": {
-                                        "type": "string",
-                                        "format": "uuid",
-                                        "description": "Identifier of the comment"
-                                    }
-                                },
-                                "required": [
-                                    "author",
-                                    "content",
-                                    "created_by",
-                                    "created_by_type",
-                                    "date",
-                                    "uuid"
-                                ]
-                            }
-                        },
-                        "uuid": {
-                            "type": "string"
-                        },
-                        "countermeasure": {
-                            "type": "object",
-                            "properties": {
-                                "status": {
-                                    "type": "string"
-                                },
-                                "uuid": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "is_incident": {
-                "type": "boolean"
-            },
-            "assets": {
-                "type": "array",
-                "items": {
+                  "created_by": {
                     "type": "string",
-                    "format": "uuid"
+                    "description": "The identifier of the creator of the comment"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Content of the comment"
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "Author of the comment"
+                  },
+                  "date": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "created_by_type": {
+                    "type": "string",
+                    "description": "The type of the creator of the comment"
+                  },
+                  "uuid": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Identifier of the comment"
+                  }
+                },
+                "required": [
+                  "author",
+                  "content",
+                  "created_by",
+                  "created_by_type",
+                  "date",
+                  "uuid"
+                ]
+              }
+            },
+            "uuid": {
+              "type": "string"
+            },
+            "countermeasure": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "uuid": {
+                  "type": "string"
                 }
-            },
-            "countermeasures": {
-                "type": "array",
-                "items": {
+              }
+            }
+          }
+        }
+      },
+      "is_incident": {
+        "type": "boolean"
+      },
+      "assets": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "countermeasures": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "action_steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "Status of the action step"
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "description": "UUID of profile that created the action step"
+                  },
+                  "action_order": {
+                    "type": "string",
+                    "description": "Position in the execution order of action steps"
+                  },
+                  "denied_by": {
+                    "type": "string",
+                    "description": "UUID of profile that denied the action step"
+                  },
+                  "object": {
                     "type": "object",
-                    "properties": {
-                        "action_steps": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "status": {
-                                        "type": "string",
-                                        "description": "Status of the action step"
-                                    },
-                                    "created_by": {
-                                        "type": "string",
-                                        "description": "UUID of profile that created the action step"
-                                    },
-                                    "action_order": {
-                                        "type": "string",
-                                        "description": "Position in the execution order of action steps"
-                                    },
-                                    "denied_by": {
-                                        "type": "string",
-                                        "description": "UUID of profile that denied the action step"
-                                    },
-                                    "object": {
-                                        "type": "object",
-                                        "description": "Object associated to the action step"
-                                    },
-                                    "assignee": {
-                                        "type": "string",
-                                        "description": "UUID of the profile assigned to the progress of the action step"
-                                    },
-                                    "activated_by_type": {
-                                        "type": "string",
-                                        "description": "Type of the profile that activated the action step"
-                                    },
-                                    "comments": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "created_by": {
-                                                    "type": "string",
-                                                    "description": "The identifier of the creator of the comment"
-                                                },
-                                                "content": {
-                                                    "type": "string",
-                                                    "description": "Content of the comment"
-                                                },
-                                                "author": {
-                                                    "type": "string",
-                                                    "description": "Author of the comment"
-                                                },
-                                                "date": {
-                                                    "type": "integer",
-                                                    "format": "int32"
-                                                },
-                                                "created_by_type": {
-                                                    "type": "string",
-                                                    "description": "The type of the creator of the comment"
-                                                },
-                                                "uuid": {
-                                                    "type": "string",
-                                                    "format": "uuid",
-                                                    "description": "Identifier of the comment"
-                                                }
-                                            },
-                                            "required": [
-                                                "author",
-                                                "content",
-                                                "created_by",
-                                                "created_by_type",
-                                                "date",
-                                                "uuid"
-                                            ]
-                                        }
-                                    },
-                                    "created_at": {
-                                        "type": "string",
-                                        "format": "date-time",
-                                        "description": "Date the action step was created"
-                                    },
-                                    "activated_by": {
-                                        "type": "string",
-                                        "description": "UUID of profile that activated the action step"
-                                    },
-                                    "activated_at": {
-                                        "type": "string",
-                                        "format": "date-time",
-                                        "description": "Date the action step was activated"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "description": "Description of the action step"
-                                    },
-                                    "denied_at": {
-                                        "type": "string",
-                                        "format": "date-time",
-                                        "description": "Date the action step was denied"
-                                    },
-                                    "name": {
-                                        "type": "string",
-                                        "description": "Name of the action step"
-                                    },
-                                    "created_by_type": {
-                                        "type": "string",
-                                        "description": "Type of the profile that created the action step"
-                                    },
-                                    "denied_by_type": {
-                                        "type": "string",
-                                        "description": "Type of the profile that denied the action step"
-                                    }
-                                }
-                            }
-                        },
-                        "activated_by_type": {
-                            "type": "string",
-                            "description": "Type of the profile that activated the countermeasure"
-                        },
-                        "comments": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "created_by": {
-                                        "type": "string",
-                                        "description": "The identifier of the creator of the comment"
-                                    },
-                                    "content": {
-                                        "type": "string",
-                                        "description": "Content of the comment"
-                                    },
-                                    "author": {
-                                        "type": "string",
-                                        "description": "Author of the comment"
-                                    },
-                                    "date": {
-                                        "type": "integer",
-                                        "format": "int32"
-                                    },
-                                    "created_by_type": {
-                                        "type": "string",
-                                        "description": "The type of the creator of the comment"
-                                    },
-                                    "uuid": {
-                                        "type": "string",
-                                        "format": "uuid",
-                                        "description": "Identifier of the comment"
-                                    }
-                                },
-                                "required": [
-                                    "author",
-                                    "content",
-                                    "created_by",
-                                    "created_by_type",
-                                    "date",
-                                    "uuid"
-                                ]
-                            }
-                        },
-                        "activated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Date the countermeasure was activated"
-                        },
-                        "relevance": {
-                            "type": "integer",
-                            "format": "int32",
-                            "description": "Relevance of the countermeasure"
-                        },
-                        "denied_by_type": {
-                            "type": "string",
-                            "description": "Type of the profile that denied the countermeasure"
-                        },
-                        "status": {
-                            "type": "string",
-                            "description": "(deprecated) Status of the countermeasure"
-                        },
+                    "description": "Object associated to the action step"
+                  },
+                  "assignee": {
+                    "type": "string",
+                    "description": "UUID of the profile assigned to the progress of the action step"
+                  },
+                  "activated_by_type": {
+                    "type": "string",
+                    "description": "Type of the profile that activated the action step"
+                  },
+                  "comments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
                         "created_by": {
-                            "type": "string",
-                            "description": "UUID of profile that created the countermeasure"
-                        },
-                        "model_uuid": {
-                            "type": "string",
-                            "description": "UUID of the model from which this countermeasure has been created"
-                        },
-                        "activated_by": {
-                            "type": "string",
-                            "description": "UUID of profile that activated the countermeasure"
-                        },
-                        "description": {
-                            "type": "string",
-                            "description": "Description of the countermeasure"
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Name of the countermeasure"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "description": "UUID of the countermeasure"
-                        },
-                        "duration": {
-                            "type": "string",
-                            "description": "Estimated duration to apply the countermeasures"
-                        },
-                        "alert_uuid": {
-                            "type": "string",
-                            "description": "UUID of the alert related to the countermeasure"
-                        },
-                        "denied_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Date the countermeasure was denied"
-                        },
-                        "created_by_type": {
-                            "type": "string",
-                            "description": "Type of the profile that created the countermeasure"
-                        },
-                        "course_of_action": {
-                            "type": "object",
-                            "description": "(deprecated) STIX2 object course of action"
-                        },
-                        "dynamic_relevance": {
-                            "type": "integer",
-                            "format": "int32",
-                            "description": "Dynamic relevance of the countermeasure"
-                        },
-                        "denied_by": {
-                            "type": "string",
-                            "description": "UUID of profile that denied the countermeasure"
-                        },
-                        "assignee": {
-                            "type": "string",
-                            "description": "UUID of the profile assigned to the progress of the countermeasure"
-                        },
-                        "created_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Date the countermeasure was created"
-                        }
-                    }
-                }
-            },
-            "updated_at": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "comments": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "created_by": {
-                            "type": "string",
-                            "description": "The identifier of the creator of the comment"
+                          "type": "string",
+                          "description": "The identifier of the creator of the comment"
                         },
                         "content": {
-                            "type": "string",
-                            "description": "Content of the comment"
+                          "type": "string",
+                          "description": "Content of the comment"
                         },
                         "author": {
-                            "type": "string",
-                            "description": "Author of the comment"
-                        },
-                        "unseen": {
-                            "type": "boolean"
+                          "type": "string",
+                          "description": "Author of the comment"
                         },
                         "date": {
-                            "type": "integer",
-                            "format": "int32"
+                          "type": "integer",
+                          "format": "int32"
                         },
                         "created_by_type": {
-                            "type": "string",
-                            "description": "The type of the creator of the comment"
+                          "type": "string",
+                          "description": "The type of the creator of the comment"
                         },
                         "uuid": {
-                            "type": "string",
-                            "format": "uuid",
-                            "description": "Identifier of the comment"
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Identifier of the comment"
                         }
-                    },
-                    "required": [
+                      },
+                      "required": [
                         "author",
                         "content",
                         "created_by",
                         "created_by_type",
                         "date",
                         "uuid"
-                    ]
+                      ]
+                    }
+                  },
+                  "created_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Date the action step was created"
+                  },
+                  "activated_by": {
+                    "type": "string",
+                    "description": "UUID of profile that activated the action step"
+                  },
+                  "activated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Date the action step was activated"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description of the action step"
+                  },
+                  "denied_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Date the action step was denied"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the action step"
+                  },
+                  "created_by_type": {
+                    "type": "string",
+                    "description": "Type of the profile that created the action step"
+                  },
+                  "denied_by_type": {
+                    "type": "string",
+                    "description": "Type of the profile that denied the action step"
+                  }
                 }
+              }
             },
-            "ttps": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "description": {
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string"
-                        },
-                        "id": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "id",
-                        "name",
-                        "type"
-                    ]
-                }
+            "activated_by_type": {
+              "type": "string",
+              "description": "Type of the profile that activated the countermeasure"
             },
-            "number_of_unseen_comments": {
-                "type": "integer",
-                "format": "int32"
+            "comments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "created_by": {
+                    "type": "string",
+                    "description": "The identifier of the creator of the comment"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Content of the comment"
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "Author of the comment"
+                  },
+                  "date": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "created_by_type": {
+                    "type": "string",
+                    "description": "The type of the creator of the comment"
+                  },
+                  "uuid": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Identifier of the comment"
+                  }
+                },
+                "required": [
+                  "author",
+                  "content",
+                  "created_by",
+                  "created_by_type",
+                  "date",
+                  "uuid"
+                ]
+              }
+            },
+            "activated_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Date the countermeasure was activated"
+            },
+            "relevance": {
+              "type": "integer",
+              "format": "int32",
+              "description": "Relevance of the countermeasure"
+            },
+            "denied_by_type": {
+              "type": "string",
+              "description": "Type of the profile that denied the countermeasure"
             },
             "status": {
-                "type": "object",
-                "properties": {
-                    "description": {
-                        "type": "string"
-                    },
-                    "uuid": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                }
+              "type": "string",
+              "description": "(deprecated) Status of the countermeasure"
             },
             "created_by": {
-                "type": "string"
+              "type": "string",
+              "description": "UUID of profile that created the countermeasure"
             },
-            "updated_by": {
-                "type": "string"
+            "model_uuid": {
+              "type": "string",
+              "description": "UUID of the model from which this countermeasure has been created"
             },
-            "source": {
-                "type": "string"
+            "activated_by": {
+              "type": "string",
+              "description": "UUID of profile that activated the countermeasure"
             },
-            "community_uuid": {
-                "type": "string",
-                "format": "uuid"
+            "description": {
+              "type": "string",
+              "description": "Description of the countermeasure"
             },
-            "number_of_total_comments": {
-                "type": "integer",
-                "format": "int32"
+            "name": {
+              "type": "string",
+              "description": "Name of the countermeasure"
             },
             "uuid": {
-                "type": "string",
-                "format": "uuid"
+              "type": "string",
+              "description": "UUID of the countermeasure"
             },
-            "rule": {
-                "type": "object",
-                "properties": {
-                    "type": {
-                        "type": "string"
-                    },
-                    "severity": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "pattern": {
-                        "type": "string"
-                    },
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    }
-                },
-                "required": [
-                    "name",
-                    "pattern",
-                    "uuid"
-                ]
+            "duration": {
+              "type": "string",
+              "description": "Estimated duration to apply the countermeasures"
             },
-            "adversaries": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "description": {
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string"
-                        },
-                        "id": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "id",
-                        "name",
-                        "type"
-                    ]
-                }
+            "alert_uuid": {
+              "type": "string",
+              "description": "UUID of the alert related to the countermeasure"
             },
-            "short_id": {
-                "type": "string"
-            },
-            "first_seen_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "last_seen_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "event_uuids": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "format": "uuid"
-                }
-            },
-            "kill_chain_short_id": {
-                "type": "string"
-            },
-            "similar": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "alert_type": {
-                "type": "object",
-                "properties": {
-                    "category": {
-                        "type": "string"
-                    },
-                    "value": {
-                        "type": "string"
-                    }
-                }
-            },
-            "details": {
-                "type": "string"
-            },
-            "stix": {
-                "type": "object"
+            "denied_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Date the countermeasure was denied"
             },
             "created_by_type": {
-                "type": "string"
+              "type": "string",
+              "description": "Type of the profile that created the countermeasure"
             },
-            "entity": {
-                "type": "object",
-                "properties": {
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name",
-                    "uuid"
-                ]
+            "course_of_action": {
+              "type": "object",
+              "description": "(deprecated) STIX2 object course of action"
+            },
+            "dynamic_relevance": {
+              "type": "integer",
+              "format": "int32",
+              "description": "Dynamic relevance of the countermeasure"
+            },
+            "denied_by": {
+              "type": "string",
+              "description": "UUID of profile that denied the countermeasure"
+            },
+            "assignee": {
+              "type": "string",
+              "description": "UUID of the profile assigned to the progress of the countermeasure"
             },
             "created_at": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "updated_by_type": {
-                "type": "string"
-            },
-            "title": {
-                "type": "string"
-            },
-            "target": {
-                "type": "string"
+              "type": "string",
+              "format": "date-time",
+              "description": "Date the countermeasure was created"
             }
+          }
         }
+      },
+      "updated_at": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "comments": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "created_by": {
+              "type": "string",
+              "description": "The identifier of the creator of the comment"
+            },
+            "content": {
+              "type": "string",
+              "description": "Content of the comment"
+            },
+            "author": {
+              "type": "string",
+              "description": "Author of the comment"
+            },
+            "unseen": {
+              "type": "boolean"
+            },
+            "date": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "created_by_type": {
+              "type": "string",
+              "description": "The type of the creator of the comment"
+            },
+            "uuid": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifier of the comment"
+            }
+          },
+          "required": [
+            "author",
+            "content",
+            "created_by",
+            "created_by_type",
+            "date",
+            "uuid"
+          ]
+        }
+      },
+      "ttps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name", "type"]
+        }
+      },
+      "number_of_unseen_comments": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "status": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "created_by": {
+        "type": "string"
+      },
+      "updated_by": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "community_uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "number_of_total_comments": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "rule": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["name", "pattern", "uuid"]
+      },
+      "adversaries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name", "type"]
+        }
+      },
+      "short_id": {
+        "type": "string"
+      },
+      "first_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "last_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "event_uuids": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "kill_chain_short_id": {
+        "type": "string"
+      },
+      "similar": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "alert_type": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "details": {
+        "type": "string"
+      },
+      "stix": {
+        "type": "object"
+      },
+      "created_by_type": {
+        "type": "string"
+      },
+      "entity": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "uuid"]
+      },
+      "created_at": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "updated_by_type": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "target": {
+        "type": "string"
+      }
     }
+  }
 }

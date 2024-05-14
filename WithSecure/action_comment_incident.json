@@ -18,10 +18,7 @@
         "type": "string"
       }
     },
-    "required": [
-        "target",
-        "comment"
-    ]
+    "required": ["target", "comment"]
   },
   "results": {}
 }

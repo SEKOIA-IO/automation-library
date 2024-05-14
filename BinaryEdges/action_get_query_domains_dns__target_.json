@@ -1,62 +1,62 @@
 {
-    "uuid": "27d556e4-b2d9-4adb-9dfe-87dae867a974",
-    "name": "List DNS targets by domain",
-    "docker_parameters": "get-query/domains/dns/{target}",
-    "description": "Return list of known DNS results for the target domain. Possible types of records currently available:\n\n -A, AAAA, NS, MX",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "List DNS targets by domain",
-        "properties": {
-            "target": {
-                "in": "path",
-                "type": "string"
-            },
-            "page": {
-                "in": "query",
-                "type": "integer"
-            }
-        },
-        "required": ["target"]
+  "uuid": "27d556e4-b2d9-4adb-9dfe-87dae867a974",
+  "name": "List DNS targets by domain",
+  "docker_parameters": "get-query/domains/dns/{target}",
+  "description": "Return list of known DNS results for the target domain. Possible types of records currently available:\n\n -A, AAAA, NS, MX",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "List DNS targets by domain",
+    "properties": {
+      "target": {
+        "in": "path",
+        "type": "string"
+      },
+      "page": {
+        "in": "query",
+        "type": "integer"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "query": {
+    "required": ["target"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "page": {
+        "type": "integer"
+      },
+      "pagesize": {
+        "type": "integer"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "A": {
+              "type": "array",
+              "items": {
                 "type": "string"
+              }
             },
-            "page": {
-                "type": "integer"
+            "updated_at": {
+              "type": "string"
             },
-            "pagesize": {
-                "type": "integer"
+            "domain": {
+              "type": "string"
             },
-            "total": {
-                "type": "integer"
-            },
-            "events": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "A": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "updated_at": {
-                            "type": "string"
-                        },
-                        "domain": {
-                            "type": "string"
-                        },
-                        "root": {
-                            "type": "string"
-                        }
-                    }
-                }
+            "root": {
+              "type": "string"
             }
+          }
         }
+      }
     }
+  }
 }

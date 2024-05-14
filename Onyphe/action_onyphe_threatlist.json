@@ -1,87 +1,85 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "ip": {
-                "description": "The ip to scan",
-                "type": "string"
-            },
-            "budget": {
-                "description": "Maximum number of pages to retrieve",
-                "type": "integer"
-            },
-            "first_page": {
-                "description": "Start retrieving data from this page",
-                "type": "integer"
-            }
-        },
-        "required": [
-            "ip"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ip": {
+        "description": "The ip to scan",
+        "type": "string"
+      },
+      "budget": {
+        "description": "Maximum number of pages to retrieve",
+        "type": "integer"
+      },
+      "first_page": {
+        "description": "Start retrieving data from this page",
+        "type": "integer"
+      }
     },
-    "description": "Get threatlist information on IP with Onyphe",
-    "docker_parameters": "onyphe_threatlist",
-    "name": "Get IP Threat List",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "count": {
-                "description": "Number of elements in results",
-                "type": "integer"
-            },
-            "error": {
-                "description": "Error code, 0 for no error",
-                "type": "integer"
-            },
-            "message": {
-                "description": "Error message, only if error is not 0",
-                "type": "string"
-            },
-            "myip": {
-                "description": "IP from which the request is made",
-                "type": "string"
-            },
-            "results": {
-                "description": "array of data",
-                "type": "array",
-                "items": {
-                    "type": "object"
-                }
-            },
-            "status": {
-                "description": "Status of the request: ok/nok",
-                "type": "string"
-            },
-            "took": {
-                "description": "Time to serve the request",
-                "type": "string"
-            },
-            "total": {
-                "description": "Total number of pieces of information, only up to 10000 are returned in results",
-                "type": "integer"
-            },
-            "max_page": {
-                "description": "Maximal number of pages",
-                "type": "integer"
-            },
-            "page": {
-                "description": "Last page requested",
-                "type": "integer"
-            }
-        },
-        "required": [
-            "count",
-            "results",
-            "status",
-            "took",
-            "total",
-            "max_page",
-            "page"
-        ],
-        "title": "Results",
-        "type": "object"
+    "required": ["ip"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Get threatlist information on IP with Onyphe",
+  "docker_parameters": "onyphe_threatlist",
+  "name": "Get IP Threat List",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "count": {
+        "description": "Number of elements in results",
+        "type": "integer"
+      },
+      "error": {
+        "description": "Error code, 0 for no error",
+        "type": "integer"
+      },
+      "message": {
+        "description": "Error message, only if error is not 0",
+        "type": "string"
+      },
+      "myip": {
+        "description": "IP from which the request is made",
+        "type": "string"
+      },
+      "results": {
+        "description": "array of data",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "status": {
+        "description": "Status of the request: ok/nok",
+        "type": "string"
+      },
+      "took": {
+        "description": "Time to serve the request",
+        "type": "string"
+      },
+      "total": {
+        "description": "Total number of pieces of information, only up to 10000 are returned in results",
+        "type": "integer"
+      },
+      "max_page": {
+        "description": "Maximal number of pages",
+        "type": "integer"
+      },
+      "page": {
+        "description": "Last page requested",
+        "type": "integer"
+      }
     },
-    "uuid": "be59c0f9-194e-4405-8492-383155769ac9"
+    "required": [
+      "count",
+      "results",
+      "status",
+      "took",
+      "total",
+      "max_page",
+      "page"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "be59c0f9-194e-4405-8492-383155769ac9"
 }

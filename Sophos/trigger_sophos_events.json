@@ -28,14 +28,11 @@
         "description": "A list of type to exclude from the pulling",
         "type": "array",
         "items": {
-            "type": "string"
+          "type": "string"
         }
       }
     },
-    "required": [
-      "frequency",
-      "intake_key"
-    ],
+    "required": ["frequency", "intake_key"],
     "title": "Sophos Events",
     "type": "object"
   },

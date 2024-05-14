@@ -1,34 +1,28 @@
 {
-    "configuration": {
-        "title": "ServiceNow",
-        "type": "object",
-        "properties": {
-            "base_url": {
-                "type": "string",
-                "description": "ServiceNox base url",
-                "format": "uri"
-            },
-            "username": {
-                "type": "string",
-                "description": "Username"
-            },
-            "password": {
-                "type": "string",
-                "description": "Password"
-            }
-        },
-        "required": [
-            "base_url",
-            "username",
-            "password"
-        ],
-        "secrets": [
-            "password"
-        ]
+  "configuration": {
+    "title": "ServiceNow",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "type": "string",
+        "description": "ServiceNox base url",
+        "format": "uri"
+      },
+      "username": {
+        "type": "string",
+        "description": "Username"
+      },
+      "password": {
+        "type": "string",
+        "description": "Password"
+      }
     },
-    "uuid": "2b2f877e-6eaa-4d6c-a18e-f3383e52a429",
-    "name": "ServiceNow",
-    "slug": "servicenow",
-    "description": "[ServiceNow](https://www.servicenow.com/) is an IT company allowing creating workflow to empower employees productivity and to improve customers experience",
-    "version": "1.24"
+    "required": ["base_url", "username", "password"],
+    "secrets": ["password"]
+  },
+  "uuid": "2b2f877e-6eaa-4d6c-a18e-f3383e52a429",
+  "name": "ServiceNow",
+  "slug": "servicenow",
+  "description": "[ServiceNow](https://www.servicenow.com/) is an IT company allowing creating workflow to empower employees productivity and to improve customers experience",
+  "version": "1.24"
 }

@@ -26,9 +26,7 @@
         }
       }
     },
-    "required": [
-      "signIns"
-    ],
+    "required": ["signIns"],
     "definitions": {
       "DeviceDetail": {
         "title": "DeviceDetail",
@@ -63,10 +61,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "isCompliant",
-          "isManaged"
-        ]
+        "required": ["isCompliant", "isManaged"]
       },
       "GeoCoordinates": {
         "title": "GeoCoordinates",
@@ -85,10 +80,7 @@
             "type": "number"
           }
         },
-        "required": [
-          "latitude",
-          "longitude"
-        ]
+        "required": ["latitude", "longitude"]
       },
       "SignInLocation": {
         "title": "SignInLocation",
@@ -128,9 +120,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "errorCode"
-        ]
+        "required": ["errorCode"]
       },
       "SignIn": {
         "title": "SignIn",

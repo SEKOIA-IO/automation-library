@@ -1,43 +1,43 @@
 {
-    "uuid": "3b1314cd-3bdd-4525-ae56-0ea52f4ffb6a",
-    "name": "Whois",
-    "docker_parameters": "whois_domain",
-    "description": "Get the current WHOIS for a domain",
-    "arguments": {
-        "type": "object",
-        "properties": {
-            "domain": {
-                "in": "query",
-                "type": "string"
-            },
-            "exact": {
-                "in": "query",
-                "type": "string"
-            },
-            "maxResults": {
-                "in": "query",
-                "type": "string"
-            },
-            "Authorization": {
-                "in": "header",
-                "type": "string"
-            }
-        },
-        "required": ["domain"]
+  "uuid": "3b1314cd-3bdd-4525-ae56-0ea52f4ffb6a",
+  "name": "Whois",
+  "docker_parameters": "whois_domain",
+  "description": "Get the current WHOIS for a domain",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "domain": {
+        "in": "query",
+        "type": "string"
+      },
+      "exact": {
+        "in": "query",
+        "type": "string"
+      },
+      "maxResults": {
+        "in": "query",
+        "type": "string"
+      },
+      "Authorization": {
+        "in": "header",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "results": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "domains": {
-                "type": "array",
-                "items": {
-                    "type": "object"
-                }
-            }
+    "required": ["domain"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "domains": {
+        "type": "array",
+        "items": {
+          "type": "object"
         }
+      }
     }
+  }
 }

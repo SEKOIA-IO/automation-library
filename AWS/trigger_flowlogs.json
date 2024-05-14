@@ -24,10 +24,7 @@
         "default": 10000
       }
     },
-    "required": [
-      "frequency",
-      "bucket_name"
-    ],
+    "required": ["frequency", "bucket_name"],
     "title": "Flowlog configuration",
     "type": "object"
   },
@@ -43,9 +40,7 @@
         "type": "string"
       }
     },
-    "required": [
-      "records"
-    ],
+    "required": ["records"],
     "title": "Flowlog records"
   },
   "uuid": "e1e721c1-0263-4763-8812-25bf24d062f4"

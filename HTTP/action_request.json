@@ -14,14 +14,7 @@
       "method": {
         "description": "Method of the HTTP request",
         "type": "string",
-        "enum": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "head",
-          "delete"
-        ]
+        "enum": ["get", "post", "put", "patch", "head", "delete"]
       },
       "data": {
         "description": "The body to attach to the request",
@@ -46,10 +39,7 @@
         "default": true
       }
     },
-    "required": [
-      "url",
-      "method"
-    ],
+    "required": ["url", "method"],
     "title": "Arguments",
     "type": "object"
   },
@@ -92,10 +82,7 @@
         "type": "object"
       }
     },
-    "required": [
-      "status_code",
-      "url"
-    ],
+    "required": ["status_code", "url"],
     "title": "Results",
     "type": "object"
   },

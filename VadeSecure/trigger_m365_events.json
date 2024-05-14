@@ -29,10 +29,7 @@
         "default": 10
       }
     },
-    "required": [
-      "frequency",
-      "tenant_id"
-    ],
+    "required": ["frequency", "tenant_id"],
     "title": "M365 Events",
     "type": "object"
   },

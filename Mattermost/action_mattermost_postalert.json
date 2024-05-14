@@ -1,40 +1,36 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "alert_uuid": {
-                "description": "The Unique identifier of the alert",
-                "type": "string"
-            },
-            "channel": {
-                "description": "The channel the message posts in. Use the channel’s name and not the display name, e.g. use town-square, not Town Square.",
-                "type": "string"
-            },
-            "api_key": {
-                "description": "The Sekoia.io API-Key to read the alert content.",
-                "type": "string"
-            },
-            "base_url": {
-                "description": "Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).",
-                "type": "string",
-                "format": "uri"
-            },
-            "pretext": {
-                "description": "An optional line of text that will be shown above the alert",
-                "type": "string"
-            }
-        },
-        "required": [
-            "alert_uuid",
-            "api_key",
-            "base_url"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "alert_uuid": {
+        "description": "The Unique identifier of the alert",
+        "type": "string"
+      },
+      "channel": {
+        "description": "The channel the message posts in. Use the channel’s name and not the display name, e.g. use town-square, not Town Square.",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "The Sekoia.io API-Key to read the alert content.",
+        "type": "string"
+      },
+      "base_url": {
+        "description": "Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).",
+        "type": "string",
+        "format": "uri"
+      },
+      "pretext": {
+        "description": "An optional line of text that will be shown above the alert",
+        "type": "string"
+      }
     },
-    "description": "Post alert to Mattermost",
-    "docker_parameters": "mattermost_post_alert",
-    "name": "Post Sekoia.io Alert",
-    "results": {},
-    "uuid": "ef3794ca-b5fa-4cee-af3f-fd5ffac01c88"
+    "required": ["alert_uuid", "api_key", "base_url"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Post alert to Mattermost",
+  "docker_parameters": "mattermost_post_alert",
+  "name": "Post Sekoia.io Alert",
+  "results": {},
+  "uuid": "ef3794ca-b5fa-4cee-af3f-fd5ffac01c88"
 }

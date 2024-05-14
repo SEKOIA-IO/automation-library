@@ -1,41 +1,41 @@
 {
-    "uuid": "11f8d9c0-b11c-48aa-a1cf-995ddb2f53ac",
-    "name": "Reverse Whois (email)",
-    "docker_parameters": "whois_email",
-    "description": "Get WHOIS records associated with an email address",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "get_whois_records_associated_with_an_email_address_",
-        "properties": {
-            "email": {
-                "in": "query",
-                "type": "string"
-            },
-            "exact": {
-                "in": "query",
-                "type": "string"
-            },
-            "maxResults": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": ["email"]
+  "uuid": "11f8d9c0-b11c-48aa-a1cf-995ddb2f53ac",
+  "name": "Reverse Whois (email)",
+  "docker_parameters": "whois_email",
+  "description": "Get WHOIS records associated with an email address",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_whois_records_associated_with_an_email_address_",
+    "properties": {
+      "email": {
+        "in": "query",
+        "type": "string"
+      },
+      "exact": {
+        "in": "query",
+        "type": "string"
+      },
+      "maxResults": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "results": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "domains": {
-                "type": "array",
-                "items": {
-                    "type": "object"
-                }
-            }
+    "required": ["email"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "domains": {
+        "type": "array",
+        "items": {
+          "type": "object"
         }
+      }
     }
+  }
 }

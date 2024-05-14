@@ -1,26 +1,24 @@
 {
-    "arguments": {
-        "type": "object",
-        "title": "Trigger Arguments",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {}
+  "arguments": {
+    "type": "object",
+    "title": "Trigger Arguments",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {}
+  },
+  "description": "Webhook Trigger to receive specific Sekoia.io Alerts",
+  "name": "Manual Trigger",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Results",
+    "type": "object",
+    "properties": {
+      "alert_uuid": {
+        "description": "Unique identifier of the Alert (UUID string).",
+        "type": "string"
+      }
     },
-    "description": "Webhook Trigger to receive specific Sekoia.io Alerts",
-    "name": "Manual Trigger",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Results",
-        "type": "object",
-        "properties": {
-            "alert_uuid": {
-                "description": "Unique identifier of the Alert (UUID string).",
-                "type": "string"
-            }
-        },
-        "required": [
-            "alert_uuid"
-        ]
-    },
-    "uuid": "fc26eb9f-b272-4c15-b3bf-ace397c0dc57",
-    "webhook": true
+    "required": ["alert_uuid"]
+  },
+  "uuid": "fc26eb9f-b272-4c15-b3bf-ace397c0dc57",
+  "webhook": true
 }

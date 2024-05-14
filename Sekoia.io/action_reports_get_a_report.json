@@ -1,28 +1,26 @@
 {
-    "uuid": "4b2accb8-8091-4784-8683-53321bb3c575",
-    "name": "Get CTI Report",
-    "docker_parameters": "get-reports/{uuid}",
-    "description": "Retrieve the details of a report",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "reports_get_a_report",
-        "properties": {
-            "uuid": {
-                "type": "string",
-                "in": "path"
-            }
-        },
-        "required": [
-            "uuid"
-        ]
+  "uuid": "4b2accb8-8091-4784-8683-53321bb3c575",
+  "name": "Get CTI Report",
+  "docker_parameters": "get-reports/{uuid}",
+  "description": "Retrieve the details of a report",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "reports_get_a_report",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "data": {
-                "type": "string"
-            }
-        }
+    "required": ["uuid"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "string"
+      }
     }
+  }
 }

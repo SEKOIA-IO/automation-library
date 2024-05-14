@@ -24,10 +24,7 @@
         "default": 10000
       }
     },
-    "required": [
-      "frequency",
-      "bucket_name"
-    ],
+    "required": ["frequency", "bucket_name"],
     "title": "CloudTrail configuration",
     "type": "object"
   },
@@ -43,9 +40,7 @@
         "type": "string"
       }
     },
-    "required": [
-      "records"
-    ],
+    "required": ["records"],
     "title": "Cloudtrail logs"
   },
   "uuid": "358fd883-bb17-4f28-a91a-7223f0a84f94"

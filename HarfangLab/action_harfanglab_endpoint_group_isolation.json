@@ -1,39 +1,34 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "id": {
-                "description": "The identifier of the group to isolate",
-                "type": "string"
-            }
-        },
-        "required": [
-            "id"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "id": {
+        "description": "The identifier of the group to isolate",
+        "type": "string"
+      }
     },
-    "description": "Isolate a group of endpoints",
-    "docker_parameters": "harfanglab_endpoint_group_isolation",
-    "name": "Isolate a group",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "requested": {
-                "description": "The list of identifiers of isolated endpoints",
-                "type": "array"
-            },
-            "unrequested": {
-                "description": "The list of identifiers of non-isolated endpoints",
-                "type": "array"
-            }
-        },
-        "required": [
-            "requested",
-            "unrequested"
-        ],
-        "title": "Results",
-        "type": "object"
+    "required": ["id"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Isolate a group of endpoints",
+  "docker_parameters": "harfanglab_endpoint_group_isolation",
+  "name": "Isolate a group",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "requested": {
+        "description": "The list of identifiers of isolated endpoints",
+        "type": "array"
+      },
+      "unrequested": {
+        "description": "The list of identifiers of non-isolated endpoints",
+        "type": "array"
+      }
     },
-    "uuid": "8f9549da-ba10-4de3-bdba-fd37d7a4ce69"
+    "required": ["requested", "unrequested"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "8f9549da-ba10-4de3-bdba-fd37d7a4ce69"
 }

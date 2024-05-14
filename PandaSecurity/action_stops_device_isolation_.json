@@ -1,36 +1,34 @@
 {
-    "uuid": "4ca7c1dc-47ab-4b29-95fa-8acaf0c02efb",
-    "name": "Stop devices isolation",
-    "docker_parameters": "post-api/v1/accounts/{account_id}/devices/noisolation",
-    "description": "Stops isolation on the specified devices.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Stop devices isolation",
-        "properties": {
-            "device_ids": {
-                "description": "List of IDs of devices to remove from isolation.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
-                "type": "array",
-                "in": "body",
-                "items": {
-                    "type": "str"
-                }
-            }
-        },
-        "required": [
-            "device_ids"
-        ]
-    },
-    "results": {
-        "type": "object",
-        "properties": {
-            "processed_device_ids": {
-                "type": "array",
-                "description": "List of IDs of the devices removed from isolation",
-                "items": {
-                    "type": "str"
-                }
-            }
+  "uuid": "4ca7c1dc-47ab-4b29-95fa-8acaf0c02efb",
+  "name": "Stop devices isolation",
+  "docker_parameters": "post-api/v1/accounts/{account_id}/devices/noisolation",
+  "description": "Stops isolation on the specified devices.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Stop devices isolation",
+    "properties": {
+      "device_ids": {
+        "description": "List of IDs of devices to remove from isolation.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "str"
         }
+      }
+    },
+    "required": ["device_ids"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "processed_device_ids": {
+        "type": "array",
+        "description": "List of IDs of the devices removed from isolation",
+        "items": {
+          "type": "str"
+        }
+      }
     }
+  }
 }

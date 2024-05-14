@@ -1,39 +1,39 @@
 {
-    "uuid": "245b3f58-0a4f-49c1-8b48-73c3b43673b6",
-    "name": "Config To Observables",
-    "docker_parameters": "config_to_observables",
-    "description": "Convert a MWDB config to a bundle of observables",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "config_path": {
-                "description": "File path to the JSON config to read.",
-                "type": "string"
-            },
-            "config": {
-                "description": "The JSON content of the config.",
-                "type": "object"
-            }
-        },
-        "oneOf": [{"required": ["config"]}, {"required": ["config_path"]}],
-        "required": [],
-        "title": "Arguments",
+  "uuid": "245b3f58-0a4f-49c1-8b48-73c3b43673b6",
+  "name": "Config To Observables",
+  "docker_parameters": "config_to_observables",
+  "description": "Convert a MWDB config to a bundle of observables",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "config_path": {
+        "description": "File path to the JSON config to read.",
+        "type": "string"
+      },
+      "config": {
+        "description": "The JSON content of the config.",
         "type": "object"
+      }
     },
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "observables": {
-                "description": "Bundle with the list of observables",
-                "type": "array"
-            },
-            "observables_path": {
-                "description": "Path of the file holding the bundle with the observables",
-                "type": "string"
-            }
-        },
-        "required": [],
-        "title": "Results",
-        "type": "object"
-    }
+    "oneOf": [{ "required": ["config"] }, { "required": ["config_path"] }],
+    "required": [],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "observables": {
+        "description": "Bundle with the list of observables",
+        "type": "array"
+      },
+      "observables_path": {
+        "description": "Path of the file holding the bundle with the observables",
+        "type": "string"
+      }
+    },
+    "required": [],
+    "title": "Results",
+    "type": "object"
+  }
 }

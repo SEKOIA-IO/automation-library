@@ -25,10 +25,7 @@
         "type": "string"
       }
     },
-    "required": [
-      "frequency",
-      "intake_key"
-    ],
+    "required": ["frequency", "intake_key"],
     "title": "Sophos Query Events",
     "type": "object"
   },

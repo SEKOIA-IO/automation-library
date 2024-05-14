@@ -1,160 +1,158 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "ip": {
-                "description": "The ip to scan",
-                "type": "string"
-            }
-        },
-        "required": [
-            "ip"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ip": {
+        "description": "The ip to scan",
+        "type": "string"
+      }
     },
-    "description": "Scan ip with Virus Total",
-    "docker_parameters": "virustotal_scan_ip",
-    "name": "Scan IP",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "response_code": {
-                "type": "integer",
-                "description": "Response Code"
+    "required": ["ip"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Scan ip with Virus Total",
+  "docker_parameters": "virustotal_scan_ip",
+  "name": "Scan IP",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "response_code": {
+        "type": "integer",
+        "description": "Response Code"
+      },
+      "verbose_msg": {
+        "type": "string",
+        "description": "Textual description of the response code"
+      },
+      "country": {
+        "type": "string",
+        "description": "Country hosting this IP address"
+      },
+      "asn": {
+        "type": "string",
+        "description": "Autonomous System number hosting this IP address"
+      },
+      "undetected_downloaded_samples": {
+        "type": "array",
+        "description": "List of undetected samples downloaded from this IP address",
+        "items": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Date of sample submission"
             },
-            "verbose_msg": {
-                "type": "string",
-                "description": "Textual description of the response code"
+            "positives": {
+              "type": "integer",
+              "description": "Number of antivirus detecting this sample as malicious"
             },
-            "country": {
-                "type": "string",
-                "description": "Country hosting this IP address"
+            "total": {
+              "type": "integer",
+              "description": "Number of antivirus that scanned this sample"
             },
-            "asn": {
-                "type": "string",
-                "description": "Autonomous System number hosting this IP address"
-            },
-            "undetected_downloaded_samples": {
-                "type": "array",
-                "description": "List of undetected samples downloaded from this IP address",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "date": {
-                            "type": "string",
-                            "description": "Date of sample submission"
-                        },
-                        "positives": {
-                            "type": "integer",
-                            "description": "Number of antivirus detecting this sample as malicious"
-                        },
-                        "total": {
-                            "type": "integer",
-                            "description": "Number of antivirus that scanned this sample"
-                        },
-                        "sha256": {
-                            "type": "string",
-                            "description": "SHA256 hash of the sample"
-                        }
-                    }
-                }
-            },
-            "undetected_urls": {
-                "type": "array",
-                "description": "List of undetected URLs on this IP address",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "scan_date": {
-                            "type": "string",
-                            "description": "Date of last scan"
-                        },
-                        "positives": {
-                            "type": "integer",
-                            "description": "Number of antivirus detecting this sample as malicious"
-                        },
-                        "total": {
-                            "type": "integer",
-                            "description": "Number of antivirus that scanned this sample"
-                        },
-                        "url": {
-                            "type": "string",
-                            "description": "URL on this domain"
-                        }
-                    }
-                }
-            },
-            "detected_downloaded_samples": {
-                "type": "array",
-                "description": "List of detected samples downloaded from this IP address",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "date": {
-                            "type": "string",
-                            "description": "Date of sample submission"
-                        },
-                        "positives": {
-                            "type": "integer",
-                            "description": "Number of antivirus detecting this sample as malicious"
-                        },
-                        "total": {
-                            "type": "integer",
-                            "description": "Number of antivirus that scanned this sample"
-                        },
-                        "sha256": {
-                            "type": "string",
-                            "description": "SHA256 hash of the sample"
-                        }
-                    }
-                }
-            },
-            "detected_urls": {
-                "type": "array",
-                "description": "List of detected URLs on this IP address",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "scan_date": {
-                            "type": "string",
-                            "description": "Date of last scan"
-                        },
-                        "positives": {
-                            "type": "integer",
-                            "description": "Number of antivirus detecting this sample as malicious"
-                        },
-                        "total": {
-                            "type": "integer",
-                            "description": "Number of antivirus that scanned this sample"
-                        },
-                        "url": {
-                            "type": "string",
-                            "description": "URL on this domain"
-                        }
-                    }
-                }
-            },
-            "resolutions": {
-                "type": "array",
-                "description": "List of domain names that resolved to this IP address",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "last_resolved": {
-                            "type": "string",
-                            "description": "Date of last resolution"
-                        },
-                        "hostname": {
-                            "type": "string",
-                            "description": "Domain name that resolved to this IP address"
-                        }
-                    }
-                }
+            "sha256": {
+              "type": "string",
+              "description": "SHA256 hash of the sample"
             }
-        },
-        "title": "Results",
-        "type": "object"
+          }
+        }
+      },
+      "undetected_urls": {
+        "type": "array",
+        "description": "List of undetected URLs on this IP address",
+        "items": {
+          "type": "object",
+          "properties": {
+            "scan_date": {
+              "type": "string",
+              "description": "Date of last scan"
+            },
+            "positives": {
+              "type": "integer",
+              "description": "Number of antivirus detecting this sample as malicious"
+            },
+            "total": {
+              "type": "integer",
+              "description": "Number of antivirus that scanned this sample"
+            },
+            "url": {
+              "type": "string",
+              "description": "URL on this domain"
+            }
+          }
+        }
+      },
+      "detected_downloaded_samples": {
+        "type": "array",
+        "description": "List of detected samples downloaded from this IP address",
+        "items": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Date of sample submission"
+            },
+            "positives": {
+              "type": "integer",
+              "description": "Number of antivirus detecting this sample as malicious"
+            },
+            "total": {
+              "type": "integer",
+              "description": "Number of antivirus that scanned this sample"
+            },
+            "sha256": {
+              "type": "string",
+              "description": "SHA256 hash of the sample"
+            }
+          }
+        }
+      },
+      "detected_urls": {
+        "type": "array",
+        "description": "List of detected URLs on this IP address",
+        "items": {
+          "type": "object",
+          "properties": {
+            "scan_date": {
+              "type": "string",
+              "description": "Date of last scan"
+            },
+            "positives": {
+              "type": "integer",
+              "description": "Number of antivirus detecting this sample as malicious"
+            },
+            "total": {
+              "type": "integer",
+              "description": "Number of antivirus that scanned this sample"
+            },
+            "url": {
+              "type": "string",
+              "description": "URL on this domain"
+            }
+          }
+        }
+      },
+      "resolutions": {
+        "type": "array",
+        "description": "List of domain names that resolved to this IP address",
+        "items": {
+          "type": "object",
+          "properties": {
+            "last_resolved": {
+              "type": "string",
+              "description": "Date of last resolution"
+            },
+            "hostname": {
+              "type": "string",
+              "description": "Domain name that resolved to this IP address"
+            }
+          }
+        }
+      }
     },
-    "uuid": "fee286fa-415b-4f04-bf26-536e40b64859"
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "fee286fa-415b-4f04-bf26-536e40b64859"
 }

@@ -1,65 +1,65 @@
 {
-    "uuid": "d8e3c0d5-f0d1-46bb-9bbe-068485e38050",
-    "name": "SSL Certificates by Host",
-    "docker_parameters": "ssl_cert_host",
-    "description": "Get SSL certificates by host name",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-            "host": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": ["host"]
+  "uuid": "d8e3c0d5-f0d1-46bb-9bbe-068485e38050",
+  "name": "SSL Certificates by Host",
+  "docker_parameters": "ssl_cert_host",
+  "description": "Get SSL certificates by host name",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "host": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "content": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "firstSeen": {
-                            "type": "string"
-                        },
-                        "lastSeen": {
-                            "type": "string"
-                        },
-                        "count": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "id": {
-                            "type": "string"
-                        },
-                        "address": {
-                            "type": "string"
-                        },
-                        "asn": {
-                            "type": "string"
-                        },
-                        "bgpPrefix": {
-                            "type": "string"
-                        },
-                        "port": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "sha1": {
-                            "type": "string"
-                        },
-                        "cert": {
-                            "type": "array",
-                            "items": {
-                                "type": "object"
-                            }
-                        }
-                    }
-                }
+    "required": ["host"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "content": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "firstSeen": {
+              "type": "string"
+            },
+            "lastSeen": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "id": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "asn": {
+              "type": "string"
+            },
+            "bgpPrefix": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "sha1": {
+              "type": "string"
+            },
+            "cert": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
             }
+          }
         }
+      }
     }
+  }
 }

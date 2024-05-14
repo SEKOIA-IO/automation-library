@@ -1,49 +1,47 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Arguments",
-        "type": "object",
-        "required": ["query"],
-        "properties": {
-            "query": {
-                "description": "Query to run",
-                "type": "string"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Arguments",
+    "type": "object",
+    "required": ["query"],
+    "properties": {
+      "query": {
+        "description": "Query to run",
+        "type": "string"
+      },
+      "parameters": {
+        "description": "Parameters to use inside the query",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "type", "value"],
+          "properties": {
+            "name": {
+              "type": "string"
             },
-            "parameters": {
-                "description": "Parameters to use inside the query",
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "required": ["name", "type", "value"],
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string"
-                        },
-                        "value": {}
-                    }
-                }
-            }
+            "type": {
+              "type": "string"
+            },
+            "value": {}
+          }
         }
+      }
+    }
+  },
+  "description": "Execute the given query and return the results",
+  "docker_parameters": "run-bigquery-query",
+  "name": "Run a query against a BigQuery table",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "items_path": {
+        "description": "Path to the file holding the results",
+        "type": "string"
+      }
     },
-    "description": "Execute the given query and return the results",
-    "docker_parameters": "run-bigquery-query",
-    "name": "Run a query against a BigQuery table",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "items_path": {
-                "description": "Path to the file holding the results",
-                "type": "string"
-            }
-        },
-        "required": [
-            "items_path"
-        ],
-        "title": "Results",
-        "type": "object"
-    },
-    "uuid": "8fcb7d3f-2cb7-474f-8727-dc5ba13eebea"
+    "required": ["items_path"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "8fcb7d3f-2cb7-474f-8727-dc5ba13eebea"
 }

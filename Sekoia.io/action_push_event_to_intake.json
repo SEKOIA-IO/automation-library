@@ -39,9 +39,7 @@
         "default": false
       }
     },
-    "required": [
-      "intake_key"
-    ]
+    "required": ["intake_key"]
   },
   "results": {
     "type": "object",

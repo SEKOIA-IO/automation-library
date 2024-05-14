@@ -15,9 +15,7 @@
         "enum": [1, 7, 30]
       }
     },
-    "required": [
-      "period"
-    ]
+    "required": ["period"]
   },
   "results": {
     "properties": {

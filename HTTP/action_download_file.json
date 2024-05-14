@@ -1,44 +1,40 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "url": {
-                "description": "Url of the file to download",
-                "type": "string",
-                "format": "uri"
-            },
-            "headers": {
-                "description": "Headers to use when sending the requests. i.e. {\"authorization\": \"Bearer foo\"}",
-                "type": "object"
-            },
-            "verify_ssl": {
-                "description": "Wether the SSL certificate must be verified. Default to true.",
-                "type": "boolean",
-                "default": true
-              }
-        },
-        "required": [
-            "url"
-        ],
-        "title": "Arguments",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "url": {
+        "description": "Url of the file to download",
+        "type": "string",
+        "format": "uri"
+      },
+      "headers": {
+        "description": "Headers to use when sending the requests. i.e. {\"authorization\": \"Bearer foo\"}",
         "type": "object"
+      },
+      "verify_ssl": {
+        "description": "Wether the SSL certificate must be verified. Default to true.",
+        "type": "boolean",
+        "default": true
+      }
     },
-    "description": "Donwload the given file and save it",
-    "docker_parameters": "download-file",
-    "name": "Download File",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "file_path": {
-                "description": "File path on disk",
-                "type": "string"
-            }
-        },
-        "required": [
-            "file_path"
-        ],
-        "title": "Results",
-        "type": "object"
+    "required": ["url"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Donwload the given file and save it",
+  "docker_parameters": "download-file",
+  "name": "Download File",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "file_path": {
+        "description": "File path on disk",
+        "type": "string"
+      }
     },
-    "uuid": "09e9dc3a-aeb2-4dde-ad96-3ee543afdf51"
+    "required": ["file_path"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "09e9dc3a-aeb2-4dde-ad96-3ee543afdf51"
 }

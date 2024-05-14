@@ -1,29 +1,24 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "WithSecure",
-        "type": "object",
-        "properties": {
-            "client_id": {
-                "description": "Client identifier",
-                "type": "string"
-            },
-            "secret": {
-                "description": "API secret to authenticate",
-                "type": "string"
-            }
-        },
-        "required": [
-            "client_id",
-            "secret"
-        ],
-        "secrets": [
-            "secret"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "WithSecure",
+    "type": "object",
+    "properties": {
+      "client_id": {
+        "description": "Client identifier",
+        "type": "string"
+      },
+      "secret": {
+        "description": "API secret to authenticate",
+        "type": "string"
+      }
     },
-    "description": "Interact with WithSecure Elements",
-    "name": "WithSecure",
-    "uuid": "8aa9f86c-f360-4ae7-84f5-b61c6917cf01",
-    "slug": "withsecure",
-    "version": "2.14.0"
+    "required": ["client_id", "secret"],
+    "secrets": ["secret"]
+  },
+  "description": "Interact with WithSecure Elements",
+  "name": "WithSecure",
+  "uuid": "8aa9f86c-f360-4ae7-84f5-b61c6917cf01",
+  "slug": "withsecure",
+  "version": "2.14.0"
 }

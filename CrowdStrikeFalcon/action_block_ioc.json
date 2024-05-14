@@ -1,26 +1,23 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "value": {
-                "description": "The value of the IOC to block",
-                "type": "string"
-            },
-            "type": {
-                "description": "Type of the IOC to block: md5, sha256",
-                "type": "string"
-            }
-        },
-        "required": [
-            "value",
-            "type"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "value": {
+        "description": "The value of the IOC to block",
+        "type": "string"
+      },
+      "type": {
+        "description": "Type of the IOC to block: md5, sha256",
+        "type": "string"
+      }
     },
-    "description": "Block the provided IOC",
-    "docker_parameters": "block_ioc",
-    "name": "Block IOC",
-    "results": {},
-    "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f9"
+    "required": ["value", "type"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Block the provided IOC",
+  "docker_parameters": "block_ioc",
+  "name": "Block IOC",
+  "results": {},
+  "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f9"
 }

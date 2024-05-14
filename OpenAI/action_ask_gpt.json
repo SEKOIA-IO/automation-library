@@ -31,9 +31,7 @@
         "type": "integer"
       }
     },
-    "required": [
-      "prompt"
-    ]
+    "required": ["prompt"]
   },
   "results": {
     "title": "AskGPTResults",
@@ -44,8 +42,6 @@
         "type": "string"
       }
     },
-    "required": [
-      "response"
-    ]
+    "required": ["response"]
   }
 }

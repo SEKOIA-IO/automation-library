@@ -1,24 +1,20 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "apikey": {
-                "description": "APIKEY for Mandrill",
-                "type": "string"
-            }
-        },
-        "required": [
-            "apikey"
-        ],
-        "title": "Arguments",
-        "type": "object",
-        "secrets": [
-            "apikey"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "apikey": {
+        "description": "APIKEY for Mandrill",
+        "type": "string"
+      }
     },
-    "description": "Mandrill is a transactional email platform from Mailchimp.",
-    "name": "Mandrill",
-    "uuid": "bc2699a6-93e5-4d74-816d-4186d6eb3ce8",
-    "slug": "mandrill",
-    "version": "2.9"
+    "required": ["apikey"],
+    "title": "Arguments",
+    "type": "object",
+    "secrets": ["apikey"]
+  },
+  "description": "Mandrill is a transactional email platform from Mailchimp.",
+  "name": "Mandrill",
+  "uuid": "bc2699a6-93e5-4d74-816d-4186d6eb3ce8",
+  "slug": "mandrill",
+  "version": "2.9"
 }

@@ -1,40 +1,35 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "index": {
-                "description": "Name of the index to use",
-                "type": "string",
-                "enum": ["ipv4", "websites", "certificates"]
-            },
-            "item": {
-                "description": "Item to retrieve",
-                "type": "string"
-            }
-        },
-        "required": [
-            "index",
-            "item"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "index": {
+        "description": "Name of the index to use",
+        "type": "string",
+        "enum": ["ipv4", "websites", "certificates"]
+      },
+      "item": {
+        "description": "Item to retrieve",
+        "type": "string"
+      }
     },
-    "description": "Return the item as a structured data",
-    "docker_parameters": "censys-view",
-    "name": "View Item",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "result_path": {
-                "description": "Path of result file",
-                "type": "string"
-            }
-        },
-        "required": [
-            "result_path"
-        ],
-        "title": "Results",
-        "type": "object"
+    "required": ["index", "item"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Return the item as a structured data",
+  "docker_parameters": "censys-view",
+  "name": "View Item",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result_path": {
+        "description": "Path of result file",
+        "type": "string"
+      }
     },
-    "uuid": "bf4f264f-8df2-44c8-88fb-459b455e51bc"
+    "required": ["result_path"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "bf4f264f-8df2-44c8-88fb-459b455e51bc"
 }

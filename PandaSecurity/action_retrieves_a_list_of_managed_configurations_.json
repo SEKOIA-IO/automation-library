@@ -40,9 +40,7 @@
         "in": "body"
       }
     },
-    "required": [
-      "type"
-    ]
+    "required": ["type"]
   },
   "results": {
     "type": "object",

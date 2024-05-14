@@ -1,47 +1,43 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "chunk_size": {
-                "description": "Number of items to include in each chunk. Defaults to 10 000.",
-                "type": "integer",
-                "minimum": 100
-            },
-            "interval": {
-                "description": "Interval in hours to wait between each trigger call. Defaults to 24.",
-                "type": "integer",
-                "minimum": 1
-            }
-        },
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "chunk_size": {
+        "description": "Number of items to include in each chunk. Defaults to 10 000.",
+        "type": "integer",
+        "minimum": 100
+      },
+      "interval": {
+        "description": "Interval in hours to wait between each trigger call. Defaults to 24.",
+        "type": "integer",
+        "minimum": 1
+      }
     },
-    "description": "Fetches Tranco list",
-    "docker_parameters": "fetch_tranco_list",
-    "name": "Fetch List",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "file_path": {
-                "description": "Tranco list file path",
-                "type": "string"
-            },
-            "chunk_offset": {
-                "description": "Offset of the chunk in the full list",
-                "type": "integer"
-            },
-            "chunk_size": {
-                "description": "Size of the chunk",
-                "type": "integer"
-            }
-        },
-        "required": [
-            "file_path",
-            "chunk_offset",
-            "chunk_size"
-        ],
-        "title": "Results",
-        "type": "object"
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Fetches Tranco list",
+  "docker_parameters": "fetch_tranco_list",
+  "name": "Fetch List",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "file_path": {
+        "description": "Tranco list file path",
+        "type": "string"
+      },
+      "chunk_offset": {
+        "description": "Offset of the chunk in the full list",
+        "type": "integer"
+      },
+      "chunk_size": {
+        "description": "Size of the chunk",
+        "type": "integer"
+      }
     },
-    "uuid": "469f5edd-77ab-4909-9d82-b29f734e5309"
+    "required": ["file_path", "chunk_offset", "chunk_size"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "469f5edd-77ab-4909-9d82-b29f734e5309"
 }

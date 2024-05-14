@@ -1,104 +1,104 @@
 {
-    "uuid": "c7c731bc-eaf4-40f9-acff-a966de1a34bd",
-    "name": "Get dataleaks trackers",
-    "docker_parameters": "get-query/dataleaks/info",
-    "description": "Get all available information about the dataleaks our platform keeps track.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Get dataleaks trackers",
-        "properties": {}
-    },
-    "results": {
+  "uuid": "c7c731bc-eaf4-40f9-acff-a966de1a34bd",
+  "name": "Get dataleaks trackers",
+  "docker_parameters": "get-query/dataleaks/info",
+  "description": "Get all available information about the dataleaks our platform keeps track.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get dataleaks trackers",
+    "properties": {}
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "sktorrent": {
         "type": "object",
         "properties": {
-            "sktorrent": {
-                "type": "object",
-                "properties": {
-                    "label": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "techname": {
-                        "type": "string"
-                    },
-                    "logo": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "string"
-                    },
-                    "year": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "fullname": {
-                        "type": "string"
-                    }
-                }
-            },
-            "samsclub": {
-                "type": "object",
-                "properties": {
-                    "label": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "techname": {
-                        "type": "string"
-                    },
-                    "logo": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "string"
-                    },
-                    "year": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "fullname": {
-                        "type": "string"
-                    }
-                }
-            },
-            "yandex": {
-                "type": "object",
-                "properties": {
-                    "label": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "techname": {
-                        "type": "string"
-                    },
-                    "logo": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "string"
-                    },
-                    "year": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "fullname": {
-                        "type": "string"
-                    }
-                }
-            }
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "techname": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fullname": {
+            "type": "string"
+          }
         }
+      },
+      "samsclub": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "techname": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fullname": {
+            "type": "string"
+          }
+        }
+      },
+      "yandex": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "techname": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "year": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fullname": {
+            "type": "string"
+          }
+        }
+      }
     }
+  }
 }

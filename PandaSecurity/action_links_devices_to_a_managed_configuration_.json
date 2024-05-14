@@ -28,10 +28,6 @@
         }
       }
     },
-    "required": [
-      "type",
-      "config_id",
-      "device_ids"
-    ]
+    "required": ["type", "config_id", "device_ids"]
   }
 }

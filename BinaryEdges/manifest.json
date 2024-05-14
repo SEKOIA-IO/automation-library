@@ -1,30 +1,25 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "api_key": {
-                "description": "Binary Edge's API key",
-                "type": "string"
-            },
-            "base_url": {
-                "description": "Binary Edge's base URL (ex. https://api.binaryedge.io/v2/)",
-                "type": "string",
-                "format": "uri"
-            }
-        },
-        "required": [
-            "api_key",
-            "base_url"
-        ],
-        "title": "Binary Edge's Configuration",
-        "type": "object",
-        "secrets": [
-            "api_key"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_key": {
+        "description": "Binary Edge's API key",
+        "type": "string"
+      },
+      "base_url": {
+        "description": "Binary Edge's base URL (ex. https://api.binaryedge.io/v2/)",
+        "type": "string",
+        "format": "uri"
+      }
     },
-    "uuid": "d9ba02ab-cb1e-4c8d-bf60-feebfc3700d6",
-    "name": "BinaryEdge's API",
-    "slug": "binaryedges",
-    "description": "[BinaryEdge](https://www.binaryedge.io/) is Cybersecurity/Data Science company that focuses its effort on acquiring, analyzing and classifying internet wide data. We have developed a platform - [40fy](https://app.binaryedge.io/) that allows us and our customers to gather several data points from exposed servers online.\n\n The API provides access to that scanning platform, for your own usage, along with access to our curated databases so that you can do querying and analytics on our worldwide (constantly updated) collected data.",
-    "version": "1.22"
+    "required": ["api_key", "base_url"],
+    "title": "Binary Edge's Configuration",
+    "type": "object",
+    "secrets": ["api_key"]
+  },
+  "uuid": "d9ba02ab-cb1e-4c8d-bf60-feebfc3700d6",
+  "name": "BinaryEdge's API",
+  "slug": "binaryedges",
+  "description": "[BinaryEdge](https://www.binaryedge.io/) is Cybersecurity/Data Science company that focuses its effort on acquiring, analyzing and classifying internet wide data. We have developed a platform - [40fy](https://app.binaryedge.io/) that allows us and our customers to gather several data points from exposed servers online.\n\n The API provides access to that scanning platform, for your own usage, along with access to our curated databases so that you can do querying and analytics on our worldwide (constantly updated) collected data.",
+  "version": "1.22"
 }

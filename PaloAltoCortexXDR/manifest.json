@@ -1,31 +1,27 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Palo Alto Cortex XDR (EDR)",
-        "type": "object",
-        "properties": {
-            "api_key": {
-                "description": "The API Key is your unique identifier used as the authorization header",
-                "type": "string"
-            },
-            "api_key_id": {
-                "description": "The API Key ID is your unique token used to authenticate the API Key",
-                "type": "string"
-            },
-            "fqdn": {
-                "description": "The FQDN is a unique host and domain name associated with each tenant",
-                "type": "string"
-            }
-        },
-        "required": [
-            "api_key",
-            "api_key_id",
-            "fqdn"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Palo Alto Cortex XDR (EDR)",
+    "type": "object",
+    "properties": {
+      "api_key": {
+        "description": "The API Key is your unique identifier used as the authorization header",
+        "type": "string"
+      },
+      "api_key_id": {
+        "description": "The API Key ID is your unique token used to authenticate the API Key",
+        "type": "string"
+      },
+      "fqdn": {
+        "description": "The FQDN is a unique host and domain name associated with each tenant",
+        "type": "string"
+      }
     },
-    "description": "Cortex XDR is the detection and response app that natively integrates network, endpoint and cloud data to stop sophisticated attacks.",
-    "name": "Palo Alto Cortex XDR (EDR)",
-    "uuid": "2bb1aaf9-a90c-411d-8e5f-c72b1b46b3d7",
-    "slug": "paloalto_cortex_xdr",
-    "version": "1.0.3"
+    "required": ["api_key", "api_key_id", "fqdn"]
+  },
+  "description": "Cortex XDR is the detection and response app that natively integrates network, endpoint and cloud data to stop sophisticated attacks.",
+  "name": "Palo Alto Cortex XDR (EDR)",
+  "uuid": "2bb1aaf9-a90c-411d-8e5f-c72b1b46b3d7",
+  "slug": "paloalto_cortex_xdr",
+  "version": "1.0.3"
 }

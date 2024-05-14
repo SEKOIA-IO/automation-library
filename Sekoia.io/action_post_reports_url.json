@@ -1,47 +1,41 @@
 {
-    "uuid": "7a35d87a-4827-4e62-a71b-7287cc1322a5",
-    "name": "Create Content Proposal from URL",
-    "docker_parameters": "post-reports/url",
-    "description": "Creates a content proposal with the content extracted from the specified URL",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "post_reports_url",
-        "properties": {
-            "url": {
-                "type": "string",
-                "in": "body",
-                "format": "uri"
-            },
-            "source_ref": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": [
-            "url"
-        ]
+  "uuid": "7a35d87a-4827-4e62-a71b-7287cc1322a5",
+  "name": "Create Content Proposal from URL",
+  "docker_parameters": "post-reports/url",
+  "description": "Creates a content proposal with the content extracted from the specified URL",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "post_reports_url",
+    "properties": {
+      "url": {
+        "type": "string",
+        "in": "body",
+        "format": "uri"
+      },
+      "source_ref": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
+    "required": ["url"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "data": {
         "type": "object",
         "properties": {
-            "data": {
-                "type": "object",
-                "properties": {
-                    "file_name": {
-                        "type": "string"
-                    },
-                    "content_proposal_id": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "content_proposal_id"
-                ]
-            }
+          "file_name": {
+            "type": "string"
+          },
+          "content_proposal_id": {
+            "type": "string"
+          }
         },
-        "required": [
-            "data"
-        ]
-    }
+        "required": ["content_proposal_id"]
+      }
+    },
+    "required": ["data"]
+  }
 }

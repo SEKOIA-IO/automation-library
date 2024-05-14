@@ -1,26 +1,23 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "value": {
-                "description": "The value of the IOC to monitor",
-                "type": "string"
-            },
-            "type": {
-                "description": "Type of the IOC to monitor: md5, sha256, domain, ipv4, ipv6",
-                "type": "string"
-            }
-        },
-        "required": [
-            "value",
-            "type"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "value": {
+        "description": "The value of the IOC to monitor",
+        "type": "string"
+      },
+      "type": {
+        "description": "Type of the IOC to monitor: md5, sha256, domain, ipv4, ipv6",
+        "type": "string"
+      }
     },
-    "description": "Enable detection for the provided IOC",
-    "docker_parameters": "monitor_ioc",
-    "name": "Monitor IOC",
-    "results": {},
-    "uuid": "5948a752-5c16-4bbd-9b12-3bc907ee05cf"
+    "required": ["value", "type"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Enable detection for the provided IOC",
+  "docker_parameters": "monitor_ioc",
+  "name": "Monitor IOC",
+  "results": {},
+  "uuid": "5948a752-5c16-4bbd-9b12-3bc907ee05cf"
 }

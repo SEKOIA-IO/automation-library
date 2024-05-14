@@ -8,8 +8,8 @@
         "description": "API base URL",
         "type": "string",
         "format": "uri",
-	"nullable": true,
-	"default": null
+        "nullable": true,
+        "default": null
       }
     },
     "required": ["base_url"]

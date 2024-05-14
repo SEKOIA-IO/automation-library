@@ -77,10 +77,7 @@
         "in": "body"
       }
     },
-    "required": [
-      "device_ids",
-      "task_name"
-    ]
+    "required": ["device_ids", "task_name"]
   },
   "results": {
     "properties": {

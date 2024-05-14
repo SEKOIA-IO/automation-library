@@ -1,40 +1,37 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "comment": {
-                "description": "The comment to post",
-                "type": "string"
-            },
-            "resource": {
-                "description": "The hash or url to comment",
-                "type": "string"
-            }
-        },
-        "required": [
-            "comment",
-            "resource"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "comment": {
+        "description": "The comment to post",
+        "type": "string"
+      },
+      "resource": {
+        "description": "The hash or url to comment",
+        "type": "string"
+      }
     },
-    "description": "Post comment to Virus Total",
-    "docker_parameters": "virustotal_post_comment",
-    "name": "Post Comment",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "response_code": {
-                "type": "integer",
-                "description": "Response Code"
-            },
-            "verbose_msg": {
-                "type": "string",
-                "description": "Textual description of the response code"
-            }
-        },
-        "title": "Results",
-        "type": "object"
+    "required": ["comment", "resource"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Post comment to Virus Total",
+  "docker_parameters": "virustotal_post_comment",
+  "name": "Post Comment",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "response_code": {
+        "type": "integer",
+        "description": "Response Code"
+      },
+      "verbose_msg": {
+        "type": "string",
+        "description": "Textual description of the response code"
+      }
     },
-    "uuid": "52ad1995-960b-4606-bac4-91c64bab63f9"
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "52ad1995-960b-4606-bac4-91c64bab63f9"
 }

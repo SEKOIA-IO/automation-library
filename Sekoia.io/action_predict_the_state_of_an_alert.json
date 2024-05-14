@@ -1,29 +1,27 @@
 {
-    "uuid": "4bdfcc99-f555-4e41-9327-9fd8615f9197",
-    "name": "Predict Alert State",
-    "docker_parameters": "post-alert",
-    "description": "Predict the state of an alert",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "predict_the_state_of_an_alert",
-        "properties": {
-            "alert": {
-                "in": "body",
-                "type": "object"
-            }
-        },
-        "required": ["alert"]
+  "uuid": "4bdfcc99-f555-4e41-9327-9fd8615f9197",
+  "name": "Predict Alert State",
+  "docker_parameters": "post-alert",
+  "description": "Predict the state of an alert",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "predict_the_state_of_an_alert",
+    "properties": {
+      "alert": {
+        "in": "body",
+        "type": "object"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "worth_human_attention": {
-                "type": "boolean"
-            }
-        },
-        "required": [
-            "worth_human_attention"
-        ]
-    }
+    "required": ["alert"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "worth_human_attention": {
+        "type": "boolean"
+      }
+    },
+    "required": ["worth_human_attention"]
+  }
 }

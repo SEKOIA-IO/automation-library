@@ -1,34 +1,37 @@
 {
-    "description": "Get Triage configs",
-    "docker_parameters": "trigger_triage_configs",
-    "name": "Triage config",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "frequency": {"type": "integer", "description": "Frequency at which the script collects IOCs"},
-            "malware_list": {
-                "type": "array",
-                "description": "List of malware family",
-                "items": {
-                    "type": "string",
-                    "description": "Malware name in Triage"
-                }
-            }
-        },
-        "required": ["frequency", "malware_list"],
-        "title": "Triage Configuration",
-        "type": "object"
+  "description": "Get Triage configs",
+  "docker_parameters": "trigger_triage_configs",
+  "name": "Triage config",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Frequency at which the script collects IOCs"
+      },
+      "malware_list": {
+        "type": "array",
+        "description": "List of malware family",
+        "items": {
+          "type": "string",
+          "description": "Malware name in Triage"
+        }
+      }
     },
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "file_path": {
-                "description": "Triage raw results file path",
-                "type": "string"
-            }
-        },
-        "required": ["file_path"],
-        "title": "Triage raw results"
+    "required": ["frequency", "malware_list"],
+    "title": "Triage Configuration",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "file_path": {
+        "description": "Triage raw results file path",
+        "type": "string"
+      }
     },
-    "uuid": "484e4dea-9540-4535-8add-9a43ed54fcdd"
+    "required": ["file_path"],
+    "title": "Triage raw results"
+  },
+  "uuid": "484e4dea-9540-4535-8add-9a43ed54fcdd"
 }

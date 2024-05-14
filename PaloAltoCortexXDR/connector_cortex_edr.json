@@ -1,36 +1,33 @@
 {
-    "description": "Fetch last Alerts from Cortex API",
-    "docker_parameters": "cortex_query_alerts",
-    "name": "Fetch Alerts from Cortex [BETA]",
-    "arguments": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "properties": {
-        "frequency": {
-          "type": "integer",
-          "description": "Batch frequency in seconds",
-          "default": 60
-        },
-        "chunk_size": {
-          "type": "integer",
-          "description": "The max size of chunks for the batch processing",
-          "default": 100
-        },
-        "intake_server": {
-          "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
-          "default": "https://intake.sekoia.io",
-          "type": "string"
-        },
-        "intake_key": {
-          "description": "Intake key to use when sending events",
-          "type": "string"
-        }
+  "description": "Fetch last Alerts from Cortex API",
+  "docker_parameters": "cortex_query_alerts",
+  "name": "Fetch Alerts from Cortex [BETA]",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
       },
-      "required": [
-        "frequency",
-        "intake_key"
-      ],
-      "title": "Cortex Query Alerts",
-      "type": "object"
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 100
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
     },
-    "uuid": "971276ce-91c7-4149-a311-da076ebc54d1"
-  }
+    "required": ["frequency", "intake_key"],
+    "title": "Cortex Query Alerts",
+    "type": "object"
+  },
+  "uuid": "971276ce-91c7-4149-a311-da076ebc54d1"
+}

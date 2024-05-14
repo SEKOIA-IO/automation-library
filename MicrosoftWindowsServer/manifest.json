@@ -1,29 +1,24 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-              "username": {
-                "description": "Username to do authentication on remote server",
-                "type": "string"
-              },
-              "password": {
-                "description": "Password to do authentication on remote server",
-                "type": "string"
-              }
-        },
-        "required": [
-            "username",
-            "password"
-        ],
-        "secrets": [
-            "password"
-        ],
-        "title": "Microsoft Actions module Configuration",
-        "type": "object"
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "username": {
+        "description": "Username to do authentication on remote server",
+        "type": "string"
+      },
+      "password": {
+        "description": "Password to do authentication on remote server",
+        "type": "string"
+      }
     },
-    "description": "Microsoft Windows Server is an operating system designed for server-based computing, offering robust server management, data storage, and networking capabilities for businesses and enterprises, facilitating diverse workloads and IT operations.",
-    "name": "Microsoft Windows Server",
-    "uuid": "33ea4995-5454-4091-a19f-497cb213346a",
-    "slug": "microsoft-windows-server",
-    "version": "1.0.4"
+    "required": ["username", "password"],
+    "secrets": ["password"],
+    "title": "Microsoft Actions module Configuration",
+    "type": "object"
+  },
+  "description": "Microsoft Windows Server is an operating system designed for server-based computing, offering robust server management, data storage, and networking capabilities for businesses and enterprises, facilitating diverse workloads and IT operations.",
+  "name": "Microsoft Windows Server",
+  "uuid": "33ea4995-5454-4091-a19f-497cb213346a",
+  "slug": "microsoft-windows-server",
+  "version": "1.0.4"
 }

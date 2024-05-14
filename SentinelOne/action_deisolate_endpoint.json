@@ -49,9 +49,7 @@
         "type": "integer"
       }
     },
-    "required": [
-      "affected"
-    ],
+    "required": ["affected"],
     "title": "Results",
     "type": "object"
   },

@@ -1,21 +1,19 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "IoC": {
-                "description": "The value of the IoC to unblock",
-                "type": "string"
-            }
-        },
-        "required": [
-            "IoC"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "IoC": {
+        "description": "The value of the IoC to unblock",
+        "type": "string"
+      }
     },
-    "description": "UnBlock the provided IOCs: IP / domain",
-    "docker_parameters": "zscaler_unblock_ioc",
-    "name": "Zscaler UnBlock IoC",
-    "results": {},
-    "uuid": "ad4f9ea3-3b1f-4666-83a4-69cb5db222f1"
+    "required": ["IoC"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "UnBlock the provided IOCs: IP / domain",
+  "docker_parameters": "zscaler_unblock_ioc",
+  "name": "Zscaler UnBlock IoC",
+  "results": {},
+  "uuid": "ad4f9ea3-3b1f-4666-83a4-69cb5db222f1"
 }

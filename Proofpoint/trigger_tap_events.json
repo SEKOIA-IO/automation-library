@@ -38,12 +38,7 @@
         "default": 1000
       }
     },
-    "required": [
-      "api_host",
-      "client_principal",
-      "client_secret",
-      "intake_key"
-    ],
+    "required": ["api_host", "client_principal", "client_secret", "intake_key"],
     "title": "TAP Events",
     "type": "object"
   },

@@ -1,33 +1,28 @@
-{   "configuration": {
-           "$schema": "http://json-schema.org/draft-07/schema#",
-           "title": "Lacework",
-           "type": "object",
-           "properties": {
-               "key_id": {
-                   "description": "The KeyId of your API Key",
-                   "type": "string"
-               },
-               "secret": {
-                   "description": "The secret of your API Key",
-                   "type": "string"
-               },
-               "account": {
-                   "description": "The account of your API Key (e.g: `YourLaceworkTenant.lacework.net`)",
-                   "type": "string"
-               }
-           },
-           "required": [
-               "key_id",
-               "secret",
-               "account"
-           ],
-           "secrets": [
-               "secret"
-           ]
-       },
-    "description": "[Lacework](https://www.lacework.com/) is a cybersecurity company specializing in cloud security and compliance, offering automated threat detection and response solutions for modern cloud environments.",
-    "name": "Lacework",
-    "uuid": "5803f97d-b324-4452-b861-0253b15de650",
-    "slug": "lacework",
-    "version": "1.0.3"
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Lacework",
+    "type": "object",
+    "properties": {
+      "key_id": {
+        "description": "The KeyId of your API Key",
+        "type": "string"
+      },
+      "secret": {
+        "description": "The secret of your API Key",
+        "type": "string"
+      },
+      "account": {
+        "description": "The account of your API Key (e.g: `YourLaceworkTenant.lacework.net`)",
+        "type": "string"
+      }
+    },
+    "required": ["key_id", "secret", "account"],
+    "secrets": ["secret"]
+  },
+  "description": "[Lacework](https://www.lacework.com/) is a cybersecurity company specializing in cloud security and compliance, offering automated threat detection and response solutions for modern cloud environments.",
+  "name": "Lacework",
+  "uuid": "5803f97d-b324-4452-b861-0253b15de650",
+  "slug": "lacework",
+  "version": "1.0.3"
 }

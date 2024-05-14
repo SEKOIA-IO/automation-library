@@ -11,9 +11,7 @@
         "default": 43200
       }
     },
-    "required": [
-      "frequency"
-    ],
+    "required": ["frequency"],
     "title": "Trigger configuration",
     "type": "object"
   },
@@ -25,9 +23,7 @@
         "type": "array"
       }
     },
-    "required": [
-      "records"
-    ],
+    "required": ["records"],
     "title": "Security events"
   },
   "uuid": "c69d4c31-8a75-4dea-9d51-5814ae73c54a"

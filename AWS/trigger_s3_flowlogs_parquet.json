@@ -29,11 +29,7 @@
         "type": "string"
       }
     },
-    "required": [
-      "frequency",
-      "queue_name",
-      "intake_key"
-    ],
+    "required": ["frequency", "queue_name", "intake_key"],
     "title": "Trigger configuration",
     "type": "object"
   },

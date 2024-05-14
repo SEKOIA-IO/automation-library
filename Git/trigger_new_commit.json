@@ -1,64 +1,60 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "sleep_time": {
-                "type": "integer",
-                "description": "Time in seconds the trigger sleeps between the checks of new commits"
-            }
-        },
-        "title": "Trigger Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "sleep_time": {
+        "type": "integer",
+        "description": "Time in seconds the trigger sleeps between the checks of new commits"
+      }
     },
-    "description": "Trigger playbook run on every Git commit",
-    "docker_parameters": "new-commit-trigger",
-    "name": "New Commit",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Trigger Arguments",
+    "type": "object"
+  },
+  "description": "Trigger playbook run on every Git commit",
+  "docker_parameters": "new-commit-trigger",
+  "name": "New Commit",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "commit": {
+        "description": "Git Commit",
+        "type": "object",
         "properties": {
-            "commit": {
-                "description": "Git Commit",
-                "type": "object",
-                "properties": {
-                    "hexsha": {
-                        "type": "string",
-                        "description": "hexsha (id) of the commit"
-                    },
-                    "summary": {
-                        "type": "string",
-                        "description": "short description of the commit"
-                    },
-                    "message": {
-                        "type": "string",
-                        "description": "full commit description"
-                    },
-                    "author_name": {
-                        "type": "string",
-                        "description": "commit author's name"
-                    },
-                    "author_email": {
-                        "type": "string",
-                        "description": "commit author's email"
-                    },
-                    "datetime": {
-                        "type": "integer",
-                        "description": "commit creation datetime"
-                    }
-                },
-                "required": [
-                    "id"
-                ]
-            },
-            "repository_path": {
-                "type": "string",
-                "description": "path of the repository directory"
-            }
+          "hexsha": {
+            "type": "string",
+            "description": "hexsha (id) of the commit"
+          },
+          "summary": {
+            "type": "string",
+            "description": "short description of the commit"
+          },
+          "message": {
+            "type": "string",
+            "description": "full commit description"
+          },
+          "author_name": {
+            "type": "string",
+            "description": "commit author's name"
+          },
+          "author_email": {
+            "type": "string",
+            "description": "commit author's email"
+          },
+          "datetime": {
+            "type": "integer",
+            "description": "commit creation datetime"
+          }
         },
-        "required": [
-            "commit", "repository_path"
-        ],
-        "title": "Results",
-        "type": "object"
+        "required": ["id"]
+      },
+      "repository_path": {
+        "type": "string",
+        "description": "path of the repository directory"
+      }
     },
-    "uuid": "5e63197c-9ca2-4681-a9ac-4ded5ea7b5a2"
+    "required": ["commit", "repository_path"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "5e63197c-9ca2-4681-a9ac-4ded5ea7b5a2"
 }

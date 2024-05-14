@@ -1,104 +1,102 @@
 {
-    "arguments": {
-        "type": "object",
-        "title": "Trigger Arguments",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {}
-    },
-    "description": "Get Malware configs from MWDB",
-    "docker_parameters": "trigger_mwdb_configs",
-    "name": "Get new configs",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "id": {
-                "description": "Configuration ID",
-                "type": "string"
-            },
-            "config_type": {
-                "description": "Configuration Type (static or dynamic)",
-                "type": "string"
-            },
-            "upload_time": {
-                "description": "Configuration Upload Time (in ISO format)",
-                "type": "string"
-            },
-            "type": {
-                "description": "Configuration Type",
-                "type": "string"
-            },
-            "family": {
-                "description": "Malware Family",
-                "type": "string"
-            },
-            "tags": {
-                "description": "Tags associated with this configuration",
-                "type": "array"
-            },
-            "children": {
-                "description": "Configuration Children Objects",
-                "type": "array"
-            },
-            "parents": {
-                "description": "Configuration Parent Objects",
-                "type": "array"
-            },
-            "cfg": {
-                "description": "Configuration Content",
-                "type": "object"
-            },
-            "files": {
-                "description": "Malware samples associated with this configuration",
-                "type": "array",
-                "items": {
-                    "description": "Malware sample",
-                    "type": "object",
-                    "properties": {
-                        "file_name": {
-                            "description": "File Name",
-                            "type": "string"
-                        },
-                        "file_size": {
-                            "description": "File Size",
-                            "type": "integer"
-                        },
-                        "file_type": {
-                            "description": "File Type",
-                            "type": "string"
-                        },
-                        "ssdeep": {
-                            "description": "File SSDEEP",
-                            "type": "string"
-                        },
-                        "md5": {
-                            "description": "File MD5",
-                            "type": "string"
-                        },
-                        "sha1": {
-                            "description": "File SHA1",
-                            "type": "string"
-                        },
-                        "sha256": {
-                            "description": "File SHA256",
-                            "type": "string"
-                        },
-                        "sha512": {
-                            "description": "File SHA512",
-                            "type": "string"
-                        },
-                        "crc32": {
-                            "description": "File CRC32",
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "required": [
-            "id", "config_type", "family", "cfg"
-        ],
-        "title": "MWDB Configuration",
+  "arguments": {
+    "type": "object",
+    "title": "Trigger Arguments",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {}
+  },
+  "description": "Get Malware configs from MWDB",
+  "docker_parameters": "trigger_mwdb_configs",
+  "name": "Get new configs",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "id": {
+        "description": "Configuration ID",
+        "type": "string"
+      },
+      "config_type": {
+        "description": "Configuration Type (static or dynamic)",
+        "type": "string"
+      },
+      "upload_time": {
+        "description": "Configuration Upload Time (in ISO format)",
+        "type": "string"
+      },
+      "type": {
+        "description": "Configuration Type",
+        "type": "string"
+      },
+      "family": {
+        "description": "Malware Family",
+        "type": "string"
+      },
+      "tags": {
+        "description": "Tags associated with this configuration",
+        "type": "array"
+      },
+      "children": {
+        "description": "Configuration Children Objects",
+        "type": "array"
+      },
+      "parents": {
+        "description": "Configuration Parent Objects",
+        "type": "array"
+      },
+      "cfg": {
+        "description": "Configuration Content",
         "type": "object"
+      },
+      "files": {
+        "description": "Malware samples associated with this configuration",
+        "type": "array",
+        "items": {
+          "description": "Malware sample",
+          "type": "object",
+          "properties": {
+            "file_name": {
+              "description": "File Name",
+              "type": "string"
+            },
+            "file_size": {
+              "description": "File Size",
+              "type": "integer"
+            },
+            "file_type": {
+              "description": "File Type",
+              "type": "string"
+            },
+            "ssdeep": {
+              "description": "File SSDEEP",
+              "type": "string"
+            },
+            "md5": {
+              "description": "File MD5",
+              "type": "string"
+            },
+            "sha1": {
+              "description": "File SHA1",
+              "type": "string"
+            },
+            "sha256": {
+              "description": "File SHA256",
+              "type": "string"
+            },
+            "sha512": {
+              "description": "File SHA512",
+              "type": "string"
+            },
+            "crc32": {
+              "description": "File CRC32",
+              "type": "string"
+            }
+          }
+        }
+      }
     },
-    "uuid": "3e57841d-8487-441a-bd5e-becd6e7ccb0f"
+    "required": ["id", "config_type", "family", "cfg"],
+    "title": "MWDB Configuration",
+    "type": "object"
+  },
+  "uuid": "3e57841d-8487-441a-bd5e-becd6e7ccb0f"
 }

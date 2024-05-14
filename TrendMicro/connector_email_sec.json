@@ -45,9 +45,7 @@
       "username",
       "api_key"
     ],
-    "secrets": [
-      "api_key"
-    ],
+    "secrets": ["api_key"],
     "title": "The configuration to fetch new logs",
     "type": "object"
   },

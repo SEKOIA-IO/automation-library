@@ -1,22 +1,20 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "hook_url": {
-                "description": "URL of the mattermost incoming webhook",
-                "type": "string",
-                "format": "uri"
-            }
-        },
-        "required": [
-            "hook_url"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "hook_url": {
+        "description": "URL of the mattermost incoming webhook",
+        "type": "string",
+        "format": "uri"
+      }
     },
-    "description": "[Mattermost](https://mattermost.com/) is a secure, open and flexible collaboration platform",
-    "name": "Mattermost",
-    "uuid": "89c860f0-3e73-4946-a5c9-431deb33b0e8",
-    "slug": "mattermost",
-    "version": "1.20"
+    "required": ["hook_url"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "[Mattermost](https://mattermost.com/) is a secure, open and flexible collaboration platform",
+  "name": "Mattermost",
+  "uuid": "89c860f0-3e73-4946-a5c9-431deb33b0e8",
+  "slug": "mattermost",
+  "version": "1.20"
 }

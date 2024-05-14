@@ -1,52 +1,48 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "cidr": {
-                "description": "The CIDR address to query",
-                "type": "string"
-            }
-        },
-        "required": [
-            "cidr"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "cidr": {
+        "description": "The CIDR address to query",
+        "type": "string"
+      }
     },
-    "description": "Fetch the list IP that can be found in a CIDR notation",
-    "docker_parameters": "ip_list",
-    "name": "List IPs from CIDR",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "CIDR": {
-                "description": "the requested CIDR address",
-                "type": "string"
+    "required": ["cidr"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Fetch the list IP that can be found in a CIDR notation",
+  "docker_parameters": "ip_list",
+  "name": "List IPs from CIDR",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "CIDR": {
+        "description": "the requested CIDR address",
+        "type": "string"
+      },
+      "peers": {
+        "description": "array of peers",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "a peer",
+          "properties": {
+            "ip": {
+              "type": "string",
+              "description": "peer ip"
             },
-            "peers": {
-                "description": "array of peers",
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "description": "a peer",
-                    "properties": {
-                        "ip": {
-                            "type": "string",
-                            "description": "peer ip"
-                        },
-                        "date": {
-                            "type": "string",
-                            "description": "last seen in UTC"
-                        }
-                    }
-                }
+            "date": {
+              "type": "string",
+              "description": "last seen in UTC"
             }
-        },
-        "required": [
-            "CIDR", "peers"
-        ],
-        "title": "Results",
-        "type": "object"
+          }
+        }
+      }
     },
-    "uuid": "a06ec7e6-b678-4b90-ab72-d6b7b8e60c72"
+    "required": ["CIDR", "peers"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "a06ec7e6-b678-4b90-ab72-d6b7b8e60c72"
 }

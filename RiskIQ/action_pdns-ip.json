@@ -1,44 +1,44 @@
 {
-    "uuid": "bb71af18-e81a-42b4-a742-d77b86e17eed",
-    "name": "IP Passive DNS",
-    "docker_parameters": "pdns_ip",
-    "description": "Retrieve results by searching for specified IP address within PDNS record data field",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-            "ip": {
-                "in": "query",
-                "type": "string"
-            },
-            "max": {
-                "in": "query",
-                "type": "string"
-            },
-            "lastSeenAfter": {
-                "in": "query",
-                "type": "string"
-            },
-            "firstSeenBefore": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": ["ip"]
+  "uuid": "bb71af18-e81a-42b4-a742-d77b86e17eed",
+  "name": "IP Passive DNS",
+  "docker_parameters": "pdns_ip",
+  "description": "Retrieve results by searching for specified IP address within PDNS record data field",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ip": {
+        "in": "query",
+        "type": "string"
+      },
+      "max": {
+        "in": "query",
+        "type": "string"
+      },
+      "lastSeenAfter": {
+        "in": "query",
+        "type": "string"
+      },
+      "firstSeenBefore": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "recordCount": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "records": {
-                "type": "array",
-                "items": {
-                    "type": "object"
-                }
-            }
+    "required": ["ip"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "recordCount": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "records": {
+        "type": "array",
+        "items": {
+          "type": "object"
         }
+      }
     }
+  }
 }

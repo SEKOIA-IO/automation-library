@@ -1,38 +1,38 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "event": {
-                "description": "MISP event",
-                "type": "object"
-            },
-            "event_path": {
-                "description": "MISP event (from file)",
-                "type": "string"
-            }
-        },
-        "required": [],
-        "title": "Arguments",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "event": {
+        "description": "MISP event",
         "type": "object"
+      },
+      "event_path": {
+        "description": "MISP event (from file)",
+        "type": "string"
+      }
     },
-    "description": "Publish an event on a MISP server",
-    "docker_parameters": "publish-to-misp",
-    "name": "Publish Event",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "event": {
-                "description": "Published MISP event",
-                "type": "object"
-            },
-            "event_path": {
-                "description": "Published MISP event (to file)",
-                "type": "string"
-            }
-        },
-        "required": [],
-        "title": "Results",
+    "required": [],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Publish an event on a MISP server",
+  "docker_parameters": "publish-to-misp",
+  "name": "Publish Event",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "event": {
+        "description": "Published MISP event",
         "type": "object"
+      },
+      "event_path": {
+        "description": "Published MISP event (to file)",
+        "type": "string"
+      }
     },
-    "uuid": "14a89812-1d7b-46bb-a300-4a98cdff8e69"
+    "required": [],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "14a89812-1d7b-46bb-a300-4a98cdff8e69"
 }

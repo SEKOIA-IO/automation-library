@@ -1,76 +1,75 @@
 {
-    "uuid": "4c518777-06c6-428d-9ce2-488a577740e4",
-    "name": "Get aggregation query",
-    "description": "Make an aggregation query",
-    "docker_parameters": "get-aggregation-query",
-    "arguments": {
-        "$schema~": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Aggregation query arguments",
-        "properties": {
-            "aggregation_type": {
-                "type": "string",
-                "description": "The aggregation type. Can be `avg`, `cardinality`, `max`, `min`, `sum` or `count`."
-            },
-            "aggregation_field": {
-                "type": "string",
-                "description": "The field on which apply the aggregation. Should be null only for `count` aggregation."
-            },
-            "query_term": {
-                "type": "string"
-            },
-            "earliest_time": {
-                "type": "string"
-            },
-            "latest_time": {
-                "type": "string"
-            },
-            "minutes_per_bucket": {
-                "type": "integer"
-            },
-            "filters": {
-                "type": "array"
-            }
-        },
-        "required": [
-            "aggregation_type",
-            "minutes_per_bucket",
-            "earliest_time",
-            "latest_time"
-        ]
+  "uuid": "4c518777-06c6-428d-9ce2-488a577740e4",
+  "name": "Get aggregation query",
+  "description": "Make an aggregation query",
+  "docker_parameters": "get-aggregation-query",
+  "arguments": {
+    "$schema~": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Aggregation query arguments",
+    "properties": {
+      "aggregation_type": {
+        "type": "string",
+        "description": "The aggregation type. Can be `avg`, `cardinality`, `max`, `min`, `sum` or `count`."
+      },
+      "aggregation_field": {
+        "type": "string",
+        "description": "The field on which apply the aggregation. Should be null only for `count` aggregation."
+      },
+      "query_term": {
+        "type": "string"
+      },
+      "earliest_time": {
+        "type": "string"
+      },
+      "latest_time": {
+        "type": "string"
+      },
+      "minutes_per_bucket": {
+        "type": "integer"
+      },
+      "filters": {
+        "type": "array"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "aggregations": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "datetime": {
-                            "type": "string"
-                        },
-                        "value": {
-                            "type": "number"
-                        },
-                        "anomaly": {},
-                        "prediction": {}
-                    }
-                }
+    "required": [
+      "aggregation_type",
+      "minutes_per_bucket",
+      "earliest_time",
+      "latest_time"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "aggregations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "datetime": {
+              "type": "string"
             },
-            "anomaly_detection_candidate_score_y_acf1": {
-                "type": "number"
+            "value": {
+              "type": "number"
             },
-            "anomaly_detection_candidate_score_y_acf5": {
-                "type": "number"
-            },
-            "anomaly_detection_candidate_score_seas_acf1": {
-                "type": "number"
-            },
-            "anomaly_detection_candidate": {
-                "type": "boolean"
-            }
-
+            "anomaly": {},
+            "prediction": {}
+          }
         }
+      },
+      "anomaly_detection_candidate_score_y_acf1": {
+        "type": "number"
+      },
+      "anomaly_detection_candidate_score_y_acf5": {
+        "type": "number"
+      },
+      "anomaly_detection_candidate_score_seas_acf1": {
+        "type": "number"
+      },
+      "anomaly_detection_candidate": {
+        "type": "boolean"
+      }
     }
+  }
 }

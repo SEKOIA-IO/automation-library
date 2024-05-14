@@ -1,126 +1,126 @@
 {
-    "uuid": "4a1354be-17e1-409a-806c-1faef82e5dd6",
-    "name": "Get details",
-    "docker_parameters": "get-query/ip/{target}",
-    "description": "Details about an Host. List of recent events for the specified host, including details of exposed ports and services.\n\n **Note**: Querying CIDRs is available for paid subscriptions only. When using CIDR, the number of credits that will be spent correspond to the number of targets that returned results. Example: a request for a /24 (256 targets) in which only 200 targets have results, will decrement 200 credits.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Get details",
-        "properties": {
-            "target": {
-                "in": "path",
-                "type": "string"
-            }
-        },
-        "required": ["target"]
+  "uuid": "4a1354be-17e1-409a-806c-1faef82e5dd6",
+  "name": "Get details",
+  "docker_parameters": "get-query/ip/{target}",
+  "description": "Details about an Host. List of recent events for the specified host, including details of exposed ports and services.\n\n **Note**: Querying CIDRs is available for paid subscriptions only. When using CIDR, the number of credits that will be spent correspond to the number of targets that returned results. Example: a request for a /24 (256 targets) in which only 200 targets have results, will decrement 200 credits.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get details",
+    "properties": {
+      "target": {
+        "in": "path",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "total": {
-                "type": "integer"
-            },
-            "query": {
-                "type": "string"
-            },
-            "events": {
-                "type": "array",
-                "items": {
+    "required": ["target"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "total": {
+        "type": "integer"
+      },
+      "query": {
+        "type": "string"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "origin": {
                     "type": "object",
                     "properties": {
-                        "results": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "origin": {
-                                        "type": "object",
-                                        "properties": {
-                                            "module": {
-                                                "type": "string"
-                                            },
-                                            "port": {
-                                                "type": "integer"
-                                            },
-                                            "ip": {
-                                                "type": "string"
-                                            },
-                                            "type": {
-                                                "type": "string"
-                                            },
-                                            "ts": {
-                                                "type": "integer"
-                                            },
-                                            "country": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    },
-                                    "result": {
-                                        "type": "object",
-                                        "properties": {
-                                            "data": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "state": {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "state": {
-                                                                "type": "string"
-                                                            }
-                                                        }
-                                                    },
-                                                    "service": {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "banner": {
-                                                                "type": "string"
-                                                            },
-                                                            "method": {
-                                                                "type": "string"
-                                                            },
-                                                            "cpe": {
-                                                                "type": "array",
-                                                                "items": {
-                                                                    "type": "string"
-                                                                }
-                                                            },
-                                                            "name": {
-                                                                "type": "string"
-                                                            },
-                                                            "product": {
-                                                                "type": "string"
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "target": {
-                                        "type": "object",
-                                        "properties": {
-                                            "protocol": {
-                                                "type": "string"
-                                            },
-                                            "port": {
-                                                "type": "integer"
-                                            },
-                                            "ip": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "port": {
-                            "type": "integer"
-                        }
+                      "module": {
+                        "type": "string"
+                      },
+                      "port": {
+                        "type": "integer"
+                      },
+                      "ip": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "ts": {
+                        "type": "integer"
+                      },
+                      "country": {
+                        "type": "string"
+                      }
                     }
+                  },
+                  "result": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "type": "object",
+                            "properties": {
+                              "state": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "service": {
+                            "type": "object",
+                            "properties": {
+                              "banner": {
+                                "type": "string"
+                              },
+                              "method": {
+                                "type": "string"
+                              },
+                              "cpe": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "product": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "target": {
+                    "type": "object",
+                    "properties": {
+                      "protocol": {
+                        "type": "string"
+                      },
+                      "port": {
+                        "type": "integer"
+                      },
+                      "ip": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
+              }
+            },
+            "port": {
+              "type": "integer"
             }
+          }
         }
+      }
     }
+  }
 }

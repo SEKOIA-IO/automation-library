@@ -1,37 +1,34 @@
 {
-    "description": "Query last IoCs from the Sophos Data lake",
-    "docker_parameters": "sophos_query_ioc_trigger",
-    "name": "Query IoC from data lake [BETA]",
-    "arguments": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "properties": {
-        "frequency": {
-          "type": "integer",
-          "description": "Batch frequency in seconds",
-          "default": 60
-        },
-        "chunk_size": {
-          "type": "integer",
-          "description": "The max size of chunks for the batch processing",
-          "default": 1000
-        },
-        "intake_server": {
-          "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
-          "default": "https://intake.sekoia.io",
-          "type": "string"
-        },
-        "intake_key": {
-          "description": "Intake key to use when sending events",
-          "type": "string"
-        }
+  "description": "Query last IoCs from the Sophos Data lake",
+  "docker_parameters": "sophos_query_ioc_trigger",
+  "name": "Query IoC from data lake [BETA]",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
       },
-      "required": [
-        "frequency",
-        "intake_key"
-      ],
-      "title": "Sophos Query Events",
-      "type": "object"
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
     },
-    "results": {},
-    "uuid": "d7052d5e-0ccc-403f-928a-f63cb71b2e0c"
-  }
+    "required": ["frequency", "intake_key"],
+    "title": "Sophos Query Events",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "d7052d5e-0ccc-403f-928a-f63cb71b2e0c"
+}

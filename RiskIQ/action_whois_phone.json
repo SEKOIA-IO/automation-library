@@ -1,40 +1,40 @@
 {
-    "uuid": "7fbffebc-98ef-44b8-b33a-d5c0457d14ab",
-    "name": "Reverse Whois (phone)",
-    "docker_parameters": "whois_phone",
-    "description": "Get WHOIS records associated with a phone number",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-            "phone": {
-                "in": "query",
-                "type": "string"
-            },
-            "exact": {
-                "in": "query",
-                "type": "string"
-            },
-            "maxResults": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": ["phone"]
+  "uuid": "7fbffebc-98ef-44b8-b33a-d5c0457d14ab",
+  "name": "Reverse Whois (phone)",
+  "docker_parameters": "whois_phone",
+  "description": "Get WHOIS records associated with a phone number",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "phone": {
+        "in": "query",
+        "type": "string"
+      },
+      "exact": {
+        "in": "query",
+        "type": "string"
+      },
+      "maxResults": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "results": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "domains": {
-                "type": "array",
-                "items": {
-                    "type": "object"
-                }
-            }
+    "required": ["phone"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "domains": {
+        "type": "array",
+        "items": {
+          "type": "object"
         }
+      }
     }
+  }
 }

@@ -24,10 +24,7 @@
         "default": ""
       }
     },
-    "required": [
-      "api_token",
-      "intake_key"
-    ],
+    "required": ["api_token", "intake_key"],
     "title": "The configuration to fetch new events",
     "type": "object"
   },

@@ -1,54 +1,54 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "SNORT",
-        "type": "object",
-        "required": ["archives"],
-        "properties": {
-            "archives": {
-                "type": "array",
-                "description": "Snort rules archives",
-                "items": {
-                    "type": "object",
-                    "required": ["url", "type"],
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": "URL of repository",
-                            "format": "uri"
-                        },
-                        "type": {
-                            "type": "string",
-                            "description": "Type of rules",
-                            "enum": ["snort", "suricata"]
-                        },
-                        "version": {
-                            "type": "string",
-                            "description": "Version of the rules"
-                        },
-                        "oinkcode": {
-                            "type": "string",
-                            "description": "Oinkcode to download the rules"
-                        }
-                    }
-                }
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "SNORT",
+    "type": "object",
+    "required": ["archives"],
+    "properties": {
+      "archives": {
+        "type": "array",
+        "description": "Snort rules archives",
+        "items": {
+          "type": "object",
+          "required": ["url", "type"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "URL of repository",
+              "format": "uri"
+            },
+            "type": {
+              "type": "string",
+              "description": "Type of rules",
+              "enum": ["snort", "suricata"]
+            },
+            "version": {
+              "type": "string",
+              "description": "Version of the rules"
+            },
+            "oinkcode": {
+              "type": "string",
+              "description": "Oinkcode to download the rules"
             }
+          }
         }
+      }
+    }
+  },
+  "description": "Trigger playbooks when new snort rules are detected of a repository",
+  "docker_parameters": "snort_rules_trigger",
+  "name": "New Snort Rules",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "bundle_path": {
+        "description": "Resulting STIX Bundle (in a file)",
+        "type": "string"
+      }
     },
-    "description": "Trigger playbooks when new snort rules are detected of a repository",
-    "docker_parameters": "snort_rules_trigger",
-    "name": "New Snort Rules",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "bundle_path": {
-                "description": "Resulting STIX Bundle (in a file)",
-                "type": "string"
-            }
-        },
-        "required": ["bundle_path"],
-        "title": "Results",
-        "type": "object"
-    },
-    "uuid": "373bcfc3-4235-4430-baf3-ac33edf70a6e"
+    "required": ["bundle_path"],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "373bcfc3-4235-4430-baf3-ac33edf70a6e"
 }

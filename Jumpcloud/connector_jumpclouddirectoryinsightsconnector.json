@@ -33,8 +33,6 @@
         "type": "string"
       }
     },
-    "required": [
-      "intake_key"
-    ]
+    "required": ["intake_key"]
   }
 }

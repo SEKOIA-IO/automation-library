@@ -1,74 +1,74 @@
 {
-    "uuid": "2172d425-5537-4770-ad32-dcafb040f4e2",
-    "name": "Search domains",
-    "docker_parameters": "get-query/domains/search",
-    "description": "List of Domains/DNS data based on a Query. Can be used with specific parameters and/or full-text search. Possible types of records currently available:\n\n -A, AAAA, NS, MX, CNAME, TXT",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Search domains",
-        "properties": {
-            "query": {
-                "in": "query",
-                "type": "string"
-            },
-            "page": {
-                "in": "query",
-                "type": "integer"
-            }
-        },
-        "required": ["query"]
+  "uuid": "2172d425-5537-4770-ad32-dcafb040f4e2",
+  "name": "Search domains",
+  "docker_parameters": "get-query/domains/search",
+  "description": "List of Domains/DNS data based on a Query. Can be used with specific parameters and/or full-text search. Possible types of records currently available:\n\n -A, AAAA, NS, MX, CNAME, TXT",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Search domains",
+    "properties": {
+      "query": {
+        "in": "query",
+        "type": "string"
+      },
+      "page": {
+        "in": "query",
+        "type": "integer"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "query": {
+    "required": ["query"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "page": {
+        "type": "integer"
+      },
+      "pagesize": {
+        "type": "integer"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "A": {
+              "type": "array",
+              "items": {
                 "type": "string"
+              }
             },
-            "page": {
-                "type": "integer"
+            "updated_at": {
+              "type": "string"
             },
-            "pagesize": {
-                "type": "integer"
+            "NS": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             },
-            "total": {
-                "type": "integer"
+            "domain": {
+              "type": "string"
             },
-            "events": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "A": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "updated_at": {
-                            "type": "string"
-                        },
-                        "NS": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "domain": {
-                            "type": "string"
-                        },
-                        "root": {
-                            "type": "string"
-                        },
-                        "MX": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+            "root": {
+              "type": "string"
+            },
+            "MX": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
+          }
         }
+      }
     }
+  }
 }

@@ -19,9 +19,7 @@
         "default": 1000
       }
     },
-    "required": [
-      "intake_key"
-    ]
+    "required": ["intake_key"]
   },
   "description": "connector playbook to get Trellix events information",
   "docker_parameters": "trellix_edr",

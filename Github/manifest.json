@@ -1,37 +1,32 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Github",
-        "type": "object",
-        "properties": {
-            "org_name": {
-                "description": "The name of your Github organization",
-                "type": "string"
-            },
-            "apikey": {
-                "description": "The APIkey to authenticate call to the Github API",
-                "type": "string"
-            },
-            "pem_file": {
-                "description": "Pem file to interact with Github API",
-                "type": "string"
-            },
-            "app_id": {
-                "description": "Github app id to interact with Github API",
-                "type": "integer"
-            }
-        },
-        "required": [
-            "org_name"
-        ],
-        "secrets": [
-            "apikey",
-            "pem_file"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Github",
+    "type": "object",
+    "properties": {
+      "org_name": {
+        "description": "The name of your Github organization",
+        "type": "string"
+      },
+      "apikey": {
+        "description": "The APIkey to authenticate call to the Github API",
+        "type": "string"
+      },
+      "pem_file": {
+        "description": "Pem file to interact with Github API",
+        "type": "string"
+      },
+      "app_id": {
+        "description": "Github app id to interact with Github API",
+        "type": "integer"
+      }
     },
-    "description": "Github connector for audit logs",
-    "name": "Github",
-    "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
-    "slug": "github",
-    "version": "1.9.0"
+    "required": ["org_name"],
+    "secrets": ["apikey", "pem_file"]
+  },
+  "description": "Github connector for audit logs",
+  "name": "Github",
+  "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
+  "slug": "github",
+  "version": "1.9.0"
 }

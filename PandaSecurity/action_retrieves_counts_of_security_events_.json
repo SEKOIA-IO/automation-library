@@ -19,9 +19,7 @@
         "in": "query"
       }
     },
-    "required": [
-      "type"
-    ]
+    "required": ["type"]
   },
   "results": {
     "properties": {

@@ -1,293 +1,276 @@
 {
-    "uuid": "113a06db-3cef-48ac-908b-45f3ebc4d1bf",
-    "name": "Edit Alert",
-    "docker_parameters": "patch-alerts/{uuid}",
-    "description": "Edit the details of an alert",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "patch_an_alert",
-        "properties": {
-            "uuid": {
-                "type": "string",
-                "in": "path"
-            },
-            "alert_type_category": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 1000,
-                "description": "Category of the alert type",
-                "in": "body"
-            },
-            "alert_type_value": {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 1000,
-                "description": "Name of the alert type, required if `alert_type_category` is present",
-                "in": "body"
-            },
-            "details": {
-                "type": "string",
-                "description": "Description of the alert",
-                "in": "body"
-            },
-            "urgency": {
-                "type": "integer",
-                "format": "int32",
-                "description": "The urgency of the alert",
-                "in": "body"
-            },
-            "kill_chain_short_id": {
-                "type": "string",
-                "x-nullable": true,
-                "description": "The ID of the kill chain step this alert denotes",
-                "in": "body"
-            },
-            "title": {
-                "type": "string",
-                "maxLength": 10000,
-                "description": "Title of the alert",
-                "in": "body"
-            }
-        },
-        "required": [
-            "uuid"
-        ]
+  "uuid": "113a06db-3cef-48ac-908b-45f3ebc4d1bf",
+  "name": "Edit Alert",
+  "docker_parameters": "patch-alerts/{uuid}",
+  "description": "Edit the details of an alert",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "patch_an_alert",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "alert_type_category": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 1000,
+        "description": "Category of the alert type",
+        "in": "body"
+      },
+      "alert_type_value": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 1000,
+        "description": "Name of the alert type, required if `alert_type_category` is present",
+        "in": "body"
+      },
+      "details": {
+        "type": "string",
+        "description": "Description of the alert",
+        "in": "body"
+      },
+      "urgency": {
+        "type": "integer",
+        "format": "int32",
+        "description": "The urgency of the alert",
+        "in": "body"
+      },
+      "kill_chain_short_id": {
+        "type": "string",
+        "x-nullable": true,
+        "description": "The ID of the kill chain step this alert denotes",
+        "in": "body"
+      },
+      "title": {
+        "type": "string",
+        "maxLength": 10000,
+        "description": "Title of the alert",
+        "in": "body"
+      }
     },
-    "results": {
+    "required": ["uuid"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "urgency": {
         "type": "object",
         "properties": {
-            "urgency": {
-                "type": "object",
-                "properties": {
-                    "severity": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "current_value": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "value": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "criticity": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "display": {
-                        "type": "string"
-                    }
-                }
-            },
-            "is_incident": {
-                "type": "boolean"
-            },
-            "assets": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "format": "uuid"
-                }
-            },
-            "updated_at": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "ttps": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "description": {
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string"
-                        },
-                        "id": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "id",
-                        "name",
-                        "type"
-                    ]
-                }
-            },
-            "number_of_unseen_comments": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "status": {
-                "type": "object",
-                "properties": {
-                    "description": {
-                        "type": "string"
-                    },
-                    "uuid": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                }
-            },
-            "created_by": {
-                "type": "string"
-            },
-            "updated_by": {
-                "type": "string"
-            },
-            "source": {
-                "type": "string"
-            },
-            "community_uuid": {
-                "type": "string",
-                "format": "uuid"
-            },
-            "number_of_total_comments": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "uuid": {
-                "type": "string",
-                "format": "uuid"
-            },
-            "rule": {
-                "type": "object",
-                "properties": {
-                    "type": {
-                        "type": "string"
-                    },
-                    "severity": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "pattern": {
-                        "type": "string"
-                    },
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    }
-                },
-                "required": [
-                    "name",
-                    "pattern",
-                    "uuid"
-                ]
-            },
-            "adversaries": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "description": {
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string"
-                        },
-                        "id": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "id",
-                        "name",
-                        "type"
-                    ]
-                }
-            },
-            "short_id": {
-                "type": "string"
-            },
-            "first_seen_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "last_seen_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "event_uuids": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "format": "uuid"
-                }
-            },
-            "kill_chain_short_id": {
-                "type": "string"
-            },
-            "similar": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "alert_type": {
-                "type": "object",
-                "properties": {
-                    "category": {
-                        "type": "string"
-                    },
-                    "value": {
-                        "type": "string"
-                    }
-                }
-            },
-            "details": {
-                "type": "string"
-            },
-            "stix": {
-                "type": "object"
-            },
-            "created_by_type": {
-                "type": "string"
-            },
-            "entity": {
-                "type": "object",
-                "properties": {
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name",
-                    "uuid"
-                ]
-            },
-            "created_at": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "updated_by_type": {
-                "type": "string"
-            },
-            "title": {
-                "type": "string"
-            },
-            "target": {
-                "type": "string"
-            }
+          "severity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "current_value": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "criticity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "display": {
+            "type": "string"
+          }
         }
+      },
+      "is_incident": {
+        "type": "boolean"
+      },
+      "assets": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "updated_at": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "ttps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name", "type"]
+        }
+      },
+      "number_of_unseen_comments": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "status": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "created_by": {
+        "type": "string"
+      },
+      "updated_by": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "community_uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "number_of_total_comments": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "rule": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": ["name", "pattern", "uuid"]
+      },
+      "adversaries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name", "type"]
+        }
+      },
+      "short_id": {
+        "type": "string"
+      },
+      "first_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "last_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "event_uuids": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "kill_chain_short_id": {
+        "type": "string"
+      },
+      "similar": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "alert_type": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "details": {
+        "type": "string"
+      },
+      "stix": {
+        "type": "object"
+      },
+      "created_by_type": {
+        "type": "string"
+      },
+      "entity": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "uuid"]
+      },
+      "created_at": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "updated_by_type": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "target": {
+        "type": "string"
+      }
     }
+  }
 }

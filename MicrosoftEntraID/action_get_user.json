@@ -94,8 +94,6 @@
         "type": "string"
       }
     },
-    "required": [
-      "accountEnabled"
-    ]
+    "required": ["accountEnabled"]
   }
 }

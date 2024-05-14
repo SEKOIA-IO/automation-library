@@ -1,53 +1,51 @@
 {
-    "name": "List devices",
-    "description": "Retrieves devices details.",
-    "uuid": "dc68f8e4-b2d7-460c-a74f-9226112696f1",
-    "docker_parameters": "list_devices",
-    "arguments": {
-        "title": "ListDevicesArguments",
-        "type": "object",
-        "properties": {
-            "organization_id": {
-                "title": "OrganizationId",
-                "description": "UUID of an organization. If organizationId is missing, default organization of authenticated client is used.",
-                "type": "string"
-            }
-        }
-    },
-    "results": {
-        "title": "ListOfDevices",
-        "type": "object",
-        "properties": {
-            "devices": {
-                "title": "Devices",
-                "type": "array",
-                "items": {
-                    "$ref": "#/definitions/Device"
-                }
-            }
-        },
-        "required": [
-            "devices"
-        ],
-        "definitions": {
-            "Device": {
-                "title": "Device",
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "title": "Id",
-                        "type": "string"
-                    },
-                    "type": {
-                        "title": "type",
-                        "type": "string"
-                    },
-                    "name": {
-                        "title": "name",
-                        "type": "string"
-                    }
-                }
-            }
-        }
+  "name": "List devices",
+  "description": "Retrieves devices details.",
+  "uuid": "dc68f8e4-b2d7-460c-a74f-9226112696f1",
+  "docker_parameters": "list_devices",
+  "arguments": {
+    "title": "ListDevicesArguments",
+    "type": "object",
+    "properties": {
+      "organization_id": {
+        "title": "OrganizationId",
+        "description": "UUID of an organization. If organizationId is missing, default organization of authenticated client is used.",
+        "type": "string"
+      }
     }
+  },
+  "results": {
+    "title": "ListOfDevices",
+    "type": "object",
+    "properties": {
+      "devices": {
+        "title": "Devices",
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Device"
+        }
+      }
+    },
+    "required": ["devices"],
+    "definitions": {
+      "Device": {
+        "title": "Device",
+        "type": "object",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "title": "type",
+            "type": "string"
+          },
+          "name": {
+            "title": "name",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
 }

@@ -29,9 +29,7 @@
         "type": "string"
       }
     },
-    "required": [
-      "intake_key"
-    ],
+    "required": ["intake_key"],
     "title": "DeepVisibility Connector",
     "type": "object"
   },
