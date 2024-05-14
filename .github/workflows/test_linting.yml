@@ -1,10 +1,6 @@
 name: Check linting
 on: push
 
-defaults:
-  run:
-    working-directory: utils
-
 jobs:
   test_linting:
     runs-on: ubuntu-latest
