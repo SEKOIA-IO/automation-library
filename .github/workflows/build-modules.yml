@@ -92,14 +92,14 @@ jobs:
         working-directory: "${{ matrix.module }}"
 
       - name: Upload Event
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Event File
           path: ${{ github.event_path }}
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Unit Test Results (${{ matrix.module }})
           path: "${{ matrix.module }}/junit.xml"
@@ -111,7 +111,7 @@ jobs:
           echo FLAG=${FLAG} >> $GITHUB_ENV # update GitHub ENV vars
 
       - name: Code Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ matrix.module }}/coverage.xml
