@@ -14,11 +14,6 @@
         "type": "string",
         "description": "The name of the SQS queue that received the notifications of the creation of S3 objects"
       },
-      "delete_consumed_messages": {
-        "type": "boolean",
-        "description": "Flag to delete consuming messages (default: true)",
-        "default": true
-      },
       "chunk_size": {
         "type": "integer",
         "description": "The size of chunks for the batch processing",

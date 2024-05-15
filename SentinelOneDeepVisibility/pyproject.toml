@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "Automation Module for SentinelOne"
+description = ""
+version = "0.0"
+authors = []
+packages = [
+    { include = "deep_visibility" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+sekoia-automation-sdk = "^1.8.1"
+"aws-automation" = {path = "../AWS", develop = false}
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^0.990"
+Faker = "^13.12.0"
+
+[build-system]
+requires = [ "poetry-core>=1.0.0",]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]

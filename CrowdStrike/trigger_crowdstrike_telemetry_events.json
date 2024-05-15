@@ -15,11 +15,6 @@
         "description": "Batch frequency in seconds. Should be greater than 0 and lower then 20 (default: 10)",
         "default": 10
       },
-      "delete_consumed_messages": {
-        "type": "boolean",
-        "description": "Flag to delete consuming messages (default: true)",
-        "default": true
-      },
       "is_fifo": {
         "type": "boolean",
         "description": "Flag to determine if the queue is a FIFO queue (default: false)",

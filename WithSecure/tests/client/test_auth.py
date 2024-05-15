@@ -60,7 +60,7 @@ def test_api_client_check_validity_before_refresh():
 
 
 def test_get_access_token_triggers_critical_log_on_auth_error(mocker):
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
+    mocker.patch.object(withsecure.client.auth, "API_AUTH_RETRY_BACKOFF", 0)
 
     log_mock = MagicMock()
     oauth_authentication = OAuthAuthentication(
@@ -141,7 +141,7 @@ def test_authentication_failure_invalid_credentials():
 
 def test_authentication_failure_no_json(mocker):
     mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 3)
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
+    mocker.patch.object(withsecure.client.auth, "API_AUTH_RETRY_BACKOFF", 0)
 
     oauth_authentication = OAuthAuthentication(
         client_id="test-client-id",
@@ -160,7 +160,7 @@ def test_authentication_failure_no_json(mocker):
 
 def test_authentication_failure_invalid_json(mocker):
     mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 3)
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
+    mocker.patch.object(withsecure.client.auth, "API_AUTH_RETRY_BACKOFF", 0)
 
     oauth_authentication = OAuthAuthentication(
         client_id="test-client-id",
@@ -179,7 +179,7 @@ def test_authentication_failure_invalid_json(mocker):
 
 def test_authentication_failure_connection_error(mocker):
     mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 1)
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
+    mocker.patch.object(withsecure.client.auth, "API_AUTH_RETRY_BACKOFF", 0)
 
     oauth_authentication = OAuthAuthentication(
         client_id="test-client-id",
@@ -198,7 +198,7 @@ def test_authentication_failure_connection_error(mocker):
 
 def test_authentication_failure_unsupported_exception(mocker):
     mocker.patch.object(withsecure.client.auth, "API_AUTH_MAX_ATTEMPT", 1)
-    mocker.patch.object(withsecure.client.auth, "API_AUTH_SECONDS_BETWEEN_ATTEMPTS", 0)
+    mocker.patch.object(withsecure.client.auth, "API_AUTH_RETRY_BACKOFF", 0)
 
     oauth_authentication = OAuthAuthentication(
         client_id="test-client-id",

@@ -1,3 +1,4 @@
+import random
 import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
@@ -9,7 +10,7 @@ from requests import PreparedRequest
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from withsecure.client.exceptions import AuthenticationError
-from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_AUTH_SECONDS_BETWEEN_ATTEMPTS, API_BASE_URL, API_TIMEOUT
+from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_BASE_URL, API_TIMEOUT, API_AUTH_RETRY_BACKOFF
 from withsecure.helpers import human_readable_api_exception
 
 API_AUTHENTICATION_URL = urljoin(API_BASE_URL, "as/token.oauth2")
@@ -117,14 +118,15 @@ class OAuthAuthentication(AuthBase):
             except AuthenticationError:
                 raise
             except Exception as error:
+                retry_delay = API_AUTH_RETRY_BACKOFF * 2**i_attempt + random.uniform(0, 1)  # exp. backoff
                 self.log_cb(
                     (
                         f"Authentication attempt failed: "
                         f"{human_readable_api_exception(error)}. "
-                        f"Will retry in {API_AUTH_SECONDS_BETWEEN_ATTEMPTS} seconds."
+                        f"Will retry in {retry_delay} seconds."
                     ),
                     "warning",
                 )
-                time.sleep(API_AUTH_SECONDS_BETWEEN_ATTEMPTS)
+                time.sleep(retry_delay)
 
         raise AuthenticationError()
