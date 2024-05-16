@@ -45,14 +45,19 @@
             "description": "commit creation datetime"
           }
         },
-        "required": ["id"]
+        "required": [
+          "id"
+        ]
       },
       "repository_path": {
         "type": "string",
         "description": "path of the repository directory"
       }
     },
-    "required": ["commit", "repository_path"],
+    "required": [
+      "commit",
+      "repository_path"
+    ],
     "title": "Results",
     "type": "object"
   },

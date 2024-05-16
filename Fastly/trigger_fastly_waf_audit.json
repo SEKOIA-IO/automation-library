@@ -41,8 +41,16 @@
         "type": "string"
       }
     },
-    "required": ["frequency", "intake_key", "email", "token", "corp"],
-    "secrets": ["token"],
+    "required": [
+      "frequency",
+      "intake_key",
+      "email",
+      "token",
+      "corp"
+    ],
+    "secrets": [
+      "token"
+    ],
     "title": "The configuration to fetch new logs",
     "type": "object"
   },

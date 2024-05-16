@@ -22,9 +22,15 @@
         "format": "uri"
       }
     },
-    "required": ["client_id", "client_secret", "base_url"],
+    "required": [
+      "client_id",
+      "client_secret",
+      "base_url"
+    ],
     "title": "CrowdStrike Falcon Configuration",
     "type": "object",
-    "secrets": ["client_secret"]
+    "secrets": [
+      "client_secret"
+    ]
   }
 }

@@ -10,7 +10,9 @@
         "description": "Batch frequency in seconds"
       }
     },
-    "required": ["frequency"],
+    "required": [
+      "frequency"
+    ],
     "title": "SearchLight Alerts",
     "type": "object"
   },
@@ -22,7 +24,9 @@
         "type": "array"
       }
     },
-    "required": ["alerts"],
+    "required": [
+      "alerts"
+    ],
     "title": "SearchLight Alerts"
   },
   "uuid": "7d026824-2c7c-4477-bc36-a1f96837eba1"

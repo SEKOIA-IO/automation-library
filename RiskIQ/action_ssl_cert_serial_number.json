@@ -12,7 +12,9 @@
         "type": "string"
       }
     },
-    "required": ["serial"]
+    "required": [
+      "serial"
+    ]
   },
   "results": {
     "type": "object",

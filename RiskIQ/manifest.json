@@ -17,8 +17,15 @@
         "description": "API secret"
       }
     },
-    "required": ["base_url", "api_key", "api_secret"],
-    "secrets": ["api_key", "api_secret"]
+    "required": [
+      "base_url",
+      "api_key",
+      "api_secret"
+    ],
+    "secrets": [
+      "api_key",
+      "api_secret"
+    ]
   },
   "uuid": "ab1540c3-1b60-4bad-9f5b-13d86a554826",
   "name": "RiskIQ",

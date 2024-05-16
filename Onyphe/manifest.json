@@ -10,7 +10,9 @@
     "required": [],
     "title": "Arguments",
     "type": "object",
-    "secrets": ["apikey"]
+    "secrets": [
+      "apikey"
+    ]
   },
   "description": "[Onyphe](https://www.onyphe.io/) is a Cyber Defense Search Engine for open-source and cyber threat intelligence data collected by crawling various sources available on the Internet or by listening to Internet background noise",
   "name": "Onyphe",

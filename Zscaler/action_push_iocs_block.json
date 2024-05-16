@@ -12,7 +12,9 @@
         "type": "string"
       }
     },
-    "required": ["stix_objects_path"],
+    "required": [
+      "stix_objects_path"
+    ],
     "title": "Arguments",
     "type": "object"
   },

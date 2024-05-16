@@ -3,7 +3,9 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Arguments",
     "type": "object",
-    "required": ["query"],
+    "required": [
+      "query"
+    ],
     "properties": {
       "query": {
         "description": "Query to run",
@@ -14,7 +16,11 @@
         "type": "array",
         "items": {
           "type": "object",
-          "required": ["name", "type", "value"],
+          "required": [
+            "name",
+            "type",
+            "value"
+          ],
           "properties": {
             "name": {
               "type": "string"
@@ -39,7 +45,9 @@
         "type": "string"
       }
     },
-    "required": ["items_path"],
+    "required": [
+      "items_path"
+    ],
     "title": "Results",
     "type": "object"
   },

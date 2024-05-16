@@ -16,7 +16,9 @@
         "description": "List of IP addresses; example \"74.125.227.230\""
       }
     },
-    "required": ["ips"]
+    "required": [
+      "ips"
+    ]
   },
   "results": {
     "type": "object",

@@ -23,7 +23,9 @@
         "type": "string"
       }
     },
-    "required": ["domain"]
+    "required": [
+      "domain"
+    ]
   },
   "results": {
     "type": "object",

@@ -38,7 +38,10 @@
         "type": "string"
       }
     },
-    "required": ["queue_name", "intake_key"],
+    "required": [
+      "queue_name",
+      "intake_key"
+    ],
     "title": "connector configuration",
     "type": "object"
   },

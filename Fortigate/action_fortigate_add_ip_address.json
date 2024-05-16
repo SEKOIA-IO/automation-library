@@ -19,7 +19,10 @@
         "type": "string"
       }
     },
-    "required": ["name", "ip"],
+    "required": [
+      "name",
+      "ip"
+    ],
     "title": "Arguments",
     "type": "object"
   },

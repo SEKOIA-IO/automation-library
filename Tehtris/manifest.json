@@ -17,8 +17,13 @@
         "type": "string"
       }
     },
-    "required": ["apikey", "tenant_id"],
-    "secrets": ["apikey"]
+    "required": [
+      "apikey",
+      "tenant_id"
+    ],
+    "secrets": [
+      "apikey"
+    ]
   },
   "description": "[TEHTRIS](https://tehtris.com) is a cybersecurity company offering products designed to protect endpoints against knwon and unknown threats",
   "name": "TEHTRIS",

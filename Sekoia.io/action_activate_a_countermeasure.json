@@ -25,11 +25,16 @@
             "description": "Author of the comment"
           }
         },
-        "required": ["content"],
+        "required": [
+          "content"
+        ],
         "in": "body"
       }
     },
-    "required": ["cm_uuid", "body"]
+    "required": [
+      "cm_uuid",
+      "body"
+    ]
   },
   "results": {
     "type": "object",

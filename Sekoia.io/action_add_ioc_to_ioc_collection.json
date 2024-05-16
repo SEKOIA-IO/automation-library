@@ -18,7 +18,13 @@
         "description": "Type of IOC",
         "example": "IP address, domain, url, email or hash",
         "type": "string",
-        "enum": ["IP address", "domain", "url", "email", "hash"]
+        "enum": [
+          "IP address",
+          "domain",
+          "url",
+          "email",
+          "hash"
+        ]
       },
       "valid_for": {
         "type": "integer",
@@ -27,10 +33,21 @@
       }
     },
     "oneOf": [
-      { "required": ["indicators"] },
-      { "required": ["indicators_path"] }
+      {
+        "required": [
+          "indicators"
+        ]
+      },
+      {
+        "required": [
+          "indicators_path"
+        ]
+      }
     ],
-    "required": ["ioc_collection_id", "indicator_type"],
+    "required": [
+      "ioc_collection_id",
+      "indicator_type"
+    ],
     "title": "Arguments",
     "type": "object"
   },

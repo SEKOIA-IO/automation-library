@@ -5,8 +5,12 @@
   "rootCauseElementType": "File",
   "primaryRootCauseName": "kprocesshacker.sys",
   "rootCauseElementNamesCount": 1,
-  "detectionEngines": ["AntiVirus"],
-  "detectionTypes": ["Known malware detected by Cybereason Anti-Malware"],
+  "detectionEngines": [
+    "AntiVirus"
+  ],
+  "detectionTypes": [
+    "Known malware detected by Cybereason Anti-Malware"
+  ],
   "malopDetectionType": "KNOWN_MALWARE",
   "creationTime": 1668357472339,
   "lastUpdateTime": 1668392385000,
@@ -31,7 +35,9 @@
   "users": [],
   "containers": [],
   "labels": [],
-  "decisionStatuses": ["Detected"],
+  "decisionStatuses": [
+    "Detected"
+  ],
   "malopCloseTime": null,
   "closerName": null,
   "malopType": "KNOWN_MALWARE",

@@ -7,7 +7,9 @@
   },
   "sm": {
     "delay": "00:00:00",
-    "to": ["/dev/null"],
+    "to": [
+      "/dev/null"
+    ],
     "pri": "32434",
     "dsn": "2.0.0",
     "ctladdr": "<jcarpenter@bobsbank.ca> (8/0)",

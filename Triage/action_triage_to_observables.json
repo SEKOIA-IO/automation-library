@@ -15,8 +15,16 @@
       }
     },
     "oneOf": [
-      { "required": ["triage_raw_results"] },
-      { "required": ["triage_raw_results_path"] }
+      {
+        "required": [
+          "triage_raw_results"
+        ]
+      },
+      {
+        "required": [
+          "triage_raw_results_path"
+        ]
+      }
     ],
     "title": "Triage raw results",
     "type": "object"

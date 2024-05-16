@@ -25,7 +25,9 @@
         }
       }
     },
-    "required": ["keywords"],
+    "required": [
+      "keywords"
+    ],
     "title": "Trigger Arguments",
     "type": "object"
   },

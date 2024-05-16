@@ -24,7 +24,13 @@
         "type": "string"
       }
     },
-    "required": ["domain", "email", "api_key"],
-    "secrets": ["api_key"]
+    "required": [
+      "domain",
+      "email",
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
   }
 }

@@ -19,8 +19,14 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "username", "password"],
-    "secrets": ["password"]
+    "required": [
+      "base_url",
+      "username",
+      "password"
+    ],
+    "secrets": [
+      "password"
+    ]
   },
   "description": "[CyberReason](https://www.cybereason.com/) is a Cybersecurity company providing products to detect and prevents attacks targeting endpoints",
   "name": "Cybereason",

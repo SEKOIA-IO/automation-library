@@ -9,7 +9,11 @@
       "index": {
         "description": "Name of the index to use",
         "type": "string",
-        "enum": ["ipv4", "websites", "certificates"]
+        "enum": [
+          "ipv4",
+          "websites",
+          "certificates"
+        ]
       },
       "field": {
         "description": "The field you are running a breakdown on in dot notation, e.g. location.country_code.",
@@ -20,7 +24,11 @@
         "type": "integer"
       }
     },
-    "required": ["query", "index", "field"],
+    "required": [
+      "query",
+      "index",
+      "field"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -35,7 +43,9 @@
         "type": "string"
       }
     },
-    "required": ["result_path"],
+    "required": [
+      "result_path"
+    ],
     "title": "Results",
     "type": "object"
   },

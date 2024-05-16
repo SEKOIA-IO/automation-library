@@ -13,8 +13,13 @@
         "type": "string"
       }
     },
-    "required": ["client_id", "secret"],
-    "secrets": ["secret"]
+    "required": [
+      "client_id",
+      "secret"
+    ],
+    "secrets": [
+      "secret"
+    ]
   },
   "description": "Interact with WithSecure Elements",
   "name": "WithSecure",

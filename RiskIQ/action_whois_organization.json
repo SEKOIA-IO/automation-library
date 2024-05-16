@@ -20,7 +20,9 @@
         "type": "string"
       }
     },
-    "required": ["org"]
+    "required": [
+      "org"
+    ]
   },
   "results": {
     "type": "object",

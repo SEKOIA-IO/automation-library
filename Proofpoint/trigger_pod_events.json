@@ -22,11 +22,17 @@
       "type": {
         "description": "The type of messages to collect",
         "type": "string",
-        "enum": ["message", "maillog"]
+        "enum": [
+          "message",
+          "maillog"
+        ]
       },
       "since_time": {
         "description": "The starting time (up to 30 days ago) to collect log data, as ISO8601 format",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "default": null
       },
       "intake_server": {
@@ -44,7 +50,13 @@
         "default": 10000
       }
     },
-    "required": ["api_host", "api_key", "cluster_id", "type", "intake_key"],
+    "required": [
+      "api_host",
+      "api_key",
+      "cluster_id",
+      "type",
+      "intake_key"
+    ],
     "title": "PoD Events",
     "type": "object"
   },

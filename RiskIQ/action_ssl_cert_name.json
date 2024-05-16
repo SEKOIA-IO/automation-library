@@ -12,7 +12,9 @@
         "type": "string"
       }
     },
-    "required": ["name"]
+    "required": [
+      "name"
+    ]
   },
   "results": {
     "type": "object",

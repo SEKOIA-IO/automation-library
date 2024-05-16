@@ -49,7 +49,11 @@
         "type": "string"
       }
     },
-    "required": ["admin_mail", "intake_key", "application_name"],
+    "required": [
+      "admin_mail",
+      "intake_key",
+      "application_name"
+    ],
     "title": "Google Reports",
     "type": "object"
   },

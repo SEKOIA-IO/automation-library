@@ -34,7 +34,10 @@
         "default": 480
       }
     },
-    "required": ["frequency", "intake_key"],
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
     "title": "The configuration to fetch new logs",
     "type": "object"
   },

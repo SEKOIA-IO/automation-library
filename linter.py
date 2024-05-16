@@ -1,4 +1,5 @@
 import argparse
+import json
 import subprocess
 import glob
 
@@ -35,33 +36,57 @@ def find_changed_json_files() -> list[str]:
     ]
 
 
-def run_npx_on_files(files_to_fix: list[str], check_only: bool = True):
+def format_json_file(file_path: str, check_only: bool = True) -> bool:
     """
-    Run prettier on the list of files.
+    Run format on a single file.
 
     Args:
-        files_to_fix: list[str]
+        file_path: str
         check_only: bool
     """
-    action = "--check" if check_only else "--write"
+    with open(file_path, "rt") as file:
+        file_content = file.read()
 
-    result = subprocess.run(
-        ["npx", "prettier", action] + files_to_fix,
-        capture_output=True
-    )
+    expected_content = json.dumps(json.loads(file_content), indent=2)
 
-    if result.returncode != 0:
-        raise Exception("Prettier failed: \n" + result.stderr.decode())
-    else:
-        print("Prettier run successfully: \n" + result.stdout.decode())
+    if file_content != expected_content and check_only:
+        print("File {0} is not formatted correctly".format(file_path))
+
+        return False
+
+    if file_content != expected_content:
+        print("File {0} is not formatted correctly. Fixing it...".format(file_path))
+        with open(file_path, "wt") as file:
+            file.write(expected_content)
+
+    return True
+
+
+def format_json_files(file_paths: list[str], check_only: bool = True):
+    """
+    Run json format on the list of files.
+
+    Args:
+        file_paths: list[str]
+        check_only: bool
+    """
+    invalid_files = [
+        file_path
+        for file_path in file_paths
+        if not format_json_file(file_path, check_only)
+    ]
+
+    if invalid_files:
+        raise ValueError(
+            "Some files are not formatted correctly. Please fix them manually: \n{0}".format(
+                "\n".join(invalid_files)
+            )
+        )
 
 
 def main():
     """
-    Lint all json files in the repository using prettier.
-
-    Requires prettier to be installed in the repository.
-        npm install --save-dev prettier
+    Lint all json files in the repository using json.dumps.
 
     Example of usage:
 
@@ -79,7 +104,7 @@ def main():
 
     files = find_changed_json_files() if args.changes else load_all_json_files(".")
 
-    run_npx_on_files(files, check_only=args.action == "check")
+    format_json_files(files, check_only=args.action == "check")
 
 
 if __name__ == "__main__":

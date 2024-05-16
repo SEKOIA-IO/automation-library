@@ -99,7 +99,11 @@
                     "type": "string"
                   }
                 },
-                "required": ["name", "uuid", "value"]
+                "required": [
+                  "name",
+                  "uuid",
+                  "value"
+                ]
               },
               "description": "The keys of the asset"
             },
@@ -119,7 +123,11 @@
                     "type": "string"
                   }
                 },
-                "required": ["name", "uuid", "value"]
+                "required": [
+                  "name",
+                  "uuid",
+                  "value"
+                ]
               },
               "description": "The attributes of the asset"
             },
@@ -148,7 +156,10 @@
                   "type": "string"
                 }
               },
-              "required": ["display", "value"],
+              "required": [
+                "display",
+                "value"
+              ],
               "description": "The criticality of the asset"
             },
             "asset_type": {
@@ -165,7 +176,10 @@
                   "type": "string"
                 }
               },
-              "required": ["name", "uuid"],
+              "required": [
+                "name",
+                "uuid"
+              ],
               "description": "The type of the asset"
             },
             "updated_at": {
@@ -214,18 +228,30 @@
                         "type": "string"
                       }
                     },
-                    "required": ["name", "uuid"]
+                    "required": [
+                      "name",
+                      "uuid"
+                    ]
                   }
                 },
                 "description": {
                   "type": "string"
                 }
               },
-              "required": ["name", "uuid"],
+              "required": [
+                "name",
+                "uuid"
+              ],
               "description": "The category of the asset"
             }
           },
-          "required": ["category", "created_at", "name", "updated_at", "uuid"]
+          "required": [
+            "category",
+            "created_at",
+            "name",
+            "updated_at",
+            "uuid"
+          ]
         }
       },
       "total": {

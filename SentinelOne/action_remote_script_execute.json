@@ -10,7 +10,11 @@
         "description": "The destination of the result",
         "type": "string",
         "default": "SentinelCloud",
-        "enum": ["SentinelCloud", "Local", "None"]
+        "enum": [
+          "SentinelCloud",
+          "Local",
+          "None"
+        ]
       },
       "task_description": {
         "description": "A short description of the task",
@@ -100,7 +104,12 @@
       "status": {
         "description": "The status of the run",
         "type": "string",
-        "enum": ["succeed", "canceled", "failed", "timeout"]
+        "enum": [
+          "succeed",
+          "canceled",
+          "failed",
+          "timeout"
+        ]
       },
       "status_reason": {
         "description": "The reason of the status",
@@ -117,7 +126,11 @@
         }
       }
     },
-    "required": ["status", "status_reason", "result_file"],
+    "required": [
+      "status",
+      "status_reason",
+      "result_file"
+    ],
     "title": "Results",
     "type": "object"
   },

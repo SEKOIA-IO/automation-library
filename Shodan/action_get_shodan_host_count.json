@@ -19,7 +19,9 @@
         "description": "A comma-separated list of properties to get summary information on. Property names can also be in the format of \"property:count\", where \"count\" is the number of facets that will be returned for a property (i.e. \"country:100\" to get the top 100 countries for a search query)."
       }
     },
-    "required": ["query"]
+    "required": [
+      "query"
+    ]
   },
   "results": {
     "type": "object",

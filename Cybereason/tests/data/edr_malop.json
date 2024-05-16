@@ -5,8 +5,12 @@
   "rootCauseElementType": "Process",
   "primaryRootCauseName": "cymulateagent.exe",
   "rootCauseElementNamesCount": 1,
-  "detectionEngines": ["EDR"],
-  "detectionTypes": ["Custom Malware"],
+  "detectionEngines": [
+    "EDR"
+  ],
+  "detectionTypes": [
+    "Custom Malware"
+  ],
   "malopDetectionType": "CUSTOM_RULE",
   "creationTime": 1668333388300,
   "lastUpdateTime": 1668945737625,

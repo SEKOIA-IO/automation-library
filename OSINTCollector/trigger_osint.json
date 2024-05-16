@@ -81,11 +81,19 @@
               "description": "Tags validity period, in days"
             }
           },
-          "required": ["name", "url", "frequency", "global_format", "fields"]
+          "required": [
+            "name",
+            "url",
+            "frequency",
+            "global_format",
+            "fields"
+          ]
         }
       }
     },
-    "required": ["collection_sources"],
+    "required": [
+      "collection_sources"
+    ],
     "title": "Trigger Arguments",
     "type": "object"
   },
@@ -100,7 +108,9 @@
         "type": "string"
       }
     },
-    "required": ["bundle_path"],
+    "required": [
+      "bundle_path"
+    ],
     "title": "Results",
     "type": "object"
   },

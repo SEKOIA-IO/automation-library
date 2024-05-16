@@ -31,8 +31,14 @@
         }
       }
     },
-    "required": ["base_url", "api_id", "api_key"],
-    "secrets": ["api_key"]
+    "required": [
+      "base_url",
+      "api_id",
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
   },
   "description": "Imperva Module",
   "name": "Imperva",

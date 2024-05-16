@@ -17,6 +17,8 @@
         }
       }
     },
-    "required": ["device_ids"]
+    "required": [
+      "device_ids"
+    ]
   }
 }

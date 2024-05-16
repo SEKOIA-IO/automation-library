@@ -14,7 +14,9 @@
         "type": "string"
       }
     },
-    "required": ["sha256"]
+    "required": [
+      "sha256"
+    ]
   },
   "results": {
     "properties": {

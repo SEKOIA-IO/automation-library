@@ -94,7 +94,12 @@
         }
       }
     },
-    "required": ["id", "config_type", "family", "cfg"],
+    "required": [
+      "id",
+      "config_type",
+      "family",
+      "cfg"
+    ],
     "title": "MWDB Configuration",
     "type": "object"
   },

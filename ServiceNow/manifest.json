@@ -17,8 +17,14 @@
         "description": "Password"
       }
     },
-    "required": ["base_url", "username", "password"],
-    "secrets": ["password"]
+    "required": [
+      "base_url",
+      "username",
+      "password"
+    ],
+    "secrets": [
+      "password"
+    ]
   },
   "uuid": "2b2f877e-6eaa-4d6c-a18e-f3383e52a429",
   "name": "ServiceNow",

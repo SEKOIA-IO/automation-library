@@ -5,14 +5,21 @@
       "index": {
         "description": "Name of the index to use",
         "type": "string",
-        "enum": ["ipv4", "websites", "certificates"]
+        "enum": [
+          "ipv4",
+          "websites",
+          "certificates"
+        ]
       },
       "item": {
         "description": "Item to retrieve",
         "type": "string"
       }
     },
-    "required": ["index", "item"],
+    "required": [
+      "index",
+      "item"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -27,7 +34,9 @@
         "type": "string"
       }
     },
-    "required": ["result_path"],
+    "required": [
+      "result_path"
+    ],
     "title": "Results",
     "type": "object"
   },

@@ -25,7 +25,10 @@
         "type": "string"
       }
     },
-    "required": ["query", "type"]
+    "required": [
+      "query",
+      "type"
+    ]
   },
   "results": {
     "type": "array",

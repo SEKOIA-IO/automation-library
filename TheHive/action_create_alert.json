@@ -27,37 +27,75 @@
         "type": "boolean"
       }
     },
-    "required": ["alert"],
+    "required": [
+      "alert"
+    ],
     "title": "Arguments",
     "type": "object"
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "id": { "type": "string" },
-      "createdBy": { "type": "string" },
-      "createdAt": { "type": "string" },
-      "updatedAt": { "type": "string" },
-      "type": { "type": "string" },
-      "source": { "type": "string" },
-      "sourceRef": { "type": "string" },
-      "externalLink": { "type": "string" },
-      "title": { "type": "string" },
-      "description": { "type": "string" },
-      "severity": { "type": "integer" },
-      "date": { "type": "integer" },
+      "id": {
+        "type": "string"
+      },
+      "createdBy": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "sourceRef": {
+        "type": "string"
+      },
+      "externalLink": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "severity": {
+        "type": "integer"
+      },
+      "date": {
+        "type": "integer"
+      },
       "tags": {
         "type": "array",
         "items": {
           "type": "string"
         }
       },
-      "tlp": { "type": "integer" },
-      "pap": { "type": "integer" },
-      "status": { "type": "string" },
-      "follow": { "type": "boolean" },
-      "customFields": { "type": "object" },
-      "artifacts": { "type": "array" }
+      "tlp": {
+        "type": "integer"
+      },
+      "pap": {
+        "type": "integer"
+      },
+      "status": {
+        "type": "string"
+      },
+      "follow": {
+        "type": "boolean"
+      },
+      "customFields": {
+        "type": "object"
+      },
+      "artifacts": {
+        "type": "array"
+      }
     },
     "title": "Results",
     "type": "object"

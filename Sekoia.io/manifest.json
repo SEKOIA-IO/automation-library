@@ -12,10 +12,15 @@
         "format": "uri"
       }
     },
-    "required": ["api_key", "base_url"],
+    "required": [
+      "api_key",
+      "base_url"
+    ],
     "title": "Sekoia.io Configuration",
     "type": "object",
-    "secrets": ["api_key"]
+    "secrets": [
+      "api_key"
+    ]
   },
   "description": "Sekoia.io",
   "name": "Sekoia.io",

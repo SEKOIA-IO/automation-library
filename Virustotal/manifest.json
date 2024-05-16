@@ -7,10 +7,14 @@
         "type": "string"
       }
     },
-    "required": ["apikey"],
+    "required": [
+      "apikey"
+    ],
     "title": "Arguments",
     "type": "object",
-    "secrets": ["apikey"]
+    "secrets": [
+      "apikey"
+    ]
   },
   "description": "[VirusTotal](https://www.virustotal.com) is a cybersecurity company specialized in malware analysis.",
   "name": "VirusTotal",

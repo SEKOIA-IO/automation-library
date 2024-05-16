@@ -12,7 +12,9 @@
         "format": "uri"
       }
     },
-    "required": ["integration_key"],
+    "required": [
+      "integration_key"
+    ],
     "title": "Arguments",
     "type": "object"
   },

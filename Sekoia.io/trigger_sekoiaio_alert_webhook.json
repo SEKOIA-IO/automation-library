@@ -17,7 +17,9 @@
         "type": "string"
       }
     },
-    "required": ["alert_uuid"]
+    "required": [
+      "alert_uuid"
+    ]
   },
   "uuid": "fc26eb9f-b272-4c15-b3bf-ace397c0dc57",
   "webhook": true

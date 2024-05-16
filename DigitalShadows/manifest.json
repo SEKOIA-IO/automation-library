@@ -28,7 +28,9 @@
       "basicauth_secret",
       "searchlight_account_id"
     ],
-    "secrets": ["basicauth_secret"]
+    "secrets": [
+      "basicauth_secret"
+    ]
   },
   "description": "Digital Shadows Module",
   "name": "Digital Shadows",

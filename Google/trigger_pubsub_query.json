@@ -3,7 +3,11 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Arguments",
     "type": "object",
-    "required": ["project_id", "subject_id", "intake_key"],
+    "required": [
+      "project_id",
+      "subject_id",
+      "intake_key"
+    ],
     "properties": {
       "intake_key": {
         "description": "Intake key to use when sending events",
@@ -45,7 +49,9 @@
         "type": "string"
       }
     },
-    "required": ["messages_path"],
+    "required": [
+      "messages_path"
+    ],
     "title": "Results",
     "type": "object"
   },

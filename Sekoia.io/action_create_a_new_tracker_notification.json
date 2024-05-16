@@ -61,7 +61,12 @@
                 "type": "string"
               }
             },
-            "required": ["id", "name", "ruleset_name", "type"]
+            "required": [
+              "id",
+              "name",
+              "ruleset_name",
+              "type"
+            ]
           },
           "created": {
             "type": "string"
@@ -73,24 +78,39 @@
           "status": {
             "type": "string",
             "default": "pending",
-            "enum": ["pending", "true_positive", "false_positive", "ignored"]
+            "enum": [
+              "pending",
+              "true_positive",
+              "false_positive",
+              "ignored"
+            ]
           },
           "observable": {
             "type": "object",
             "properties": {
-              "type": { "type": "string" },
-              "id": { "type": "string" }
+              "type": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
             }
           },
           "id": {
             "type": "string"
           }
         },
-        "required": ["created", "observable", "rule"],
+        "required": [
+          "created",
+          "observable",
+          "rule"
+        ],
         "in": "body"
       }
     },
-    "required": ["data"]
+    "required": [
+      "data"
+    ]
   },
   "results": {
     "type": "object",
@@ -148,7 +168,12 @@
                 "type": "string"
               }
             },
-            "required": ["id", "name", "ruleset_name", "type"]
+            "required": [
+              "id",
+              "name",
+              "ruleset_name",
+              "type"
+            ]
           },
           "created": {
             "type": "string"
@@ -160,22 +185,38 @@
           "status": {
             "type": "string",
             "default": "pending",
-            "enum": ["pending", "true_positive", "false_positive", "ignored"]
+            "enum": [
+              "pending",
+              "true_positive",
+              "false_positive",
+              "ignored"
+            ]
           },
           "observable": {
             "type": "object",
             "properties": {
-              "type": { "type": "string" },
-              "id": { "type": "string" }
+              "type": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
             }
           },
           "id": {
             "type": "string"
           }
         },
-        "required": ["created", "id", "observable", "rule"]
+        "required": [
+          "created",
+          "id",
+          "observable",
+          "rule"
+        ]
       }
     },
-    "required": ["data"]
+    "required": [
+      "data"
+    ]
   }
 }

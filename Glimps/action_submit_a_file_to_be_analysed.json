@@ -36,7 +36,9 @@
         "example": "9618ae7e-e284-405d-8998-ff1e12c7ca27"
       }
     },
-    "required": ["status"],
+    "required": [
+      "status"
+    ],
     "type": "object"
   }
 }

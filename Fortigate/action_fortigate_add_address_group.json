@@ -14,7 +14,10 @@
         }
       }
     },
-    "required": ["name", "member"],
+    "required": [
+      "name",
+      "member"
+    ],
     "title": "Arguments",
     "type": "object"
   },

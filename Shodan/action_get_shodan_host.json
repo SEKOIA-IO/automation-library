@@ -24,7 +24,9 @@
         "description": "True to only return the list of ports and the general host information, no banners. (default: False) "
       }
     },
-    "required": ["ip"]
+    "required": [
+      "ip"
+    ]
   },
   "results": {
     "type": "object",

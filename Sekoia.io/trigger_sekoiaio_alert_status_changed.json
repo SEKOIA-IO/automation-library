@@ -21,7 +21,7 @@
         "type": "string"
       },
       "event_type": {
-        "description": "Action that triggered this Sekoia.io Alert notification (could be for example “alert-created”, “alert-status-changed”, etc.)",
+        "description": "Action that triggered this Sekoia.io Alert notification (could be for example \u201calert-created\u201d, \u201calert-status-changed\u201d, etc.)",
         "type": "string"
       },
       "alert_uuid": {

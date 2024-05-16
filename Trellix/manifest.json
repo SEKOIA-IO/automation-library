@@ -40,8 +40,15 @@
         "type": "integer"
       }
     },
-    "required": ["client_id", "client_secret", "api_key"],
-    "secrets": ["client_secret", "api_key"],
+    "required": [
+      "client_id",
+      "client_secret",
+      "api_key"
+    ],
+    "secrets": [
+      "client_secret",
+      "api_key"
+    ],
     "title": "Trellix module Configuration",
     "type": "object"
   },

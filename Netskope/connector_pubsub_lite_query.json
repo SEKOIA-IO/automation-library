@@ -9,7 +9,9 @@
       "subscription_id",
       "intake_key"
     ],
-    "secrets": ["credentials"],
+    "secrets": [
+      "credentials"
+    ],
     "properties": {
       "credentials": {
         "description": "Credentials to use. You can find them in the credentials file",

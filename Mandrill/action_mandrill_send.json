@@ -46,7 +46,9 @@
                   "type": "string"
                 }
               },
-              "required": ["email"]
+              "required": [
+                "email"
+              ]
             },
             "minItems": 1
           },
@@ -158,7 +160,9 @@
                   }
                 }
               },
-              "required": ["email"]
+              "required": [
+                "email"
+              ]
             }
           },
           "tags": {
@@ -222,7 +226,9 @@
         "type": "string"
       }
     },
-    "required": ["message"],
+    "required": [
+      "message"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -255,7 +261,9 @@
         }
       }
     },
-    "required": ["report"],
+    "required": [
+      "report"
+    ],
     "title": "Results",
     "type": "object"
   },

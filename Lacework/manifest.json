@@ -17,8 +17,14 @@
         "type": "string"
       }
     },
-    "required": ["key_id", "secret", "account"],
-    "secrets": ["secret"]
+    "required": [
+      "key_id",
+      "secret",
+      "account"
+    ],
+    "secrets": [
+      "secret"
+    ]
   },
   "description": "[Lacework](https://www.lacework.com/) is a cybersecurity company specializing in cloud security and compliance, offering automated threat detection and response solutions for modern cloud environments.",
   "name": "Lacework",

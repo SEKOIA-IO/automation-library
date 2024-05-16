@@ -17,7 +17,9 @@
         "default": true
       }
     },
-    "required": ["url"],
+    "required": [
+      "url"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -32,7 +34,9 @@
         "type": "string"
       }
     },
-    "required": ["file_path"],
+    "required": [
+      "file_path"
+    ],
     "title": "Results",
     "type": "object"
   },

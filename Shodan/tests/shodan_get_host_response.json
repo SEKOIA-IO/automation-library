@@ -8,12 +8,19 @@
   "area_code": null,
   "longitude": -122.0775,
   "last_update": "2022-06-22T09:06:45.680165",
-  "ports": [443, 53],
+  "ports": [
+    443,
+    53
+  ],
   "latitude": 37.4056,
-  "hostnames": ["dns.google"],
+  "hostnames": [
+    "dns.google"
+  ],
   "country_code": "US",
   "country_name": "United States",
-  "domains": ["dns.google"],
+  "domains": [
+    "dns.google"
+  ],
   "org": "Google LLC",
   "data": [
     {
@@ -24,7 +31,9 @@
       "data": "\nRecursion: enabled",
       "asn": "AS15169",
       "port": 53,
-      "hostnames": ["dns.google"],
+      "hostnames": [
+        "dns.google"
+      ],
       "location": {
         "city": "Mountain View",
         "region_code": "CA",
@@ -41,7 +50,9 @@
         "software": null
       },
       "ip": 134744072,
-      "domains": ["dns.google"],
+      "domains": [
+        "dns.google"
+      ],
       "org": "Google LLC",
       "os": null,
       "_shodan": {
@@ -65,7 +76,9 @@
       "data": "\nRecursion: enabled",
       "asn": "AS15169",
       "port": 53,
-      "hostnames": ["dns.google"],
+      "hostnames": [
+        "dns.google"
+      ],
       "location": {
         "city": "Mountain View",
         "region_code": "CA",
@@ -82,7 +95,9 @@
         "software": null
       },
       "ip": 134744072,
-      "domains": ["dns.google"],
+      "domains": [
+        "dns.google"
+      ],
       "org": "Google LLC",
       "os": null,
       "_shodan": {
@@ -270,13 +285,21 @@
           "SSLv3/TLS read finished",
           "SSL negotiation finished successfully"
         ],
-        "alpn": ["grpc-exp", "h2", "http/1.1"],
+        "alpn": [
+          "grpc-exp",
+          "h2",
+          "http/1.1"
+        ],
         "ocsp": {}
       },
-      "hostnames": ["dns.google"],
+      "hostnames": [
+        "dns.google"
+      ],
       "transport": "tcp",
       "ip": 134744072,
-      "domains": ["dns.google"],
+      "domains": [
+        "dns.google"
+      ],
       "ip_str": "8.8.8.8",
       "os": null,
       "_shodan": {

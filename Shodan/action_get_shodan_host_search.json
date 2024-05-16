@@ -29,7 +29,9 @@
         "description": "True or False; whether or not to truncate some of the larger fields (default: True) "
       }
     },
-    "required": ["query"]
+    "required": [
+      "query"
+    ]
   },
   "results": {
     "type": "object",

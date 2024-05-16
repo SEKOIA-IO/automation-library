@@ -24,7 +24,10 @@
         "in": "body"
       }
     },
-    "required": ["uuid", "content"]
+    "required": [
+      "uuid",
+      "content"
+    ]
   },
   "results": {
     "type": "object",

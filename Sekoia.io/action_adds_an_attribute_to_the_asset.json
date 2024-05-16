@@ -21,7 +21,11 @@
         "type": "string"
       }
     },
-    "required": ["uuid", "name", "value"]
+    "required": [
+      "uuid",
+      "name",
+      "value"
+    ]
   },
   "results": {
     "type": "object",
@@ -37,6 +41,10 @@
         "type": "string"
       }
     },
-    "required": ["name", "uuid", "value"]
+    "required": [
+      "name",
+      "uuid",
+      "value"
+    ]
   }
 }

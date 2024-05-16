@@ -20,7 +20,9 @@
         "type": "string"
       }
     },
-    "required": ["nameserver"]
+    "required": [
+      "nameserver"
+    ]
   },
   "results": {
     "type": "object",

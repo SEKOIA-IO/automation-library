@@ -44,7 +44,11 @@
         "type": "string"
       }
     },
-    "required": ["frequency", "queue_name", "intake_key"],
+    "required": [
+      "frequency",
+      "queue_name",
+      "intake_key"
+    ],
     "title": "connector configuration",
     "type": "object"
   },

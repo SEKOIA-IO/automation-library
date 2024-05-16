@@ -18,7 +18,10 @@
         }
       }
     },
-    "required": ["frequency", "malware_list"],
+    "required": [
+      "frequency",
+      "malware_list"
+    ],
     "title": "Triage Configuration",
     "type": "object"
   },
@@ -30,7 +33,9 @@
         "type": "string"
       }
     },
-    "required": ["file_path"],
+    "required": [
+      "file_path"
+    ],
     "title": "Triage raw results"
   },
   "uuid": "484e4dea-9540-4535-8add-9a43ed54fcdd"

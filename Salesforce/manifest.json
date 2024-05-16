@@ -24,8 +24,14 @@
         "type": "string"
       }
     },
-    "required": ["client_id", "client_secret", "base_url"],
-    "secrets": ["client_secret"],
+    "required": [
+      "client_id",
+      "client_secret",
+      "base_url"
+    ],
+    "secrets": [
+      "client_secret"
+    ],
     "title": "Salesforce module Configuration",
     "type": "object"
   },

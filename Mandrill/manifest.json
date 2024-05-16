@@ -7,10 +7,14 @@
         "type": "string"
       }
     },
-    "required": ["apikey"],
+    "required": [
+      "apikey"
+    ],
     "title": "Arguments",
     "type": "object",
-    "secrets": ["apikey"]
+    "secrets": [
+      "apikey"
+    ]
   },
   "description": "Mandrill is a transactional email platform from Mailchimp.",
   "name": "Mandrill",

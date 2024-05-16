@@ -18,8 +18,14 @@
         "type": "string"
       }
     },
-    "required": ["client_id", "client_secret", "tenant_id"],
-    "secrets": ["client_secret"],
+    "required": [
+      "client_id",
+      "client_secret",
+      "tenant_id"
+    ],
+    "secrets": [
+      "client_secret"
+    ],
     "title": "Office 365 management API",
     "type": "object"
   },

@@ -9,16 +9,38 @@
     "title": "Get Security Events",
     "properties": {
       "type": {
-        "description": "Type of security event. Specify one of these values:\n\t- 1 — Malware\n\t- 2 — PUPs (Potentially Unwanted Programs)\n\t- 3 — Blocked Programs\n\t- 4 — Exploits\n\t- 5 — Blocked by Advanced Security\n\t- 6 — Virus\n\t- 7 — Spyware\n\t- 8 — Hacking Tools and PUPs detected by Antivirus\n\t- 9 — Phishing\n\t- 10 — Suspicious\n\t- 11 — Dangerous Actions\n\t- 12 — Tracking Cookies\n\t- 13 — Malware URLs\n\t- 14 — Other security event by Antivirus\n\t- 15 — Intrusion Attempts\n\t- 16 — Blocked Connections\n\t- 17 — Blocked Devices\n\t- 18 — Indicators of Attack\nExample: 13",
+        "description": "Type of security event. Specify one of these values:\n\t- 1 \u2014 Malware\n\t- 2 \u2014 PUPs (Potentially Unwanted Programs)\n\t- 3 \u2014 Blocked Programs\n\t- 4 \u2014 Exploits\n\t- 5 \u2014 Blocked by Advanced Security\n\t- 6 \u2014 Virus\n\t- 7 \u2014 Spyware\n\t- 8 \u2014 Hacking Tools and PUPs detected by Antivirus\n\t- 9 \u2014 Phishing\n\t- 10 \u2014 Suspicious\n\t- 11 \u2014 Dangerous Actions\n\t- 12 \u2014 Tracking Cookies\n\t- 13 \u2014 Malware URLs\n\t- 14 \u2014 Other security event by Antivirus\n\t- 15 \u2014 Intrusion Attempts\n\t- 16 \u2014 Blocked Connections\n\t- 17 \u2014 Blocked Devices\n\t- 18 \u2014 Indicators of Attack\nExample: 13",
         "type": "integer",
         "in": "path",
-        "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
       },
       "period": {
         "description": "Period of time to retrieve security events for. Specify one of these values:\n\t- 1 - Previous 24 hours\n\t- 7 - Previous 7 days",
         "type": "integer",
         "in": "path",
-        "enum": [1, 7]
+        "enum": [
+          1,
+          7
+        ]
       },
       "hostname": {
         "description": "Host name (base-64 encoded) of the device you want to retrieve security events for.",
@@ -26,7 +48,10 @@
         "in": "query"
       }
     },
-    "required": ["type", "period"]
+    "required": [
+      "type",
+      "period"
+    ]
   },
   "results": {
     "properties": {
@@ -39,8 +64,29 @@
       "action": {
         "description": "Indicates the action performed. For Indicators Of Attack:\n- 0: Undefined\n- 1: Informed\n- 2: Attack Blocked.\nFor other detections:\n- 0: Allowed\n- 1: Moved Quarantine\n- 2: Blocked\n- 3: Killed\n- 4: Ignored\n- 5: Cleaned\n- 6: Deleted\n- 7: Restored\n- 8: Allowed By Whitelist\n- 9: Write Blocked\n- 10: User Pending\n- 11: Uninstalled\n- 13: After Process Blocked\n- 14: Immediately Blocked\n- 15: Allowed By User\n- 16: Detected Restart Pending\n- 17: Allowed By Administrator\n- 18: AllowedSonGwInstaller\n- 21: Suspend Process\n- 1009: Informed\n- 1010: Unquarantine\n- 1011: Rename\n- 1012: Block URL\n",
         "enum": [
-          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 21,
-          1009, 1010, 1011, 1012
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          21,
+          1009,
+          1010,
+          1011,
+          1012
         ],
         "format": "int32",
         "type": "integer"
@@ -78,8 +124,28 @@
       "detected_by": {
         "description": "Protection or technology in antivirus detections.\n- 1: On Demand Scan\n- 2: File Resident\n- 3: Mail Resident\n- 4: Firewall\n- 5: Device Control\n- 6: Exchange Mailbox\n- 7: Exchange Transport\n- 8: Exchange Antispam\n- 9: Web Protection\n- 10: Exchange Content\n- 11: Minerva\n- 12: Web Access Control\n- 13: Anti-theft\n- 14: Anti-tampering\n- 15: Personal Information Tracking\n- 16: Isolation\n- 17: Data Search Control\n- 18: Patch Management\n- 19: Personal Information Inventory\n- 20: Application Control\n- 21: Encryption USB\n- 22: Authorized Software\n",
         "enum": [
-          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-          21, 22
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22
         ],
         "format": "int32"
       },
@@ -95,17 +161,32 @@
       },
       "device_type": {
         "description": "Device type in antivirus and firewall detections.\n- 0: Undefined\n- 1: Workstation\n- 2: Laptop\n- 3: Server\n- 4: Mobile\n",
-        "enum": [0, 1, 2, 3, 4],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
         "format": "int32"
       },
       "direction": {
         "description": "Direction of firewall blocked connections.\n- 1: Incoming\n- 2: Outgoing\n- 3: Incoming and Outgoing\n- 4: Internal\n",
-        "enum": [1, 2, 3, 4],
+        "enum": [
+          1,
+          2,
+          3,
+          4
+        ],
         "format": "int32"
       },
       "discard_motive": {
         "description": "Reason for discarding the knowledge sample.\n- 0: Unknown\n- 1: Other Reason\n- 2: File Max Size\n",
-        "enum": [0, 1, 2],
+        "enum": [
+          0,
+          1,
+          2
+        ],
         "format": "int32"
       },
       "domain": {
@@ -130,7 +211,15 @@
       },
       "event_type": {
         "description": "Indicates the event type.\n- 0: Malware\n- 1: Exploit\n- 2: Pups\n- 3: Blocked item\n- 6: Lock Plus Advanced Security\n- 7: Lock Plus Application Control\n- 8: Application Control\n",
-        "enum": [0, 1, 2, 3, 6, 7, 8],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          6,
+          7,
+          8
+        ],
         "format": "int32"
       },
       "excluded": {
@@ -193,7 +282,12 @@
       },
       "like_lihood_of_being_malicious": {
         "description": "Indicates the likelihood of being malicious.\n- 0: Low\n- 1: Medium\n- 2: High\n- 3: Very High\n",
-        "enum": [0, 1, 2, 3],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
         "format": "int32"
       },
       "local_endpoint": {
@@ -208,7 +302,16 @@
       },
       "lock_plus_rule_id": {
         "description": "LockPlus Rule ID.\n- 1: Obfuscated Params Powershell\n- 2: User Executed Powershell\n- 4: Unknown Scripts\n- 5: Locally Built Programs\n- 6: Documents With Macros\n- 7: Windows Boot Registry\n- 101: Forbidden Md5\n- 102: Forbidden Program Name\n",
-        "enum": [1, 2, 4, 5, 6, 7, 101, 102],
+        "enum": [
+          1,
+          2,
+          4,
+          5,
+          6,
+          7,
+          101,
+          102
+        ],
         "format": "int32"
       },
       "made_external_connections": {
@@ -219,7 +322,17 @@
       },
       "malware_category": {
         "description": "Malware category in antivirus detections.\n- 1: Virus\n- 2: Spyware\n- 3: HackingPpnd\n- 4: Phishing\n- 5: Suspicious\n- 6: Blocked Operations\n- 7: Tracking Cookies\n- 8: Malware URL\n- 9: Others\n",
-        "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
         "format": "int32"
       },
       "malware_name": {
@@ -229,15 +342,71 @@
       "malware_type": {
         "description": "Malware type in antivirus detections.\n- 21: Nereus Heuritic\n- 22: Beta trace Heuritic\n- 23: Smart Clean Heuritic\n- 24: Cloud Heuritic\n- 25: 1N\n- 26: Behavioral\n- 31: Confirmed Goodware\n- 32: Not Confirmed Goodware\n- 33: Unwanted Goodware\n- 34: Ranked\n- 35: Digital Signature\n- 101: Virus\n- 102: Worm\n- 103: Trojan\n- 104: TrojanPwdeal\n- 105: Dialer\n- 106: Joke\n- 107: Security Risk\n- 108: Spyware\n- 109: Adware\n- 110: WormFakefrom\n- 111: Tracking Cookie\n- 112: Pup\n- 113: Hacking Tool\n- 114: Vulnerability\n- 115: Max Size\n- 116: ZipOfDeath\n- 117: PackerOfDeath\n- 118: Hoax\n- 119: Phis Fraud\n- 120: Rootkit\n- 121: Backdoor\n- 122: Virus Constructor\n- 123: Malicious URL\n- 201: Advertising\n- 202: Toolbar\n- 203: NetTool\n- 204: Advert Popup\n- 219: Illegal\n- 223: Internet Tools\n- 227: Offensive\n- 236: Society Education\n- 241: Content Filter\n",
         "enum": [
-          21, 22, 23, 24, 25, 26, 31, 32, 33, 34, 35, 101, 102, 103, 104, 105,
-          106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119,
-          120, 121, 122, 123, 201, 202, 203, 204, 219, 223, 227, 236, 241
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          31,
+          32,
+          33,
+          34,
+          35,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          201,
+          202,
+          203,
+          204,
+          219,
+          223,
+          227,
+          236,
+          241
         ],
         "format": "int32"
       },
       "network_activity_type": {
         "description": "Network activity type in firewall detections.\n- 1: IcmpAttack\n- 2: UdpPortScan\n- 3: HeaderLengths\n- 4: UdpFlood\n- 5: TcpFlagsCheck\n- 6: SmartWins\n- 7: IpExplicitPath\n- 8: LandAttack\n- 9: SmartDns\n- 10: IcmpFilterEchoRequest\n- 11: OsDetection\n- 12: SmartDhcp\n- 13: SynFlood\n- 14: SmartArp\n- 15: TcpPortScan\n",
-        "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
         "format": "int32"
       },
       "number_of_occurrences": {
@@ -251,22 +420,47 @@
       },
       "platform_id": {
         "description": "Platform of affected device.\n- 0: Undefined\n- 1: Windows\n- 2: Linux\n- 3: Mac\n- 4: Android\n- 5: IOS\n",
-        "enum": [0, 1, 2, 3, 4, 5],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
         "format": "int32"
       },
       "protection_mode": {
         "description": "Indicates the protection mode.\n- 0: Undefined\n- 1: Audit\n- 2: Hardening\n- 3: Lock\n",
-        "enum": [0, 1, 2, 3],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
         "format": "int32"
       },
       "protocol": {
         "description": "Protocol of firewall blocked connections.\n- 1: Tcp\n- 2: Udp\n- 3: TcpUdp\n- 4: Icmp\n- 5: IP\n- 6: All\n",
-        "enum": [1, 2, 3, 4, 5, 6],
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
         "format": "int32"
       },
       "reclassified_to_type": {
         "description": "Indicates the type to which it has been reclassified.\n- 0: Blocked\n- 1: Malware\n- 3: Pup\n- 6: Goodware\n- 11: Removed From List\n",
-        "enum": [0, 1, 3, 6, 11],
+        "enum": [
+          0,
+          1,
+          3,
+          6,
+          11
+        ],
         "format": "int32"
       },
       "remote_endpoint": {
@@ -319,7 +513,14 @@
       },
       "rule_risk": {
         "description": "Indicates the rule risk for indicators of attack detections.\n- 0: Undefined\n- 1: Critical\n- 2: High\n- 3: Medium\n- 4: Low\n- 1000: Unknown\n",
-        "enum": [0, 1, 2, 3, 4, 1000],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          1000
+        ],
         "format": "int32"
       },
       "security_event_date": {
@@ -357,12 +558,24 @@
       },
       "status": {
         "description": "Indicates the status in indicators of attack detections.\n- 0: Undefined\n- 1: Pending\n- 2: Filed\n",
-        "enum": [0, 1, 2],
+        "enum": [
+          0,
+          1,
+          2
+        ],
         "format": "int32"
       },
       "type": {
         "description": "Type of device for device control detections.\n- 0: Undefined\n- 1: Removable Storage\n- 2: Image Capture\n- 3: Optical Storage\n- 4: Bluetooth\n- 5: Modem\n- 6: Mobile\n",
-        "enum": [0, 1, 2, 3, 4, 5, 6],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
         "format": "int32"
       },
       "user_name": {

@@ -13,8 +13,13 @@
         "description": "MISP API key"
       }
     },
-    "required": ["misp_url", "misp_api_key"],
-    "secrets": ["misp_api_key"]
+    "required": [
+      "misp_url",
+      "misp_api_key"
+    ],
+    "secrets": [
+      "misp_api_key"
+    ]
   },
   "description": "[MISP](https://www.misp-project.org/) is a opensource platform to gather, store, share and correlate threat intelligence like cyber security indicators",
   "name": "MISP",

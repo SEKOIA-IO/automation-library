@@ -16,7 +16,9 @@
         "description": "List of hostnames; example \"google.com\"."
       }
     },
-    "required": ["hostnames"]
+    "required": [
+      "hostnames"
+    ]
   },
   "results": {
     "type": "object",

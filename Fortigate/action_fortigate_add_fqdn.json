@@ -19,7 +19,10 @@
         "type": "string"
       }
     },
-    "required": ["name", "fqdn"],
+    "required": [
+      "name",
+      "fqdn"
+    ],
     "title": "Arguments",
     "type": "object"
   },

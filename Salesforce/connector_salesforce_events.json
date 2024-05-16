@@ -19,7 +19,9 @@
         "default": 1000
       }
     },
-    "required": ["intake_key"]
+    "required": [
+      "intake_key"
+    ]
   },
   "description": "connector playbook to get Salesforce information",
   "docker_parameters": "salesforce",

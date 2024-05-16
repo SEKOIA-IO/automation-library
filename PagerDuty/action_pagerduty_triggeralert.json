@@ -16,7 +16,11 @@
         "format": "uri"
       }
     },
-    "required": ["alert_uuid", "api_key", "base_url"],
+    "required": [
+      "alert_uuid",
+      "api_key",
+      "base_url"
+    ],
     "title": "Arguments",
     "type": "object"
   },

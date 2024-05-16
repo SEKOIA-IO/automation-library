@@ -11,8 +11,13 @@
         "type": "string"
       }
     },
-    "required": ["username", "password"],
-    "secrets": ["password"],
+    "required": [
+      "username",
+      "password"
+    ],
+    "secrets": [
+      "password"
+    ],
     "title": "Microsoft Actions module Configuration",
     "type": "object"
   },

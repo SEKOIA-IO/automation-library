@@ -21,7 +21,9 @@
         "in": "body"
       }
     },
-    "required": ["case_uuid"]
+    "required": [
+      "case_uuid"
+    ]
   },
   "results": {
     "type": "object",

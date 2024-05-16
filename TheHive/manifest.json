@@ -16,10 +16,16 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "apikey", "organisation"],
+    "required": [
+      "base_url",
+      "apikey",
+      "organisation"
+    ],
     "title": "Arguments",
     "type": "object",
-    "secrets": ["apikey"]
+    "secrets": [
+      "apikey"
+    ]
   },
   "description": "[TheHive](https://thehive-project.org/) is a scalable, open source and free Security Incident Response Platform",
   "name": "The Hive",

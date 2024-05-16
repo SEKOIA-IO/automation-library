@@ -12,7 +12,9 @@
         "type": "integer"
       }
     },
-    "required": ["url"],
+    "required": [
+      "url"
+    ],
     "title": "Arguments",
     "type": "object"
   },

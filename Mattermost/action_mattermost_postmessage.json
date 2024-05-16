@@ -7,7 +7,7 @@
         "type": "string"
       },
       "channel": {
-        "description": "The channel the message posts in. Use the channel’s name and not the display name, e.g. use town-square, not Town Square.",
+        "description": "The channel the message posts in. Use the channel\u2019s name and not the display name, e.g. use town-square, not Town Square.",
         "type": "string"
       },
       "username": {
@@ -15,7 +15,9 @@
         "type": "string"
       }
     },
-    "required": ["message"],
+    "required": [
+      "message"
+    ],
     "title": "Arguments",
     "type": "object"
   },

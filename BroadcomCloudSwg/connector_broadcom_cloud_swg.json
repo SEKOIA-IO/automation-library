@@ -19,7 +19,9 @@
         "default": 1000
       }
     },
-    "required": ["intake_key"]
+    "required": [
+      "intake_key"
+    ]
   },
   "description": "connector playbook to get Broadcom Cloud SWG events",
   "docker_parameters": "broadcom_cloud_swg",

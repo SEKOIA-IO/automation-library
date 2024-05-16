@@ -27,7 +27,11 @@
         "in": "body"
       }
     },
-    "required": ["device_ids", "action_type", "count_down_type"]
+    "required": [
+      "device_ids",
+      "action_type",
+      "count_down_type"
+    ]
   },
   "results": {
     "type": "object",

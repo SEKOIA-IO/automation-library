@@ -21,8 +21,13 @@
         "type": "integer"
       }
     },
-    "required": ["org_name"],
-    "secrets": ["apikey", "pem_file"]
+    "required": [
+      "org_name"
+    ],
+    "secrets": [
+      "apikey",
+      "pem_file"
+    ]
   },
   "description": "Github connector for audit logs",
   "name": "Github",

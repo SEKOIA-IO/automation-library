@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["hash"],
+    "required": [
+      "hash"
+    ],
     "title": "Arguments",
     "type": "object"
   },

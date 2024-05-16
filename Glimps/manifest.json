@@ -17,9 +17,13 @@
         "type": "string"
       }
     },
-    "required": ["api_key"],
+    "required": [
+      "api_key"
+    ],
     "title": "Arguments",
     "type": "object",
-    "secrets": ["api_key"]
+    "secrets": [
+      "api_key"
+    ]
   }
 }

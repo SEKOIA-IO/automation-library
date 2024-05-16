@@ -19,7 +19,10 @@
         "type": "string"
       }
     },
-    "required": ["issue_key", "status_name"]
+    "required": [
+      "issue_key",
+      "status_name"
+    ]
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",

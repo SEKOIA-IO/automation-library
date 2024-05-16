@@ -11,7 +11,10 @@
         "type": "string"
       }
     },
-    "required": ["comment", "resource"],
+    "required": [
+      "comment",
+      "resource"
+    ],
     "title": "Arguments",
     "type": "object"
   },

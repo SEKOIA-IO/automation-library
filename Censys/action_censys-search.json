@@ -13,7 +13,11 @@
       "index": {
         "description": "Name of the index to search",
         "type": "string",
-        "enum": ["ipv4", "websites", "certificates"]
+        "enum": [
+          "ipv4",
+          "websites",
+          "certificates"
+        ]
       },
       "fields": {
         "description": "Fields to return",
@@ -27,7 +31,10 @@
         "type": "integer"
       }
     },
-    "required": ["query", "index"],
+    "required": [
+      "query",
+      "index"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -42,7 +49,9 @@
         "type": "string"
       }
     },
-    "required": ["result_path"],
+    "required": [
+      "result_path"
+    ],
     "title": "Results",
     "type": "object"
   },

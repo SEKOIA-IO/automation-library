@@ -24,7 +24,9 @@
         "default": 600
       }
     },
-    "required": ["intake_key"]
+    "required": [
+      "intake_key"
+    ]
   },
   "description": "Trigger playbook to get Salesforce information",
   "docker_parameters": "salesforce",

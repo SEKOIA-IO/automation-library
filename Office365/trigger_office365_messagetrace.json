@@ -43,7 +43,11 @@
         "type": "string"
       }
     },
-    "required": ["account_name", "account_password", "intake_key"],
+    "required": [
+      "account_name",
+      "account_password",
+      "intake_key"
+    ],
     "title": "MessageTrace Events",
     "type": "object"
   },

@@ -7,7 +7,9 @@
         "type": "object"
       }
     },
-    "required": ["event"],
+    "required": [
+      "event"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -22,7 +24,9 @@
         "type": "object"
       }
     },
-    "required": ["bundle"],
+    "required": [
+      "bundle"
+    ],
     "title": "Results",
     "type": "object"
   },

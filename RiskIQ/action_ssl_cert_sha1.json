@@ -12,7 +12,9 @@
         "type": "string"
       }
     },
-    "required": ["sha1"]
+    "required": [
+      "sha1"
+    ]
   },
   "results": {
     "type": "object",

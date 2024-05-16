@@ -18,7 +18,9 @@
         "type": "string"
       }
     },
-    "required": ["target"]
+    "required": [
+      "target"
+    ]
   },
   "results": {}
 }

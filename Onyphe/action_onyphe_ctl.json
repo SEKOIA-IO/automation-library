@@ -15,7 +15,9 @@
         "type": "integer"
       }
     },
-    "required": ["domain"],
+    "required": [
+      "domain"
+    ],
     "title": "Arguments",
     "type": "object"
   },

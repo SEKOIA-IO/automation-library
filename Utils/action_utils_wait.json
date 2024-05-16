@@ -9,7 +9,9 @@
         "maximum": 3600
       }
     },
-    "required": ["duration"],
+    "required": [
+      "duration"
+    ],
     "title": "Arguments",
     "type": "object"
   },

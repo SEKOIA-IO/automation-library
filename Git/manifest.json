@@ -10,7 +10,9 @@
         "format": "uri"
       }
     },
-    "required": ["repository_url"]
+    "required": [
+      "repository_url"
+    ]
   },
   "description": "[Git](https://git-scm.com/) is a free and open source distributed version control system designed to handle projects with speed and efficiency.",
   "name": "Git",

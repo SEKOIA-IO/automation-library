@@ -14,7 +14,9 @@
         "type": "string"
       }
     },
-    "required": ["uuid"]
+    "required": [
+      "uuid"
+    ]
   },
   "results": {
     "properties": {

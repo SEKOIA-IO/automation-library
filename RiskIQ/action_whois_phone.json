@@ -20,7 +20,9 @@
         "type": "string"
       }
     },
-    "required": ["phone"]
+    "required": [
+      "phone"
+    ]
   },
   "results": {
     "type": "object",

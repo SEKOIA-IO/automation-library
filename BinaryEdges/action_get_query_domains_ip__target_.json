@@ -17,7 +17,9 @@
         "type": "integer"
       }
     },
-    "required": ["target"]
+    "required": [
+      "target"
+    ]
   },
   "results": {
     "type": "object",

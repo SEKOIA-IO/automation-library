@@ -14,7 +14,9 @@
         "description": "Domain name to lookup; example \"cnn.com\"."
       }
     },
-    "required": ["domain"]
+    "required": [
+      "domain"
+    ]
   },
   "results": {
     "type": "object",

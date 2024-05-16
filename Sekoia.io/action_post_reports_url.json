@@ -18,7 +18,9 @@
         "type": "string"
       }
     },
-    "required": ["url"]
+    "required": [
+      "url"
+    ]
   },
   "results": {
     "type": "object",
@@ -33,9 +35,13 @@
             "type": "string"
           }
         },
-        "required": ["content_proposal_id"]
+        "required": [
+          "content_proposal_id"
+        ]
       }
     },
-    "required": ["data"]
+    "required": [
+      "data"
+    ]
   }
 }

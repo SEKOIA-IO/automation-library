@@ -29,7 +29,9 @@
         "type": "integer"
       }
     },
-    "required": ["intake_key"]
+    "required": [
+      "intake_key"
+    ]
   },
   "description": "Trigger playbook to get Checkpoint Harmony Mobile events",
   "docker_parameters": "checkpoint_harmony_mobile",

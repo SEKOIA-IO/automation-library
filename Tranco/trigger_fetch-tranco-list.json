@@ -35,7 +35,11 @@
         "type": "integer"
       }
     },
-    "required": ["file_path", "chunk_offset", "chunk_size"],
+    "required": [
+      "file_path",
+      "chunk_offset",
+      "chunk_size"
+    ],
     "title": "Results",
     "type": "object"
   },

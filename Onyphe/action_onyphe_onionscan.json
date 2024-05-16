@@ -15,7 +15,9 @@
         "type": "integer"
       }
     },
-    "required": ["onion"],
+    "required": [
+      "onion"
+    ],
     "title": "Arguments",
     "type": "object"
   },

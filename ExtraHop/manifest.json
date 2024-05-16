@@ -16,8 +16,14 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "client_id", "client_secret"],
-    "secrets": ["client_secret"]
+    "required": [
+      "base_url",
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
   },
   "description": "ExtraHop is a leading provider of network detection and response (NDR) solutions.",
   "name": "ExtraHop",

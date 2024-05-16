@@ -12,8 +12,13 @@
         "type": "string"
       }
     },
-    "required": ["api_key", "account_id"],
-    "secrets": ["api_key"],
+    "required": [
+      "api_key",
+      "account_id"
+    ],
+    "secrets": [
+      "api_key"
+    ],
     "title": "Cato Networks module Configuration",
     "type": "object"
   },

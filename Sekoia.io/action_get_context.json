@@ -16,8 +16,13 @@
         "type": "string"
       }
     },
-    "required": ["term"]
+    "required": [
+      "term"
+    ]
   },
   "results": {},
-  "required": ["items", "has_more"]
+  "required": [
+    "items",
+    "has_more"
+  ]
 }

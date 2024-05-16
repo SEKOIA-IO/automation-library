@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["ip"],
+    "required": [
+      "ip"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -103,7 +105,12 @@
         }
       }
     },
-    "required": ["ip", "hasPorno", "hasChildPorno", "contents"],
+    "required": [
+      "ip",
+      "hasPorno",
+      "hasChildPorno",
+      "contents"
+    ],
     "title": "Results",
     "type": "object"
   },

@@ -30,7 +30,10 @@
         "default": 10
       }
     },
-    "required": ["frequency", "intake_key"],
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
     "title": "Darktrace Threat Visualizer logs",
     "type": "object"
   },

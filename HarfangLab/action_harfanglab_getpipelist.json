@@ -38,7 +38,12 @@
         "type": "object"
       }
     },
-    "required": ["id", "action", "creationtime", "parameters"],
+    "required": [
+      "id",
+      "action",
+      "creationtime",
+      "parameters"
+    ],
     "title": "Results",
     "type": "object"
   },

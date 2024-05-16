@@ -25,7 +25,9 @@
         "type": "object"
       }
     },
-    "required": ["event"],
+    "required": [
+      "event"
+    ],
     "title": "Results",
     "type": "object"
   },

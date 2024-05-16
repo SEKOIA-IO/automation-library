@@ -24,7 +24,9 @@
         "type": "string"
       }
     },
-    "required": ["ip"]
+    "required": [
+      "ip"
+    ]
   },
   "results": {
     "type": "object",

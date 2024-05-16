@@ -11,7 +11,9 @@
         "type": "integer"
       }
     },
-    "required": ["file"],
+    "required": [
+      "file"
+    ],
     "title": "Arguments",
     "type": "object"
   },

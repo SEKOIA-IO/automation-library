@@ -25,7 +25,10 @@
         "type": "string"
       }
     },
-    "required": ["frequency", "intake_key"],
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
     "title": "Cortex Query Alerts",
     "type": "object"
   },

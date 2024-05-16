@@ -17,7 +17,9 @@
         "type": "integer"
       }
     },
-    "required": ["tag"]
+    "required": [
+      "tag"
+    ]
   },
   "results": {
     "type": "array",

@@ -15,7 +15,9 @@
         "type": "integer"
       }
     },
-    "required": ["md5"],
+    "required": [
+      "md5"
+    ],
     "title": "Arguments",
     "type": "object"
   },

@@ -25,7 +25,18 @@
         "default": false
       }
     },
-    "oneOf": [{ "required": ["file"] }, { "required": ["file_path"] }],
+    "oneOf": [
+      {
+        "required": [
+          "file"
+        ]
+      },
+      {
+        "required": [
+          "file_path"
+        ]
+      }
+    ],
     "required": [],
     "title": "Arguments",
     "type": "object"

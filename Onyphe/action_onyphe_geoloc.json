@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["ip"],
+    "required": [
+      "ip"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -107,7 +109,13 @@
         "type": "integer"
       }
     },
-    "required": ["count", "results", "status", "took", "total"],
+    "required": [
+      "count",
+      "results",
+      "status",
+      "took",
+      "total"
+    ],
     "title": "Results",
     "type": "object"
   },

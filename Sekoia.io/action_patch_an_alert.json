@@ -50,7 +50,9 @@
         "in": "body"
       }
     },
-    "required": ["uuid"]
+    "required": [
+      "uuid"
+    ]
   },
   "results": {
     "type": "object",
@@ -111,7 +113,11 @@
               "type": "string"
             }
           },
-          "required": ["id", "name", "type"]
+          "required": [
+            "id",
+            "name",
+            "type"
+          ]
         }
       },
       "number_of_unseen_comments": {
@@ -177,7 +183,11 @@
             "format": "uuid"
           }
         },
-        "required": ["name", "pattern", "uuid"]
+        "required": [
+          "name",
+          "pattern",
+          "uuid"
+        ]
       },
       "adversaries": {
         "type": "array",
@@ -197,7 +207,11 @@
               "type": "string"
             }
           },
-          "required": ["id", "name", "type"]
+          "required": [
+            "id",
+            "name",
+            "type"
+          ]
         }
       },
       "short_id": {
@@ -256,7 +270,10 @@
             "type": "string"
           }
         },
-        "required": ["name", "uuid"]
+        "required": [
+          "name",
+          "uuid"
+        ]
       },
       "created_at": {
         "type": "integer",

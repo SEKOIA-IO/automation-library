@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["ip"],
+    "required": [
+      "ip"
+    ],
     "title": "Arguments",
     "type": "object"
   },

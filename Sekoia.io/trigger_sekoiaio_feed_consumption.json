@@ -31,7 +31,9 @@
         "type": "string"
       }
     },
-    "required": ["stix_objects_path"],
+    "required": [
+      "stix_objects_path"
+    ],
     "title": "Results",
     "type": "object"
   },

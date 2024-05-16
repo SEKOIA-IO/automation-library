@@ -15,7 +15,9 @@
         "type": "integer"
       }
     },
-    "required": ["ip"],
+    "required": [
+      "ip"
+    ],
     "title": "Arguments",
     "type": "object"
   },

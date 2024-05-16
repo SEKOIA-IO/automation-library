@@ -14,7 +14,9 @@
         "description": "The identifier of the asset"
       }
     },
-    "required": ["uuid"]
+    "required": [
+      "uuid"
+    ]
   },
   "results": {
     "type": "object",
@@ -35,7 +37,11 @@
               "type": "string"
             }
           },
-          "required": ["name", "uuid", "value"]
+          "required": [
+            "name",
+            "uuid",
+            "value"
+          ]
         },
         "description": "The keys of the asset"
       },
@@ -55,7 +61,11 @@
               "type": "string"
             }
           },
-          "required": ["name", "uuid", "value"]
+          "required": [
+            "name",
+            "uuid",
+            "value"
+          ]
         },
         "description": "The attributes of the asset"
       },
@@ -81,7 +91,10 @@
             "type": "string"
           }
         },
-        "required": ["display", "value"],
+        "required": [
+          "display",
+          "value"
+        ],
         "description": "The criticality associated with the asset"
       },
       "asset_type": {
@@ -98,7 +111,10 @@
             "type": "string"
           }
         },
-        "required": ["name", "uuid"]
+        "required": [
+          "name",
+          "uuid"
+        ]
       },
       "updated_at": {
         "type": "string",
@@ -143,16 +159,28 @@
                   "type": "string"
                 }
               },
-              "required": ["name", "uuid"]
+              "required": [
+                "name",
+                "uuid"
+              ]
             }
           },
           "description": {
             "type": "string"
           }
         },
-        "required": ["name", "uuid"]
+        "required": [
+          "name",
+          "uuid"
+        ]
       }
     },
-    "required": ["category", "created_at", "name", "updated_at", "uuid"]
+    "required": [
+      "category",
+      "created_at",
+      "name",
+      "updated_at",
+      "uuid"
+    ]
   }
 }

@@ -32,7 +32,10 @@
         }
       }
     },
-    "required": ["frequency", "intake_key"],
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
     "title": "Sophos Events",
     "type": "object"
   },

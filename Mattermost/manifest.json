@@ -8,7 +8,9 @@
         "format": "uri"
       }
     },
-    "required": ["hook_url"],
+    "required": [
+      "hook_url"
+    ],
     "title": "Arguments",
     "type": "object"
   },

@@ -17,16 +17,24 @@
       },
       "tg_username": {
         "description": "The username for the ThreatGraphAPI",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "default": null
       },
       "tg_password": {
         "description": "The password for the ThreatGraphAPI",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "default": null
       }
     },
-    "required": ["intake_key"],
+    "required": [
+      "intake_key"
+    ],
     "title": "CrowdStrike Falcon Trigger",
     "type": "object"
   },

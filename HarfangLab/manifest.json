@@ -12,10 +12,15 @@
         "type": "string"
       }
     },
-    "required": ["url", "api_token"],
+    "required": [
+      "url",
+      "api_token"
+    ],
     "title": "Arguments",
     "type": "object",
-    "secrets": ["api_token"]
+    "secrets": [
+      "api_token"
+    ]
   },
   "description": "HarfangLab is an Endpoint detection and response (EDR) solution certified by ANSSI since 2020",
   "name": "HarfangLab",

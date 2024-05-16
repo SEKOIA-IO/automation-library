@@ -7,7 +7,7 @@
         "type": "string"
       },
       "channel": {
-        "description": "The channel the message posts in. Use the channel’s name and not the display name, e.g. use town-square, not Town Square.",
+        "description": "The channel the message posts in. Use the channel\u2019s name and not the display name, e.g. use town-square, not Town Square.",
         "type": "string"
       },
       "api_key": {
@@ -24,7 +24,11 @@
         "type": "string"
       }
     },
-    "required": ["alert_uuid", "api_key", "base_url"],
+    "required": [
+      "alert_uuid",
+      "api_key",
+      "base_url"
+    ],
     "title": "Arguments",
     "type": "object"
   },

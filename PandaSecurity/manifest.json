@@ -42,6 +42,9 @@
     ],
     "title": "WatchGuard Configuration",
     "type": "object",
-    "secrets": ["api_key", "access_secret"]
+    "secrets": [
+      "api_key",
+      "access_secret"
+    ]
   }
 }

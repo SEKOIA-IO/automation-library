@@ -3,14 +3,19 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "SNORT",
     "type": "object",
-    "required": ["archives"],
+    "required": [
+      "archives"
+    ],
     "properties": {
       "archives": {
         "type": "array",
         "description": "Snort rules archives",
         "items": {
           "type": "object",
-          "required": ["url", "type"],
+          "required": [
+            "url",
+            "type"
+          ],
           "properties": {
             "url": {
               "type": "string",
@@ -20,7 +25,10 @@
             "type": {
               "type": "string",
               "description": "Type of rules",
-              "enum": ["snort", "suricata"]
+              "enum": [
+                "snort",
+                "suricata"
+              ]
             },
             "version": {
               "type": "string",
@@ -46,7 +54,9 @@
         "type": "string"
       }
     },
-    "required": ["bundle_path"],
+    "required": [
+      "bundle_path"
+    ],
     "title": "Results",
     "type": "object"
   },

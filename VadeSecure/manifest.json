@@ -28,7 +28,9 @@
       "client_id",
       "client_secret"
     ],
-    "secrets": ["client_secret"]
+    "secrets": [
+      "client_secret"
+    ]
   },
   "description": "Vade Secure Module",
   "name": "Vade Secure",

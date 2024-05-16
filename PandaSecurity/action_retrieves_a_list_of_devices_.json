@@ -81,7 +81,15 @@
             },
             "encryption": {
               "description": "Device encryption status.\n- 0: Without protection or without information\n- 1: Activated\n- 2: Deactivated\n- 3: Error\n- 4: Error installing\n- 5: Without license\n- 6: Not available\n",
-              "enum": [0, 1, 2, 3, 4, 5, 6],
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
               "example": 6,
               "format": "int32",
               "type": "integer"
@@ -98,7 +106,12 @@
             },
             "isolation_state": {
               "description": "Isolation state of the device.\n- 0: Not isolated\n- 1: Isolated\n- 2: Applying isolation\n- 3: Removing isolation\n",
-              "enum": [0, 1, 2, 3],
+              "enum": [
+                0,
+                1,
+                2,
+                3
+              ],
               "example": 1,
               "format": "int32",
               "type": "integer"
@@ -111,7 +124,12 @@
             },
             "license_status": {
               "description": "Status of the device license.\n- 0: Assigned\n- 1: Not assigned\n- 2: Manual deallocation\n- 3: Auto deallocation\n",
-              "enum": [0, 1, 2, 3],
+              "enum": [
+                0,
+                1,
+                2,
+                3
+              ],
               "example": 0,
               "format": "int32",
               "type": "integer"
@@ -130,7 +148,13 @@
             },
             "platform_id": {
               "description": "Device platform.\n- 1: Windows\n- 2: Linux\n- 3: macOS\n- 4: Android\n",
-              "enum": [1, 2, 3, 4, 5],
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
               "example": 1,
               "format": "int32",
               "type": "integer"

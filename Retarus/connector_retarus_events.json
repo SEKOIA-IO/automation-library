@@ -15,8 +15,13 @@
         "type": "string"
       }
     },
-    "required": ["ws_url", "ws_key"],
-    "secrets": ["ws_key"],
+    "required": [
+      "ws_url",
+      "ws_key"
+    ],
+    "secrets": [
+      "ws_key"
+    ],
     "title": "Retarus events",
     "type": "object"
   },

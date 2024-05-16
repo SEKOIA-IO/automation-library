@@ -12,7 +12,9 @@
         "type": "string"
       }
     },
-    "required": ["host"]
+    "required": [
+      "host"
+    ]
   },
   "results": {
     "type": "object",

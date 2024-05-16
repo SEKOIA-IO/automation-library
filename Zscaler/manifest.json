@@ -24,9 +24,17 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "username", "password", "api_key"],
+    "required": [
+      "base_url",
+      "username",
+      "password",
+      "api_key"
+    ],
     "title": "Zscaler Configuration",
     "type": "object",
-    "secrets": ["password", "api_key"]
+    "secrets": [
+      "password",
+      "api_key"
+    ]
   }
 }

@@ -15,7 +15,18 @@
         "type": "object"
       }
     },
-    "oneOf": [{ "required": ["config"] }, { "required": ["config_path"] }],
+    "oneOf": [
+      {
+        "required": [
+          "config"
+        ]
+      },
+      {
+        "required": [
+          "config_path"
+        ]
+      }
+    ],
     "required": [],
     "title": "Arguments",
     "type": "object"

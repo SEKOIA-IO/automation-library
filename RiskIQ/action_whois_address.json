@@ -20,7 +20,9 @@
         "type": "string"
       }
     },
-    "required": ["address"]
+    "required": [
+      "address"
+    ]
   },
   "results": {
     "type": "object",

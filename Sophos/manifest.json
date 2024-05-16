@@ -30,7 +30,9 @@
       "client_id",
       "client_secret"
     ],
-    "secrets": ["client_secret"]
+    "secrets": [
+      "client_secret"
+    ]
   },
   "description": "Sophos Module",
   "name": "Sophos",

@@ -12,10 +12,16 @@
         "description": "Period of time to retrieve security event counters for. Specify one of these values:\n\t- 1 - Previous 24 hours\n\t- 7 - Previous 7 days\n\t- 30 - Previous 30 days\nExample: 7",
         "type": "integer",
         "in": "path",
-        "enum": [1, 7, 30]
+        "enum": [
+          1,
+          7,
+          30
+        ]
       }
     },
-    "required": ["period"]
+    "required": [
+      "period"
+    ]
   },
   "results": {
     "properties": {

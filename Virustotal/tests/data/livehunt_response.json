@@ -641,13 +641,18 @@
         "magic": "Dalvik dex file version 035",
         "md5": "9c690e200b2b4e155dcf54bf2afb9506",
         "meaningful_name": "classes.dex",
-        "names": ["classes.dex"],
+        "names": [
+          "classes.dex"
+        ],
         "reputation": 0,
         "sha1": "5ccab7eca67a56c556fd0ce83713d3a37450bbd1",
         "sha256": "6483f16eabe91a1615274f8fc24cb4421f4e77f867c6d8c43aed2c412c31dd1b",
         "size": 6243484,
         "ssdeep": "49152:QMwq+lKq0ZMxGcjuP02hyk02sGP4XmwZ/Z+fszEnA5l2F6K+QN4UFSBe5+yqx:9wgJMxGI2kk0aP4XPZRje5+yqx",
-        "tags": ["dex", "android"],
+        "tags": [
+          "dex",
+          "android"
+        ],
         "times_submitted": 1,
         "total_votes": {
           "harmless": 0,
@@ -676,7 +681,11 @@
           "6483f16eabe91a1615274f8fc24cb4421f4e77f867c6d8c43aed2c412c31dd1b"
         ],
         "rule_name": "maritime_spam_keywords",
-        "rule_tags": ["TEST", "SEKOIA", "MARITIME"],
+        "rule_tags": [
+          "TEST",
+          "SEKOIA",
+          "MARITIME"
+        ],
         "ruleset_id": "6380064847626240",
         "ruleset_name": "MARITIME"
       },

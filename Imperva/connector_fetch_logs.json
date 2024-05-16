@@ -16,7 +16,9 @@
         "type": "string"
       }
     },
-    "required": ["intake_key"],
+    "required": [
+      "intake_key"
+    ],
     "title": "Fetch Imperva WAF logs",
     "type": "object"
   },

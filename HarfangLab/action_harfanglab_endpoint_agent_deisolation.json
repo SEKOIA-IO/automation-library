@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["id"],
+    "required": [
+      "id"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -26,7 +28,10 @@
         "type": "array"
       }
     },
-    "required": ["requested", "unrequested"],
+    "required": [
+      "requested",
+      "unrequested"
+    ],
     "title": "Results",
     "type": "object"
   },

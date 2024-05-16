@@ -29,7 +29,12 @@
         "description": "Maximum number of events to retrieve"
       }
     },
-    "required": ["query", "earliest_time", "latest_time", "fields"]
+    "required": [
+      "query",
+      "earliest_time",
+      "latest_time",
+      "fields"
+    ]
   },
   "results": {
     "type": "object",

@@ -14,7 +14,11 @@
         "type": "string"
       }
     },
-    "required": ["api_key"],
-    "secrets": ["api_key"]
+    "required": [
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
   }
 }

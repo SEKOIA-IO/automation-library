@@ -12,8 +12,16 @@
       }
     },
     "oneOf": [
-      { "required": ["observables"] },
-      { "required": ["observables_path"] }
+      {
+        "required": [
+          "observables"
+        ]
+      },
+      {
+        "required": [
+          "observables_path"
+        ]
+      }
     ],
     "title": "Arguments",
     "type": "object"

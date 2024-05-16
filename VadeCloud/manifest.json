@@ -18,8 +18,14 @@
         "type": "string"
       }
     },
-    "required": ["hostname", "login", "password"],
-    "secrets": ["password"]
+    "required": [
+      "hostname",
+      "login",
+      "password"
+    ],
+    "secrets": [
+      "password"
+    ]
   },
   "description": "",
   "name": "Vade Cloud",

@@ -32,7 +32,10 @@
         }
       }
     },
-    "required": ["frequency", "intake_key"],
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
     "title": "The configuration to fetch new events",
     "type": "object"
   },

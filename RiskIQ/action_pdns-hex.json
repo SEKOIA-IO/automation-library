@@ -29,7 +29,9 @@
         "description": "Hexadecimal encoding of data field bytes"
       }
     },
-    "required": ["hex"]
+    "required": [
+      "hex"
+    ]
   },
   "results": {
     "type": "object",

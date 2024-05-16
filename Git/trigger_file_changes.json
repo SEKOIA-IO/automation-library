@@ -47,7 +47,10 @@
               "description": "type of change (A, D, R, M, T)"
             }
           },
-          "required": ["filepath", "change_type"]
+          "required": [
+            "filepath",
+            "change_type"
+          ]
         }
       },
       "old_commit": {
@@ -63,7 +66,11 @@
         "description": "path of the repository directory"
       }
     },
-    "required": ["changes", "old_commit", "new_commit"],
+    "required": [
+      "changes",
+      "old_commit",
+      "new_commit"
+    ],
     "title": "Results",
     "type": "object"
   },

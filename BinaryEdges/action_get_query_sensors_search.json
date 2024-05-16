@@ -25,7 +25,9 @@
         "type": "integer"
       }
     },
-    "required": ["query"]
+    "required": [
+      "query"
+    ]
   },
   "results": {
     "type": "object",

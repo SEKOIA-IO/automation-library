@@ -12,10 +12,15 @@
         "format": "uri"
       }
     },
-    "required": ["api_key", "base_url"],
+    "required": [
+      "api_key",
+      "base_url"
+    ],
     "title": "Binary Edge's Configuration",
     "type": "object",
-    "secrets": ["api_key"]
+    "secrets": [
+      "api_key"
+    ]
   },
   "uuid": "d9ba02ab-cb1e-4c8d-bf60-feebfc3700d6",
   "name": "BinaryEdge's API",
