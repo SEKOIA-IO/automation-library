@@ -131,7 +131,6 @@ class CreateAlertAction(NybbleAction):
         nybble_alert.custom_fields_visible = {"false_positives": rule_definition["false_positives"]}
         nybble_alert.custom_fields_hidden = {}
 
-        print(nybble_alert.alert_event_original)
 
         """
     Send to Nybble Hub
