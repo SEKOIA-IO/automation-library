@@ -52,5 +52,5 @@
   "slug": "nybble",
   "uuid": "0664bc2d-8f09-410f-ab8f-e0e07911a6f4",
   "docker": "sekoia-automation-module-nybble",
-  "version": "1.0"
+  "version": "1.0.0"
 }
