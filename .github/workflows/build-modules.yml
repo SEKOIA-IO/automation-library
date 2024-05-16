@@ -94,7 +94,7 @@ jobs:
       - name: Upload Event
         uses: actions/upload-artifact@v4
         with:
-          name: Event File
+          name: Event File ${{ matrix.module }}
           path: ${{ github.event_path }}
 
       - name: Upload Test Results
