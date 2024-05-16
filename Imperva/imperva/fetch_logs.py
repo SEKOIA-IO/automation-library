@@ -286,49 +286,6 @@ class LogsDownloader(Trigger):
             reraise=True,
         )
 
-    @cached_property
-    def __connector_user_agent(self):
-        return f"sekoiaio-connector-{self.configuration['intake_key']}"
-
-    def push_events_to_intakes(self, events: list[str]) -> list:
-        # no event to push
-        if not events:
-            return []
-
-        # Reset the consecutive error count
-        self._error_count = 0
-        self._last_events_time = datetime.utcnow()
-        intake_host = os.environ.get("SEKOIAIO_INTAKE_HOST", "https://intake.sekoia.io")
-        batch_api = urljoin(intake_host, "batch")
-
-        # Collect event_ids
-        event_ids: list = []
-
-        # forward the events
-        for chunk in self._chunk_events(events):
-            try:
-                request_body = {
-                    "intake_key": self.configuration["intake_key"],
-                    "jsons": chunk,
-                }
-
-                for attempt in self._retry():
-                    with attempt:
-                        res: Response = requests.post(
-                            batch_api,
-                            json=request_body,
-                            headers={"User-Agent": self.__connector_user_agent},
-                            timeout=30,
-                        )
-                if res.status_code > 299:
-                    self.log(f"Intake rejected events: {res.text}", level="error")
-                    res.raise_for_status()
-                event_ids.extend(res.json().get("event_ids", []))
-            except Exception as ex:
-                self.log_exception(ex, message=f"Failed to forward {len(chunk)} events")
-
-        return event_ids
-
     def handle_log_decrypted_content(self, decrypted_file):
         decrypted_file = decrypted_file.decode("utf-8")  # many lines
         events_list: list[str] = decrypted_file.split("\n")

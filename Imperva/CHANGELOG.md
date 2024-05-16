@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-04-03 - 1.20
+
+### Changed
+
+- Use Sekoia-automation-SDK to push events to intake
+
 ## 2023-11-22 - 1.18
 
 ### Changed
