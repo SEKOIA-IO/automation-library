@@ -1,27 +1,29 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "duration": {
-                "description": "Time to wait, in seconds",
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 3600
-            }
-        },
-        "required": ["duration"],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "duration": {
+        "description": "Time to wait, in seconds",
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 3600
+      }
     },
-    "description": "Wait",
-    "docker_parameters": "utils_wait",
-    "name": "Wait",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {},
-        "required": [],
-        "title": "Results",
-        "type": "object"
-    },
-    "uuid": "41cd724b-bfcc-4fb7-bee7-ef5d02176e4c"
+    "required": [
+      "duration"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Wait",
+  "docker_parameters": "utils_wait",
+  "name": "Wait",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "required": [],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "41cd724b-bfcc-4fb7-bee7-ef5d02176e4c"
 }

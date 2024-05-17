@@ -17,9 +17,9 @@
         "type": "array"
       },
       "server": {
-                "description": "Remote server dns name or IP address",
-                "type": "string"
-              }
+        "description": "Remote server dns name or IP address",
+        "type": "string"
+      }
     },
     "required": [],
     "secrets": [],

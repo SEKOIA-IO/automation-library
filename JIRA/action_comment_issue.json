@@ -19,7 +19,10 @@
         "type": "string"
       }
     },
-    "required": ["issue_key", "comment"]
+    "required": [
+      "issue_key",
+      "comment"
+    ]
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",

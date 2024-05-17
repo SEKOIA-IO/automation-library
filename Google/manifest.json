@@ -55,7 +55,9 @@
         }
       }
     },
-    "required": ["credentials"]
+    "required": [
+      "credentials"
+    ]
   },
   "description": "Google module",
   "name": "Google",

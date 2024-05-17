@@ -19,8 +19,8 @@
       }
     },
     "required": [
-        "target",
-        "comment"
+      "target",
+      "comment"
     ]
   },
   "results": {}

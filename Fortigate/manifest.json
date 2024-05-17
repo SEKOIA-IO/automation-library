@@ -1,48 +1,48 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-            "firewalls": {
-                "title": "Fortigate FW Configurations",
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "api_key": {
-                            "description": "Fortigate API Key related to the API user generated",
-                            "type": "string"
-                        },
-                        "base_ip": {
-                            "description": "Fortigate base IP (ex. 31.7.YYY.XXX)",
-                            "type": "string"
-                        },
-                        "base_port": {
-                            "description": "Fortigate base Port (ex. 4443)",
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "api_key",
-                        "base_ip",
-                        "base_port"
-                    ]
-                }
-            }
-        },
-        "required": [
-            "firewalls"
-        ],
-        "secrets": [
-            "api_key"
-        ]
-    },
-    "title": "Fortigate FW Configuration",
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "description": "Fortigate is a firewall appliance from [Fortinet](http://www.fortinet.com/) with anti-spam and anti-virus features. Initially distributed as a physical, rack-mounted product, Fortigate can now be installed as a virtual appliance that could run on virtualization platforms such as VMware vSphere",
-    "name": "Fortigate Firewalls",
-    "uuid": "ca9a9497-bcd2-4d0c-b0c1-72699231feb2",
-    "slug": "fortigate",
-    "version": "1.27"
+    "properties": {
+      "firewalls": {
+        "title": "Fortigate FW Configurations",
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "api_key": {
+              "description": "Fortigate API Key related to the API user generated",
+              "type": "string"
+            },
+            "base_ip": {
+              "description": "Fortigate base IP (ex. 31.7.YYY.XXX)",
+              "type": "string"
+            },
+            "base_port": {
+              "description": "Fortigate base Port (ex. 4443)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "api_key",
+            "base_ip",
+            "base_port"
+          ]
+        }
+      }
+    },
+    "required": [
+      "firewalls"
+    ],
+    "secrets": [
+      "api_key"
+    ]
+  },
+  "title": "Fortigate FW Configuration",
+  "type": "object",
+  "description": "Fortigate is a firewall appliance from [Fortinet](http://www.fortinet.com/) with anti-spam and anti-virus features. Initially distributed as a physical, rack-mounted product, Fortigate can now be installed as a virtual appliance that could run on virtualization platforms such as VMware vSphere",
+  "name": "Fortigate Firewalls",
+  "uuid": "ca9a9497-bcd2-4d0c-b0c1-72699231feb2",
+  "slug": "fortigate",
+  "version": "1.27"
 }

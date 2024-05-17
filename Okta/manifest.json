@@ -1,30 +1,30 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Okta",
-        "type": "object",
-        "properties": {
-            "base_url": {
-                "description": "The url to your Okta tenant",
-                "type": "string",
-                "format": "uri"
-            },
-            "apikey": {
-                "description": "The APIkey to authenticate call to the API",
-                "type": "string"
-            }
-        },
-        "required": [
-            "base_url",
-            "apikey"
-        ],
-        "secrets": [
-            "apikey"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Okta",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "description": "The url to your Okta tenant",
+        "type": "string",
+        "format": "uri"
+      },
+      "apikey": {
+        "description": "The APIkey to authenticate call to the API",
+        "type": "string"
+      }
     },
-    "description": "[Okta](https://www.okta.com/) is an entreprise-grade, identity management service compatible with cloud apps as well as many on-premises applications",
-    "name": "Okta",
-    "uuid": "4ef895d1-3f21-4678-8d0a-5c39c37210fe",
-    "slug": "okta",
-    "version": "2.7.1"
+    "required": [
+      "base_url",
+      "apikey"
+    ],
+    "secrets": [
+      "apikey"
+    ]
+  },
+  "description": "[Okta](https://www.okta.com/) is an entreprise-grade, identity management service compatible with cloud apps as well as many on-premises applications",
+  "name": "Okta",
+  "uuid": "4ef895d1-3f21-4678-8d0a-5c39c37210fe",
+  "slug": "okta",
+  "version": "2.7.1"
 }

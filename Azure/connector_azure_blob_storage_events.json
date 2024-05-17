@@ -36,8 +36,15 @@
         "default": 60
       }
     },
-    "required": ["container_name", "account_name", "account_key", "intake_key"],
-    "secrets": ["account_key"]
+    "required": [
+      "container_name",
+      "account_name",
+      "account_key",
+      "intake_key"
+    ],
+    "secrets": [
+      "account_key"
+    ]
   },
   "description": "connector playbook to get Azure Blob Storage events information",
   "docker_parameters": "azure_blob_storage",

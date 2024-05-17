@@ -1,254 +1,254 @@
 {
-    "uuid": "f11f93f8-df5e-4f03-a049-45c3ad9c15c1",
-    "name": "Create Asset",
-    "docker_parameters": "post-assets",
-    "description": "Create a new asset",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+  "uuid": "f11f93f8-df5e-4f03-a049-45c3ad9c15c1",
+  "name": "Create Asset",
+  "docker_parameters": "post-assets",
+  "description": "Create a new asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "creates_a_new_asset",
+    "properties": {
+      "asset_type": {
         "type": "object",
-        "title": "creates_a_new_asset",
         "properties": {
-            "asset_type": {
-                "type": "object",
-                "properties": {
-                    "uuid": {
-                        "type": "string"
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "in": "body"
-            },
-            "name": {
-                "type": "string",
-                "in": "body"
-            },
-            "criticity": {
-                "type": "integer",
-                "format": "int32",
-                "in": "body"
-            },
-            "description": {
-                "type": "string",
-                "in": "body"
-            },
-            "attributes": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "value": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "name",
-                        "value"
-                    ]
-                },
-                "in": "body"
-            },
-            "keys": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "value": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "name",
-                        "value"
-                    ]
-                },
-                "in": "body"
-            },
-            "owners": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "in": "body"
-            },
-            "community_uuid": {
-                "type": "string",
-                "in": "body"
-            }
+          "uuid": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
         },
-        "required": [
-            "asset_type",
-            "name",
-            "criticity"
-        ]
-    },
-    "results": {
-        "type": "object",
-        "properties": {
-            "keys": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "value": {
-                            "type": "string"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "name": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "name",
-                        "uuid",
-                        "value"
-                    ]
-                }
+        "in": "body"
+      },
+      "name": {
+        "type": "string",
+        "in": "body"
+      },
+      "criticity": {
+        "type": "integer",
+        "format": "int32",
+        "in": "body"
+      },
+      "description": {
+        "type": "string",
+        "in": "body"
+      },
+      "attributes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
             },
-            "attributes": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "value": {
-                            "type": "string"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "name": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "name",
-                        "uuid",
-                        "value"
-                    ]
-                }
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "value"
+          ]
+        },
+        "in": "body"
+      },
+      "keys": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "value"
+          ]
+        },
+        "in": "body"
+      },
+      "owners": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "in": "body"
+      },
+      "community_uuid": {
+        "type": "string",
+        "in": "body"
+      }
+    },
+    "required": [
+      "asset_type",
+      "name",
+      "criticity"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "keys": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
             },
             "uuid": {
-                "type": "string",
-                "format": "uuid"
+              "type": "string",
+              "format": "uuid"
             },
             "name": {
-                "type": "string"
-            },
-            "created_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "criticity": {
-                "type": "object",
-                "properties": {
-                    "value": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "display": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "display",
-                    "value"
-                ]
-            },
-            "asset_type": {
-                "type": "object",
-                "properties": {
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name",
-                    "uuid"
-                ]
-            },
-            "updated_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "description": {
-                "type": "string"
-            },
-            "owners": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "format": "uuid"
-                }
-            },
-            "community_uuid": {
-                "type": "string"
-            },
-            "category": {
-                "type": "object",
-                "properties": {
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "types": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "uuid": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                },
-                                "name": {
-                                    "type": "string"
-                                },
-                                "description": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "uuid"
-                            ]
-                        }
-                    },
-                    "description": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name",
-                    "uuid"
-                ]
+              "type": "string"
             }
+          },
+          "required": [
+            "name",
+            "uuid",
+            "value"
+          ]
+        }
+      },
+      "attributes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "uuid": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "uuid",
+            "value"
+          ]
+        }
+      },
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "name": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "criticity": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "display": {
+            "type": "string"
+          }
         },
         "required": [
-            "category",
-            "created_at",
-            "name",
-            "updated_at",
-            "uuid"
+          "display",
+          "value"
         ]
-    }
+      },
+      "asset_type": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "uuid"
+        ]
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "description": {
+        "type": "string"
+      },
+      "owners": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "community_uuid": {
+        "type": "string"
+      },
+      "category": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "uuid"
+              ]
+            }
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "uuid"
+        ]
+      }
+    },
+    "required": [
+      "category",
+      "created_at",
+      "name",
+      "updated_at",
+      "uuid"
+    ]
+  }
 }

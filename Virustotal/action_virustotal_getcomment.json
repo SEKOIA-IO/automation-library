@@ -1,56 +1,56 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "resource": {
-                "description": "The hash or url to get comments from",
-                "type": "string"
-            }
-        },
-        "required": [
-            "resource"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "resource": {
+        "description": "The hash or url to get comments from",
+        "type": "string"
+      }
     },
-    "description": "Get comments from Virus Total",
-    "docker_parameters": "virustotal_get_comments",
-    "name": "Get Comments",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "response_code": {
-                "type": "integer",
-                "description": "Response Code"
+    "required": [
+      "resource"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Get comments from Virus Total",
+  "docker_parameters": "virustotal_get_comments",
+  "name": "Get Comments",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "response_code": {
+        "type": "integer",
+        "description": "Response Code"
+      },
+      "verbose_msg": {
+        "type": "string",
+        "description": "Textual description of the response code"
+      },
+      "resource": {
+        "type": "string",
+        "description": "Resource Identifier"
+      },
+      "comments": {
+        "type": "array",
+        "description": "List of comments",
+        "items": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Date of the comment"
             },
-            "verbose_msg": {
-                "type": "string",
-                "description": "Textual description of the response code"
-            },
-            "resource": {
-                "type": "string",
-                "description": "Resource Identifier"
-            },
-            "comments": {
-                "type": "array",
-                "description": "List of comments",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "date": {
-                            "type": "string",
-                            "description": "Date of the comment"
-                        },
-                        "comment": {
-                            "type": "string",
-                            "description": "Content of the comment"
-                        }
-                    }
-                }
+            "comment": {
+              "type": "string",
+              "description": "Content of the comment"
             }
-        },
-        "title": "Results",
-        "type": "object"
+          }
+        }
+      }
     },
-    "uuid": "95111167-996a-428d-a6c7-081461d8b5c4"
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "95111167-996a-428d-a6c7-081461d8b5c4"
 }

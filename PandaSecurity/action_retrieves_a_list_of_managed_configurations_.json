@@ -9,10 +9,14 @@
     "title": "Retrieve Managed Configurations",
     "properties": {
       "type": {
-        "description": "Type of configuration to return. Specify one of these values:\n\t- 1 — Deployment settings\n\t- 2 — Workstations and servers\n\t- 3 — Android\nExample: 2",
+        "description": "Type of configuration to return. Specify one of these values:\n\t- 1 \u2014 Deployment settings\n\t- 2 \u2014 Workstations and servers\n\t- 3 \u2014 Android\nExample: 2",
         "type": "integer",
         "in": "path",
-        "enum": [1, 2, 3]
+        "enum": [
+          1,
+          2,
+          3
+        ]
       },
       "$top": {
         "description": "Specifies the number of objects to retrieve.\nExample: 5",

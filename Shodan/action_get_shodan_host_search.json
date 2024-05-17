@@ -1,141 +1,141 @@
 {
-    "uuid": "5cb712d6-7dc9-43bb-b0cd-956d01392e0a",
-    "name": "Search Host",
-    "docker_parameters": "get-shodan/host/search",
-    "description": "Search Shodan using the same query syntax as the website and use facets to get summary information for different properties.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "get_shodan_host_search",
-        "properties": {
-            "query": {
-                "in": "query",
-                "type": "string",
-                "description": "Shodan search query. The provided string is used to search the database of banners in Shodan, with the additional option to provide filters inside the search query using a \"filter:value\" format. For example, the following search query would find Apache webservers located in Germany: \"apache country:DE\". "
-            },
-            "facets": {
-                "in": "query",
-                "type": "string",
-                "description": "A comma-separated list of properties to get summary information on. Property names can also be in the format of \"property:count\", where \"count\" is the number of facets that will be returned for a property (i.e. \"country:100\" to get the top 100 countries for a search query)."
-            },
-            "max_pages": {
-                "type": "integer",
-                "description": "Set the maximum number of pages retrieved.",
-                "default": 1
-            },
-            "minify": {
-                "in": "query",
-                "type": "boolean",
-                "description": "True or False; whether or not to truncate some of the larger fields (default: True) "
-            }
-        },
-        "required": [
-            "query"
-        ]
+  "uuid": "5cb712d6-7dc9-43bb-b0cd-956d01392e0a",
+  "name": "Search Host",
+  "docker_parameters": "get-shodan/host/search",
+  "description": "Search Shodan using the same query syntax as the website and use facets to get summary information for different properties.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_shodan_host_search",
+    "properties": {
+      "query": {
+        "in": "query",
+        "type": "string",
+        "description": "Shodan search query. The provided string is used to search the database of banners in Shodan, with the additional option to provide filters inside the search query using a \"filter:value\" format. For example, the following search query would find Apache webservers located in Germany: \"apache country:DE\". "
+      },
+      "facets": {
+        "in": "query",
+        "type": "string",
+        "description": "A comma-separated list of properties to get summary information on. Property names can also be in the format of \"property:count\", where \"count\" is the number of facets that will be returned for a property (i.e. \"country:100\" to get the top 100 countries for a search query)."
+      },
+      "max_pages": {
+        "type": "integer",
+        "description": "Set the maximum number of pages retrieved.",
+        "default": 1
+      },
+      "minify": {
+        "in": "query",
+        "type": "boolean",
+        "description": "True or False; whether or not to truncate some of the larger fields (default: True) "
+      }
     },
-    "results": {
+    "required": [
+      "query"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "matches": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "os": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "string"
+            },
+            "isp": {
+              "type": "string"
+            },
+            "asn": {
+              "type": "string"
+            },
+            "hostnames": {
+              "type": "array",
+              "items": {}
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                },
+                "region_code": {
+                  "type": "string"
+                },
+                "area_code": {
+                  "type": "string"
+                },
+                "longitude": {
+                  "type": "integer"
+                },
+                "country_code3": {
+                  "type": "string"
+                },
+                "country_name": {
+                  "type": "string"
+                },
+                "postal_code": {
+                  "type": "string"
+                },
+                "dma_code": {
+                  "type": "string"
+                },
+                "country_code": {
+                  "type": "string"
+                },
+                "latitude": {
+                  "type": "integer"
+                }
+              }
+            },
+            "ip": {
+              "type": "integer"
+            },
+            "domains": {
+              "type": "array",
+              "items": {}
+            },
+            "org": {
+              "type": "string"
+            },
+            "data": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "ip_str": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "facets": {
         "type": "object",
         "properties": {
-            "matches": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "os": {
-                            "type": "string"
-                        },
-                        "timestamp": {
-                            "type": "string"
-                        },
-                        "isp": {
-                            "type": "string"
-                        },
-                        "asn": {
-                            "type": "string"
-                        },
-                        "hostnames": {
-                            "type": "array",
-                            "items": {}
-                        },
-                        "location": {
-                            "type": "object",
-                            "properties": {
-                                "city": {
-                                    "type": "string"
-                                },
-                                "region_code": {
-                                    "type": "string"
-                                },
-                                "area_code": {
-                                    "type": "string"
-                                },
-                                "longitude": {
-                                    "type": "integer"
-                                },
-                                "country_code3": {
-                                    "type": "string"
-                                },
-                                "country_name": {
-                                    "type": "string"
-                                },
-                                "postal_code": {
-                                    "type": "string"
-                                },
-                                "dma_code": {
-                                    "type": "string"
-                                },
-                                "country_code": {
-                                    "type": "string"
-                                },
-                                "latitude": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "ip": {
-                            "type": "integer"
-                        },
-                        "domains": {
-                            "type": "array",
-                            "items": {}
-                        },
-                        "org": {
-                            "type": "string"
-                        },
-                        "data": {
-                            "type": "string"
-                        },
-                        "port": {
-                            "type": "integer"
-                        },
-                        "ip_str": {
-                            "type": "string"
-                        }
-                    }
+          "org": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "value": {
+                  "type": "string"
                 }
-            },
-            "facets": {
-                "type": "object",
-                "properties": {
-                    "org": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "count": {
-                                    "type": "integer"
-                                },
-                                "value": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "total": {
-                "type": "integer"
+              }
             }
+          }
         }
+      },
+      "total": {
+        "type": "integer"
+      }
     }
+  }
 }

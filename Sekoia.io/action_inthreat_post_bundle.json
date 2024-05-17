@@ -1,52 +1,65 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "bundle": {
-                "description": "STIX Bundle to upload",
-                "type": "object"
-            },
-            "bundle_path": {
-                "description": "Path of the STIX Bundle to upload",
-                "type": "string"
-            },
-            "auto_merge": {
-                "description": "Whether or not the uploaded bundle can automatically be merged to the consolidated database",
-                "type": "boolean",
-                "default": false
-            },
-            "enrich": {
-                "description": "Whether or not the uploaded bundle should be enriched",
-                "type": "boolean",
-                "default": true
-            },
-            "name": {
-                "description": "Name to use for the new content proposal",
-                "type": "string"
-            },
-            "assigned_to": {
-                "description": "Avatar assigned to the content proposal",
-                "type": "string"
-            }
-        },
-        "oneOf": [{"required": ["bundle"]}, {"required": ["bundle_path"]}],
-        "title": "Arguments",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "bundle": {
+        "description": "STIX Bundle to upload",
         "type": "object"
+      },
+      "bundle_path": {
+        "description": "Path of the STIX Bundle to upload",
+        "type": "string"
+      },
+      "auto_merge": {
+        "description": "Whether or not the uploaded bundle can automatically be merged to the consolidated database",
+        "type": "boolean",
+        "default": false
+      },
+      "enrich": {
+        "description": "Whether or not the uploaded bundle should be enriched",
+        "type": "boolean",
+        "default": true
+      },
+      "name": {
+        "description": "Name to use for the new content proposal",
+        "type": "string"
+      },
+      "assigned_to": {
+        "description": "Avatar assigned to the content proposal",
+        "type": "string"
+      }
     },
-    "description": "Create Content Proposal",
-    "docker_parameters": "post_bundle",
-    "name": "Create Content Proposal",
-    "results": {
-        "type": "object",
-        "properties": {
-            "file_name": {
-                "type": "string"
-            },
-            "content_proposal_id": {
-                "type": "string"
-            }
-        },
-        "required": ["content_proposal_id"]
+    "oneOf": [
+      {
+        "required": [
+          "bundle"
+        ]
+      },
+      {
+        "required": [
+          "bundle_path"
+        ]
+      }
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Create Content Proposal",
+  "docker_parameters": "post_bundle",
+  "name": "Create Content Proposal",
+  "results": {
+    "type": "object",
+    "properties": {
+      "file_name": {
+        "type": "string"
+      },
+      "content_proposal_id": {
+        "type": "string"
+      }
     },
-    "uuid": "640586e4-9111-4ca8-b824-ca65b1d3f2ef"
+    "required": [
+      "content_proposal_id"
+    ]
+  },
+  "uuid": "640586e4-9111-4ca8-b824-ca65b1d3f2ef"
 }

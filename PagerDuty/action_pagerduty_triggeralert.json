@@ -1,32 +1,32 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "alert_uuid": {
-                "description": "The Unique identifier of the alert",
-                "type": "string"
-            },
-            "api_key": {
-                "description": "The Sekoia.io API-Key to read the alert content.",
-                "type": "string"
-            },
-            "base_url": {
-                "description": "Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).",
-                "type": "string",
-                "format": "uri"
-            }
-        },
-        "required": [
-            "alert_uuid",
-            "api_key",
-            "base_url"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "alert_uuid": {
+        "description": "The Unique identifier of the alert",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "The Sekoia.io API-Key to read the alert content.",
+        "type": "string"
+      },
+      "base_url": {
+        "description": "Base URL of Sekoia.io api (e.g. https://api.sekoia.io/).",
+        "type": "string",
+        "format": "uri"
+      }
     },
-    "description": "Trigger alert to PagerDuty",
-    "docker_parameters": "pagerduty_trigger_alert",
-    "name": "Trigger Alert",
-    "results": {},
-    "uuid": "34e0bd73-a7d2-426a-b9fd-21b1124bb395"
+    "required": [
+      "alert_uuid",
+      "api_key",
+      "base_url"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Trigger alert to PagerDuty",
+  "docker_parameters": "pagerduty_trigger_alert",
+  "name": "Trigger Alert",
+  "results": {},
+  "uuid": "34e0bd73-a7d2-426a-b9fd-21b1124bb395"
 }

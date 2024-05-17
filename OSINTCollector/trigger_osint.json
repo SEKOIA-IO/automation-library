@@ -1,102 +1,118 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "collection_sources": {
-                "type": "array",
-                "description": "OSINT Sources",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string",
-                            "description": "Name of the OSINT source"
-                        },
-                        "url": {
-                            "type": "string",
-                            "description": "URL of the OSINT source",
-                            "format": "uri"
-                        },
-                        "frequency": {
-                            "type": "integer",
-                            "description": "OSINT source refresh frequency (in seconds)",
-                            "minimum": 60
-                        },
-                        "global_format": {
-                            "type": "string",
-                            "description": "Global format of the OSINT source",
-                            "enum": ["line", "regexpline", "html", "json", "csv", "block", "xml"]
-                        },
-                        "fields": {
-                            "type": "array",
-                            "description": "Fields to include in the output",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "item_format": {
-                            "type": "array",
-                            "description": "Format of a single item (input, JSONPath expressions or Regex only)",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "separator": {
-                            "type": "string",
-                            "description": "Separator used between the parsed fragments"
-                        },
-                        "ignore": {
-                            "type": "string",
-                            "description": "Ignore lines starting with this string"
-                        },
-                        "quotechar": {
-                            "type": "string",
-                            "description": "Character used to quote elements (for CSV only). Default to '\"'"
-                        },
-                        "iterate_over": {
-                            "type": "string",
-                            "description": "Base item to iterate over (for JSON and HTML only)"
-                        },
-                        "cache_results": {
-                            "type": "boolean",
-                            "description": "Cache Results to only send updates"
-                        },
-                        "tags": {
-                            "type": "array",
-                            "description": "List of tags to add to generated observables",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "tags_valid_for": {
-                            "type": "integer",
-                            "description": "Tags validity period, in days"
-                        }
-                    },
-                    "required": ["name", "url", "frequency", "global_format", "fields"]
-                }
-            }
-        },
-        "required": ["collection_sources"],
-        "title": "Trigger Arguments",
-        "type": "object"
-    },
-    "description": "Fetch objects from a osint collection source",
-    "docker_parameters": "osint_trigger",
-    "name": "Fetch OSINT",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "bundle_path": {
-                "description": "Filepath of the bundle of STIX objects fetched from the collection",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "collection_sources": {
+        "type": "array",
+        "description": "OSINT Sources",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the OSINT source"
+            },
+            "url": {
+              "type": "string",
+              "description": "URL of the OSINT source",
+              "format": "uri"
+            },
+            "frequency": {
+              "type": "integer",
+              "description": "OSINT source refresh frequency (in seconds)",
+              "minimum": 60
+            },
+            "global_format": {
+              "type": "string",
+              "description": "Global format of the OSINT source",
+              "enum": [
+                "line",
+                "regexpline",
+                "html",
+                "json",
+                "csv",
+                "block",
+                "xml"
+              ]
+            },
+            "fields": {
+              "type": "array",
+              "description": "Fields to include in the output",
+              "items": {
                 "type": "string"
+              }
+            },
+            "item_format": {
+              "type": "array",
+              "description": "Format of a single item (input, JSONPath expressions or Regex only)",
+              "items": {
+                "type": "string"
+              }
+            },
+            "separator": {
+              "type": "string",
+              "description": "Separator used between the parsed fragments"
+            },
+            "ignore": {
+              "type": "string",
+              "description": "Ignore lines starting with this string"
+            },
+            "quotechar": {
+              "type": "string",
+              "description": "Character used to quote elements (for CSV only). Default to '\"'"
+            },
+            "iterate_over": {
+              "type": "string",
+              "description": "Base item to iterate over (for JSON and HTML only)"
+            },
+            "cache_results": {
+              "type": "boolean",
+              "description": "Cache Results to only send updates"
+            },
+            "tags": {
+              "type": "array",
+              "description": "List of tags to add to generated observables",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tags_valid_for": {
+              "type": "integer",
+              "description": "Tags validity period, in days"
             }
-        },
-        "required": [
-            "bundle_path"
-        ],
-        "title": "Results",
-        "type": "object"
+          },
+          "required": [
+            "name",
+            "url",
+            "frequency",
+            "global_format",
+            "fields"
+          ]
+        }
+      }
     },
-    "uuid": "00d77e88-74e5-4725-9694-c0e7bb16cd56"
+    "required": [
+      "collection_sources"
+    ],
+    "title": "Trigger Arguments",
+    "type": "object"
+  },
+  "description": "Fetch objects from a osint collection source",
+  "docker_parameters": "osint_trigger",
+  "name": "Fetch OSINT",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "bundle_path": {
+        "description": "Filepath of the bundle of STIX objects fetched from the collection",
+        "type": "string"
+      }
+    },
+    "required": [
+      "bundle_path"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "00d77e88-74e5-4725-9694-c0e7bb16cd56"
 }

@@ -1,45 +1,45 @@
 {
-    "configuration": {
-        "title": "Entra ID configuration",
-        "type": "object",
-        "properties": {
-            "tenant_id": {
-                "title": "Tenant Id",
-                "description": "ID of the Microsoft Entra ID tenant",
-                "type": "string"
-            },
-            "client_id": {
-                "title": "Client Id",
-                "description": "Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",
-                "type": "string"
-            },
-            "client_secret": {
-                "title": "Client Secret",
-                "description": "Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",
-                "type": "string"
-            },
-            "username": {
-                "title": "Delegated account username",
-                "description": "The username of the delegated account used for some administrative tasks (eg: reset password)",
-                "type": "string"
-            },
-            "password": {
-                "title": "Delegated account password",
-                "description": "The password of the delegated account used for some administrative tasks (eg: reset password)",
-                "type": "string"
-            }
-        },
-        "required": [
-            "tenant_id"
-        ],
-        "secrets": [
-            "client_secret",
-            "password"
-        ]
+  "configuration": {
+    "title": "Entra ID configuration",
+    "type": "object",
+    "properties": {
+      "tenant_id": {
+        "title": "Tenant Id",
+        "description": "ID of the Microsoft Entra ID tenant",
+        "type": "string"
+      },
+      "client_id": {
+        "title": "Client Id",
+        "description": "Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",
+        "type": "string"
+      },
+      "client_secret": {
+        "title": "Client Secret",
+        "description": "Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",
+        "type": "string"
+      },
+      "username": {
+        "title": "Delegated account username",
+        "description": "The username of the delegated account used for some administrative tasks (eg: reset password)",
+        "type": "string"
+      },
+      "password": {
+        "title": "Delegated account password",
+        "description": "The password of the delegated account used for some administrative tasks (eg: reset password)",
+        "type": "string"
+      }
     },
-    "description": "[Microsoft Entra ID (formely Azure Active Directory)](https://azure.microsoft.com/en-us/services/active-directory/#overview) is an enterprise identity service that provides single sign-on, multifactor authentication, and conditional access to guard against 99.9 percent of cybersecurity attacks.",
-    "name": "Microsoft Entra ID",
-    "uuid": "3abf7928-65ef-4a5f-ba3e-5fbe56123d0c",
-    "slug": "azure-ad",
-    "version": "2.7"
+    "required": [
+      "tenant_id"
+    ],
+    "secrets": [
+      "client_secret",
+      "password"
+    ]
+  },
+  "description": "[Microsoft Entra ID (formely Azure Active Directory)](https://azure.microsoft.com/en-us/services/active-directory/#overview) is an enterprise identity service that provides single sign-on, multifactor authentication, and conditional access to guard against 99.9 percent of cybersecurity attacks.",
+  "name": "Microsoft Entra ID",
+  "uuid": "3abf7928-65ef-4a5f-ba3e-5fbe56123d0c",
+  "slug": "azure-ad",
+  "version": "2.7"
 }

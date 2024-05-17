@@ -1,35 +1,35 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "base_url": {
-                "description": "Your TheHive instance URL",
-                "type": "string",
-                "format": "uri"
-            },
-            "apikey": {
-                "description": "An API key",
-                "type": "string"
-            },
-            "organisation": {
-                "description": "The user organisation",
-                "type": "string"
-            }
-        },
-        "required": [
-            "base_url",
-            "apikey",
-            "organisation"
-        ],
-        "title": "Arguments",
-        "type": "object",
-        "secrets": [
-            "apikey"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "base_url": {
+        "description": "Your TheHive instance URL",
+        "type": "string",
+        "format": "uri"
+      },
+      "apikey": {
+        "description": "An API key",
+        "type": "string"
+      },
+      "organisation": {
+        "description": "The user organisation",
+        "type": "string"
+      }
     },
-    "description": "[TheHive](https://thehive-project.org/) is a scalable, open source and free Security Incident Response Platform",
-    "name": "The Hive",
-    "uuid": "48086812-d709-4eff-b308-e8bf504b8a7a",
-    "slug": "thehive",
-    "version": "1.22.1"
+    "required": [
+      "base_url",
+      "apikey",
+      "organisation"
+    ],
+    "title": "Arguments",
+    "type": "object",
+    "secrets": [
+      "apikey"
+    ]
+  },
+  "description": "[TheHive](https://thehive-project.org/) is a scalable, open source and free Security Incident Response Platform",
+  "name": "The Hive",
+  "uuid": "48086812-d709-4eff-b308-e8bf504b8a7a",
+  "slug": "thehive",
+  "version": "1.22.1"
 }

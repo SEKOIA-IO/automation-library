@@ -1,45 +1,47 @@
 {
-    "uuid": "124b57d8-f3bf-4625-a817-ebd8696df848",
-    "name": "List subdomains",
-    "docker_parameters": "get-query/domains/subdomain/{target}",
-    "description": "Return list of subdomains known from the target domains.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "List subdomains",
-        "properties": {
-            "target": {
-                "in": "path",
-                "type": "string"
-            },
-            "page": {
-                "in": "query",
-                "type": "integer"
-            }
-        },
-        "required": ["target"]
+  "uuid": "124b57d8-f3bf-4625-a817-ebd8696df848",
+  "name": "List subdomains",
+  "docker_parameters": "get-query/domains/subdomain/{target}",
+  "description": "Return list of subdomains known from the target domains.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "List subdomains",
+    "properties": {
+      "target": {
+        "in": "path",
+        "type": "string"
+      },
+      "page": {
+        "in": "query",
+        "type": "integer"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string"
-            },
-            "page": {
-                "type": "integer"
-            },
-            "pagesize": {
-                "type": "integer"
-            },
-            "total": {
-                "type": "integer"
-            },
-            "events": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            }
+    "required": [
+      "target"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "page": {
+        "type": "integer"
+      },
+      "pagesize": {
+        "type": "integer"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "string"
         }
+      }
     }
+  }
 }

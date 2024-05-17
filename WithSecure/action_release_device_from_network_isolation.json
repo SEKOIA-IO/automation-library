@@ -14,7 +14,7 @@
       }
     },
     "required": [
-        "target"
+      "target"
     ]
   },
   "results": {}

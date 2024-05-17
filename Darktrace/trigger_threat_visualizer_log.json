@@ -1,46 +1,46 @@
 {
-    "description": "Get the newest logs from Darktrace Threat Visualizer",
-    "docker_parameters": "darktrace_threat_visualizer_logs",
-    "name": "Fetch new logs from Darktrace",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "frequency": {
-                "type": "integer",
-                "description": "Batch frequency in seconds",
-                "default": 60
-            },
-            "intake_server": {
-                "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
-                "default": "https://intake.sekoia.io",
-                "type": "string"
-            },
-            "intake_key": {
-                "description": "Intake key to use when sending events",
-                "type": "string"
-            },
-            "verify_certificate": {
-                "description": "Is the server certificate verified",
-                "type": "boolean",
-                "default": true
-            },
-            "ratelimit_per_minute": {
-                "description": "The number of requests allowed to the API in one minute",
-                "type": "integer",
-                "default": 10
-            }
-        },
-        "required": [
-            "frequency",
-            "intake_key"
-        ],
-        "title": "Darktrace Threat Visualizer logs",
-        "type": "object"
+  "description": "Get the newest logs from Darktrace Threat Visualizer",
+  "docker_parameters": "darktrace_threat_visualizer_logs",
+  "name": "Fetch new logs from Darktrace",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "verify_certificate": {
+        "description": "Is the server certificate verified",
+        "type": "boolean",
+        "default": true
+      },
+      "ratelimit_per_minute": {
+        "description": "The number of requests allowed to the API in one minute",
+        "type": "integer",
+        "default": 10
+      }
     },
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {},
-        "title": "The events"
-    },
-    "uuid": "778ae6f9-61d1-4370-8842-526c89102f19"
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
+    "title": "Darktrace Threat Visualizer logs",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "The events"
+  },
+  "uuid": "778ae6f9-61d1-4370-8842-526c89102f19"
 }

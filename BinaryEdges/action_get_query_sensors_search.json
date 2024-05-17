@@ -1,110 +1,112 @@
 {
-    "uuid": "03dd9ea8-c199-46d1-af86-20e47ca8dfe9",
-    "name": "Search sensors",
-    "docker_parameters": "get-query/sensors/search",
-    "description": "Events based on a Query. List of recent events for the given query, including details of scanned ports, payloads and tags. Can be used with specific parameters and/or full-text search.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Search sensors",
-        "properties": {
-            "query": {
-                "in": "query",
-                "type": "string"
-            },
-            "days": {
-                "in": "query",
-                "type": "integer"
-            },
-            "page": {
-                "in": "query",
-                "type": "integer"
-            },
-            "only_ips": {
-                "in": "query",
-                "type": "integer"
-            }
-        },
-        "required": ["query"]
+  "uuid": "03dd9ea8-c199-46d1-af86-20e47ca8dfe9",
+  "name": "Search sensors",
+  "docker_parameters": "get-query/sensors/search",
+  "description": "Events based on a Query. List of recent events for the given query, including details of scanned ports, payloads and tags. Can be used with specific parameters and/or full-text search.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Search sensors",
+    "properties": {
+      "query": {
+        "in": "query",
+        "type": "string"
+      },
+      "days": {
+        "in": "query",
+        "type": "integer"
+      },
+      "page": {
+        "in": "query",
+        "type": "integer"
+      },
+      "only_ips": {
+        "in": "query",
+        "type": "integer"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string"
-            },
-            "page": {
-                "type": "integer"
-            },
-            "pagesize": {
-                "type": "integer"
-            },
-            "total": {
-                "type": "integer"
-            },
-            "events": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "data": {
-                            "type": "object",
-                            "properties": {
-                                "payload": {
-                                    "type": "string"
-                                },
-                                "extra": {
-                                    "type": "object",
-                                    "properties": {
-                                        "ssh": {
-                                            "type": "object",
-                                            "properties": {
-                                                "description": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                "tags": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        },
-                        "target": {
-                            "type": "object",
-                            "properties": {
-                                "port": {
-                                    "type": "integer"
-                                },
-                                "protocol": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "origin": {
-                            "type": "object",
-                            "properties": {
-                                "ip": {
-                                    "type": "string"
-                                },
-                                "type": {
-                                    "type": "string"
-                                },
-                                "ts": {
-                                    "type": "integer"
-                                },
-                                "asn": {
-                                    "type": "integer"
-                                }
-                            }
+    "required": [
+      "query"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "page": {
+        "type": "integer"
+      },
+      "pagesize": {
+        "type": "integer"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "object",
+              "properties": {
+                "payload": {
+                  "type": "string"
+                },
+                "extra": {
+                  "type": "object",
+                  "properties": {
+                    "ssh": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
                         }
+                      }
                     }
+                  }
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
+              }
+            },
+            "target": {
+              "type": "object",
+              "properties": {
+                "port": {
+                  "type": "integer"
+                },
+                "protocol": {
+                  "type": "string"
+                }
+              }
+            },
+            "origin": {
+              "type": "object",
+              "properties": {
+                "ip": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "ts": {
+                  "type": "integer"
+                },
+                "asn": {
+                  "type": "integer"
+                }
+              }
             }
+          }
         }
+      }
     }
+  }
 }

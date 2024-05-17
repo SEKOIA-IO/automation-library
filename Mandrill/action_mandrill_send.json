@@ -1,267 +1,271 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "message": {
+        "description": "The information on the message to send",
+        "type": "object",
         "properties": {
-            "message": {
-                "description": "The information on the message to send",
-                "type": "object",
-                "properties": {
-                    "html": {
-                        "description": "The full HTML content to be sent",
-                        "type": "string"
-                    },
-                    "text": {
-                        "description": "The optional full text content to be sent",
-                        "type": "string"
-                    },
-                    "subject": {
-                        "description": "The message subject",
-                        "type": "string"
-                    },
-                    "from_email": {
-                        "description": "The sender email address.",
-                        "type": "string"
-                    },
-                    "from_name": {
-                        "description": "The optional from name to be used",
-                        "type": "string"
-                    },
-                    "to": {
-                        "description": "An array of recipient information.",
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "description": "A single recipient's information.",
-                            "properties": {
-                                "email": {
-                                    "description": "The email address of the recipient",
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "description": "The optional display name to use for the recipient",
-                                    "type": "string"
-                                },
-                                "type": {
-                                    "description": "The header type to use for the recipient, defaults to 'to' if not provided oneof(to, cc, bcc)",
-                                    "type": "string"
-                                }
-                            },
-                            "required": ["email"]
-                        },
-                        "minItems": 1
-                    },
-                    "headers": {
-                        "description": "The optional extra headers to add to the message (most headers are allowed)",
-                        "type": "object"
-                    },
-                    "important": {
-                        "description": "Whether or not this message is important, and should be delivered ahead of non-important messages",
-                        "type": "boolean"
-                    },
-                    "track_opens": {
-                        "description": "Whether or not to turn on open tracking for the message",
-                        "type": "boolean"
-                    },
-                    "track_clicks": {
-                        "description": "Whether or not to turn on click tracking for the message",
-                        "type": "boolean"
-                    },
-                    "auto_text": {
-                        "description": "Whether or not to automatically generate a text part for messages that are not given text",
-                        "type": "boolean"
-                    },
-                    "auto_html": {
-                        "description": "Whether or not to automatically generate an HTML part for messages that are not given HTML",
-                        "type": "boolean"
-                    },
-                    "inline_css": {
-                        "description": "Whether or not to automatically inline all CSS styles provided in the message HTML - only for HTML documents less than 256KB in size",
-                        "type": "string"
-                    },
-                    "url_strip_qs": {
-                        "description": "Whether or not to strip the query string from URLs when aggregating tracked URL data",
-                        "type": "boolean"
-                    },
-                    "preserve_recipients": {
-                        "description": "Whether or not to expose all recipients in to 'To' header for each email",
-                        "type": "boolean"
-                    },
-                    "view_content_link": {
-                        "description": "Set to false to remove content logging for sensitive emails",
-                        "type": "boolean"
-                    },
-                    "bcc_address": {
-                        "description": "An optional address to receive an exact copy of each recipient's email",
-                        "type": "string"
-                    },
-                    "tracking_domain": {
-                        "description": "A custom domain to use for tracking opens and clicks instead of mandrillapp.com",
-                        "type": "string"
-                    },
-                    "signing_domain": {
-                        "description": "A custom domain to use for SPF/DKIM signing instead of mandrill (for 'via' or 'on behalf of' in email clients)",
-                        "type": "string"
-                    },
-                    "return_path_domain": {
-                        "description": "A custom domain to use for the messages's return-path",
-                        "type": "string"
-                    },
-                    "merge": {
-                        "description": "Whether to evaluate merge tags in the message. Will automatically be set to true if either merge_vars or global_merge_vars are provided.",
-                        "type": "boolean"
-                    },
-                    "merge_language": {
-                        "description": "The merge tag language to use when evaluating merge tags, either mailchimp or handlebars",
-                        "type": "string"
-                    },
-                    "global_merge_vars": {
-                        "description": "The global merge variables to use for all recipients. You can override these per recipient.",
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "description": "A single global merge variable",
-                            "properties": {
-                                "name": {
-                                    "description": "The global merge variable's name. Merge variable names are case-insensitive and may not start with _",
-                                    "type": "string"
-                                },
-                                "content": {
-                                    "description": "The global merge variable's content",
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "merge_vars": {
-                        "description": "Per-recipient merge variables, which override global merge variables with the same name.",
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "description": "Per-recipient merge variables",
-                            "properties": {
-                                "rcpt": {
-                                    "description": "The email address of the recipient that the merge variables should apply to",
-                                    "type": "string"
-                                },
-                                "vars": {
-                                    "description": "The recipient's merge variables",
-                                    "type": "object",
-                                    "properties": {
-                                        "name": {
-                                            "description": "The merge variable's name. Merge variable names are case-insensitive and may not start with _",
-                                            "type": "string"
-                                        },
-                                        "content": {
-                                            "descrption": "The merge variable's content",
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            },
-                            "required": ["email"]
-                        }
-                    },
-                    "tags": {
-                        "description": "An array of string to tag the message with. Stats are accumulated using tags, though we only store the first 100 we see, so this should not be unique or change frequently. Tags should be 50 characters or less. Any tags starting with an underscore are reserved for internal use and will cause errors.",
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "description": "A single tag - must not start with an underscore"
-                        }
-                    },
-                    "subaccount": {
-                        "description": "The unique id of a subaccount for this message - must already exist or will fail with an error",
-                        "type": "string"
-                    },
-                    "google_analytics_domains": {
-                        "description": "An array of strings indicating for which any matching URLs will automatically have Google Analytics parameters appended to their query string automatically.",
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "google_analytics_campaign": {
-                        "description": "Optional string indicating the value to set for the utm_campaign tracking parameter. If this isn't provided the email's from address will be used instead.",
-                        "type": "string"
-                    },
-                    "recipient_attachments": {
-                        "description": "An array of supported attachments to add to the message",
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "description": "A single supported attachment",
-                            "properties": {
-                                "rcpt": {
-                                    "description": "The MIME type of the attachment",
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "description": "The file name of the attachment",
-                                    "type": "string"
-                                },
-                                "content": {
-                                    "description": "The content of the attachment as a base64-encoded string",
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
+          "html": {
+            "description": "The full HTML content to be sent",
+            "type": "string"
+          },
+          "text": {
+            "description": "The optional full text content to be sent",
+            "type": "string"
+          },
+          "subject": {
+            "description": "The message subject",
+            "type": "string"
+          },
+          "from_email": {
+            "description": "The sender email address.",
+            "type": "string"
+          },
+          "from_name": {
+            "description": "The optional from name to be used",
+            "type": "string"
+          },
+          "to": {
+            "description": "An array of recipient information.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A single recipient's information.",
+              "properties": {
+                "email": {
+                  "description": "The email address of the recipient",
+                  "type": "string"
                 },
-                "required": []
-            },
-            "async": {
-                "description": "Enable a background sending mode that is optimized for bulk sending. In async mode, messages/send will immediately return a status of 'queued' for every recipient. To handle rejections when sending in async mode, set up a webhook for the 'reject' event. Defaults to false for messages with no more than 10 recipients; messages with more than 10 recipients are always sent asynchronously, regardless of the value of async.",
-                "type": "boolean"
-            },
-            "ip_pool": {
-                "description": "The name of the dedicated ip pool that should be used to send the message. If you do not have any dedicated IPs, this parameter has no effect. If you specify a pool that does not exist, your default pool will be used instead.",
-                "type": "string"
-            },
-            "send_at": {
-                "description": "When this message should be sent as a UTC timestamp in YYYY-MM-DD HH:MM:SS format. If you specify a time in the past, the message will be sent immediately. An additional fee applies for scheduled email, and this feature is only available to accounts with a positive balance.",
-                "type": "string"
-            }
-        },
-        "required": [
-            "message"
-        ],
-        "title": "Arguments",
-        "type": "object"
-    },
-    "description": "Send a new transactional message through Mandrill",
-    "docker_parameters": "mandrill_send",
-    "name": "Send Message",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "report": {
-                "description": "An array of structs for each recipient containing the key 'email' with the email address, and details of the message status for that recipient",
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "description": "The sending results for a single recipient",
-                    "properties": {
-                        "email": {
-                            "description": "The email address of the recipient",
-                            "type": "string"
-                        },
-                        "status": {
-                            "description": "The email address of the recipient  the file name of the attachment",
-                            "type": "string"
-                        },
-                        "content": {
-                            "description": "The content of the attachment as a base64-encoded string",
-                            "type": "string"
-                        }
-                    }
+                "name": {
+                  "description": "The optional display name to use for the recipient",
+                  "type": "string"
+                },
+                "type": {
+                  "description": "The header type to use for the recipient, defaults to 'to' if not provided oneof(to, cc, bcc)",
+                  "type": "string"
                 }
+              },
+              "required": [
+                "email"
+              ]
+            },
+            "minItems": 1
+          },
+          "headers": {
+            "description": "The optional extra headers to add to the message (most headers are allowed)",
+            "type": "object"
+          },
+          "important": {
+            "description": "Whether or not this message is important, and should be delivered ahead of non-important messages",
+            "type": "boolean"
+          },
+          "track_opens": {
+            "description": "Whether or not to turn on open tracking for the message",
+            "type": "boolean"
+          },
+          "track_clicks": {
+            "description": "Whether or not to turn on click tracking for the message",
+            "type": "boolean"
+          },
+          "auto_text": {
+            "description": "Whether or not to automatically generate a text part for messages that are not given text",
+            "type": "boolean"
+          },
+          "auto_html": {
+            "description": "Whether or not to automatically generate an HTML part for messages that are not given HTML",
+            "type": "boolean"
+          },
+          "inline_css": {
+            "description": "Whether or not to automatically inline all CSS styles provided in the message HTML - only for HTML documents less than 256KB in size",
+            "type": "string"
+          },
+          "url_strip_qs": {
+            "description": "Whether or not to strip the query string from URLs when aggregating tracked URL data",
+            "type": "boolean"
+          },
+          "preserve_recipients": {
+            "description": "Whether or not to expose all recipients in to 'To' header for each email",
+            "type": "boolean"
+          },
+          "view_content_link": {
+            "description": "Set to false to remove content logging for sensitive emails",
+            "type": "boolean"
+          },
+          "bcc_address": {
+            "description": "An optional address to receive an exact copy of each recipient's email",
+            "type": "string"
+          },
+          "tracking_domain": {
+            "description": "A custom domain to use for tracking opens and clicks instead of mandrillapp.com",
+            "type": "string"
+          },
+          "signing_domain": {
+            "description": "A custom domain to use for SPF/DKIM signing instead of mandrill (for 'via' or 'on behalf of' in email clients)",
+            "type": "string"
+          },
+          "return_path_domain": {
+            "description": "A custom domain to use for the messages's return-path",
+            "type": "string"
+          },
+          "merge": {
+            "description": "Whether to evaluate merge tags in the message. Will automatically be set to true if either merge_vars or global_merge_vars are provided.",
+            "type": "boolean"
+          },
+          "merge_language": {
+            "description": "The merge tag language to use when evaluating merge tags, either mailchimp or handlebars",
+            "type": "string"
+          },
+          "global_merge_vars": {
+            "description": "The global merge variables to use for all recipients. You can override these per recipient.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A single global merge variable",
+              "properties": {
+                "name": {
+                  "description": "The global merge variable's name. Merge variable names are case-insensitive and may not start with _",
+                  "type": "string"
+                },
+                "content": {
+                  "description": "The global merge variable's content",
+                  "type": "string"
+                }
+              }
             }
+          },
+          "merge_vars": {
+            "description": "Per-recipient merge variables, which override global merge variables with the same name.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Per-recipient merge variables",
+              "properties": {
+                "rcpt": {
+                  "description": "The email address of the recipient that the merge variables should apply to",
+                  "type": "string"
+                },
+                "vars": {
+                  "description": "The recipient's merge variables",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "description": "The merge variable's name. Merge variable names are case-insensitive and may not start with _",
+                      "type": "string"
+                    },
+                    "content": {
+                      "descrption": "The merge variable's content",
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "email"
+              ]
+            }
+          },
+          "tags": {
+            "description": "An array of string to tag the message with. Stats are accumulated using tags, though we only store the first 100 we see, so this should not be unique or change frequently. Tags should be 50 characters or less. Any tags starting with an underscore are reserved for internal use and will cause errors.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "A single tag - must not start with an underscore"
+            }
+          },
+          "subaccount": {
+            "description": "The unique id of a subaccount for this message - must already exist or will fail with an error",
+            "type": "string"
+          },
+          "google_analytics_domains": {
+            "description": "An array of strings indicating for which any matching URLs will automatically have Google Analytics parameters appended to their query string automatically.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "google_analytics_campaign": {
+            "description": "Optional string indicating the value to set for the utm_campaign tracking parameter. If this isn't provided the email's from address will be used instead.",
+            "type": "string"
+          },
+          "recipient_attachments": {
+            "description": "An array of supported attachments to add to the message",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A single supported attachment",
+              "properties": {
+                "rcpt": {
+                  "description": "The MIME type of the attachment",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "The file name of the attachment",
+                  "type": "string"
+                },
+                "content": {
+                  "description": "The content of the attachment as a base64-encoded string",
+                  "type": "string"
+                }
+              }
+            }
+          }
         },
-        "required": [
-            "report"
-        ],
-        "title": "Results",
-        "type": "object"
+        "required": []
+      },
+      "async": {
+        "description": "Enable a background sending mode that is optimized for bulk sending. In async mode, messages/send will immediately return a status of 'queued' for every recipient. To handle rejections when sending in async mode, set up a webhook for the 'reject' event. Defaults to false for messages with no more than 10 recipients; messages with more than 10 recipients are always sent asynchronously, regardless of the value of async.",
+        "type": "boolean"
+      },
+      "ip_pool": {
+        "description": "The name of the dedicated ip pool that should be used to send the message. If you do not have any dedicated IPs, this parameter has no effect. If you specify a pool that does not exist, your default pool will be used instead.",
+        "type": "string"
+      },
+      "send_at": {
+        "description": "When this message should be sent as a UTC timestamp in YYYY-MM-DD HH:MM:SS format. If you specify a time in the past, the message will be sent immediately. An additional fee applies for scheduled email, and this feature is only available to accounts with a positive balance.",
+        "type": "string"
+      }
     },
-    "uuid": "cb61842a-e09f-417d-acdf-34c818c61c87"
+    "required": [
+      "message"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Send a new transactional message through Mandrill",
+  "docker_parameters": "mandrill_send",
+  "name": "Send Message",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "report": {
+        "description": "An array of structs for each recipient containing the key 'email' with the email address, and details of the message status for that recipient",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "The sending results for a single recipient",
+          "properties": {
+            "email": {
+              "description": "The email address of the recipient",
+              "type": "string"
+            },
+            "status": {
+              "description": "The email address of the recipient  the file name of the attachment",
+              "type": "string"
+            },
+            "content": {
+              "description": "The content of the attachment as a base64-encoded string",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "report"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "cb61842a-e09f-417d-acdf-34c818c61c87"
 }

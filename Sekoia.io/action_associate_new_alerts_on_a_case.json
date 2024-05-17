@@ -1,36 +1,36 @@
 {
-    "uuid": "186f5b43-2e79-4497-9eee-9e4f3ca54500",
-    "name": "Attach Alerts to Case",
-    "docker_parameters": "patch-cases/{case_uuid}/alerts",
-    "description": "Attach one or more alerts to a specific case",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "associate_new_alerts_on_a_case",
-        "properties": {
-            "case_uuid": {
-                "type": "string",
-                "in": "path"
-            },
-            "alerts": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "description": "The list of identifiers of alerts to add",
-                "in": "body"
-            }
+  "uuid": "186f5b43-2e79-4497-9eee-9e4f3ca54500",
+  "name": "Attach Alerts to Case",
+  "docker_parameters": "patch-cases/{case_uuid}/alerts",
+  "description": "Attach one or more alerts to a specific case",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "associate_new_alerts_on_a_case",
+    "properties": {
+      "case_uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "alerts": {
+        "type": "array",
+        "items": {
+          "type": "string"
         },
-        "required": [
-            "case_uuid"
-        ]
+        "description": "The list of identifiers of alerts to add",
+        "in": "body"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "status": {
-                "type": "string"
-            }
-        }
+    "required": [
+      "case_uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string"
+      }
     }
+  }
 }

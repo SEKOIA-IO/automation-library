@@ -1,113 +1,115 @@
 {
-    "uuid": "2751b830-45aa-4e3d-afdb-7baba33efd2a",
-    "name": "Search screenshots",
-    "docker_parameters": "get-query/image/search",
-    "description": "Remote Desktops based on a Query. List of screenshots and details extracted from them for the given query, including OCR and whether faces were found or not. Can be used with specific parameters and/or full-text search.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Search screenshots",
-        "properties": {
-            "query": {
-                "in": "query",
-                "type": "string"
-            },
-            "page": {
-                "in": "query",
-                "type": "integer"
-            }
-        },
-        "required": ["query"]
+  "uuid": "2751b830-45aa-4e3d-afdb-7baba33efd2a",
+  "name": "Search screenshots",
+  "docker_parameters": "get-query/image/search",
+  "description": "Remote Desktops based on a Query. List of screenshots and details extracted from them for the given query, including OCR and whether faces were found or not. Can be used with specific parameters and/or full-text search.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Search screenshots",
+    "properties": {
+      "query": {
+        "in": "query",
+        "type": "string"
+      },
+      "page": {
+        "in": "query",
+        "type": "integer"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "pagesize": {
-                "type": "integer"
+    "required": [
+      "query"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "pagesize": {
+        "type": "integer"
+      },
+      "query": {
+        "type": "string"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "page": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "thumb": {
+              "type": "string"
             },
-            "query": {
+            "tags": {
+              "type": "array",
+              "items": {
                 "type": "string"
+              }
             },
-            "total": {
-                "type": "integer"
+            "ts": {
+              "type": "integer"
             },
-            "page": {
-                "type": "integer"
+            "port": {
+              "type": "integer"
             },
-            "events": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "thumb": {
-                            "type": "string"
-                        },
-                        "tags": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "ts": {
-                            "type": "integer"
-                        },
-                        "port": {
-                            "type": "integer"
-                        },
-                        "url": {
-                            "type": "string"
-                        },
-                        "height": {
-                            "type": "integer"
-                        },
-                        "geoip": {
-                            "type": "object",
-                            "properties": {
-                                "iso_code": {
-                                    "type": "string"
-                                },
-                                "timezone": {
-                                    "type": "string"
-                                },
-                                "latitude": {
-                                    "type": "float"
-                                },
-                                "longitude": {
-                                    "type": "float"
-                                },
-                                "location": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "float"
-                                    }
-                                },
-                                "country_name": {
-                                    "type": "string"
-                                },
-                                "city_name": "string"
-                            }
-                        },
-                        "ip": {
-                            "type": "string"
-                        },
-                        "country": {
-                            "type": "string"
-                        },
-                        "as_name": {
-                            "type": "string"
-                        },
-                        "asn": {
-                            "type": "integer"
-                        },
-                        "width": {
-                            "type": "integer"
-                        },
-                        "image_id": {
-                            "type": "string"
-                        }
-                    }
-                }
+            "url": {
+              "type": "string"
+            },
+            "height": {
+              "type": "integer"
+            },
+            "geoip": {
+              "type": "object",
+              "properties": {
+                "iso_code": {
+                  "type": "string"
+                },
+                "timezone": {
+                  "type": "string"
+                },
+                "latitude": {
+                  "type": "float"
+                },
+                "longitude": {
+                  "type": "float"
+                },
+                "location": {
+                  "type": "array",
+                  "items": {
+                    "type": "float"
+                  }
+                },
+                "country_name": {
+                  "type": "string"
+                },
+                "city_name": "string"
+              }
+            },
+            "ip": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            },
+            "as_name": {
+              "type": "string"
+            },
+            "asn": {
+              "type": "integer"
+            },
+            "width": {
+              "type": "integer"
+            },
+            "image_id": {
+              "type": "string"
             }
+          }
         }
+      }
     }
+  }
 }
