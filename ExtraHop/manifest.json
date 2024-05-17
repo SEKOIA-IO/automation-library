@@ -1,33 +1,33 @@
 {
-    "configuration": {
-        "title": "ExtraHop",
-        "type": "object",
-        "properties": {
-            "base_url": {
-                "description": "API base URL",
-                "type": "string"
-            },
-            "client_id": {
-                "description": "Client ID",
-                "type": "string"
-            },
-            "client_secret": {
-                "description": "Client Secret",
-                "type": "string"
-            }
-        },
-        "required": [
-            "base_url",
-            "client_id",
-            "client_secret"
-        ],
-        "secrets": [
-            "client_secret"
-        ]
+  "configuration": {
+    "title": "ExtraHop",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "description": "API base URL",
+        "type": "string"
+      },
+      "client_id": {
+        "description": "Client ID",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "Client Secret",
+        "type": "string"
+      }
     },
-    "description": "ExtraHop is a leading provider of network detection and response (NDR) solutions.",
-    "name": "ExtraHop",
-    "slug": "extrahop",
-    "uuid": "7fbcf1fc-55d3-4fcd-9907-e491e234e9c0",
-    "version": "1.0.2"
+    "required": [
+      "base_url",
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
+  },
+  "description": "ExtraHop is a leading provider of network detection and response (NDR) solutions.",
+  "name": "ExtraHop",
+  "slug": "extrahop",
+  "uuid": "7fbcf1fc-55d3-4fcd-9907-e491e234e9c0",
+  "version": "1.0.2"
 }

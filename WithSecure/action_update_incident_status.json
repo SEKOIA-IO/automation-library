@@ -16,18 +16,28 @@
         "title": "Status",
         "description": "Status.",
         "type": "string",
-        "enum": ["new","acknowledged","inProgress","monitoring","closed"]
+        "enum": [
+          "new",
+          "acknowledged",
+          "inProgress",
+          "monitoring",
+          "closed"
+        ]
       },
       "resolution": {
         "title": "Resolution",
         "description": "Resolution.",
         "type": "string",
-        "enum": ["unconfirmed","confirmed","falsePositive"]
+        "enum": [
+          "unconfirmed",
+          "confirmed",
+          "falsePositive"
+        ]
       }
     },
     "required": [
-        "target",
-        "status"
+      "target",
+      "status"
     ]
   },
   "results": {}

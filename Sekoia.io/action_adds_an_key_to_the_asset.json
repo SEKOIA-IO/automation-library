@@ -1,50 +1,50 @@
 {
-    "uuid": "b589efe6-3da1-4800-bd41-9873c403fe58",
-    "name": "Add key to Asset",
-    "docker_parameters": "post-assets/{uuid}/keys",
-    "description": "Adds a key to an asset",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "adds_an_key_to_the_asset",
-        "properties": {
-            "uuid": {
-                "type": "string",
-                "in": "path"
-            },
-            "name": {
-                "in": "query",
-                "type": "string"
-            },
-            "value": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": [
-            "uuid",
-            "name",
-            "value"
-        ]
+  "uuid": "b589efe6-3da1-4800-bd41-9873c403fe58",
+  "name": "Add key to Asset",
+  "docker_parameters": "post-assets/{uuid}/keys",
+  "description": "Adds a key to an asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "adds_an_key_to_the_asset",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "name": {
+        "in": "query",
+        "type": "string"
+      },
+      "value": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "value": {
-                "type": "string"
-            },
-            "uuid": {
-                "type": "string",
-                "format": "uuid"
-            },
-            "name": {
-                "type": "string"
-            }
-        },
-        "required": [
-            "name",
-            "uuid",
-            "value"
-        ]
-    }
+    "required": [
+      "uuid",
+      "name",
+      "value"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "value": {
+        "type": "string"
+      },
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "name": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "uuid",
+      "value"
+    ]
+  }
 }

@@ -9,16 +9,38 @@
     "title": "Get Security Events",
     "properties": {
       "type": {
-        "description": "Type of security event. Specify one of these values:\n\t- 1 — Malware\n\t- 2 — PUPs (Potentially Unwanted Programs)\n\t- 3 — Blocked Programs\n\t- 4 — Exploits\n\t- 5 — Blocked by Advanced Security\n\t- 6 — Virus\n\t- 7 — Spyware\n\t- 8 — Hacking Tools and PUPs detected by Antivirus\n\t- 9 — Phishing\n\t- 10 — Suspicious\n\t- 11 — Dangerous Actions\n\t- 12 — Tracking Cookies\n\t- 13 — Malware URLs\n\t- 14 — Other security event by Antivirus\n\t- 15 — Intrusion Attempts\n\t- 16 — Blocked Connections\n\t- 17 — Blocked Devices\n\t- 18 — Indicators of Attack\nExample: 13",
+        "description": "Type of security event. Specify one of these values:\n\t- 1 \u2014 Malware\n\t- 2 \u2014 PUPs (Potentially Unwanted Programs)\n\t- 3 \u2014 Blocked Programs\n\t- 4 \u2014 Exploits\n\t- 5 \u2014 Blocked by Advanced Security\n\t- 6 \u2014 Virus\n\t- 7 \u2014 Spyware\n\t- 8 \u2014 Hacking Tools and PUPs detected by Antivirus\n\t- 9 \u2014 Phishing\n\t- 10 \u2014 Suspicious\n\t- 11 \u2014 Dangerous Actions\n\t- 12 \u2014 Tracking Cookies\n\t- 13 \u2014 Malware URLs\n\t- 14 \u2014 Other security event by Antivirus\n\t- 15 \u2014 Intrusion Attempts\n\t- 16 \u2014 Blocked Connections\n\t- 17 \u2014 Blocked Devices\n\t- 18 \u2014 Indicators of Attack\nExample: 13",
         "type": "integer",
         "in": "path",
-        "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
       },
       "period": {
         "description": "Period of time to retrieve security events for. Specify one of these values:\n\t- 1 - Previous 24 hours\n\t- 7 - Previous 7 days",
         "type": "integer",
         "in": "path",
-        "enum": [1, 7]
+        "enum": [
+          1,
+          7
+        ]
       },
       "hostname": {
         "description": "Host name (base-64 encoded) of the device you want to retrieve security events for.",

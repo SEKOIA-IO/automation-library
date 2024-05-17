@@ -1,29 +1,29 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "name": {
-                "description": "The name of the Address Group.",
-                "type": "string"
-            },
-            "member": {
-                "description": "The Object LIST to be added in the Address Group (can be an IP address, a FQDN or event a Group), for example Address1",
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            }
-        },
-        "required": [
-            "name",
-            "member"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "name": {
+        "description": "The name of the Address Group.",
+        "type": "string"
+      },
+      "member": {
+        "description": "The Object LIST to be added in the Address Group (can be an IP address, a FQDN or event a Group), for example Address1",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
     },
-    "description": "Add a new Address Group to a Fortigate Firewall",
-    "docker_parameters": "fortigate_add_group_address",
-    "name": "Post Fortigate Address Group",
-    "results": {},
-    "uuid": "d98acb88-88ca-4afe-95d0-b9996fe37cfc"
+    "required": [
+      "name",
+      "member"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Add a new Address Group to a Fortigate Firewall",
+  "docker_parameters": "fortigate_add_group_address",
+  "name": "Post Fortigate Address Group",
+  "results": {},
+  "uuid": "d98acb88-88ca-4afe-95d0-b9996fe37cfc"
 }

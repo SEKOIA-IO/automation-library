@@ -19,7 +19,7 @@
       }
     },
     "required": [
-        "target"
+      "target"
     ]
   },
   "results": {}

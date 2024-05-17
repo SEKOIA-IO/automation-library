@@ -1,54 +1,54 @@
 {
-    "uuid": "3092c266-e34a-403c-a90f-71447bfcd680",
-    "name": "Isolate Devices",
-    "docker_parameters": "post-api/v1/accounts/{account_id}/devices/isolation",
-    "description": "Isolates the specified devices. When you isolate a device, communication to and from the device is denied.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Isolate Devices",
-        "properties": {
-            "device_ids": {
-                "description": "List of IDs of devices to isolate.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
-                "type": "array",
-                "in": "body",
-                "items": {
-                    "type": "str"
-                }
-            },
-            "exclusion_programs": {
-                "description": "List of programs to exclude from isolation and allow to communicate normally.",
-                "type": "array",
-                "in": "body",
-                "items": {
-                    "type": "str"
-                }
-            },
-            "customized_message": {
-                "description": "Text to show in an alert message on the isolated devices",
-                "type": "str",
-                "in": "body"
-            },
-            "hide_customized_alert": {
-                "description": "Indicates whether to hide the customized alert message on isolated devices.",
-                "type": "boolean",
-                "in": "body"
-            }
-        },
-        "required": [
-            "device_ids"
-        ]
-    },
-    "results": {
-        "type": "object",
-        "properties": {
-            "processed_device_ids": {
-                "type": "array",
-                "description": "List of IDs of the isolated devices",
-                "items": {
-                    "type": "str"
-                }
-            }
+  "uuid": "3092c266-e34a-403c-a90f-71447bfcd680",
+  "name": "Isolate Devices",
+  "docker_parameters": "post-api/v1/accounts/{account_id}/devices/isolation",
+  "description": "Isolates the specified devices. When you isolate a device, communication to and from the device is denied.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Isolate Devices",
+    "properties": {
+      "device_ids": {
+        "description": "List of IDs of devices to isolate.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "str"
         }
+      },
+      "exclusion_programs": {
+        "description": "List of programs to exclude from isolation and allow to communicate normally.",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "str"
+        }
+      },
+      "customized_message": {
+        "description": "Text to show in an alert message on the isolated devices",
+        "type": "str",
+        "in": "body"
+      },
+      "hide_customized_alert": {
+        "description": "Indicates whether to hide the customized alert message on isolated devices.",
+        "type": "boolean",
+        "in": "body"
+      }
+    },
+    "required": [
+      "device_ids"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "processed_device_ids": {
+        "type": "array",
+        "description": "List of IDs of the isolated devices",
+        "items": {
+          "type": "str"
+        }
+      }
     }
+  }
 }

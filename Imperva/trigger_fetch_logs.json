@@ -16,33 +16,35 @@
         "type": "string"
       }
     },
-    "required": ["intake_key"],
+    "required": [
+      "intake_key"
+    ],
     "title": "Fetch Imperva WAF logs",
     "type": "object"
   },
-    "description": "Fetch Imperva WAF logs",
-    "docker_parameters": "imperva_logs",
-    "name": "Imperva WAF logs",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "logs": {
-                "description": "A list of logs.",
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            },
-            "logs_path": {
-                "description": "The filename containing the logs",
-                "type": "string"
-            }
-        },
-        "required": [
-            "logs"
-        ],
-        "title": "Results",
-        "type": "object"
+  "description": "Fetch Imperva WAF logs",
+  "docker_parameters": "imperva_logs",
+  "name": "Imperva WAF logs",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "logs": {
+        "description": "A list of logs.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "logs_path": {
+        "description": "The filename containing the logs",
+        "type": "string"
+      }
     },
-    "uuid": "7902efc5-a9c4-4ff1-9f82-b0551ec9d003"
+    "required": [
+      "logs"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "7902efc5-a9c4-4ff1-9f82-b0551ec9d003"
 }

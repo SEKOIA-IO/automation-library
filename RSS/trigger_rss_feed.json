@@ -1,85 +1,85 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "RSS",
-        "type": "object",
-        "properties": {
-            "feeds": {
-                "type": "array",
-                "description": "RSS Feeds configuration",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": "URL of the RSS feed",
-                            "format": "uri"
-                        },
-                        "frequency": {
-                            "type": "integer",
-                            "description": "Frequency of feed lookups (in seconds)",
-                            "default": 300,
-                            "minimum": 60
-                        },
-                        "strict": {
-                            "type": "boolean",
-                            "description": "Whether the RSS parsing should be strict or not.",
-                            "default": false
-                        },
-                        "to_file": {
-                            "type": "boolean",
-                            "description": "Whether the event should be saved in a file or sent directly",
-                            "default": false
-                        }
-                    }
-                }
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "RSS",
+    "type": "object",
+    "properties": {
+      "feeds": {
+        "type": "array",
+        "description": "RSS Feeds configuration",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "URL of the RSS feed",
+              "format": "uri"
+            },
+            "frequency": {
+              "type": "integer",
+              "description": "Frequency of feed lookups (in seconds)",
+              "default": 300,
+              "minimum": 60
+            },
+            "strict": {
+              "type": "boolean",
+              "description": "Whether the RSS parsing should be strict or not.",
+              "default": false
+            },
+            "to_file": {
+              "type": "boolean",
+              "description": "Whether the event should be saved in a file or sent directly",
+              "default": false
             }
+          }
         }
-    },
-    "description": "Trigger playbook when new posts are published",
-    "docker_parameters": "rss_trigger",
-    "name": "New Post",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "RSS Item",
+      }
+    }
+  },
+  "description": "Trigger playbook when new posts are published",
+  "docker_parameters": "rss_trigger",
+  "name": "New Post",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "RSS Item",
+    "type": "object",
+    "properties": {
+      "source": {
         "type": "object",
+        "description": "Information about the RSS Feed's source"
+      },
+      "item": {
+        "type": "object",
+        "description": "RSS Item content",
         "properties": {
-            "source": {
-                "type": "object",
-                "description": "Information about the RSS Feed's source"
-            },
-            "item": {
-                "type": "object",
-                "description": "RSS Item content",
-                "properties": {
-                    "author": {
-                        "type": "string",
-                        "description": "Author of the RSS item"
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "Title of the RSS item"
-                    },
-                    "link": {
-                        "type": "string",
-                        "description": "Link to the full RSS item"
-                    },
-                    "description": {
-                        "type": "string",
-                        "description": "Description of the RSS item"
-                    },
-                    "published": {
-                        "type": "string",
-                        "description": "Date and time of publication"
-                    }
-                }
-            },
-            "event_path": {
-                "type": "string",
-                "description": "Path to the file containing the RSS event"
-            }
-        },
-        "required": []
+          "author": {
+            "type": "string",
+            "description": "Author of the RSS item"
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the RSS item"
+          },
+          "link": {
+            "type": "string",
+            "description": "Link to the full RSS item"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the RSS item"
+          },
+          "published": {
+            "type": "string",
+            "description": "Date and time of publication"
+          }
+        }
+      },
+      "event_path": {
+        "type": "string",
+        "description": "Path to the file containing the RSS event"
+      }
     },
-    "uuid": "c0511b14-585a-42fd-a896-715a5989d4ff"
+    "required": []
+  },
+  "uuid": "c0511b14-585a-42fd-a896-715a5989d4ff"
 }

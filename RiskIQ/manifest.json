@@ -1,35 +1,35 @@
 {
-    "configuration": {
-        "title": "RiskIQ",
-        "type": "object",
-        "properties": {
-            "base_url": {
-                "type": "string",
-                "description": "RiskIQ base url",
-                "format": "uri"
-            },
-            "api_key": {
-                "type": "string",
-                "description": "API key"
-            },
-            "api_secret": {
-                "type": "string",
-                "description": "API secret"
-            }
-        },
-        "required": [
-            "base_url",
-            "api_key",
-            "api_secret"
-        ],
-        "secrets": [
-            "api_key",
-            "api_secret"
-        ]
+  "configuration": {
+    "title": "RiskIQ",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "type": "string",
+        "description": "RiskIQ base url",
+        "format": "uri"
+      },
+      "api_key": {
+        "type": "string",
+        "description": "API key"
+      },
+      "api_secret": {
+        "type": "string",
+        "description": "API secret"
+      }
     },
-    "uuid": "ab1540c3-1b60-4bad-9f5b-13d86a554826",
-    "name": "RiskIQ",
-    "slug": "riskiq",
-    "description": "[RiskIQ](https://www.riskiq.com/) is a cyber security company providing software as a service to detect phishing, fraud, malware, and other online security threats.",
-    "version": "1.24"
+    "required": [
+      "base_url",
+      "api_key",
+      "api_secret"
+    ],
+    "secrets": [
+      "api_key",
+      "api_secret"
+    ]
+  },
+  "uuid": "ab1540c3-1b60-4bad-9f5b-13d86a554826",
+  "name": "RiskIQ",
+  "slug": "riskiq",
+  "description": "[RiskIQ](https://www.riskiq.com/) is a cyber security company providing software as a service to detect phishing, fraud, malware, and other online security threats.",
+  "version": "1.24"
 }

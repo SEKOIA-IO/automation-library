@@ -1,73 +1,73 @@
 {
-    "uuid": "0d323de3-a864-4afe-a0c3-e7ff45883d7a",
-    "name": "Comment Alert",
-    "docker_parameters": "post-alerts/{uuid}/comments",
-    "description": "Attach a new comment on an Alert",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "post_a_comment_on_an_alert",
-        "properties": {
-            "uuid": {
-                "type": "string",
-                "in": "path"
-            },
-            "content": {
-                "type": "string",
-                "description": "Content of the comment",
-                "in": "body"
-            },
-            "author": {
-                "type": "string",
-                "maxLength": 32,
-                "description": "Author of the comment",
-                "in": "body"
-            }
-        },
-        "required": [
-            "uuid",
-            "content"
-        ]
+  "uuid": "0d323de3-a864-4afe-a0c3-e7ff45883d7a",
+  "name": "Comment Alert",
+  "docker_parameters": "post-alerts/{uuid}/comments",
+  "description": "Attach a new comment on an Alert",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "post_a_comment_on_an_alert",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "content": {
+        "type": "string",
+        "description": "Content of the comment",
+        "in": "body"
+      },
+      "author": {
+        "type": "string",
+        "maxLength": 32,
+        "description": "Author of the comment",
+        "in": "body"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "created_by": {
-                "type": "string",
-                "description": "The identifier of the creator of the comment"
-            },
-            "content": {
-                "type": "string",
-                "description": "Content of the comment"
-            },
-            "author": {
-                "type": "string",
-                "description": "Author of the comment"
-            },
-            "unseen": {
-                "type": "boolean"
-            },
-            "date": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "created_by_type": {
-                "type": "string",
-                "description": "The type of the creator of the comment"
-            },
-            "uuid": {
-                "type": "string",
-                "format": "uuid",
-                "description": "Identifier of the comment"
-            }
-        },
-        "required": [
-            "author",
-            "content",
-            "created_by",
-            "created_by_type",
-            "date",
-            "uuid"
-        ]
-    }
+    "required": [
+      "uuid",
+      "content"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "created_by": {
+        "type": "string",
+        "description": "The identifier of the creator of the comment"
+      },
+      "content": {
+        "type": "string",
+        "description": "Content of the comment"
+      },
+      "author": {
+        "type": "string",
+        "description": "Author of the comment"
+      },
+      "unseen": {
+        "type": "boolean"
+      },
+      "date": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "created_by_type": {
+        "type": "string",
+        "description": "The type of the creator of the comment"
+      },
+      "uuid": {
+        "type": "string",
+        "format": "uuid",
+        "description": "Identifier of the comment"
+      }
+    },
+    "required": [
+      "author",
+      "content",
+      "created_by",
+      "created_by_type",
+      "date",
+      "uuid"
+    ]
+  }
 }

@@ -1,186 +1,186 @@
 {
-    "uuid": "2588a60c-59da-4b65-9b96-e5facd03c768",
-    "name": "Get Asset",
-    "docker_parameters": "get-assets/{uuid}",
-    "description": "Return an asset according its identifier",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Get Asset",
-        "properties": {
-            "uuid": {
-                "type": "string",
-                "in": "path",
-                "description": "The identifier of the asset"
-            }
-        },
-        "required": [
-            "uuid"
-        ]
+  "uuid": "2588a60c-59da-4b65-9b96-e5facd03c768",
+  "name": "Get Asset",
+  "docker_parameters": "get-assets/{uuid}",
+  "description": "Return an asset according its identifier",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get Asset",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path",
+        "description": "The identifier of the asset"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "keys": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "value": {
-                            "type": "string"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "name": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "name",
-                        "uuid",
-                        "value"
-                    ]
-                },
-                "description": "The keys of the asset"
-            },
-            "attributes": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "value": {
-                            "type": "string"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "name": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "name",
-                        "uuid",
-                        "value"
-                    ]
-                },
-                "description": "The attributes of the asset"
+    "required": [
+      "uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "keys": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
             },
             "uuid": {
-                "type": "string",
-                "format": "uuid"
+              "type": "string",
+              "format": "uuid"
             },
             "name": {
-                "type": "string"
-            },
-            "created_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "criticity": {
-                "type": "object",
-                "properties": {
-                    "value": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "display": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "display",
-                    "value"
-                ],
-                "description": "The criticality associated with the asset"
-            },
-            "asset_type": {
-                "type": "object",
-                "properties": {
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name",
-                    "uuid"
-                ]
-            },
-            "updated_at": {
-                "type": "string",
-                "format": "date-time"
-            },
-            "description": {
-                "type": "string"
-            },
-            "owners": {
-                "type": "array",
-                "items": {
-                    "type": "string",
-                    "format": "uuid"
-                }
-            },
-            "community_uuid": {
-                "type": "string"
-            },
-            "category": {
-                "type": "object",
-                "properties": {
-                    "uuid": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "types": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "uuid": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                },
-                                "name": {
-                                    "type": "string"
-                                },
-                                "description": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "uuid"
-                            ]
-                        }
-                    },
-                    "description": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name",
-                    "uuid"
-                ]
+              "type": "string"
             }
+          },
+          "required": [
+            "name",
+            "uuid",
+            "value"
+          ]
+        },
+        "description": "The keys of the asset"
+      },
+      "attributes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "uuid": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "uuid",
+            "value"
+          ]
+        },
+        "description": "The attributes of the asset"
+      },
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "name": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "criticity": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "display": {
+            "type": "string"
+          }
         },
         "required": [
-            "category",
-            "created_at",
-            "name",
-            "updated_at",
-            "uuid"
+          "display",
+          "value"
+        ],
+        "description": "The criticality associated with the asset"
+      },
+      "asset_type": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "uuid"
         ]
-    }
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "description": {
+        "type": "string"
+      },
+      "owners": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "community_uuid": {
+        "type": "string"
+      },
+      "category": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "uuid"
+              ]
+            }
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "uuid"
+        ]
+      }
+    },
+    "required": [
+      "category",
+      "created_at",
+      "name",
+      "updated_at",
+      "uuid"
+    ]
+  }
 }

@@ -1,36 +1,36 @@
 {
-    "configuration": {
-        "title": "MicrosoftADConfiguration",
-        "type": "object",
-        "properties": {
-            "servername": {
-                "title": "Server name",
-                "description": "IP or name of your host",
-                "type": "string"
-            },
-            "admin_username": {
-                "title": "Admin username account",
-                "description": "The username of the account that have necessary permisions to change passwords (e.g admin@example.com )",
-                "type": "string"
-            },
-            "admin_password": {
-                "title": "Password account",
-                "description": "The dedicated password of the account",
-                "type": "string"
-            }
-        },
-        "required": [
-            "servername",
-            "admin_username",
-            "admin_password"
-        ],
-        "secrets": [
-            "admin_password"
-        ]
+  "configuration": {
+    "title": "MicrosoftADConfiguration",
+    "type": "object",
+    "properties": {
+      "servername": {
+        "title": "Server name",
+        "description": "IP or name of your host",
+        "type": "string"
+      },
+      "admin_username": {
+        "title": "Admin username account",
+        "description": "The username of the account that have necessary permisions to change passwords (e.g admin@example.com )",
+        "type": "string"
+      },
+      "admin_password": {
+        "title": "Password account",
+        "description": "The dedicated password of the account",
+        "type": "string"
+      }
     },
-    "description": "Microsoft Active Directory (Microsoft AD), is a directory service developed by Microsoft for Windows domain networks. It is a centralized system that stores information about networked resources and makes these resources easily accessible to users and administrators. Active Directory provides services for authentication and authorization, organizing and managing resources, such as users, computers, and devices, in a networked environment.",
-    "name": "Microsoft Active Directory",
-    "uuid": "b2d96259-af89-4f7a-ae6e-a0af2d2400f3",
-    "slug": "microsoft-ad",
-    "version": "1.2.1"
+    "required": [
+      "servername",
+      "admin_username",
+      "admin_password"
+    ],
+    "secrets": [
+      "admin_password"
+    ]
+  },
+  "description": "Microsoft Active Directory (Microsoft AD), is a directory service developed by Microsoft for Windows domain networks. It is a centralized system that stores information about networked resources and makes these resources easily accessible to users and administrators. Active Directory provides services for authentication and authorization, organizing and managing resources, such as users, computers, and devices, in a networked environment.",
+  "name": "Microsoft Active Directory",
+  "uuid": "b2d96259-af89-4f7a-ae6e-a0af2d2400f3",
+  "slug": "microsoft-ad",
+  "version": "1.2.1"
 }
