@@ -18,6 +18,23 @@
       },
       "required": ["term"]
     },
-    "results": {},
+    "results": {
+          "title": "post_search_objects",
+          "type": "object",
+          "properties": {
+              "items": {
+                  "title": "Items",
+                  "type": "array"
+              },
+              "has_more": {
+                "title": "HasMore",
+                "type": "boolean"
+            }
+          },
+          "required": [
+              "items",
+              "has_more"
+          ]
+      },
     "required": ["items", "has_more"]
   }
