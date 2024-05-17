@@ -5,9 +5,11 @@ from functools import cached_property
 from typing import Any, Optional
 
 import orjson
+import requests
 from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from withsecure import WithSecureModule
 from withsecure.client import ApiClient
@@ -68,6 +70,20 @@ class SecurityEventsConnector(Connector):
             log_cb=self.log,
         )
 
+    def _retry(self):
+        return Retrying(
+            stop=stop_after_attempt(5),
+            wait=wait_exponential(multiplier=1, min=1, max=10),
+            reraise=True,
+        )
+
+    def __get_events(self, data: dict[str, Any], headers: dict[str, str], **kwargs) -> requests.Response:
+        for attempt in self._retry():
+            with attempt:
+                return self.client.post(
+                    API_SECURITY_EVENTS_URL, data=data, timeout=API_TIMEOUT, headers=headers, **kwargs
+                )
+
     def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch all the events that occurred after the specified from date
@@ -89,7 +105,7 @@ class SecurityEventsConnector(Connector):
         url = API_SECURITY_EVENTS_URL
 
         try:
-            response = self.client.post(url, data=data, timeout=API_TIMEOUT, headers=headers)
+            response = self.__get_events(data=data, headers=headers)
             response.raise_for_status()
             payload = response.json()
         except Exception as any_exception:
@@ -114,7 +130,7 @@ class SecurityEventsConnector(Connector):
                 return
             data["anchor"] = anchor
             try:
-                response = self.client.post(url, data=data, timeout=API_TIMEOUT, headers=headers)
+                response = self.__get_events(data=data, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
             except Exception as any_exception:
