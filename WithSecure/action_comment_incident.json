@@ -37,6 +37,22 @@
     },
     "required": [
         "items"
-    ]
+    ],
+    "definitions": {
+        "ItemKeys": {
+            "title": "ItemKeys",
+            "type": "object",
+            "properties": {
+                "incidentId": {
+                    "title": "Incident Id",
+                    "type": "string"
+                },
+                "comment": {
+                    "title": "Comment",
+                    "type": "string"
+                }
+            }
+        }
+    }
   }
 }

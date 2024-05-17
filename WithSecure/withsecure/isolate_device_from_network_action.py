@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Any
+from withsecure.models import RemoteOperationResponse
 
 from withsecure.device_operation_action import DeviceOperationAction
 
@@ -7,11 +7,6 @@ from withsecure.device_operation_action import DeviceOperationAction
 class ActionArguments(BaseModel):
     target: str
     message: str | None = None
-
-
-class RemoteOperationResponse(BaseModel):
-    multistatus: list[Any]
-    transactionId: str
 
 
 class IsolateDeviceFromNetworkAction(DeviceOperationAction):
@@ -26,5 +21,5 @@ class IsolateDeviceFromNetworkAction(DeviceOperationAction):
         )
 
         return RemoteOperationResponse(
-            multistatus=response.get("multistatus"), transactionId=response.get("transactionId")
+            multistatus=response.get("multistatus", []), transactionId=response["transactionId"]
         )
