@@ -27,7 +27,7 @@ class SecurityEventsConnectorConfiguration(DefaultConnectorConfiguration):
     organization_id: str | None = Field(
         None, description="UUID of the organization (if missing, default org. is used)"
     )
-    frequency: int = 5
+    frequency: int = 60
 
 
 class SecurityEventsConnector(Connector):
