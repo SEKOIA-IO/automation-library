@@ -42,7 +42,7 @@ def test_run_to_isolate_a_computer_with_message(action):
                 "expires_in": 1799,
             },
         )
-        mock_requests.get(
+        mock_requests.post(
             API_DEVICES_OPERATION_URL,
             status_code=207,
             json=response_payload,

@@ -40,5 +40,21 @@
       "status"
     ]
   },
-  "results": {}
+  "results": {
+    "title": "UpdateStatusIncident",
+    "type": "object",
+    "properties": {
+      "multistatus": {
+        "title": "Multistatus",
+        "type": "string"
+      },
+      "transactionId": {
+        "title": "transactionId",
+        "type": "string"
+      }
+    },
+    "required": [
+      "multistatus"
+    ]
+  }
 }

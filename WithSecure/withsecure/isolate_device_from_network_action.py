@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from withsecure.models import RemoteOperationResponse
 
 from withsecure.device_operation_action import DeviceOperationAction
 
@@ -9,12 +10,16 @@ class ActionArguments(BaseModel):
 
 
 class IsolateDeviceFromNetworkAction(DeviceOperationAction):
-    def run(self, arguments: ActionArguments) -> None:
+    def run(self, arguments: ActionArguments) -> RemoteOperationResponse:
         parameters = {}
         if arguments.message:
             parameters["message"] = arguments.message
 
         # execute the operation
-        self._execute_operation_on_device(
+        response = self._execute_operation_on_device(
             operation_name="isolateFromNetwork", target=arguments.target, parameters=parameters
+        )
+
+        return RemoteOperationResponse(
+            multistatus=response.get("multistatus", []), transactionId=response["transactionId"]
         )
