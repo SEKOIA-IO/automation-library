@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-21 - 1.30.14
+
+### Fixed
+
+- Fix typo for the collected events metric
+
 ## 2024-05-21 - 1.30.13
 
 ### Added
