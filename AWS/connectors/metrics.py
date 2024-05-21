@@ -6,9 +6,9 @@ from prometheus_client import Counter, Gauge, Histogram
 prom_namespace = "symphony_module_common"
 
 
-INCOMING_MESSAGES = Counter(
-    name="collected_messages",
-    documentation="Number of messages consumed from the event_hub",
+INCOMING_EVENTS = Counter(
+    name="collected_events",
+    documentation="Number of collected events from AWS S3",
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )

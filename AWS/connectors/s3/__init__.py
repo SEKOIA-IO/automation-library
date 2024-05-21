@@ -12,6 +12,7 @@ from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
 from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
 from aws_helpers.utils import normalize_s3_key
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
+from connectors.metrics import INCOMING_EVENTS
 
 
 class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
@@ -131,6 +132,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_data))
                 for record in message_records:
                     try:
                         s3_bucket = record.get("s3", {}).get("bucket", {}).get("name")
