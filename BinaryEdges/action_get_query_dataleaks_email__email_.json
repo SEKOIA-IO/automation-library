@@ -1,35 +1,37 @@
 {
-    "uuid": "ab4d39fa-5b4c-486a-8453-403fedf2ea23",
-    "name": "Search dataleaks by email",
-    "docker_parameters": "get-query/dataleaks/email/{email}",
-    "description": "Allows you to search across multiple data breaches to see if any of your email addresses has been compromised. If you are affected, we recommend you change your password on the respective services.\n\n Verify how many dataleaks affected an specific email address.\n\n **Note:** Available for paid subscriptions only.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Search dataleaks by email",
-        "properties": {
-            "email": {
-                "in": "path",
-                "type": "string"
-            }
-        },
-        "required": ["email"]
+  "uuid": "ab4d39fa-5b4c-486a-8453-403fedf2ea23",
+  "name": "Search dataleaks by email",
+  "docker_parameters": "get-query/dataleaks/email/{email}",
+  "description": "Allows you to search across multiple data breaches to see if any of your email addresses has been compromised. If you are affected, we recommend you change your password on the respective services.\n\n Verify how many dataleaks affected an specific email address.\n\n **Note:** Available for paid subscriptions only.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Search dataleaks by email",
+    "properties": {
+      "email": {
+        "in": "path",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "total": {
-                "type": "integer"
-            },
-            "events": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            },
-            "query": {
-                "type": "string"
-            }
+    "required": [
+      "email"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "total": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "string"
         }
+      },
+      "query": {
+        "type": "string"
+      }
     }
+  }
 }

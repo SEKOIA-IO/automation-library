@@ -1,24 +1,24 @@
 {
-    "uuid": "05fd97a1-43f7-4f47-ae02-63e1d1219040",
-    "name": "OpenAI",
-    "slug": "openai",
-    "version": "1.5",
-    "description": "The OpenAI API can be applied to virtually any task that involves understanding or generating natural language, code, or images.",
-    "configuration": {
-        "title": "OpenAIConfiguration",
-        "type": "object",
-        "properties": {
-            "api_key": {
-                "title": "Api Key",
-                "description": "API Key to use to connect to OpenAI API endpoints",
-                "type": "string"
-            }
-        },
-        "required": [
-            "api_key"
-        ],
-        "secrets": [
-            "api_key"
-        ]
-    }
+  "uuid": "05fd97a1-43f7-4f47-ae02-63e1d1219040",
+  "name": "OpenAI",
+  "slug": "openai",
+  "version": "1.5",
+  "description": "The OpenAI API can be applied to virtually any task that involves understanding or generating natural language, code, or images.",
+  "configuration": {
+    "title": "OpenAIConfiguration",
+    "type": "object",
+    "properties": {
+      "api_key": {
+        "title": "Api Key",
+        "description": "API Key to use to connect to OpenAI API endpoints",
+        "type": "string"
+      }
+    },
+    "required": [
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
+  }
 }

@@ -1,41 +1,41 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "feed_id": {
-                "type": "string",
-                "description": "ID of the Sekoia.io feed to get data from",
-                "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608"
-            },
-            "batch_size_limit": {
-                "type": "integer",
-                "description": "Size of the batch of elements to get from the Sekoia.io feed in one time",
-                "default": 200
-            },
-            "modified_after": {
-                "type": "string",
-                "description": "Date from which IOCs should be retrieved. It must be a valid RFC-3339 date-time string (i.e. 2024-04-12T23:20:50.52Z)"
-            }
-        },
-        "type": "object",
-        "title": "Feed consumption configuration"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "feed_id": {
+        "type": "string",
+        "description": "ID of the Sekoia.io feed to get data from",
+        "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608"
+      },
+      "batch_size_limit": {
+        "type": "integer",
+        "description": "Size of the batch of elements to get from the Sekoia.io feed in one time",
+        "default": 200
+      },
+      "modified_after": {
+        "type": "string",
+        "description": "Date from which IOCs should be retrieved. It must be a valid RFC-3339 date-time string (i.e. 2024-04-12T23:20:50.52Z)"
+      }
     },
-    "description": "Get all non-revoked objects from Sekoia.io Intelligence feed",
-    "docker_parameters": "feed_consumption_trigger",
-    "name": "Feed Consumption",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "stix_objects_path": {
-                "description": "Filepath of the STIX objects fetched from the collection",
-                "type": "string"
-            }
-        },
-        "required": [
-            "stix_objects_path"
-        ],
-        "title": "Results",
-        "type": "object"
+    "type": "object",
+    "title": "Feed consumption configuration"
+  },
+  "description": "Get all non-revoked objects from Sekoia.io Intelligence feed",
+  "docker_parameters": "feed_consumption_trigger",
+  "name": "Feed Consumption",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "stix_objects_path": {
+        "description": "Filepath of the STIX objects fetched from the collection",
+        "type": "string"
+      }
     },
-    "uuid": "ac6100ed-3fb7-4355-83ac-049c14aa44fd"
+    "required": [
+      "stix_objects_path"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "ac6100ed-3fb7-4355-83ac-049c14aa44fd"
 }

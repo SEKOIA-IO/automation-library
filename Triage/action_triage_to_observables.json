@@ -1,38 +1,49 @@
 {
-    "description": "Triage raw results to observables",
-    "docker_parameters": "triage_to_observables",
-    "name": "Triage to observables",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "triage_raw_results": {
-                "description": "List of objects that contain Triage raw results",
-                "type": "array"
-            },
-            "triage_raw_results_path": {
-                "description": "Path of objects that contain Triage raw results",
-                "type": "string"
-            }
-        },
-        "oneOf": [{"required": ["triage_raw_results"]}, {"required": ["triage_raw_results_path"]}],
-        "title": "Triage raw results",
-        "type": "object"
+  "description": "Triage raw results to observables",
+  "docker_parameters": "triage_to_observables",
+  "name": "Triage to observables",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "triage_raw_results": {
+        "description": "List of objects that contain Triage raw results",
+        "type": "array"
+      },
+      "triage_raw_results_path": {
+        "description": "Path of objects that contain Triage raw results",
+        "type": "string"
+      }
     },
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "observables": {
-                "description": "Bundle with the list of observables",
-                "type": "array"
-            },
-            "observables_path": {
-                "description": "Path of the file holding the bundle with the observables",
-                "type": "string"
-            }
-        },
-        "required": [],
-        "title": "Results (observables)",
-        "type": "object"
+    "oneOf": [
+      {
+        "required": [
+          "triage_raw_results"
+        ]
+      },
+      {
+        "required": [
+          "triage_raw_results_path"
+        ]
+      }
+    ],
+    "title": "Triage raw results",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "observables": {
+        "description": "Bundle with the list of observables",
+        "type": "array"
+      },
+      "observables_path": {
+        "description": "Path of the file holding the bundle with the observables",
+        "type": "string"
+      }
     },
-    "uuid": "2ab0c09a-5f11-4730-8ee1-183a480ff323"
+    "required": [],
+    "title": "Results (observables)",
+    "type": "object"
+  },
+  "uuid": "2ab0c09a-5f11-4730-8ee1-183a480ff323"
 }

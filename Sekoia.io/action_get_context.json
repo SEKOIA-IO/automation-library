@@ -1,23 +1,28 @@
 {
-    "uuid": "5d60776b-eb19-4421-aca3-df1cd109d9c0",
-    "name": "Get context",
-    "docker_parameters": "get_context",
-    "description": "Get reports from a specific term",
-    "arguments": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "type": "object",
-      "title": "post_search_objects",
-      "properties": {
-        "sort": {
-          "type": "string",
-          "default": "pertinence"
-        },
-        "term": {
-          "type": "string"
-        }
+  "uuid": "5d60776b-eb19-4421-aca3-df1cd109d9c0",
+  "name": "Get context",
+  "docker_parameters": "get_context",
+  "description": "Get reports from a specific term",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "post_search_objects",
+    "properties": {
+      "sort": {
+        "type": "string",
+        "default": "pertinence"
       },
-      "required": ["term"]
+      "term": {
+        "type": "string"
+      }
     },
-    "results": {},
-    "required": ["items", "has_more"]
-  }
+    "required": [
+      "term"
+    ]
+  },
+  "results": {},
+  "required": [
+    "items",
+    "has_more"
+  ]
+}

@@ -1,24 +1,24 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "apikey": {
-                "description": "APIKEY for VirusTotal",
-                "type": "string"
-            }
-        },
-        "required": [
-            "apikey"
-        ],
-        "title": "Arguments",
-        "type": "object",
-        "secrets": [
-            "apikey"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "apikey": {
+        "description": "APIKEY for VirusTotal",
+        "type": "string"
+      }
     },
-    "description": "[VirusTotal](https://www.virustotal.com) is a cybersecurity company specialized in malware analysis.",
-    "name": "VirusTotal",
-    "uuid": "d023af1d-25d8-465b-b85f-2ed48214d6a5",
-    "slug": "virustotal",
-    "version": "1.27.1"
+    "required": [
+      "apikey"
+    ],
+    "title": "Arguments",
+    "type": "object",
+    "secrets": [
+      "apikey"
+    ]
+  },
+  "description": "[VirusTotal](https://www.virustotal.com) is a cybersecurity company specialized in malware analysis.",
+  "name": "VirusTotal",
+  "uuid": "d023af1d-25d8-465b-b85f-2ed48214d6a5",
+  "slug": "virustotal",
+  "version": "1.27.1"
 }

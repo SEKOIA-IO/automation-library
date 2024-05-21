@@ -14,10 +14,12 @@
         "in": "path"
       },
       "type": {
-        "description": "Type of configuration. Currently, only option 2 is supported.\n\t- 2 — Workstations and servers.\nExample: 2",
+        "description": "Type of configuration. Currently, only option 2 is supported.\n\t- 2 \u2014 Workstations and servers.\nExample: 2",
         "type": "integer",
         "in": "path",
-        "enum": [2]
+        "enum": [
+          2
+        ]
       },
       "device_ids": {
         "description": "List of IDs of devices to link to the specified managed configuration..\nExample: cb509c17-7b88-461a-ba3b-3d43e29e6cd4,2c13685e-7d1f-4726-9ad3-5c8fa7718bab",

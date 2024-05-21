@@ -1,35 +1,35 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "sleep_time": {
-                "type": "integer",
-                "description": "Time in seconds the worker sleeps between the checks of new events"
-            },
-            "attributes_filter": {
-                "type": "integer",
-                "description": "Time in seconds after which attributes are no longer considered new (0 for no filter)"
-            }
-        },
-        "title": "Trigger Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "sleep_time": {
+        "type": "integer",
+        "description": "Time in seconds the worker sleeps between the checks of new events"
+      },
+      "attributes_filter": {
+        "type": "integer",
+        "description": "Time in seconds after which attributes are no longer considered new (0 for no filter)"
+      }
     },
-    "description": "Trigger a playbook on a new MISP event",
-    "docker_parameters": "trigger",
-    "name": "New Event",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "event": {
-                "description": "MISP event",
-                "type": "object"
-            }
-        },
-        "required": [
-            "event"
-        ],
-        "title": "Results",
+    "title": "Trigger Arguments",
+    "type": "object"
+  },
+  "description": "Trigger a playbook on a new MISP event",
+  "docker_parameters": "trigger",
+  "name": "New Event",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "event": {
+        "description": "MISP event",
         "type": "object"
+      }
     },
-    "uuid": "f9e8cf2c-065f-4116-89dd-ff2cfe7f452a"
+    "required": [
+      "event"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "f9e8cf2c-065f-4116-89dd-ff2cfe7f452a"
 }

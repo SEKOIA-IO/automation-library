@@ -63,7 +63,11 @@
         "type": "object"
       }
     },
-    "required": ["project_key", "summary", "issue_type"]
+    "required": [
+      "project_key",
+      "summary",
+      "issue_type"
+    ]
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",

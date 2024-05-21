@@ -1,132 +1,134 @@
 {
-    "uuid": "78ed463e-cda5-410b-8771-8db68bec740f",
-    "name": "Get sensors",
-    "docker_parameters": "get-query/sensors/ip/{target}",
-    "description": "Details about an Scanner. List of recent events form the specified host, including details of scanned ports, payloads and tags.\n\n **Note**: Querying CIDRs is available for paid subscriptions only. When using CIDR, the number of credits that will be spent correspond to the number of targets that returned results. Example: a request for a /24 (256 targets) in which only 200 targets have results, will decrement 200 credits.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Get sensors",
-        "properties": {
-            "target": {
-                "in": "path",
-                "type": "string"
-            }
-        },
-        "required": ["target"]
+  "uuid": "78ed463e-cda5-410b-8771-8db68bec740f",
+  "name": "Get sensors",
+  "docker_parameters": "get-query/sensors/ip/{target}",
+  "description": "Details about an Scanner. List of recent events form the specified host, including details of scanned ports, payloads and tags.\n\n **Note**: Querying CIDRs is available for paid subscriptions only. When using CIDR, the number of credits that will be spent correspond to the number of targets that returned results. Example: a request for a /24 (256 targets) in which only 200 targets have results, will decrement 200 credits.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get sensors",
+    "properties": {
+      "target": {
+        "in": "path",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string"
+    "required": [
+      "target"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "targets_found": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": "integer"
             },
-            "total": {
-                "type": "integer"
-            },
-            "targets_found": {
-                "type": "integer"
-            },
-            "events": {
-                "type": "array",
-                "items": {
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "target": {
                     "type": "object",
                     "properties": {
-                        "port": {
-                            "type": "integer"
-                        },
-                        "results": {
-                            "type": "array",
-                            "items": {
+                      "port": {
+                        "type": "integer"
+                      },
+                      "protocol": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "origin": {
+                    "type": "object",
+                    "properties": {
+                      "ts": {
+                        "type": "integer"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "ip": {
+                        "type": "string"
+                      },
+                      "rdns": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "payload": {
+                        "type": "string"
+                      },
+                      "extra": {
+                        "type": "object",
+                        "properties": {
+                          "http": {
+                            "type": "object",
+                            "properties": {
+                              "method": {
+                                "type": "string"
+                              },
+                              "path": {
+                                "type": "string"
+                              },
+                              "version": {
+                                "type": "string"
+                              },
+                              "headers": {
                                 "type": "object",
                                 "properties": {
-                                    "target": {
-                                        "type": "object",
-                                        "properties": {
-                                            "port": {
-                                                "type": "integer"
-                                            },
-                                            "protocol": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    },
-                                    "origin": {
-                                        "type": "object",
-                                        "properties": {
-                                            "ts": {
-                                                "type": "integer"
-                                            },
-                                            "type": {
-                                                "type": "string"
-                                            },
-                                            "ip": {
-                                                "type": "string"
-                                            },
-                                            "rdns": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    },
-                                    "data": {
-                                        "type": "object",
-                                        "properties": {
-                                            "payload": {
-                                                "type": "string"
-                                            },
-                                            "extra": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "http": {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "method": {
-                                                                "type": "string"
-                                                            },
-                                                            "path": {
-                                                                "type": "string"
-                                                            },
-                                                            "version": {
-                                                                "type": "string"
-                                                            },
-                                                            "headers": {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "user-agent": {
-                                                                        "type": "string"
-                                                                    },
-                                                                    "accept": {
-                                                                        "type": "string"
-                                                                    },
-                                                                    "accept-encoding": {
-                                                                        "type": "string"
-                                                                    },
-                                                                    "content-type": {
-                                                                        "type": "string"
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "tags": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "@timestamp": {
-                                        "type": "string"
-                                    }
+                                  "user-agent": {
+                                    "type": "string"
+                                  },
+                                  "accept": {
+                                    "type": "string"
+                                  },
+                                  "accept-encoding": {
+                                    "type": "string"
+                                  },
+                                  "content-type": {
+                                    "type": "string"
+                                  }
                                 }
+                              }
                             }
+                          }
                         }
+                      },
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
                     }
+                  },
+                  "@timestamp": {
+                    "type": "string"
+                  }
                 }
+              }
             }
+          }
         }
+      }
     }
+  }
 }

@@ -1,40 +1,42 @@
 {
-    "uuid": "1fdcc990-5eaa-42ad-bdf0-545a4e17eefb",
-    "name": "Reverse Whois (address)",
-    "docker_parameters": "whois_address",
-    "description": "Get WHOIS records associated with an address",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-            "address": {
-                "in": "query",
-                "type": "string"
-            },
-            "exact": {
-                "in": "query",
-                "type": "string"
-            },
-            "maxResults": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": ["address"]
+  "uuid": "1fdcc990-5eaa-42ad-bdf0-545a4e17eefb",
+  "name": "Reverse Whois (address)",
+  "docker_parameters": "whois_address",
+  "description": "Get WHOIS records associated with an address",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "address": {
+        "in": "query",
+        "type": "string"
+      },
+      "exact": {
+        "in": "query",
+        "type": "string"
+      },
+      "maxResults": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "results": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "domains": {
-                "type": "array",
-                "items": {
-                    "type": "object"
-                }
-            }
+    "required": [
+      "address"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "domains": {
+        "type": "array",
+        "items": {
+          "type": "object"
         }
+      }
     }
+  }
 }

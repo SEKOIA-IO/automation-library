@@ -1,48 +1,48 @@
 {
-    "uuid": "72cb8c5b-4920-40c5-a47c-b4b05173fcbc",
-    "name": "Send action",
-    "docker_parameters": "post-api/v1/accounts/{account_id}/devices/action",
-    "description": "Initiates an action on the specified devices. For example, send an action to reboot a device.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Send action",
-        "properties": {
-            "device_ids": {
-                "description": "List of IDs of devices to reboot.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
-                "type": "array",
-                "in": "body",
-                "items": {
-                    "type": "str"
-                }
-            },
-            "action_type": {
-                "description": "Type of action to initiate on the device. Specify one of these values:\n\t- 1 - Reboot",
-                "type": "integer",
-                "in": "body"
-            },
-            "count_down_type": {
-                "description": "Amount of time to count down to the action. Specify one of these values:\n\t- 1 - Immediate\n\t- 2 - Fifteen minutes\n\t- 3 - Thirty minutes\n\t- 4 - One hour\n\t- 5 - Two hours\n\t- 6 - Four hours\n\t- 7 - Eight hours",
-                "type": "integer",
-                "in": "body"
-            }
-        },
-        "required": [
-            "device_ids",
-            "action_type",
-            "count_down_type"
-        ]
-    },
-    "results": {
-        "type": "object",
-        "properties": {
-            "processed_device_ids": {
-                "type": "array",
-                "description": "List of IDs of the rebooted devices",
-                "items": {
-                    "type": "str"
-                }
-            }
+  "uuid": "72cb8c5b-4920-40c5-a47c-b4b05173fcbc",
+  "name": "Send action",
+  "docker_parameters": "post-api/v1/accounts/{account_id}/devices/action",
+  "description": "Initiates an action on the specified devices. For example, send an action to reboot a device.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Send action",
+    "properties": {
+      "device_ids": {
+        "description": "List of IDs of devices to reboot.\nExample: \"cb509c17-7b88-461a-ba3b-3d43e29e6cd4\",\"2c13685e-7d1f-4726-9ad3-5c8fa7718bab\"",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "str"
         }
+      },
+      "action_type": {
+        "description": "Type of action to initiate on the device. Specify one of these values:\n\t- 1 - Reboot",
+        "type": "integer",
+        "in": "body"
+      },
+      "count_down_type": {
+        "description": "Amount of time to count down to the action. Specify one of these values:\n\t- 1 - Immediate\n\t- 2 - Fifteen minutes\n\t- 3 - Thirty minutes\n\t- 4 - One hour\n\t- 5 - Two hours\n\t- 6 - Four hours\n\t- 7 - Eight hours",
+        "type": "integer",
+        "in": "body"
+      }
+    },
+    "required": [
+      "device_ids",
+      "action_type",
+      "count_down_type"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "processed_device_ids": {
+        "type": "array",
+        "description": "List of IDs of the rebooted devices",
+        "items": {
+          "type": "str"
+        }
+      }
     }
+  }
 }

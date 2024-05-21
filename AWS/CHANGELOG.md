@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-13 - 1.30.12
+
+### Changed
+
+- Remove delete_consumed_messages setting from trigger configuration
+
 ## 2024-04-24 - 1.30.11
 
 ### Changed
