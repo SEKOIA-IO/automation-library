@@ -1,5 +1,6 @@
 import json
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from deep_visibility.metrics import DISCARDED_EVENTS
 
 EXCLUDED_EVENT_TYPES = [
     "File Modification",
@@ -34,9 +35,11 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
                     json_record = json.loads(record)
                     # Exclude events with no category defined or a group category
                     if "event.category" not in json_record or json_record["event.category"] == "group":
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
                         continue
                     # Exclude specific event types
                     if "event.type" in json_record and json_record["event.type"] in EXCLUDED_EVENT_TYPES:
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
                         continue
                     records.append(record)
                 except:
