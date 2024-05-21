@@ -132,7 +132,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_data))
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
                 for record in message_records:
                     try:
                         s3_bucket = record.get("s3", {}).get("bucket", {}).get("name")
