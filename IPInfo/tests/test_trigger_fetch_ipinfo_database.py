@@ -201,3 +201,13 @@ def test_run_is_interrupted_by_signal(trigger, request_mock):
     Thread(target=set_stop_event, daemon=True).start()
     trigger.run()
     assert len(trigger.get_ipinfo_database.mock_calls) > 0
+
+
+def test_tags_valid_for(symphony_storage):
+    trigger = TriggerFetchIPInfoDatabase(data_path=symphony_storage)
+    trigger.configuration = {}
+    assert trigger.tags_valid_for == trigger.MAX_HOUR_TAG_VALID_FOR
+
+    trigger = TriggerFetchIPInfoDatabase(data_path=symphony_storage)
+    trigger.configuration = {"tags_valid_for": 1}
+    assert trigger.tags_valid_for == 1
