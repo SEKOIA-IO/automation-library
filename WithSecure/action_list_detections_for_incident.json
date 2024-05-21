@@ -21,96 +21,96 @@
     "title": "ListDetectionForIncident",
     "type": "object",
     "properties": {
-        "detections": {
-            "title": "Detections",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/Detection"
-            }
+      "detections": {
+        "title": "Detections",
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Detection"
         }
+      }
     },
     "required": [
-        "detections"
+      "detections"
     ],
     "definitions": {
-        "Detection": {
-            "title": "Detection",
-            "type": "object",
-            "properties": {
-                "detectionId": {
-                    "title": "Detection ID",
-                    "type": "string"
-                },
-                "incidentId": {
-                    "title": "Incident ID",
-                    "type": "string"
-                },
-                "detectionClass": {
-                  "title": "Detection Class",
-                  "type": "string"
-                },
-                "severity": {
-                  "title": "Severity",
-                  "type": "string"
-                },
-                "riskLevel": {
-                  "title": "Risk Level",
-                  "type": "string"
-                },
-                "createdTimestamp": {
-                  "title": "Created Timestamp",
-                  "type": "string"
-                },
-                "initialReceivedTimestamp": {
-                  "title": "Initial Received Timestamp",
-                  "type": "string"
-                },
-                "privileges": {
-                  "title": "Privileges",
-                  "type": "string"
-                },
-                "exePath": {
-                  "title": "ExePath",
-                  "type": "string"
-                },
-                "description": {
-                  "title": "Description",
-                  "type": "string"
-                },
-                "pid": {
-                  "title": "Pid",
-                  "type": "integer"
-                },
-                "exeHash": {
-                  "title": "ExeHash",
-                  "type": "string"
-                },
-                "deviceId": {
-                  "title": "Device Id",
-                  "type": "string"
-                },
-                "activityContext": {
-                  "title": "Activity Context",
-                  "type": "array"
-                },
-                "exeName": {
-                  "title": "ExeName",
-                  "type": "string"
-                },
-                "name": {
-                  "title": "Name",
-                  "type": "string"
-                },
-                "cmdl": {
-                  "title": "Cmdl",
-                  "type": "string"
-                },
-                "username": {
-                  "title": "Username",
-                  "type": "string"
-                }
-            }
+      "Detection": {
+        "title": "Detection",
+        "type": "object",
+        "properties": {
+          "detectionId": {
+            "title": "Detection ID",
+            "type": "string"
+          },
+          "incidentId": {
+            "title": "Incident ID",
+            "type": "string"
+          },
+          "detectionClass": {
+            "title": "Detection Class",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "riskLevel": {
+            "title": "Risk Level",
+            "type": "string"
+          },
+          "createdTimestamp": {
+            "title": "Created Timestamp",
+            "type": "string"
+          },
+          "initialReceivedTimestamp": {
+            "title": "Initial Received Timestamp",
+            "type": "string"
+          },
+          "privileges": {
+            "title": "Privileges",
+            "type": "string"
+          },
+          "exePath": {
+            "title": "ExePath",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "pid": {
+            "title": "Pid",
+            "type": "integer"
+          },
+          "exeHash": {
+            "title": "ExeHash",
+            "type": "string"
+          },
+          "deviceId": {
+            "title": "Device Id",
+            "type": "string"
+          },
+          "activityContext": {
+            "title": "Activity Context",
+            "type": "array"
+          },
+          "exeName": {
+            "title": "ExeName",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "cmdl": {
+            "title": "Cmdl",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
         }
+      }
     }
   }
 }

@@ -19,40 +19,40 @@
       }
     },
     "required": [
-        "target",
-        "comment"
+      "target",
+      "comment"
     ]
   },
   "results": {
     "title": "CommentIncident",
     "type": "object",
     "properties": {
+      "items": {
+        "title": "Items",
+        "type": "array",
         "items": {
-            "title": "Items",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/ItemKeys"
-            }
+          "$ref": "#/definitions/ItemKeys"
         }
+      }
     },
     "required": [
-        "items"
+      "items"
     ],
     "definitions": {
-        "ItemKeys": {
-            "title": "ItemKeys",
-            "type": "object",
-            "properties": {
-                "incidentId": {
-                    "title": "Incident Id",
-                    "type": "string"
-                },
-                "comment": {
-                    "title": "Comment",
-                    "type": "string"
-                }
-            }
+      "ItemKeys": {
+        "title": "ItemKeys",
+        "type": "object",
+        "properties": {
+          "incidentId": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "comment": {
+            "title": "Comment",
+            "type": "string"
+          }
         }
+      }
     }
   }
 }
