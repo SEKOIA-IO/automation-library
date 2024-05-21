@@ -70,19 +70,18 @@ class SecurityEventsConnector(Connector):
             log_cb=self.log,
         )
 
-    def _retry(self):
-        return Retrying(
+    def __get_events(self, data: dict[str, Any], headers: dict[str, str]) -> requests.Response:
+        for attempt in Retrying(
             stop=stop_after_attempt(5),
             wait=wait_exponential(multiplier=1, min=1, max=10),
             reraise=True,
-        )
-
-    def __get_events(self, data: dict[str, Any], headers: dict[str, str], **kwargs) -> requests.Response:
-        for attempt in self._retry():
+        ):
             with attempt:
-                return self.client.post(
-                    API_SECURITY_EVENTS_URL, data=data, timeout=API_TIMEOUT, headers=headers, **kwargs
+                response: requests.Response = self.client.post(
+                    API_SECURITY_EVENTS_URL, data=data, timeout=API_TIMEOUT, headers=headers
                 )
+
+        return response
 
     def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         """
