@@ -17,7 +17,7 @@ from sekoia_automation.trigger import Trigger
 
 
 class TriggerFetchIPInfoDatabase(Trigger):
-    MAX_HOUR_TAG_VALID_FOR: int = 10 * 24  # Tags are valid for 10 days
+    MAX_HOUR_TAG_VALID_FOR: int = 3 * 24  # Tags are valid for 3 days
 
     @cached_property
     def api_token(self):
@@ -28,7 +28,7 @@ class TriggerFetchIPInfoDatabase(Trigger):
         if valid_for := self.configuration.get("tags_valid_for"):
             return valid_for
         return min(
-            self.MAX_HOUR_TAG_VALID_FOR, self.configuration.get("interval", 24) * 10
+            self.MAX_HOUR_TAG_VALID_FOR, self.configuration.get("interval", 24) * 3
         )
 
     @property
@@ -169,6 +169,9 @@ class TriggerFetchIPInfoDatabase(Trigger):
 
             if asn_number.startswith("AS"):
                 asn_number = int(asn_number[2:])
+
+            if asn_name == "":
+                asn_name = f"AS{asn_number}"
 
         except Exception:
             self.log(

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2024-05-22
+
+### Fixed
+
+- Set default duration according to manifest
+- Set AS name based on its number when empty in the IPInfo file
+
 ## [1.1] - 2024-05-21
 
 ### Added
