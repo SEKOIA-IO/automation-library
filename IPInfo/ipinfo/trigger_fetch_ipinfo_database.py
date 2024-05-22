@@ -23,6 +23,14 @@ class TriggerFetchIPInfoDatabase(Trigger):
     def api_token(self):
         return self.module.configuration["api_token"]
 
+    @cached_property
+    def tags_valid_for(self) -> int:
+        if valid_for := self.configuration.get("tags_valid_for"):
+            return valid_for
+        return min(
+            self.MAX_HOUR_TAG_VALID_FOR, self.configuration.get("interval", 24) * 10
+        )
+
     @property
     def database_url(self):
         return f"https://ipinfo.io/data/free/country_asn.json.gz?token={self.api_token}"
@@ -82,13 +90,10 @@ class TriggerFetchIPInfoDatabase(Trigger):
 
         # Establish validity timeframe for produced observables
         # The tags are valid for 10 days
-        tag_valid_for: int = min(
-            self.MAX_HOUR_TAG_VALID_FOR, self.configuration.get("interval", 24) * 10
-        )
         now: datetime = datetime.utcnow()
         tag_valid_from: str = self.datetime_to_str(now)
         tag_valid_until: str = self.datetime_to_str(
-            now + timedelta(hours=tag_valid_for)
+            now + timedelta(hours=self.tags_valid_for)
         )
         asn_cache: dict[int, dict] = dict()
 

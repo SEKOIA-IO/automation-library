@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-02-02 - 1.0
+## [1.1] - 2024-05-21
+
+### Added
+
+- Allow to set tag's validity duration
+
+## [1.0] - 2024-02-02
 
 ### Changed
 
