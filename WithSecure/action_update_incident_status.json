@@ -9,7 +9,7 @@
     "properties": {
       "target": {
         "title": "Incident ID",
-        "description": "Incident identifier to comment.",
+        "description": "Incident identifier to update.",
         "type": "string"
       },
       "status": {
