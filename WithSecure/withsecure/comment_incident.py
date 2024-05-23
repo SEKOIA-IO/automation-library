@@ -19,6 +19,8 @@ class CommentIncidentResponse(BaseModel):
 
 
 class CommentIncident(IncidentOperationAction):
+    results_model = CommentIncidentResponse
+
     def run(self, arguments: ActionArguments) -> CommentIncidentResponse:
         parameters = {}
         parameters["comment"] = arguments.comment

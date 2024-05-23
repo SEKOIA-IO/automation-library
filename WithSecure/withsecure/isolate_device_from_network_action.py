@@ -10,6 +10,8 @@ class ActionArguments(BaseModel):
 
 
 class IsolateDeviceFromNetworkAction(DeviceOperationAction):
+    results_model = RemoteOperationResponse
+
     def run(self, arguments: ActionArguments) -> RemoteOperationResponse:
         parameters = {}
         if arguments.message:
