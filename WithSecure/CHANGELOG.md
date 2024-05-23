@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## 2024-05-23 - 2.14.3
+
+### Fixed
+
+- Add result model to actions
+
 ## 2024-05-17 - 2.14.2
 
 ### Changed

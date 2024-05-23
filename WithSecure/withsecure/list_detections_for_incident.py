@@ -34,6 +34,8 @@ class DetectionItems(BaseModel):
 
 
 class ListDetectionForIncident(IncidentOperationAction):
+    results_model = DetectionItems
+
     def run(self, arguments: ActionArguments) -> DetectionItems:
         # execute the operation
         detections = self._execute_operation_on_incident(

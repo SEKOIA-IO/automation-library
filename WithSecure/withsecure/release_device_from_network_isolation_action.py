@@ -9,6 +9,8 @@ class ActionArguments(BaseModel):
 
 
 class ReleaseDeviceFromNetworkIsolationAction(DeviceOperationAction):
+    results_model = RemoteOperationResponse
+
     def run(self, arguments: ActionArguments) -> RemoteOperationResponse:
         # execute the operation
         response = self._execute_operation_on_device(

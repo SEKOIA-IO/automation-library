@@ -4,7 +4,10 @@ import requests_mock
 from withsecure import WithSecureModule
 from withsecure.client.auth import API_AUTHENTICATION_URL
 from withsecure.constants import API_DEVICES_OPERATION_URL
-from withsecure.isolate_device_from_network_action import ActionArguments, IsolateDeviceFromNetworkAction
+from withsecure.release_device_from_network_isolation_action import (
+    ActionArguments,
+    ReleaseDeviceFromNetworkIsolationAction,
+)
 
 
 @pytest.fixture
@@ -14,7 +17,7 @@ def action(data_storage):
         return None
 
     module = WithSecureModule()
-    action = IsolateDeviceFromNetworkAction(module=module, data_path=data_storage)
+    action = ReleaseDeviceFromNetworkIsolationAction(module=module, data_path=data_storage)
     # mock the log function of trigger that requires network access to the api for reporting
     action.log = fake_log_cb
     action.module.configuration = {
@@ -48,8 +51,11 @@ def test_run_to_release_device_from_network_isolation(action):
             json=response_payload,
         )
 
-        action.run(
+        response = action.run(
             arguments=ActionArguments(
                 target="e297cbf5-ba53-4e66-909c-6d87527c4e98",
             )
         )
+
+        assert isinstance(response, dict)
+        assert response_payload == response
