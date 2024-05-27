@@ -1,0 +1,40 @@
+{
+  "description": "Consume SentinelOne DeepVisibility events from S3 objects based on notifications",
+  "docker_parameters": "sentinelone_deep_visibility_connector",
+  "name": "Consume SentinelOne DeepVisibility events from AWS S3",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "queue_name": {
+        "type": "string",
+        "description": "The name of the SQS queue that received the notifications of the creation of S3 objects"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "DeepVisibility Connector",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "607322b7-c13b-4727-b7ca-fe58bd30b4a9"
+}

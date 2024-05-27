@@ -1,5 +1,7 @@
 from pydantic import BaseModel
+from typing import Any
 
+from withsecure.models import RemoteOperationResponse
 from withsecure.incident_operation_action import IncidentOperationAction
 
 
@@ -10,13 +12,19 @@ class ActionArguments(BaseModel):
 
 
 class UpdateStatusIncident(IncidentOperationAction):
-    def run(self, arguments: ActionArguments) -> None:
+    results_model = RemoteOperationResponse
+
+    def run(self, arguments: ActionArguments) -> RemoteOperationResponse:
         parameters = {}
         parameters["status"] = arguments.status
         if arguments.resolution:
             parameters["resolution"] = arguments.resolution
 
         # execute the operation
-        self._execute_operation_on_incident(
+        response = self._execute_operation_on_incident(
             operation_name="UpdateStatusIncident", target=arguments.target, parameters=parameters
+        )
+
+        return RemoteOperationResponse(
+            multistatus=response.get("multistatus", []), transactionId=response["transactionId"]
         )

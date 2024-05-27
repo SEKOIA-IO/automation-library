@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-17 - 2.59.1
+
+### Update
+
+- Add output results to Get context action
+- Add some tests
+
 ## 2024-01-18 - 2.58.3
 
 ### Fixed

@@ -9,26 +9,52 @@
     "properties": {
       "target": {
         "title": "Incident ID",
-        "description": "Incident identifier to comment.",
+        "description": "Incident identifier to update.",
         "type": "string"
       },
       "status": {
         "title": "Status",
         "description": "Status.",
         "type": "string",
-        "enum": ["new","acknowledged","inProgress","monitoring","closed"]
+        "enum": [
+          "new",
+          "acknowledged",
+          "inProgress",
+          "monitoring",
+          "closed"
+        ]
       },
       "resolution": {
         "title": "Resolution",
         "description": "Resolution.",
         "type": "string",
-        "enum": ["unconfirmed","confirmed","falsePositive"]
+        "enum": [
+          "unconfirmed",
+          "confirmed",
+          "falsePositive"
+        ]
       }
     },
     "required": [
-        "target",
-        "status"
+      "target",
+      "status"
     ]
   },
-  "results": {}
+  "results": {
+    "title": "UpdateStatusIncident",
+    "type": "object",
+    "properties": {
+      "multistatus": {
+        "title": "Multistatus",
+        "type": "string"
+      },
+      "transactionId": {
+        "title": "transactionId",
+        "type": "string"
+      }
+    },
+    "required": [
+      "multistatus"
+    ]
+  }
 }

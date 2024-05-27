@@ -48,8 +48,11 @@ def test_run_to_update_status_for_an_incident(action):
             json=response_payload,
         )
 
-        action.run(
+        response = action.run(
             arguments=ActionArguments(
                 target="e297cbf5-ba53-4e66-909c-6d87527c4e98", status="acknowledged", resolution="confirmed"
             )
         )
+
+        assert isinstance(response, dict)
+        assert response == response_payload

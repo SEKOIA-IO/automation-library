@@ -1,49 +1,53 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "query": {
-                "description": "Query to execute",
-                "type": "string"
-            },
-            "index": {
-                "description": "Name of the index to use",
-                "type": "string",
-                "enum": ["ipv4", "websites", "certificates"]
-            },
-            "field": {
-                "description": "The field you are running a breakdown on in dot notation, e.g. location.country_code.",
-                "type": "string"
-            },
-            "buckets": {
-                "description": "The maximum number of values to be returned in the report. Maximum: 500. Default: 50",
-                "type": "integer"
-            }
-        },
-        "required": [
-            "query",
-            "index",
-            "field"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "query": {
+        "description": "Query to execute",
+        "type": "string"
+      },
+      "index": {
+        "description": "Name of the index to use",
+        "type": "string",
+        "enum": [
+          "ipv4",
+          "websites",
+          "certificates"
+        ]
+      },
+      "field": {
+        "description": "The field you are running a breakdown on in dot notation, e.g. location.country_code.",
+        "type": "string"
+      },
+      "buckets": {
+        "description": "The maximum number of values to be returned in the report. Maximum: 500. Default: 50",
+        "type": "integer"
+      }
     },
-    "description": "Generate a Censys report from results",
-    "docker_parameters": "censys-report",
-    "name": "Get Report",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "result_path": {
-                "description": "Path of result file",
-                "type": "string"
-            }
-        },
-        "required": [
-            "result_path"
-        ],
-        "title": "Results",
-        "type": "object"
+    "required": [
+      "query",
+      "index",
+      "field"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Generate a Censys report from results",
+  "docker_parameters": "censys-report",
+  "name": "Get Report",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result_path": {
+        "description": "Path of result file",
+        "type": "string"
+      }
     },
-    "uuid": "56326172-afcf-4be5-b9d9-326bfce3427d"
+    "required": [
+      "result_path"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "56326172-afcf-4be5-b9d9-326bfce3427d"
 }

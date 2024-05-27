@@ -1,50 +1,50 @@
 {
-    "uuid": "0e6ae58d-30f0-47a5-b9e5-5162c6596bda",
-    "name": "Create Content Proposal from PDF",
-    "docker_parameters": "post-reports/pdf",
-    "description": "Creates a content proposal with the content extracted from the specified PDF",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "post_reports_pdf",
-        "properties": {
-            "name": {
-                "in": "query",
-                "type": "string"
-            },
-            "file": {
-                "in": "formData",
-                "type": "string"
-            },
-            "source_ref": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": [
-            "file"
-        ]
+  "uuid": "0e6ae58d-30f0-47a5-b9e5-5162c6596bda",
+  "name": "Create Content Proposal from PDF",
+  "docker_parameters": "post-reports/pdf",
+  "description": "Creates a content proposal with the content extracted from the specified PDF",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "post_reports_pdf",
+    "properties": {
+      "name": {
+        "in": "query",
+        "type": "string"
+      },
+      "file": {
+        "in": "formData",
+        "type": "string"
+      },
+      "source_ref": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
+    "required": [
+      "file"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "data": {
         "type": "object",
         "properties": {
-            "data": {
-                "type": "object",
-                "properties": {
-                    "file_name": {
-                        "type": "string"
-                    },
-                    "content_proposal_id": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "content_proposal_id"
-                ]
-            }
+          "file_name": {
+            "type": "string"
+          },
+          "content_proposal_id": {
+            "type": "string"
+          }
         },
         "required": [
-            "data"
+          "content_proposal_id"
         ]
-    }
+      }
+    },
+    "required": [
+      "data"
+    ]
+  }
 }

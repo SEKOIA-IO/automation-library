@@ -26,10 +26,36 @@ def action(data_storage):
 
 def test_run_to_list_detections_for_an_incident(action):
     response_payload = {
-        "multistatus": [
-            {"target": "e297cbf5-ba53-4e66-909c-6d87527c4e98", "status": 202, "operationId": "1766423938040964633"}
-        ],
-        "transactionId": "0000-981c1d1730764143",
+        "items": [
+            {
+                "severity": "info",
+                "privileges": "NORMAL_PRIVILEGES",
+                "riskLevel": "info",
+                "exePath": "%stestroot%\\system32",
+                "createdTimestamp": "2024-05-06T11:41:46.716Z",
+                "description": "test description",
+                "pid": 996,
+                "exeHash": "445f5f38365af88ec2",
+                "deviceId": "0c3d6a05-613a",
+                "detectionClass": "PROCESS",
+                "activityContext": [
+                    {"type": "elevation", "status": "elevated"},
+                    {
+                        "eventCode": "21 (Remote Desktop Services: Session logon succeeded)",
+                        "sourceAddress": "1.2.3.4",
+                        "type": "test_services",
+                        "logonUsername": "testWorkstation\\testadmin",
+                    },
+                ],
+                "exeName": "testexename.exe",
+                "name": "suspicious_remote_logon_session",
+                "initialReceivedTimestamp": "2024-05-06T11:43:12Z",
+                "incidentId": "341d0e1a-bf1d",
+                "cmdl": "C:\\Windows\\system32\\testexename.exe -k DcomLaunch -p -s LSM",
+                "username": "",
+                "detectionId": "42ba511b-684a-4829",
+            },
+        ]
     }
 
     with requests_mock.Mocker() as mock_requests:
@@ -48,4 +74,7 @@ def test_run_to_list_detections_for_an_incident(action):
             json=response_payload,
         )
 
-        action.run(arguments=ActionArguments(target="e297cbf5-ba53-4e66-909c-6d87527c4e98"))
+        response = action.run(arguments=ActionArguments(target="e297cbf5-ba53-4e66-909c-6d87527c4e98"))
+
+        assert isinstance(response, dict)
+        assert response_payload["items"] == response["detections"]

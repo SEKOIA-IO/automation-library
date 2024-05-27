@@ -1,30 +1,30 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "api_key": {
-                "description": "Sekoia.io API key",
-                "type": "string"
-            },
-            "base_url": {
-                "description": "Sekoia.io base URL (ex. https://api.sekoia.io)",
-                "type": "string",
-                "format": "uri"
-            }
-        },
-        "required": [
-            "api_key",
-            "base_url"
-        ],
-        "title": "Sekoia.io Configuration",
-        "type": "object",
-        "secrets": [
-            "api_key"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "api_key": {
+        "description": "Sekoia.io API key",
+        "type": "string"
+      },
+      "base_url": {
+        "description": "Sekoia.io base URL (ex. https://api.sekoia.io)",
+        "type": "string",
+        "format": "uri"
+      }
     },
-    "description": "Sekoia.io",
-    "name": "Sekoia.io",
-    "uuid": "92d8bb47-7c51-445d-81de-ae04edbb6f0a",
-    "slug": "sekoia.io",
-    "version": "2.59.0"
+    "required": [
+      "api_key",
+      "base_url"
+    ],
+    "title": "Sekoia.io Configuration",
+    "type": "object",
+    "secrets": [
+      "api_key"
+    ]
+  },
+  "description": "Sekoia.io",
+  "name": "Sekoia.io",
+  "uuid": "92d8bb47-7c51-445d-81de-ae04edbb6f0a",
+  "slug": "sekoia.io",
+  "version": "2.59.1"
 }

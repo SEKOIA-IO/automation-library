@@ -1,33 +1,33 @@
 {
-    "configuration": {
-        "title": "AWS",
-        "type": "object",
-        "properties": {
-            "aws_access_key": {
-                "description": "The identifier of the access key",
-                "type": "string"
-            },
-            "aws_secret_access_key": {
-                "description": "The secret associated to the access key",
-                "type": "string"
-            },
-            "aws_region_name": {
-                "description": "The area hosting the AWS resources",
-                "type": "string"
-            }
-        },
-        "required": [
-            "aws_access_key",
-            "aws_secret_access_key",
-            "aws_region_name"
-        ],
-        "secrets": [
-            "aws_secret_access_key"
-        ]
+  "configuration": {
+    "title": "AWS",
+    "type": "object",
+    "properties": {
+      "aws_access_key": {
+        "description": "The identifier of the access key",
+        "type": "string"
+      },
+      "aws_secret_access_key": {
+        "description": "The secret associated to the access key",
+        "type": "string"
+      },
+      "aws_region_name": {
+        "description": "The area hosting the AWS resources",
+        "type": "string"
+      }
     },
-    "description": "[AWS](https://aws.amazon.com/) is a one of the main cloud provider, supported by Amazon. It offers services for storage (S3, Glacier, EBS, ...), for networking (Snowball, CloudFront, ...), for computing (EC2, ECS, EKS, ...) and others.\nThis module provides triggers to collect events from AWS",
-    "name": "AWS",
-    "uuid": "b4462429-6f0f-42b5-87b8-430111697d28",
-    "slug": "aws",
-    "version": "1.30.11"
+    "required": [
+      "aws_access_key",
+      "aws_secret_access_key",
+      "aws_region_name"
+    ],
+    "secrets": [
+      "aws_secret_access_key"
+    ]
+  },
+  "description": "[AWS](https://aws.amazon.com/) is a one of the main cloud provider, supported by Amazon. It offers services for storage (S3, Glacier, EBS, ...), for networking (Snowball, CloudFront, ...), for computing (EC2, ECS, EKS, ...) and others.\nThis module provides triggers to collect events from AWS",
+  "name": "AWS",
+  "uuid": "b4462429-6f0f-42b5-87b8-430111697d28",
+  "slug": "aws",
+  "version": "1.30.14"
 }

@@ -2,20 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## 2024-05-23 - 2.14.4
+
+### Fixed
+
+- Add result model to update incident action
+
+## 2024-05-23 - 2.14.3
+
+### Fixed
+
+- Add result model to actions
+
+## 2024-05-17 - 2.14.2
+
+### Changed
+
+- Increase the frequency between the calls when fetching events
+- Add the transaction id when logging an HTTP error
+
+### Fixed
+
+- Add a retry strategy when facing errors during events fetching
+
+## 2024-05-07
+
+- Add response field classes
+- Update some methods
+- Add exponential backoff retry strategy on authentication requests
 
 ## 2024-04-22 
 
 - Add missing read rights when creating WithSecure API client
 
-## 2024-04-03 
+## 2024-04-03
 
 - Add read rights when creating WithSecure API client
 
-## 2024-03-14 
+## 2024-03-14
 
 - Fix issue with some actions
 

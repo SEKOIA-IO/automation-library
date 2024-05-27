@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Sekoia.io Automation Module for WithSecure"
-version = "2.3"
+version = "2.4"
 description = ""
 authors = []
 
@@ -9,6 +9,7 @@ python = ">=3.10,<3.12"
 sekoia-automation-sdk = { version="^1.10.0", extras=["all"] }
 structlog = "^22.3.0"
 requests = "^2.31.0"
+tenacity = "^8.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

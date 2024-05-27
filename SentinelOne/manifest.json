@@ -1,26 +1,26 @@
 {
-    "configuration": {
-        "title": "SentinelOne",
-        "type": "object",
-        "properties": {
-            "hostname": {
-                "title": "Hostname",
-                "description": "The domain-name to the SentinelOne instance",
-                "type": "string"
-            },
-            "api_token": {
-                "title": "API Token",
-                "description": "The API token to authenticate to SentinelOne",
-                "type": "string"
-            }
-        },
-        "secrets": [
-            "api_token"
-        ]
+  "configuration": {
+    "title": "SentinelOne",
+    "type": "object",
+    "properties": {
+      "hostname": {
+        "title": "Hostname",
+        "description": "The domain-name to the SentinelOne instance",
+        "type": "string"
+      },
+      "api_token": {
+        "title": "API Token",
+        "description": "The API token to authenticate to SentinelOne",
+        "type": "string"
+      }
     },
-    "description": "This module interacts with the SentinelOne",
-    "name": "SentinelOne",
-    "uuid": "ff675e74-e5c1-47c8-a571-d207fc297464",
-    "slug": "sentinelone",
-    "version": "1.15.4"
+    "secrets": [
+      "api_token"
+    ]
+  },
+  "description": "This module interacts with the SentinelOne",
+  "name": "SentinelOne",
+  "uuid": "ff675e74-e5c1-47c8-a571-d207fc297464",
+  "slug": "sentinelone",
+  "version": "1.15.4"
 }

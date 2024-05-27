@@ -1,8 +1,12 @@
 [tool.poetry]
-name = "Automation Module for AWS"
+name = "aws-automation"
 description = ""
 version = "0.0"
 authors = []
+packages = [
+    {include = "connectors"},
+    {include = "aws_helpers"}
+]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
@@ -10,7 +14,7 @@ sekoia-automation-sdk = { version="^1.12.2", extras=["all"] }
 boto3 = "^1.21.3"
 orjson = "^3.6.7"
 pandas = "^1.4.4"
-fastparquet = "^0.8.3"
+fastparquet = "^2024.2"
 loguru = "^0.7.0"
 aiobotocore = "^2.5.0"
 async-lru = "^2.0.2"

@@ -1,263 +1,263 @@
 {
-    "uuid": "37782dd7-1308-4cd4-a73d-0a6cc69661e3",
-    "name": "List Assets",
-    "docker_parameters": "get-assets",
-    "description": "Return a list of assets according to the filters",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "List assets",
-        "properties": {
-            "limit": {
-                "in": "query",
-                "type": "integer",
-                "description": "The number of assets to return"
+  "uuid": "37782dd7-1308-4cd4-a73d-0a6cc69661e3",
+  "name": "List Assets",
+  "docker_parameters": "get-assets",
+  "description": "Return a list of assets according to the filters",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "List assets",
+    "properties": {
+      "limit": {
+        "in": "query",
+        "type": "integer",
+        "description": "The number of assets to return"
+      },
+      "offset": {
+        "in": "query",
+        "type": "integer",
+        "description": "The position of the first asset to return"
+      },
+      "match[uuid]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their identifier"
+      },
+      "match[name]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their name"
+      },
+      "match[category_name]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their category"
+      },
+      "match[category_uuid]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their category"
+      },
+      "match[type_name]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their type"
+      },
+      "match[type_uuid]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their type"
+      },
+      "range[criticality]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their criticality"
+      },
+      "date[created_at]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their creation date"
+      },
+      "date[updated_at]": {
+        "in": "query",
+        "type": "string",
+        "description": "Filter assets according to their modification date"
+      },
+      "sort": {
+        "in": "query",
+        "type": "string",
+        "description": "The field to use to sort the list"
+      },
+      "direction": {
+        "in": "query",
+        "type": "string",
+        "description": "The direction to sort the list"
+      }
+    }
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "keys": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "uuid",
+                  "value"
+                ]
+              },
+              "description": "The keys of the asset"
             },
-            "offset": {
-                "in": "query",
-                "type": "integer",
-                "description": "The position of the first asset to return"
+            "attributes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "uuid",
+                  "value"
+                ]
+              },
+              "description": "The attributes of the asset"
             },
-            "match[uuid]": {
-                "in": "query",
+            "uuid": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The identifier of the asset"
+            },
+            "name": {
+              "type": "string",
+              "description": "The name of the asset"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "The creation date of the asset"
+            },
+            "criticity": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "display": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "display",
+                "value"
+              ],
+              "description": "The criticality of the asset"
+            },
+            "asset_type": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "uuid"
+              ],
+              "description": "The type of the asset"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "The modification date of the asset"
+            },
+            "description": {
+              "type": "string"
+            },
+            "owners": {
+              "type": "array",
+              "items": {
                 "type": "string",
-                "description": "Filter assets according to their identifier"
+                "format": "uuid"
+              },
+              "description": "The owners of the asset"
             },
-            "match[name]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their name"
+            "community_uuid": {
+              "type": "string",
+              "description": "The community of the asset"
             },
-            "match[category_name]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their category"
-            },
-            "match[category_uuid]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their category"
-            },
-            "match[type_name]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their type"
-            },
-            "match[type_uuid]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their type"
-            },
-            "range[criticality]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their criticality"
-            },
-            "date[created_at]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their creation date"
-            },
-            "date[updated_at]": {
-                "in": "query",
-                "type": "string",
-                "description": "Filter assets according to their modification date"
-            },
-            "sort": {
-                "in": "query",
-                "type": "string",
-                "description": "The field to use to sort the list"
-            },
-            "direction": {
-                "in": "query",
-                "type": "string",
-                "description": "The direction to sort the list"
-            }
-        }
-    },
-    "results": {
-        "type": "object",
-        "properties": {
-            "items": {
-                "type": "array",
-                "items": {
+            "category": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "types": {
+                  "type": "array",
+                  "items": {
                     "type": "object",
                     "properties": {
-                        "keys": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "value": {
-                                        "type": "string"
-                                    },
-                                    "uuid": {
-                                        "type": "string",
-                                        "format": "uuid"
-                                    },
-                                    "name": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "name",
-                                    "uuid",
-                                    "value"
-                                ]
-                            },
-                            "description": "The keys of the asset"
-                        },
-                        "attributes": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "value": {
-                                        "type": "string"
-                                    },
-                                    "uuid": {
-                                        "type": "string",
-                                        "format": "uuid"
-                                    },
-                                    "name": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "name",
-                                    "uuid",
-                                    "value"
-                                ]
-                            },
-                            "description": "The attributes of the asset"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "format": "uuid",
-                            "description": "The identifier of the asset"
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "The name of the asset"
-                        },
-                        "created_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "The creation date of the asset"
-                        },
-                        "criticity": {
-                            "type": "object",
-                            "properties": {
-                                "value": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                },
-                                "display": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "display",
-                                "value"
-                            ],
-                            "description": "The criticality of the asset"
-                        },
-                        "asset_type": {
-                            "type": "object",
-                            "properties": {
-                                "uuid": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                },
-                                "name": {
-                                    "type": "string"
-                                },
-                                "description": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "uuid"
-                            ],
-                            "description": "The type of the asset"
-                        },
-                        "updated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "The modification date of the asset"
-                        },
-                        "description": {
-                            "type": "string"
-                        },
-                        "owners": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "format": "uuid"
-                            },
-                            "description": "The owners of the asset"
-                        },
-                        "community_uuid": {
-                            "type": "string",
-                            "description": "The community of the asset"
-                        },
-                        "category": {
-                            "type": "object",
-                            "properties": {
-                                "uuid": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                },
-                                "name": {
-                                    "type": "string"
-                                },
-                                "types": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "uuid": {
-                                                "type": "string",
-                                                "format": "uuid"
-                                            },
-                                            "name": {
-                                                "type": "string"
-                                            },
-                                            "description": {
-                                                "type": "string"
-                                            }
-                                        },
-                                        "required": [
-                                            "name",
-                                            "uuid"
-                                        ]
-                                    }
-                                },
-                                "description": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "uuid"
-                            ],
-                            "description": "The category of the asset"
-                        }
+                      "uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
                     },
                     "required": [
-                        "category",
-                        "created_at",
-                        "name",
-                        "updated_at",
-                        "uuid"
+                      "name",
+                      "uuid"
                     ]
+                  }
+                },
+                "description": {
+                  "type": "string"
                 }
-            },
-            "total": {
-                "type": "integer",
-                "format": "int32"
+              },
+              "required": [
+                "name",
+                "uuid"
+              ],
+              "description": "The category of the asset"
             }
+          },
+          "required": [
+            "category",
+            "created_at",
+            "name",
+            "updated_at",
+            "uuid"
+          ]
         }
+      },
+      "total": {
+        "type": "integer",
+        "format": "int32"
+      }
     }
+  }
 }

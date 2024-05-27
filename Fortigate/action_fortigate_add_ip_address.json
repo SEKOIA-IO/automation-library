@@ -1,34 +1,34 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "name": {
-                "description": "The name of the Address.",
-                "type": "string"
-            },
-            "ip": {
-                "description": "The IPv4 linked with the Address to be blocked, (for ex: '1.1.1.1').",
-                "type": "string"
-            },
-            "associated-interface": {
-                "description": "The associated interface of the firewall leave blank for 'Any' (default: Any).",
-                "type": "string"
-            },
-            "comment": {
-                "description": "A commentary to be displayed in the Fortigate GUI (default none).",
-                "type": "string"
-            }
-        },
-        "required": [
-            "name",
-            "ip"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "name": {
+        "description": "The name of the Address.",
+        "type": "string"
+      },
+      "ip": {
+        "description": "The IPv4 linked with the Address to be blocked, (for ex: '1.1.1.1').",
+        "type": "string"
+      },
+      "associated-interface": {
+        "description": "The associated interface of the firewall leave blank for 'Any' (default: Any).",
+        "type": "string"
+      },
+      "comment": {
+        "description": "A commentary to be displayed in the Fortigate GUI (default none).",
+        "type": "string"
+      }
     },
-    "description": "Add a new IP Address object to a Fortigate Firewall",
-    "docker_parameters": "fortigate_add_ip_address",
-    "name": "Post Fortigate IP Address",
-    "results": {},
-    "uuid": "377a9c54-6bb6-40e3-8753-80cbc5b59c60"
+    "required": [
+      "name",
+      "ip"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Add a new IP Address object to a Fortigate Firewall",
+  "docker_parameters": "fortigate_add_ip_address",
+  "name": "Post Fortigate IP Address",
+  "results": {},
+  "uuid": "377a9c54-6bb6-40e3-8753-80cbc5b59c60"
 }

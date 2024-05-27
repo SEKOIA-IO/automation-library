@@ -44,8 +44,8 @@
     "type": "object",
     "properties": {
       "total_items": {
-          "type": "integer",
-          "description": "Total number of devices.\nIf the count request parameter is true, total_items displays the total number of devices. If count is false, then total_items displays null.\nExample: 42"
+        "type": "integer",
+        "description": "Total number of devices.\nIf the count request parameter is true, total_items displays the total number of devices. If count is false, then total_items displays null.\nExample: 42"
       },
       "data": {
         "type": "array",

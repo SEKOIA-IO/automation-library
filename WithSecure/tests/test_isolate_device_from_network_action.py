@@ -42,14 +42,17 @@ def test_run_to_isolate_a_computer_with_message(action):
                 "expires_in": 1799,
             },
         )
-        mock_requests.get(
+        mock_requests.post(
             API_DEVICES_OPERATION_URL,
             status_code=207,
             json=response_payload,
         )
 
-        action.run(
+        response = action.run(
             arguments=ActionArguments(
                 target="e297cbf5-ba53-4e66-909c-6d87527c4e98", message="Example of a test message"
             )
         )
+
+        assert isinstance(response, dict)
+        assert response_payload == response
