@@ -83,7 +83,7 @@ class TriggersJSONValidator(Validator):
 
         if not isinstance(raw.get("results"), dict):
             result.errors.append(
-                CheckError(filepath=path, error=f"`arguments` is not present")
+                CheckError(filepath=path, error=f"`results` is not present")
             )
 
         elif not cls.is_valid_json_schema(raw["results"]):
