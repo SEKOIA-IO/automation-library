@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from sekoia_automation.action import Action
 from thehive4py import TheHiveApi
@@ -7,7 +7,7 @@ from requests import HTTPError
 
 
 class TheHiveCreateAlertV5(Action):
-    def run(self, arguments: dict[str, Any]) -> OutputAlert:
+    def run(self, arguments: dict[str, Any]) -> Optional[OutputAlert]:
         api = TheHiveApi(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
