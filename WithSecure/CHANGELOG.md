@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## 2024-05-28 - 2.14.5
+
+### Changed
+
+- Change the way to compute the lag
+
 ## 2024-05-23 - 2.14.4
 
 ### Fixed

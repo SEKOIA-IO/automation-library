@@ -122,6 +122,8 @@ class SecurityEventsConnector(Connector):
                     f"The last page of events was empty. Waiting {self.configuration.frequency}s "
                     "before fetching next page"
                 )
+                # if no new events, we are up to date
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                 time.sleep(self.configuration.frequency)
 
             anchor = payload.get("nextAnchor")
@@ -160,10 +162,10 @@ class SecurityEventsConnector(Connector):
             with self.context as cache:
                 cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
-        # Compute the current lag
-        now = datetime.now(timezone.utc)
-        current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+            # Update the current lag only if the most_recent_date_seen was updated
+            now = datetime.now(timezone.utc)
+            current_lag = now - most_recent_date_seen
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
     def next_batch(self) -> None:
         # save the starting time
