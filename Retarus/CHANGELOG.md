@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0] - 2024-02-07
+## 2024-05-28 - 1.0.1
+
+### Fixed
+
+- Add the intake key as arguments of the connector configuration
+
+## 2024-02-07 - 1.0.0
 
 ### Added
 

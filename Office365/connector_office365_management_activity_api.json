@@ -16,12 +16,17 @@
       "tenant_id": {
         "description": "",
         "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
       }
     },
     "required": [
       "client_id",
       "client_secret",
-      "tenant_id"
+      "tenant_id",
+      "intake_key"
     ],
     "secrets": [
       "client_secret"
