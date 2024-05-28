@@ -3,7 +3,7 @@
   "name": "Panda Security",
   "slug": "panda-security",
   "description": "[PandaSecurity](https://www.pandasecurity.com/), a [WatchGuard](https://www.watchguard.com/) company, is a cybsersecurity vendor, delivering products designed to protect endpoints against outside threats.\n\nThis module provides actions and triggers to interact with the [Watchguard Panda Aether platform](https://www.watchguard.com/wgrd-products/panda-endpoint-security) to act on AD360 and EPP devices",
-  "version": "1.22.1",
+  "version": "1.23.0",
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
