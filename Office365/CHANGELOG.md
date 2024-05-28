@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28- 2.15.1
+
+### Fixed
+
+- Add the intake key argument in the configuration of the `management_api` logs collector
+
 ## 2024-02-28- 2.15.0
 
 ### Added

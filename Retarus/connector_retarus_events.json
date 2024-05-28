@@ -13,11 +13,16 @@
       "ws_key": {
         "description": "Retarus websocket auth key",
         "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
       }
     },
     "required": [
       "ws_url",
-      "ws_key"
+      "ws_key",
+      "intake_key"
     ],
     "secrets": [
       "ws_key"
