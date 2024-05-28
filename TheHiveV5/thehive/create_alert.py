@@ -42,3 +42,5 @@ class TheHiveCreateAlertV5(Action):
                 self.log(f"Response: {e.response.text}")
         except Exception as e:
             self.error(str(e))
+
+        return None
