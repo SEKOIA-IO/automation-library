@@ -40,7 +40,6 @@ class ManifestValidator(Validator):
             )
             return
 
-        # @todo check uniqueness among all the modules
         module_uuid = manifest.get("uuid")
         if not module_uuid:
             result.errors.append(
@@ -101,7 +100,6 @@ class ManifestValidator(Validator):
                     error=f"'{module_version}' is not valid semantic version. Read more: https://semver.org/",
                 )
             )
-        # @todo perhaps, we can fix "2.0" by adding another zero?
 
         module_configuration = manifest.get("configuration")
         if not module_version:

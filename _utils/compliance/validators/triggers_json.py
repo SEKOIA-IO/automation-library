@@ -1,5 +1,7 @@
 import argparse
 import json
+import uuid
+from functools import partial
 from pathlib import Path
 
 from jsonschema import Draft7Validator
@@ -34,16 +36,19 @@ class TriggersJSONValidator(Validator):
             result.errors.append(CheckError(filepath=path, error=f"can't load JSON"))
             return
 
-        # @todo test for unique identifier
         if not isinstance(raw.get("name"), str):
             result.errors.append(
                 CheckError(filepath=path, error=f"`name` is not present")
             )
 
         if not isinstance(raw.get("uuid"), str):
-            # @todo possible to fix: generate uuid
             result.errors.append(
-                CheckError(filepath=path, error=f"`uuid` is not present")
+                CheckError(
+                    filepath=path,
+                    error=f"`uuid` is not present",
+                    fix_label="Generate random UUID",
+                    fix=partial(cls.set_random_uuid, path=path),
+                )
             )
         else:
             if "uuid_to_check" not in result.options:
@@ -98,3 +103,13 @@ class TriggersJSONValidator(Validator):
             return True
         except SchemaError as e:
             return False
+
+    @staticmethod
+    def set_random_uuid(path: Path):
+        with open(path, "rt") as file:
+            manifest = json.load(file)
+
+        manifest["uuid"] = str(uuid.uuid4())
+
+        with open(path, "wt") as file:
+            json.dump(manifest, file, indent=2)

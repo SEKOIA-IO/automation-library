@@ -76,7 +76,7 @@ def fix_set_uuid(file_path: Path, uuid: str) -> None:
         json.dump(manifest, file, indent=2)
 
 
-def check_uuids(items):
+def check_uniqueness(items, error_msg: str):
     for v in items.values():
         if len(v) > 1:
             for file_name, val in v:
@@ -87,19 +87,25 @@ def check_uuids(items):
                 val.result.errors.append(
                     CheckError(
                         filepath=path,
-                        error=f"UUID is not unique",
+                        error=error_msg,
                     )
                 )
 
 
 def check_uuids_and_slugs(validators: list[ModuleValidator]):
     manifest_uuids = defaultdict(list)
+    manifest_slugs = defaultdict(list)
     actions_uuids = defaultdict(list)
     triggers_uuids = defaultdict(list)
     connectors_uuids = defaultdict(list)
 
     for validator in validators:
         module_path = validator.result.options["path"]
+
+        module_slug = validator.result.options.get("module_slug")
+        if module_slug:
+            manifest_slugs[module_slug].append(("manifest.json", validator))
+
         uuids = validator.result.options.get("uuid_to_check", {})
 
         suffix_to_uuid = defaultdict(dict)
@@ -142,10 +148,11 @@ def check_uuids_and_slugs(validators: list[ModuleValidator]):
                 del connectors_uuids[data["connector"]]
 
     # check UUIDs from each group separately
-    check_uuids(manifest_uuids)
-    check_uuids(actions_uuids)
-    check_uuids(connectors_uuids)
-    check_uuids(triggers_uuids)
+    check_uniqueness(manifest_slugs, error_msg="slug is not unique")
+    check_uniqueness(manifest_uuids, error_msg="UUID is not unique")
+    check_uniqueness(actions_uuids, error_msg="UUID is not unique")
+    check_uniqueness(connectors_uuids, error_msg="UUID is not unique")
+    check_uniqueness(triggers_uuids, error_msg="UUID is not unique")
 
 
 if __name__ == "__main__":
