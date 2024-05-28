@@ -1,9 +1,12 @@
 import argparse
+import json
 import subprocess
+from collections import defaultdict
+from functools import partial
 from pathlib import Path
 
 from validators import MODULES_PATH, ModuleValidator
-from validators.models import CheckError, CheckResult
+from validators.models import CheckError
 
 
 def check_module(module_path: str | Path, args: argparse.Namespace):
@@ -63,31 +66,86 @@ def find_changed_modules(root_path: Path) -> list[Path]:
     return sorted(list(changed_modules))
 
 
-def check_module_uuids_and_slugs(check_module_results: list[CheckResult]):
-    # MANIFEST
-    module_uuids: dict[str, str] = dict()
-    for module_result in check_module_results:
-        if (
-            len(module_result.errors) == 0
-            and "uuid_to_check" in module_result.options
-            and "manifest.json" in module_result.options["uuid_to_check"]
-            and module_result.options["uuid_to_check"]["manifest.json"] in module_uuids
-        ):
-            module_result.errors.append(
-                CheckError(
-                    filepath=module_result.options["manifest_path"],
-                    error=f"module have the same uuid ({module_result.options['uuid_to_check']['manifest.json']}) "
-                    f"than module {module_uuids[module_result.options['manifest_uuid']]}",
-                )
-            )
+def fix_set_uuid(file_path: Path, uuid: str) -> None:
+    with open(file_path, "rt") as file:
+        manifest = json.load(file)
 
-            module_uuids[module_result.options["uuid_to_check"]["manifest.json"]] = (
-                module_result.options.get("uuid_to_check", {}).get(
-                    "manifest.json", "unknown"
-                )
-            )
+    manifest["uuid"] = uuid
 
-    # @todo also check every action, trigger and connector JSONs?
+    with open(file_path, "wt") as file:
+        json.dump(manifest, file, indent=2)
+
+
+def check_uuids(items):
+    for v in items.values():
+        if len(v) > 1:
+            for file_name, val in v:
+                path = val.result.options["path"] / file_name
+
+                # We don't add fix call (e.g. generating new UUID) here, because it would create
+                # a lot of error-prone corner cases
+                val.result.errors.append(
+                    CheckError(
+                        filepath=path,
+                        error=f"UUID is not unique",
+                    )
+                )
+
+
+def check_uuids_and_slugs(validators: list[ModuleValidator]):
+    manifest_uuids = defaultdict(list)
+    actions_uuids = defaultdict(list)
+    triggers_uuids = defaultdict(list)
+    connectors_uuids = defaultdict(list)
+
+    for validator in validators:
+        module_path = validator.result.options["path"]
+        uuids = validator.result.options.get("uuid_to_check", {})
+
+        suffix_to_uuid = defaultdict(dict)
+        for filename, uuid in uuids.items():
+            if filename == "manifest.json":
+                manifest_uuids[uuid].append((filename, validator))
+
+            elif filename.startswith("action_"):
+                actions_uuids[uuid].append((filename, validator))
+
+            elif filename.startswith("trigger_"):
+                triggers_uuids[uuid].append((filename, validator))
+                suffix_to_uuid[filename.lstrip("trigger_")]["trigger"] = uuid
+
+            elif filename.startswith("connector_"):
+                connectors_uuids[uuid].append((filename, validator))
+                suffix_to_uuid[filename.lstrip("connector_")]["connector"] = uuid
+
+        for suffix, data in suffix_to_uuid.items():
+            # ignore cases where we have only either `trigger_` or `connector_` files
+            if "connector" not in data or "trigger" not in data:
+                continue
+
+            if data["connector"] != data["trigger"]:
+                filename_to_fix = "connector_%s" % suffix
+                filepath = module_path / filename_to_fix
+                validator.result.errors.append(
+                    CheckError(
+                        filepath=filepath,
+                        error=f"UUID is not consistent with trigger_%s" % suffix,
+                        fix_label="Set the same UUID for trigger_%s and connector_%s"
+                        % (suffix, suffix),
+                        fix=partial(
+                            fix_set_uuid, file_path=filepath, uuid=data["trigger"]
+                        ),
+                    )
+                )
+                # We don't want to check these further
+                del triggers_uuids[data["trigger"]]
+                del connectors_uuids[data["connector"]]
+
+    # check UUIDs from each group separately
+    check_uuids(manifest_uuids)
+    check_uuids(actions_uuids)
+    check_uuids(connectors_uuids)
+    check_uuids(triggers_uuids)
 
 
 if __name__ == "__main__":
@@ -102,6 +160,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    all_modules = find_modules(MODULES_PATH)
+
     if args.changes:
         modules = find_changed_modules(MODULES_PATH)
 
@@ -110,25 +170,33 @@ if __name__ == "__main__":
 
     else:
         # check all modules by default
-        modules = find_modules(MODULES_PATH)
+        modules = all_modules
 
     print(f"🔎 {len(modules)} module(s) found")
 
     all_validators = []
+    selected_validators = []
+
     errors_to_fix = []
     has_any_errors = False
-    for module in modules:
+    for module in all_modules:
         r = check_module(module, args)
         all_validators.append(r)
 
+        # We have to check all the modules, but show results only for the selected ones
+        if module in modules:
+            selected_validators.append(r)
+
+    check_uuids_and_slugs(all_validators)
+
+    for r in selected_validators:
         if r.result.errors:
             has_any_errors = True
             for item in r.result.errors:
                 if item.fix is not None:
                     errors_to_fix.append(item)
 
-    check_module_uuids_and_slugs([item.result for item in all_validators])
-    for res in sorted(all_validators, key=lambda x: x.path):
+    for res in sorted(selected_validators, key=lambda x: x.path):
         if len(res.result.errors) > 0:
             print(format_errors(res))
 

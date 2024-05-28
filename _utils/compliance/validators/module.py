@@ -42,3 +42,6 @@ class ModuleValidator:
     def validate(self):
         for validator in self.validators:
             validator.validate(self.result, self.args)
+
+    def __repr__(self):
+        return f'ModuleValidator(path="{self.path}")'

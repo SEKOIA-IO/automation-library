@@ -25,5 +25,7 @@ class TestsValidator(Validator):
         test_files = list(tests_path.rglob("test_*.py"))
         if len(test_files) == 0:
             result.errors.append(
-                CheckError(filepath=tests_path, error="There are no tests in tests folder")
+                CheckError(
+                    filepath=tests_path, error="There are no tests in tests folder"
+                )
             )
