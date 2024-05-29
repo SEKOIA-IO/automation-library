@@ -22,12 +22,12 @@ class LaceworkAuthentication(AuthBase):
     """
 
     def __init__(
-        self,
-        lacework_url: str,
-        access_key: str,
-        secret_key: str,
-        default_headers: dict[str, str] | None = None,
-        ratelimit_per_hour: int = 480,
+            self,
+            lacework_url: str,
+            access_key: str,
+            secret_key: str,
+            default_headers: dict[str, str] | None = None,
+            ratelimit_per_hour: int = 480,
     ):
         self.__lacework_url = lacework_url
         self.__access_key = access_key
@@ -50,11 +50,12 @@ class LaceworkAuthentication(AuthBase):
         Return Lacework Credentials for the API
         """
         current_dt = datetime.datetime.now(datetime.timezone.utc)
+        expires_at = (
+            self.__api_credentials.expiresAt.replace(tzinfo=datetime.timezone.utc)
+            if self.__api_credentials else current_dt
+        )
 
-        if (
-            self.__api_credentials is None
-            or current_dt + datetime.timedelta(seconds=3600) >= self.__api_credentials.expiresAt
-        ):
+        if current_dt + datetime.timedelta(seconds=3600) >= expires_at:
             response = self.__http_session.post(
                 url=f"https://{self.__lacework_url}/api/v2/access/tokens",
                 headers={"X-LW-UAKS": self.__secret_key, "Content-Type": "application/json"},

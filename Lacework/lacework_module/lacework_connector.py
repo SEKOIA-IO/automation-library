@@ -37,7 +37,6 @@ class LaceworkEventsTrigger(Connector):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.from_date: str | None = None
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
@@ -58,18 +57,6 @@ class LaceworkEventsTrigger(Connector):
 
             return most_recent_date_seen
 
-    def set_most_recent_date_seen(self, recent_date: datetime) -> None:
-        # save the greatest date
-        if self.from_date is None or isoparse(self.from_date) < recent_date:
-            self.from_date = recent_date.isoformat()
-
-        with self.context as cache:
-            cache["most_recent_date_seen"] = self.from_date
-
-    @cached_property
-    def pagination_limit(self) -> Any:
-        return max(self.configuration.chunk_size, 1000)
-
     @cached_property
     def client(self) -> LaceworkApiClient:
         auth = LaceworkAuthentication(
@@ -77,9 +64,15 @@ class LaceworkEventsTrigger(Connector):
             access_key=self.module.configuration.key_id,
             secret_key=self.module.configuration.secret,
         )
-        return LaceworkApiClient(base_url=self.module.configuration.account, auth=auth)
 
-    def run(self) -> None:
+        return LaceworkApiClient(
+            base_url=self.module.configuration.account,
+            auth=auth,
+            nb_retries=5,
+            ratelimit_per_hour=480,
+        )
+
+    def run(self) -> None:  # pragma: no cover
         self.log(message="Lacework Events Trigger has started", level="info")
 
         try:
@@ -127,8 +120,8 @@ class LaceworkEventsTrigger(Connector):
             )
             return None
 
-    def get_response_by_timestamp(self) -> dict[str, Any] | None:
-        response = self.client.get_alerts_from_date(self.most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    def get_response_by_timestamp(self, date: datetime) -> dict[str, Any] | None:
+        response = self.client.get_alerts_from_date(date.strftime("%Y-%m-%dT%H:%M:%SZ"))
         if not response.ok:
             self.log(
                 message=(
@@ -149,56 +142,52 @@ class LaceworkEventsTrigger(Connector):
 
             return None
 
-    @staticmethod
-    def parse_event_time(value: str) -> datetime:
-        RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-
-        return datetime.strptime(value, RFC3339_STRICT_FORMAT).replace(tzinfo=timezone.utc)
-
-    @staticmethod
-    def get_next_page_url(response: dict[str, Any]) -> str | None:
-        result: str | None = response.get("content", {}).get("paging", {}).get("urls", {}).get("nextPage")
-
-        return result
-
     def forward_next_batches(self) -> None:
         """
         Successively queries the Lacework Central API while more are available
         and the current batch is not too big.
         """
-        first_batch = self.get_response_by_timestamp()
+        start_events_date = self.most_recent_date_seen
+        first_batch = self.get_response_by_timestamp(start_events_date)
         if first_batch is not None:
-            next_page_url = self.get_next_page_url(first_batch)
+            next_page_url = LaceworkApiClient.get_next_page_url(first_batch)
             first_batch_events = first_batch.get("data", [])
 
-            last_date = max([self.parse_event_time(item["endTime"]) for item in first_batch_events])
+            last_date = max([LaceworkApiClient.parse_event_time(item["endTime"]) for item in first_batch_events])
 
             self.log(message=f"Sending the first batch of {len(first_batch_events)} messages", level="info")
-            self.push_events_to_intakes(events=[orjson.dumps(message).decode("utf-8") for message in first_batch_events])
+            self.push_events_to_intakes(
+                events=[orjson.dumps(message).decode("utf-8") for message in first_batch_events])
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(first_batch_events))
 
             grouped_data = []
             while next_page_url:
                 response_next_page = self.get_next_events(next_page_url)
                 if response_next_page:
-                    next_page_url = self.get_next_page_url(response_next_page)
-                    next_page_items = response_next_page.get("items", [])
+                    next_page_url = LaceworkApiClient.get_next_page_url(response_next_page)
+                    next_page_items = response_next_page.get("data", [])
 
                     grouped_data.extend([orjson.dumps(message).decode("utf-8") for message in next_page_items])
-                    last_date_page_date = max([self.parse_event_time(item["endTime"]) for item in next_page_items])
+                    last_date_page_date = max(
+                        [LaceworkApiClient.parse_event_time(item["endTime"]) for item in next_page_items]
+                    )
+
                     if last_date_page_date > last_date:
                         last_date = last_date_page_date
 
-                    if len(grouped_data) > self.pagination_limit:
+                    if len(grouped_data) > self.configuration.chunk_size:
                         self.log(message=f"Sending a batch of {len(grouped_data)} messages", level="info")
                         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                         self.push_events_to_intakes(events=grouped_data)
                         grouped_data = []
 
-            if grouped_data != []:
+            if len(grouped_data) > 0:
                 self.log(message=f"Sending a batch of {len(grouped_data)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
                 self.push_events_to_intakes(events=grouped_data)
 
-            self.set_most_recent_date_seen(last_date)
+            if start_events_date < last_date:
+                with self.context as cache:
+                    cache["most_recent_date_seen"] = last_date.isoformat()
+
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(time.time() - last_date.timestamp()))
