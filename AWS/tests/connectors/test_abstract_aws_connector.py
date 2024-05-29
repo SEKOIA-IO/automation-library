@@ -39,7 +39,7 @@ class FakeAWSConnector(AbstractAwsConnector):
         Returns:
             tuple[list[str], int]:
         """
-        return ( self.messages_ids, self.messages_timestamp)
+        return (self.messages_ids, self.messages_timestamp)
 
 
 def test_connector_run_should_pause(aws_module: AwsModule, symphony_storage: Path, intake_key: str):
@@ -49,16 +49,14 @@ def test_connector_run_should_pause(aws_module: AwsModule, symphony_storage: Pat
     Args:
         aws_module: AwsModule
     """
-    connector = FakeAWSConnector(
-        module=aws_module,
-        data_path=symphony_storage,
-        messages_ids=[],
-        messages_timestamp=[]
-    )
+    connector = FakeAWSConnector(module=aws_module, data_path=symphony_storage, messages_ids=[], messages_timestamp=[])
     connector.configuration = DefaultConnectorConfiguration(intake_key=intake_key)
     event_loop = asyncio.get_event_loop()
 
-    with patch("connectors.time") as mock_time, patch("connectors.AbstractAwsConnector.running", side_effect=[True, True, False]):
+    with (
+        patch("connectors.time") as mock_time,
+        patch("connectors.AbstractAwsConnector.running", side_effect=[True, True, False]),
+    ):
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1701862800.0
         end_time = start_time + batch_duration
@@ -79,13 +77,20 @@ def test_connector_run_should_not_pause(aws_module: AwsModule, symphony_storage:
     connector = FakeAWSConnector(
         module=aws_module,
         data_path=symphony_storage,
-        messages_ids=["f5ca74e3-13ea-4a9b-875d-6c79c33e9aaa", "e0381838-84da-47e2-9a57-a560d72ed0eb", "b718257b-1cec-4905-bf4a-cee2e9f27bcf"],
-        messages_timestamp=[1701819000, 1701862822, 1701845760]
+        messages_ids=[
+            "f5ca74e3-13ea-4a9b-875d-6c79c33e9aaa",
+            "e0381838-84da-47e2-9a57-a560d72ed0eb",
+            "b718257b-1cec-4905-bf4a-cee2e9f27bcf",
+        ],
+        messages_timestamp=[1701819000, 1701862822, 1701845760],
     )
     connector.configuration = DefaultConnectorConfiguration(intake_key=intake_key)
     event_loop = asyncio.get_event_loop()
 
-    with patch("connectors.time") as mock_time, patch("connectors.AbstractAwsConnector.running", side_effect=[True, True, False]):
+    with (
+        patch("connectors.time") as mock_time,
+        patch("connectors.AbstractAwsConnector.running", side_effect=[True, True, False]),
+    ):
         batch_duration = 73  # the batch lasts 73 seconds
         start_time = 1701862800.0
         end_time = start_time + batch_duration
@@ -106,13 +111,20 @@ def test_connector_run_with_lag_should_not_pause(aws_module: AwsModule, symphony
     connector = FakeAWSConnector(
         module=aws_module,
         data_path=symphony_storage,
-        messages_ids=["f5ca74e3-13ea-4a9b-875d-6c79c33e9aaa", "e0381838-84da-47e2-9a57-a560d72ed0eb", "b718257b-1cec-4905-bf4a-cee2e9f27bcf"],
-        messages_timestamp=[1701819000, 1701862822, 1701845760]
+        messages_ids=[
+            "f5ca74e3-13ea-4a9b-875d-6c79c33e9aaa",
+            "e0381838-84da-47e2-9a57-a560d72ed0eb",
+            "b718257b-1cec-4905-bf4a-cee2e9f27bcf",
+        ],
+        messages_timestamp=[1701819000, 1701862822, 1701845760],
     )
     connector.configuration = DefaultConnectorConfiguration(intake_key=intake_key)
     event_loop = asyncio.get_event_loop()
 
-    with patch("connectors.time") as mock_time, patch("connectors.AbstractAwsConnector.running", side_effect=[True, True, False]):
+    with (
+        patch("connectors.time") as mock_time,
+        patch("connectors.AbstractAwsConnector.running", side_effect=[True, True, False]),
+    ):
         batch_duration = 16  # the batch lasts 16 seconds
         start_time = 1701845760.0
         end_time = start_time + batch_duration
