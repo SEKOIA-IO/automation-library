@@ -1,3 +1,4 @@
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -7,14 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-05-28 - 1.31.0
+## 2024-05-28 - 1.0.0
 
 ### Changed
 
 - Upgrade sekoia-automation-sdk
-
-## 2023-11-22 - 1.30
-
-### Changed
-
-- Upgrade dependencies: Sekoia-automation-SDK 1.8.1
