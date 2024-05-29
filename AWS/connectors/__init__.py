@@ -69,7 +69,7 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
         """
         raise NotImplementedError("next_batch method must be implemented")
 
-    def _next_batch(self, loop):
+    def _next_batch(self, loop: asyncio.AbstractEventLoop) -> None:
         processing_start = time.time()
 
         batch_result: tuple[list[str], list[int]] = loop.run_until_complete(self.next_batch())
@@ -86,7 +86,7 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
         current_lag = 0
         if len(messages_timestamp) > 0:
             last_message_timestamp = max(messages_timestamp)
-            current_lag = processing_end - (last_message_timestamp / 1000)
+            current_lag = int(processing_end) - int(last_message_timestamp / 1000)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
         if len(message_ids) > 0:
