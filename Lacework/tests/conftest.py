@@ -102,9 +102,7 @@ def alerts_response_with_next(session_faker: Faker) -> dict[str, Any]:
         "paging": {
             "rows": 1000,
             "totalRows": 3120,
-            "urls": {
-                "nextPage": session_faker.uri()
-            },
+            "urls": {"nextPage": session_faker.uri()},
         },
         "data": [
             {
@@ -152,9 +150,7 @@ def alerts_response_with_next_1(session_faker: Faker) -> dict[str, Any]:
         "paging": {
             "rows": 1000,
             "totalRows": 3120,
-            "urls": {
-                "nextPage": session_faker.uri()
-            },
+            "urls": {"nextPage": session_faker.uri()},
         },
         "data": [
             {

@@ -28,6 +28,7 @@ class LaceworkApiClient(ApiClient):
         https://docs.lacework.net/api/v2/docs#tag/Alerts/paths/~1api~1v2~1Alerts/get
         https://docs.lacework.net/api/about-the-lacework-api
     """
+
     auth: LaceworkAuthentication
 
     def list_alerts(self, parameters: dict[Any, Any] | None = None) -> requests.Response:

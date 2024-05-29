@@ -67,10 +67,10 @@ def test_get_next_events(trigger: LaceworkEventsTrigger, alerts_response: dict[s
 
 
 def test_get_next_events_1(
-        trigger: LaceworkEventsTrigger,
-        alerts_response: dict[str, Any],
-        alerts_response_with_next: dict[str, Any],
-        alerts_response_with_next_1: dict[str, Any]
+    trigger: LaceworkEventsTrigger,
+    alerts_response: dict[str, Any],
+    alerts_response_with_next: dict[str, Any],
+    alerts_response_with_next_1: dict[str, Any],
 ):
     host = f"https://{trigger.module.configuration.account}"
     params = {"token": "foo-token", "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))}
@@ -85,7 +85,7 @@ def test_get_next_events_1(
         mock.get(
             url=LaceworkApiClient.get_next_page_url(alerts_response_with_next),
             status_code=200,
-            json=alerts_response_with_next_1
+            json=alerts_response_with_next_1,
         )
         most_recent_time = datetime.utcnow().replace(tzinfo=timezone.utc)
         mock.get(
@@ -101,7 +101,7 @@ def test_get_next_events_1(
                         "internetExposure": "UnknownInternetExposure",
                         "reachability": "UnknownReachability",
                         "derivedFields": {"category": "Policy", "sub_category": "File", "source": "Agent"},
-                        "endTime": most_recent_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                        "endTime": most_recent_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                         "lastUserUpdatedTime": "2022-06-30T01:26:51.392Z",
                         "status": "Open",
                         "alertName": "Unauthorized API Call",
@@ -111,7 +111,7 @@ def test_get_next_events_1(
                         },
                     },
                 ]
-            }
+            },
         )
 
         trigger.forward_next_batches()

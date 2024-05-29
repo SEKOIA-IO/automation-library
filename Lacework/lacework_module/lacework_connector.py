@@ -157,7 +157,8 @@ class LaceworkEventsTrigger(Connector):
 
             self.log(message=f"Sending the first batch of {len(first_batch_events)} messages", level="info")
             self.push_events_to_intakes(
-                events=[orjson.dumps(message).decode("utf-8") for message in first_batch_events])
+                events=[orjson.dumps(message).decode("utf-8") for message in first_batch_events]
+            )
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(first_batch_events))
 
             grouped_data = []
