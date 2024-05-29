@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 prom_namespace_lacework = "symphony_module_lacework"
 

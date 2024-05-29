@@ -1,9 +1,10 @@
 import datetime
-from dateutil.parser import isoparse
-from requests_ratelimiter import LimiterAdapter, PreparedRequest
-import requests
-from requests.auth import AuthBase
 from typing import Any
+
+import requests
+from dateutil.parser import isoparse
+from requests.auth import AuthBase
+from requests_ratelimiter import LimiterAdapter, PreparedRequest
 
 
 class LaceworkCredentials:

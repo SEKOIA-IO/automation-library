@@ -1,8 +1,9 @@
+from typing import Any
+
 import requests
 from requests.adapters import Retry
 from requests.auth import AuthBase
 from requests_ratelimiter import LimiterAdapter
-from typing import Any
 
 from lacework_module.client.auth import LaceworkAuthentication
 

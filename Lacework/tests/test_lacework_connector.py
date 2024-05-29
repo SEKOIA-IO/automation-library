@@ -1,32 +1,54 @@
 import os
-from pathlib import Path
-from unittest.mock import MagicMock, Mock
 from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 import requests_mock
+from faker import Faker
 
-from lacework_module.base import LaceworkConfiguration, LaceworkModule
-from lacework_module.lacework_connector import LaceworkConfiguration, LaceworkEventsTrigger
+from lacework_module.base import LaceworkModule
+from lacework_module.lacework_connector import LaceworkEventsTrigger
 
 
 @pytest.fixture
-def trigger(symphony_storage: Path):
+def account(session_faker: Faker) -> str:
+    return session_faker.word()
+
+
+@pytest.fixture
+def key_id(session_faker: Faker) -> str:
+    return session_faker.word()
+
+
+@pytest.fixture
+def secret(session_faker: Faker) -> str:
+    return session_faker.word()
+
+
+@pytest.fixture
+def intake_key(session_faker: Faker) -> str:
+    return session_faker.word()
+
+
+@pytest.fixture
+def trigger(symphony_storage: Path, account: str, key_id: str, secret: str, intake_key: str):
     module = LaceworkModule()
     trigger = LaceworkEventsTrigger(module=module, data_path=symphony_storage)
     trigger.module.configuration = {
-        "secret": "my-secret",
-        "key_id": "my-id",
-        "account": "example.lacework.net",
+        "secret": secret,
+        "key_id": key_id,
+        "account": account,
     }
-    trigger.configuration = {"intake_key": "0123456789"}
+    trigger.configuration = {"intake_key": intake_key}
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
+
     return trigger
 
 
-def test_get_next_events(trigger: LaceworkEventsTrigger):
+def test_get_next_events(trigger: LaceworkEventsTrigger, alerts_response: dict[str, any]):
     host = f"https://{trigger.module.configuration.account}"
     params = {"token": "foo-token", "expiresAt": str(datetime.utcnow() + timedelta(seconds=3600))}
     with requests_mock.Mocker() as mock:
@@ -36,55 +58,7 @@ def test_get_next_events(trigger: LaceworkEventsTrigger):
             json=params,
         )
 
-        # flake8: noqa
-
-        response = {
-            "paging": {
-                "rows": 1000,
-                "totalRows": 3120,
-                "urls": {"nextPage": "https://example.lacework.net/api/v2/Alerts/AbcdEfgh123..."},
-            },
-            "data": [
-                {
-                    "alertId": 855628,
-                    "startTime": "2022-06-30T00:00:00.000Z",
-                    "alertType": "MaliciousFile",
-                    "severity": "Critical",
-                    "internetExposure": "UnknownInternetExposure",
-                    "reachability": "UnknownReachability",
-                    "derivedFields": {"category": "Anomaly", "sub_category": "File", "source": "Agent"},
-                    "endTime": "2022-06-30T01:00:00.000Z",
-                    "lastUserUpdatedTime": "",
-                    "status": "Open",
-                    "alertName": "Clone of Cloud Activity log ingestion failure detected",
-                    "alertInfo": {
-                        "subject": "Clone of Cloud Activity log ingestion failure detected: `azure-al-india-dnd` (and `3` more) is failing for data ingestion into Lacework",
-                        "description": "New integration failure detected for azure-al-india-dnd (and 3 more)",
-                    },
-                    "policyId": "CUSTOM_PLATFORM_130",
-                },
-                {
-                    "alertId": 855629,
-                    "startTime": "2022-06-30T00:00:00.000Z",
-                    "alertType": "ChangedFile",
-                    "severity": "Critical",
-                    "internetExposure": "UnknownInternetExposure",
-                    "reachability": "UnknownReachability",
-                    "derivedFields": {"category": "Policy", "sub_category": "File", "source": "Agent"},
-                    "endTime": "2022-06-30T01:00:00.000Z",
-                    "lastUserUpdatedTime": "2022-06-30T01:26:51.392Z",
-                    "status": "Open",
-                    "alertName": "Unauthorized API Call",
-                    "alertInfo": {
-                        "subject": "Unauthorized API Call: For account: `1234567890`: Unauthorized API call was attempted `4` times",
-                        "description": "For account: 1234567890: Unauthorized API call was attempted 4 times by user  ABCD1234:Lacework",
-                    },
-                },
-            ],
-        }
-        # flake8: qa
-
-        mock.get(url=f"{host}/api/v2/Alerts", status_code=200, headers=params, json=response)
+        mock.get(url=f"{host}/api/v2/Alerts", status_code=200, headers=params, json=alerts_response)
         trigger.forward_next_batches()
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         assert len(calls) > 0
