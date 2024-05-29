@@ -569,58 +569,58 @@ CreateRule = type(
     "CreateRule",
     (GenericAPIAction,),
     {
-        "verb":"post",
+        "verb": "post",
         "endpoint": base_url + "conf/rules-catalog/rules",
         "query_parameters": [],
-    }
+    },
 )
 
 DeleteRule = type(
     "DeleteRule",
     (GenericAPIAction,),
     {
-        "verb":"delete",
+        "verb": "delete",
         "endpoint": base_url + "conf/rules-catalog/rules/{uuid}",
         "query_parameters": ["community_uuid"],
-    }
+    },
 )
 
 DisableRule = type(
     "DisableRule",
     (GenericAPIAction,),
     {
-        "verb":"put",
+        "verb": "put",
         "endpoint": base_url + "conf/rules-catalog/rules/{uuid}/disabled",
         "query_parameters": ["community_uuid"],
-    }
+    },
 )
 
 EnableRule = type(
     "EnableRule",
     (GenericAPIAction,),
     {
-        "verb":"put",
+        "verb": "put",
         "endpoint": base_url + "conf/rules-catalog/rules/{uuid}/enabled",
         "query_parameters": ["community_uuid"],
-    }
+    },
 )
 
 GetRule = type(
     "GetRule",
     (GenericAPIAction,),
     {
-        "verb":"get",
+        "verb": "get",
         "endpoint": base_url + "conf/rules-catalog/rules/{uuid}",
         "query_parameters": [],
-    }
+    },
 )
 
 UpdateRule = type(
     "UpdateRule",
     (GenericAPIAction,),
     {
-        "verb":"put",
+        "verb": "put",
         "endpoint": base_url + "conf/rules-catalog/rules/{uuid}",
         "query_parameters": [],
-    }
+    },
 )
