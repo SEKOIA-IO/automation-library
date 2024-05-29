@@ -155,6 +155,10 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             self.log("Invalid JSON message received from LiveAPI", level="error")
             return
 
+        if message.get("authenticated"):
+            # Ignore auth messages
+            return
+
         # We can only manage v2 events
         if str(message.get("metadata", {}).get("version")) != "2":
             self.log("Received event with version not handled by the trigger", level="info", event=message)
