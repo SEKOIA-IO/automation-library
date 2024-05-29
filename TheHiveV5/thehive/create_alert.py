@@ -29,7 +29,8 @@ class TheHiveCreateAlertV5(Action):
             type=alert_type,
             source="Sekoia.io",
             sourceRef=arg_alert["short_id"],
-            description=f"type: {alert_type}\r\nlink: {link}\r\ndetails: {arg_alert['details']}",  # add full alert type in description, add link in description
+            # add full alert type in description, add link in description
+            description=f"type: {alert_type}\r\nlink: {link}\r\ndetails: {arg_alert['details']}",  
         )
 
         try:
