@@ -236,7 +236,7 @@ def test_load_without_cursor(trigger, data_storage):
             name="site:www.example.com",
             url="https://dashboard.signalsciences.net/api/v0/corps/testcorp/sites/www.example.com/activity",
         )
-        assert consumer.latest_start_event_date.isoformat() == datetime_expected.isoformat()
+        assert consumer.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
 
 
 def test_get_sites(trigger, message_sites):
