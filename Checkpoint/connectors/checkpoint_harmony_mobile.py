@@ -63,7 +63,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
             return one_hour_ago
 
         # Parse the most recent date seen
-        last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
+        last_event_date: datetime = isoparse(last_event_date_str).replace(microsecond=0)
 
         # We don't retrieve messages older than 1 hour
         if last_event_date < one_hour_ago:
