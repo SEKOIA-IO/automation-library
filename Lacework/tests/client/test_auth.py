@@ -3,20 +3,21 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 import requests_mock
+from faker import Faker
 
 from lacework_module.client.auth import LaceworkAuthentication
 
 
-def test_get_credentials():
-    account = "example.lacework.net"
-    key_id = "foo"
-    secret = "bar"
+def test_get_credentials(session_faker: Faker):
+    account = session_faker.word()
+    key_id = session_faker.word()
+    secret = session_faker.word()
     auth = LaceworkAuthentication(account, key_id, secret)
 
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
-            url=f"https://{account}/api/v2/access/tokens",
+            url="https://{account}/api/v2/access/tokens".format(account=account),
             headers={"X-LW-UAKS": secret, "Content-Type": "application/json"},
             json={
                 "token": "foo-token",
@@ -32,15 +33,15 @@ def test_get_credentials():
         assert credentials.authorization == "Bearer foo-token"
 
 
-def test_get_credentials_request_new_token_only_when_needed():
-    account = "example.lacework.net"
-    key_id = "foo"
-    secret = "bar"
+def test_get_credentials_request_new_token_only_when_needed(session_faker: Faker):
+    account = session_faker.word()
+    key_id = session_faker.word()
+    secret = session_faker.word()
     auth = LaceworkAuthentication(account, key_id, secret)
 
     with requests_mock.Mocker() as mock:
         p1 = mock.post(
-            url=f"https://{account}/api/v2/access/tokens",
+            url="https://{account}/api/v2/access/tokens".format(account=account),
             headers={"X-LW-UAKS": secret, "Content-Type": "application/json"},
             json={"token": "123456", "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=3600)).isoformat()},
         )
@@ -57,7 +58,7 @@ def test_get_credentials_request_new_token_only_when_needed():
         assert credentials.authorization == "Bearer 78910"
 
         p3 = mock.post(
-            url=f"https://{account}/api/v2/access/tokens",
+            url="https://{account}/api/v2/access/tokens".format(account=account),
             headers={"X-LW-UAKS": secret, "Content-Type": "application/json"},
             json={"token": "78910", "expiresAt": (datetime.now(timezone.utc) + timedelta(seconds=10000)).isoformat()},
         )

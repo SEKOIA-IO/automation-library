@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-30 - 1.2.0
+
+### Changed
+
+- Change the way how the connector is handling events
+
 ## 2024-05-28 - 1.1.0
 
 ### Changed
