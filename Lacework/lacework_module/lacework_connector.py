@@ -140,7 +140,7 @@ class LaceworkEventsTrigger(Connector):
             data_to_push.extend([alert for alert in alerts if alert["alertId"] > start_alerts_id])
 
             while next_page_url:
-                alerts, next_page_url = self.client.get_events_by_page(next_page_url)
+                alerts, next_page_url = self.client.get_alerts_by_page(next_page_url)
                 if alerts:
                     latest_alerts_id_next_page = max([item["alertId"] for item in alerts])
                     if latest_alerts_id_next_page > latest_alerts_id:

@@ -58,9 +58,9 @@ class LaceworkApiClient(ApiClient):
 
         return self._parse_alerts_response(response.json())
 
-    def get_events_by_page(self, url: str) -> Tuple[list[dict[str, Any]] | None, str | None]:
+    def get_alerts_by_page(self, url: str) -> Tuple[list[dict[str, Any]] | None, str | None]:
         """
-        Get events by page.
+        Get alerts by page.
 
         Args:
             url: str
