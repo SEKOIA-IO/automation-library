@@ -136,6 +136,7 @@ class AuditLogConnector(AsyncConnector):
     async def next_batch(self) -> None:
         """Fetches the next batch of events and pushes them to the intake."""
 
+        current_lag: int = 0
         batch_start_time = time.time()
         audit_events = await self.get_audit_events(self.last_ts)
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(audit_events))
@@ -158,8 +159,7 @@ class AuditLogConnector(AsyncConnector):
 
                 # compute the lag
                 now = time.time()
-                current_lag = now - self.last_ts / 1000
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag))
+                current_lag = int(now - self.last_ts / 1000)
             else:
                 self.log(
                     message="No events to forward ",
@@ -170,6 +170,8 @@ class AuditLogConnector(AsyncConnector):
                 message=str(audit_events),
                 level="warn",
             )
+
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
