@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-30 - 1.3.1
+
+### Fixed
+
+- Fix the way to compute the collect lag, especially when no events were fetched from the source
+
 ## 2024-05-28 - 1.3.0
 
 ### Changed
