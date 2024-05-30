@@ -88,14 +88,15 @@ def test_get_next_events_1(
             json=alerts_response_with_next_1,
         )
         most_recent_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+        most_recent_alert_id = 855629 * 2
         mock.get(
             url=LaceworkApiClient.get_next_page_url(alerts_response_with_next_1),
             status_code=200,
             json={
                 "data": [
                     {
-                        "alertId": 855629,
-                        "startTime": "2022-08-31T00:00:00.000Z",
+                        "alertId": most_recent_alert_id,
+                        "startTime": most_recent_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                         "alertType": "ChangedFile",
                         "severity": "Critical",
                         "internetExposure": "UnknownInternetExposure",
@@ -118,7 +119,8 @@ def test_get_next_events_1(
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         assert len(calls) > 0
 
-        assert trigger.most_recent_date_seen == most_recent_time
+        assert trigger.latest_start_event_date == most_recent_time
+        assert trigger.latest_alert_id == most_recent_alert_id
 
 
 @pytest.mark.skipif("{'LACEWORK_ID', 'LACEWORK_SECRET'}.issubset(os.environ.keys()) == False")

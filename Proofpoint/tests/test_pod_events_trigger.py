@@ -90,7 +90,7 @@ def test_consumer_on_message(consumer, queue):
     consumer.on_message(None, original)
 
     message = orjson.loads(original)
-    assert consumer.most_recent_date_seen == message["ts"]
+    assert consumer.latest_start_event_date == message["ts"]
 
 
 def test_consumer_on_error(consumer, trigger):

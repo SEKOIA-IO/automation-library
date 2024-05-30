@@ -197,7 +197,7 @@ def test_load_without_checkpoint(trigger, data_storage, fake_time):
 
     datetime_expected = fake_time - timedelta(hours=1)
 
-    assert trigger.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
+    assert trigger.latest_start_event_date.isoformat() == datetime_expected.isoformat()
 
 
 def test_old_checkpoint(trigger, data_storage, fake_time):
@@ -208,4 +208,4 @@ def test_old_checkpoint(trigger, data_storage, fake_time):
         cache["most_recent_date_seen"] = "2022-02-22T16:16:46+00:00"
 
     datetime_expected = fake_time - timedelta(days=7)
-    assert trigger.most_recent_date_seen.isoformat() == datetime_expected.isoformat()
+    assert trigger.latest_start_event_date.isoformat() == datetime_expected.isoformat()

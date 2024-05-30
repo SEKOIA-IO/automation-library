@@ -40,11 +40,30 @@ class LaceworkEventsTrigger(Connector):
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
-    def most_recent_date_seen(self) -> datetime:
+    def latest_alert_id(self) -> int:
+        """
+        Get the latest alert id from the previous run if present.
+
+        Returns:
+            int | None:
+        """
+        with self.context as cache:
+            result: int | None = cache.get("latest_alert_id_from_previous_run")
+
+        return result or 0
+
+    @property
+    def latest_start_event_date(self) -> datetime:
+        """
+        Get the latest start event date from the previous run if present otherwise we get the date from 1 day ago.
+
+        Returns:
+            datetime:
+        """
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
-            most_recent_date_seen_str = cache.get("most_recent_date_seen")
+            most_recent_date_seen_str = cache.get("latest_start_event_date_from_previous_run")
 
             if most_recent_date_seen_str is None:
                 return now - timedelta(days=1)
@@ -99,96 +118,58 @@ class LaceworkEventsTrigger(Connector):
         finally:
             self.log(message="Lacework Events Trigger has stopped", level="info")
 
-    def get_next_events(self, url: str) -> Any | None:
-        response = self.client.get(url=url)
-        if not response.ok:
-            self.log(
-                message=(
-                    "Request on Lacework Central API to fetch next page events failed with"
-                    f" status {response.status_code} - {response.reason}"
-                ),
-                level="error",
-            )
-
-            return None
-        try:
-            return response.json()
-        except ValueError:
-            self.log(
-                message="No more messages to forward",
-                level="info",
-            )
-            return None
-
-    def get_response_by_timestamp(self, date: datetime) -> dict[str, Any] | None:
-        response = self.client.get_alerts_from_date(date.strftime("%Y-%m-%dT%H:%M:%SZ"))
-        if not response.ok:
-            self.log(
-                message=(
-                    "Request on Lacework Central API to fetch events failed with"
-                    f" status {response.status_code} - {response.reason}"
-                ),
-                level="error",
-            )
-
-            return None
-
-        try:
-            result: dict[str, Any] = response.json()
-
-            return result
-        except ValueError:
-            self.log(message="No more messages to forward", level="info")
-
-            return None
-
     def forward_next_batches(self) -> None:
         """
         Successively queries the Lacework Central API while more are available
         and the current batch is not too big.
         """
-        start_events_date = self.most_recent_date_seen
-        first_batch = self.get_response_by_timestamp(start_events_date)
-        if first_batch is not None:
-            next_page_url = LaceworkApiClient.get_next_page_url(first_batch)
-            first_batch_events = first_batch.get("data", [])
+        start_alerts_date = self.latest_start_event_date
+        start_alerts_id = self.latest_alert_id
 
-            last_date = max([LaceworkApiClient.parse_event_time(item["endTime"]) for item in first_batch_events])
+        alerts, next_page_url = self.client.get_alerts_by_date(start_alerts_date)
 
-            self.log(message=f"Sending the first batch of {len(first_batch_events)} messages", level="info")
-            self.push_events_to_intakes(
-                events=[orjson.dumps(message).decode("utf-8") for message in first_batch_events]
-            )
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(first_batch_events))
+        data_to_push = []
+        if alerts:
+            # As we want to save latest alert id as well we need to get the latest alert id from the current batch
+            latest_alerts_id = max([item["alertId"] for item in alerts])
+            if latest_alerts_id < start_alerts_id:
+                latest_alerts_id = start_alerts_id
 
-            grouped_data = []
+            latest_alerts_date = max([LaceworkApiClient.parse_response_time(item["startTime"]) for item in alerts])
+
+            data_to_push.extend([alert for alert in alerts if alert["alertId"] > start_alerts_id])
+
             while next_page_url:
-                response_next_page = self.get_next_events(next_page_url)
-                if response_next_page:
-                    next_page_url = LaceworkApiClient.get_next_page_url(response_next_page)
-                    next_page_items = response_next_page.get("data", [])
+                alerts, next_page_url = self.client.get_events_by_page(next_page_url)
+                if alerts:
+                    latest_alerts_id_next_page = max([item["alertId"] for item in alerts])
+                    if latest_alerts_id_next_page > latest_alerts_id:
+                        latest_alerts_id = latest_alerts_id_next_page
 
-                    grouped_data.extend([orjson.dumps(message).decode("utf-8") for message in next_page_items])
+                    data_to_push.extend([alert for alert in alerts if alert["alertId"] > start_alerts_id])
+
                     last_date_page_date = max(
-                        [LaceworkApiClient.parse_event_time(item["endTime"]) for item in next_page_items]
+                        [LaceworkApiClient.parse_response_time(item["startTime"]) for item in alerts]
                     )
 
-                    if last_date_page_date > last_date:
-                        last_date = last_date_page_date
+                    if last_date_page_date > latest_alerts_date:
+                        latest_alerts_date = last_date_page_date
 
-                    if len(grouped_data) > self.configuration.chunk_size:
-                        self.log(message=f"Sending a batch of {len(grouped_data)} messages", level="info")
-                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
-                        self.push_events_to_intakes(events=grouped_data)
-                        grouped_data = []
+                    if len(data_to_push) > self.configuration.chunk_size:
+                        self.log(message=f"Sending a batch of {len(data_to_push)} messages", level="info")
+                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(data_to_push))
+                        self.push_events_to_intakes(events=[orjson.loads(orjson.dumps(item)) for item in data_to_push])
+                        data_to_push = []
 
-            if len(grouped_data) > 0:
-                self.log(message=f"Sending a batch of {len(grouped_data)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
-                self.push_events_to_intakes(events=grouped_data)
+            if len(data_to_push) > 0:
+                self.log(message=f"Sending a batch of {len(data_to_push)} messages", level="info")
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(data_to_push))
+                self.push_events_to_intakes(events=[orjson.loads(orjson.dumps(item)) for item in data_to_push])
 
-            if start_events_date < last_date:
-                with self.context as cache:
-                    cache["most_recent_date_seen"] = last_date.isoformat()
+            with self.context as cache:
+                cache["latest_start_event_date_from_previous_run"] = latest_alerts_date.isoformat()
+                cache["latest_alert_id_from_previous_run"] = latest_alerts_id
 
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(time.time() - last_date.timestamp()))
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
+                int(time.time() - latest_alerts_date.timestamp())
+            )
