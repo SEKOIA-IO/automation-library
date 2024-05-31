@@ -158,13 +158,15 @@ class LaceworkEventsTrigger(Connector):
                     if len(data_to_push) > self.configuration.chunk_size:
                         self.log(message=f"Sending a batch of {len(data_to_push)} messages", level="info")
                         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(data_to_push))
-                        self.push_events_to_intakes(events=[orjson.loads(orjson.dumps(item)) for item in data_to_push])
+                        self.push_events_to_intakes(
+                            events=[orjson.dumps(item).decode("utf-8") for item in data_to_push]
+                        )
                         data_to_push = []
 
             if len(data_to_push) > 0:
                 self.log(message=f"Sending a batch of {len(data_to_push)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(data_to_push))
-                self.push_events_to_intakes(events=[orjson.loads(orjson.dumps(item)) for item in data_to_push])
+                self.push_events_to_intakes(events=[orjson.dumps(item).decode("utf-8") for item in data_to_push])
 
             with self.context as cache:
                 cache["latest_start_event_date_from_previous_run"] = latest_alerts_date.isoformat()
