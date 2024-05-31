@@ -62,13 +62,13 @@ def test_enable_rule_failure():
     arguments = {"uuid": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
-        mock.put(f"{base_url}{ressource}/enable", json=expected_response, status_code=500)
+        mock.put(f"{base_url}{ressource}/enabled", json=expected_response, status_code=500)
         results: dict = action.run(arguments)
         assert results == expected_response
         assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "PUT"
-        assert url_decoder(history[0].url) == f"{base_url}{ressource}/enable"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}/enabled"
 
 
 def test_get_rule_failure():
@@ -196,14 +196,14 @@ def test_disable_rule_failure():
     arguments = {"uuid": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
-        mock.put(f"{base_url}{ressource}/disable", json=expected_response, status_code=500)
+        mock.put(f"{base_url}{ressource}/disabled", json=expected_response, status_code=500)
         results: dict = action.run(arguments)
 
         assert results == expected_response
         assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "PUT"
-        assert url_decoder(history[0].url) == f"{base_url}{ressource}/disable"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}/disabled"
 
 
 def test_delete_rule_success():
@@ -402,7 +402,7 @@ def test_enable_rule_success():
     arguments = {"uuid": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
-        mock.put(f"{base_url}{ressource}/enable", json=expected_response)
+        mock.put(f"{base_url}{ressource}/enabled", json=expected_response)
         results: dict = action.run(arguments)
         assert results == expected_response
         assert mock.call_count == 1
@@ -446,10 +446,10 @@ def test_disable_rule_success():
     arguments = {"uuid": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
-        mock.put(f"{base_url}{ressource}/disable", json=expected_response)
+        mock.put(f"{base_url}{ressource}/disabled", json=expected_response)
         results: dict = action.run(arguments)
         assert results == expected_response
         assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "PUT"
-        assert url_decoder(history[0].url) == f"{base_url}{ressource}/disable"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}/disabled"
