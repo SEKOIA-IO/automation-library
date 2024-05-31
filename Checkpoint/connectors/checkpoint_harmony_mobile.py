@@ -63,7 +63,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
             return one_hour_ago
 
         # Parse the most recent date seen
-        last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
+        last_event_date: datetime = isoparse(last_event_date_str).replace(microsecond=0)
 
         # We don't retrieve messages older than 1 hour
         if last_event_date < one_hour_ago:
@@ -136,13 +136,12 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
                     message_ids, latest_event_date = loop.run_until_complete(self.get_checkpoint_harmony_events())
                     processing_end = time.time()
 
-                    lag = processing_end - latest_event_date
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(lag)
-
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
+                    lag = 0.
                     log_message = "No records to forward"
                     if len(message_ids) > 0:
+                        lag = processing_end - latest_event_date
                         log_message = "Pushed {0} records".format(len(message_ids))
 
                     self.log(message=log_message, level="info")
@@ -151,6 +150,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
                         processing_time=(processing_end - processing_start),
                         additional_log=log_message,
                     )
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(lag)
 
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                         processing_end - processing_start

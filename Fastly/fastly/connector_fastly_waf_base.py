@@ -165,6 +165,7 @@ class FastlyWAFConsumer(Thread):
                     message=f"{self.name}: No events to forward",
                     level="info",
                 )
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
