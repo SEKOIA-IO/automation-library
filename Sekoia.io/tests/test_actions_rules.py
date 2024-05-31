@@ -15,7 +15,7 @@ def test_get_rule_success():
     action: GetRule = GetRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {
         "uuid": "fake_uuid",
         "name": "Rule Name",
@@ -57,7 +57,7 @@ def test_enable_rule_failure():
     action: EnableRule = EnableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {"error": "Failed to enable rule"}
     arguments = {"uuid": "fake_uuid"}
 
@@ -75,7 +75,7 @@ def test_get_rule_failure():
 
     action: GetRule = GetRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {"error": "Failed to get rule"}
     with requests_mock.Mocker() as mock:
         mock.get(f"{base_url}{ressource}", json=expected_response, status_code=500)
@@ -91,7 +91,7 @@ def test_delete_rule_failure():
 
     action: DeleteRule = DeleteRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {"error": "Failed to delete rule"}
     arguments = {"uuid": "fake_uuid"}
     with requests_mock.Mocker() as mock:
@@ -108,7 +108,7 @@ def test_create_rule_failure():
 
     action: CreateRule = CreateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-    ressource = "rules-catalog/rules"
+    ressource = "conf/rules-catalog/rules"
     expected_response = {"error": "Failed to create rule"}
     arguments = {
         "name": "New Rule",
@@ -148,7 +148,7 @@ def test_update_rule_failure():
 
     action: UpdateRule = UpdateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {"error": "Failed to update rule"}
     arguments = {
         "uuid": "fake_uuid",
@@ -191,7 +191,7 @@ def test_disable_rule_failure():
     action: DisableRule = DisableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {"error": "Failed to disable rule"}
     arguments = {"uuid": "fake_uuid"}
 
@@ -211,7 +211,7 @@ def test_delete_rule_success():
     action: DeleteRule = DeleteRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {"message": "Rule deleted successfully"}
     arguments = {"uuid": "fake_uuid"}
 
@@ -231,7 +231,7 @@ def test_create_rule_success():
     action: CreateRule = CreateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules"
+    ressource = "conf/rules-catalog/rules"
     expected_response = {
         "uuid": "fake_uuid",
         "name": "New Rule",
@@ -300,7 +300,7 @@ def test_update_rule_success():
     action: UpdateRule = UpdateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {
         "uuid": "fake_uuid",
         "name": "Updated Rule",
@@ -372,7 +372,7 @@ def test_enable_rule_success():
     action: EnableRule = EnableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {
         "uuid": "fake_uuid",
         "name": "Rule Name",
@@ -416,7 +416,7 @@ def test_disable_rule_success():
     action: DisableRule = DisableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
-    ressource = "rules-catalog/rules/fake_uuid"
+    ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {
         "uuid": "fake_uuid",
         "name": "Rule Name",
