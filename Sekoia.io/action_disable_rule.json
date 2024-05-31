@@ -290,7 +290,7 @@
               "type": "string",
               "description": "Field path"
             },
-            "ndescription": {
+            "description": {
               "type": "string",
               "description": "Field description"
             }
