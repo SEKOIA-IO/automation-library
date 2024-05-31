@@ -131,7 +131,7 @@ def test_create_rule_failure():
         "goal": "goal",
         "false_positives": "false_positives",
         "references": "references",
-        "available_for_subcommunities": False,
+        "available_for_subcommunities": True,
         "instance_uuid": "instance_uuid",
     }
     with requests_mock.Mocker() as mock:
@@ -161,7 +161,7 @@ def test_update_rule_failure():
         "alert_category_uuid": "updated_alert_category_uuid",
         "tags": ["tag1", "tag2", "tag3"],
         "source": "updated_source",
-        "verified": False,
+        "verified": True,
         "related_object_refs": ["ref1", "ref2", "ref3"],
         "datasources": ["datasource1", "datasource2", "datasource3"],
         "event_fields": [
@@ -255,7 +255,7 @@ def test_create_rule_success():
         "goal": "goal",
         "false_positives": "false_positives",
         "references": "references",
-        "available_for_subcommunities": False,
+        "available_for_subcommunities": True,
         "instance_uuid": "instance_uuid",
     }
     arguments = {
@@ -313,7 +313,7 @@ def test_update_rule_success():
         "alert_category_uuid": "updated_alert_category_uuid",
         "tags": ["tag1", "tag2", "tag3"],
         "source": "updated_source",
-        "verified": False,
+        "verified": True,
         "related_object_refs": ["ref1", "ref2", "ref3"],
         "datasources": ["datasource1", "datasource2", "datasource3"],
         "event_fields": [
