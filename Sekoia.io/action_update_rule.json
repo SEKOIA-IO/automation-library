@@ -1,0 +1,535 @@
+{
+  "uuid": "095be615-a8ad-4c33-8e9c-c7612fbf6c9f",
+  "name": "Update rule",
+  "docker_parameters": "rules-catalog/rules/{uuid}",
+  "description": "Update a rule",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "update_rule",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "community_uuid": {
+        "in": "body",
+        "type": "string"
+      },
+      "name": {
+        "in": "body",
+        "type": "string",
+        "minLength": 5,
+        "maxLength": 100
+      },
+      "type": {
+        "in": "body",
+        "type": "string"
+      },
+      "description": {
+        "in": "body",
+        "type": "string",
+        "maxLength": 1000
+      },
+      "payload": {
+        "in": "body",
+        "type": "string"
+      },
+      "severity": {
+        "in": "body",
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "effort": {
+        "in": "body",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4
+      },
+      "alert_type_uuid": {
+        "in": "body",
+        "type": "string",
+        "format": "uuid"
+      },
+      "tags": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "related_object_refs": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "datasources": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "event_fields": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": ["field", "description"]
+        }
+      },
+      "enabled": {
+        "in": "body",
+        "type": "boolean"
+      },
+      "parameters": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": ["value"]
+        }
+      },
+      "all_entities": {
+        "in": "body",
+        "type": "boolean"
+      },
+      "entities": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "all_assets": {
+        "in": "body",
+        "type": "boolean"
+      },
+      "assets": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "goal": {
+        "in": "body",
+        "type": "string"
+      },
+      "false_positives": {
+        "in": "body",
+        "type": "string"
+      },
+      "similarity_strategy": {
+        "in": "body",
+        "type": "array",
+        "items": {
+          "type": "any"
+        }
+      },
+      "available_for_subcommunities": {
+        "in": "body",
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "uuid",
+      "name",
+      "type",
+      "description",
+      "payload",
+      "severity",
+      "effort",
+      "alert_type_uuid",
+      "enabled"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "format": "uuid",
+        "description": "The identifier of the rule"
+      },
+      "enabled": {
+        "type": "boolean",
+        "description": "Is the rule enabled ?"
+      },
+      "community_uuid": {
+        "type": "string",
+        "description": "The community uuid if the rule is attached to one"
+      },
+      "parameters": {
+        "type": "array",
+        "description": "The parameters of the rule",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The identifier of the parameter"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 100,
+              "description": "The name of the parameter"
+            },
+            "value": {
+              "type": "string",
+              "description": "The value of the parameter"
+            },
+            "default": {
+              "type": "string",
+              "description": "The default value of the parameter"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 1000,
+              "description": "The description of the parameter"
+            }
+          },
+          "required": ["uuid", "name", "value", "default", "description"]
+        }
+      },
+      "all_entities": {
+        "type": "boolean",
+        "description": "Should the rule be applied on all entities ?"
+      },
+      "entities": {
+        "type": "array",
+        "description": "The list of entities the rule should be applied on",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 100,
+              "description": "The name of the entity"
+            },
+            "entity_id": {
+              "type": "string",
+              "description": "The Id of the entity"
+            },
+            "alerts_generation": {
+              "type": "string",
+              "description": "The uuid of the generation mode"
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 1000,
+              "description": "The description of the entity"
+            },
+            "community_uuid": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The community uuid"
+            },
+            "uuid": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The entity uuid"
+            },
+            "number_of_intakes": {
+              "type": "integer",
+              "description": "The number of intakes"
+            }
+          },
+          "required": [
+            "name",
+            "entity_id",
+            "alerts_generation",
+            "community_uuid",
+            "uuid"
+          ]
+        }
+      },
+      "all_assets": {
+        "type": "boolean",
+        "description": "Should the rule be applied on all assets ?"
+      },
+      "assets": {
+        "type": "array",
+        "description": "The list of assets identifiers the rule should be applied on",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "last_compilation_success": {
+        "type": "boolean",
+        "description": "Did the last compilation succeed ?"
+      },
+      "last_compilation_message": {
+        "type": "string",
+        "description": "The message of the last compilation"
+      },
+      "last_compilation_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "The last compilation date of the rule"
+      },
+      "name": {
+        "type": "string",
+        "minLength": 5,
+        "maxLength": 100,
+        "description": "The name of the rule"
+      },
+      "type": {
+        "type": "any",
+        "description": "The type of the rule"
+      },
+      "private": {
+        "type": "boolean",
+        "description": "Is the rule available only for the community ?"
+      },
+      "is_private": {
+        "type": "boolean",
+        "description": "Is the rule available only for the community ?"
+      },
+      "description": {
+        "type": "string",
+        "maxLength": 1000,
+        "description": "The descrition of the rule"
+      },
+      "payload": {
+        "type": "string",
+        "description": "The payload of the rule"
+      },
+      "severity": {
+        "type": "integer",
+        "description": "The severity of the rule"
+      },
+      "effort": {
+        "type": "integer",
+        "description": "The effort of the rule"
+      },
+      "alert_type": {
+        "type": "object",
+        "description": "The alert type associated to the rule",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Alert type uuid"
+          },
+          "category_uuid": {
+            "type": "string",
+            "description": "Alert type category uuid"
+          },
+          "value": {
+            "type": "string",
+            "description": "Alert type name"
+          },
+          "detail": {
+            "type": "string",
+            "description": "Alert type detail"
+          },
+          "description": {
+            "type": "string",
+            "description": "Alert type description"
+          }
+        },
+        "required": ["uuid", "category_uuid", "value"]
+      },
+      "alert_category": {
+        "type": "object",
+        "description": "The alert category associated to the rule",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "Alert category uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 100,
+            "description": "Alert category name"
+          }
+        },
+        "required": ["uuid", "name"]
+      },
+      "tags": {
+        "type": "array",
+        "description": "The list of tags associated to the rule",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The identifier of the tag"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 100,
+              "description": "The name of the tag"
+            }
+          },
+          "required": ["uuid", "name"]
+        }
+      },
+      "source": {
+        "type": "string",
+        "description": "The source of the rule"
+      },
+      "verified": {
+        "type": "boolean",
+        "description": "Is the rule verified ?"
+      },
+      "related_object_refs": {
+        "type": "array",
+        "description": "The list of reference of objects related to the rule",
+        "items": {
+          "type": "string"
+        }
+      },
+      "datasources": {
+        "type": "array",
+        "description": "The list of datasources of the rule",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "Unique identifier of the datasource"
+            },
+            "name": {
+              "type": "string",
+              "description": "The name of the datasource"
+            }
+          }
+        }
+      },
+      "event_fields": {
+        "type": "array",
+        "description": "The list of fields to show when displaying a matched event",
+        "items": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "description": "Field path"
+            },
+            "description": {
+              "type": "string",
+              "description": "Field description"
+            }
+          }
+        }
+      },
+      "similarity_strategy": {
+        "type": "array",
+        "description": "Similarity Strategy used by this rule",
+        "items": {
+          "type": "any"
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "The creation date of the rule"
+      },
+      "created_by": {
+        "type": "string",
+        "description": "The profile who created the rule"
+      },
+      "created_by_type": {
+        "type": "string",
+        "description": "The profile type who created the rule can be 'avatar', 'application', 'apikey'"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "The modification date of the rule"
+      },
+      "updated_by": {
+        "type": "string",
+        "description": "The profile who updated the rule"
+      },
+      "updated_by_type": {
+        "type": "string",
+        "description": "The profile type who updated the rule can be 'rule', 'application', 'apikey'"
+      },
+      "goal": {
+        "type": "string",
+        "description": "A high-level description explaining the contribution of the rule"
+      },
+      "false_positives": {
+        "type": "string",
+        "description": "A possible legitimate usage which can raise a false alert"
+      },
+      "references": {
+        "type": "string",
+        "description": "Details on what led to write this rule"
+      },
+      "available_for_subcommunities": {
+        "type": "boolean",
+        "default": false,
+        "description": "Is the rule available for subcommunities (if applicable) ?"
+      },
+      "instance_uuid": {
+        "type": "string",
+        "format": "uuid",
+        "description": "The identifier of the instance of the rule"
+      }
+    },
+    "required": [
+      "uuid",
+      "enabled",
+      "parameters",
+      "all_entities",
+      "all_assets",
+      "last_compilation_success",
+      "last_compilation_message",
+      "last_compilation_at",
+      "name",
+      "type",
+      "severity",
+      "effort",
+      "alert_type",
+      "alert_category",
+      "source",
+      "verified",
+      "related_object_refs",
+      "datasources",
+      "event_fields",
+      "created_at",
+      "created_by",
+      "created_by_type",
+      "updated_at",
+      "instance_uuid"
+    ]
+  }
+}

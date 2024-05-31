@@ -1,0 +1,22 @@
+{
+  "uuid": "095be615-a8ad-4c33-8e9c-c7612fbf6c9f",
+  "name": "Delete rule",
+  "docker_parameters": "rules-catalog/rules/{uuid}",
+  "description": "Delete a rule",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "delete_rule",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "community_uuid": {
+        "in": "query",
+        "type": "string"
+      }
+    },
+    "required": ["uuid"]
+  }
+}
