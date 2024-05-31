@@ -58,7 +58,7 @@ def test_enable_rule_failure():
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
     ressource = "conf/rules-catalog/rules/fake_uuid"
-    expected_response = {"error": "Failed to enable rule"}
+    expected_response = None
     arguments = {"uuid": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
@@ -76,7 +76,7 @@ def test_get_rule_failure():
     action: GetRule = GetRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     ressource = "conf/rules-catalog/rules/fake_uuid"
-    expected_response = {"error": "Failed to get rule"}
+    expected_response = None
     with requests_mock.Mocker() as mock:
         mock.get(f"{base_url}{ressource}", json=expected_response, status_code=500)
         results: dict = action.run({"uuid": "fake_uuid"})
@@ -92,7 +92,7 @@ def test_delete_rule_failure():
     action: DeleteRule = DeleteRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     ressource = "conf/rules-catalog/rules/fake_uuid"
-    expected_response = {"error": "Failed to delete rule"}
+    expected_response = None
     arguments = {"uuid": "fake_uuid"}
     with requests_mock.Mocker() as mock:
         mock.delete(f"{base_url}{ressource}", json=expected_response, status_code=500)
@@ -109,7 +109,7 @@ def test_create_rule_failure():
     action: CreateRule = CreateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     ressource = "conf/rules-catalog/rules"
-    expected_response = {"error": "Failed to create rule"}
+    expected_response = None
     arguments = {
         "name": "New Rule",
         "description": "This is a new rule",
@@ -149,7 +149,7 @@ def test_update_rule_failure():
     action: UpdateRule = UpdateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     ressource = "conf/rules-catalog/rules/fake_uuid"
-    expected_response = {"error": "Failed to update rule"}
+    expected_response = None
     arguments = {
         "uuid": "fake_uuid",
         "name": "Updated Rule",
@@ -192,7 +192,7 @@ def test_disable_rule_failure():
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
     ressource = "conf/rules-catalog/rules/fake_uuid"
-    expected_response = {"error": "Failed to disable rule"}
+    expected_response = None
     arguments = {"uuid": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
@@ -408,7 +408,7 @@ def test_enable_rule_success():
         assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "PUT"
-        assert url_decoder(history[0].url) == f"{base_url}{ressource}/enable"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}/enabled"
 
 
 def test_disable_rule_success():
