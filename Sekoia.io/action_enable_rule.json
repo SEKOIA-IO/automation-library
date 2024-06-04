@@ -1,5 +1,5 @@
 {
-  "uuid": "095be615-a8ad-4c33-8e9c-c7612fbf6c9f",
+  "uuid": "1c3785c6-ef6c-4daf-98a1-6aa3d9cd94c4",
   "name": "Enable rule",
   "docker_parameters": "rules-catalog/rules/{uuid}/enabled",
   "description": "Enable a rule",

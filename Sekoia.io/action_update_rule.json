@@ -1,5 +1,5 @@
 {
-  "uuid": "095be615-a8ad-4c33-8e9c-c7612fbf6c9f",
+  "uuid": "b9f6cd73-7c01-4fe6-afbc-0e8290ee8e36",
   "name": "Update rule",
   "docker_parameters": "rules-catalog/rules/{uuid}",
   "description": "Update a rule",
