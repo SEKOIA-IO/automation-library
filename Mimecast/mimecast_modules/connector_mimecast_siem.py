@@ -5,10 +5,8 @@ import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from io import BytesIO
-from pathlib import Path
 from threading import Event, Lock, Thread
 from typing import Generator
-from urllib.parse import urljoin
 
 import requests
 from dateutil.parser import isoparse
@@ -23,6 +21,7 @@ from .helpers import async_fetch_content, gather_with_concurrency, get_upper_sec
 
 class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
+    chunk_size: int = 100
     ratelimit_per_minute: int = 20
 
 
@@ -111,7 +110,8 @@ class MimecastSIEMWorker(Thread):
 
         return result
 
-    async def async_download_batch(self, urls: list[str]) -> list[dict]:
+    @staticmethod
+    async def async_download_batch(urls: list[str]) -> list[dict]:
         tasks = []
         for url in urls:
             tasks.append(asyncio.ensure_future(async_fetch_content(url)))
@@ -128,7 +128,8 @@ class MimecastSIEMWorker(Thread):
 
         return result
 
-    def __format_datetime(self, dt: datetime) -> str:
+    @staticmethod
+    def __format_datetime(dt: datetime) -> str:
         base = dt.strftime("%Y-%m-%dT%H:%M:%S")
         ms = dt.strftime("%f")[:3]
         return f"{base}.{ms}Z"
@@ -136,14 +137,20 @@ class MimecastSIEMWorker(Thread):
     def __fetch_next_events(self, from_date: datetime, use_batches: bool = True) -> Generator[list, None, None]:
         # for a stream version, dateRangeStartsAt shouldn't be more than 24h ago, or we'll get 400 error
         if use_batches:
-            url = urljoin("https://api.services.mimecast.com", "siem/v1/batch/events/cg")
-            params = {"type": self.log_type, "pageSize": 10, "dateRangeStartsAt": from_date.strftime("%Y-%m-%d")}
+            url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
+            params = {
+                "type": self.log_type,
+                "pageSize": self.connector.configuration.chunk_size,
+                "dateRangeStartsAt": from_date.strftime("%Y-%m-%d"),
+            }
 
         else:
-            url = urljoin("https://api.services.mimecast.com", "siem/v1/events/cg")
-            params = {"types": self.log_type, "pageSize": 10, "dateRangeStartsAt": self.__format_datetime(from_date)}
-
-        print(params)
+            url = "https://api.services.mimecast.com/siem/v1/events/cg"
+            params = {
+                "types": self.log_type,
+                "pageSize": self.connector.configuration.chunk_size,
+                "dateRangeStartsAt": self.__format_datetime(from_date),
+            }
 
         response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
@@ -175,7 +182,6 @@ class MimecastSIEMWorker(Thread):
                     f"before fetching next page",
                     level="info",
                 )
-                print("Last page")
                 # time.sleep(self.connector.configuration.frequency)
                 return
 
@@ -185,7 +191,6 @@ class MimecastSIEMWorker(Thread):
                 return
 
             params["nextPage"] = next_page_token
-            print(params)
             response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
     def fetch_events(self) -> Generator[list, None, None]:
@@ -225,12 +230,11 @@ class MimecastSIEMWorker(Thread):
                     message=f"{self.log_type}: Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                print(batch_of_events)
                 # OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
-                    message="{self.log_type}: No events to forward",
+                    message=f"{self.log_type}: No events to forward",
                     level="info",
                 )
 
