@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Mimecast",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Desc",
+  "name": "Mimecast",
+  "uuid": "72af1e06-84db-497d-b4ac-10defb1f265f",
+  "docker": "sekoia-automation-module-mimecast",
+  "version": "1.0"
+}
