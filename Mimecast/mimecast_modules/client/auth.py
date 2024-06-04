@@ -40,7 +40,6 @@ class ApiKeyAuthentication(AuthBase):
 
     def get_credentials(self) -> MimecastCredentials:
         current_dt = datetime.utcnow()
-        print(current_dt)
         if self.__credentials is None or current_dt + timedelta(seconds=300) >= self.__credentials.expires_at:
             response = self.__http_session.post(
                 url=self.AUTH_URL,
@@ -49,7 +48,6 @@ class ApiKeyAuthentication(AuthBase):
                 timeout=60,
             )
             response.raise_for_status()
-            print(response.json(), response.status_code)
 
             api_credentials: dict = response.json()
 
