@@ -1,7 +1,7 @@
 {
   "uuid": "095be615-a8ad-4c33-8e9c-c7612fbf6c9f",
   "name": "Create rule",
-  "docker_parameters": "rules-catalog/rules",
+  "docker_parameters": "post-rules",
   "description": "Create a new rule",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

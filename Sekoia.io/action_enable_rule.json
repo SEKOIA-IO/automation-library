@@ -1,7 +1,7 @@
 {
   "uuid": "1c3785c6-ef6c-4daf-98a1-6aa3d9cd94c4",
   "name": "Enable rule",
-  "docker_parameters": "rules-catalog/rules/{uuid}/enabled",
+  "docker_parameters": "put-rules/{uuid}/enable",
   "description": "Enable a rule",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
