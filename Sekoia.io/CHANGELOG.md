@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Updated main.py
+- Fix docker_parameters for rule actions and add them to main.py
 
 ## 2024-06-04 - 2.60.3
 
