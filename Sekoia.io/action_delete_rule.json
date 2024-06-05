@@ -1,7 +1,7 @@
 {
   "uuid": "ec84f052-8934-4a0b-a1d7-ae8426357bbd",
   "name": "Delete rule",
-  "docker_parameters": "rules-catalog/rules/{uuid}",
+  "docker_parameters": "delete-rules/{uuid}",
   "description": "Delete a rule",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

@@ -1,7 +1,7 @@
 {
   "uuid": "fab3ec9a-3b8b-4ce6-b6b2-8831b79c6a69",
   "name": "Get rule",
-  "docker_parameters": "rules-catalog/rules/{uuid}",
+  "docker_parameters": "get-rules/{uuid}",
   "description": "Get a rule",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
