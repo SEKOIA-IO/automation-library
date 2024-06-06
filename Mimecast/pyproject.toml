@@ -6,7 +6,11 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.0"
+sekoia-automation-sdk = "^1.13.0"
+requests = "^2.32.3"
+requests-ratelimiter = "^0.6.0"
+python-dateutil = "^2.9.0.post0"
+orjson = "^3.10.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

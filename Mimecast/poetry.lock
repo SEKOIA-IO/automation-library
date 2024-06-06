@@ -1301,6 +1301,21 @@ files = [
 ]
 
 [[package]]
+name = "pyrate-limiter"
+version = "2.10.0"
+description = "Python Rate-Limiter using Leaky-Bucket Algorithm"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "pyrate_limiter-2.10.0-py3-none-any.whl", hash = "sha256:a99e52159f5ed5eb58118bed8c645e30818e7c0e0d127a0585c8277c776b0f7f"},
+    {file = "pyrate_limiter-2.10.0.tar.gz", hash = "sha256:98cc52cdbe058458e945ae87d4fd5a73186497ffa545ee6e98372f8599a5bd34"},
+]
+
+[package.extras]
+all = ["filelock (>=3.0)", "redis (>=3.3,<4.0)", "redis-py-cluster (>=2.1.3,<3.0.0)"]
+docs = ["furo (>=2022.3.4,<2023.0.0)", "myst-parser (>=0.17)", "sphinx (>=4.3.0,<5.0.0)", "sphinx-autodoc-typehints (>=1.17,<2.0)", "sphinx-copybutton (>=0.5)", "sphinxcontrib-apidoc (>=0.3,<0.4)"]
+
+[[package]]
 name = "pytest"
 version = "8.2.2"
 description = "pytest: simple powerful testing with Python"
@@ -1573,6 +1588,24 @@ requests = ">=2.22,<3"
 
 [package.extras]
 fixture = ["fixtures"]
+
+[[package]]
+name = "requests-ratelimiter"
+version = "0.6.0"
+description = "Rate-limiting for the requests library"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "requests_ratelimiter-0.6.0-py3-none-any.whl", hash = "sha256:0641ec7b3dd919a64a8e390358d416c7369f89eb61bec0cf6113ea8d2ec4f072"},
+    {file = "requests_ratelimiter-0.6.0.tar.gz", hash = "sha256:ad72f033323df3c1012a3ac4bb91be36606741f58ec9faede62b89b475ea99f6"},
+]
+
+[package.dependencies]
+pyrate-limiter = "<3.0"
+requests = ">=2.20"
+
+[package.extras]
+docs = ["furo (>=2023.3,<2024.0)", "myst-parser (>=1.0)", "sphinx (>=5.2,<6.0)", "sphinx-autodoc-typehints (>=1.22,<2.0)", "sphinx-copybutton (>=0.5)"]
 
 [[package]]
 name = "requests-toolbelt"
@@ -2096,4 +2129,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "2bac130d8b8d150e9abdcc55e1b85afc72d4b35bde18bd8bc75daa47017692bf"
+content-hash = "03c4cb0c65301c4e74e157152c93bfba5e66aaa86f2ab1a8be13f5557f81238d"
