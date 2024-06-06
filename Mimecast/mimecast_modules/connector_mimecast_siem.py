@@ -17,6 +17,7 @@ from sekoia_automation.storage import PersistentJSON
 from . import MimecastModule
 from .client import ApiClient
 from .helpers import async_fetch_content, gather_with_concurrency, get_upper_second
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
@@ -164,7 +165,7 @@ class MimecastSIEMWorker(Thread):
             events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
 
             if len(events) > 0:
-                # INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                 yield events
 
             else:
@@ -206,6 +207,10 @@ class MimecastSIEMWorker(Thread):
                 # save in context the most recent date seen
                 self.most_recent_date_seen = most_recent_date_seen
 
+        now = datetime.now(timezone.utc)
+        current_lag = now - most_recent_date_seen
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(int(current_lag.total_seconds()))
+
     def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time.time()
@@ -220,19 +225,21 @@ class MimecastSIEMWorker(Thread):
                     message=f"{self.log_type}: Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                # OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
+
             else:
                 self.log(
                     message=f"{self.log_type}: No events to forward",
                     level="info",
                 )
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(message=f"{self.log_type}: Fetched and forwarded events in {batch_duration} seconds", level="info")
-        # FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.connector.configuration.frequency - batch_duration
