@@ -129,6 +129,7 @@ class LaceworkEventsTrigger(Connector):
         alerts, next_page_url = self.client.get_alerts_by_date(start_alerts_date)
 
         data_to_push = []
+        current_lag: int = 0
         if alerts:
             # As we want to save latest alert id as well we need to get the latest alert id from the current batch
             latest_alerts_id = max([item["alertId"] for item in alerts])
@@ -172,6 +173,7 @@ class LaceworkEventsTrigger(Connector):
                 cache["latest_start_event_date_from_previous_run"] = latest_alerts_date.isoformat()
                 cache["latest_alert_id_from_previous_run"] = latest_alerts_id
 
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                int(time.time() - latest_alerts_date.timestamp())
-            )
+            current_lag = int(time.time() - latest_alerts_date.timestamp())
+
+        # Monitor the events lag
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)

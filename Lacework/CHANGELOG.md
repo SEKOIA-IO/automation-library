@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-06 - 1.2.2
+
+### Fixed
+
+- Fix the way to compute the lag on events, when no events were fetched from the API
+
 ## 2024-05-31 - 1.2.1
 
 ### Fixed
