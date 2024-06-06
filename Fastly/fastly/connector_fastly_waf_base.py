@@ -140,13 +140,10 @@ class FastlyWAFConsumer(Thread):
                 # save in context the most recent date seen
                 self.save_checkpoint(self.from_datetime.isoformat())
 
-        now = datetime.datetime.now(datetime.timezone.utc)
-        current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(int(current_lag.total_seconds()))
-
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
+        current_lag: int = 0
 
         # Fetch next batch
         for events in self.fetch_events():
@@ -160,12 +157,17 @@ class FastlyWAFConsumer(Thread):
                 )
                 OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
+
+                # Compute the current lag from the date of the most recent event seen
+                current_lag = int((datetime.datetime.now(datetime.timezone.utc) - self.from_datetime).total_seconds())
             else:
                 self.log(
                     message=f"{self.name}: No events to forward",
                     level="info",
                 )
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
+
+        # Monitor the lag
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(current_lag)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
