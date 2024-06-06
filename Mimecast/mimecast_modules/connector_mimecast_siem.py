@@ -142,22 +142,13 @@ class MimecastSIEMWorker(Thread):
         ms = dt.strftime("%f")[:3]
         return f"{base}.{ms}Z"
 
-    def __fetch_next_events(self, from_date: datetime, use_batches: bool = True) -> Generator[list, None, None]:
-        # for a stream version, dateRangeStartsAt shouldn't be more than 24h ago, or we'll get 400 error
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
+        url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
         params: dict[str, int | str] = {
             "pageSize": self.connector.configuration.chunk_size,
+            "type": self.log_type,
+            "dateRangeStartsAt": from_date.strftime("%Y-%m-%d"),
         }
-
-        if use_batches:
-            url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
-            params["type"] = self.log_type
-            params["dateRangeStartsAt"] = from_date.strftime("%Y-%m-%d")
-
-        else:
-            url = "https://api.services.mimecast.com/siem/v1/events/cg"
-            params["types"] = self.log_type
-            params["dateRangeStartsAt"] = self.__format_datetime(from_date)
-
         response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
         while self.running:
@@ -165,16 +156,12 @@ class MimecastSIEMWorker(Thread):
 
             result = response.json()
 
-            if use_batches:
-                batch_urls = [item["url"] for item in result.get("value", [])]
-                events = self.download_batches(batch_urls)
+            batch_urls = [item["url"] for item in result.get("value", [])]
+            events = self.download_batches(batch_urls)
 
-                # The cursor is a date, not a datetime. Thus, we have to download all events from the
-                # day's start and then filter out all events with timestamps before `from_date`
-                events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
-
-            else:
-                events = result.get("value", [])
+            # The cursor is a date, not a datetime. Thus, we have to download all events from the
+            # day's start and then filter out all events with timestamps before `from_date`
+            events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
 
             if len(events) > 0:
                 # INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
@@ -186,7 +173,6 @@ class MimecastSIEMWorker(Thread):
                     f"Waiting {self.connector.configuration.frequency}s before fetching next page",
                     level="info",
                 )
-                # time.sleep(self.connector.configuration.frequency)
                 return
 
             next_page_token = result.get("@nextPage")

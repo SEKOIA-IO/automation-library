@@ -80,41 +80,6 @@ def batch_event_1():
     }
 
 
-@pytest.fixture
-def stream_events_response_empty():
-    return {"value": [], "@nextLink": "tokenNextPageLast==", "@nextPage": "tokenNextPageLast==", "pageSize": 0}
-
-
-@pytest.fixture
-def stream_events_response_1():
-    return {
-        "value": [
-            {
-                "aggregateId": "J5JwSy0HNvG7AvCg1sgDvQ_1715708284",
-                "processingId": "hP5f7mBanAVkWJWfh4vYvca3zOi9I3jROBmH3Z_Kysk_1715708284",
-                "accountId": "CDE22A102",
-                "action": "Hld",
-                "timestamp": 1715708287466,
-                "senderEnvelope": "john.doe015@gmail.com",
-                "messageId": "<CAF7=BmDb+6qHo+J5EB9oH+S4ncJOfEMsUYAEirX4MRZRJX+esw@mail.gmail.com>",
-                "subject": "Moderate",
-                "holdReason": "Spm",
-                "totalSizeAttachments": "0",
-                "numberAttachments": "0",
-                "attachments": None,
-                "emailSize": "3466",
-                "type": "process",
-                "subtype": "Hld",
-                "_offset": 105825,
-                "_partition": 137,
-            }
-        ],
-        "@nextLink": "tokenNextPage==",
-        "@nextPage": "tokenNextPage==",
-        "pageSize": 1,
-    }
-
-
 def test_fetch_batches(
     trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1
 ):
