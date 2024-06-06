@@ -8,9 +8,9 @@ from io import BytesIO
 from threading import Event, Lock, Thread
 from typing import Generator
 
+import orjson
 import requests
 from dateutil.parser import isoparse
-from orjson import orjson
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -29,7 +29,7 @@ class MimecastSIEMWorker(Thread):
     def __init__(self, connector: "MimecastSIEMConnector", log_type: str):
         super().__init__()
         self.connector = connector
-        self.log_type = log_type
+        self.log_type: str = log_type
 
         self.context = self.connector.context
         self.from_date = self.most_recent_date_seen
@@ -144,21 +144,19 @@ class MimecastSIEMWorker(Thread):
 
     def __fetch_next_events(self, from_date: datetime, use_batches: bool = True) -> Generator[list, None, None]:
         # for a stream version, dateRangeStartsAt shouldn't be more than 24h ago, or we'll get 400 error
+        params: dict[str, int | str] = {
+            "pageSize": self.connector.configuration.chunk_size,
+        }
+
         if use_batches:
             url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
-            params = {
-                "type": self.log_type,
-                "pageSize": self.connector.configuration.chunk_size,
-                "dateRangeStartsAt": from_date.strftime("%Y-%m-%d"),
-            }
+            params["type"] = self.log_type
+            params["dateRangeStartsAt"] = from_date.strftime("%Y-%m-%d")
 
         else:
             url = "https://api.services.mimecast.com/siem/v1/events/cg"
-            params = {
-                "types": self.log_type,
-                "pageSize": self.connector.configuration.chunk_size,
-                "dateRangeStartsAt": self.__format_datetime(from_date),
-            }
+            params["types"] = self.log_type
+            params["dateRangeStartsAt"] = self.__format_datetime(from_date)
 
         response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
