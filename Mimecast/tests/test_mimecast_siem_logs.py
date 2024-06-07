@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
@@ -117,3 +117,43 @@ def test_fetch_batches(
 def test_most_recent_datetime_seen(trigger, patch_datetime_now, fake_time):
     consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
     assert consumer.most_recent_date_seen == fake_time - timedelta(days=1)
+
+
+def test_start_consumers(trigger):
+    with patch("mimecast_modules.connector_mimecast_siem.MimecastSIEMWorker.start") as mock_start:
+        consumers = trigger.start_consumers()
+
+        assert consumers is not None
+
+        assert "process" in consumers
+        assert "receipt" in consumers
+        assert "journal" in consumers
+
+        assert mock_start.called
+
+
+def test_supervise_consumers(trigger):
+    with patch("mimecast_modules.connector_mimecast_siem.MimecastSIEMWorker.start") as mock_start:
+        consumers = {
+            "a": Mock(**{"is_alive.return_value": False, "running": True}),
+            "b": None,
+            "c": Mock(**{"is_alive.return_value": True, "running": True}),
+            "d": Mock(**{"is_alive.return_value": False, "running": False}),
+        }
+
+        trigger.supervise_consumers(consumers)
+        assert mock_start.call_count == 2
+
+
+def test_stop_consumers(trigger):
+    consumers = {
+        "a": Mock(**{"is_alive.return_value": False}),
+        "b": None,
+        "c": Mock(**{"is_alive.return_value": False}),
+        "to_stop": Mock(**{"is_alive.return_value": True}),
+    }
+    trigger.stop_consumers(consumers)
+
+    consumer_to_stop = consumers.get("to_stop")
+    assert consumer_to_stop is not None
+    assert consumer_to_stop.stop.called
