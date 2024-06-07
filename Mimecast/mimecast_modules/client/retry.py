@@ -22,7 +22,7 @@ class Retry(BaseRetry):
         """
         Manage Rate-limiting headers from the server.
         """
-        ratelimit_retry_after = response.getheader("X-RateLimit-Reset")
+        ratelimit_retry_after = response.headers.get("X-RateLimit-Reset")
         if ratelimit_retry_after:
             return self.parse_ratelimit_retry_after(ratelimit_retry_after)
 
