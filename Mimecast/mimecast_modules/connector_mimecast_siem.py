@@ -68,7 +68,7 @@ class MimecastSIEMWorker(Thread):
 
         # if undefined, retrieve events from the last day
         if most_recent_date_seen_str is None:
-            return now - timedelta(days=7)
+            return now - timedelta(days=1)
 
         # parse the most recent date seen
         most_recent_date_seen = isoparse(most_recent_date_seen_str)

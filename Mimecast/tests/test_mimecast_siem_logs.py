@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -112,3 +112,8 @@ def test_fetch_batches(
 
         assert trigger.push_events_to_intakes.call_count == 1
         mock_time.sleep.assert_called_once_with(44)
+
+
+def test_most_recent_datetime_seen(trigger, patch_datetime_now, fake_time):
+    consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
+    assert consumer.most_recent_date_seen == fake_time - timedelta(days=1)
