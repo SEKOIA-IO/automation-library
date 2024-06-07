@@ -16,36 +16,21 @@ class LogoValidator(Validator):
         if not result.options.get("path"):
             return
 
-        module_dir: Path = result.options["path"]
-        logo_path = module_dir / "logo.png"
-
-        check_logo_image(image_path=logo_path, result=result)
+        check_logo_image(result=result)
 
 
-def check_logo_image(image_path: Path, result: CheckResult) -> None:
-    from PIL import Image
+def check_logo_image(result: CheckResult) -> None:
+    module_dir: Path = result.options["path"]
 
-    def has_transparency(img: Image):
-        if img.info.get("transparency", None) is not None:
-            return True
+    # Check whether SVG logo exists. If so, no need for other checks
+    svg_path = module_dir / "logo.svg"
+    if svg_path.is_file():
+        return
 
-        elif img.mode == "P":
-            transparent = img.info.get("transparency", -1)
-            for _, index in img.getcolors():
-                if index == transparent:
-                    return True
-
-        elif img.mode == "RGBA":
-            extrema = img.getextrema()
-            if extrema[3][0] < 255:
-                return True
-
-        return False
+    image_path = module_dir / "logo.png"
 
     if not image_path.is_file():
-        result.errors.append(
-            CheckError(filepath=image_path, error=f"logo.png is missing")
-        )
+        result.errors.append(CheckError(filepath=image_path, error=f"Logo is missing"))
         return
 
     image = Image.open(image_path)
@@ -95,6 +80,24 @@ def check_logo_image(image_path: Path, result: CheckResult) -> None:
     image.close()
 
     result.options["logo_path"] = image_path
+
+
+def has_transparency(img: Image) -> bool:
+    if img.info.get("transparency", None) is not None:
+        return True
+
+    elif img.mode == "P":
+        transparent = img.info.get("transparency", -1)
+        for _, index in img.getcolors():
+            if index == transparent:
+                return True
+
+    elif img.mode == "RGBA":
+        extrema = img.getextrema()
+        if extrema[3][0] < 255:
+            return True
+
+    return False
 
 
 def fix_transparent_background(source: Path, destination: Path, fuzz: int = 0):
