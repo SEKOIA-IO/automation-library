@@ -1,7 +1,11 @@
 import asyncio
+import gzip
+import json
 from datetime import datetime, timedelta
+from io import BytesIO
 
 import aiohttp
+import requests
 
 
 def get_upper_second(time: datetime) -> datetime:
@@ -29,3 +33,51 @@ async def async_fetch_content(url: str) -> bytes:
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             return await response.read()
+
+
+def __fetch_content(batch_url: str) -> list[dict]:
+    response = requests.get(batch_url, timeout=60)
+    response.raise_for_status()
+
+    file_content = BytesIO(response.content)
+
+    result = []
+    with gzip.open(file_content, "rt") as file:
+        for line in file:
+            result.append(json.loads(line))
+
+    return result
+
+
+def sync_download_batch(urls: list[str]) -> list[dict]:
+    result = []
+    for url in urls:
+        result.extend(__fetch_content(url))
+
+    return result
+
+
+async def async_download_batch(urls: list[str]) -> list[dict]:
+    tasks = []
+    for url in urls:
+        tasks.append(asyncio.ensure_future(async_fetch_content(url)))
+
+    num_concurrency = 8
+    items = await gather_with_concurrency(num_concurrency, *tasks)
+
+    result = []
+    for item in items:
+        file_content = BytesIO(item)
+        with gzip.open(file_content, "rt") as file:
+            for line in file:
+                result.append(json.loads(line))
+
+    return result
+
+
+def download_batches(urls: list[str], use_async=True) -> list[dict]:
+    if use_async:
+        return asyncio.run(async_download_batch(urls))
+
+    else:
+        return sync_download_batch(urls)

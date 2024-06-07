@@ -84,7 +84,7 @@ def test_fetch_batches(
     trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1
 ):
     with requests_mock.Mocker() as mock_requests, patch(
-        "mimecast_modules.connector_mimecast_siem.MimecastSIEMWorker.download_batches"
+        "mimecast_modules.connector_mimecast_siem.download_batches"
     ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
         mock_download_batches.side_effect = [[batch_event_1], []]
 

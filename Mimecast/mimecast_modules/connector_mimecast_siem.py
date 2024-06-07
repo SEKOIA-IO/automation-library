@@ -1,22 +1,17 @@
-import asyncio
-import gzip
-import json
 import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
-from io import BytesIO
 from threading import Event, Lock, Thread
 from typing import Generator
 
 import orjson
-import requests
 from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import MimecastModule
 from .client import ApiClient
-from .helpers import async_fetch_content, gather_with_concurrency, get_upper_second
+from .helpers import download_batches, get_upper_second
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
@@ -92,52 +87,6 @@ class MimecastSIEMWorker(Thread):
         self.connector.context_lock.release()
 
     @staticmethod
-    def __fetch_content(batch_url: str) -> list[dict]:
-        response = requests.get(batch_url, timeout=60)
-        response.raise_for_status()
-
-        file_content = BytesIO(response.content)
-
-        result = []
-        with gzip.open(file_content, "rt") as file:
-            for line in file:
-                result.append(json.loads(line))
-
-        return result
-
-    def sync_download_batch(self, urls: list[str]) -> list[dict]:
-        result = []
-        for url in urls:
-            result.extend(self.__fetch_content(url))
-
-        return result
-
-    @staticmethod
-    async def async_download_batch(urls: list[str]) -> list[dict]:
-        tasks = []
-        for url in urls:
-            tasks.append(asyncio.ensure_future(async_fetch_content(url)))
-
-        num_concurrency = 8
-        items = await gather_with_concurrency(num_concurrency, *tasks)
-
-        result = []
-        for item in items:
-            file_content = BytesIO(item)
-            with gzip.open(file_content, "rt") as file:
-                for line in file:
-                    result.append(json.loads(line))
-
-        return result
-
-    def download_batches(self, urls: list[str], use_async=True) -> list[dict]:
-        if use_async:
-            return asyncio.run(self.async_download_batch(urls))
-
-        else:
-            return self.sync_download_batch(urls)
-
-    @staticmethod
     def __format_datetime(dt: datetime) -> str:
         base = dt.strftime("%Y-%m-%dT%H:%M:%S")
         ms = dt.strftime("%f")[:3]
@@ -158,7 +107,7 @@ class MimecastSIEMWorker(Thread):
             result = response.json()
 
             batch_urls = [item["url"] for item in result.get("value", [])]
-            events = self.download_batches(batch_urls)
+            events = download_batches(urls=batch_urls)
 
             # The cursor is a date, not a datetime. Thus, we have to download all events from the
             # day's start and then filter out all events with timestamps before `from_date`
