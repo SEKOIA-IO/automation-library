@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgrade sekoia-automation-sdk
 
-## 2023-11-28 - 2.7
+## 2023-11-28 - 2.7.0
 
 ### Changed
 
@@ -23,18 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Remove credentials from required fields (as the module support OAUTH2.0 and delegated account authentication)
 
-## 2023-11-22 - 2.6
+## 2023-11-22 - 2.6.0
 
 ### Changed
 
 - Upgrade dependencies: Sekoia-automation-SDK 1.8.1
 
-## 2023-10-31 - 2.5
+## 2023-11-03 - 2.5.3
 
 ### Changed
 
-- Add 3 actions : Delete app, Revoke sign in, Reset password
-- Update 5 actions : Disable User, Enable user, Get sign in, Get User, Get User authentication methods
+- Some fixes in classes after testing
 
 ## 2023-11-02 - 2.5.2
 
@@ -42,8 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add a class for async actions
 
-## 2023-11-03 - 2.5.3
+## 2023-10-31 - 2.5.0
 
 ### Changed
 
-- Some fixes in classes after testing
+- Add 3 actions : Delete app, Revoke sign in, Reset password
+- Update 5 actions : Disable User, Enable user, Get sign in, Get User, Get User authentication methods

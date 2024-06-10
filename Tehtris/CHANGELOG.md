@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add timeout to HTTP requests
 
-## 2023-11-22 - 1.13
+## 2023-11-22 - 1.13.0
 
 ### Changed
 
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - add more details when facing issues with responses from Tehtris
 
-## 2023-10-26 - 1.12
+## 2023-10-26 - 1.12.0
 
 ### Added
 

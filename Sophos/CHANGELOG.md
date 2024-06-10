@@ -43,20 +43,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix the way to handle the HTTP exceptions
 
-## [1.11.9] - 2023-07-26
+## 2023-07-26 - 1.11.9
 
 ### Changed
 
 - fix metrics
 
-## [1.11.8] - 2023-07-24
+## 2023-07-24 - 1.11.8
 
 ### Changed
 
 - Fix the way to handle exception in the EDR connector
 - Add more logs
 
-## [1.11.7] - 2023-07-18
+## 2023-07-18 - 1.11.7
 
 ### Added
 
@@ -64,19 +64,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add an interval between two requests in the XDR connector
 - Improve the way to handle failing requests
 
-## [1.11] - 2023-07-13
+## 2023-07-13 - 1.11.0
 
 ### Changed
 
 - Bump sdk version
 
-## [1.10] - 2023-07-12
+## 2023-07-12 - 1.10.0
 
 ### Changed
 
 - Bump sdk version
 
-## [1.9.1] - 2023-06-30
+## 2023-06-30 - 1.9.1
 
 ### Added
 

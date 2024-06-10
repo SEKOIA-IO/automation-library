@@ -13,22 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgrade sekoia-automation-sdk
 
-## 2023-14-29 - 1.2.1
+## 2023-12-15 - 1.2.1
 
-### Update
+### Changed
 
 - Add some exceptions
 
-## 2023-14-29 - 1.2.0
+## 2023-12-14 - 1.2.0
 
-### Update
+### Changed
 
 - Improve the way to disable and enable account by getting the real userAccountControl.
 - Add an Exception if there's no permission to do some actions
 
 ## 2023-11-29 - 1.1.0
 
-### Update
+### Changed
 
 - Update LDAP query
 - Add some tests
