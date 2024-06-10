@@ -397,7 +397,8 @@
             },
             "createdAt": {
               "description": "createdAt",
-              "type": "datetime"
+              "type": "string",
+              "format": "datetime"
             },
             "parentProcessName": {
               "description": "parentProcessName",

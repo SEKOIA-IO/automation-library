@@ -13,12 +13,13 @@
         "type": "array",
         "in": "body",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       }
     },
     "required": [
       "device_ids"
     ]
-  }
+  },
+  "results": {}
 }

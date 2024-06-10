@@ -13,7 +13,7 @@
         "type": "array",
         "in": "body",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       },
       "action_type": {
@@ -40,7 +40,7 @@
         "type": "array",
         "description": "List of IDs of the rebooted devices",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       }
     }

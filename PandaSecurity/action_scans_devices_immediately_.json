@@ -13,17 +13,17 @@
         "type": "array",
         "in": "body",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       },
       "task_name": {
         "description": "Name of the scan task.\nExample: Routine scan",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "task_description": {
         "description": "Description of the scan task.\nExample: Windows 8 machines only",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "scan_scope": {
@@ -33,7 +33,7 @@
       },
       "specified_items_to_scan": {
         "description": "List of specific locations or items to scan. All folders and files in the specified locations are scanned.\nWorks only when scan_scope is 2.\nExample: \"C:\\Downloads\", \"C:\\Documents\"",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "detect_hacking_tools": {
@@ -58,22 +58,22 @@
       },
       "extensions_to_exclude": {
         "description": "List of file extensions to exclude from the scan.\nWorks only when apply_exclusions_on_scan is true.\nExample: \"exe\",\"pdf\"",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "files_to_exclude": {
         "description": "List of file names (with their extensions) to exclude from the scan.\nWorks only when apply_exclusions_on_scan is true.\nExample: \"Chrome.exe\", \"Explorer.exe\"",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "folders_to_exclude": {
         "description": "List of folders to exclude from the scan. You must include the full path.\nWorks only when apply_exclusions_on_scan is true.\nExample: \"D:/shared_drive/documents\"",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "execution_window_expiration": {
         "description": "Time period in which the scan must run before it times out. The default is 7 days.\nExample: 8.07:06:05 specifies 8 days, 7 hours, 6 minutes, and 5 seconds",
-        "type": "str",
+        "type": "string",
         "in": "body"
       }
     },

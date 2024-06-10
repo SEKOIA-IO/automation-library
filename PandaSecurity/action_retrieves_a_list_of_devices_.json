@@ -20,7 +20,7 @@
       },
       "$search": {
         "description": "Returns only objects that include the specified text string. For example, \"name\" returns objects that include \"hostname\" and \"username\".\nThe supported search fields depend on the endpoint:\n\t- Devices: Host name, description, IP address, logged on user\n\t- DeviceProtectionStatus: Host name\n\t- ManagedConfigurations: Name, description\nExample: name",
-        "type": "str",
+        "type": "string",
         "in": "query"
       },
       "$count": {
@@ -30,7 +30,7 @@
       },
       "$orderby": {
         "description": "Specifies how to order results. You can order by any parameter in the response and sort results in ascending or descending order.\nSpecify a parameter name with any underscores removed, followed by a + (plus sign) and either asc (ascending) or desc (descending).\nFor example, to order results by the host_name parameter in descending order, specify hostname+desc. If you do not specify a field to order by, the API will use the order in the database.\nExample: hostname+desc",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "$config": {
