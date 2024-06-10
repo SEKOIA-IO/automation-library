@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-10 - 2.60.5
+
+### Changed
+
+- Addition of default values on json files
+
 ## 2024-06-05 - 2.60.4
 
 ### Changed
