@@ -15,7 +15,7 @@
       "community_uuid": {
         "in": "query",
         "type": "string",
-        "default": false
+        "default": ""
       }
     },
     "required": ["uuid"]
