@@ -14,7 +14,8 @@
       },
       "community_uuid": {
         "in": "body",
-        "type": "string"
+        "type": "string",
+        "default": ""
       },
       "name": {
         "in": "body",
@@ -55,6 +56,7 @@
       "tags": {
         "in": "body",
         "type": "array",
+        "default": [],
         "items": {
           "type": "string"
         }
@@ -62,6 +64,7 @@
       "related_object_refs": {
         "in": "body",
         "type": "array",
+        "default": [],
         "items": {
           "type": "string"
         }
@@ -69,6 +72,7 @@
       "datasources": {
         "in": "body",
         "type": "array",
+        "default": [],
         "items": {
           "type": "string",
           "format": "uuid"
@@ -77,6 +81,7 @@
       "event_fields": {
         "in": "body",
         "type": "array",
+        "default": [],
         "items": {
           "type": "object",
           "properties": {
@@ -92,20 +97,23 @@
       },
       "enabled": {
         "in": "body",
-        "type": "boolean"
+        "type": "boolean",
+        "default": false
       },
       "parameters": {
         "in": "body",
         "type": "array",
+        "default": [],
         "items": {
           "type": "object",
           "properties": {
             "uuid": {
               "type": "string",
-              "format": "uuid"
+              "default": ""
             },
             "name": {
-              "type": "string"
+              "type": "string",
+              "default": ""
             },
             "value": {
               "type": "string"
@@ -116,11 +124,13 @@
       },
       "all_entities": {
         "in": "body",
-        "type": "boolean"
+        "type": "boolean",
+        "default": false
       },
       "entities": {
         "in": "body",
         "type": "array",
+        "default": [],
         "items": {
           "type": "string",
           "format": "uuid"
@@ -128,11 +138,13 @@
       },
       "all_assets": {
         "in": "body",
-        "type": "boolean"
+        "type": "boolean",
+        "default": false
       },
       "assets": {
         "in": "body",
         "type": "array",
+        "default": [],
         "items": {
           "type": "string",
           "format": "uuid"
@@ -140,16 +152,21 @@
       },
       "goal": {
         "in": "body",
-        "type": "string"
+        "type": "string",
+        "default": ""
       },
       "false_positives": {
         "in": "body",
-        "type": "string"
+        "type": "string",
+        "default": ""
       },
       "similarity_strategy": {
         "in": "body",
         "type": "array",
-        "items": {}
+        "default": [],
+        "items": {
+          "type": "any"
+        }
       },
       "available_for_subcommunities": {
         "in": "body",
@@ -304,6 +321,7 @@
         "description": "The name of the rule"
       },
       "type": {
+        "type": "any",
         "description": "The type of the rule"
       },
       "private": {
@@ -449,7 +467,9 @@
       "similarity_strategy": {
         "type": "array",
         "description": "Similarity Strategy used by this rule",
-        "items": {}
+        "items": {
+          "type": "any"
+        }
       },
       "created_at": {
         "type": "string",
