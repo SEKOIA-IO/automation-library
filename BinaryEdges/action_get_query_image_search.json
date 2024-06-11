@@ -72,21 +72,23 @@
                   "type": "string"
                 },
                 "latitude": {
-                  "type": "float"
+                  "type": "number"
                 },
                 "longitude": {
-                  "type": "float"
+                  "type": "number"
                 },
                 "location": {
                   "type": "array",
                   "items": {
-                    "type": "float"
+                    "type": "number"
                   }
                 },
                 "country_name": {
                   "type": "string"
                 },
-                "city_name": "string"
+                "city_name": {
+                  "type": "string"
+                }
               }
             },
             "ip": {
