@@ -90,7 +90,7 @@ class AsyncGithubClient(object):
             self.app_id,
         )
 
-    async def get_auth_headers(self) -> dict[str, str]:
+    async def get_auth_headers(self, refresh_token: bool = False) -> dict[str, str]:
         """Get auth headers."""
         headers = {
             "Accept": "application/vnd.github+json",
@@ -101,6 +101,9 @@ class AsyncGithubClient(object):
             headers["Authorization"] = "token {0}".format(self.api_key)
         else:
             token_refresher = await self._get_token_refresher()
+            if refresh_token:
+                await token_refresher.refresh_token()
+
             token = await token_refresher.get_access_token()
 
             headers["Authorization"] = "Bearer {0}".format(token)
@@ -141,9 +144,7 @@ class AsyncGithubClient(object):
 
             async with session.get(request_url, params=params, headers=headers) as response:
                 if response.status != 200:
-                    token_refresher = await self._get_token_refresher()
-                    await token_refresher.refresh_token()
-                    headers = await self.get_auth_headers()
+                    headers = await self.get_auth_headers(refresh_token=True)
 
                     async with session.get(request_url, params=params, headers=headers) as refreshed_response:
                         result = await refreshed_response.json()

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-30 - 1.10.2
+
+### Changed
+
+- Fix refresh token with pem file timeout
+- Added paging support for github api response
+
 ## 2024-05-30 - 1.10.1
 
 ### Changed
