@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-10 - 2.60.6
+
+### Fixed
+
+- Fixing typo on action_delete_rule.json
+
 ## 2024-06-10 - 2.60.5
 
 ### Changed
