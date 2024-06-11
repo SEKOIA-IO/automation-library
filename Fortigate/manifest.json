@@ -44,5 +44,5 @@
   "name": "Fortigate Firewalls",
   "uuid": "ca9a9497-bcd2-4d0c-b0c1-72699231feb2",
   "slug": "fortigate",
-  "version": "1.28"
+  "version": "1.28.0"
 }
