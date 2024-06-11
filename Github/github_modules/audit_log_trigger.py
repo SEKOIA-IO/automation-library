@@ -183,7 +183,8 @@ class AuditLogConnector(AsyncConnector):
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
             logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
-            time.sleep(delta_sleep)
+            logger.info("Next batch in the future. Waiting {delta_sleep} seconds")
+            await asyncio.sleep(delta_sleep)
 
     def run(self) -> None:  # pragma: no cover
         """Runs Github audit logs."""

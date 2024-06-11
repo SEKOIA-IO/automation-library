@@ -1,10 +1,12 @@
 """Contains client to interact with Github API."""
 
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Union
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
+from multidict import MultiDictProxy
+from yarl import URL
 
 from github_modules.async_client.token_refresher import PemGithubTokenRefresher
 
@@ -115,7 +117,9 @@ class AsyncGithubClient(object):
         """
         return "https://api.github.com/orgs/{0}/audit-log".format(self.organization)
 
-    async def get_audit_logs(self, start_from: int) -> list[dict[str, Any]]:
+    async def _get_audit_logs(
+        self, start_from: int, url: str | None = None
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """
         Get audit logs data.
 
@@ -125,13 +129,48 @@ class AsyncGithubClient(object):
         Returns:
             list[dict[str, Any]]:
         """
-        print(start_from)
-        params = {"phrase": "created:>{0}".format(start_from), "order": "asc"}
+        params = {} if url else {"phrase": "created:>{0}".format(start_from), "order": "asc", "per_page": 100}
+        request_url = url or self.audit_logs_url
+
+        result: list[dict[str, Any]] = []
+        links: Union[MultiDictProxy[Union[str, URL]], dict[Any, Any]] = {}
+        next_link: str | None = None
 
         async with self.session() as session:
             headers = await self.get_auth_headers()
 
-            async with session.get(self.audit_logs_url, params=params, headers=headers) as response:
-                result: list[dict[str, Any]] = await response.json()
+            async with session.get(request_url, params=params, headers=headers) as response:
+                if response.status != 200:
+                    token_refresher = await self._get_token_refresher()
+                    await token_refresher.refresh_token()
+                    headers = await self.get_auth_headers()
 
-                return result
+                    async with session.get(request_url, params=params, headers=headers) as refreshed_response:
+                        result = await refreshed_response.json()
+                        links = refreshed_response.links.get("next", {})
+                        next_link = str(links.get("url")) if links.get("url") else None
+                else:
+                    result = await response.json()
+                    links = response.links.get("next", {})
+                    next_link = str(links.get("url")) if links.get("url") else None
+
+                return result, next_link
+
+    async def get_audit_logs(self, start_from: int) -> list[dict[str, Any]]:
+        """
+        Get audit logs.
+
+        If token is expired - refresh it and try again.
+
+        Args:
+            start_from: int
+
+        Returns:
+            list[dict[str, Any]]:
+        """
+        result, next_url = await self._get_audit_logs(start_from)
+        while next_url:
+            result_part, next_url = await self._get_audit_logs(start_from, next_url)
+            result.extend(result_part)
+
+        return result
