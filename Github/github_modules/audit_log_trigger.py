@@ -182,7 +182,7 @@ class AuditLogConnector(AsyncConnector):
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
+            logger.info(f"Next batch in the future. Waiting {delta_sleep} seconds")
             await asyncio.sleep(delta_sleep)
 
     def run(self) -> None:  # pragma: no cover
