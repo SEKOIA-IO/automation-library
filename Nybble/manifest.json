@@ -20,31 +20,15 @@
         "title": "Nhub Key",
         "description": "Nybble Hub Connector Key to authenticate the requests",
         "type": "string"
-      },
-      "sekoia_url": {
-        "title": "Sekoia Url",
-        "description": "Sekoia.io Base URL",
-        "minLength": 1,
-        "maxLength": 2083,
-        "format": "uri",
-        "type": "string"
-      },
-      "sekoia_api_key": {
-        "title": "Sekoia Api Key",
-        "description": "Sekoia.io API Key",
-        "type": "string"
       }
     },
     "required": [
       "nhub_url",
       "nhub_username",
-      "nhub_key",
-      "sekoia_url",
-      "sekoia_api_key"
+      "nhub_key"
     ],
     "secrets": [
-      "nhub_key",
-      "sekoia_api_key"
+      "nhub_key"
     ]
   },
   "description": "[Nybble Hub](https://nybble-security.io) is the worldwide first blue team community which handles your alerts at a glance.",

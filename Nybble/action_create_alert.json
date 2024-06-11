@@ -12,6 +12,11 @@
         "description": "Received alert, from Sekoia 'Get Alert' action",
         "type": "object"
       },
+      "rule": {
+        "title": "Rule",
+        "description": "Alert Rule from Rule Catalog, from Sekoia 'Get Rule' action",
+        "type": "object"
+      },
       "events": {
         "title": "Events",
         "description": "Related Events, from Sekoia 'Get The Alert Events' action",
@@ -23,6 +28,7 @@
     },
     "required": [
       "alert_data",
+      "rule",
       "events"
     ]
   },

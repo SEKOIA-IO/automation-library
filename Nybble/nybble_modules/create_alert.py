@@ -1,13 +1,12 @@
-from json import JSONEncoder
 from math import ceil
 from pydantic import BaseModel, Field
 import requests
-from requests import Response
 from nybble_modules import NybbleAction
 
 
 class CreateAlertArguments(BaseModel):
     alert_data: dict = Field(..., description="Received alert, from Sekoia 'Get Alert' action")
+    rule: dict = Field(..., description="Alert Rule from Rule Catalog, from Sekoia 'Get Rule' action")
     events: list[dict] = Field(..., description="Related Events, from Sekoia 'Get The Alert Events' action")
 
 
@@ -81,29 +80,9 @@ class CreateAlertAction(NybbleAction):
 
         return cleaned_event
 
-    def _getRuleDefinition(self, rule_uuid: str, api_key: str, base_url: str) -> dict:
-        """
-        Returns the rule from the rules catalog
-        """
-
-        url = f"{base_url}v1/sic/conf/rules-catalog/rules/{rule_uuid}"
-
-        response: Response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
-        response.raise_for_status()
-        return response.json()
-
     def run(self, arguments: CreateAlertArguments) -> CreateAlertResults:
         nybble_alert = NybbleAlert()
         self.log(message=f"Sending alert to Nybble Hub. Alert ID: {arguments.alert_data['uuid']}", level="info")
-
-        """
-    Get rule from rule Catalog -> provide fields, references etc...
-    """
-        rule_definition = self._getRuleDefinition(
-            rule_uuid=arguments.alert_data["rule"]["uuid"],
-            api_key=self.module.configuration.sekoia_api_key,
-            base_url=self.module.configuration.sekoia_url,
-        )
 
         """
     Generate final payload for Nybble Hub
@@ -111,7 +90,7 @@ class CreateAlertAction(NybbleAction):
     """
         nybble_alert.alert_processing_time = arguments.alert_data["created_at"]
         nybble_alert.alert_fields = self._generateFields(
-            rule_event_fields=rule_definition["event_fields"], event=arguments.events[0]
+            rule_event_fields=arguments.rule["event_fields"], event=arguments.events[0]
         )
         nybble_alert.alert_event_original = self._cleanEventOriginal(arguments.events[0])
         nybble_alert.alert_id = arguments.alert_data["uuid"]
@@ -120,17 +99,16 @@ class CreateAlertAction(NybbleAction):
         )  # scale 1 to 100 in sekoia -> 1 to 4 in Nybble
         nybble_alert.rule_status = "stable"
         nybble_alert.rule_name = arguments.alert_data["title"]
-        nybble_alert.rule_references = str(rule_definition["references"]).split(
+        nybble_alert.rule_references = str(arguments.rule["references"]).split(
             ","
         )  # sekoia is providing comma separated references
-        nybble_alert.rule_tags = self._generateTags(rule_definition["tags"])
-        nybble_alert.sigma_rule_id = rule_definition[
+        nybble_alert.rule_tags = self._generateTags(arguments.rule["tags"])
+        nybble_alert.sigma_rule_id = arguments.rule[
             "uuid"
         ]  # TODO find better (we took RULE uuid instead of uuid_instance which is coming from alert)
         nybble_alert.mssp_client = arguments.alert_data["community_uuid"]
-        nybble_alert.custom_fields_visible = {"false_positives": rule_definition["false_positives"]}
+        nybble_alert.custom_fields_visible = {"false_positives": arguments.rule["false_positives"]}
         nybble_alert.custom_fields_hidden = {}
-
 
         """
     Send to Nybble Hub

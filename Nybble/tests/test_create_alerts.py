@@ -26,6 +26,7 @@ def arguments():
             {"host.name": "host1", "host.ip": "1.2.3.4", "timestamp": "2024-05-02T12:09:42.835000Z"},
             {"host.name": "host2", "host.ip": "5.6.7.8", "timestamp": "2024-05-02T12:09:42.835000Z"},
         ],
+        rule={},
     )
 
 
@@ -53,12 +54,10 @@ SEKOIA_ALERT_RULE_MOCK_EMPTY: dict[str, Any] = {
 
 def test_create_alert(symphony_storage, nybble_module, arguments):
 
+    arguments.rule = SEKOIA_ALERT_RULE_MOCK
+
     create_alert_action = CreateAlertAction(module=nybble_module, data_path=symphony_storage)
     with requests_mock.Mocker() as mock:
-        mock.get(
-            f"{nybble_module.configuration.sekoia_url}v1/sic/conf/rules-catalog/rules/{arguments.alert_data['rule']['uuid']}",
-            json=SEKOIA_ALERT_RULE_MOCK,
-        )
         mock.post(
             f"{nybble_module.configuration.nhub_url}/conn/sekoia", json={"ok": "created with success"}, status_code=200
         )
@@ -69,12 +68,10 @@ def test_create_alert(symphony_storage, nybble_module, arguments):
 
 def test_create_alert_noFields_noTags(symphony_storage, nybble_module, arguments):
 
+    arguments.rule = SEKOIA_ALERT_RULE_MOCK_EMPTY
+
     create_alert_action = CreateAlertAction(module=nybble_module, data_path=symphony_storage)
     with requests_mock.Mocker() as mock:
-        mock.get(
-            f"{nybble_module.configuration.sekoia_url}v1/sic/conf/rules-catalog/rules/{arguments.alert_data['rule']['uuid']}",
-            json=SEKOIA_ALERT_RULE_MOCK_EMPTY,
-        )
         mock.post(
             f"{nybble_module.configuration.nhub_url}/conn/sekoia", json={"ok": "created with success"}, status_code=200
         )
@@ -85,12 +82,9 @@ def test_create_alert_noFields_noTags(symphony_storage, nybble_module, arguments
 
 def test_create_alert_error(symphony_storage, nybble_module, arguments):
 
+    arguments.rule = SEKOIA_ALERT_RULE_MOCK
     create_alert_action = CreateAlertAction(module=nybble_module, data_path=symphony_storage)
     with requests_mock.Mocker() as mock:
-        mock.get(
-            f"{nybble_module.configuration.sekoia_url}v1/sic/conf/rules-catalog/rules/{arguments.alert_data['rule']['uuid']}",
-            json=SEKOIA_ALERT_RULE_MOCK,
-        )
         mock.post(
             f"{nybble_module.configuration.nhub_url}/conn/sekoia", json={"error": "dummy error"}, status_code=500
         )

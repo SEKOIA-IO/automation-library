@@ -22,10 +22,6 @@ def symphony_storage():
 def nybble_module():
     module = NybbleModule()
     module.configuration = NybbleConfiguration(
-        nhub_url="https://abcdef.nybble-analytics.io",
-        nhub_username="testuser",
-        nhub_key="dummykey",
-        sekoia_url="https://abcdef.sekoia.io",
-        sekoia_api_key="dummysekoiakey",
+        nhub_url="https://abcdef.nybble-analytics.io", nhub_username="testuser", nhub_key="dummykey"
     )
     return module
