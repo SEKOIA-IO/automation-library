@@ -75,7 +75,7 @@ class ManifestValidator(Validator):
                 )
             )
 
-        elif not re.match(r"^[a-z]([a-z\_\-]|\d)*$", module_slug):
+        elif not re.match(r"^[a-z]([a-z_.\-]|\d)*$", module_slug):
             result.errors.append(
                 CheckError(
                     filepath=manifest_path,
