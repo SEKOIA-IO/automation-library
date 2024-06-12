@@ -12,7 +12,8 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+
 from .timestepper import TimeStepper
 
 

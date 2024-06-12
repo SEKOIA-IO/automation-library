@@ -94,5 +94,5 @@ def test_run(connector, freezer, event):
         pull_content.assert_called_once_with(datetime.now(tz=UTC), datetime.now(tz=UTC))
         forward_events.assert_called_once_with(event)
         prometheus_labels.assert_called_once_with(
-            intake_key=connector.configuration.intake_key, datasource="office365"
+            intake_key=connector.configuration.intake_key
         )

@@ -9,26 +9,11 @@ from prometheus_client import Counter, Histogram
 from sekoia_automation.connector import Connector
 from sekoia_automation.storage import get_data_path
 
+from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+
 from .configuration import Office365Configuration
 from .errors import FailedToActivateO365Subscription
 from .office365_client import Office365API
-
-# Declare prometheus metrics
-prom_namespace = "office365_intakes"
-
-OUTGOING_EVENTS = Counter(
-    name="forwarded_events",
-    documentation="Number of events forwarded to SEKOIA.IO",
-    namespace=prom_namespace,
-    labelnames=["datasource", "intake_key"],
-)
-
-FORWARD_EVENTS_DURATION = Histogram(
-    name="forward_events_duration",
-    documentation="Duration to collect and forward events",
-    namespace=prom_namespace,
-    labelnames=["datasource", "intake_key"],
-)
 
 
 class Office365Connector(Connector):
@@ -142,7 +127,7 @@ class Office365Connector(Connector):
             events (list[dict]): Events to forward to intake
         """
         self.log(f"Pushing {len(events)} event(s) to intake", level="info")
-        OUTGOING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="office365").inc(len(events))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
 
         self.push_events_to_intakes(events)
 
@@ -174,7 +159,7 @@ class Office365Connector(Connector):
             events = self.pull_content(start_pull_date, end_pull_date)
             self.forward_events(events)
 
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="office365").observe(
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                 time.time() - start_time
             )
 
