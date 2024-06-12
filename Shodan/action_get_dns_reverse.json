@@ -22,8 +22,6 @@
   },
   "results": {
     "type": "object",
-    "properties": {
-      "type": "object"
-    }
+    "properties": {}
   }
 }

@@ -13,7 +13,7 @@
         "type": "array",
         "in": "body",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       }
     },
@@ -28,7 +28,7 @@
         "type": "array",
         "description": "List of IDs of the devices removed from isolation",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       }
     }

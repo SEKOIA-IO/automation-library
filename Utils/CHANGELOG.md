@@ -13,19 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgrade sekoia-automation-sdk
 
-## 2023-01-08 - 1.3.1
+## 2024-01-08 - 1.3.1
 
 ### Fixed
 
 - Little fix in the declaration 
 
-## 2023-12-20 - 1.3
+## 2023-12-20 - 1.3.0
 
 ### Added
 
 - Add password generator action
 
-## 2023-11-22 - 1.2
+## 2023-11-22 - 1.2.0
 
 ### Changed
 
@@ -37,19 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix the return of the action GetCurrentTime
 
-## 2023-11-13 - 1.0.2
+## 2023-11-13 - 1.0.3
 
 ### Fixed
 
 - Normalize the action
 
-## 2023-11-09 - 1.0.1
+## 2023-11-09 - 1.0.2
 
 ### Fixed
 
 - Add description for the action GetCurrentTimeAction
 
-## 2023-09-01 - 1.0.0
+## 2023-09-01 - 1.0.1
 
 ### Added
 

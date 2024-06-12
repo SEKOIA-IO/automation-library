@@ -121,7 +121,7 @@
         "properties": {
           "download_url": {
             "description": "The url to download the result",
-            "type": "str"
+            "type": "string"
           }
         }
       }

@@ -25,57 +25,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Change event_lags metrics from Histogram to Gauge
 
-### 2024-02-02 - 1.5.2
+## 2024-02-02 - 1.5.2
 
-#### Fixed
+### Fixed
 
 - Fix on the configuration option for frequency
 
-### 2024-02-02 - 1.5.1
+## 2024-02-02 - 1.5.1
 
-#### Added
+### Added
 
 - Configuration option for frequency
 
-### 2024-01-24 - 1.4.12
+## 2024-01-24 - 1.4.12
 
-#### Added
+### Added
 
 - Configuration option for salesforce api rate limit.
 - Correct log message when is unable to authorize with salesforce api.
 
-### 2023-11-21 - 1.4.11
+## 2023-11-21 - 1.4.11
 
-#### Fixed
+### Fixed
 
 - Fix connector startup problems
 
-### 2023-11-08 - 1.4.8
+## 2023-11-08 - 1.4.8
 
-#### Fixed
+### Fixed
 
 - Fix rate limiting and change configuration of the module
 
-### 2023-11-08 - 1.4.6
+## 2023-11-08 - 1.4.6
 
-#### Fixed
+### Fixed
 
 - Fix metrics
 
-### 2023-09-28 - 1.3.0
+## 2023-09-28 - 1.3.0
 
-#### Changed
+### Changed
 
 - Change the way of how events pushed to the intake. Use async wrapper for that
 
-### 2023-07-20 - 1.2.5
+## 2023-07-20 - 1.2.5
 
-#### Added
+### Added
 
 - add beta flag
 
-### 2023-06-13 - 1.0.0
+## 2023-06-13 - 1.0.0
 
-#### Added
+### Added
 
 - initial version of the connector

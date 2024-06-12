@@ -160,9 +160,7 @@
         "type": "array",
         "in": "body",
         "default": [],
-        "items": {
-          "type": "any"
-        }
+        "items": {}
       },
       "available_for_subcommunities": {
         "type": "boolean",
@@ -316,7 +314,6 @@
         "description": "The name of the rule"
       },
       "type": {
-        "type": "any",
         "description": "The type of the rule"
       },
       "private": {
@@ -462,9 +459,7 @@
       "similarity_strategy": {
         "type": "array",
         "description": "Similarity Strategy used by this rule",
-        "items": {
-          "type": "any"
-        }
+        "items": {}
       },
       "created_at": {
         "type": "string",

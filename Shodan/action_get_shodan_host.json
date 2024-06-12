@@ -99,7 +99,7 @@
                   "type": "string"
                 },
                 "longitude": {
-                  "type": "float"
+                  "type": "number"
                 },
                 "country_code3": {
                   "type": "string"
@@ -117,7 +117,7 @@
                   "type": "string"
                 },
                 "latitude": {
-                  "type": "float"
+                  "type": "number"
                 }
               }
             },
@@ -145,13 +145,13 @@
         "type": "string"
       },
       "longitude": {
-        "type": "float"
+        "type": "number"
       },
       "country_code3": {
         "type": "string"
       },
       "latitude": {
-        "type": "float"
+        "type": "number"
       },
       "os": {
         "type": "string"

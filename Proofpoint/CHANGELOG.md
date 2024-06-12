@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix the way to handle user-provided datetime
 
-## 2023-11-22 - 1.14
+## 2023-11-22 - 1.14.0
 
 ### Changed
 

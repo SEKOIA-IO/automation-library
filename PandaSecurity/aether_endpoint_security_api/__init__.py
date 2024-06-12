@@ -33,13 +33,6 @@ class AetherAction(GenericAPIAction, AuthorizationMixin):
 base_url = "rest/aether-endpoint-security/aether-mgmt/"
 
 
-class RetrievesDataControlModuleStatus(AetherAction):
-    verb = "get"
-    endpoint = base_url + "api/v1/accounts/{account_id}/datacontrolstatistics"
-    query_parameters: list[str] = []
-    timeout: int = 120
-
-
 class RetrievesListOfDevices(AetherAction):
     verb = "get"
     endpoint = base_url + "api/v1/accounts/{account_id}/devices"

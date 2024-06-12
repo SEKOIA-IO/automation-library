@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add connector for Trellix EDR
 
-## 2023-11-22 - 1.6
+## 2023-11-22 - 1.6.0
 
 ### Changed
 

@@ -13,7 +13,7 @@
         "type": "array",
         "in": "body",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       },
       "exclusion_programs": {
@@ -21,12 +21,12 @@
         "type": "array",
         "in": "body",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       },
       "customized_message": {
         "description": "Text to show in an alert message on the isolated devices",
-        "type": "str",
+        "type": "string",
         "in": "body"
       },
       "hide_customized_alert": {
@@ -46,7 +46,7 @@
         "type": "array",
         "description": "List of IDs of the isolated devices",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       }
     }

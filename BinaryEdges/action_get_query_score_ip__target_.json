@@ -21,7 +21,7 @@
     "type": "object",
     "properties": {
       "normalized_ip_score": {
-        "type": "float"
+        "type": "number"
       },
       "normalized_ip_score_detailed": {
         "type": "object",
@@ -120,25 +120,25 @@
                                   "type": "string"
                                 },
                                 "cvss": {
-                                  "type": "float"
+                                  "type": "number"
                                 }
                               }
                             }
                           },
                           "score": {
-                            "type": "float"
+                            "type": "number"
                           }
                         }
                       }
                     },
                     "score": {
-                      "type": "float"
+                      "type": "number"
                     }
                   }
                 }
               },
               "score": {
-                "type": "float"
+                "type": "number"
               }
             }
           },

@@ -41,21 +41,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Add a retry strategy when facing errors during events fetching
 
-## 2024-05-07
+## 2024-05-07 - 2.14.0
+
+### Changed
 
 - Add response field classes
 - Update some methods
 - Add exponential backoff retry strategy on authentication requests
 
-## 2024-04-22 
+## 2024-04-22 - 2.13.7
+
+### Changed
 
 - Add missing read rights when creating WithSecure API client
 
-## 2024-04-03
+## 2024-04-03 - 2.13.6
+
+### Changed
 
 - Add read rights when creating WithSecure API client
 
-## 2024-03-14
+## 2024-03-14 - 2.13.5
+
+### Fixed
 
 - Fix issue with some actions
 
@@ -65,7 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Change event_lags metrics from Histogram to Gauge
 
-## 2023-11-22 - 2.11
+## 2023-11-22 - 2.11.0
 
 ### Changed
 
