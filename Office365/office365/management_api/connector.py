@@ -14,6 +14,7 @@ from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from .configuration import Office365Configuration
 from .errors import FailedToActivateO365Subscription
 from .office365_client import Office365API
+from .helpers import split_date_range
 
 
 class Office365Connector(Connector):
@@ -70,30 +71,6 @@ class Office365Connector(Connector):
             tenant_id=self.configuration.tenant_id,
         )
 
-    def _split_date_range(
-        self, start_date: datetime, end_date: datetime, delta: timedelta
-    ) -> list[tuple[datetime, datetime]]:
-        """Splits a date range in shorter intervals with a set max duration
-
-        This is a recursive method that, given a start and end date, will create a first tuple for the first 30
-        minutes of the interval, then call itself to create the tuples of the subsequent 30 minutes intervals and
-        append them at the end of the list of intervals.
-        The last interval of the list may be of less than 30 minutes if the global interval duration is not a multiple
-        of 30 minutes.
-
-        Args:
-            start_date (datetime): Current start date of the to-be-split interval
-            end_date (datetime): End date of the to-be-split interval
-            delta (timedelta): Max duration of the splits
-
-        Returns:
-            list[tuple[datetime, datetime]]: A list of subintervals covering of all the global interval
-        """
-        if end_date - start_date <= delta:
-            return [(start_date, end_date)]
-        else:
-            return [(start_date, start_date + delta)] + self._split_date_range(start_date + delta, end_date, delta)
-
     def pull_content(self, start_pull_date: datetime, end_pull_date: datetime) -> list[str]:
         """Pulls content from Office 365 subscriptions
 
@@ -107,7 +84,7 @@ class Office365Connector(Connector):
         pulled_events: list[str] = []
 
         content_types = self.client.list_subscriptions()
-        for start_date, end_date in self._split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
+        for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
             for content_type in content_types:
                 # Get the paginated contents from a subscription
                 for contents in self.client.get_subscription_contents(

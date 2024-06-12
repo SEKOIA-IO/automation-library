@@ -43,15 +43,6 @@ def test_pull_content(connector, event):
     assert json.loads(result[0]) == event
 
 
-def test_split_date_range(connector):
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(minutes=31)
-    delta = timedelta(minutes=30)
-    split = connector._split_date_range(start_date, end_date, delta)
-
-    assert split == [(start_date, start_date + delta), (start_date + delta, end_date)]
-
-
 def test_last_pull_date(connector, freezer):
     now = datetime.now(UTC)
 
