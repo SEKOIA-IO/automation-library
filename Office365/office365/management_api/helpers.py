@@ -1,7 +1,10 @@
+from collections.abc import Generator
 from datetime import datetime, timedelta
 
 
-def split_date_range(start_date: datetime, end_date: datetime, delta: timedelta) -> list[tuple[datetime, datetime]]:
+def split_date_range(
+    start_date: datetime, end_date: datetime, delta: timedelta
+) -> Generator[tuple[datetime, datetime], None, None]:
     """Splits a date range in shorter intervals with a set max duration
 
     This is a recursive method that, given a start and end date, will create a first tuple for the first 30
@@ -16,9 +19,19 @@ def split_date_range(start_date: datetime, end_date: datetime, delta: timedelta)
         delta (timedelta): Max duration of the splits
 
     Returns:
-        list[tuple[datetime, datetime]]: A list of subintervals covering of all the global interval
+        Generator[tuple[datetime, datetime], None, None]: A generator of subintervals covering of all the global interval
     """
-    if end_date - start_date <= delta:
-        return [(start_date, end_date)]
-    else:
-        return [(start_date, start_date + delta)] + split_date_range(start_date + delta, end_date, delta)
+    # Define the starting and ending date for the first interval
+    lower_date = start_date
+    upper_date = lower_date + delta
+
+    # Until we reach the end date
+    while upper_date < end_date:
+        # Yield the current interval
+        yield (lower_date, upper_date)
+
+        # Compute the next interval
+        lower_date, upper_date = upper_date, upper_date + delta
+
+    # Yield the last interval
+    yield (lower_date, end_date)

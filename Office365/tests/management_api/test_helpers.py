@@ -9,7 +9,7 @@ def test_split_date_range_should_return_one_range(connector):
     delta = timedelta(minutes=30)
     split = split_date_range(start_date, end_date, delta)
 
-    assert split == [(start_date, end_date)]
+    assert list(split) == [(start_date, end_date)]
 
 
 def test_split_date_range_should_return_two_ranges(connector):
@@ -18,4 +18,4 @@ def test_split_date_range_should_return_two_ranges(connector):
     delta = timedelta(minutes=30)
     split = split_date_range(start_date, end_date, delta)
 
-    assert split == [(start_date, start_date + delta), (start_date + delta, end_date)]
+    assert list(split) == [(start_date, start_date + delta), (start_date + delta, end_date)]
