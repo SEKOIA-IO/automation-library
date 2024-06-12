@@ -84,6 +84,4 @@ def test_run(connector, freezer, event):
         activate_subscriptions.assert_called_once()
         pull_content.assert_called_once_with(datetime.now(tz=UTC), datetime.now(tz=UTC))
         forward_events.assert_called_once_with(event)
-        prometheus_labels.assert_called_once_with(
-            intake_key=connector.configuration.intake_key
-        )
+        prometheus_labels.assert_called_once_with(intake_key=connector.configuration.intake_key)

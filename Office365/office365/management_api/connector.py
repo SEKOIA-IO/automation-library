@@ -136,9 +136,7 @@ class Office365Connector(Connector):
             events = self.pull_content(start_pull_date, end_pull_date)
             self.forward_events(events)
 
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                time.time() - start_time
-            )
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start_time)
 
             self.last_pull_date = end_pull_date
             sleep(60)
