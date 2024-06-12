@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.19.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-04-24 - 1.18.4
 
 ### Changed
@@ -23,13 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-03-07 - 1.18.2
 
-### Add
+### Added
 
 - Add the nextkey condition
 
 ## 2024-03-07 - 1.18.1
 
-### Add
+### Added
 
 - Add some exceptions
 - Update google api sdk library
@@ -52,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix the shutdown method on the PubSub Connector
 
-## 2023-11-22 - 1.16
+## 2023-11-22 - 1.16.0
 
 ### Changed
 

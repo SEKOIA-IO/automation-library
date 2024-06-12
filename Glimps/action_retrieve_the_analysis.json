@@ -1,6 +1,7 @@
 {
   "uuid": "31d90d77-a480-408b-9ce3-d565ff161231",
   "name": "Get the results of an analysis",
+  "description": "",
   "docker_parameters": "get-results/{uuid}",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

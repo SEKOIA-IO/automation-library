@@ -15,7 +15,7 @@
       },
       "filter": {
         "description": "Filters the security event counters by date\nSpecify the type of security event:\n\t- 33001 \u2014 Antivirus\n\t- 32001 \u2014 Other types\nSpecify the length of the time period in the format [x, y] where x is the number of units and y is the unit of time:\n\t- 1 \u2014 Years\n\t- 2 - Months\n\t- 3 - Days\n\t- 4 - Hours\nFor example, this retrieves threats detected by AV for the last 7 days: filter=33001%20AmongTheLast%20[7,3].\nThis retrieves security event counters for the other types for the last 3 months: filter=32001%20AmongTheLast%20[3,2].\nIf you do not specify a filter, the API returns all of the security events for the last 30 days.\nExample: 33001%20AmongTheLast%20[7,3]",
-        "type": "str",
+        "type": "string",
         "in": "query"
       }
     },

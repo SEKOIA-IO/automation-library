@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-12 - 2.16.1
+
+### Added
+
+- Declare Office365 Management API connector as trigger
+
+## 2024-05-28 - 2.16.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-05-28- 2.15.1
 
 ### Fixed
@@ -29,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Change event_lags metrics from Histogram to Gauge
 
-## 2023-11-22 - 2.13
+## 2023-11-22 - 2.13.0
 
 ### Changed
 

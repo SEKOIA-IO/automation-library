@@ -136,6 +136,7 @@ class AuditLogConnector(AsyncConnector):
     async def next_batch(self) -> None:
         """Fetches the next batch of events and pushes them to the intake."""
 
+        current_lag: int = 0
         batch_start_time = time.time()
         audit_events = await self.get_audit_events(self.last_ts)
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(audit_events))
@@ -158,8 +159,7 @@ class AuditLogConnector(AsyncConnector):
 
                 # compute the lag
                 now = time.time()
-                current_lag = now - self.last_ts / 1000
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag))
+                current_lag = int(now - self.last_ts / 1000)
             else:
                 self.log(
                     message="No events to forward ",
@@ -171,6 +171,8 @@ class AuditLogConnector(AsyncConnector):
                 level="warn",
             )
 
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
@@ -180,8 +182,8 @@ class AuditLogConnector(AsyncConnector):
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
-            time.sleep(delta_sleep)
+            logger.info(f"Next batch in the future. Waiting {delta_sleep} seconds")
+            await asyncio.sleep(delta_sleep)
 
     def run(self) -> None:  # pragma: no cover
         """Runs Github audit logs."""

@@ -114,10 +114,10 @@
                     }
                   },
                   "not_before": {
-                    "type": "float"
+                    "type": "number"
                   },
                   "not_after": {
-                    "type": "float"
+                    "type": "number"
                   },
                   "serial_number": {
                     "type": "string"
@@ -194,10 +194,10 @@
                       }
                     },
                     "not_before": {
-                      "type": "float"
+                      "type": "number"
                     },
                     "not_after": {
-                      "type": "float"
+                      "type": "number"
                     },
                     "serial_number": {
                       "type": "string"
@@ -215,7 +215,7 @@
                 "type": "integer"
               },
               "seen": {
-                "type": "float"
+                "type": "number"
               },
               "source": {
                 "type": "object",

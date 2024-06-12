@@ -7,20 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.1] - 2024-05-22
+## 2024-05-28 - 1.2.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-05-22 - 1.1.1
 
 ### Fixed
 
 - Set default duration according to manifest
 - Set AS name based on its number when empty in the IPInfo file
 
-## [1.1] - 2024-05-21
+## 2024-05-21 - 1.1.0
 
 ### Added
 
 - Allow to set tag's validity duration
 
-## [1.0] - 2024-02-02
+## 2024-02-02 - 1.0.0
 
 ### Changed
 

@@ -35,11 +35,11 @@
     "properties": {
       "id": {
         "description": "Identifier of the job",
-        "type": "str"
+        "type": "string"
       },
       "action": {
         "description": "Name of job action",
-        "type": "str"
+        "type": "string"
       },
       "creationtime": {
         "description": "Creation date of the job",

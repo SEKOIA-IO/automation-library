@@ -180,3 +180,4 @@ class SophosEDREventsTrigger(SophosConnector):
             self.push_events_to_intakes(events=messages)
         else:
             self.log(message="No messages to forward", level="info")
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)

@@ -7,11 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-01-05 - 1.118
+## 2023-11-01 - 1.119.1
+
+### Changed
+
+- Add additional user-agent to work with api
+
+## 2024-05-28 - 1.119.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-01-05 - 1.118.0
+
+### Changed
 
 - Support 204 response with application/json header
 
-## 2023-11-22 - 1.116
+## 2023-11-22 - 1.116.0
 
 ### Changed
 

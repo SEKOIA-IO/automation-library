@@ -1,0 +1,40 @@
+{
+  "description": "Office 365 management API",
+  "docker_parameters": "office365_management_api",
+  "name": "Office 365 management API",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "client_id": {
+        "description": "",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "",
+        "type": "string"
+      },
+      "tenant_id": {
+        "description": "",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "client_id",
+      "client_secret",
+      "tenant_id",
+      "intake_key"
+    ],
+    "secrets": [
+      "client_secret"
+    ],
+    "title": "Office 365 management API",
+    "type": "object"
+  },
+  "uuid": "584ebe4c-d94f-44ed-b53b-fe4f7ccaf6c8",
+  "slug": "o365mgmtapi",
+  "results": {}
+}

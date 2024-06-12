@@ -10,7 +10,7 @@
     "properties": {
       "config_id": {
         "description": "Identifier of the managed configuration to associate with the devices.\nExample: 2836d89d-1e98-4377-92b7-0a76ac2a7699",
-        "type": "str",
+        "type": "string",
         "in": "path"
       },
       "type": {
@@ -26,7 +26,7 @@
         "type": "array",
         "in": "body",
         "items": {
-          "type": "str"
+          "type": "string"
         }
       }
     },
@@ -35,5 +35,6 @@
       "config_id",
       "device_ids"
     ]
-  }
+  },
+  "results": {}
 }

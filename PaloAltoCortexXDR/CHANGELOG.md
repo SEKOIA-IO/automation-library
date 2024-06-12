@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.1.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-02-15 - 1.0.3
 
 ### Changed
@@ -21,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-02-01 - 1.0.1
 
-### Change
+### Changed
 
 - Improve the timestamp setter ( Add one seconde to the last timestamp )
 

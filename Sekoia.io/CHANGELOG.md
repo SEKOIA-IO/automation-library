@@ -7,9 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-10 - 2.60.6
+
+### Fixed
+
+- Fixing typo on action_delete_rule.json
+
+## 2024-06-10 - 2.60.5
+
+### Changed
+
+- Addition of default values on json files
+
+## 2024-06-05 - 2.60.4
+
+### Changed
+
+- Fix docker_parameters for rule actions and add them to main.py
+
+## 2024-06-04 - 2.60.3
+
+### Changed
+
+- Updated uuids of rules actions
+
+## 2024-05-31 - 2.60.2
+
+### Added
+
+- Add Rules actions
+
+## 2024-05-29 - 2.60.1
+
+### Changed
+
+- Ignore authenticated messages
+
+## 2024-05-28 - 2.60.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-05-17 - 2.59.1
 
-### Update
+### Changed
 
 - Add output results to Get context action
 - Add some tests
@@ -92,14 +134,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgrade dependencies: Sekoia-automation-SDK 1.8.1
 
+## 2023-10-31 - 2.50.0
+
+### Changed
+
+- Update get context action
+
 ## 2023-10-10 - 2.47.0
 
 ### Added
 
 - Add the action that let us get reports from a specific term
 
-## 2023-10-31 - 2.50.0
-
-### Updated
-
-- Update get context action

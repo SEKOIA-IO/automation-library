@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.8.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-02-13 - 1.7.2
 
 ### Changed
@@ -25,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add connector for Trellix EDR
 
-## 2023-11-22 - 1.6
+## 2023-11-22 - 1.6.0
 
 ### Changed
 

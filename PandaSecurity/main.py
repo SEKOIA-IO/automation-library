@@ -4,7 +4,6 @@ from aether_endpoint_security_api import (
     IsolatesDevices,
     LinksDevicesToManagedConfiguration,
     RetrievesCountsOfSecurityEvents,
-    RetrievesDataControlModuleStatus,
     RetrievesDeviceProtectionStatus,
     RetrievesFullEncryptionModuleStatus,
     RetrievesListOfDevices,
@@ -22,10 +21,6 @@ from aether_endpoint_security_api.trigger_security_events import AetherSecurityE
 
 if __name__ == "__main__":
     module = Module()
-    module.register(
-        RetrievesDataControlModuleStatus,
-        "get-api/v1/accounts/{account_id}/datacontrolstatistics",
-    )
     module.register(RetrievesListOfDevices, "get-api/v1/accounts/{account_id}/devices")
     module.register(SendsActionToDevices, "post-api/v1/accounts/{account_id}/devices/action")
     module.register(IsolatesDevices, "post-api/v1/accounts/{account_id}/devices/isolation")

@@ -7,11 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.16.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-03-14 - 1.15.3
 
 ### Changed
 
 - Upgrade the SentinelOne logo
+
+## 2024-01-26 - 1.15.0
+
+### Changed
+
+- Fix tenacity loop not handling the case where the query is still running.
+- Fix tenacity loop retrying even if the query is failed or in error.
+- Update DeepVisibilityEvent pydantic basemodel according to DeepVisibility documentation and tests.
 
 ## 2023-12-14 - 1.14.1
 
@@ -19,15 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Upgrade dependencies
 
-## 2023-11-22 - 1.14
+## 2023-11-22 - 1.14.0
 
 ### Changed
 
 - Upgrade dependencies: Sekoia-automation-SDK 1.8.1
-
-## 2024-01-26 - 1.15.1
-
-### Changed
-- Fix tenacity loop not handling the case where the query is still running.
-- Fix tenacity loop retrying even if the query is failed or in error.
-- Update DeepVisibilityEvent pydantic basemodel according to DeepVisibility documentation and tests.

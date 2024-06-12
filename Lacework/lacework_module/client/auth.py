@@ -1,9 +1,10 @@
 import datetime
-from dateutil.parser import isoparse
-from requests_ratelimiter import LimiterAdapter, PreparedRequest
-import requests
-from requests.auth import AuthBase
 from typing import Any
+
+import requests
+from dateutil.parser import isoparse
+from requests.auth import AuthBase
+from requests_ratelimiter import LimiterAdapter, PreparedRequest
 
 
 class LaceworkCredentials:
@@ -49,11 +50,13 @@ class LaceworkAuthentication(AuthBase):
         Return Lacework Credentials for the API
         """
         current_dt = datetime.datetime.now(datetime.timezone.utc)
+        expires_at = (
+            self.__api_credentials.expiresAt.replace(tzinfo=datetime.timezone.utc)
+            if self.__api_credentials
+            else current_dt
+        )
 
-        if (
-            self.__api_credentials is None
-            or current_dt + datetime.timedelta(seconds=3600) >= self.__api_credentials.expiresAt
-        ):
+        if self.__api_credentials is None or current_dt + datetime.timedelta(seconds=3600) >= expires_at:
             response = self.__http_session.post(
                 url=f"https://{self.__lacework_url}/api/v2/access/tokens",
                 headers={"X-LW-UAKS": self.__secret_key, "Content-Type": "application/json"},
