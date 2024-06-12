@@ -210,20 +210,15 @@ if __name__ == "__main__":
     if args.action == "check":
         if len(errors_to_fix) > 0:
             print()
-            print("Available automatic fixes (run with `fix` command):")
+            print("🛠 Available automatic fixes (run with `fix` command):")
             for error in errors_to_fix:
                 print(
                     f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}"
                 )
 
-        if has_any_errors:
-            exit(1)
-
     elif args.action == "fix":
         if len(errors_to_fix) == 0:
-            print("No errors found - nothing to fix")
-
-        else:
+            print("There is nothing we can fix automatically")
             print()
             print("Fixing...")
             for error in errors_to_fix:
@@ -231,3 +226,10 @@ if __name__ == "__main__":
                     f"FIX {error.filepath.relative_to(MODULES_PATH)}:{error.fix_label}"
                 )
                 error.fix()
+
+    if has_any_errors:
+        print("❌  Found errors")
+        exit(1)
+
+    else:
+        print("✅  No errors found!")
