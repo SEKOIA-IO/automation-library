@@ -24,7 +24,6 @@
   "description": "Mimecast offers cloud-based email security, archiving, and continuity solutions to protect against cyber threats and ensure compliance.",
   "name": "Mimecast",
   "uuid": "72af1e06-84db-497d-b4ac-10defb1f265f",
-  "docker": "sekoia-automation-module-mimecast",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "slug": "mimecast"
 }
