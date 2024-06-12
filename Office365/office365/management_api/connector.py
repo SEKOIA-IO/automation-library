@@ -11,53 +11,18 @@ from sekoia_automation.storage import get_data_path
 
 from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
+from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
 from .errors import FailedToActivateO365Subscription
-from .office365_client import Office365API
 from .helpers import split_date_range
+from .office365_client import Office365API
 
 
 class Office365Connector(Connector):
     configuration: Office365Configuration
 
-    @cached_property
-    def _last_pull_date(self) -> Path:
-        return get_data_path().joinpath(f"o365_{self.configuration.intake_key}_last_pull")
-
-    @property
-    def last_pull_date(self) -> datetime:
-        """Reads the last events pull date from S3.
-
-        Office365 can return events from up to 7 days ago. If the last pull date is older than that, or if no
-        last pull date is found, we return a "7 days ago" date instead. If the stored date is timezone-naive or not
-        in UTC, we raise an error to avoid the risk of confusions => all dates must be timezone-aware,
-        this is an arbitrary choice to avoid any inconsistencies.
-
-        Returns: Last pull date or now.
-
-        """
-        start_date = datetime.now(UTC)
-        try:
-            last_pull_date = datetime.fromisoformat(self._last_pull_date.read_text())
-        except Exception:
-            return start_date
-
-        if not last_pull_date or datetime.now(UTC) - last_pull_date > timedelta(days=7):
-            return start_date - timedelta(days=7)
-
-        return last_pull_date
-
-    @last_pull_date.setter
-    def last_pull_date(self, new_last_pull_date: datetime) -> None:
-        """Stores the last events pull date on S3.
-
-        We expect stored date to be always timezone-aware and in UTC.
-
-        Args:
-          new_last_pull_date: Date to be stored
-
-        """
-        self._last_pull_date.write_text(new_last_pull_date.isoformat())
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     @cached_property
     def client(self) -> Office365API:
@@ -128,9 +93,11 @@ class Office365Connector(Connector):
         """
         self.activate_subscriptions()
 
+        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
+
         while self.running:
             start_time = time.time()
-            start_pull_date = self.last_pull_date
+            start_pull_date = checkpoint.offset
             end_pull_date = datetime.now(UTC)
 
             events = self.pull_content(start_pull_date, end_pull_date)
@@ -138,7 +105,7 @@ class Office365Connector(Connector):
 
             FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start_time)
 
-            self.last_pull_date = end_pull_date
+            checkpoint.offset = end_pull_date
             sleep(60)
 
         self._executor.shutdown(wait=True)

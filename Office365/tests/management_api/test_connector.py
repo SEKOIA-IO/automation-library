@@ -43,26 +43,6 @@ def test_pull_content(connector, event):
     assert json.loads(result[0]) == event
 
 
-def test_last_pull_date(connector, freezer):
-    now = datetime.now(UTC)
-
-    # Not set
-    with patch.object(Path, "read_text", side_effect=FileNotFoundError):
-        # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
-        # and the moment `last_pull_date` is generated
-        assert now == connector.last_pull_date
-
-    # Less than 7 days ago
-    connector.last_pull_date = now
-    assert connector.last_pull_date == now
-
-    # More than 7 days ago
-    connector.last_pull_date = now - timedelta(days=365)
-    # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
-    # and the moment `last_pull_date` is generated
-    assert (now - connector.last_pull_date).days == 7
-
-
 def test_run(connector, freezer, event):
     def sleeper(_):
         sleep(0.1)
