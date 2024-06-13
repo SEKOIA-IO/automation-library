@@ -61,6 +61,9 @@ async def test_active_subscription_should_succeed(mocked_responses, mock_azure_a
     # act
     await client.activate_subscriptions()
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_office_365_auth_fail_no_token(mocked_responses, mock_azure_authentication_no_access_token, tenant_id):
@@ -94,6 +97,9 @@ async def test_office_365_auth_fail_no_token(mocked_responses, mock_azure_authen
     # act
     with pytest.raises(ApplicationAuthenticationFailed, match="Failed to get access token"):
         await client.activate_subscriptions()
+
+    # finalize
+    client.close()
 
 
 @pytest.mark.asyncio
@@ -129,6 +135,9 @@ async def test_office_365_auth_fail_bad_token(mocked_responses, mock_azure_authe
     with pytest.raises(ApplicationAuthenticationFailed, match="Bearer Authentication not supported"):
         await client.activate_subscriptions()
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_list_subscriptions(mocked_responses, mock_azure_authentication, tenant_id):
@@ -163,6 +172,9 @@ async def test_list_subscriptions(mocked_responses, mock_azure_authentication, t
 
     # act
     assert await client.list_subscriptions() == ["Audit.SharePoint"]
+
+    # finalize
+    client.close()
 
 
 @pytest.mark.asyncio
@@ -200,6 +212,9 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
         content_type="Audit.SharePoint", start_time=datetime.now() - timedelta(days=1), end_time=datetime.now()
     )
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_get_content(mocked_responses, mock_azure_authentication, tenant_id):
@@ -234,6 +249,9 @@ async def test_get_content(mocked_responses, mock_azure_authentication, tenant_i
 
     # act
     assert await client.list_subscriptions() == ["Audit.SharePoint"]
+
+    # finalize
+    client.close()
 
 
 @pytest.mark.asyncio
@@ -278,6 +296,9 @@ async def test_activate_subscription_should_exception_when_handling_business_err
     with pytest.raises(FailedToActivateO365Subscription):
         await client.activate_subscriptions()
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_activate_subscription_should_exception_on_http_error(
@@ -320,6 +341,9 @@ async def test_activate_subscription_should_exception_on_http_error(
     with pytest.raises(FailedToActivateO365Subscription):
         await client.activate_subscriptions()
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_list_subscriptions_should_succeed(mocked_responses, mock_azure_authentication, tenant_id):
@@ -358,6 +382,9 @@ async def test_list_subscriptions_should_succeed(mocked_responses, mock_azure_au
     # assert
     assert subscriptions is not None
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_list_subscriptions_should_exception_when_handling_business_error(
@@ -383,6 +410,9 @@ async def test_list_subscriptions_should_exception_when_handling_business_error(
     with pytest.raises(FailedToListO365Subscriptions):
         await client.list_subscriptions()
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_list_subscriptions_should_exception_on_http_error(
@@ -406,6 +436,9 @@ async def test_list_subscriptions_should_exception_on_http_error(
     # act
     with pytest.raises(FailedToListO365Subscriptions):
         await client.list_subscriptions()
+
+    # finalize
+    client.close()
 
 
 @pytest.mark.asyncio
@@ -469,6 +502,9 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     mocked_responses.assert_called_with(url)
     with pytest.raises(StopAsyncIteration):
         await anext(gen)
+
+    # finalize
+    client.close()
 
 
 @pytest.mark.asyncio
@@ -543,6 +579,9 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     pages = [item async for item in gen]
     assert 2 == len(pages)
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_get_subscription_contents_should_exception_when_handling_business_error(
@@ -573,6 +612,9 @@ contentType={content_type}",
         gen = client.get_subscription_contents(content_type)
         await anext(gen)
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_get_subscription_contents_should_exception_on_http_error(
@@ -600,6 +642,9 @@ contentType={content_type}",
     with pytest.raises(FailedToGetO365SubscriptionContents):
         gen = client.get_subscription_contents(content_type)
         await anext(gen)
+
+    # finalize
+    client.close()
 
 
 @pytest.mark.asyncio
@@ -675,6 +720,9 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     # assert
     assert 2 == len(content)
 
+    # finalize
+    client.close()
+
 
 @pytest.mark.asyncio
 async def test_get_content_should_exception_when_handling_business_error(
@@ -699,6 +747,9 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     # act
     with pytest.raises(FailedToGetO365AuditContent):
         await client.get_content(content_uri)
+
+    # finalize
+    client.close()
 
 
 @pytest.mark.asyncio
@@ -725,3 +776,6 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     # act
     with pytest.raises(FailedToGetO365AuditContent):
         await client.get_content(content_uri)
+
+    # finalize
+    client.close()

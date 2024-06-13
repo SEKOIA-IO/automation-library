@@ -136,3 +136,5 @@ class Office365Connector(AsyncConnector):
 
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
+
+        self.client.close()
