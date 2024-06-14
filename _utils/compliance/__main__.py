@@ -77,7 +77,7 @@ def fix_set_uuid(file_path: Path, uuid: str) -> None:
 
 
 def check_uniqueness(items, error_msg: str):
-    for v in items.values():
+    for k, v in items.items():
         if len(v) > 1:
             for file_name, val in v:
                 path = val.result.options["path"] / file_name
@@ -90,6 +90,59 @@ def check_uniqueness(items, error_msg: str):
                         error=error_msg,
                     )
                 )
+
+
+def check_docker_params(validators: list[ModuleValidator]):
+    for validator in validators:
+        actions_docker_params = defaultdict(list)
+        triggers_docker_params = defaultdict(list)
+        connectors_docker_params = defaultdict(list)
+
+        module_path = validator.result.options["path"]
+        docker_parameters = validator.result.options.get("docker_parameters", {})
+
+        suffix_to_docker = defaultdict(dict)
+        for filename, docker in docker_parameters.items():
+            if filename.startswith("action_"):
+                actions_docker_params[docker].append((filename, validator))
+                suffix_to_docker[filename.lstrip("action_")]["action"] = docker
+
+            elif filename.startswith("trigger_"):
+                triggers_docker_params[docker].append((filename, validator))
+                suffix_to_docker[filename.lstrip("trigger_")]["trigger"] = docker
+
+            elif filename.startswith("connector_"):
+                connectors_docker_params[docker].append((filename, validator))
+                suffix_to_docker[filename.lstrip("connector_")]["connector"] = docker
+
+        for suffix, data in suffix_to_docker.items():
+            # ignore cases where we have only either `trigger_` or `connector_` files
+            if "connector" not in data or "trigger" not in data:
+                continue
+
+            if data["connector"] != data["trigger"]:
+                filename_to_fix = "connector_%s" % suffix
+                filepath = module_path / filename_to_fix
+                validator.result.errors.append(
+                    CheckError(
+                        filepath=filepath,
+                        error=f"`docker_parameters` is not consistent with trigger_%s"
+                        % suffix,
+                    )
+                )
+                # We don't want to check these further
+                del triggers_docker_params[data["trigger"]]
+                del connectors_docker_params[data["connector"]]
+
+        check_uniqueness(
+            actions_docker_params, error_msg="`docker_parameters` is not unique"
+        )
+        check_uniqueness(
+            triggers_docker_params, error_msg="`docker_parameters` is not unique"
+        )
+        check_uniqueness(
+            connectors_docker_params, error_msg="`docker_parameters` is not unique"
+        )
 
 
 def check_uuids_and_slugs(validators: list[ModuleValidator]):
@@ -195,6 +248,7 @@ if __name__ == "__main__":
             selected_validators.append(r)
 
     check_uuids_and_slugs(all_validators)
+    check_docker_params(all_validators)
 
     for r in selected_validators:
         if r.result.errors:
