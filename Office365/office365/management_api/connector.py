@@ -82,6 +82,20 @@ class Office365Connector(Connector):
                 message="An exception occurred when trying to subscribe to Office365 events.",
             )
 
+    def forward_next_batches(self, checkpoint: Checkpoint):
+        start_time = time.time()
+        start_pull_date = checkpoint.offset
+        end_pull_date = datetime.now(UTC)
+
+        for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
+            events = self.pull_content(start_date, end_date)
+            self.forward_events(events)
+
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start_time)
+
+        checkpoint.offset = end_pull_date
+        sleep(60)
+
     def run(self):
         """Main execution thread
 
@@ -91,21 +105,9 @@ class Office365Connector(Connector):
         When stopped, the clear_cache is stopped and joined as well so that we wait for it to end gracefully.
         """
         self.activate_subscriptions()
-
         checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
 
         while self.running:
-            start_time = time.time()
-            start_pull_date = checkpoint.offset
-            end_pull_date = datetime.now(UTC)
-
-            for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
-                events = self.pull_content(start_date, end_date)
-                self.forward_events(events)
-
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start_time)
-
-            checkpoint.offset = end_pull_date
-            sleep(60)
+            self.forward_next_batches(checkpoint)
 
         self._executor.shutdown(wait=True)
