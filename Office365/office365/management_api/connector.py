@@ -36,29 +36,28 @@ class Office365Connector(Connector):
             tenant_id=self.configuration.tenant_id,
         )
 
-    def pull_content(self, start_pull_date: datetime, end_pull_date: datetime) -> list[str]:
+    def pull_content(self, start_date: datetime, end_date: datetime) -> list[str]:
         """Pulls content from Office 365 subscriptions
 
         Args:
-            start_pull_date (datetime): Start date of the pull interval
-            end_pull_date (datetime): End date of the pull interval
+            start_date (datetime): Start date of the interval
+            end_date (datetime): End date of the interval
 
         Returns:
-            list[dict]: List of events recevied for the pull interval
+            list[dict]: List of events recevied for the interval
         """
         pulled_events: list[str] = []
 
         content_types = self.client.list_subscriptions()
-        for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
-            for content_type in content_types:
-                # Get the paginated contents from a subscription
-                for contents in self.client.get_subscription_contents(
-                    content_type, start_time=start_date, end_time=end_date
-                ):
-                    for content in contents:
-                        events = self.client.get_content(content["contentUri"])
-                        for event in events:
-                            pulled_events.append(json.dumps(event))
+        for content_type in content_types:
+            # Get the paginated contents from a subscription
+            for contents in self.client.get_subscription_contents(
+                content_type, start_time=start_date, end_time=end_date
+            ):
+                for content in contents:
+                    events = self.client.get_content(content["contentUri"])
+                    for event in events:
+                        pulled_events.append(json.dumps(event))
 
         return pulled_events
 
@@ -100,8 +99,9 @@ class Office365Connector(Connector):
             start_pull_date = checkpoint.offset
             end_pull_date = datetime.now(UTC)
 
-            events = self.pull_content(start_pull_date, end_pull_date)
-            self.forward_events(events)
+            for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
+                events = self.pull_content(start_date, end_date)
+                self.forward_events(events)
 
             FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start_time)
 
