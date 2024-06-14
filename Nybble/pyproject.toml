@@ -7,7 +7,7 @@ authors = []
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.0"
-requests = "^2.31.0"
+requests = "^2.32.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
