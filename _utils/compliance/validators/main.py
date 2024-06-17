@@ -22,14 +22,32 @@ class MainPYValidator(Validator):
             )
             return
 
-        used_docker_params = {
-            item.ast_node.value
-            for item in search_python_files(
+        used_docker_params = set()
+
+        calls = list(
+            search_python_files(
                 paths=[main_path],
-                expression='.//Call/func/Attribute[@attr="register"]/value/Name[@id="module"]/../../../../args/Constant',
+                expression=""".//Call/func/Attribute[@attr="register"]/value/Name[@id="module"]/../../../..""",
             )
-            if not isinstance(item, FileFinished)
-        }
+        )
+
+        for call in calls:
+            if isinstance(call, FileFinished):
+                continue
+
+            ast_node = call.ast_node
+
+            if len(ast_node.args) > 1:
+                arg_node = ast_node.args[1]
+                arg_node_value = arg_node.value
+                used_docker_params.add(arg_node_value)
+
+            elif len(ast_node.keywords) > 0:
+                kwarg_node = ast_node.keywords[0]
+                kwarg_node_name = kwarg_node.arg
+                if kwarg_node_name == "name":
+                    kwarg_node_value = kwarg_node.value.value
+                    used_docker_params.add(kwarg_node_value)
 
         docker_params_in_jsons = set(result.options.get("docker_parameters").values())
         absent_in_main_py = docker_params_in_jsons - used_docker_params
@@ -38,7 +56,8 @@ class MainPYValidator(Validator):
         for item in absent_in_main_py:
             result.errors.append(
                 CheckError(
-                    filepath=main_path, error=f"Docker parameter `{item}` is not registered in main.py"
+                    filepath=main_path,
+                    error=f"Docker parameter `{item}` is not registered in main.py",
                 )
             )
 
