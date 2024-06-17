@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-17 - 2.17.0
+
+### Changed
+
+- Transform Office365 Management API connector as asynchronous connector
+
 ## 2024-06-12 - 2.16.1
 
 ### Added
