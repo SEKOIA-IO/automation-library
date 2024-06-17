@@ -178,7 +178,7 @@ class Office365API:
 
         # queries contents until the NextPageUri is undefined
         query_string = urlencode(params)
-        next_page_uri = f"{base_url}/subscriptions/content?{query_string}"
+        next_page_uri: str | None = f"{base_url}/subscriptions/content?{query_string}"
         while next_page_uri is not None:
             # queries the contents for the current page
             async with self._fresh_session() as session:
