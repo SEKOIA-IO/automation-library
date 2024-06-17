@@ -1,6 +1,6 @@
 {
   "description": "Get last events from the Netskope platform through the API v2",
-  "docker_parameters": "netskope_events_trigger_v2",
+  "docker_parameters": "netskope_events_connector_v2",
   "name": "Fetch new events from Netskope",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
