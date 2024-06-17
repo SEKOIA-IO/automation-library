@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from sekoia_automation import constants
@@ -114,10 +114,10 @@ def start_time(trigger_activation) -> datetime:
 @pytest.fixture
 def client():
     client = Mock()
-    client.activate_subscriptions = Mock()
-    client.get_subscription_contents = Mock()
-    client.list_subscriptions = Mock()
-    client.get_content = Mock()
+    client.activate_subscriptions = AsyncMock()
+    client.get_subscription_contents = AsyncMock()
+    client.list_subscriptions = AsyncMock()
+    client.get_content = AsyncMock()
     yield client
 
 
