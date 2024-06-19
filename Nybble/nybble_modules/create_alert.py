@@ -68,7 +68,10 @@ class CreateAlertAction(NybbleAction):
 
         for field in rule_event_fields:
             cur_field = str(field["field"])
-            nybble_fields[cur_field] = event[cur_field]
+            valeur = event.get(cur_field)
+
+            if valeur is not None:
+                nybble_fields[cur_field] = valeur
         return nybble_fields
 
     def _cleanEventOriginal(self, original_event: dict) -> dict:
