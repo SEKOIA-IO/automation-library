@@ -13,3 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Create the Nybble module and add the action to send Alert to Nybble SaaS platform
 
+## 2024-06-19 - 1.0.1
+
+### Fixed
+
+- Fixing issue when field given in rule is not part of the event (optional)
