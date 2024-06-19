@@ -92,6 +92,7 @@ def test_create_alert_noFields_noTags(symphony_storage, nybble_module, arguments
 
         assert results["status"] == True
 
+
 def test_create_alert_missing_field(symphony_storage, nybble_module, arguments):
 
     arguments.rule = SEKOIA_ALERT_RULE_MOCK_EXTRA_FIELD
@@ -104,6 +105,7 @@ def test_create_alert_missing_field(symphony_storage, nybble_module, arguments):
         results = create_alert_action.run(arguments)
 
         assert results["status"] == True
+
 
 def test_create_alert_error(symphony_storage, nybble_module, arguments):
 
