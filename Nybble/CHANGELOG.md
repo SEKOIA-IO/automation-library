@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-06-19 - 1.0.1
+## 2024-06-19 - 1.0.2
+
+### Fixed
+
+- Fixing empty json during alert sending in some specific cases
+
+## 2024-06-18 - 1.0.1
 
 ### Fixed
 
