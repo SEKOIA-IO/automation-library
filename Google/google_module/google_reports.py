@@ -1,5 +1,6 @@
 import orjson
 from functools import cached_property
+from typing import Optional
 
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import isoparse
@@ -179,7 +180,7 @@ class GoogleReports(GoogleTrigger):
                 level="info",
             )
 
-    def get_activities(self, start: str, end: str, next_key: str = None):
+    def get_activities(self, start: str, end: str, next_key: Optional[str] = None):
         message_without_nk = f"Initiating Google reports request using the created credential object."
         message_with_nk = f"Initiating Google reports request using the created credential object. Next_key {next_key} included for pagination."
         log_message = message_with_nk if next_key else message_without_nk
@@ -205,7 +206,7 @@ class GoogleReports(GoogleTrigger):
             self.log(message=f"Can't reach the google api server", level="warning")
 
     def get_reports_with_nk(self, start: str, end: str, next_key: str):
-        const_next_key: str | None = next_key
+        const_next_key = next_key
         self.log(
             message=f"Start looping for all next activities with the first next key {const_next_key}",
             level="info",
@@ -221,14 +222,14 @@ class GoogleReports(GoogleTrigger):
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
                 self.push_events_to_intakes(events=next_messages)
 
-                const_next_key = response_next_page.get("nextPageToken")
+                const_next_key = response_next_page.get("nextPageToken", "")
                 self.log(
                     message=f"Updated nextKey to the new value: {const_next_key}",
                     level="info",
                 )
 
             else:
-                const_next_key = False
+                const_next_key = ""
                 self.log(message=f"There's no items even if there's a next key!!", level="info")
 
     def get_reports_events(self, start: datetime, end: datetime):
