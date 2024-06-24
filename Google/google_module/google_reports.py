@@ -179,7 +179,7 @@ class GoogleReports(GoogleTrigger):
                 level="info",
             )
 
-    def get_activities(self, start: datetime, end: datetime, next_key: str = None):
+    def get_activities(self, start: str, end: str, next_key: str = None):
         message_without_nk = f"Initiating Google reports request using the created credential object."
         message_with_nk = f"Initiating Google reports request using the created credential object. Next_key {next_key} included for pagination."
         log_message = message_with_nk if next_key else message_without_nk
@@ -205,7 +205,7 @@ class GoogleReports(GoogleTrigger):
             self.log(message=f"Can't reach the google api server", level="warning")
 
     def get_reports_with_nk(self, start: str, end: str, next_key: str):
-        const_next_key = next_key
+        const_next_key : str | None = next_key
         self.log(
             message=f"Start looping for all next activities with the first next key {const_next_key}",
             level="info",
