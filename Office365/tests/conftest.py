@@ -115,7 +115,7 @@ def start_time(trigger_activation) -> datetime:
 def client():
     client = Mock()
     client.activate_subscriptions = AsyncMock()
-    client.get_subscription_contents = AsyncMock()
+    client.get_subscription_contents = Mock()
     client.list_subscriptions = AsyncMock()
     client.get_content = AsyncMock()
     yield client

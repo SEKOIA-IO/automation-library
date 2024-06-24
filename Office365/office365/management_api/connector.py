@@ -56,7 +56,7 @@ class Office365Connector(AsyncConnector):
         content_types = await self.client.list_subscriptions()
         for content_type in content_types:
             # Get the paginated contents from a subscription
-            async for contents in await self.client.get_subscription_contents(
+            async for contents in self.client.get_subscription_contents(
                 content_type, start_time=start_date, end_time=end_date
             ):
                 for content in contents:
