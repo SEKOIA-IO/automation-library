@@ -4,7 +4,7 @@ from collections.abc import Generator
 
 from sekoia_automation.trigger import Trigger
 
-from .metrics import EVENTS_LAG
+from office365.metrics import EVENTS_LAG
 
 
 class TimeStepper:
