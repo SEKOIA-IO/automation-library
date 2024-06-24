@@ -162,18 +162,18 @@ class LaceworkEventsTrigger(Connector):
                         self.push_events_to_intakes(
                             events=[orjson.dumps(item).decode("utf-8") for item in data_to_push]
                         )
+                        current_lag = int(time.time() - latest_alerts_date.timestamp())
                         data_to_push = []
 
             if len(data_to_push) > 0:
                 self.log(message=f"Sending a batch of {len(data_to_push)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(data_to_push))
                 self.push_events_to_intakes(events=[orjson.dumps(item).decode("utf-8") for item in data_to_push])
+                current_lag = int(time.time() - latest_alerts_date.timestamp())
 
             with self.context as cache:
                 cache["latest_start_event_date_from_previous_run"] = latest_alerts_date.isoformat()
                 cache["latest_alert_id_from_previous_run"] = latest_alerts_id
-
-            current_lag = int(time.time() - latest_alerts_date.timestamp())
 
         # Monitor the events lag
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
