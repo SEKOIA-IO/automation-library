@@ -125,16 +125,19 @@ class Office365Connector(AsyncConnector):
         Then loop every 60 seconds, pull events using the Office 365 API and forward them.
         When stopped, the clear_cache is stopped and joined as well so that we wait for it to end gracefully.
         """
-        asyncio.run(self.activate_subscriptions())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        loop.run_until_complete(self.activate_subscriptions())
 
         checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
 
         while self.running:
             try:
-                loop = asyncio.get_event_loop()
                 loop.run_until_complete(self.forward_events_forever(checkpoint))
 
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
 
+        loop.close()
         self.client.close()
