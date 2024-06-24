@@ -94,7 +94,7 @@ class GoogleReports(GoogleTrigger):
 
             # parse the most recent date seen
             most_recent_date_seen = isoparse(most_recent_date_seen_str)
-            
+
             # We don't retrieve messages older than almost 6 months
             six_months_ago = now - timedelta(days=180)
             if most_recent_date_seen < six_months_ago:
@@ -117,7 +117,7 @@ class GoogleReports(GoogleTrigger):
     @cached_property
     def pagination_limit(self):
         return max(self.configuration.chunk_size, 1000)
-    
+
     @cached_property
     def reports_service(self):
         """
@@ -133,7 +133,7 @@ class GoogleReports(GoogleTrigger):
     def stop(self, *args, **kwargs):
         self.log(message="Stopping Google Reports API trigger", level="info")
         super().stop(*args, **kwargs)
-        
+
     def run(self):
         self.log(
             message=f"Starting Google Reports api for {self.configuration.application_name.value} application at {self.stepper.start.isoformat()}",
@@ -145,7 +145,7 @@ class GoogleReports(GoogleTrigger):
                 # check if the trigger should stop
                 if self._stop_event.is_set():
                     break
-                
+
                 duration_start = time.time()
 
                 try:
@@ -158,12 +158,10 @@ class GoogleReports(GoogleTrigger):
                         level="error",
                     )
                     raise
-                
+
                 # Save the most recent date seen
                 self.stepper = end.isoformat()
-                self.log(
-                    message=f"Changing recent date in get reports events to  {end.isoformat()}", level="info"
-                )
+                self.log(message=f"Changing recent date in get reports events to  {end.isoformat()}", level="info")
 
                 # compute the duration of the last events fetching
                 duration = int(time.time() - duration_start)
@@ -181,12 +179,12 @@ class GoogleReports(GoogleTrigger):
                 level="info",
             )
 
-    def get_activities(self, start: datetime, end: datetime, next_key: str=None):
+    def get_activities(self, start: datetime, end: datetime, next_key: str = None):
         message_without_nk = f"Initiating Google reports request using the created credential object."
         message_with_nk = f"Initiating Google reports request using the created credential object. Next_key {next_key} included for pagination."
         log_message = message_with_nk if next_key else message_without_nk
         self.log(message=log_message, level="info")
-        
+
         try:
             activities = (
                 self.reports_service.activities()
@@ -205,7 +203,7 @@ class GoogleReports(GoogleTrigger):
 
         except (TransportError, ServerNotFoundError) as ex:
             self.log(message=f"Can't reach the google api server", level="warning")
-            
+
     def get_reports_with_nk(self, start: str, end: str, next_key: str):
         const_next_key = next_key
         self.log(
@@ -216,19 +214,19 @@ class GoogleReports(GoogleTrigger):
             response_next_page = self.get_activities(start, end, next_key) or {}
             next_page_items = response_next_page.get("items", [])
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_page_items))
-            
+
             if next_page_items:
                 next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                 self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
                 self.push_events_to_intakes(events=next_messages)
-                
+
                 const_next_key = response_next_page.get("nextPageToken")
                 self.log(
                     message=f"Updated nextKey to the new value: {const_next_key}",
                     level="info",
                 )
-                
+
             else:
                 const_next_key = False
                 self.log(message=f"There's no items even if there's a next key!!", level="info")

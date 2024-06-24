@@ -97,7 +97,7 @@ def test_get_reports_events(trigger, drive_response):
                 trigger.get_reports_events(start_date, end_date)
                 results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
                 assert len(results[0]) == 3
-                
+
                 dict_result = [json.loads(result) for result in results[0]]
                 assert dict_result[0]["id"]["time"] == "2023-08-07T12:04:37.532Z"
                 assert dict_result[1]["id"]["time"] == "2023-08-07T12:03:37.532Z"
@@ -118,9 +118,9 @@ def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
                     results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
                     # 3 items because the first 3 items are pushed in the first call
                     assert len(results[0]) == 3
-                    
+
                     dict_result = [json.loads(result) for result in results[0]]
-                    assert dict_result[2]["id"]["time"] == '2023-08-07T11:02:37.532Z'
+                    assert dict_result[2]["id"]["time"] == "2023-08-07T11:02:37.532Z"
 
 
 @pytest.mark.skipif(
