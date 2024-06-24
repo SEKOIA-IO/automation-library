@@ -1,0 +1,57 @@
+{
+    "description": "Get Login user activities using google reports api",
+    "docker_parameters": "run-login_reports_trigger",
+    "name": "Get login user activities",
+    "arguments": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "default": 60
+        },
+        "application_name": {
+          "type": "string",
+          "description": "The application from which the activities should be fetched",
+          "default": "login"
+        },
+        "timedelta": {
+          "type": "integer",
+          "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 150 minutes ago)",
+          "default": 150
+        },
+        "start_time": {
+          "type": "integer",
+          "description": "The number of days from which events should be queried.",
+          "default": 1
+        },
+        "chunk_size": {
+          "type": "integer",
+          "description": "The max size of chunks for the batch processing",
+          "default": 1000
+        },
+        "intake_server": {
+          "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+          "default": "https://intake.sekoia.io",
+          "type": "string"
+        },
+        "intake_key": {
+          "description": "Intake key to use when sending events",
+          "type": "string"
+        },
+        "admin_mail": {
+          "description": "Email of your google admin",
+          "type": "string"
+        }
+      },
+      "required": [
+        "admin_mail",
+        "intake_key",
+        "application_name"
+      ],
+      "title": "Login Reports",
+      "type": "object"
+    },
+    "results": {},
+    "uuid": "6cef696f-bbb2-494b-b473-11dfa03212d7"
+  }

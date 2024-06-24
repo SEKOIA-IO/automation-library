@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-24 - 1.20.0
+
+### Changed
+
+- Add login json
+- Add timestepper for both login and other services
+
 ## 2024-05-28 - 1.19.0
 
 ### Changed
