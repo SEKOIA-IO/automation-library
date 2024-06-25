@@ -35,4 +35,5 @@ class Checkpoint:
     def offset(self, last_message_date: datetime | None):
         if last_message_date is not None:
             if self.offset is None or last_message_date > self.offset:
+                self._most_recent_date_seen = last_message_date
                 self._context.write_text(last_message_date.isoformat())
