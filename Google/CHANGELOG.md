@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-06-25 - 1.20.2
 
-### Fix
+### Changed
 
 - Delete application_name from required fields
 
 ## 2024-06-25 - 1.20.1
 
-### Fix
+### Changed
 
 - Fix login configuration problem
 
