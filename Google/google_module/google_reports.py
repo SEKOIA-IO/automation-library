@@ -1,14 +1,20 @@
 import orjson
 from functools import cached_property
+from typing import Optional
 
 from datetime import datetime, timedelta, timezone
-from enum import Enum
+from dateutil.parser import isoparse
 import time
+
+from enum import Enum
+from threading import Event
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+
 from google_module.base import GoogleTrigger
 from google_module.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from google_module.timestepper import TimeStepper
 
 from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.connector import DefaultConnectorConfiguration
@@ -45,16 +51,16 @@ class ApplicationName(str, Enum):
 
 class GoogleReportsConfig(DefaultConnectorConfiguration):
     admin_mail: str
-    frequency: int = 20
+    frequency: int = 60
     application_name: ApplicationName = ApplicationName.DRIVE
     chunk_size: int = 1000
+    timedelta: int = 1
+    start_time: int = 1
 
 
 class GoogleReports(GoogleTrigger):
     """
     Connect to Google Reports API and return the results
-
-    Good to know : This's the parent class for all other Google reports applications classes
     """
 
     configuration: GoogleReportsConfig
@@ -67,11 +73,11 @@ class GoogleReports(GoogleTrigger):
             "https://www.googleapis.com/auth/admin.reports.audit.readonly",
             "https://www.googleapis.com/auth/admin.reports.usage.readonly",
         ]
-        self.events_sum = 0
+        self._stop_event = Event()
         self.from_date = ""
 
     @property
-    def most_recent_date_seen(self):
+    def stepper(self):
         now = datetime.now(timezone.utc)
 
         with self.context as cache:
@@ -80,27 +86,31 @@ class GoogleReports(GoogleTrigger):
 
             # if undefined, retrieve events from the last day
             if most_recent_date_seen_str is None:
-                before_one_day = now - timedelta(days=1)
-                return before_one_day.strftime("%Y-%m-%dT%H:%M:%SZ")
+                return TimeStepper.create(
+                    self,
+                    self.configuration.frequency,
+                    self.configuration.timedelta,
+                    self.configuration.start_time,
+                )
 
             # parse the most recent date seen
-            most_recent_date_seen = datetime.strptime(most_recent_date_seen_str, "%Y-%m-%dT%H:%M:%SZ").replace(
-                tzinfo=timezone.utc
-            )
+            most_recent_date_seen = isoparse(most_recent_date_seen_str)
 
             # We don't retrieve messages older than almost 6 months
             six_months_ago = now - timedelta(days=180)
             if most_recent_date_seen < six_months_ago:
                 most_recent_date_seen = six_months_ago
 
-            return most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+            return TimeStepper.create_from_time(
+                self,
+                most_recent_date_seen,
+                self.configuration.frequency,
+                self.configuration.timedelta,
+            )
 
-    @most_recent_date_seen.setter
-    def most_recent_date_seen(self, recent_date):
-        add_one_seconde = datetime.strptime(recent_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
-            tzinfo=timezone.utc
-        ) + timedelta(seconds=1)
-        self.from_date = add_one_seconde.strftime("%Y-%m-%dT%H:%M:%SZ")
+    @stepper.setter
+    def stepper(self, recent_date):
+        self.from_date = recent_date
         with self.context as cache:
             app_key_name_in_cache = "most_recent_date_seen_" + self.configuration.application_name.value
             cache[app_key_name_in_cache] = self.from_date
@@ -109,19 +119,38 @@ class GoogleReports(GoogleTrigger):
     def pagination_limit(self):
         return max(self.configuration.chunk_size, 1000)
 
+    @cached_property
+    def reports_service(self):
+        """
+        Returns a build object for accessing Google Admin Reports API.
+        """
+        credentials = service_account.Credentials.from_service_account_file(
+            self.service_account_path, scopes=self.scopes
+        )
+        delegated_credentials = credentials.with_subject(self.configuration.admin_mail)
+
+        return build("admin", "reports_v1", credentials=delegated_credentials)
+
+    def stop(self, *args, **kwargs):
+        self.log(message="Stopping Google Reports API trigger", level="info")
+        super().stop(*args, **kwargs)
+
     def run(self):
         self.log(
-            message=f"Starting Google Reports api for {self.configuration.application_name.value} application at {self.most_recent_date_seen}",
+            message=f"Starting Google Reports api for {self.configuration.application_name.value} application at {self.stepper.start.isoformat()}",
             level="info",
         )
 
         try:
-            while self.running:
-                start = time.time()
+            for start, end in self.stepper.ranges():
+                # check if the trigger should stop
+                if self._stop_event.is_set():
+                    break
+
+                duration_start = time.time()
 
                 try:
-                    self.get_reports_events()
-
+                    self.get_reports_events(start, end)
                 except (HTTPError, BaseHTTPError) as ex:
                     self.log_exception(ex, message="Failed to get next batch of events")
                 except Exception as ex:
@@ -131,8 +160,12 @@ class GoogleReports(GoogleTrigger):
                     )
                     raise
 
+                # Save the most recent date seen
+                self.stepper = end.isoformat()
+                self.log(message=f"Changing recent date in get reports events to  {end.isoformat()}", level="info")
+
                 # compute the duration of the last events fetching
-                duration = int(time.time() - start)
+                duration = int(time.time() - duration_start)
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
                 # Compute the remaining sleeping time
@@ -147,55 +180,22 @@ class GoogleReports(GoogleTrigger):
                 level="info",
             )
 
-    def get_build_object(self):
-        credentials = service_account.Credentials.from_service_account_file(
-            self.service_account_path, scopes=self.scopes
-        )
-        delegated_credentials = credentials.with_subject(self.configuration.admin_mail)
-
-        reports_service = build("admin", "reports_v1", credentials=delegated_credentials)
-
-        return reports_service
-
-    def get_activities(self):
-        reports_service = self.get_build_object()
-
-        self.log(message=f"Start requesting the Google reports with credential object created", level="info")
+    def get_activities(self, start: str, end: str, next_key: Optional[str] = None):
+        message_without_nk = f"Initiating Google reports request using the created credential object."
+        message_with_nk = f"Initiating Google reports request using the created credential object. Next_key {next_key} included for pagination."
+        log_message = message_with_nk if next_key else message_without_nk
+        self.log(message=log_message, level="info")
 
         try:
             activities = (
-                reports_service.activities()
+                self.reports_service.activities()
                 .list(
                     userKey="all",
                     applicationName=self.configuration.application_name.value,
                     maxResults=self.pagination_limit,
-                    startTime=self.most_recent_date_seen,
-                )
-                .execute()
-            )
-
-            return activities
-
-        except (TransportError, ServerNotFoundError) as ex:
-            self.log(message=f"Can't reach the google api server", level="warning")
-
-    def get_next_activities(self, next_key):
-        reports_service = self.get_build_object()
-
-        self.log(
-            message=f"Start requesting the Google reports with credential object created and also next key",
-            level="info",
-        )
-
-        try:
-            activities = (
-                reports_service.activities()
-                .list(
-                    userKey="all",
-                    applicationName=self.configuration.application_name.value,
-                    maxResults=self.pagination_limit,
+                    startTime=start,
+                    endTime=end,
                     pageToken=next_key,
-                    startTime=self.most_recent_date_seen,
                 )
                 .execute()
             )
@@ -205,61 +205,50 @@ class GoogleReports(GoogleTrigger):
         except (TransportError, ServerNotFoundError) as ex:
             self.log(message=f"Can't reach the google api server", level="warning")
 
-    def get_next_activities_with_next_key(self, next_key):
+    def get_reports_with_nk(self, start: str, end: str, next_key: str):
         const_next_key = next_key
         self.log(
             message=f"Start looping for all next activities with the first next key {const_next_key}",
             level="info",
         )
         while const_next_key:
-            next_messages = []
-            response_next_page = self.get_next_activities(next_key) or {}
-
+            response_next_page = self.get_activities(start, end, next_key) or {}
             next_page_items = response_next_page.get("items", [])
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_page_items))
+
             if next_page_items:
-                recent_date = next_page_items[0].get("id").get("time")
-                next_messages.extend(next_page_items)
+                next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                 self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
                 self.push_events_to_intakes(events=next_messages)
-                self.most_recent_date_seen = recent_date
-                self.log(
-                    message=f"Updated recent date (get_next_activities) to  {self.most_recent_date_seen}",
-                    level="info",
-                )
-                self.events_sum += len(next_messages)
-                const_next_key = response_next_page.get("nextPageToken")
+
+                const_next_key = response_next_page.get("nextPageToken", "")
                 self.log(
                     message=f"Updated nextKey to the new value: {const_next_key}",
                     level="info",
                 )
+
             else:
                 const_next_key = ""
                 self.log(message=f"There's no items even if there's a next key!!", level="info")
 
-    def get_reports_events(self):
+    def get_reports_events(self, start: datetime, end: datetime):
         self.log(message=f"Creating a google credentials objects", level="info")
-
-        activities = self.get_activities() or {}
+        start_isoformat, stop_isoformat = start.isoformat(), end.isoformat()
+        activities = self.get_activities(start_isoformat, stop_isoformat) or {}
         items, next_key = activities.get("items", []), activities.get("nextPageToken")
 
         self.log(message=f"Getting activities with {len(items)} elements", level="info")
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(items))
 
         if len(items) > 0:
-            recent_date = items[0].get("id").get("time")
             messages = [orjson.dumps(message).decode("utf-8") for message in items]
             self.log(message=f"Sending the first batch of {len(messages)} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
             self.push_events_to_intakes(events=messages)
-            self.most_recent_date_seen = recent_date
-            self.log(
-                message=f"Changing recent date in get reports events to  {self.most_recent_date_seen}", level="info"
-            )
-            self.events_sum += len(messages)
 
             if next_key:
-                self.get_next_activities_with_next_key(next_key)
+                self.get_reports_with_nk(start_isoformat, stop_isoformat, next_key)
 
         else:
             self.log(message="No messages to forward", level="info")
