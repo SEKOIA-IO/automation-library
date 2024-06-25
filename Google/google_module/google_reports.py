@@ -52,7 +52,7 @@ class ApplicationName(str, Enum):
 class GoogleReportsConfig(DefaultConnectorConfiguration):
     admin_mail: str
     frequency: int = 60
-    application_name: ApplicationName = ApplicationName.DRIVE
+    application_name: ApplicationName = ApplicationName.LOGIN
     chunk_size: int = 1000
     timedelta: int = 1
     start_time: int = 1
