@@ -1,4 +1,5 @@
 """All necessary tests for http client."""
+
 from typing import Any
 
 import pytest
