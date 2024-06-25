@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-25 - 1.20.2
+
+### Changed
+
+- Delete application_name from required fields
+
 ## 2024-06-25 - 1.20.1
 
 ### Changed
