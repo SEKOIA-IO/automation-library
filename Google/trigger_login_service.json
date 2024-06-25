@@ -10,11 +10,6 @@
           "description": "Batch frequency in seconds",
           "default": 60
         },
-        "application_name": {
-          "type": "string",
-          "description": "The application from which the activities should be fetched",
-          "default": "login"
-        },
         "timedelta": {
           "type": "integer",
           "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 150 minutes ago)",
