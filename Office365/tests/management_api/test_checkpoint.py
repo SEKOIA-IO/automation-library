@@ -56,3 +56,21 @@ def test_checkpoint_greater_than_30_days(symphony_storage, checkpoint, intake_ke
         # Timedelta is sligthly less than 30 days since a few microseconds elapsed between `now`
         # and the moment `last_pull_date` is generated
         assert (now - checkpoint.offset).days == 30
+
+
+def test_checkpoint_save_last_date(symphony_storage, checkpoint, intake_key):
+    # arrange
+    now = datetime.now(timezone.utc)
+    previous_observed_date = now - timedelta(days=5)
+    context = symphony_storage / f"o365_{intake_key}_last_pull"
+    context.write_text(previous_observed_date.isoformat())
+
+    # assert that the checkpoint is at the last observed date
+    assert checkpoint.offset == previous_observed_date
+
+    # save a more recent date in the checkpoint
+    new_observed_date = now - timedelta(days=1)
+    checkpoint.offset = new_observed_date
+
+    # assert that the checkpoint was updated to the new observed date
+    assert checkpoint.offset == new_observed_date

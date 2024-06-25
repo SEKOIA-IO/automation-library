@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-25 - 2.17.2
+
+### Fixed
+
+- Update the internal cursor when saving a new date in the checkpoint
+
 ## 2024-06-24 - 2.17.1
 
 ### Fixed
 
-- Fixe the way to use the event loop
+- Fix the way to use the event loop
 
 ## 2024-06-17 - 2.17.0
 
