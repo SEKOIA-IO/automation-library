@@ -98,7 +98,7 @@ class Office365Connector(AsyncConnector):
         end_pull_date = datetime.now(UTC)
 
         for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
-            async for list_of_events in self.pull_content(start_pull_date, end_pull_date):
+            async for list_of_events in self.pull_content(start_date, end_date):
                 await self.send_events(list_of_events)
 
         # get the ending time and compute the duration to forward the events
