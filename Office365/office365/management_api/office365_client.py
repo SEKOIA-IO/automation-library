@@ -94,7 +94,7 @@ class Office365API:
 
                 # check HTTP status code
                 if response.status >= 400:
-                    raise FailedToActivateO365Subscription(status_code=response.status, body=response.text)
+                    raise FailedToActivateO365Subscription(status_code=response.status, body=await response.text())
 
                 subscription = await response.json()
 
@@ -119,7 +119,7 @@ class Office365API:
 
             # check HTTP status code
             if response.status >= 400:
-                raise FailedToListO365Subscriptions(status_code=response.status, body=response.text)
+                raise FailedToListO365Subscriptions(status_code=response.status, body=await response.text())
 
             # get the body of the response
             subscriptions = await response.json()
@@ -188,7 +188,7 @@ class Office365API:
 
                 # check HTTP status code
                 if response.status >= 400:
-                    raise FailedToGetO365SubscriptionContents(status_code=response.status, body=response.text)
+                    raise FailedToGetO365SubscriptionContents(status_code=response.status, body=await response.text())
 
                 contents = await response.json()
 
@@ -219,7 +219,7 @@ class Office365API:
 
             # check HTTP status code
             if response.status >= 400:
-                raise FailedToGetO365AuditContent(status_code=response.status, body=response.text)
+                raise FailedToGetO365AuditContent(status_code=response.status, body=await response.text())
 
             content = await response.json(content_type=None)
 
