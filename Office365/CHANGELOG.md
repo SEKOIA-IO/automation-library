@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-26 - 2.17.3
+
+### Fixed
+
+- Fix the way to get the content of HTTP errors
+
 ## 2024-06-25 - 2.17.2
 
 ### Fixed
