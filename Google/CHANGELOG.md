@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-26 - 1.20.4
+
+### Changed
+
+- Change days to hours for start_time variable
+
 ## 2024-06-26 - 1.20.3
 
 ### Changed
