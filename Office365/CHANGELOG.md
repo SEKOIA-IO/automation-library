@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-01 - 2.17.5
+
+### Fixed
+
+- Move async main stuff in a dedicated async method
+
 ## 2024-06-26 - 2.17.4
 
 ### Fixed
