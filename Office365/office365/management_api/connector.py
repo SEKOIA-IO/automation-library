@@ -139,7 +139,7 @@ class Office365Connector(AsyncConnector):
         """
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        asyncio.run_until_complete(self.collect_events())
+        loop.run_until_complete(self.collect_events())
 
         loop.close()
         self.client.close()
