@@ -73,7 +73,7 @@ class TimeStepper:
         if start_time == 0:
             end = datetime.datetime.now(datetime.UTC) - t_timedelta
         else:
-            end = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=start_time)
+            end = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=start_time)
 
         start = end - t_frequency
 
