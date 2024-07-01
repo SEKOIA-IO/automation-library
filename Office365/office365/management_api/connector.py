@@ -117,6 +117,18 @@ class Office365Connector(AsyncConnector):
         while self.running:
             await self.forward_next_batches(checkpoint)
 
+    async def collect_events(self):
+        await self.activate_subscriptions()
+
+        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
+
+        while self.running:
+            try:
+                await self.forward_events_forever(checkpoint)
+
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")
+
     def run(self):
         """Main execution thread
 
@@ -127,17 +139,7 @@ class Office365Connector(AsyncConnector):
         """
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-
-        loop.run_until_complete(self.activate_subscriptions())
-
-        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
-
-        while self.running:
-            try:
-                loop.run_until_complete(self.forward_events_forever(checkpoint))
-
-            except Exception as error:
-                self.log_exception(error, message="Failed to forward events")
+        asyncio.run_until_complete(self.collect_events())
 
         loop.close()
         self.client.close()
