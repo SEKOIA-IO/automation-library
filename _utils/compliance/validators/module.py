@@ -8,6 +8,7 @@ from . import (
     DependenciesValidator,
     DockerfileValidator,
     LogoValidator,
+    MainPYValidator,
     ManifestValidator,
     TestsValidator,
     TriggersJSONValidator,
@@ -37,6 +38,7 @@ class ModuleValidator:
             ActionsJSONValidator,
             ConnectorsJSONValidator,
             TriggersJSONValidator,
+            MainPYValidator,
         ]
 
     def validate(self):

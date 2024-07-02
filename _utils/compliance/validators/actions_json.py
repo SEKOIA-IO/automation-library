@@ -69,12 +69,14 @@ class ActionsJSONValidator(Validator):
             )
 
         else:
-            if path.stem not in result.options["actions"]:
-                result.options["actions"][path.stem] = {}
+            if "docker_parameters" not in result.options:
+                result.options["docker_parameters"] = {}
+            if path.name not in result.options["docker_parameters"]:
+                result.options["docker_parameters"][path.name] = {}
 
-            result.options["actions"][path.stem]["docker_parameters"] = raw[
+            result.options["docker_parameters"][path.name] = raw.get(
                 "docker_parameters"
-            ]
+            )
 
         if not isinstance(raw.get("arguments"), dict):
             result.errors.append(
