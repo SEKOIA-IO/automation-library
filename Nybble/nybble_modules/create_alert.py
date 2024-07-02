@@ -20,19 +20,36 @@ class NybbleAlert(dict):
     Final Object sent to Nybble Hub
     """
 
-    alert_processing_time: str
-    alert_fields: dict[str, str]
-    alert_event_original: dict
-    alert_id: str
-    alert_level: int
-    rule_status: str
-    rule_name: str
-    rule_tags: list[str]
-    rule_references: list[str]
-    sigma_rule_id: str
-    mssp_client: str
-    custom_fields_visible: dict
-    custom_fields_hidden: dict
+    def __init__(
+        self,
+        alert_processing_time=None,
+        alert_fields=None,
+        alert_event_original=None,
+        alert_id=None,
+        alert_level=None,
+        rule_status=None,
+        rule_name=None,
+        rule_tags=None,
+        rule_references=None,
+        sigma_rule_id=None,
+        mssp_client=None,
+        custom_fields_visible=None,
+        custom_fields_hidden=None,
+    ):
+        super().__init__()
+        self["alert_processing_time"] = alert_processing_time
+        self["alert_fields"] = alert_fields if alert_fields is not None else {}
+        self["alert_event_original"] = alert_event_original if alert_event_original is not None else {}
+        self["alert_id"] = alert_id
+        self["alert_level"] = alert_level
+        self["rule_status"] = rule_status
+        self["rule_name"] = rule_name
+        self["rule_tags"] = rule_tags if rule_tags is not None else []
+        self["rule_references"] = rule_references if rule_references is not None else []
+        self["sigma_rule_id"] = sigma_rule_id
+        self["mssp_client"] = mssp_client
+        self["custom_fields_visible"] = custom_fields_visible if custom_fields_visible is not None else {}
+        self["custom_fields_hidden"] = custom_fields_hidden if custom_fields_hidden is not None else {}
 
 
 class CreateAlertAction(NybbleAction):
@@ -68,7 +85,10 @@ class CreateAlertAction(NybbleAction):
 
         for field in rule_event_fields:
             cur_field = str(field["field"])
-            nybble_fields[cur_field] = event[cur_field]
+            valeur = event.get(cur_field)
+
+            if valeur is not None:
+                nybble_fields[cur_field] = valeur
         return nybble_fields
 
     def _cleanEventOriginal(self, original_event: dict) -> dict:
@@ -88,27 +108,27 @@ class CreateAlertAction(NybbleAction):
     Generate final payload for Nybble Hub
       We take only the 1st event triggering the alert
     """
-        nybble_alert.alert_processing_time = arguments.alert_data["created_at"]
-        nybble_alert.alert_fields = self._generateFields(
+        nybble_alert["alert_processing_time"] = arguments.alert_data["created_at"]
+        nybble_alert["alert_fields"] = self._generateFields(
             rule_event_fields=arguments.rule["event_fields"], event=arguments.events[0]
         )
-        nybble_alert.alert_event_original = self._cleanEventOriginal(arguments.events[0])
-        nybble_alert.alert_id = arguments.alert_data["uuid"]
-        nybble_alert.alert_level = (
+        nybble_alert["alert_event_original"] = self._cleanEventOriginal(arguments.events[0])
+        nybble_alert["alert_id"] = arguments.alert_data["uuid"]
+        nybble_alert["alert_level"] = (
             1 if arguments.alert_data["urgency"]["value"] == 0 else ceil(arguments.alert_data["urgency"]["value"] / 25)
         )  # scale 1 to 100 in sekoia -> 1 to 4 in Nybble
-        nybble_alert.rule_status = "stable"
-        nybble_alert.rule_name = arguments.alert_data["title"]
-        nybble_alert.rule_references = str(arguments.rule["references"]).split(
+        nybble_alert["rule_status"] = "stable"
+        nybble_alert["rule_name"] = arguments.alert_data["title"]
+        nybble_alert["rule_references"] = str(arguments.rule["references"]).split(
             ","
         )  # sekoia is providing comma separated references
-        nybble_alert.rule_tags = self._generateTags(arguments.rule["tags"])
-        nybble_alert.sigma_rule_id = arguments.rule[
+        nybble_alert["rule_tags"] = self._generateTags(arguments.rule["tags"])
+        nybble_alert["sigma_rule_id"] = arguments.rule[
             "uuid"
         ]  # TODO find better (we took RULE uuid instead of uuid_instance which is coming from alert)
-        nybble_alert.mssp_client = arguments.alert_data["community_uuid"]
-        nybble_alert.custom_fields_visible = {"false_positives": arguments.rule["false_positives"]}
-        nybble_alert.custom_fields_hidden = {}
+        nybble_alert["mssp_client"] = arguments.alert_data["community_uuid"]
+        nybble_alert["custom_fields_visible"] = {"false_positives": arguments.rule["false_positives"]}
+        nybble_alert["custom_fields_hidden"] = {}
 
         """
     Send to Nybble Hub

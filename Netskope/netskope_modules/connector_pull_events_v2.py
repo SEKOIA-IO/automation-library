@@ -146,6 +146,13 @@ class NetskopeEventConnector(Connector):
         return get_tenant_hostname(self.module.configuration.base_url)
 
     @cached_property
+    def _user_agent(self):
+        return "sekoiaio-connector/{}-{}".format(
+            self.module.manifest.get("slug"),
+            self.module.manifest.get("version"),
+        )
+
+    @cached_property
     def dataexports(self) -> list[tuple[NetskopeEventType, NetskopeAlertType | None]]:
         return [
             (NetskopeEventType.PAGE, None),
@@ -186,6 +193,7 @@ class NetskopeEventConnector(Connector):
             Const.NSKP_TENANT_HOSTNAME: self.tenant_hostname,
             Const.NSKP_EVENT_TYPE: event_type.value,
             Const.NSKP_ITERATOR_NAME: self.get_index_name(event_type, alert_type),
+            Const.NSKP_USER_AGENT: self._user_agent,
         }
 
         if event_type == NetskopeEventType.ALERT:

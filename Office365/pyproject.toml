@@ -6,19 +6,22 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.13.0"
+sekoia-automation-sdk = { version = "^1.13.0", extras = ["all"] }
 orjson = "^3.7.7"
 tenacity = "^8.0.1"
 msal = "^1.18.0"
 python-dateutil = "^2.8.2"
 freezegun = "^1.4.0"
 pytest-freezegun = "^0.4.2"
+aiohttp = "^3.9.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
+pytest-asyncio = "*"
 requests = "*"
 requests-mock = "*"
+aioresponses = "^0.7.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

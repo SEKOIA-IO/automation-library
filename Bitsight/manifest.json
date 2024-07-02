@@ -1,0 +1,32 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Bitsight",
+    "type": "object",
+    "properties": {
+      "company_uuids": {
+        "description": "The list of company uuids",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "api_token": {
+        "description": "The API Token to authenticate calls to the Bitsight API",
+        "type": "string"
+      }
+    },
+    "required": [
+      "api_token",
+      "company_uuids"
+    ],
+    "secrets": [
+      "api_token"
+    ]
+  },
+  "description": "Bitsight connector for audit logs",
+  "name": "Bitsight",
+  "uuid": "59b7f559-0a07-456f-b1c0-41d9fbe6ad4a",
+  "slug": "bitsight",
+  "version": "1.0.0"
+}

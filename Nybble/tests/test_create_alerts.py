@@ -30,6 +30,19 @@ def arguments():
     )
 
 
+SEKOIA_ALERT_RULE_MOCK_EXTRA_FIELD: dict[str, Any] = {
+    "uuid": "7cb3f329-8d12-4065-8dd1-fdb91da7eecf",
+    "instance_uuid": "8b4b4a25-3b15-47ea-b701-db75d7da7346",
+    "event_fields": [
+        {"field": "host.name", "description": "Host Name"},
+        {"field": "host.ip", "description": "Host IP Address"},
+        {"field": "user.name", "description": "User Name, missing in event"},
+    ],
+    "references": "https://abcdef.fr",
+    "tags": [{"uuid": "fca4002a-07c1-41e3-8efa-c2e49a171dab", "name": "Linux"}],
+    "false_positives": None,
+}
+
 SEKOIA_ALERT_RULE_MOCK: dict[str, Any] = {
     "uuid": "7cb3f329-8d12-4065-8dd1-fdb91da7eecf",
     "instance_uuid": "8b4b4a25-3b15-47ea-b701-db75d7da7346",
@@ -69,6 +82,20 @@ def test_create_alert(symphony_storage, nybble_module, arguments):
 def test_create_alert_noFields_noTags(symphony_storage, nybble_module, arguments):
 
     arguments.rule = SEKOIA_ALERT_RULE_MOCK_EMPTY
+
+    create_alert_action = CreateAlertAction(module=nybble_module, data_path=symphony_storage)
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            f"{nybble_module.configuration.nhub_url}/conn/sekoia", json={"ok": "created with success"}, status_code=200
+        )
+        results = create_alert_action.run(arguments)
+
+        assert results["status"] == True
+
+
+def test_create_alert_missing_field(symphony_storage, nybble_module, arguments):
+
+    arguments.rule = SEKOIA_ALERT_RULE_MOCK_EXTRA_FIELD
 
     create_alert_action = CreateAlertAction(module=nybble_module, data_path=symphony_storage)
     with requests_mock.Mocker() as mock:

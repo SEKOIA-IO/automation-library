@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-01 - 2.17.6
+
+### Fixed
+
+- Fix run_until_complete method
+
+## 2024-07-01 - 2.17.5
+
+### Fixed
+
+- Move async main stuff in a dedicated async method
+
+## 2024-06-26 - 2.17.4
+
+### Fixed
+
+- Fix the dates used to pull the contents
+
+## 2024-06-26 - 2.17.3
+
+### Fixed
+
+- Fix the way to get the content of HTTP errors
+
+## 2024-06-25 - 2.17.2
+
+### Fixed
+
+- Update the internal cursor when saving a new date in the checkpoint
+
+## 2024-06-24 - 2.17.1
+
+### Fixed
+
+- Fix the way to use the event loop
+
+## 2024-06-17 - 2.17.0
+
+### Changed
+
+- Transform Office365 Management API connector as asynchronous connector
+
 ## 2024-06-12 - 2.16.1
 
 ### Added
