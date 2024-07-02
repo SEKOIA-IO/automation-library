@@ -1,7 +1,7 @@
 {
   "uuid": "3b1314cd-3bdd-4525-ae56-0ea52f4ffb6a",
   "name": "Whois",
-  "docker_parameters": "whois_domain",
+  "docker_parameters": "current_whois_domain",
   "description": "Get the current WHOIS for a domain",
   "arguments": {
     "type": "object",
