@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-02 - 1.20.5
+
+### Changed
+
+- Catch some network exceptions
+
+## 2024-07-01 - 1.20.4
+
+### Changed
+
+- Change days to hours for start_time variable
+
+## 2024-06-26 - 1.20.3
+
+### Changed
+
+- Fix configuration
+
+## 2024-06-25 - 1.20.2
+
+### Changed
+
+- Delete application_name from required fields
+
+## 2024-06-25 - 1.20.1
+
+### Changed
+
+- Fix login configuration problem
+
+## 2024-06-24 - 1.20.0
+
+### Changed
+
+- Add login json
+- Add timestepper for both login and other services
+
 ## 2024-05-28 - 1.19.0
 
 ### Changed

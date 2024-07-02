@@ -8,7 +8,7 @@
       "frequency": {
         "type": "integer",
         "description": "Batch frequency in seconds",
-        "default": 20
+        "default": 60
       },
       "application_name": {
         "type": "string",
@@ -22,13 +22,22 @@
           "groups",
           "groups_enterprise",
           "jamboard",
-          "login",
           "meet",
           "token",
           "user_accounts",
           "keep"
         ],
         "default": "drive"
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 0 minutes ago)",
+        "default": 0
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried.",
+        "default": 1
       },
       "chunk_size": {
         "type": "integer",

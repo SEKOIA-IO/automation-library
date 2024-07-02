@@ -6,6 +6,7 @@ from google_module.google_reports import GoogleReports
 import tempfile
 import json
 import codecs
+import datetime
 
 
 @pytest.fixture
@@ -64,21 +65,21 @@ def drive_response_NK():
         "items": [
             {
                 "kind": "admin#reports#activity",
-                "id": {"time": "2023-08-07T12:04:37.532Z"},
+                "id": {"time": "2023-08-07T12:01:37.532Z"},
                 "etag": "etage1",
                 "actor": {},
                 "events": [],
             },
             {
                 "kind": "admin#reports#activity",
-                "id": {"time": "2023-08-07T12:03:37.532Z"},
+                "id": {"time": "2023-08-07T11:03:37.532Z"},
                 "etag": "etage2",
                 "actor": {},
                 "events": [],
             },
             {
                 "kind": "admin#reports#activity",
-                "id": {"time": "2023-08-07T12:02:37.532Z"},
+                "id": {"time": "2023-08-07T11:02:37.532Z"},
                 "etag": "etage3",
                 "actor": {},
                 "events": [],
@@ -87,14 +88,20 @@ def drive_response_NK():
     }
 
 
-def test_get_google_reports_data(trigger, drive_response):
+def test_get_reports_events(trigger, drive_response):
     with patch("google_module.google_reports.build", return_value=Mock()):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
             with patch("google_module.google_reports.GoogleReports.get_activities", return_value=drive_response):
-                trigger.get_reports_events()
+                start_date = datetime.datetime(2023, 8, 7, 12, 1, 37)
+                end_date = datetime.datetime(2023, 8, 7, 12, 4, 37)
+                trigger.get_reports_events(start_date, end_date)
                 results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-                assert len(results[0]) != 0
-                assert trigger.events_sum == 3
+                assert len(results[0]) == 3
+
+                dict_result = [json.loads(result) for result in results[0]]
+                assert dict_result[0]["id"]["time"] == "2023-08-07T12:04:37.532Z"
+                assert dict_result[1]["id"]["time"] == "2023-08-07T12:03:37.532Z"
+                assert dict_result[2]["id"]["time"] == "2023-08-07T12:02:37.532Z"
 
 
 def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
@@ -102,13 +109,18 @@ def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
         with patch("google.oauth2.service_account.Credentials.from_service_account_file", return_value=Mock()):
             with patch("google_module.google_reports.GoogleReports.get_activities", return_value=drive_response_NK):
                 with patch(
-                    "google_module.google_reports.GoogleReports.get_next_activities",
+                    "google_module.google_reports.GoogleReports.get_reports_with_nk",
                     return_value=drive_response,
                 ):
-                    trigger.get_reports_events()
+                    start_date = datetime.datetime(2023, 8, 7, 12, 1, 37)
+                    end_date = datetime.datetime(2023, 8, 7, 12, 4, 37)
+                    trigger.get_reports_events(start_date, end_date)
                     results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-                    assert len(results[0]) != 0
-                    assert trigger.events_sum == 6
+                    # 3 items because the first 3 items are pushed in the first call
+                    assert len(results[0]) == 3
+
+                    dict_result = [json.loads(result) for result in results[0]]
+                    assert dict_result[2]["id"]["time"] == "2023-08-07T11:02:37.532Z"
 
 
 @pytest.mark.skipif(
@@ -145,7 +157,9 @@ def test_get_google_reports_data_integration():
         json_file.write(decoded_json_string)
         trigger.service_account_path = temp_file_path
 
-    trigger.get_reports_events()
+    start_date = datetime.datetime(2023, 8, 7, 12, 1, 37)
+    end_date = datetime.datetime(2023, 8, 7, 12, 4, 37)
+    trigger.get_reports_events(start_date, end_date)
     os.close(temp_fd)
     os.remove(temp_file_path)
     results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]

@@ -10,5 +10,6 @@ if __name__ == "__main__":
     module.register(BigQueryAction, "run-bigquery-query")
     module.register(PubSub, "run-pubsub")
     module.register(GoogleReports, "run-google_reports_trigger")
+    module.register(GoogleReports, "run-login_reports_trigger")
 
     module.run()
