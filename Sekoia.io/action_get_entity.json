@@ -28,6 +28,10 @@
         "type": "string",
         "description": "The name of the entity"
       },
+      "entity_id": {
+        "type": "string",
+        "description": "The chosen ID of the entity"
+      },
       "community_uuid": {
         "type": "string",
         "description": "The UUID of the community the entity belongs to"
