@@ -1,0 +1,53 @@
+{
+  "name": "Create Alert",
+  "description": "Create an Alert into Nybble Hub",
+  "uuid": "06cf0602-e56b-572b-94e0-fdaf709db1b0",
+  "docker_parameters": "CreateAlertAction",
+  "arguments": {
+    "title": "CreateAlertArguments",
+    "type": "object",
+    "properties": {
+      "alert_data": {
+        "title": "Alert Data",
+        "description": "Received alert, from Sekoia 'Get Alert' action",
+        "type": "object"
+      },
+      "rule": {
+        "title": "Rule",
+        "description": "Alert Rule from Rule Catalog, from Sekoia 'Get Rule' action",
+        "type": "object"
+      },
+      "events": {
+        "title": "Events",
+        "description": "Related Events, from Sekoia 'Get The Alert Events' action",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      }
+    },
+    "required": [
+      "alert_data",
+      "rule",
+      "events"
+    ]
+  },
+  "results": {
+    "title": "CreateAlertResults",
+    "type": "object",
+    "properties": {
+      "status": {
+        "title": "Status",
+        "type": "boolean"
+      },
+      "details": {
+        "title": "Details",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "details"
+    ]
+  }
+}
