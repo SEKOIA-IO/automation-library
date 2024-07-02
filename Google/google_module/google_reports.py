@@ -202,8 +202,8 @@ class GoogleReports(GoogleTrigger):
 
             return activities
 
-        except (TransportError, ServerNotFoundError) as ex:
-            self.log(message=f"Can't reach the google api server", level="warning")
+        except (TransportError, ServerNotFoundError, OSError, BrokenPipeError) as ex:
+            self.log(message=f"Can't reach the google api server during processing of request: {ex}", level="warning")
 
     def get_reports_with_nk(self, start: str, end: str, next_key: str):
         const_next_key = next_key
