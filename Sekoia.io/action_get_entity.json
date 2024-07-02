@@ -1,0 +1,53 @@
+{
+  "uuid": "4478ac52-b549-44b2-9164-abca02bd2f3a",
+  "name": "Get Entity",
+  "docker_parameters": "get-entities/{uuid}",
+  "description": "Retrieve an entity",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_entity",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      }
+    },
+    "required": [
+      "uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "description": "The UUID of the entity"
+      },
+      "name": {
+        "type": "string",
+        "description": "The name of the entity"
+      },
+      "entity_id": {
+        "type": "string",
+        "description": "The chosen ID of the entity"
+      },
+      "community_uuid": {
+        "type": "string",
+        "description": "The UUID of the community the entity belongs to"
+      },
+      "description": {
+        "type": "string",
+        "description": "The description of the entity"
+      },
+      "alerts_generation": {
+        "type": "string",
+        "description": "Whether alerts generated for this entity require analyst approval"
+      },
+      "number_of_intakes": {
+        "type": "number",
+        "description": "The number of configured intakes for this entity"
+      }
+    }
+  }
+}

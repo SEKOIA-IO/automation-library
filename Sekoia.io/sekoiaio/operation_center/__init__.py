@@ -624,3 +624,23 @@ UpdateRule = type(
         "query_parameters": [],
     },
 )
+
+GetIntake = type(
+    "GetIntake",
+    (GenericAPIAction,),
+    {
+        "verb": "get",
+        "endpoint": base_url + "conf/intakes/{uuid}",
+        "query_parameters": [],
+    },
+)
+
+GetEntity = type(
+    "GetEntity",
+    (GenericAPIAction,),
+    {
+        "verb": "get",
+        "endpoint": base_url + "conf/entities/{uuid}",
+        "query_parameters": [],
+    },
+)
