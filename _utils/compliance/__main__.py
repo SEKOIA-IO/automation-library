@@ -19,11 +19,13 @@ def check_module(module_path: str | Path, args: argparse.Namespace):
     return m
 
 
-def format_errors(mod_val: ModuleValidator) -> str:
+def format_errors(mod_val: ModuleValidator, ignored_paths: set[Path]) -> str:
     errors = mod_val.result.errors
     module_name = mod_val.path.name
     return "\n".join(
-        "%s:%s:%s" % (module_name, error.filepath.name, error.error) for error in errors
+        "%s:%s:%s" % (module_name, error.filepath.name, error.error)
+        for error in errors
+        if error.filepath not in ignored_paths
     )
 
 
@@ -218,6 +220,17 @@ if __name__ == "__main__":
         "--module", action="append", default=[], help="Check/fix specific modules"
     )
 
+    # get and parse .complianceignore
+    compliance_ignore_path = Path(MODULES_PATH / ".complianceignore")
+    paths_to_ignore = []
+    if compliance_ignore_path.exists():
+        with open(compliance_ignore_path, "rt") as f:
+            paths_to_ignore = {
+                MODULES_PATH / path
+                for path in f.read().split("\n")
+                if not path.startswith("#") and len(path) > 0
+            }
+
     args = parser.parse_args()
 
     all_modules = find_modules(MODULES_PATH)
@@ -252,14 +265,19 @@ if __name__ == "__main__":
 
     for r in selected_validators:
         if r.result.errors:
-            has_any_errors = True
             for item in r.result.errors:
+                if item.filepath in paths_to_ignore:
+                    continue
+
+                has_any_errors = True
                 if item.fix is not None:
                     errors_to_fix.append(item)
 
     for res in sorted(selected_validators, key=lambda x: x.path):
         if len(res.result.errors) > 0:
-            print(format_errors(res))
+            fmt = format_errors(res, ignored_paths=paths_to_ignore)
+            if fmt:
+                print(fmt)
 
     if args.action == "check":
         if len(errors_to_fix) > 0:
