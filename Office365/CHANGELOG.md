@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-03 - 2.17.7
+
+### Fixed
+
+- Fix the checkpoint system when the context doesn't exist
+
 ## 2024-07-01 - 2.17.6
 
 ### Fixed
