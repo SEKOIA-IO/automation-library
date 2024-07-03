@@ -60,12 +60,13 @@ def trigger(symphony_storage):
 @pytest.mark.asyncio
 async def test_handle_messages(trigger):
     # arrange
-    messages: list[EventData] = [
-        EventData('{"records": [{"name": "record1"}, null, {"name": "record2"}]}'),
-        EventData('{"type": "heartbeat"}'),
-        EventData('[{"name": "record3"}, {"name": "record4"}, {"name": "record5"}]'),
-        EventData('{"name": "record6"}'),
+    events: list[str] = [
+        '{"records": [{"name": "record1"}, null, {"name": "record2"}]}',
+        '{"type": "heartbeat"}',
+        '[{"name": "record3"}, {"name": "record4"}, {"name": "record5"}]',
+        '{"name": "record6"}',
     ]
+    messages: list[EventData] = [EventData(event) for event in events]
     partition_context = AsyncMock()
 
     # act
