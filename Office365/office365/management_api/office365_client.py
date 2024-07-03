@@ -38,11 +38,11 @@ class Office365API:
         self._token_expiration = 0
         self._publisher_id = publisher_id
 
-    def close(self):
+    async def close(self):
         """
         Close the client
         """
-        self._session.close()
+        await self._session.close()
 
     async def _authenticate_client(self):
         """
