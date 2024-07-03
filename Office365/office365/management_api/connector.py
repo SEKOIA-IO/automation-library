@@ -129,6 +129,8 @@ class Office365Connector(AsyncConnector):
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
 
+        await self.client.close()
+
     def run(self):
         """Main execution thread
 
@@ -142,4 +144,3 @@ class Office365Connector(AsyncConnector):
         loop.run_until_complete(self.collect_events())
 
         loop.close()
-        self.client.close()
