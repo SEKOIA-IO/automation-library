@@ -23,7 +23,7 @@ def test_non_existing_checkpoint(checkpoint):
 
     # Not set
     with (
-        patch.object(Path, "read_text", side_effect=FileNotFoundError),
+        patch.object(Path, "read_text", side_effect=OSError),
         patch("office365.management_api.checkpoint.datetime") as mock_datetime,
     ):
         mock_datetime.now.return_value = now
