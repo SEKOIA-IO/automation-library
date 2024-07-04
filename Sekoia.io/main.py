@@ -34,6 +34,8 @@ from sekoiaio.operation_center import (
     ReturnsAsset,
     TriggerActionOnAlertWorkflow,
     UpdateRule,
+    GetIntake,
+    GetEntity,
 )
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
 from sekoiaio.operation_center.get_event_field_common_values import GetEventFieldCommonValues
@@ -47,6 +49,7 @@ from sekoiaio.triggers.alerts import (
     SecurityAlertsTrigger,
 )
 from sekoiaio.triggers.intelligence import FeedConsumptionTrigger, FeedIOCConsumptionTrigger
+from sekoiaio.workspace import GetCommunity
 
 if __name__ == "__main__":
     module = Module()
@@ -84,6 +87,9 @@ if __name__ == "__main__":
     module.register(UpdateRule, "put-rules/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
     module.register(AddIOCtoIOCCollectionAction, "add_ioc_to_ioc_collection")
+    module.register(GetIntake, "get-intakes/{uuid}")
+    module.register(GetEntity, "get-entities/{uuid}")
+    module.register(GetCommunity, "get-communities/{uuid}")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

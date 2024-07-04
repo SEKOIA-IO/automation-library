@@ -62,7 +62,7 @@ async def test_active_subscription_should_succeed(mocked_responses, mock_azure_a
     await client.activate_subscriptions()
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,7 @@ async def test_office_365_auth_fail_no_token(mocked_responses, mock_azure_authen
         await client.activate_subscriptions()
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -136,7 +136,7 @@ async def test_office_365_auth_fail_bad_token(mocked_responses, mock_azure_authe
         await client.activate_subscriptions()
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -174,7 +174,7 @@ async def test_list_subscriptions(mocked_responses, mock_azure_authentication, t
     assert await client.list_subscriptions() == ["Audit.SharePoint"]
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -213,7 +213,7 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     )
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -251,7 +251,7 @@ async def test_get_content(mocked_responses, mock_azure_authentication, tenant_i
     assert await client.list_subscriptions() == ["Audit.SharePoint"]
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -297,7 +297,7 @@ async def test_activate_subscription_should_exception_when_handling_business_err
         await client.activate_subscriptions()
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -342,7 +342,7 @@ async def test_activate_subscription_should_exception_on_http_error(
         await client.activate_subscriptions()
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -383,7 +383,7 @@ async def test_list_subscriptions_should_succeed(mocked_responses, mock_azure_au
     assert subscriptions is not None
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -411,7 +411,7 @@ async def test_list_subscriptions_should_exception_when_handling_business_error(
         await client.list_subscriptions()
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -438,7 +438,7 @@ async def test_list_subscriptions_should_exception_on_http_error(
         await client.list_subscriptions()
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -504,7 +504,7 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
         await anext(gen)
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -580,7 +580,7 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     assert 2 == len(pages)
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -613,7 +613,7 @@ contentType={content_type}",
         await anext(gen)
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -644,7 +644,7 @@ contentType={content_type}",
         await anext(gen)
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -721,7 +721,7 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
     assert 2 == len(content)
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -749,7 +749,7 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
         await client.get_content(content_uri)
 
     # finalize
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -778,4 +778,4 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
         await client.get_content(content_uri)
 
     # finalize
-    client.close()
+    await client.close()

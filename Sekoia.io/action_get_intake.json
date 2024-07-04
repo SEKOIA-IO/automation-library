@@ -1,0 +1,91 @@
+{
+  "uuid": "6b7a7ebc-d5a0-4886-ba09-d2aa5cd7608d",
+  "name": "Get Intake",
+  "docker_parameters": "get-intakes/{uuid}",
+  "description": "Retrieve an intake",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_intake",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      }
+    },
+    "required": [
+      "uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "description": "The UUID of the intake"
+      },
+      "name": {
+        "type": "string",
+        "description": "The name of the intake"
+      },
+      "community_uuid": {
+        "type": "string",
+        "description": "The UUID of the community the intake belongs to"
+      },
+      "format_uuid": {
+        "type": "string",
+        "description": "The UUID of the format of the intake"
+      },
+      "intake_key": {
+        "type": "string",
+        "description": "The key to use to send events to the intake"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "The date and time the intake was created"
+      },
+      "created_by": {
+        "type": "string",
+        "description": "The user who created the intake"
+      },
+      "created_by_type": {
+        "type": "string",
+        "description": "The type of user who created the intake"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "The date and time the intake was last updated"
+      },
+      "updated_by": {
+        "type": "string",
+        "description": "The user who last updated the intake"
+      },
+      "updated_by_type": {
+        "type": "string",
+        "description": "The type of user who last updated the intake"
+      },
+      "is_custom_format": {
+        "type": "boolean",
+        "description": "Whether the format is custom (not maintained by Sekoia)"
+      },
+      "connector_configuration_uuid": {
+        "type": "string",
+        "description": "The UUID of the connector configuration, for pulling intakes"
+      },
+      "status": {
+        "type": "string",
+        "description": "A string representation of the status of the intake (mainly for pulling intakes)"
+      },
+      "entity": {
+        "uuid": {
+          "type": "string",
+          "description": "The UUID of the entity the intake belongs to"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the entity the intake belongs to"
+        }
+      }
+    }
+  }
+}

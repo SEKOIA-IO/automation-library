@@ -1,7 +1,7 @@
 {
   "uuid": "192b85b6-4bed-493b-897e-41893a4d14bc",
   "name": "Reverse Whois (organization)",
-  "docker_parameters": "whois_organization",
+  "docker_parameters": "whois_org",
   "description": "Get WHOIS records associated with an organization",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",

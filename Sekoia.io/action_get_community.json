@@ -1,0 +1,88 @@
+{
+  "uuid": "13124b8b-9b20-47f0-ad41-118f53ccb833",
+  "name": "Get Community",
+  "docker_parameters": "get-communities/{uuid}",
+  "description": "Retrieve a community",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_community",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path"
+      }
+    },
+    "required": [
+      "uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "description": "The UUID of the community"
+      },
+      "name": {
+        "type": "string",
+        "description": "The name of the community"
+      },
+      "description": {
+        "type": "string",
+        "description": "The description of the community"
+      },
+      "homepage_url": {
+        "type": "string",
+        "description": "URL of the community's homepage"
+      },
+      "created_at": {
+        "type": "string",
+        "description": "The date and time the community was created"
+      },
+      "created_by": {
+        "type": "string",
+        "description": "The user who created the community"
+      },
+      "created_by_type": {
+        "type": "string",
+        "description": "The type of user who created the community"
+      },
+      "updated_at": {
+        "type": "string",
+        "description": "The date and time the community was last updated"
+      },
+      "is_parent": {
+        "type": "boolean",
+        "description": "Whether the community is a multi-tenant community"
+      },
+      "parent_community_uuid": {
+        "type": "string",
+        "description": "The UUID of the parent community (if any)"
+      },
+      "subcommunities": {
+        "type": "array",
+        "description": "List of UUIDs of communities that are managed by this multi-tenant community",
+        "items": {
+          "type": "string"
+        }
+      },
+      "is_mfa_enforced": {
+        "type": "boolean",
+        "description": "Whether the community has enforced multi-factor authentication"
+      },
+      "session_timeout": {
+        "type": "number",
+        "description": "The session timeout in minutes for the community (if any)"
+      },
+      "disable_inactive_avatars": {
+        "type": "boolean",
+        "description": "Whether the community automatically disables inactive avatars (after 90 days)"
+      },
+      "disabled": {
+        "type": "boolean",
+        "description": "Whether the community is disabled"
+      }
+    }
+  }
+}

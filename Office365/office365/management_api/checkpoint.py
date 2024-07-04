@@ -23,7 +23,7 @@ class Checkpoint:
                 thirty_days_ago = now - timedelta(days=30)
                 if most_recent_date_seen < thirty_days_ago:
                     most_recent_date_seen = thirty_days_ago
-            except FileNotFoundError:
+            except Exception:
                 # if not defined, set the most recent date seen to now
                 most_recent_date_seen = now
 
