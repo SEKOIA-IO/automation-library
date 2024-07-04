@@ -206,7 +206,10 @@ async def test_pull_findings_connector_consume_finding_events(connector: PullFin
     """
     connector.configuration.batch_limit = 2
 
-    date_1 = session_faker.date()
+    date_1 = (
+        (datetime.now() - timedelta(days=3)).replace(microsecond=0, second=0, minute=0, hour=0).strftime("%Y-%m-%d")
+    )
+
     findings_1 = [
         {
             **session_faker.pydict(allowed_types=[str, int]),
@@ -217,7 +220,9 @@ async def test_pull_findings_connector_consume_finding_events(connector: PullFin
     ]
     company_id_1 = session_faker.word()
 
-    date_2 = session_faker.date()
+    date_2 = (
+        (datetime.now() - timedelta(days=1)).replace(microsecond=0, second=0, minute=0, hour=0).strftime("%Y-%m-%d")
+    )
     findings_2 = [
         {
             **session_faker.pydict(allowed_types=[str, int]),
@@ -290,7 +295,11 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
             },
         }
 
-    now = datetime.now()
+    now = datetime.utcnow()
+
+    now_minus_7_days = (
+        (now - timedelta(days=7)).replace(microsecond=0, second=0, minute=0, hour=0).strftime("%Y-%m-%d")
+    )
 
     date_1 = (now - timedelta(days=1)).isoformat()
     findings_1 = [new_finding(date_1) for _ in range(3)]
@@ -304,7 +313,7 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
         next_url_1 = session_faker.uri()
 
         mocked_responses.get(
-            f"https://api.bitsighttech.com/ratings/v1/companies/{company_id_1}/findings",
+            f"https://api.bitsighttech.com/ratings/v1/companies/{company_id_1}/findings?last_seen={now_minus_7_days}",
             payload={"links": {"next": next_url_1}, "results": findings_1},
             repeat=True,
         )
