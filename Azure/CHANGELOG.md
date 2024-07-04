@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-04 - 2.5.1
+
+### Added
+
+- Compute the event lag from enqueued time for the messahe for the EventHub connector
+
 ## 2024-05-28 - 2.5.0
 
 ### Changed
