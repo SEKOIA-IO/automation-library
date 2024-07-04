@@ -41,4 +41,3 @@ class HostnameEntry(BaseModel):
 
 class HostnamesResult(BaseModel):
     hostnames: List[HostnameEntry]
-
