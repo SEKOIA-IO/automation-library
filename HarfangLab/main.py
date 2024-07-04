@@ -9,7 +9,7 @@ from harfanglab.endpoint_actions import (
 )
 from harfanglab.get_pipe_list_action import GetPipeListAction
 
-from harfanglab.get_hostnames_by_ip import GetHostnamesByIP
+from harfanglab.get_hostnames_by_ip_action import GetHostnamesByIP
 
 # internals
 from harfanglab.get_process_list_action import GetProcessListAction

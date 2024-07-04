@@ -29,3 +29,14 @@ class JobTriggerResult(BaseModel):
     action: str
     creationtime: str
     parameters: Optional[Dict[str, Any]]
+
+class HostnameEntry(BaseModel):
+    hostname: str
+    ipaddress: str
+    last_seen: str
+    os: str
+    status: str
+
+
+class HostnamesResult(BaseModel):
+    hostnames: List[HostnameEntry]
