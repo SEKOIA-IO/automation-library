@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from datetime import datetime, timezone
 from functools import cached_property
 from threading import Event
 from typing import Any, Optional, cast
@@ -9,10 +10,11 @@ import orjson
 from azure.eventhub import EventData
 from azure.eventhub.aio import EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblobaio import BlobCheckpointStore
+from dateutil.parser import isoparse
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
-from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -135,6 +137,13 @@ class AzureEventsHubTrigger(AsyncConnector):
             )
 
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
+
+        enqueued_times = [message.enqueued_time for message in messages if message.enqueued_time is not None]
+        if len(enqueued_times) > 0:
+            now = datetime.now(timezone.utc)
+            most_recent_enqueued_time = max(enqueued_times)
+            current_lag = now - most_recent_enqueued_time
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
 
     async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
         self.log_exception(
