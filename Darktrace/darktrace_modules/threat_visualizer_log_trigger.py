@@ -116,8 +116,12 @@ class ThreatVisualizerLogConsumer(Thread):
 
     def next_batch(self):
         logger.debug(f"New batch")
+        # reset the current lag
+        current_lag: int = 0
+
         # save the start time
         batch_start_time = time.time()
+
         response = []
         try:
             response = self.request_events()
@@ -133,6 +137,7 @@ class ThreatVisualizerLogConsumer(Thread):
 
         if type(response) is list:
             response = self.refine_response(response)
+
             # if the response is not empty, push it
             if response != []:
                 for event in response:
@@ -147,10 +152,9 @@ class ThreatVisualizerLogConsumer(Thread):
                     level="info",
                 )
 
-                # compute the lag
+                # compute the current lag
                 now = time.time()
-                current_lag = now - self.last_ts / 1000
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(int(current_lag))
+                current_lag = int(now - self.last_ts / 1000)
             else:  # pragma: no cover
                 self.connector.log(
                     message="No events to forward",
@@ -167,6 +171,9 @@ class ThreatVisualizerLogConsumer(Thread):
         batch_duration = int(batch_end_time - batch_start_time)
         logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
         FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
+
+        # report the current lag
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(current_lag)
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.connector.configuration.frequency - batch_duration
