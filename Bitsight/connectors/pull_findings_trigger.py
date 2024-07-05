@@ -1,7 +1,7 @@
 import asyncio
 import time
 from asyncio import Queue
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, TypeAlias
 
 import orjson
@@ -25,6 +25,30 @@ class CompanyCheckpoint(BaseModel):
     last_seen: str | None = None
     offset: int | None = None
 
+    def with_updated_last_seen(self) -> "CompanyCheckpoint":
+        """
+        Get CompanyCheckpoint with updated last_see corresponded to the next logic.
+
+        If last_seen is None, then update it with 7 days before now and set offset to 0.
+        If last_seen is not None and lower then 7 days before now, then update it with 7 days before now and set offset to 0.
+
+        Format should be 'YYYY-MM-DD' corresponded to the Bitsight API:
+            https://help.bitsighttech.com/hc/en-us/articles/360022913734-GET-Finding-Details
+
+        Returns:
+            datetime:
+        """
+        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=7)
+
+        parsed_last_seen = (
+            datetime.fromisoformat(self.last_seen).replace(tzinfo=timezone.utc) if self.last_seen else None
+        )
+
+        if parsed_last_seen is not None and parsed_last_seen >= result:
+            return self
+
+        return CompanyCheckpoint(company_uuid=self.company_uuid, last_seen=result.strftime("%Y-%m-%d"), offset=None)
+
 
 class Checkpoint(BaseModel):
     values: list[CompanyCheckpoint] = []
@@ -32,9 +56,9 @@ class Checkpoint(BaseModel):
     def get_company_checkpoint(self, company_uuid: str) -> CompanyCheckpoint:
         for value in self.values:
             if value.company_uuid == company_uuid:
-                return value
+                return value.with_updated_last_seen()
 
-        return CompanyCheckpoint(company_uuid=company_uuid)
+        return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen()
 
     def increment_company_checkpoint(self, company_uuid: str, last_seen: str) -> None:
         company_checkpoint = self.get_company_checkpoint(company_uuid)
