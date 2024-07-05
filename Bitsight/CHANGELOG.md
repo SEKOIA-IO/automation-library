@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-05 - 1.0.1
+
+### Added
+
+- Update connector to fetch event only from the last 7 days
+
 ## 2024-06-17 - 1.0.0
 
 ### Added
