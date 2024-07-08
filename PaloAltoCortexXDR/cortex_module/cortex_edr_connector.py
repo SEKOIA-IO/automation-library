@@ -52,7 +52,8 @@ class CortexQueryEDRTrigger(CortexConnector):
                 before_five_minutes = now - timedelta(minutes=5)
                 return int(before_five_minutes.timestamp())
 
-            one_week_ago = int((now - timedelta(days=7)).timestamp())
+            # We don't collect events older than 7 days
+            one_week_ago = int((now - timedelta(days=7)).timestamp()) * 1000
             if timestamp_cursor < one_week_ago:
                 timestamp_cursor = one_week_ago
 
@@ -60,9 +61,8 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     @timestamp_cursor.setter
     def timestamp_cursor(self, time: int) -> None:
-        time_to_utc = datetime.fromtimestamp(time / 1000)
-        add_one_seconde = int((time_to_utc + timedelta(seconds=1)).timestamp() * 1000)
-        self._timestamp_cursor = add_one_seconde
+        # add 1 second to the most recent date seen
+        self._timestamp_cursor = time + 1000
         with self.context as cache:
             cache["timestamp_cursor"] = self._timestamp_cursor
 
@@ -133,8 +133,10 @@ class CortexQueryEDRTrigger(CortexConnector):
         current_lag: int = 0
         if len(events) > 0:
             most_recent_timestamp = orjson.loads(events[0]).get("detection_timestamp")
-            current_lag = int(time.time() - most_recent_timestamp)
             self.timestamp_cursor = most_recent_timestamp
+
+            # compute the current_lag in seconds
+            current_lag = int(time.time() - (most_recent_timestamp / 1000))
 
         else:
             self.log(message=f"No alerts to forward at {self.timestamp_cursor}", level="info")
