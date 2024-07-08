@@ -77,18 +77,14 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
 
                 while self.running:
                     processing_start = time.time()
+                    current_lag: int = 0
 
                     batch_result: tuple[list[str], list[int]] = loop.run_until_complete(self.next_batch())
                     message_ids, messages_timestamp = batch_result
 
-                    # Identify delay between message timestamp ( when it was pushed to sqs )
-                    # and current timestamp ( when it was processed )
+                    # compute the duration of the batch
                     processing_end = time.time()
                     batch_duration = processing_end - processing_start
-                    for message_timestamp in messages_timestamp:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                            processing_end - (message_timestamp / 1000)
-                        )
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
@@ -97,8 +93,16 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
 
                     if len(message_ids) > 0:
                         self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+
+                        # Identify delay between message timestamp ( when it was pushed to sqs )
+                        # and current timestamp ( when it was processed )
+                        max_message_timestamp = int(max(messages_timestamp) / 1000)
+                        current_lag = processing_end - max_message_timestamp
                     else:
                         self.log(message="No records to forward", level="info")
+
+                    # report the current lag
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
                     # compute the remaining sleeping time. If greater than 0, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
