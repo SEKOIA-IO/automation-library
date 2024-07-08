@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-05 - 1.7.1
+
+### Fixed
+
+- Set the current lag to 0 when no events are fetched (because the connector is up-to-date)
+
 ## 2024-05-28 - 1.7.0
 
 ### Changed
