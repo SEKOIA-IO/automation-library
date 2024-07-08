@@ -84,6 +84,7 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                     # Identify delay between message timestamp ( when it was pushed to sqs )
                     # and current timestamp ( when it was processed )
                     processing_end = time.time()
+                    batch_duration = processing_end - processing_start
                     for message_timestamp in messages_timestamp:
                         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
                             processing_end - (message_timestamp / 1000)
@@ -98,7 +99,12 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                         self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
                     else:
                         self.log(message="No records to forward", level="info")
-                        time.sleep(self.configuration.frequency)
+
+                    # compute the remaining sleeping time. If greater than 0, sleep
+                    delta_sleep = self.configuration.frequency - batch_duration
+                    if delta_sleep > 0:
+                        self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                        time.sleep(delta_sleep)
 
             except Exception as e:
                 self.log_exception(e)
