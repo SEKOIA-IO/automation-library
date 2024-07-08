@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-08 - 1.31.1
+
+### Changed
+
+- Change the way to report the lag, when no events were collected
+- Refactor the way to pause the connector
+
 ## 2024-05-28 - 1.31.0
 
 ### Changed
