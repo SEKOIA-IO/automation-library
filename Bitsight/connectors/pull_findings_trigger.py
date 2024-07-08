@@ -277,22 +277,25 @@ class PullFindingsConnector(AsyncConnector):
                     # compute the lag if we got events
                     current_lag: int = 0
                     if result_count > 0:
-                        current_lag = processing_end - last_event_date.timestamp()
+                        current_lag = int(processing_end - last_event_date.timestamp())
                     else:
                         logger.info("No new events to forward")
 
                     # report the lag
                     EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
+                    # report the number of forwarded events
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        last_event_date.timestamp() - processing_start
-                    )
+                    # compute and report the duration to fetch the events
+                    batch_duration = int(processing_end - processing_start)
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
-                    if result_count == 0:
-                        logger.info("No new events to forward")
-                        time.sleep(self.configuration.frequency)
+                    # compute the remaining sleeping time. If greater than 0, sleep
+                    delta_sleep = self.configuration.frequency - batch_duration
+                    if delta_sleep > 0:
+                        self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                        time.sleep(delta_sleep)
 
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
