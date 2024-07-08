@@ -94,7 +94,10 @@
       },
       "limit": {
         "in": "query",
-        "type": "integer"
+        "type": "integer",
+	"minimum": 1,
+	"default": 20,
+	"maximum": 100
       },
       "offset": {
         "in": "query",

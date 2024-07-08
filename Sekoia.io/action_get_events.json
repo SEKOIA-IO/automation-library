@@ -22,7 +22,10 @@
       },
       "limit": {
         "type": "number",
-        "description": "Maximum number of events to retrieve"
+        "description": "Maximum number of events to retrieve",
+	"minimum": 1,
+	"default": 20,
+	"maximum": 100
       }
     },
     "required": [
