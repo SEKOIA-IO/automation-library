@@ -274,9 +274,15 @@ class PullFindingsConnector(AsyncConnector):
                         ]
                     )
 
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                        processing_end - last_event_date.timestamp()
-                    )
+                    # compute the lag if we got events
+                    current_lag: int = 0
+                    if result_count > 0:
+                        current_lag = processing_end - last_event_date.timestamp()
+                    else:
+                        logger.info("No new events to forward")
+
+                    # report the lag
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result_count)
 
