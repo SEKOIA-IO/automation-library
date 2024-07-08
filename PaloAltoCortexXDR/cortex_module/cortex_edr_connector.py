@@ -130,14 +130,16 @@ class CortexQueryEDRTrigger(CortexConnector):
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(combined_data))
                 self.push_events_to_intakes(events=combined_data)
 
+        current_lag: int = 0
         if len(events) > 0:
             most_recent_timestamp = orjson.loads(events[0]).get("detection_timestamp")
-            events_lag = int(time.time() - most_recent_timestamp)
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+            current_lag = int(time.time() - most_recent_timestamp)
             self.timestamp_cursor = most_recent_timestamp
 
         else:
             self.log(message=f"No alerts to forward at {self.timestamp_cursor}", level="info")
+
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def run(self) -> None:
         """Run Cortex EDR Connector"""
