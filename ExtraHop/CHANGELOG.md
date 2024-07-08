@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-08 - 1.1.1
+
+### Fixed
+
+- Fix the precision of timestamp (in milliseconds)
+
 ## 2024-05-28 - 1.1.0
 
 ### Changed
