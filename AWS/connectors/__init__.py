@@ -96,8 +96,8 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
 
                         # Identify delay between message timestamp ( when it was pushed to sqs )
                         # and current timestamp ( when it was processed )
-                        max_message_timestamp = int(max(messages_timestamp) / 1000)
-                        current_lag = processing_end - max_message_timestamp
+                        max_message_timestamp = max(messages_timestamp)
+                        current_lag = int(processing_end - max_message_timestamp / 1000)
                     else:
                         self.log(message="No records to forward", level="info")
 
