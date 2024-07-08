@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-08 - 1.5.1
+
+### Fixed
+
+- Update the length of the accountID to 5 digits
+
 ## 2024-05-28 - 1.5.0
 
 ### Changed
