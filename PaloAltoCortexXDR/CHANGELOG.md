@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Change the way to compute event lags
+- Fix the precision of the timestamps used in the connector
 
 ## 2024-05-28 - 1.1.0
 
