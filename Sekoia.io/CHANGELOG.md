@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-08 - 2.61.1
+
+### Fixed
+
+- Add miminum, maximum and default value for actions with limit parameter
+
 ## 2024-06-10 - 2.60.6
 
 ### Fixed
