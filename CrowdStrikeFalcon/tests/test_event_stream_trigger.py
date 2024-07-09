@@ -148,6 +148,7 @@ def test_read_stream(trigger):
             "UserIp": "185.162.177.26",
             "OperationName": "streamStarted",
             "ServiceName": "Crowdstrike Streaming API",
+            "event_simpleName": "DnsRequest",
             "Success": True,
             "UTCTimestamp": 1657110865,
             "AuditKeyValues": [
@@ -183,6 +184,64 @@ def test_read_stream(trigger):
     )
 
 
+def test_ignore_event(trigger):
+    fake_stream = {
+        "dataFeedURL": "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/0?appId=sio-00000",
+        "sessionToken": {
+            "token": "my_token==",
+            "expiration": "2022-07-06T12:39:24.017018689Z",
+        },
+        "refreshActiveSessionURL": (
+            "https://api.eu-1.crowdstrike.com/sensors/entities/datafeed-actions"
+            "/v1/0?appId=sio-00000&action_name=refresh_active_stream_session"
+        ),
+        "refreshActiveSessionInterval": 1800,
+    }
+
+    fake_event = {
+        "metadata": {
+            "customerIDString": "11111111111111111111111111111111",
+            "offset": 174,
+            "eventType": "AuthActivityAuditEvent",
+            "eventCreationTime": 1657110865303,
+            "version": "1.0",
+        },
+        "event": {
+            "UserId": "api-client-id:00000000000000000000000000000000",
+            "UserIp": "185.162.177.26",
+            "OperationName": "streamStarted",
+            "ServiceName": "Crowdstrike Streaming API",
+            "Success": True,
+            "UTCTimestamp": 1657110865,
+            "AuditKeyValues": [
+                {"Key": "partition", "ValueString": "0"},
+                {"Key": "offset", "ValueString": "-1"},
+                {"Key": "appId", "ValueString": "sio-00000"},
+                {"Key": "eventType", "ValueString": "All event type(s)"},
+                {
+                    "Key": "APIClientID",
+                    "ValueString": "22222222222222222222222222222222",
+                },
+            ],
+        },
+    }
+
+    client_mock = MagicMock()
+    client_mock.get.return_value.__enter__.return_value.status_code = 200
+    client_mock.get.return_value.__enter__.return_value.iter_lines.return_value = [orjson.dumps(fake_event)]
+    reader = EventStreamReader(
+        trigger, fake_stream["dataFeedURL"].split("?")[0], fake_stream, 0, "sio-00000", client_mock
+    )
+
+    reader.start()
+
+    time.sleep(1)
+    reader.stop()
+    reader.join()
+
+    assert trigger.events_queue.qsize() == 0
+
+
 def test_read_stream_call_verticles_collector(trigger):
     fake_stream = {
         "dataFeedURL": "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/0?appId=sio-00000",
@@ -208,6 +267,7 @@ def test_read_stream_call_verticles_collector(trigger):
         },
         "event": {
             "DetectName": "Authentication Bypass",
+            "event_simpleName": "DnsRequest",
             "SensorId": "445f78e41b0d4a2d962fb5991537081a",
             "DetectId": detection_id,
         },
@@ -570,6 +630,7 @@ def test_read_stream_with_verticles(trigger):
             "ComputerName": "nsewmkzevukn-vm",
             "UserName": "Administrator",
             "DetectName": "Overwatch Detection",
+            "event_simpleName": "DnsRequest",
             "DetectDescription": "Falcon Overwatch has identified malicious activity carried out by a suspected or known eCrime operator. This activity has been raised for critical action and should be investigated urgently.",  # noqa: E501
             "Severity": severity_code,
             "SeverityName": severity_name,

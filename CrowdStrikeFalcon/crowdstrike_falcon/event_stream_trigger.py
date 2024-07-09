@@ -17,7 +17,7 @@ from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
 from crowdstrike_falcon.exceptions import StreamNotAvailable
 from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type
-from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
+from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS, DISCARDED_EVENTS
 from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
 from crowdstrike_falcon.logging import get_logger
 
@@ -25,7 +25,27 @@ logger = get_logger()
 
 MAX_EVENTS_PER_BATCH = 1000
 
-
+EXCLUDED_EVENT_ACTIONS = [
+    "SensorHeartbeat",
+    "ConfigStateUpdate",
+    "ErrorEvent",
+    "FalconServiceStatus",
+    "CurrentSystemTags",
+    "BillingInfo",
+    "ChannelActive",
+    "IdpDcPerfReport",
+    "ProvisioningChannelVersionRequired",
+    "ChannelVersionRequired",
+    "SensorSelfDiagnosticTelemetry",
+    "SystemCapacity",
+    "MobilePowerStats",
+    "DeliverRulesEngineResultsToCloud",
+    "NeighborListIP4",
+    "NeighborListIP6",
+    "AgentConnect",
+    "AgentOnline",
+    "ResourceUtilization",
+]
 class VerticlesCollector:
     def __init__(
         self,
@@ -249,6 +269,10 @@ class EventStreamReader(threading.Thread):
                                     decoded_line = line.strip().decode()
                                     # check the line is json
                                     event = json.loads(decoded_line)
+                                    # Exclude events with a specific action or an empty one
+                                    if event["event"].get("event_simpleName") is None or (event["event"].get("event_simpleName") in EXCLUDED_EVENT_ACTIONS):
+                                        DISCARDED_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc()
+                                        continue
                                     # store the new event in the queue along with it stream root url
                                     self.events_queue.put((self.stream_root_url, decoded_line))
                                     INCOMING_DETECTIONS.labels(
