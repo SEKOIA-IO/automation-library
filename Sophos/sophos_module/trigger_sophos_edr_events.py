@@ -1,6 +1,7 @@
 import datetime
 import time
 from functools import cached_property
+from typing import Any, Optional
 
 import orjson
 from requests.exceptions import HTTPError
@@ -34,26 +35,28 @@ class SophosEDREventsTrigger(SophosConnector):
 
     configuration: SophosEDRConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
     def cursor(self) -> str | None:
         with self.context as cache:
-            return cache.get("cursor")
+            result: str | None = cache.get("cursor")
+
+            return result
 
     @cursor.setter
-    def cursor(self, cursor: str):
+    def cursor(self, cursor: str) -> None:
         with self.context as cache:
             cache["cursor"] = cursor
 
     @cached_property
-    def pagination_limit(self):
+    def pagination_limit(self) -> int:
         return max(self.configuration.chunk_size, 1000)
 
     @cached_property
-    def client(self):
+    def client(self) -> SophosApiClient:
         auth = SophosApiAuthentication(
             api_host=self.module.configuration.api_host,
             authorization_url=self.module.configuration.oauth2_authorization_url,
@@ -62,7 +65,7 @@ class SophosEDREventsTrigger(SophosConnector):
         )
         return SophosApiClient(auth=auth)
 
-    def run(self):
+    def run(self) -> None:  # pragma: no cover
         self.log(message="Sophos Events Trigger has started", level="info")
 
         try:
@@ -89,9 +92,9 @@ class SophosEDREventsTrigger(SophosConnector):
         finally:
             self.log(message="Sophos Events Trigger has stopped", level="info")
 
-    def get_next_events(self, cursor: str | None) -> dict | None:
+    def get_next_events(self, cursor: str | None) -> dict[str, Any] | None:
         # set parameters
-        parameters = {
+        parameters: dict[str, Any] = {
             "limit": self.pagination_limit,
         }
 
@@ -122,15 +125,19 @@ class SophosEDREventsTrigger(SophosConnector):
 
             return None
 
-        return response.json()
+        result: dict[str, Any] = response.json()
 
-    def _get_most_recent_timestamp_from_items(self, items: list[dict]):
-        def _extract_timestamp(item: dict) -> float:
+        return result
+
+    def _get_most_recent_timestamp_from_items(self, items: list[dict[str, Any]]) -> float:
+        def _extract_timestamp(item: dict[str, Any]) -> float:
             RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
             return datetime.datetime.strptime(item["created_at"], RFC3339_STRICT_FORMAT).timestamp()
 
-        latest_message = max(items, key=lambda item: item["created_at"])
+        latest_message: dict[str, Any] = max(items, key=lambda item: item["created_at"])  # type: ignore
         latest_message_timestamp = _extract_timestamp(latest_message)
+
         return latest_message_timestamp
 
     def forward_next_batches(self) -> None:

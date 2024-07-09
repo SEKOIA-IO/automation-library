@@ -1,11 +1,11 @@
 import os
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 import requests_mock
 
-from sophos_module.base import SophosConfiguration, SophosModule
-from sophos_module.trigger_sophos_edr_events import SophosEDRConfiguration, SophosEDREventsTrigger
+from sophos_module.base import SophosModule
+from sophos_module.trigger_sophos_edr_events import SophosEDREventsTrigger
 
 
 @pytest.fixture

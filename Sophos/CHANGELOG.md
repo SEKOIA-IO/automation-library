@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-09 - 1.16.2
+
+### Fixed
+
+- Set max time window to fetch events as 30 days
+- Add more logs
+
 ## 2024-06-06 - 1.16.1
 
 ### Fixed
