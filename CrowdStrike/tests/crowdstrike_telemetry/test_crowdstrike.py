@@ -77,12 +77,11 @@ async def test_process_s3_file(crowdstrike_connector, session_faker):
     """
     key = session_faker.file_path(depth=2, extension="json")
     content = b"""
-{"data": "aaaaa"}
-{"data": "bbbbb"}
+{"data": "aaaaa", "event_simpleName": "EndOfProcess"}
+{"data": "bbbbb", "event_simpleName": "FalconServiceStatus"}
 """
     expected = [
-        '{"data": "aaaaa"}',
-        '{"data": "bbbbb"}',
+        '{"data": "aaaaa", "event_simpleName": "EndOfProcess"}',
     ]
 
     with patch.object(crowdstrike_connector.s3_wrapper, "read_key") as mock_read_key:
@@ -105,8 +104,8 @@ async def test_process_gzipped_s3_file(crowdstrike_connector, session_faker):
     """
     key = session_faker.file_path(depth=2, extension="json")
     data = [
-        {"data": session_faker.sentence()},
-        {"data": session_faker.sentence()},
+        {"data": session_faker.sentence(), "event_simpleName": "EndOfProcess"},
+        {"data": session_faker.sentence(), "event_simpleName": "EndOfProcess"},
     ]
     expected = [json.dumps(item) for item in data]
 
@@ -131,7 +130,7 @@ async def test_process_s3_file_one_line(crowdstrike_connector, session_faker):
         session_faker: Faker
     """
     key = session_faker.file_path(depth=2, extension="json")
-    data = {"data": session_faker.sentence()}
+    data = {"data": session_faker.sentence(), "event_simpleName": "EndOfProcess"}
     expected = [json.dumps(data)]
 
     with patch.object(crowdstrike_connector.s3_wrapper, "read_key") as mock_read_key:

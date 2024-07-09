@@ -1,5 +1,5 @@
 """Contains connector, configuration and module."""
-
+import json
 import asyncio
 import time
 from functools import cached_property
@@ -13,9 +13,30 @@ from aws.s3 import S3Configuration, S3Wrapper
 from aws.sqs import SqsConfiguration, SqsWrapper
 
 from . import CrowdStrikeTelemetryModule
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, DISCARDED_EVENTS
 from .schemas import CrowdStrikeNotificationSchema
 
+EXCLUDED_EVENT_ACTIONS = [
+    "SensorHeartbeat",
+    "ConfigStateUpdate",
+    "ErrorEvent",
+    "FalconServiceStatus",
+    "CurrentSystemTags",
+    "BillingInfo",
+    "ChannelActive",
+    "IdpDcPerfReport",
+    "ProvisioningChannelVersionRequired",
+    "ChannelVersionRequired",
+    "SensorSelfDiagnosticTelemetry",
+    "SystemCapacity",
+    "MobilePowerStats",
+    "DeliverRulesEngineResultsToCloud",
+    "NeighborListIP4",
+    "NeighborListIP6",
+    "AgentConnect",
+    "AgentOnline",
+    "ResourceUtilization",
+]
 
 class CrowdStrikeTelemetryConfig(DefaultConnectorConfiguration):
     queue_name: str
@@ -123,8 +144,24 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
             if content[0:2] == b"\x1f\x8b":
                 logger.info(f"Decompressing file by key {key}")
                 result_content = decompress(content)
-
-        return [line for line in result_content.decode("utf-8").split("\n") if len(line.strip()) > 0]
+        result = []
+        for line in result_content.decode("utf-8").split("\n"):
+            if len(line.strip()) > 0:
+                try:
+                    event = json.loads(line)
+                    if event.get("event_simpleName") is None or event.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS:
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        continue
+                    result.append(line)
+                except Exception as any_exception:
+                    logger.error(
+                        "failed to read line from event stream",
+                        line=line,
+                        stream_root_url=self.stream_root_url,
+                    )
+                    self.log_exception(any_exception)
+                    raise any_exception
+        return result
 
     def run(self) -> None:  # pragma: no cover
         """Runs Crowdstrike Telemetry."""
