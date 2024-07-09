@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Any
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
@@ -18,16 +19,16 @@ class SophosApiCredentials:
     api_url: str
 
     @property
-    def authorization(self):
+    def authorization(self) -> str:
         return f"{self.token_type.title()} {self.access_token}"
 
     @property
-    def tenancy_header(self):
+    def tenancy_header(self) -> dict[str, str]:
         return {f"X-{self.tenancy_type.title()}-ID": self.tenancy_id}
 
 
 class SophosApiAuthentication(AuthBase):
-    def __init__(self, api_host: str, authorization_url: str, client_id: str, client_secret: str):
+    def __init__(self, api_host: str, authorization_url: str, client_id: str, client_secret: str) -> None:
         self.__api_host = api_host
         self.__authorization_url = authorization_url
         self.__client_id = client_id
@@ -71,7 +72,7 @@ class SophosApiAuthentication(AuthBase):
 
             credentials: SophosApiCredentials = SophosApiCredentials()
 
-            api_credentials: dict = response.json()
+            api_credentials: dict[str, Any] = response.json()
             credentials.token_type = api_credentials["token_type"]
             credentials.access_token = api_credentials["access_token"]
             credentials.expires_at = current_dt + timedelta(seconds=api_credentials["expires_in"])
@@ -88,7 +89,7 @@ class SophosApiAuthentication(AuthBase):
             )
             response.raise_for_status()
 
-            whoami: dict = response.json()
+            whoami: dict[str, Any] = response.json()
             credentials.tenancy_type = whoami["idType"]
             credentials.tenancy_id = whoami["id"]
             credentials.api_url = whoami["apiHosts"].get("dataRegion") or whoami["apiHosts"]["global"]
@@ -96,8 +97,9 @@ class SophosApiAuthentication(AuthBase):
 
         return self.api_credentials
 
-    def __call__(self, request):
+    def __call__(self, request: requests.PreparedRequest) -> requests.PreparedRequest:
         credentials = self.get_credentials()
         request.headers["Authorization"] = credentials.authorization
         request.headers.update(credentials.tenancy_header)
+
         return request

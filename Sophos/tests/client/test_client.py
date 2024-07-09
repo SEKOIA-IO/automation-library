@@ -3,7 +3,6 @@ import time
 
 import pytest
 import requests_mock
-from requests.exceptions import HTTPError
 
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication

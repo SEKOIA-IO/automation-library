@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 MAPPING = {
     "device_event_class_id": "type",
@@ -13,7 +14,7 @@ MAPPING = {
 }
 
 
-def translate_fields(data: dict) -> dict:
+def translate_fields(data: dict[str, Any]) -> dict[str, Any]:
     for key, value in list(data.items()):
         if key in MAPPING:
             del data[key]
@@ -22,7 +23,7 @@ def translate_fields(data: dict) -> dict:
     return data
 
 
-def strip_null_values(data: dict) -> dict:
+def strip_null_values(data: dict[str, Any]) -> dict[str, Any]:
     for k in list(data.keys()):
         if data[k] is None:
             del data[k]
@@ -45,7 +46,7 @@ REGEX_MAPS = {
 }
 
 
-def extract_info(data: dict) -> dict:
+def extract_info(data: dict[str, Any]) -> dict[str, Any]:
     if "description" in data.keys():
         data["name"] = data["description"]
 
@@ -65,5 +66,5 @@ def extract_info(data: dict) -> dict:
     return data
 
 
-def normalize_message(data: dict) -> dict:
+def normalize_message(data: dict[str, Any]) -> dict[str, Any]:
     return extract_info(translate_fields(strip_null_values(data)))
