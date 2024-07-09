@@ -160,7 +160,6 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
                         stream_root_url=self.stream_root_url,
                     )
                     self.log_exception(any_exception)
-                    raise any_exception
         return result
 
     def run(self) -> None:  # pragma: no cover
