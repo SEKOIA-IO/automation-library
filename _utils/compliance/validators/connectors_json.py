@@ -62,18 +62,19 @@ class ConnectorsJSONValidator(Validator):
                 CheckError(filepath=path, error=f"`description` is not present")
             )
 
-        # @todo track this to main.py ?
         if not isinstance(raw.get("docker_parameters"), str):
             result.errors.append(
                 CheckError(filepath=path, error=f"`docker_parameters` is not present")
             )
         else:
-            if path.stem not in result.options["connectors"]:
-                result.options["connectors"][path.stem] = {}
+            if "docker_parameters" not in result.options:
+                result.options["docker_parameters"] = {}
+            if path.name not in result.options["docker_parameters"]:
+                result.options["docker_parameters"][path.name] = {}
 
-            result.options["connectors"][path.stem]["docker_parameters"] = raw[
+            result.options["docker_parameters"][path.name] = raw.get(
                 "docker_parameters"
-            ]
+            )
 
         if not isinstance(raw.get("arguments"), dict):
             result.errors.append(
