@@ -110,7 +110,7 @@ class SophosXDRQueryTrigger(SophosConnector):
         )
 
         response = self.client.run_query(json_query=query)
-        if response.status_code != 200:
+        if response.status_code >= 400:
             self.log(
                 message=f"Failed to post the query. Status code: {response.status_code}, response: {response.text}",
                 level="error",
@@ -133,7 +133,7 @@ class SophosXDRQueryTrigger(SophosConnector):
             # It's the Second step of our query treatment.
             # Checking the status of our query.
             response_query_status = self.client.get_query_status(query_id)
-            if response_query_status.status_code != 200:
+            if response_query_status.status_code >= 400:
                 self.log(
                     message=f"Failed to get the query status. Status code: {response_query_status.status_code}, "
                     f"response: {response_query_status.text}",
