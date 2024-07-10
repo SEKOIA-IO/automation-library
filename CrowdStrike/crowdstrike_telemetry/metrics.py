@@ -17,6 +17,13 @@ FORWARD_EVENTS_DURATION = Histogram(
     labelnames=["intake_key"],
 )
 
+DISCARDED_EVENTS = Counter(
+    name="discarded_events",
+    documentation="Number of events discarded from the collect",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)
+
 EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
