@@ -104,9 +104,9 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                     # report the current lag
                     EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
-                    # compute the remaining sleeping time. If greater than 0, sleep
+                    # compute the remaining sleeping time. If greater than 0 and no messages were fetched, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
-                    if delta_sleep > 0:
+                    if len(message_ids) == 0 and delta_sleep > 0:
                         self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
                         time.sleep(delta_sleep)
 
