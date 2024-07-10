@@ -107,10 +107,13 @@ class NetskopeEventConsumer(Thread):
         )
 
         # compute the lag
+        current_lag: int = 0
         if most_recent_timestamp > 0:
             now = time.time()
-            current_lag = now - most_recent_timestamp
-            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(int(current_lag))
+            current_lag = int(now - most_recent_timestamp)
+
+        # report the lag
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(current_lag)
 
         # get the sleeping time from the response. Otherwise, compute the remaining sleeping time.
         delta_sleep = content.get("wait_time", 30 - batch_duration)
