@@ -1,4 +1,5 @@
 """Contains connector, configuration and module."""
+
 import json
 import asyncio
 import time
@@ -37,6 +38,7 @@ EXCLUDED_EVENT_ACTIONS = [
     "AgentOnline",
     "ResourceUtilization",
 ]
+
 
 class CrowdStrikeTelemetryConfig(DefaultConnectorConfiguration):
     queue_name: str
@@ -149,7 +151,10 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
             if len(line.strip()) > 0:
                 try:
                     event = json.loads(line)
-                    if event.get("event_simpleName") is None or event.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS:
+                    if (
+                        event.get("event_simpleName") is None
+                        or event.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
+                    ):
                         DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
                         continue
                     result.append(line)
