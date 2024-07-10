@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-10 - 1.16.3
+
+### Fixed
+
+- Change the expected status code from responses
+
 ## 2024-07-09 - 1.16.2
 
 ### Fixed
