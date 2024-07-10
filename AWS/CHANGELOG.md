@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-10 - 1.31.2
+
+### Fixed
+
+- Only pause the connector when messages were not collected
+
 ## 2024-07-08 - 1.31.1
 
 ### Changed
