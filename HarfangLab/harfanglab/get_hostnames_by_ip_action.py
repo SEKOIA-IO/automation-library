@@ -27,7 +27,6 @@ class GetHostnamesByIP(Action):
         response.raise_for_status()
 
         data = response.json()
-        print(data)  # For debugging
 
         hostnames = [HostnameEntry(**entry) for entry in data]
         if get_only_last_seen:
