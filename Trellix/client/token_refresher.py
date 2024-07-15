@@ -12,6 +12,7 @@ from loguru import logger
 from yarl import URL
 
 from .schemas.token import HttpToken, Scope, TrellixToken
+from .errors import APIError, AuthenticationFailed
 
 
 class TrellixTokenRefresher(object):
@@ -31,7 +32,14 @@ class TrellixTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, client_id: str, client_secret: str, api_key: str, base_url: str, scopes: Set[Scope]):
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        api_key: str,
+        base_url: str,
+        scopes: Set[Scope],
+    ):
         """
         Initialize TrellixTokenRefresher.
 
@@ -70,7 +78,12 @@ class TrellixTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls, client_id: str, client_secret: str, api_key: str, auth_url: str, scopes: Set[Scope]
+        cls,
+        client_id: str,
+        client_secret: str,
+        api_key: str,
+        auth_url: str,
+        scopes: Set[Scope],
     ) -> "TrellixTokenRefresher":
         """
         Get singleton TrellixTokenRefresher instance for specified set of scopes.
@@ -118,12 +131,26 @@ class TrellixTokenRefresher(object):
         headers = {"x-api-header": self.api_key}
 
         async with self.session().post(
-            self.auth_url, headers=headers, auth=BasicAuth(self.client_id, self.client_secret), json={}
+            self.auth_url,
+            headers=headers,
+            auth=BasicAuth(self.client_id, self.client_secret),
+            json={},
         ) as response:
             logger.info(response.url)
+            if response.status >= 500:
+                error_description = await response.text()
+                raise APIError(error_description)
+
             response_data = await response.json()
 
-            self._token = TrellixToken(token=HttpToken(**response_data), scopes=self.scopes, created_at=time.time())
+            if response.status in (401, 403):
+                raise AuthenticationFailed.from_http_response(response_data)
+
+            self._token = TrellixToken(
+                token=HttpToken(**response_data),
+                scopes=self.scopes,
+                created_at=time.time(),
+            )
 
             await self._schedule_token_refresh(self._token.token.expires_in)
 
