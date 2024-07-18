@@ -122,7 +122,7 @@ class VerticlesCollector:
                 error,
                 message=(
                     f"Failed to collect verticles for detection {detection_id}: "
-                    "{error.response.status_code} {error.response.reason}"
+                    f"{error.response.status_code} {error.response.reason}"
                 ),
             )
         except Exception as error:
@@ -214,11 +214,15 @@ class EventStreamReader(threading.Thread):
             logger.info("successfully refreshed event stream", refresh_url=refresh_url)
 
         except requests.exceptions.RequestException as e:
-            self.log_exception(
-                e,
-                message=f"failed to refresh the event stream with "
-                f"http status {e.response.status_code} and content: `{e.response.text}`",
-            )
+            if e.response:
+                self.log_exception(
+                    e,
+                    message=f"failed to refresh the event stream with "
+                    f"http status {e.response.status_code} and content: `{e.response.text}`",
+                )
+
+            else:
+                self.log_exception(e, message="failed to refresh the event stream")
 
     def refresh_stream_timer(self):
         return self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
