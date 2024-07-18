@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.6.1
+
+### Changed
+
+- Add an option to fetch `Daily` logs
+
 ## 2024-05-28 - 1.6.0
 
 ### Changed

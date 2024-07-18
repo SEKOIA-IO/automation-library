@@ -3,6 +3,7 @@
 import csv
 from contextlib import asynccontextmanager
 from datetime import datetime
+from enum import Enum
 from typing import Any, AsyncGenerator, Dict, Tuple
 from urllib.parse import urlencode
 
@@ -15,6 +16,13 @@ from utils.file_utils import save_response_to_temp_file
 
 from .schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
 from .token_refresher import SalesforceTokenRefresher
+
+
+class LogType(Enum):
+    """Salesforce event types."""
+
+    DAILY = "Daily"
+    HOURLY = "Hourly"
 
 
 class SalesforceHttpClient(object):
@@ -101,9 +109,12 @@ class SalesforceHttpClient(object):
         return " ".join([line.strip() for line in query.strip().splitlines()]).replace(" ", "+").replace(",", "+,")
 
     @staticmethod
-    def _log_files_query(start_from: datetime | None = None) -> str:
+    def _log_files_query(start_from: datetime | None = None, log_type: LogType | None = None) -> str:
         """
         Query to get log files.
+
+        Docs for EventLogFile:
+        https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_eventlogfile.htm
 
         Docs for query with CreatedDate filter
         https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/event_log_file_hourly_overview.htm
@@ -112,17 +123,19 @@ class SalesforceHttpClient(object):
 
         Args:
             start_from: datetime | None
+            log_type: LogType | None
 
         Returns:
             str:
         """
         date_filter = "AND CreatedDate > {0}".format(start_from.strftime("%Y-%m-%dT%H:%M:%SZ")) if start_from else ""
+        result_log_type = log_type if log_type else LogType.HOURLY
 
         return """
             SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
-                FROM EventLogFile WHERE Interval = \'Hourly\' {0}
+                FROM EventLogFile WHERE Interval = \'{0}\' {1}
         """.format(
-            date_filter
+            result_log_type.value, date_filter
         )
 
     def _request_url_with_query(self, query: str) -> URL:
@@ -186,12 +199,15 @@ class SalesforceHttpClient(object):
 
             raise Exception(error_msg)
 
-    async def get_log_files(self, start_from: datetime | None = None) -> SalesforceEventLogFilesResponse:
+    async def get_log_files(
+        self, start_from: datetime | None = None, log_type: LogType | None = None
+    ) -> SalesforceEventLogFilesResponse:
         """
         Get log files from Salesforce.
 
         Args:
             start_from: datetime | None
+            log_type: LogType | None
 
         Raises:
             ValueError: Salesforce response cannot be processed
@@ -201,7 +217,7 @@ class SalesforceHttpClient(object):
         """
         logger.info("Getting log files from Salesforce. Start date is {0}", start_from)
 
-        query = self._log_files_query(start_from)
+        query = self._log_files_query(start_from, log_type)
 
         url = self._request_url_with_query(query)
         headers = await self._request_headers()

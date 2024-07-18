@@ -22,6 +22,11 @@
         "type": "integer",
         "description": "Batch frequency in seconds",
         "default": 600
+      },
+      "fetch_daily_logs": {
+        "type": "boolean",
+        "description": "Fetch daily logs. By default, it will fetch Hourly logs",
+        "default": false
       }
     },
     "required": [
