@@ -3,10 +3,10 @@ import queue
 import threading
 import time
 from collections.abc import Generator
-from datetime import datetime, timedelta
 from functools import cached_property
 
 import orjson
+import requests.exceptions
 from requests.auth import AuthBase
 from requests.exceptions import HTTPError, StreamConsumedError
 from sekoia_automation.connector import Connector
@@ -204,12 +204,21 @@ class EventStreamReader(threading.Thread):
         """
         logger.debug("refresh the event stream", refresh_url={refresh_url})
 
-        self.client.post(
-            url=refresh_url,
-            json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
-        )
+        try:
+            response = self.client.post(
+                url=refresh_url,
+                json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
+            )
+            response.raise_for_status()
 
-        logger.info("succesfully refreshed event stream", refresh_url=refresh_url)
+            logger.info("successfully refreshed event stream", refresh_url=refresh_url)
+
+        except requests.exceptions.RequestException as e:
+            self.log_exception(
+                e,
+                message=f"failed to refresh the event stream with "
+                f"http status {e.response.status_code} and content: `{e.response.text}`",
+            )
 
     def refresh_stream_timer(self):
         return self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])

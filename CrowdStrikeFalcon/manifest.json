@@ -3,7 +3,7 @@
   "name": "CrowdStrike Falcon",
   "slug": "crowdstrike-falcon",
   "description": "Integrates with CrowdStrike Falcon EDR",
-  "version": "1.19.0",
+  "version": "1.19.1",
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
