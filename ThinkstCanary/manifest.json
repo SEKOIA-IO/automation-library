@@ -1,0 +1,25 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Thinkst Canary",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "title": "Base Url",
+        "description": "Base URL",
+        "type": "string"
+      },
+      "auth_token": {
+        "title": "Auth Token",
+        "description": "Auth token",
+        "type": "string"
+      }
+    },
+    "required": ["base_url", "auth_token"],
+    "secrets": ["auth_token"]
+  },
+  "description": "Thinkst Canary specializes in innovative cybersecurity solutions, particularly using honeypot technology to detect and alert on threats within networks. They provide early warnings of breaches with minimal false positives.",
+  "name": "Thinkst Canary",
+  "uuid": "cf24fdfe-d132-4b83-9fad-d1658818e0c3",
+  "version": "0.1.0"
+}

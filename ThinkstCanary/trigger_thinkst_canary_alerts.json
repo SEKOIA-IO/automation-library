@@ -1,0 +1,32 @@
+{
+  "description": "Get latest events from Thinkst Canary",
+  "docker_parameters": "event_stream_trigger",
+  "name": "Fetch Thinkst Canary Events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 10,
+        "minimum": 1,
+        "maximum": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 1000
+      }
+    },
+    "required": ["intake_key"],
+    "title": "Thinkst Canary connector",
+    "type": "object"
+  },
+  "uuid": "01d01a08-6013-4da8-9682-7d3f18e79585"
+}
