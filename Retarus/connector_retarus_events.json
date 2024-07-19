@@ -8,7 +8,8 @@
       "ws_url": {
         "description": "Retarus websocket URL",
         "type": "string",
-        "format": "uri"
+        "format": "uri",
+        "default": "wss://events.retarus.com/email/siem/v1/websocket?channel=sekoiaio"
       },
       "ws_key": {
         "description": "Retarus websocket auth key",
