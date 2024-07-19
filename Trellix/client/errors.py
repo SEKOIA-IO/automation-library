@@ -25,7 +25,7 @@ class AuthenticationFailed(APIError):
         self.client_id = client_id
 
     @classmethod
-    def from_http_response(cls, error: dict[str, Any]):
+    def from_http_response(cls, error: dict[str, Any]) -> "AuthenticationFailed":
         return cls(
             error["error"],
             error.get("error_description"),
@@ -33,7 +33,7 @@ class AuthenticationFailed(APIError):
             error.get("client_id"),
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         parts = [f"code='{self.code}'"]
         if self.description:
             parts.append(f"description='{self.description}'")
