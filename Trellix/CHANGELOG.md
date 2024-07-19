@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-15 - 1.8.1
+
+### Fixed
+
+- Improve the way to handle errors on authentication
+
 ## 2024-05-28 - 1.8.0
 
 ### Changed
