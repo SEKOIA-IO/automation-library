@@ -1,0 +1,41 @@
+{
+  "description": "Get OSCF records from new S3 Parquet objects based on notifications",
+  "docker_parameters": "aws_s3_oscf_trigger",
+  "name": "Fetch new OCSF records on S3",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "queue_name": {
+        "type": "string",
+        "description": "The name of the SQS queue that received the notifications of the creation of S3 objects"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 10000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "frequency",
+      "queue_name",
+      "intake_key"
+    ],
+    "title": "connector configuration",
+    "type": "object"
+  },
+  "uuid": "04c40271-b44e-4977-8c62-5356011b2bb6"
+}
