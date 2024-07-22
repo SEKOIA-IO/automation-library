@@ -168,12 +168,6 @@ class GoogleReports(GoogleTrigger):
                 duration = int(time.time() - duration_start)
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
-                # Compute the remaining sleeping time
-                delta_sleep = self.configuration.frequency - duration
-                # if greater than 0, sleep
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
-
         finally:
             self.log(
                 message="Failed to forward events from Google Reports API",
