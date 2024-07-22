@@ -270,7 +270,6 @@ class TrellixEdrConnector(AsyncConnector):
                     if len(message_ids) > 0:
                         log_message = "Pushed {0} records".format(len(message_ids))
 
-                    logger.info(log_message)
                     self.log(message=log_message, level="info")
 
                     logger.info(
@@ -283,4 +282,4 @@ class TrellixEdrConnector(AsyncConnector):
                     )
 
             except Exception as e:
-                logger.error("Error while running Trellix EDR: {error}", error=e)
+                self.log_exception(e, message="Error while running Trellix EDR")
