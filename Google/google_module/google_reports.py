@@ -101,11 +101,13 @@ class GoogleReports(GoogleTrigger):
             if most_recent_date_seen < six_months_ago:
                 most_recent_date_seen = six_months_ago
 
-            return TimeStepper.create_from_time(
+            timeshift = timedelta(minutes=self.configuration.timedelta)
+            return TimeStepper(
                 self,
                 most_recent_date_seen,
-                self.configuration.frequency,
-                self.configuration.timedelta,
+                now - timeshift,  # Set the end of the period to the now minus the temporal shift
+                timedelta(seconds=self.configuration.frequency),
+                timeshift,
             )
 
     @stepper.setter
