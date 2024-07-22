@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-22 - 1.31.3
+
+### Added
+
+- Add connector for OCSF documents
+
 ## 2024-07-10 - 1.31.2
 
 ### Fixed
