@@ -10,7 +10,7 @@ import pytest
 from aiohttp import ClientResponse
 from aioresponses import aioresponses
 
-from client.http_client import SalesforceHttpClient
+from client.http_client import LogType, SalesforceHttpClient
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
 from utils.file_utils import delete_file
 
@@ -55,6 +55,38 @@ async def test_salesforce_http_client_log_files_query_1():
     """Test SalesforceHttpClient._log_files_query."""
     query = SalesforceHttpClient._log_files_query(
         start_from=datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+    expected_query = """
+        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
+                FROM EventLogFile WHERE Interval = \'Hourly\' AND CreatedDate > 2023-01-01T00:00:00Z
+    """.strip()
+
+    assert query.strip() == expected_query
+
+
+@pytest.mark.asyncio
+async def test_salesforce_http_client_log_files_query_2():
+    """Test SalesforceHttpClient._log_files_query."""
+    query = SalesforceHttpClient._log_files_query(
+        start_from=datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
+        log_type=LogType.DAILY,
+    )
+
+    expected_query = """
+        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
+                FROM EventLogFile WHERE Interval = \'Daily\' AND CreatedDate > 2023-01-01T00:00:00Z
+    """.strip()
+
+    assert query.strip() == expected_query
+
+
+@pytest.mark.asyncio
+async def test_salesforce_http_client_log_files_query_2():
+    """Test SalesforceHttpClient._log_files_query."""
+    query = SalesforceHttpClient._log_files_query(
+        start_from=datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
+        log_type=LogType.HOURLY,
     )
 
     expected_query = """
