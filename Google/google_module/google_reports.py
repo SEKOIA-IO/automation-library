@@ -101,11 +101,13 @@ class GoogleReports(GoogleTrigger):
             if most_recent_date_seen < six_months_ago:
                 most_recent_date_seen = six_months_ago
 
-            return TimeStepper.create_from_time(
+            timeshift = timedelta(minutes=self.configuration.timedelta)
+            return TimeStepper(
                 self,
                 most_recent_date_seen,
-                self.configuration.frequency,
-                self.configuration.timedelta,
+                now - timeshift,  # Set the end of the period to the now minus the temporal shift
+                timedelta(seconds=self.configuration.frequency),
+                timeshift,
             )
 
     @stepper.setter
@@ -167,12 +169,6 @@ class GoogleReports(GoogleTrigger):
                 # compute the duration of the last events fetching
                 duration = int(time.time() - duration_start)
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                # Compute the remaining sleeping time
-                delta_sleep = self.configuration.frequency - duration
-                # if greater than 0, sleep
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
 
         finally:
             self.log(
