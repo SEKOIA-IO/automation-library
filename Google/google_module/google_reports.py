@@ -208,7 +208,7 @@ class GoogleReports(GoogleTrigger):
             level="info",
         )
         while const_next_key:
-            response_next_page = self.get_activities(start, end, next_key) or {}
+            response_next_page = self.get_activities(start, end, const_next_key) or {}
             next_page_items = response_next_page.get("items", [])
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_page_items))
 
