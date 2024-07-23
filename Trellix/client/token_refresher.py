@@ -6,6 +6,7 @@ from asyncio import Lock, Task
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional, Set
 from urllib.parse import urlencode
+from posixpath import join as urljoin
 
 from aiohttp import BasicAuth, ClientSession
 from loguru import logger
@@ -118,9 +119,11 @@ class TrellixTokenRefresher(object):
             "scope": "+".join(self.scopes),
         }
 
-        return URL("{0}/iam/v1.1/token".format(self.base_url)).with_query(
-            urlencode(params, safe="+", encoding="utf-8")
-        )
+        auth_url = self.base_url
+        if not auth_url.endswith("/token"):
+            auth_url = urljoin(auth_url, "token")
+
+        return URL(auth_url).with_query(urlencode(params, safe="+", encoding="utf-8"))
 
     async def refresh_token(self) -> None:
         """
@@ -137,13 +140,16 @@ class TrellixTokenRefresher(object):
             json={},
         ) as response:
             logger.info(response.url)
+
+            # raise an exception for any server error
             if response.status >= 500:
                 error_description = await response.text()
                 raise APIError(error_description)
 
             response_data = await response.json()
 
-            if response.status in (401, 403):
+            # raise an exception for any client error
+            if response.status >= 400:
                 raise AuthenticationFailed.from_http_response(response_data)
 
             self._token = TrellixToken(

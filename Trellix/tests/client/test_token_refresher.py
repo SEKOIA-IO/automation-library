@@ -203,3 +203,35 @@ async def test_trellix_refresher_instance(http_token, session_faker):
     await instance1.close()
     await instance2.close()
     await instance3.close()
+
+
+@pytest.mark.parametrize(
+    "auth_url,expected_auth_path",
+    [
+        ("https://iam.cloud.trellix.com/iam/v1.0", "/iam/v1.0/token"),
+        ("https://iam.cloud.trellix.com/iam/v1.0/token", "/iam/v1.0/token"),
+        ("https://iam.mcafee-cloud.com/iam/v1.1", "/iam/v1.1/token"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_trellix_refresher_auth_url(
+    http_token, session_faker, token_refresher_session, auth_url, expected_auth_path
+):
+    """
+    Test TrellixTokenRefresher.auth_url
+
+    Args:
+        http_token: HttpToken
+        session_faker: Faker
+        token_refresher_session: MagicMock
+    """
+
+    token_refresher = TrellixTokenRefresher(
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.word(),
+        auth_url,
+        Scope.complete_set_of_scopes(),
+    )
+
+    assert token_refresher.auth_url.path == expected_auth_path
