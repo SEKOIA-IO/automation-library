@@ -82,6 +82,15 @@ def test_securityalertstrigger_retrieve_alert_from_api_exp_raised(
         alert_trigger.log.assert_called()
 
 
+def test_securityalertstrigger_retrieve_alert_not_json(alert_trigger, samplenotif_alert_created, requests_mock):
+    alert_uuid = samplenotif_alert_created["attributes"]["uuid"]
+    requests_mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", status_code=200, text="not json")
+
+    with patch("tenacity.nap.time"):
+        alert_trigger.handle_event(samplenotif_alert_created)
+        alert_trigger.log.assert_called()
+
+
 def test_securityalertstrigger_handle_alert_send_message(
     alert_trigger,
     sample_notifications,

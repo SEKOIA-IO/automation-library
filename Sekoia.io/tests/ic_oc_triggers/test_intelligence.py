@@ -1,11 +1,10 @@
 import os
 import time
 from threading import Thread
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, patch
 import pytest
 import requests_mock
 from requests import Response
-from sekoia_automation.storage import write
 
 from sekoiaio.triggers.intelligence import (
     FeedConsumptionTrigger,
