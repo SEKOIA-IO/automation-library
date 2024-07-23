@@ -137,13 +137,16 @@ class TrellixTokenRefresher(object):
             json={},
         ) as response:
             logger.info(response.url)
+
+            # raise an exception for any server error
             if response.status >= 500:
                 error_description = await response.text()
                 raise APIError(error_description)
 
             response_data = await response.json()
 
-            if response.status in (401, 403):
+            # raise an exception for any client error
+            if response.status >= 400:
                 raise AuthenticationFailed.from_http_response(response_data)
 
             self._token = TrellixToken(
