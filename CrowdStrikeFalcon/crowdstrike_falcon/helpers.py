@@ -144,3 +144,14 @@ def stix_to_indicators(stix_object, supported_types_map):
             results.append({"type": ioc_type, "value": ioc_value})
 
     return results
+
+
+def compute_refresh_interval(interval: int) -> int:
+    """
+    Compute a refresh interval with a safety margin
+
+    This margin is depends on the refresh interval and a maximum of five minutes.
+    The refresh interval is a minimum of 30 seconds
+    """
+    delta = min(300, int(interval / 6))
+    return max(30, interval - delta)
