@@ -1,6 +1,7 @@
 # flake8: noqa: E402
 import os
 from datetime import datetime, timedelta
+from posixpath import join as urljoin
 
 from tenacity import Retrying, wait_exponential, stop_after_attempt
 
@@ -81,6 +82,8 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
         api_key = self.module.configuration["api_key"]
         base_url = self.module.configuration["base_url"]
+
+        self.log(f"Base URL provided is {base_url}", level="info")
 
         self._validate_api_key(base_url, api_key)
 
@@ -181,6 +184,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
     def _validate_api_key(self, base_url: str, api_key: str):
         """Ensure submitted APIKey is valid, raise a exception if not."""
+        url = urljoin(base_url, "api/v1/me").replace("/api/api", "/api")  # In case base_url ends with /api
         for attempt in Retrying(
             reraise=True,
             wait=wait_exponential(max=10),
@@ -188,7 +192,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         ):
             with attempt:
                 response = requests.get(
-                    f"{base_url}/v1/me",
+                    url,
                     headers={"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()},
                 )
                 # Retry 5xx errors

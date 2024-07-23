@@ -84,14 +84,14 @@ def test_pong(base_trigger):
 
 
 def test_run_forbidden(base_trigger, requests_mock):
-    requests_mock.get("http://fake.url//v1/me", status_code=403)
+    requests_mock.get("http://fake.url/api/v1/me", status_code=403)
     with pytest.raises(HTTPError):
         base_trigger.run()
         assert base_trigger._error_count == 5
 
 
 def test_run(base_trigger, requests_mock):
-    requests_mock.get("http://fake.url//v1/me", status_code=200)
+    requests_mock.get("http://fake.url/api/v1/me", status_code=200)
     base_trigger.stop()
     try:
         base_trigger.run()
