@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-23 - 1.8.3
+
+### Fixed
+
+- Raise exception on authentication when facing 4xx status code
+- Fix the way to compute the authentication url
+
 ## 2024-07-22 - 1.8.2
 
 ### Changed
