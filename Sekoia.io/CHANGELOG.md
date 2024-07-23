@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-23 - 2.62.0
+
+### Changed
+
+- Improve logging when fetching an alert failed.
+
 ## 2024-07-08 - 2.61.1
 
 ### Fixed

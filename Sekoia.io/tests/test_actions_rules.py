@@ -1,6 +1,5 @@
 from urllib.parse import unquote as url_decoder
 
-import pytest
 import requests_mock
 
 from sekoiaio.operation_center import GetRule, EnableRule, DisableRule, DeleteRule, CreateRule, UpdateRule
