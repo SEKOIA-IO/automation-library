@@ -204,25 +204,20 @@ class EventStreamReader(threading.Thread):
         """
         logger.debug("refresh the event stream", refresh_url={refresh_url})
 
-        try:
-            response = self.client.post(
-                url=refresh_url,
-                json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
+        response = self.client.post(
+            url=refresh_url,
+            json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
+        )
+        if not response.ok:
+            logger.error(
+                "Failed to refresh the event stream",
+                refresh_url=refresh_url,
+                status_code=response.status_code,
+                content=response.text,
             )
-            response.raise_for_status()
-
+            self.log(level="error", message="failed to refresh the event stream")
+        else:
             logger.info("successfully refreshed event stream", refresh_url=refresh_url)
-
-        except requests.exceptions.RequestException as e:
-            if e.response:
-                self.log_exception(
-                    e,
-                    message=f"failed to refresh the event stream with "
-                    f"http status {e.response.status_code} and content: `{e.response.text}`",
-                )
-
-            else:
-                self.log_exception(e, message="failed to refresh the event stream")
 
     def refresh_stream_timer(self):
         return self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])
