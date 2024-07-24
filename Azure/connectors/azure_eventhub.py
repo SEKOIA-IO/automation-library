@@ -93,6 +93,7 @@ class AzureEventsHubTrigger(AsyncConnector):
                 ),
                 level="info",
             )
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
             await self.client.close()
 
         # acknowledge the messages
