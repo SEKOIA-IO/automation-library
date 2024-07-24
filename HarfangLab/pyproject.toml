@@ -8,11 +8,14 @@ authors = []
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.13.0"
 pydantic = "^1.8.2"
+requests = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
+mypy = "*"
+types-requests = "*"
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
