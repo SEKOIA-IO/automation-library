@@ -1,4 +1,3 @@
-
 import requests
 from sekoia_automation.action import Action
 
