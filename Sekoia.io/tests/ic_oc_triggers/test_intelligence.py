@@ -37,7 +37,7 @@ def trigger(data_storage):
 
 def test_url_generation(trigger):
     expected_url = (
-        "https://api.sekoia.io/v2/inthreat/collections/"
+        "https://api.sekoia.io/api/v2/inthreat/collections/"
         "d6092c37-d8d7-45c3-8aff-c4dc26030608/objects"
         "?limit=200&include_revoked=False&skip_expired=true"
     )
@@ -47,7 +47,7 @@ def test_url_generation(trigger):
 def test_url_generation_modified_after(trigger):
     trigger.configuration["modified_after"] = "2021-09-01T00:00:00Z"
     expected_url = (
-        "https://api.sekoia.io/v2/inthreat/collections/"
+        "https://api.sekoia.io/api/v2/inthreat/collections/"
         "d6092c37-d8d7-45c3-8aff-c4dc26030608/objects"
         "?limit=200&include_revoked=False&skip_expired=true&modified_after=2021-09-01T00:00:00Z"
     )
