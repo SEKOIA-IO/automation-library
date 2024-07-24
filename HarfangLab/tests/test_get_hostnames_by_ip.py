@@ -26,15 +26,15 @@ def test_get_hostnames_by_ip():
             {
                 "hostname": "test-host",
                 "ipaddress": target_ip,
-                "last_seen": "2023-07-04T12:00:00Z",
-                "os": "Windows",
+                "lastseen": "2023-07-04T12:00:00Z",
+                "ostype": "Windows",
                 "status": "active",
             },
             {
                 "hostname": "test-host-2",
                 "ipaddress": target_ip,
-                "last_seen": "2023-07-05T12:00:00Z",
-                "os": "Linux",
+                "lastseen": "2023-07-05T12:00:00Z",
+                "ostype": "Linux",
                 "status": "inactive",
             },
         ]
@@ -51,15 +51,15 @@ def test_get_hostnames_by_ip():
                 HostnameEntry(
                     hostname="test-host",
                     ipaddress=target_ip,
-                    last_seen="2023-07-04T12:00:00Z",
-                    os="Windows",
+                    lastseen="2023-07-04T12:00:00Z",
+                    ostype="Windows",
                     status="active",
                 ),
                 HostnameEntry(
                     hostname="test-host-2",
                     ipaddress=target_ip,
-                    last_seen="2023-07-05T12:00:00Z",
-                    os="Linux",
+                    lastseen="2023-07-05T12:00:00Z",
+                    ostype="Linux",
                     status="inactive",
                 ),
             ]
@@ -73,8 +73,8 @@ def test_get_hostnames_by_ip():
                 HostnameEntry(
                     hostname="test-host-2",
                     ipaddress=target_ip,
-                    last_seen="2023-07-05T12:00:00Z",
-                    os="Linux",
+                    lastseen="2023-07-05T12:00:00Z",
+                    ostype="Linux",
                     status="inactive",
                 )
             ]

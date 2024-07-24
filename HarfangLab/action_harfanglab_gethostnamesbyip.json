@@ -23,7 +23,10 @@
     "properties": {
       "hostnames": {
         "description": "Hostnames",
-        "type": "object"
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
       }
     },
     "required": [
