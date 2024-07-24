@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-24 - 2.5.2
+
+### Fixed
+
+- Reset event lag when no message was received
+
 ## 2024-07-04 - 2.5.1
 
 ### Added
