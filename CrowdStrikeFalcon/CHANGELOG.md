@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-23 - 1.19.3
+
+### Fixed
+
+- Change the way the refresh interval is calculated to keep the datafeed active
+
 ## 2024-07-22 - 1.19.2
 
 ### Changed

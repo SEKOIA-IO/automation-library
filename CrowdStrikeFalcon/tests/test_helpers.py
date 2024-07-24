@@ -5,6 +5,7 @@ from crowdstrike_falcon.helpers import (
     get_detection_id,
     get_extended_verticle_type,
     group_edges_by_verticle_type,
+    compute_refresh_interval,
 )
 
 
@@ -106,3 +107,8 @@ def test_get_detection_id():
         },
     }
     assert get_detection_id(detection) == detection_id
+
+
+@pytest.mark.parametrize("interval,expected_result", [(1800, 1500), (60, 50), (30, 30), (3600, 3300)])
+def test_compute_refresh_interval(interval, expected_result):
+    assert compute_refresh_interval(interval) == expected_result

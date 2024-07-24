@@ -16,7 +16,7 @@ from sekoia_automation.timer import RepeatedTimer
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
 from crowdstrike_falcon.exceptions import StreamNotAvailable
-from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type
+from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type, compute_refresh_interval
 from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
 from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
 from crowdstrike_falcon.logging import get_logger
@@ -190,7 +190,7 @@ class EventStreamReader(threading.Thread):
 
     @property
     def refresh_interval(self) -> int:
-        return int(self.stream_info["refreshActiveSessionInterval"])
+        return compute_refresh_interval(int(self.stream_info["refreshActiveSessionInterval"]))
 
     def log(self, *args, **kwargs):
         self.connector.log(*args, **kwargs)
