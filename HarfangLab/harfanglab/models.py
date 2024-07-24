@@ -34,8 +34,8 @@ class JobTriggerResult(BaseModel):
 class HostnameEntry(BaseModel):
     hostname: str
     ipaddress: str
-    lastseen: Field(..., alias="lastseen")
-    ostype: Field(..., alias="ostype")
+    lastseen: str = Field(..., alias="lastseen")
+    ostype: str = Field(..., alias="ostype")
     status: str
 
 
