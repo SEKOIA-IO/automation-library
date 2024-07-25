@@ -22,6 +22,7 @@
           "groups",
           "groups_enterprise",
           "jamboard",
+	  "login",
           "meet",
           "token",
           "user_accounts",

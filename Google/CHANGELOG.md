@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-25 - 1.20.8
+
+### Fixed
+
+- Fix the list of application for the Google report connector
+
 ## 2024-07-23 - 1.20.7
 
 ### Fixed
