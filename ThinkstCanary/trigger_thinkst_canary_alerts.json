@@ -1,6 +1,6 @@
 {
   "description": "Get latest events from Thinkst Canary",
-  "docker_parameters": "event_stream_trigger",
+  "docker_parameters": "thinkst_canary_alerts",
   "name": "Fetch Thinkst Canary Events",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -28,5 +28,6 @@
     "title": "Thinkst Canary connector",
     "type": "object"
   },
+  "results": {},
   "uuid": "01d01a08-6013-4da8-9682-7d3f18e79585"
 }

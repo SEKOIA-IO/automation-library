@@ -20,6 +20,7 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUT
 class ThinksCanaryAlertsConnectorConfiguration(DefaultConnectorConfiguration):
     chunk_size: int = 1000
     frequency: int = 10
+    acknowledge: bool = False
 
 
 logger = structlog.getLogger()
