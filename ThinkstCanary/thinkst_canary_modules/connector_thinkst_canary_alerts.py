@@ -9,6 +9,7 @@ import orjson
 import requests
 import structlog
 from dateutil.parser import isoparse
+from pydantic import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -18,9 +19,9 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUT
 
 
 class ThinksCanaryAlertsConnectorConfiguration(DefaultConnectorConfiguration):
-    chunk_size: int = 1000
-    frequency: int = 10
-    acknowledge: bool = False
+    chunk_size: int = Field(1000, description="The max size of chunks for the batch processing", ge=1, le=1000)
+    frequency: int = Field(10, description="Batch frequency in seconds", ge=1, le=60)
+    acknowledge: bool = Field(False, description="Whether to acknowledge received events")
 
 
 logger = structlog.getLogger()
@@ -49,6 +50,22 @@ class ThinkstCanaryAlertsConnector(Connector):
             most_recent_id_seen = int(most_recent_id_seen)
 
         return most_recent_id_seen
+
+    def acknowledge_incident(self, incident_id: str) -> None:
+        url = urljoin(self.client.base_url, "/api/v1/incident/acknowledge")
+        params = {"incident": incident_id}
+
+        response = self.client.post(url=url, params=params)
+        if response.ok:
+            self.log(level="info", message=f"successfully acknowledged {incident_id}")
+
+        else:
+            self.log(level="error", message=f"error while trying to acknowledge {incident_id}")
+            logger.error(
+                f"error while trying to acknowledge {incident_id}",
+                status_code=response.status_code,
+                content=response.text,
+            )
 
     def _handle_response_error(self, response: requests.Response):
         if not response.ok:
@@ -129,14 +146,20 @@ class ThinkstCanaryAlertsConnector(Connector):
         most_recent_timestamp_seen = None  # for the event lag calculation
 
         try:
-            for next_page in self.fetch_pages(most_recent_id_seen):
-                events = self.extract_events(next_page)
-                last_event_id = next_page["max_updated_id"]
+            for page in self.fetch_pages(most_recent_id_seen):
+                events = self.extract_events(page)
+
+                last_event_id = page["max_updated_id"]
                 if most_recent_id_seen is None or last_event_id > most_recent_id_seen:
                     most_recent_id_seen = last_event_id
 
+                if self.configuration.acknowledge:
+                    incidents_ids = [event["incident_id"] for event in events if event["event_type"] == "incident"]
+                    for incident_id in incidents_ids:
+                        self.acknowledge_incident(incident_id=incident_id)
+
                 if len(events) > 0:
-                    most_recent_timestamp_seen = dateutil.parser.parse(next_page["updated_std"])
+                    most_recent_timestamp_seen = dateutil.parser.parse(page["updated_std"])
                     yield events
 
         finally:

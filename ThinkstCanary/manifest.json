@@ -5,12 +5,10 @@
     "type": "object",
     "properties": {
       "base_url": {
-        "title": "Base Url",
         "description": "Base URL",
         "type": "string"
       },
       "auth_token": {
-        "title": "Auth Token",
         "description": "Auth token",
         "type": "string"
       }

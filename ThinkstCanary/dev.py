@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 
 from thinkst_canary_modules import ThinkstCanaryModule, ThinkstCanaryModuleConfiguration
-from thinkst_canary_modules.connector_thinkst_canary import (
+from thinkst_canary_modules.connector_thinkst_canary_alerts import (
     ThinksCanaryAlertsConnectorConfiguration,
     ThinkstCanaryAlertsConnector,
 )
@@ -36,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--auth_token", type=str, required=True)
     parser.add_argument("--intake_key", type=str, required=True)
     parser.add_argument("--test", action="store_true")
+    parser.add_argument("--ack", action="store_true")
 
     args = parser.parse_args()
 
@@ -49,6 +50,7 @@ if __name__ == "__main__":
     class DumbConnectorConfiguration(ThinksCanaryAlertsConnectorConfiguration):
         # frequency: int = 60
         intake_key = args.intake_key
+        acknowledge = args.ack
 
         # https://intake.test.sekoia.io or https://intake.sekoia.io
         intake_server: str = "https://intake.test.sekoia.io" if args.test else "https://intake.sekoia.io"

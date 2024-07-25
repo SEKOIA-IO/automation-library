@@ -5,28 +5,36 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "intake_key": {
-        "description": "Intake key to use when sending events",
+      "intake_server": {
         "type": "string"
       },
+      "intake_key": {
+        "type": "string"
+      },
+      "chunk_size": {
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 1000,
+        "type": "integer"
+      },
       "frequency": {
-        "type": "integer",
         "description": "Batch frequency in seconds",
         "default": 10,
         "minimum": 1,
-        "maximum": 60
+        "maximum": 60,
+        "type": "integer"
       },
-      "chunk_size": {
-        "type": "integer",
-        "description": "The size of chunks for the batch processing",
-        "default": 1000,
-        "minimum": 1,
-        "maximum": 1000
+      "acknowledge": {
+        "description": "Whether to acknowledge received events",
+        "default": false,
+        "type": "boolean"
       }
     },
     "required": ["intake_key"],
     "title": "Thinkst Canary connector",
-    "type": "object"
+    "type": "object",
+    "secrets": []
   },
   "results": {},
   "uuid": "01d01a08-6013-4da8-9682-7d3f18e79585"
