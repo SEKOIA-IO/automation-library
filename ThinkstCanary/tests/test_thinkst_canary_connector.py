@@ -1,12 +1,7 @@
-import os
-import time
-from datetime import datetime, timedelta, timezone
-from threading import Thread
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
-from requests import Response
 
 from thinkst_canary_modules import ThinkstCanaryModule
 from thinkst_canary_modules.connector_thinkst_canary_alerts import ThinkstCanaryAlertsConnector
@@ -19,10 +14,9 @@ def trigger(data_storage):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
+    trigger.acknowledge_incident = MagicMock()
     trigger.module.configuration = {"auth_token": "AUTH_TOKEN", "base_url": "https://example.com"}
-    trigger.configuration = {
-        "intake_key": "intake_key",
-    }
+    trigger.configuration = {"intake_key": "intake_key", "frequency": 60, "acknowledge": False}
     yield trigger
 
 
@@ -163,9 +157,69 @@ def message1():
 
 
 def test_fetch_events(trigger, message1):
+    trigger.push_events_to_intakes = MagicMock()
+
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get("https://example.com/api/v1/incidents/unacknowledged", status_code=200, json=message1)
         events = trigger.fetch_events()
 
         assert list(events) == [trigger.extract_events(message1)]
         assert trigger.from_id == 3
+
+
+def test_long_next_batch_should_not_sleep(trigger, message1):
+    with patch(
+        "thinkst_canary_modules.connector_thinkst_canary_alerts.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/api/v1/incidents/unacknowledged",
+            status_code=200,
+            json=message1,
+        )
+        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 0
+
+
+def test_next_batch_sleep_until_next_round(trigger, message1):
+    with patch(
+        "thinkst_canary_modules.connector_thinkst_canary_alerts.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/api/v1/incidents/unacknowledged",
+            status_code=200,
+            json=message1,
+        )
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 1
+
+
+def test_acknowledge_messages(trigger, message1):
+    trigger.configuration.acknowledge = True
+
+    with patch(
+        "thinkst_canary_modules.connector_thinkst_canary_alerts.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/api/v1/incidents/unacknowledged",
+            status_code=200,
+            json=message1,
+        )
+
+        trigger.next_batch()
+        assert trigger.acknowledge_incident.call_count == 2  # 1 for each incident
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 1
