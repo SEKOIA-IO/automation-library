@@ -14,7 +14,6 @@ def trigger(data_storage):
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.acknowledge_incident = MagicMock()
     trigger.module.configuration = {"auth_token": "AUTH_TOKEN", "base_url": "https://example.com"}
     trigger.configuration = {"intake_key": "intake_key", "frequency": 60, "acknowledge": False}
     yield trigger
@@ -219,7 +218,12 @@ def test_acknowledge_messages(trigger, message1):
             json=message1,
         )
 
+        url_ack = "https://example.com/api/v1/incident/acknowledge"
+        mock_requests.post(url_ack, status_code=200)
+
         trigger.next_batch()
-        assert trigger.acknowledge_incident.call_count == 2  # 1 for each incident
+        ack_requests = [item.url for item in mock_requests.request_history if url_ack in item.url]
+
+        assert len(ack_requests) == 2  # 1 for each incident
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 1
