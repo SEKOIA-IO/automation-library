@@ -6,7 +6,7 @@
     "properties": {
       "api_url": {
         "description": "The url of the Darktrace appliance. (e.g. https://example.darktrace.com or https://192.168.0.1)",
-        "format": "uri"
+        "format": "uri",
         "type": "string"
       },
       "public_key": {
