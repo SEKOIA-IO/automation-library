@@ -28,8 +28,8 @@ class GetHostnamesByIP(Action):
 
         data = response.json()
 
-        # Check if data is a dictionary with a key "result" or directly a list
-        result = data.get("result") if isinstance(data, dict) else data
+        # Check if data is a dictionary with a key "results" or directly a list
+        result = data.get("results") if isinstance(data, dict) else data
 
         hostnames = [HostnameEntry(**entry) for entry in result]
         if get_only_last_seen:
