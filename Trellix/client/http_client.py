@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator, Optional, Set
 
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
+from aiohttp_retry import RetryClient
 from yarl import URL
 
 from .schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
@@ -100,7 +101,7 @@ class TrellixHttpClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if cls._session is None:
-            cls._session = ClientSession()
+            cls._session = RetryClient()
 
         if cls._rate_limiter:
             async with cls._rate_limiter:

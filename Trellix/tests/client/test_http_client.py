@@ -306,3 +306,56 @@ async def test_trellix_http_client_get_edr_alert_events(
         result = await http_client.get_edr_alerts(results_start_date, results_limit)
 
         assert result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_trellix_http_client_retry(
+    session_faker: Faker, http_token: HttpToken, edr_alert_event_response: TrellixResponse[EdrAlertAttributes]
+):
+    """
+    Test get edr alert events.
+
+    Args:
+        session_faker: Faker
+        http_token: HttpToken
+        edr_alert_event_response: TrellixResponse[EdrAlertAttributes]
+    """
+    with aioresponses() as mocked_responses:
+        base_url = session_faker.uri()
+        base_auth_url = session_faker.uri()
+        client_id = session_faker.word()
+        client_secret = session_faker.word()
+        api_key = session_faker.word()
+
+        results_limit = session_faker.pyint()
+        results_start_date = session_faker.date_time()
+
+        http_client = await TrellixHttpClient.instance(
+            client_id,
+            client_secret,
+            api_key,
+            base_auth_url,
+            base_url,
+        )
+
+        token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
+
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+
+        expected_result = [edr_alert_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
+
+        url = http_client.edr_alerts_url(results_start_date, limit=results_limit)
+        mocked_responses.get(
+            url,
+            status=500,
+        )
+        mocked_responses.get(
+            http_client.edr_alerts_url(results_start_date, limit=results_limit),
+            status=200,
+            payload={
+                "data": orjson.loads(orjson.dumps(expected_result).decode("utf-8")),
+            },
+        )
+        result = await http_client.get_edr_alerts(results_start_date, results_limit)
+
+        assert result == expected_result
