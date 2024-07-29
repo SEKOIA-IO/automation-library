@@ -1,12 +1,12 @@
 {
-    "configuration": {
-        "title": "Proofpoint",
-        "type": "object",
-        "properties": {}
-    },
-    "description": "Proofpoint Module",
-    "name": "Proofpoint",
-    "uuid": "eaa52274-2664-47fa-978e-af87a4222cba",
-    "slug": "proofpoint",
-    "version": "1.15.2"
+  "configuration": {
+    "title": "Proofpoint",
+    "type": "object",
+    "properties": {}
+  },
+  "description": "Proofpoint Module",
+  "name": "Proofpoint",
+  "uuid": "eaa52274-2664-47fa-978e-af87a4222cba",
+  "slug": "proofpoint",
+  "version": "1.16.0"
 }

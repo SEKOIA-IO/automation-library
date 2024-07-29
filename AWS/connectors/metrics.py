@@ -1,14 +1,14 @@
 """All necessary metrics."""
 
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 # Declare common prometheus metrics
 prom_namespace = "symphony_module_common"
 
 
-INCOMING_MESSAGES = Counter(
-    name="collected_messages",
-    documentation="Number of messages consumed from the event_hub",
+INCOMING_EVENTS = Counter(
+    name="collected_events",
+    documentation="Number of collected events from AWS S3",
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )

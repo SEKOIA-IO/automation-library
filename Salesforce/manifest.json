@@ -1,43 +1,43 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "org_type": {
-                "description": "Organization type. Might be one of the following: 'production', 'sandbox', 'trial', 'developer'. Default is 'production'",
-                "type": "string",
-                "default": "production"
-            },
-            "client_id": {
-                "description": "Client id to interact with salesforce API",
-                "type": "string"
-            },
-            "client_secret": {
-                "description": "Client secret to interact with salesforce API",
-                "type": "string"
-            },
-            "rate_limit": {
-                "type": "string",
-                "description": "Rate limit for requests to salesforce. Value should have next format {max_rate}/{time_period}. For example: 3/60. Sekoia will use default rate limits if value is empty or invalid. More information you can find in docs: https://developer.salesforce.com/docs/atlas.en-us.salesforce_app_limits_cheatsheet.meta/salesforce_app_limits_cheatsheet/salesforce_app_limits_platform_api.htm"
-            },
-            "base_url": {
-                "description": "Url of salesforce instance. Consists of https://<instance>.salesforce.com",
-                "type": "string"
-            }
-        },
-        "required": [
-            "client_id",
-            "client_secret",
-            "base_url"
-        ],
-        "secrets": [
-            "client_secret"
-        ],
-        "title": "Salesforce module Configuration",
-        "type": "object"
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "org_type": {
+        "description": "Organization type. Might be one of the following: 'production', 'sandbox', 'trial', 'developer'. Default is 'production'",
+        "type": "string",
+        "default": "production"
+      },
+      "client_id": {
+        "description": "Client id to interact with salesforce API",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "Client secret to interact with salesforce API",
+        "type": "string"
+      },
+      "rate_limit": {
+        "type": "string",
+        "description": "Rate limit for requests to salesforce. Value should have next format {max_rate}/{time_period}. For example: 3/60. Sekoia will use default rate limits if value is empty or invalid. More information you can find in docs: https://developer.salesforce.com/docs/atlas.en-us.salesforce_app_limits_cheatsheet.meta/salesforce_app_limits_cheatsheet/salesforce_app_limits_platform_api.htm"
+      },
+      "base_url": {
+        "description": "Url of salesforce instance. Consists of https://<instance>.salesforce.com",
+        "type": "string"
+      }
     },
-    "description": "Salesforce provides users comprehensive tools to manage customer data, automate processes, analyze data and insights, and create personalized customer experiences. Salesforce also offers a variety of solutions for customer service, marketing automation, commerce, app development, and more",
-    "name": "Salesforce",
-    "uuid": "f811e134-2548-11ee-be56-0242ac120002",
-    "slug": "salesforce",
-    "version": "1.5.3"
+    "required": [
+      "client_id",
+      "client_secret",
+      "base_url"
+    ],
+    "secrets": [
+      "client_secret"
+    ],
+    "title": "Salesforce module Configuration",
+    "type": "object"
+  },
+  "description": "Salesforce provides users comprehensive tools to manage customer data, automate processes, analyze data and insights, and create personalized customer experiences. Salesforce also offers a variety of solutions for customer service, marketing automation, commerce, app development, and more",
+  "name": "Salesforce",
+  "uuid": "f811e134-2548-11ee-be56-0242ac120002",
+  "slug": "salesforce",
+  "version": "1.6.1"
 }

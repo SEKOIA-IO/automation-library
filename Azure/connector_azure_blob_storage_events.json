@@ -29,6 +29,11 @@
         "type": "integer",
         "description": "The max size of chunks for the batch processing",
         "default": 1000
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
       }
     },
     "required": [
@@ -41,8 +46,8 @@
       "account_key"
     ]
   },
-  "description": "connector p laybook to get Azure Blob Storage events information",
+  "description": "connector playbook to get Azure Blob Storage events information",
   "docker_parameters": "azure_blob_storage",
-  "name": "[BETA] Collect Azure Blob Storage events",
-  "uuid": "626f4d84-5ab7-11ee-8c99-0242ac120002"
+  "name": "Collect Azure Blob Storage events",
+  "uuid": "d75861b5-03a6-4857-b2b6-40f04a4255a8"
 }

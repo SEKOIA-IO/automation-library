@@ -5,7 +5,7 @@ import pytest
 import requests_mock
 
 from sophos_module.base import SophosModule
-from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery, SophosXDRQueryTrigger
+from sophos_module.trigger_sophos_xdr_query import SophosXDRIOCQuery
 
 
 @pytest.fixture

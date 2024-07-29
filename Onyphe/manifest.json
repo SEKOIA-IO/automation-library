@@ -1,22 +1,22 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "apikey": {
-                "description": "APIKEY for Onyphe",
-                "type": "string"
-            }
-        },
-        "required": [],
-        "title": "Arguments",
-        "type": "object",
-        "secrets": [
-            "apikey"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "apikey": {
+        "description": "APIKEY for Onyphe",
+        "type": "string"
+      }
     },
-    "description": "[Onyphe](https://www.onyphe.io/) is a Cyber Defense Search Engine for open-source and cyber threat intelligence data collected by crawling various sources available on the Internet or by listening to Internet background noise",
-    "name": "Onyphe",
-    "uuid": "3d20c308-bc7f-492f-99b0-211614a58116",
-    "slug": "onyphe",
-    "version": "1.22.1"
+    "required": [],
+    "title": "Arguments",
+    "type": "object",
+    "secrets": [
+      "apikey"
+    ]
+  },
+  "description": "[Onyphe](https://www.onyphe.io/) is a Cyber Defense Search Engine for open-source and cyber threat intelligence data collected by crawling various sources available on the Internet or by listening to Internet background noise",
+  "name": "Onyphe",
+  "uuid": "3d20c308-bc7f-492f-99b0-211614a58116",
+  "slug": "onyphe",
+  "version": "1.23.0"
 }

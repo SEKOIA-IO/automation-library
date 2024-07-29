@@ -1,40 +1,40 @@
 {
-    "configuration": {
-        "title": "Vade Secure",
-        "type": "object",
-        "properties": {
-            "oauth2_authorization_url": {
-                "description": "OAuth2 authorization URL",
-                "type": "string",
-                "format": "uri"
-            },
-            "api_host": {
-                "description": "API Url of the VadeSecure platform (e.g. 'https://m365.eu.vadesecure.com')",
-                "type": "string",
-                "format": "uri"
-            },
-            "client_id": {
-                "description": "OAuth2 client identifier",
-                "type": "string"
-            },
-            "client_secret": {
-                "description": "OAuth2 client secret",
-                "type": "string"
-            }
-        },
-        "required": [
-            "oauth2_authorization_url",
-            "api_host",
-            "client_id",
-            "client_secret"
-        ],
-        "secrets": [
-            "client_secret"
-        ]
+  "configuration": {
+    "title": "Vade Secure",
+    "type": "object",
+    "properties": {
+      "oauth2_authorization_url": {
+        "description": "OAuth2 authorization URL",
+        "type": "string",
+        "format": "uri"
+      },
+      "api_host": {
+        "description": "API Url of the VadeSecure platform (e.g. 'https://m365.eu.vadesecure.com')",
+        "type": "string",
+        "format": "uri"
+      },
+      "client_id": {
+        "description": "OAuth2 client identifier",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "OAuth2 client secret",
+        "type": "string"
+      }
     },
-    "description": "Vade Secure Module",
-    "name": "Vade Secure",
-    "uuid": "1411df5b-5de1-40bd-a988-725cfe692aff",
-    "slug": "vadesecure",
-    "version": "1.49.2"
+    "required": [
+      "oauth2_authorization_url",
+      "api_host",
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
+  },
+  "description": "Vade Secure Module",
+  "name": "Vade Secure",
+  "uuid": "1411df5b-5de1-40bd-a988-725cfe692aff",
+  "slug": "vadesecure",
+  "version": "1.51.0"
 }

@@ -1,21 +1,21 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "IoC": {
-                "description": "The value of the IoC to block",
-                "type": "string"
-            }
-        },
-        "required": [
-            "IoC"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "IoC": {
+        "description": "The value of the IoC to block",
+        "type": "string"
+      }
     },
-    "description": "Block the provided IOCs: IP / domain",
-    "docker_parameters": "zscaler_block_ioc",
-    "name": "Zscaler Block IoC",
-    "results": {},
-    "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f2"
+    "required": [
+      "IoC"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Block the provided IOCs: IP / domain",
+  "docker_parameters": "zscaler_block_ioc",
+  "name": "Zscaler Block IoC",
+  "results": {},
+  "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f2"
 }

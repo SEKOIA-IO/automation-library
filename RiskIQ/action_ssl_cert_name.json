@@ -1,57 +1,59 @@
 {
-    "uuid": "e722c79c-7a87-426b-8f83-7f491fb72677",
-    "name": "SSL Certificates by Name",
-    "docker_parameters": "ssl_cert_name",
-    "description": "Get SSL certificates by name",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-            "name": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": ["name"]
+  "uuid": "e722c79c-7a87-426b-8f83-7f491fb72677",
+  "name": "SSL Certificates by Name",
+  "docker_parameters": "ssl_cert_name",
+  "description": "Get SSL certificates by name",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "name": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "content": {
-                "type": "array",
-                "items": {
-                    "type": "object"
-                }
-            },
-            "first": {
-                "type": "boolean"
-            },
-            "last": {
-                "type": "boolean"
-            },
-            "number": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "numberOfElements": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "size": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "sort": {
-                "type": "string"
-            },
-            "totalElements": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "totalPages": {
-                "type": "integer",
-                "format": "int32"
-            }
+    "required": [
+      "name"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "content": {
+        "type": "array",
+        "items": {
+          "type": "object"
         }
+      },
+      "first": {
+        "type": "boolean"
+      },
+      "last": {
+        "type": "boolean"
+      },
+      "number": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "numberOfElements": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "size": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "sort": {
+        "type": "string"
+      },
+      "totalElements": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "totalPages": {
+        "type": "integer",
+        "format": "int32"
+      }
     }
+  }
 }

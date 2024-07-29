@@ -2,7 +2,6 @@
 Module for actions that are not fully generic
 """
 
-
 from sekoia_automation.action import GenericAPIAction
 
 from sekoiaio.intelligence_center import base_url
@@ -46,10 +45,12 @@ class GetContextAction(GenericAPIAction):
             if item.get("external_references"):
                 external_references = item.get("external_references")
                 # Search for FLINT source_name and add url to them
-                if external_references[0].get("source_name").startswith("FLINT"):
-                    ind = items.index(item)
-                    url = "https://app.sekoia.io/intelligence/objects/" + item.get("id")
-                    item["external_references"][0].update({"url": url})
-                    items[ind] = item
+                for reference in external_references:
+                    if reference.get("source_name").startswith("FLINT"):
+                        index_item = items.index(item)
+                        index_ref = external_references.index(reference)
+                        url = "https://app.sekoia.io/intelligence/objects/" + item.get("id")
+                        item["external_references"][index_ref].update({"url": url})
+                        items[index_item] = item
 
         return {"items": items, "has_more": results.get("has_more")}

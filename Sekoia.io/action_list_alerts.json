@@ -1,372 +1,375 @@
 {
-    "uuid": "050b7bc1-4df8-47bc-84e2-ec265821e18a",
-    "name": "Search Alerts",
-    "docker_parameters": "get-alerts",
-    "description": "find alerts that match your filters",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "list_alerts",
-        "properties": {
-            "match[community_uuid]": {
-                "in": "query",
-                "type": "string"
+  "uuid": "050b7bc1-4df8-47bc-84e2-ec265821e18a",
+  "name": "Search Alerts",
+  "docker_parameters": "get-alerts",
+  "description": "find alerts that match your filters",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "list_alerts",
+    "properties": {
+      "match[community_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[entity_name]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[entity_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[status_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[status_name]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[type_category]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[type_value]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[source]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[target]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[node]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[stix_object]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[rule_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[rule_name]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[short_id]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[title]": {
+        "in": "query",
+        "type": "string"
+      },
+      "date[created_at]": {
+        "in": "query",
+        "type": "string"
+      },
+      "date[updated_at]": {
+        "in": "query",
+        "type": "string"
+      },
+      "range[urgency]": {
+        "in": "query",
+        "type": "string"
+      },
+      "range[similar]": {
+        "in": "query",
+        "type": "string"
+      },
+      "visible": {
+        "in": "query",
+        "type": "boolean"
+      },
+      "limit": {
+        "in": "query",
+        "type": "integer",
+	"minimum": 1,
+	"default": 20,
+	"maximum": 100
+      },
+      "offset": {
+        "in": "query",
+        "type": "integer"
+      },
+      "stix": {
+        "in": "query",
+        "type": "boolean"
+      },
+      "sort": {
+        "in": "query",
+        "type": "string"
+      },
+      "direction": {
+        "in": "query",
+        "type": "string"
+      },
+      "with_count": {
+        "in": "query",
+        "type": "boolean"
+      }
+    }
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "total": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "has_more": {
+        "type": "boolean"
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "urgency": {
+              "type": "object",
+              "properties": {
+                "severity": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "current_value": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "value": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "criticity": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "display": {
+                  "type": "string"
+                }
+              }
             },
-            "match[entity_name]": {
-                "in": "query",
-                "type": "string"
+            "is_incident": {
+              "type": "boolean"
             },
-            "match[entity_uuid]": {
-                "in": "query",
-                "type": "string"
+            "assets": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
             },
-            "match[status_uuid]": {
-                "in": "query",
-                "type": "string"
+            "updated_at": {
+              "type": "integer",
+              "format": "int32"
             },
-            "match[status_name]": {
-                "in": "query",
-                "type": "string"
+            "ttps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "type"
+                ]
+              }
             },
-            "match[type_category]": {
-                "in": "query",
-                "type": "string"
+            "number_of_unseen_comments": {
+              "type": "integer",
+              "format": "int32"
             },
-            "match[type_value]": {
-                "in": "query",
-                "type": "string"
+            "status": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "uuid": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
             },
-            "match[source]": {
-                "in": "query",
-                "type": "string"
+            "created_by": {
+              "type": "string"
             },
-            "match[target]": {
-                "in": "query",
-                "type": "string"
+            "updated_by": {
+              "type": "string"
             },
-            "match[node]": {
-                "in": "query",
-                "type": "string"
+            "source": {
+              "type": "string"
             },
-            "match[stix_object]": {
-                "in": "query",
-                "type": "string"
+            "community_uuid": {
+              "type": "string",
+              "format": "uuid"
             },
-            "match[rule_uuid]": {
-                "in": "query",
-                "type": "string"
+            "number_of_total_comments": {
+              "type": "integer",
+              "format": "int32"
             },
-            "match[rule_name]": {
-                "in": "query",
-                "type": "string"
+            "uuid": {
+              "type": "string",
+              "format": "uuid"
             },
-            "match[short_id]": {
-                "in": "query",
-                "type": "string"
+            "rule": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "pattern": {
+                  "type": "string"
+                },
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "name",
+                "pattern",
+                "uuid"
+              ]
             },
-            "match[uuid]": {
-                "in": "query",
-                "type": "string"
+            "adversaries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "type"
+                ]
+              }
             },
-            "match[title]": {
-                "in": "query",
-                "type": "string"
+            "short_id": {
+              "type": "string"
             },
-            "date[created_at]": {
-                "in": "query",
-                "type": "string"
+            "first_seen_at": {
+              "type": "string",
+              "format": "date-time"
             },
-            "date[updated_at]": {
-                "in": "query",
-                "type": "string"
+            "last_seen_at": {
+              "type": "string",
+              "format": "date-time"
             },
-            "range[urgency]": {
-                "in": "query",
-                "type": "string"
+            "event_uuids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
             },
-            "range[similar]": {
-                "in": "query",
-                "type": "string"
+            "kill_chain_short_id": {
+              "type": "string"
             },
-            "visible": {
-                "in": "query",
-                "type": "boolean"
+            "similar": {
+              "type": "integer",
+              "format": "int32"
             },
-            "limit": {
-                "in": "query",
-                "type": "integer"
+            "alert_type": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
             },
-            "offset": {
-                "in": "query",
-                "type": "integer"
+            "details": {
+              "type": "string"
             },
             "stix": {
-                "in": "query",
-                "type": "boolean"
+              "type": "object"
             },
-            "sort": {
-                "in": "query",
-                "type": "string"
+            "created_by_type": {
+              "type": "string"
             },
-            "direction": {
-                "in": "query",
-                "type": "string"
-            },
-            "with_count": {
-                "in": "query",
-                "type": "boolean"
-            }
-        }
-    },
-    "results": {
-        "type": "object",
-        "properties": {
-            "total": {
-                "type": "integer",
-                "format": "int32"
-            },
-            "has_more": {
-                "type": "boolean"
-            },
-            "items": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "urgency": {
-                            "type": "object",
-                            "properties": {
-                                "severity": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                },
-                                "current_value": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                },
-                                "value": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                },
-                                "criticity": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                },
-                                "display": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "is_incident": {
-                            "type": "boolean"
-                        },
-                        "assets": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "format": "uuid"
-                            }
-                        },
-                        "updated_at": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "ttps": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "description": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    },
-                                    "id": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "id",
-                                    "name",
-                                    "type"
-                                ]
-                            }
-                        },
-                        "number_of_unseen_comments": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "status": {
-                            "type": "object",
-                            "properties": {
-                                "description": {
-                                    "type": "string"
-                                },
-                                "uuid": {
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "created_by": {
-                            "type": "string"
-                        },
-                        "updated_by": {
-                            "type": "string"
-                        },
-                        "source": {
-                            "type": "string"
-                        },
-                        "community_uuid": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "number_of_total_comments": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "format": "uuid"
-                        },
-                        "rule": {
-                            "type": "object",
-                            "properties": {
-                                "type": {
-                                    "type": "string"
-                                },
-                                "severity": {
-                                    "type": "integer",
-                                    "format": "int32"
-                                },
-                                "description": {
-                                    "type": "string"
-                                },
-                                "name": {
-                                    "type": "string"
-                                },
-                                "pattern": {
-                                    "type": "string"
-                                },
-                                "uuid": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "pattern",
-                                "uuid"
-                            ]
-                        },
-                        "adversaries": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "description": {
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "type": "string"
-                                    },
-                                    "id": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "id",
-                                    "name",
-                                    "type"
-                                ]
-                            }
-                        },
-                        "short_id": {
-                            "type": "string"
-                        },
-                        "first_seen_at": {
-                            "type": "string",
-                            "format": "date-time"
-                        },
-                        "last_seen_at": {
-                            "type": "string",
-                            "format": "date-time"
-                        },
-                        "event_uuids": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "format": "uuid"
-                            }
-                        },
-                        "kill_chain_short_id": {
-                            "type": "string"
-                        },
-                        "similar": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "alert_type": {
-                            "type": "object",
-                            "properties": {
-                                "category": {
-                                    "type": "string"
-                                },
-                                "value": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "details": {
-                            "type": "string"
-                        },
-                        "stix": {
-                            "type": "object"
-                        },
-                        "created_by_type": {
-                            "type": "string"
-                        },
-                        "entity": {
-                            "type": "object",
-                            "properties": {
-                                "uuid": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                },
-                                "name": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "uuid"
-                            ]
-                        },
-                        "created_at": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "updated_by_type": {
-                            "type": "string"
-                        },
-                        "title": {
-                            "type": "string"
-                        },
-                        "target": {
-                            "type": "string"
-                        }
-                    }
+            "entity": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
                 }
+              },
+              "required": [
+                "name",
+                "uuid"
+              ]
+            },
+            "created_at": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "updated_by_type": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
             }
+          }
         }
+      }
     }
+  }
 }

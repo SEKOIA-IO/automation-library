@@ -1,5 +1,6 @@
 """Contains tests for AwsSqsMessagesTrigger."""
 
+import os
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -51,7 +52,6 @@ def connector_config(faker: Faker, intake_key: str) -> AwsSqsMessagesTriggerConf
         intake_key=intake_key,
         frequency=faker.pyint(),
         queue_name=faker.word(),
-        records_in_queue_per_batch=1,
     )
 
 
@@ -74,6 +74,7 @@ def connector(
     Returns:
         AwsSqsMessagesTrigger:
     """
+    os.environ["AWS_BATCH_SIZE"] = "1"
     connector = AwsSqsMessagesTrigger(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = connector_config

@@ -52,3 +52,14 @@ def test_human_readable_api_support_exception():
 
     response.json = raise_exception
     assert human_readable_api_error(response) == "WithSecure API rejected our request (Exception)"
+
+
+def test_human_readable_api_error_with_transaction_id():
+    response = requests.Response()
+    response.status_code = 503
+    response.headers = {"X-Transaction": "0000-1111111111111111"}
+
+    assert (
+        human_readable_api_error(response)
+        == "WithSecure API rejected our request (status=503 transaction-id=0000-1111111111111111)"
+    )

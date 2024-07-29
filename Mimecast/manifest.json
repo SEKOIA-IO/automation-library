@@ -1,0 +1,30 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Mimecast",
+    "type": "object",
+    "properties": {
+      "client_id": {
+        "description": "Client ID",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "Client Secret",
+        "type": "string"
+      }
+    },
+    "required": [
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
+  },
+  "description": "Mimecast offers cloud-based email security, archiving, and continuity solutions to protect against cyber threats and ensure compliance.",
+  "name": "Mimecast",
+  "slug": "mimecast",
+  "uuid": "72af1e06-84db-497d-b4ac-10defb1f265f",
+  "version": "0.1.1",
+  "slug": "mimecast"
+}

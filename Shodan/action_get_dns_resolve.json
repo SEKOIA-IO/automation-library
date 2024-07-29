@@ -1,29 +1,27 @@
 {
-    "uuid": "b1b98911-071b-4a4d-b26e-2ae5aa7cef62",
-    "name": "Lookup IPs",
-    "docker_parameters": "get-dns/resolve",
-    "description": "Look up the IP address for the provided list of hostnames.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "get_dns_resolve",
-        "properties": {
-            "hostnames": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "description": "List of hostnames; example \"google.com\"."
-            }
+  "uuid": "b1b98911-071b-4a4d-b26e-2ae5aa7cef62",
+  "name": "Lookup IPs",
+  "docker_parameters": "get-dns/resolve",
+  "description": "Look up the IP address for the provided list of hostnames.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_dns_resolve",
+    "properties": {
+      "hostnames": {
+        "type": "array",
+        "items": {
+          "type": "string"
         },
-        "required": [
-            "hostnames"
-        ]
+        "description": "List of hostnames; example \"google.com\"."
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "type": "object"
-        }
-    }
+    "required": [
+      "hostnames"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {}
+  }
 }

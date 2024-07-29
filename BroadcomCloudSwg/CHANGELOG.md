@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.1.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-03-08 - 1.0.12
+
+### Fixed
+
+- update offsets each time after processing file
+
+## 2024-03-05 - 1.0.11
+
+### Added
+
+- save offsets for last 24 hour.
+
+## 2024-03-05 - 1.0.10
+
+### Fixed
+
+- remove some logs
+- update limits
+
+## 2024-02-20 - 1.0.9
+
+### Fixed
+
+- remove processed file
+- add retry 
+
 ## 2024-02-20 - 1.0.8
 
 ### Fixed
@@ -47,14 +79,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-02-08 - 1.0.2
 
-### Fix
+### Fixed
 
 - Update rate limiter settings
 - Handle empty zip file 
 
 ## 2024-02-07 - 1.0.1
 
-### Fix
+### Fixed
 
 - Remove group by before push data to intake
 

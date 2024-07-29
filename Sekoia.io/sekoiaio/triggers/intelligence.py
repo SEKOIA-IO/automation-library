@@ -32,15 +32,20 @@ class FeedConsumptionTrigger(Trigger):
         return self.configuration.get("batch_size_limit", 200)
 
     @property
+    def modified_after(self) -> str | None:
+        return self.configuration.get("modified_after")
+
+    @property
     def url(self):
         url = (
             urljoin(
                 self.module.configuration["base_url"],
-                f"v2/inthreat/collections/{self.feed_id}/objects",
+                f"api/v2/inthreat/collections/{self.feed_id}/objects",
             )
             + f"?limit={self.batch_size_limit}"
             + f"&include_revoked={not self.first_run}"
         )
+        url = url.replace("/api/api", "/api")  # In case base_url ends with /api
         if len(self.API_URL_ADDITIONAL_PARAMETERS) > 0:
             url += "&" + "&".join(self.API_URL_ADDITIONAL_PARAMETERS)
 
@@ -48,6 +53,8 @@ class FeedConsumptionTrigger(Trigger):
             cursor = cache.get("cursors", {}).get(self.feed_id)
             if cursor:
                 return f"{url}&cursor={cursor}"
+            elif self.modified_after:
+                return f"{url}&modified_after={self.modified_after}"
             else:
                 return url
 

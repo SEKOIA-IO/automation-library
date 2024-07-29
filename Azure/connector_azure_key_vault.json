@@ -1,0 +1,53 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "connector Azure Key Vault configuration",
+    "type": "object",
+    "properties": {
+      "container_name": {
+        "description": "Container name to interact with Azure Blob Storage",
+        "type": "string"
+      },
+      "account_name": {
+        "description": "Account name of the Azure Blob Storage",
+        "type": "string"
+      },
+      "account_key": {
+        "description": "Account key of the Azure Blob Storage",
+        "type": "string"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      }
+    },
+    "required": [
+      "container_name",
+      "account_name",
+      "account_key",
+      "intake_key"
+    ],
+    "secrets": [
+      "account_key"
+    ]
+  },
+  "description": "connector playbook to get Azure Key Vault events information",
+  "docker_parameters": "azure_key_vault",
+  "name": "[BETA] Collect Azure Key Vault events",
+  "uuid": "23ab3160-a632-494a-b036-5e4f76be7ec3"
+}

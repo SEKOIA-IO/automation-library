@@ -1,6 +1,8 @@
 """Contains AwsSqsMessagesTrigger."""
 
+import os
 from functools import cached_property
+from typing import Any, Optional
 
 import orjson
 
@@ -13,7 +15,7 @@ class AwsSqsMessagesTriggerConfiguration(AbstractAwsConnectorConfiguration):
 
     sqs_frequency: int = 10
     chunk_size: int = 10000
-    delete_consumed_messages: bool = False
+    delete_consumed_messages: bool = True
     queue_name: str
 
 
@@ -22,6 +24,12 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
     name = "AWS SQS Messages"
     configuration: AwsSqsMessagesTriggerConfiguration
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        """Init AbstractAwsS3QueuedConnector."""
+
+        super().__init__(*args, **kwargs)
+        self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
 
     @cached_property
     def sqs_wrapper(self) -> SqsWrapper:
@@ -70,7 +78,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
-            if len(records) >= self.configuration.records_in_queue_per_batch or not records:
+            if len(records) >= self.limit_of_events_to_push or not records:
                 continue_receiving = False
 
         self.log(message=f"Forwarding {len(records)} messages", level="info")

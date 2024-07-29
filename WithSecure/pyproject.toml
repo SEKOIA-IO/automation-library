@@ -1,14 +1,15 @@
 [tool.poetry]
 name = "Sekoia.io Automation Module for WithSecure"
-version = "2.3"
+version = "2.4"
 description = ""
 authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version="^1.10.0", extras=["all"] }
+sekoia-automation-sdk = { version="^1.13.0", extras=["all"] }
 structlog = "^22.3.0"
 requests = "^2.31.0"
+tenacity = "^8.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -17,10 +18,7 @@ requests-mock = "*"
 pytest-mock = "^3.10.0"
 autoflake = "^1.4"
 isort = "^5.10.1"
-black = "^22.3.0"
-mypy = "^0.960"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
-poetry = "^1.5.1"
 
 [build-system]
 requires = ["poetry-core"]

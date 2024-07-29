@@ -101,6 +101,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
     )
     def _retrieve_alert_from_alertapi(self, alert_uuid):
         api_url = urljoin(self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}")
+        api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
         api_key = self.module.configuration["api_key"]
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()}
@@ -116,10 +117,25 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             },
         )
 
+        if not response.ok:
+            try:
+                content = response.json()
+            except Exception:
+                content = response.text
+            self.log(
+                "Error while fetching alert from Alert API",
+                level="error",
+                status_code=response.status_code,
+                content=content,
+            )
+
         # raise an exception if the http request failed
         response.raise_for_status()
-
-        return response.json()
+        try:
+            return response.json()
+        except Exception as exp:
+            self.log("Failed to parse JSON response from Alert API", level="error", content=response.text)
+            raise exp
 
 
 class AlertCreatedTrigger(SecurityAlertsTrigger):

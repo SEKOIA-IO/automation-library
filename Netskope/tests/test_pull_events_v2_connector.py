@@ -34,6 +34,12 @@ def trigger(symphony_storage):
     return trigger
 
 
+def test_user_agent(trigger):
+    user_agent = trigger._user_agent
+    assert user_agent is not None
+    assert user_agent.startswith("sekoiaio-connector/netskope-")
+
+
 def test_next_batch_sleep_until_next_round(trigger):
     with patch("netskope_modules.connector_pull_events_v2.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(

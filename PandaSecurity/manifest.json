@@ -1,50 +1,50 @@
 {
-    "uuid": "e2215979-3462-4fb6-8635-57700aada01c",
-    "name": "Panda Security",
-    "slug": "panda-security",
-    "description": "[PandaSecurity](https://www.pandasecurity.com/), a [WatchGuard](https://www.watchguard.com/) company, is a cybsersecurity vendor, delivering products designed to protect endpoints against outside threats.\n\nThis module provides actions and triggers to interact with the [Watchguard Panda Aether platform](https://www.watchguard.com/wgrd-products/panda-endpoint-security) to act on AD360 and EPP devices",
-    "version": "1.22.1",
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "base_url": {
-                "description": "WatchGuard Cloud base URL (ex. https://api.usa.cloud.watchguard.com)",
-                "type": "string",
-                "format": "uri"
-            },
-            "account_id": {
-                "description": "Your WatchGuard Cloud account ID",
-                "type": "string"
-            },
-            "api_key": {
-                "description": "The API key associated to your Watchguard Cloud account",
-                "type": "string"
-            },
-            "access_id": {
-                "description": "The identifier of the access credential used to authorize the requests",
-                "type": "string"
-            },
-            "access_secret": {
-                "description": "The secret of the access credential used to authorize the requests",
-                "type": "string"
-            },
-            "audience": {
-                "description": "The identifier of the managed account for service provider",
-                "type": "string"
-            }
-        },
-        "required": [
-            "account_id",
-            "api_key",
-            "base_url",
-            "access_id",
-            "access_secret"
-        ],
-        "title": "WatchGuard Configuration",
-        "type": "object",
-        "secrets": [
-            "api_key",
-            "access_secret"
-        ]
-    }
+  "uuid": "e2215979-3462-4fb6-8635-57700aada01c",
+  "name": "Panda Security",
+  "slug": "panda-security",
+  "description": "[PandaSecurity](https://www.pandasecurity.com/), a [WatchGuard](https://www.watchguard.com/) company, is a cybsersecurity vendor, delivering products designed to protect endpoints against outside threats.\n\nThis module provides actions and triggers to interact with the [Watchguard Panda Aether platform](https://www.watchguard.com/wgrd-products/panda-endpoint-security) to act on AD360 and EPP devices",
+  "version": "1.23.0",
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "base_url": {
+        "description": "WatchGuard Cloud base URL (ex. https://api.usa.cloud.watchguard.com)",
+        "type": "string",
+        "format": "uri"
+      },
+      "account_id": {
+        "description": "Your WatchGuard Cloud account ID",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "The API key associated to your Watchguard Cloud account",
+        "type": "string"
+      },
+      "access_id": {
+        "description": "The identifier of the access credential used to authorize the requests",
+        "type": "string"
+      },
+      "access_secret": {
+        "description": "The secret of the access credential used to authorize the requests",
+        "type": "string"
+      },
+      "audience": {
+        "description": "The identifier of the managed account for service provider",
+        "type": "string"
+      }
+    },
+    "required": [
+      "account_id",
+      "api_key",
+      "base_url",
+      "access_id",
+      "access_secret"
+    ],
+    "title": "WatchGuard Configuration",
+    "type": "object",
+    "secrets": [
+      "api_key",
+      "access_secret"
+    ]
+  }
 }

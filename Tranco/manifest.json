@@ -1,13 +1,13 @@
 {
-    "configuration": {
-        "type": "object",
-        "title": "Module configuration",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {}
-    },
-    "description": "[Tranco](https://tranco-list.eu/) is an top sites ranking list hardened against manipulation.",
-    "name": "Tranco",
-    "uuid": "081074fc-240d-437f-a214-fba49691e69e",
-    "slug": "tranco",
-    "version": "1.24"
+  "configuration": {
+    "type": "object",
+    "title": "Module configuration",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {}
+  },
+  "description": "[Tranco](https://tranco-list.eu/) is an top sites ranking list hardened against manipulation.",
+  "name": "Tranco",
+  "uuid": "081074fc-240d-437f-a214-fba49691e69e",
+  "slug": "tranco",
+  "version": "1.25.0"
 }

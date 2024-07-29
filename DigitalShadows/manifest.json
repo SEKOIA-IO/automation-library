@@ -1,40 +1,40 @@
 {
-    "configuration": {
-        "title": "Digital Shadows",
-        "type": "object",
-        "properties": {
-            "api_url": {
-                "description": "URL of the SearchLight instance",
-                "type": "string",
-                "default": "https://api.searchlight.app/v1",
-                "format": "uri"
-            },
-            "searchlight_account_id": {
-                "description": "SearchLight Account ID",
-                "type": "string"
-            },
-            "basicauth_key": {
-                "description": "HTTP Basic authentication key",
-                "type": "string"
-            },
-            "basicauth_secret": {
-                "description": "HTTP Basic authentication secret",
-                "type": "string"
-            }
-        },
-        "required": [
-            "api_url",
-            "basicauth_key",
-            "basicauth_secret",
-            "searchlight_account_id"
-        ],
-        "secrets": [
-            "basicauth_secret"
-        ]
+  "configuration": {
+    "title": "Digital Shadows",
+    "type": "object",
+    "properties": {
+      "api_url": {
+        "description": "URL of the SearchLight instance",
+        "type": "string",
+        "default": "https://api.searchlight.app/v1",
+        "format": "uri"
+      },
+      "searchlight_account_id": {
+        "description": "SearchLight Account ID",
+        "type": "string"
+      },
+      "basicauth_key": {
+        "description": "HTTP Basic authentication key",
+        "type": "string"
+      },
+      "basicauth_secret": {
+        "description": "HTTP Basic authentication secret",
+        "type": "string"
+      }
     },
-    "description": "Digital Shadows Module",
-    "name": "Digital Shadows",
-    "uuid": "e76687ed-db66-482a-8549-f3ef3b248e06",
-    "slug": "digital-shadows",
-    "version": "1.18"
+    "required": [
+      "api_url",
+      "basicauth_key",
+      "basicauth_secret",
+      "searchlight_account_id"
+    ],
+    "secrets": [
+      "basicauth_secret"
+    ]
+  },
+  "description": "Digital Shadows Module",
+  "name": "Digital Shadows",
+  "uuid": "e76687ed-db66-482a-8549-f3ef3b248e06",
+  "slug": "digital-shadows",
+  "version": "1.19.0"
 }

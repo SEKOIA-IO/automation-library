@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-10 - 1.31.2
+
+### Fixed
+
+- Only pause the connector when messages were not collected
+
+## 2024-07-08 - 1.31.1
+
+### Changed
+
+- Change the way to report the lag, when no events were collected
+- Refactor the way to pause the connector
+
+## 2024-05-28 - 1.31.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-05-21 - 1.30.14
+
+### Fixed
+
+- Fix typo for the collected events metric
+
+## 2024-05-21 - 1.30.13
+
+### Added
+
+- Add a metric for collected events
+
+## 2024-05-13 - 1.30.12
+
+### Changed
+
+- Remove delete_consumed_messages setting from trigger configuration
+
+## 2024-04-24 - 1.30.11
+
+### Changed
+
+- Remove beta flag on AWS CLoudfront connector
+
+## 2024-03-29 - 1.30.10
+
+### Changed
+
+- Use environment variable instead of configuration for batch size.
+
+## 2024-03-29 - 1.30.9
+
+### Changed
+
+- Update `sekoia-automation-sdk` to the latest version (1.12.2) to fix
+  support to intake batch URL.
+
+## 2024-03-22 - 1.30.8
+
+### Changed
+
+- Update `sekoia-automation-sdk` to the latest version (1.12.1) to fix
+  support for connectors (Batch URL) (not yet released).
+
+## 2024-03-05 - 1.30.7
+
+### Changed
+
+- Filtering some ec2 events
+
 ## 2024-02-28 - 1.30.6
 
 ### Changed
@@ -31,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Change event_lags metrics from Histogram to Gauge
 
-## 2024-02-08 - 1.20.2
+## 2024-02-08 - 1.30.2
 
 ### Fixed
 
@@ -51,19 +120,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2023-12-22 - 1.29.4
 
-### Add
+### Added
 
 - Combine messages into batch before sending it to the intake
 
 ## 2023-12-07 - 1.29.3
 
-### Add
+### Added
 
 - Add beta flag to the Cloudfront connector
 
 ## 2023-12-07 - 1.29.0
 
-### Add
+### Added
 
 - Add for the first time the Cloudfront connector
 
@@ -92,25 +161,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bugfix with SQS connector push events to intake
 
-## 2023-11-21 - 1.27
+## 2023-11-21 - 1.27.0
 
 ### Fixed
 
 - Fix connector startup problems
 
-## 2023-10-18 - 1.26
+## 2023-10-18 - 1.26.0
 
 ### Changed
 
 - Refactoring of main functionality to make it more robust and easier to maintain
 
-## 2023-10-27 - 1.25
+## 2023-10-27 - 1.25.0
 
 ### Changed
 
 - Exclude GetRecords and GetObject events from collection
 
-## 2023-10-26 - 1.24
+## 2023-10-26 - 1.24.0
 
 ### Changed
 

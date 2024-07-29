@@ -112,13 +112,14 @@ class TehtrisEventConnector(Connector):
                 # forward current events
                 yield next_events
 
-        # save the most recent date
+        # save the most recent date and compute the current lag
+        current_lag: int = 0
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
+            delta_time = datetime.now(timezone.utc) - most_recent_date_seen
+            current_lag = int(delta_time.total_seconds())
 
-        now = datetime.now(timezone.utc)
-        current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def next_batch(self):
         # save the starting time

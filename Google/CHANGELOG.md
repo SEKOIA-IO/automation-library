@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-25 - 1.20.8
+
+### Fixed
+
+- Fix the list of application for the Google report connector
+
+## 2024-07-23 - 1.20.7
+
+### Fixed
+
+- Fix the pagination of events
+
+## 2024-07-22 - 1.20.6
+
+### Fixed
+
+- Change the way to catch back the delay with the timestepper
+
+## 2024-07-02 - 1.20.5
+
+### Changed
+
+- Catch some network exceptions
+
+## 2024-07-01 - 1.20.4
+
+### Changed
+
+- Change days to hours for start_time variable
+
+## 2024-06-26 - 1.20.3
+
+### Changed
+
+- Fix configuration
+
+## 2024-06-25 - 1.20.2
+
+### Changed
+
+- Delete application_name from required fields
+
+## 2024-06-25 - 1.20.1
+
+### Changed
+
+- Fix login configuration problem
+
+## 2024-06-24 - 1.20.0
+
+### Changed
+
+- Add login json
+- Add timestepper for both login and other services
+
+## 2024-05-28 - 1.19.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-04-24 - 1.18.4
+
+### Changed
+
+- Remove the beta flag from the connector
+
+## 2024-04-11 - 1.18.3
+
+### Changed
+
+- Add http exception
+- Update google package
+- Change timestamp storage 
+
+## 2024-03-07 - 1.18.2
+
+### Added
+
+- Add the nextkey condition
+
+## 2024-03-07 - 1.18.1
+
+### Added
+
+- Add some exceptions
+- Update google api sdk library
+
+## 2024-03-06 - 1.18.0
+
+### Changed
+
+- Change the timestamp logic
+
 ## 2024-02-13 - 1.17.3
 
 ### Changed
@@ -19,7 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix the shutdown method on the PubSub Connector
 
-## 2023-11-22 - 1.16
+## 2023-11-22 - 1.16.0
 
 ### Changed
 

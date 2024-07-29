@@ -1,9 +1,10 @@
-import datetime
 import time
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any
 
 import orjson
+from dateutil.parser import isoparse
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -12,7 +13,7 @@ from urllib3.exceptions import HTTPError as BaseHTTPError
 from lacework_module.base import LaceworkModule
 from lacework_module.client import LaceworkApiClient
 from lacework_module.client.auth import LaceworkAuthentication
-from lacework_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
+from lacework_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class LaceworkConfiguration(DefaultConnectorConfiguration):
@@ -39,29 +40,58 @@ class LaceworkEventsTrigger(Connector):
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
-    def cursor(self) -> str | None:
-        with self.context as cache:
-            return str(cache.get("cursor"))
+    def latest_alert_id(self) -> int:
+        """
+        Get the latest alert id from the previous run if present.
 
-    @cursor.setter
-    def cursor(self, cursor: str) -> None:
+        Returns:
+            int | None:
+        """
         with self.context as cache:
-            cache["cursor"] = cursor
+            result: int | None = cache.get("latest_alert_id_from_previous_run")
 
-    @cached_property
-    def pagination_limit(self) -> Any:
-        return max(self.configuration.chunk_size, 1000)
+        return result or 0
+
+    @property
+    def latest_start_event_date(self) -> datetime:
+        """
+        Get the latest start event date from the previous run if present otherwise we get the date from 1 day ago.
+
+        Returns:
+            datetime:
+        """
+        now = datetime.now(timezone.utc)
+
+        with self.context as cache:
+            most_recent_date_seen_str = cache.get("latest_start_event_date_from_previous_run")
+
+            if most_recent_date_seen_str is None:
+                return now - timedelta(days=1)
+
+            most_recent_date_seen = isoparse(most_recent_date_seen_str)
+
+            one_week_ago = now - timedelta(days=7)
+            if most_recent_date_seen.replace(tzinfo=timezone.utc) < one_week_ago:
+                most_recent_date_seen = one_week_ago
+
+            return most_recent_date_seen
 
     @cached_property
     def client(self) -> LaceworkApiClient:
         auth = LaceworkAuthentication(
-            lacework_url=self.module.configuration.lacework_url,
-            access_key=self.module.configuration.access_key,
-            secret_key=self.module.configuration.secret_key,
+            lacework_url=self.module.configuration.account,
+            access_key=self.module.configuration.key_id,
+            secret_key=self.module.configuration.secret,
         )
-        return LaceworkApiClient(base_url=self.module.configuration.lacework_url, auth=auth)
 
-    def run(self) -> None:
+        return LaceworkApiClient(
+            base_url=self.module.configuration.account,
+            auth=auth,
+            nb_retries=5,
+            ratelimit_per_hour=480,
+        )
+
+    def run(self) -> None:  # pragma: no cover
         self.log(message="Lacework Events Trigger has started", level="info")
 
         try:
@@ -88,88 +118,62 @@ class LaceworkEventsTrigger(Connector):
         finally:
             self.log(message="Lacework Events Trigger has stopped", level="info")
 
-    def get_next_events(self, cursor: str | None) -> Any | None:
-        # set parameters
-        parameters = {
-            "limit": self.pagination_limit,
-        }
-
-        # if defined, set the cursor
-        if cursor:
-            parameters["cursor"] = cursor
-        # otherwise, get events starting from the last 5 minutes
-        else:
-            parameters["startTime"] = int(time.time()) - 300
-
-        # Get the events
-        response = self.client.list_alerts(parameters=parameters)
-
-        # Something failed
-        if not response.ok:
-            self.log(
-                message=(
-                    "Request on Lacework Central API to fetch events of failed with"
-                    f" status {response.status_code} - {response.reason}"
-                ),
-                level="error",
-            )
-
-            return None
-
-        return response.json()
-
-    def _get_most_recent_timestamp_from_items(self, items: list[dict[Any, Any]]) -> float:
-        def _extract_timestamp(item: dict[Any, Any]) -> float:
-            RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-            return datetime.datetime.strptime(item["startTime"], RFC3339_STRICT_FORMAT).timestamp()
-
-        later = 0.0
-        for item in items:
-            if _extract_timestamp(item) > later:
-                later = _extract_timestamp(item)
-        return later
-
     def forward_next_batches(self) -> None:
         """
         Successively queries the Lacework Central API while more are available
         and the current batch is not too big.
         """
-        has_more_messages = True
-        cursor = self.cursor
+        start_alerts_date = self.latest_start_event_date
+        start_alerts_id = self.latest_alert_id
 
-        messages = []
-        while has_more_messages and self.running:
-            has_more_messages = False
+        alerts, next_page_url = self.client.get_alerts_by_date(start_alerts_date)
 
-            batch = self.get_next_events(cursor)
-            if batch is None:
-                break
+        data_to_push = []
+        current_lag: int = 0
+        if alerts:
+            # As we want to save latest alert id as well we need to get the latest alert id from the current batch
+            latest_alerts_id = max([item["alertId"] for item in alerts])
+            if latest_alerts_id < start_alerts_id:
+                latest_alerts_id = start_alerts_id
 
-            if batch.get("content", {}).get("paging", {}).get("urls", {}).get("nextPage") != None:
-                has_more_messages = True
-                cursor = max(item.get("startTime") for item in batch.get("data", []))
+            latest_alerts_date = max([LaceworkApiClient.parse_response_time(item["startTime"]) for item in alerts])
 
-            items = batch.get("data", [])
-            if len(items) > 0:
-                most_recent_timestamp_seen = self._get_most_recent_timestamp_from_items(items)
-                events_lag = int(time.time() - most_recent_timestamp_seen)
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
-                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(items))
+            data_to_push.extend([alert for alert in alerts if alert["alertId"] > start_alerts_id])
 
-            for message in items:
-                messages.append(orjson.dumps(message).decode("utf-8"))
+            while next_page_url:
+                alerts, next_page_url = self.client.get_alerts_by_page(next_page_url)
+                if alerts:
+                    latest_alerts_id_next_page = max([item["alertId"] for item in alerts])
+                    if latest_alerts_id_next_page > latest_alerts_id:
+                        latest_alerts_id = latest_alerts_id_next_page
 
-            if len(messages) > self.pagination_limit:
-                self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
-                self.push_events_to_intakes(events=messages)
-                messages = []
+                    data_to_push.extend([alert for alert in alerts if alert["alertId"] > start_alerts_id])
 
-        self.cursor = cursor
+                    last_date_page_date = max(
+                        [LaceworkApiClient.parse_response_time(item["startTime"]) for item in alerts]
+                    )
 
-        if messages:
-            self.log(message=f"Sending a batch of {len(messages)} messages", level="info")
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
-            self.push_events_to_intakes(events=messages)
-        else:
-            self.log(message="No messages to forward", level="info")
+                    if last_date_page_date > latest_alerts_date:
+                        latest_alerts_date = last_date_page_date
+
+                    if len(data_to_push) > self.configuration.chunk_size:
+                        self.log(message=f"Sending a batch of {len(data_to_push)} messages", level="info")
+                        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(data_to_push))
+                        self.push_events_to_intakes(
+                            events=[orjson.dumps(item).decode("utf-8") for item in data_to_push]
+                        )
+                        current_lag = int(time.time() - latest_alerts_date.timestamp())
+                        data_to_push = []
+
+            if len(data_to_push) > 0:
+                self.log(message=f"Sending a batch of {len(data_to_push)} messages", level="info")
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(data_to_push))
+                self.push_events_to_intakes(events=[orjson.dumps(item).decode("utf-8") for item in data_to_push])
+                current_lag = int(time.time() - latest_alerts_date.timestamp())
+
+            with self.context as cache:
+                cache["latest_start_event_date_from_previous_run"] = latest_alerts_date.isoformat()
+                cache["latest_alert_id_from_previous_run"] = latest_alerts_id
+
+        # Monitor the events lag
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)

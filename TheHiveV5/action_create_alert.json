@@ -1,0 +1,96 @@
+{
+  "uuid": "366a9bed-e124-4ad2-9498-acc54a285eba",
+  "name": "Create an alert in The Hive v5",
+  "description": "",
+  "docker_parameters": "thehive_create_alert",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "alert": {
+        "description": "A Sekoia.io alert",
+        "type": "object"
+      }
+    },
+    "required": [
+      "alert"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "_id": {
+        "type": "string"
+      },
+      "_type": {
+        "type": "string"
+      },
+      "_createdBy": {
+        "type": "string"
+      },
+      "_createdAt": {
+        "type": "integer"
+      },
+      "type": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string"
+      },
+      "sourceRef": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "severity": {
+        "type": "integer"
+      },
+      "date": {
+        "type": "integer"
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "tlp": {
+        "type": "integer"
+      },
+      "pap": {
+        "type": "integer"
+      },
+      "status": {
+        "type": "string"
+      },
+      "follow": {
+        "type": "boolean"
+      },
+      "customFields": {
+        "type": "object"
+      },
+      "observableCount": {
+        "type": "integer"
+      },
+      "stage": {
+        "type": "string"
+      },
+      "extraData": {
+        "type": "object"
+      },
+      "newDate": {
+        "type": "integer"
+      },
+      "timeToDetect": {
+        "type": "integer"
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  }
+}

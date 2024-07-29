@@ -1,18 +1,15 @@
+import asyncio
 import time
-from collections.abc import Generator
-from contextlib import contextmanager
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlparse, urlunsplit
+from urllib.parse import urlencode, urlparse, urlunsplit
 
 import msal
-import requests
+from aiohttp.client import ClientSession
 
-from .constants import (
-    OFFICE365_ACTIVE_SUBSCRIPTION_STATUS,
-    OFFICE365_AUTHORITY_DEFAULT,
-    OFFICE365_URL_BASE,
-)
+from .constants import OFFICE365_ACTIVE_SUBSCRIPTION_STATUS, OFFICE365_AUTHORITY_DEFAULT, OFFICE365_URL_BASE
 from .errors import (
     ApplicationAuthenticationFailed,
     FailedToActivateO365Subscription,
@@ -37,16 +34,22 @@ class Office365API:
             client_credential=client_secret,
             authority=self._normalize_office365_url(),
         )
-        self._session = requests.session()
+        self._session = ClientSession()
         self._token_expiration = 0
         self._publisher_id = publisher_id
 
-    def _authenticate_client(self):
+    async def close(self):
+        """
+        Close the client
+        """
+        await self._session.close()
+
+    async def _authenticate_client(self):
         """
         Authenticate the application
         """
         scopes = ["https://manage.office.com/.default"]
-        response = self._app.acquire_token_for_client(scopes=scopes)
+        response = await asyncio.get_event_loop().run_in_executor(None, self._app.acquire_token_for_client, scopes)
 
         if "access_token" not in response:
             raise ApplicationAuthenticationFailed("Failed to get access token", response=response)
@@ -57,19 +60,19 @@ class Office365API:
         self._token_expiration = time.time() + int(response["expires_in"])
         self._session.headers["Authorization"] = "{} {}".format(response["token_type"], response["access_token"])
 
-    @contextmanager
-    def _fresh_session(self):
+    @asynccontextmanager
+    async def _fresh_session(self) -> AsyncGenerator[ClientSession, None]:
         """
         Return a fresh authenticated session
 
         Check the expiration time of the current token and renew it if expired
         """
         if time.time() > self._token_expiration - 10:
-            self._authenticate_client()
+            await self._authenticate_client()
 
         yield self._session
 
-    def activate_subscriptions(self) -> None:
+    async def activate_subscriptions(self) -> None:
         """
         Activate subscriptions for a tenant
 
@@ -79,21 +82,21 @@ class Office365API:
         """
         EXPECTED_SUBSCRIPTIONS = {"Audit.AzureActiveDirectory", "Audit.SharePoint", "Audit.General", "Audit.Exchange"}
 
-        already_enabled_types = set(self.list_subscriptions())
+        already_enabled_types = set(await self.list_subscriptions())
         missing_types = EXPECTED_SUBSCRIPTIONS - already_enabled_types
 
         # Activate missing types
-        with self._fresh_session() as session:
+        async with self._fresh_session() as session:
             for content_type in missing_types:
                 # activate the subscription
                 base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
-                response = session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
+                response = await session.post(f"{base_url}/subscriptions/start", params={"contentType": content_type})
 
                 # check HTTP status code
-                if response.status_code >= 400:
-                    raise FailedToActivateO365Subscription(status_code=response.status_code, body=response.text)
+                if response.status >= 400:
+                    raise FailedToActivateO365Subscription(status_code=response.status, body=await response.text())
 
-                subscription = response.json()
+                subscription = await response.json()
 
                 if "error" in subscription:
                     raise FailedToActivateO365Subscription(
@@ -101,7 +104,7 @@ class Office365API:
                         error_message=subscription["error"].get("message"),
                     )
 
-    def list_subscriptions(self) -> list[str]:
+    async def list_subscriptions(self) -> list[str]:
         """
         List the subscriptions for the tenant
 
@@ -110,16 +113,16 @@ class Office365API:
         """
         base_url = OFFICE365_URL_BASE.format(tenant_id=self.tenant_id)
 
-        with self._fresh_session() as session:
+        async with self._fresh_session() as session:
             # get the list of subscriptions
-            response = session.get(f"{base_url}/subscriptions/list")
+            response = await session.get(f"{base_url}/subscriptions/list")
 
             # check HTTP status code
-            if response.status_code >= 400:
-                raise FailedToListO365Subscriptions(status_code=response.status_code, body=response.text)
+            if response.status >= 400:
+                raise FailedToListO365Subscriptions(status_code=response.status, body=await response.text())
 
             # get the body of the response
-            subscriptions = response.json()
+            subscriptions = await response.json()
 
             # check business errors
             if "error" in subscriptions:
@@ -136,12 +139,12 @@ class Office365API:
 
             return list(active_subscriptions)
 
-    def get_subscription_contents(
+    async def get_subscription_contents(
         self,
         content_type: str,
         start_time: datetime | str | None = None,
         end_time: datetime | str | None = None,
-    ) -> Generator[list[dict[str, Any]], None, None]:
+    ) -> AsyncGenerator[list[dict[str, Any]], None]:
         """
         Return the contents from the subscription to a tenant
 
@@ -174,20 +177,20 @@ class Office365API:
             params["endTime"] = end_time
 
         # queries contents until the NextPageUri is undefined
-        next_page_uri = f"{base_url}/subscriptions/content"
+        query_string = urlencode(params)
+        next_page_uri: str | None = f"{base_url}/subscriptions/content?{query_string}"
         while next_page_uri is not None:
             # queries the contents for the current page
-            with self._fresh_session() as session:
-                response = session.get(
+            async with self._fresh_session() as session:
+                response = await session.get(
                     next_page_uri,
-                    params=params,
                 )
 
                 # check HTTP status code
-                if response.status_code >= 400:
-                    raise FailedToGetO365SubscriptionContents(status_code=response.status_code, body=response.text)
+                if response.status >= 400:
+                    raise FailedToGetO365SubscriptionContents(status_code=response.status, body=await response.text())
 
-                contents = response.json()
+                contents = await response.json()
 
                 # check business errors
                 if "error" in contents:
@@ -200,7 +203,7 @@ class Office365API:
                 # get the uri for the next page if defined
                 next_page_uri = response.headers.get("NextPageUri")
 
-    def get_content(self, content_uri: str) -> list[dict[str, Any]]:
+    async def get_content(self, content_uri: str) -> list[dict[str, Any]]:
         """
         Return a content
 
@@ -209,16 +212,16 @@ class Office365API:
         :rtype: list
         """
         # queries the contents for the current page
-        with self._fresh_session() as session:
-            response = session.get(
+        async with self._fresh_session() as session:
+            response = await session.get(
                 content_uri,
             )
 
             # check HTTP status code
-            if response.status_code >= 400:
-                raise FailedToGetO365AuditContent(status_code=response.status_code, body=response.text)
+            if response.status >= 400:
+                raise FailedToGetO365AuditContent(status_code=response.status, body=await response.text())
 
-            content = response.json()
+            content = await response.json(content_type=None)
 
             # check business errors
             if "error" in content:

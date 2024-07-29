@@ -18,9 +18,14 @@ from sekoiaio.operation_center import (
     AddsKeyToAsset,
     AssociateNewAlertsOnCase,
     CreatesNewAsset,
+    CreateRule,
     DeletesAsset,
+    DeleteRule,
     DenyCountermeasure,
+    DisableRule,
+    EnableRule,
     GetAlert,
+    GetRule,
     ListAlerts,
     ListAssets,
     PatchAlert,
@@ -28,6 +33,9 @@ from sekoiaio.operation_center import (
     PredictStateOfAlert,
     ReturnsAsset,
     TriggerActionOnAlertWorkflow,
+    UpdateRule,
+    GetIntake,
+    GetEntity,
 )
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
 from sekoiaio.operation_center.get_event_field_common_values import GetEventFieldCommonValues
@@ -41,6 +49,7 @@ from sekoiaio.triggers.alerts import (
     SecurityAlertsTrigger,
 )
 from sekoiaio.triggers.intelligence import FeedConsumptionTrigger, FeedIOCConsumptionTrigger
+from sekoiaio.workspace import GetCommunity
 
 if __name__ == "__main__":
     module = Module()
@@ -50,8 +59,13 @@ if __name__ == "__main__":
     module.register(AddsKeyToAsset, "post-assets/{uuid}/keys")
     module.register(AssociateNewAlertsOnCase, "patch-cases/{case_uuid}/alerts")
     module.register(CreatesNewAsset, "post-assets")
+    module.register(CreateRule, "post-rules")
+    module.register(DeleteRule, "delete-rules/{uuid}")
     module.register(DenyCountermeasure, "patch-alerts/countermeasures/{cm_uuid}/deny")
+    module.register(DisableRule, "put-rules/{uuid}/disable")
+    module.register(EnableRule, "put-rules/{uuid}/enable")
     module.register(GetAlert, "get-alerts/{uuid}")
+    module.register(GetRule, "get-rules/{uuid}")
     module.register(CreateNewTrackerNotification, "post-trackers/notifications/")
     module.register(PostBundleAction, "post_bundle")
     module.register(GetContextAction, "get_context")
@@ -70,8 +84,12 @@ if __name__ == "__main__":
     module.register(ListAssets, "get-assets")
     module.register(DeletesAsset, "delete-assets/{uuid}")
     module.register(ReturnsAsset, "get-assets/{uuid}")
+    module.register(UpdateRule, "put-rules/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
     module.register(AddIOCtoIOCCollectionAction, "add_ioc_to_ioc_collection")
+    module.register(GetIntake, "get-intakes/{uuid}")
+    module.register(GetEntity, "get-entities/{uuid}")
+    module.register(GetCommunity, "get-communities/{uuid}")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

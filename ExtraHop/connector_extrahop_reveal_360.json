@@ -1,7 +1,7 @@
 {
   "description": "Get last logs from the ExtraHop Reveal(x) 360",
   "docker_parameters": "extrahop_reveal_360",
-  "name": "[BETA] Fetch new alerts from ExtraHop Reveal(x) 360",
+  "name": "Fetch new alerts from ExtraHop Reveal(x) 360",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -25,7 +25,10 @@
         "type": "string"
       }
     },
-    "required": ["frequency", "intake_key"],
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
     "title": "The configuration to fetch new events",
     "type": "object"
   },

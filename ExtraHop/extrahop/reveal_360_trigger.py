@@ -1,6 +1,7 @@
 import time
 from functools import cached_property
 from typing import Generator
+from posixpath import join as urljoin
 
 import orjson
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -30,7 +31,7 @@ class ExtraHopReveal360Connector(Connector):
     def client(self) -> ApiClient:
         return ApiClient(
             auth=ExtraHopApiAuthentication(
-                base_url=self.module.configuration.base_url,
+                base_url=self.module.configuration.tenant_url,
                 client_id=self.module.configuration.client_id,
                 client_secret=self.module.configuration.client_secret,
             )
@@ -68,7 +69,7 @@ class ExtraHopReveal360Connector(Connector):
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        url = f"{self.module.configuration.base_url}/api/v1/detections/search"
+        url = urljoin(self.module.configuration.tenant_url, "api/v1/detections/search")
         response = self.client.post(url, json=params, headers=headers, timeout=60)
 
         if not response.ok:
@@ -97,6 +98,7 @@ class ExtraHopReveal360Connector(Connector):
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_timestamp_seen = self.from_date
+        current_lag: int = 0
 
         for next_events in self.iterate_through_pages(most_recent_timestamp_seen):
             if next_events:
@@ -111,14 +113,16 @@ class ExtraHopReveal360Connector(Connector):
                     if last_event_timestamp > most_recent_timestamp_seen:
                         most_recent_timestamp_seen = last_event_timestamp
 
-                    events_lag = int((time.time() - most_recent_timestamp_seen) / 1000.0)
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
+                    current_lag = int(time.time() - (most_recent_timestamp_seen / 1000.0))
 
                 yield next_events
 
         if most_recent_timestamp_seen > self.from_date:
             self.from_date = most_recent_timestamp_seen + 1
             self.set_last_timestamp(last_timestamp=self.from_date)
+
+        # Report the current lag
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def next_batch(self) -> None:
         batch_start_time = time.time()

@@ -201,3 +201,67 @@ def test_run_is_interrupted_by_signal(trigger, request_mock):
     Thread(target=set_stop_event, daemon=True).start()
     trigger.run()
     assert len(trigger.get_ipinfo_database.mock_calls) > 0
+
+
+def test_tags_valid_for(symphony_storage):
+    trigger = TriggerFetchIPInfoDatabase(data_path=symphony_storage)
+    trigger.configuration = {}
+    assert trigger.tags_valid_for == trigger.MAX_HOUR_TAG_VALID_FOR
+
+    trigger = TriggerFetchIPInfoDatabase(data_path=symphony_storage)
+    trigger.configuration = {"tags_valid_for": 1}
+    assert trigger.tags_valid_for == 1
+
+
+def test_parse_db_rows_ipv4_empty_as_name(trigger, mocked_uuid):
+    # ipv6 segment
+    assert list(
+        trigger._parse_db_row(
+            row=b'{"start_ip": "2001:550:2:8::2b:1", "end_ip": "2001:550:2:8::2b:1", "country": "CA", "country_name": "Canada", "continent": "NA", "continent_name": "North America", "asn": "AS174", "as_name": "", "as_domain": "cogentcomm.biz"}\n',  # noqa: E501
+            tag_valid_from="2024-01-30T09:04:38Z",
+            tag_valid_until="2024-01-30T09:04:38Z",
+            asn_cache=dict(),
+        )
+    ) == [
+        [
+            {
+                "id": "autonomous-system--00000000-0000-0000-0000-000000000000",
+                "name": "AS174",
+                "number": 174,
+                "type": "autonomous-system",
+                "x_inthreat_sources_refs": [
+                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
+                ],
+            },
+            {
+                "id": "observable-relationship--00000000-0000-0000-0000-000000000000",
+                "relationship_type": "belongs-to",
+                "source_ref": "ipv6-addr--00000000-0000-0000-0000-000000000000",
+                "target_ref": "autonomous-system--00000000-0000-0000-0000-000000000000",
+                "type": "observable-relationship",
+                "x_inthreat_sources_refs": [
+                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
+                ],
+            },
+            {
+                "id": "ipv6-addr--00000000-0000-0000-0000-000000000000",
+                "type": "ipv6-addr",
+                "value": "2001:550:2:8::2b:1/128",
+                "x_inthreat_sources_refs": [
+                    "identity--1e9f6197-b3a0-4665-88e7-767929d013a4"
+                ],
+                "x_inthreat_tags": [
+                    {
+                        "name": "country:CA",
+                        "valid_from": "2024-01-30T09:04:38Z",
+                        "valid_until": "2024-01-30T09:04:38Z",
+                    },
+                    {
+                        "name": "asn:174",
+                        "valid_from": "2024-01-30T09:04:38Z",
+                        "valid_until": "2024-01-30T09:04:38Z",
+                    },
+                ],
+            },
+        ]
+    ]

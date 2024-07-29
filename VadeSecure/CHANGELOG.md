@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.51.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-03-29 - 1.50.0
+
+### Changed
+
+- Move API client and authorization to a separate module
+
 ## 2024-02-13 - 1.49.2
 
 ### Changed
@@ -19,25 +31,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Declare pagination_limit and rate_limit parameters in the trigger configuration
 
-## 2023-12-18 - 1.49
+## 2023-12-18 - 1.49.0
 
 ### Fixed
 
 - In case if there is no last message, empty string for ordering
 
-## 2023-12-18 - 1.48
+## 2023-12-18 - 1.48.0
 
 ### Added
 
 - Use latest message datetime during next execution
 
-## 2023-11-23 - 1.47
+## 2023-11-23 - 1.47.0
 
 ### Added
 
 - Collecting events lag metric
 
-## 2023-11-22 - 1.46
+## 2023-11-22 - 1.46.0
 
 ### Changed
 

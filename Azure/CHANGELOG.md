@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-24 - 2.5.2
+
+### Fixed
+
+- Reset event lag when no message was received
+
+## 2024-07-04 - 2.5.1
+
+### Added
+
+- Compute the event lag from enqueued time for the messahe for the EventHub connector
+
+## 2024-05-28 - 2.5.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-04-24 - 2.4.12
+
+### Changed
+
+- Remove beta flag from azure blob storage and azure network watcher connectors
+
+## 2024-04-22 - 2.4.11
+
+### Changed
+
+- Update sekoia-automation-sdk
+
+## 2024-04-09 - 2.4.10
+
+### Fixed
+
+- Fix the way to handle the Azure Key Vault Events
+
+## 2024-04-09 - 2.4.9
+
+### Added
+
+- Add new connector to work with Azure Key Vault events
+
+## 2024-04-09 - 2.4.8
+
+### Changed
+
+- Pause the blob storage connector when no records were forwarded
+
+## 2024-04-09 - 2.4.7
+
+### Changed
+
+- Add more logs
+- Refactor get_azure_blob_data with a new method that get the most recent blobs
+
+## 2024-04-08 - 2.4.6
+
+### Fixed
+
+- Exclude empty lines from the records when processing through Azure Blob Storage
+
+## 2024-03-21 - 2.4.5
+
+### Added
+
+- Add chunk size usage to Azure Blob Storage connector
+
+## 2024-03-21 - 2.4.4
+
+### Added
+
+- Add new Azure Blob Storage connector. This connector is generic and do no actions on events
+
+### Changed
+
+- Rebrand the previous Azure Blob Storage connector into one specific for Azure Network Watcher.
+
 ## 2024-03-01 - 2.4.3
 
 ### Changed

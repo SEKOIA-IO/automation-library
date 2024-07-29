@@ -1,12 +1,12 @@
 {
-    "configuration": {
-        "title": "Skyhigh Security",
-        "type": "object",
-        "properties": {}
-    },
-    "description": "Skyhigh Security",
-    "name": "Skyhigh Security",
-    "uuid": "86cf0970-63e7-446a-b608-5d6f7e778a9b",
-    "slug": "skyhigh-security",
-    "version": "1.13.1"
+  "configuration": {
+    "title": "Skyhigh Security",
+    "type": "object",
+    "properties": {}
+  },
+  "description": "Skyhigh Security",
+  "name": "Skyhigh Security",
+  "uuid": "86cf0970-63e7-446a-b608-5d6f7e778a9b",
+  "slug": "skyhigh-security",
+  "version": "1.14.0"
 }

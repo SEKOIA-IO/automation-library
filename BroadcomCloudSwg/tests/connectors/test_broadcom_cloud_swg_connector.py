@@ -334,7 +334,7 @@ async def test_broadcom_cloud_swg_connector_get_events(
         )
 
         list_of_files_url = client.list_of_files_to_process_url(
-            start_from - timedelta(hours=3),
+            start_from - timedelta(hours=4),
             start_from - timedelta(hours=2),
         )
 

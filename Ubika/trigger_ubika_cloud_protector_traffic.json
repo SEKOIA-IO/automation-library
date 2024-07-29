@@ -1,0 +1,60 @@
+{
+  "description": "Ubika Cloud Protector - Traffic",
+  "docker_parameters": "ubika_cloud_protector_traffic",
+  "name": "[BETA] Fetch new traffic events from Ubika Cloud Protector",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "provider": {
+        "description": "Id of cirrus provider",
+        "type": "string"
+      },
+      "tenant": {
+        "description": "Id of cirrus tenant",
+        "type": "string"
+      },
+      "token": {
+        "description": "API token",
+        "type": "string"
+      }
+    },
+    "required": [
+      "provider",
+      "tenant",
+      "token",
+      "intake_key"
+    ],
+    "secrets": [
+      "token"
+    ],
+    "title": "The configuration to fetch new events",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "The events"
+  },
+  "uuid": "60b3ed59-e7e4-45fa-84e8-5a52695116c1"
+}

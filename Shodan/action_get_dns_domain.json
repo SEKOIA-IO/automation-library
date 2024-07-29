@@ -1,55 +1,55 @@
 {
-    "uuid": "0960d6d4-dfe0-4968-8735-41299adcf71d",
-    "name": "Get DNS domain",
-    "docker_parameters": "get-dns/domain/{domain}",
-    "description": "Get all the subdomains and other DNS entries for the given domain. Uses 1 query credit per lookup.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "get_dns_domain",
-        "properties": {
-            "domain": {
-                "in": "path",
-                "type": "string",
-                "description": "Domain name to lookup; example \"cnn.com\"."
-            }
-        },
-        "required": [
-            "domain"
-        ]
+  "uuid": "0960d6d4-dfe0-4968-8735-41299adcf71d",
+  "name": "Get DNS domain",
+  "docker_parameters": "get-dns/domain/{domain}",
+  "description": "Get all the subdomains and other DNS entries for the given domain. Uses 1 query credit per lookup.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_dns_domain",
+    "properties": {
+      "domain": {
+        "in": "path",
+        "type": "string",
+        "description": "Domain name to lookup; example \"cnn.com\"."
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "domain": {
-                "type": "string"
-            },
-            "tags": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            },
-            "data": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "subdomain": {
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string"
-                        },
-                        "value": {
-                            "type": "string"
-                        },
-                        "last_seen": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
+    "required": [
+      "domain"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "domain": {
+        "type": "string"
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
         }
+      },
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "subdomain": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "last_seen": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
+  }
 }

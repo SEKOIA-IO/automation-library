@@ -3,15 +3,13 @@
 import asyncio
 import time
 import traceback
-from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import Any, AsyncGenerator, Optional
-from posixpath import join as urljoin
+from typing import Any, Optional
 
 import orjson
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from github_modules import GithubModule
@@ -32,7 +30,7 @@ class AuditLogConnectorConfiguration(DefaultConnectorConfiguration):
     q: str | None = None
 
 
-class AuditLogConnector(Connector):
+class AuditLogConnector(AsyncConnector):
     """This connector fetches audit logs from the Github API"""
 
     _github_client: AsyncGithubClient | None = None
@@ -77,34 +75,6 @@ class AuditLogConnector(Connector):
 
         return self._github_client
 
-    @classmethod
-    def rate_limiter(cls) -> AsyncLimiter:  # pragma: no cover
-        """
-        Get or initialize rate limiter.
-
-        Returns:
-            AsyncLimiter:
-        """
-        if cls._rate_limiter is None:
-            cls._rate_limiter = AsyncLimiter(1, 1)
-
-        return cls._rate_limiter
-
-    @classmethod
-    @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[ClientSession, None]:  # pragma: no cover
-        """
-        Get or initialize client session.
-
-        Returns:
-            ClientSession:
-        """
-        if cls._session is None:
-            cls._session = ClientSession()
-
-        async with cls.rate_limiter():
-            yield cls._session
-
     @property
     def last_ts(self) -> int:
         """
@@ -134,70 +104,6 @@ class AuditLogConnector(Connector):
         """
         with self.context as cache:
             cache["last_ts"] = str(last_ts)
-
-    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:
-        """
-        Stops the connector with additional log message.
-
-        Args:
-            args: Any
-            kwargs: Optional[Any]
-        """
-
-        self.log(message="Stopping Github audit logs connector", level="info")
-        # Exit signal received, asking the processor to stop
-        super().stop(args, kwargs)
-
-    async def _push_data_to_intake(self, events: list[str]) -> list[str]:  # pragma: no cover
-        """
-        Custom method to push events to intakes.
-
-        Args:
-            events: list[str]
-
-        Returns:
-            list[str]:
-        """
-        self._last_events_time = datetime.utcnow()
-        batch_api = urljoin(self.configuration.intake_server, "batch")
-
-        logger.info("Pushing total: {count} events to intakes", count=len(events))
-
-        result_ids = []
-
-        chunks = self._chunk_events(events)
-        headers = {"User-Agent": f"sekoiaio-connector-{self.configuration.intake_key}"}
-        async with self.session() as session:
-            for chunk_index, chunk in enumerate(chunks):
-                logger.info(
-                    "Start to push chunk {chunk_index} with data count {data_count} to intakes",
-                    chunk_index=chunk_index,
-                    data_count=len(chunk),
-                )
-                request_body = {"intake_key": self.configuration.intake_key, "jsons": chunk}
-
-                async with session.post(batch_api, headers=headers, json=request_body) as response:
-                    # Not sure what response code will be at this point to identify error.
-                    # Usually 200, 201, 202 ... until 300 means success
-                    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#successful_responses
-                    if response.status >= 300:
-                        error = await response.text()
-                        logger.error(
-                            "Error while pushing chunk {chunk_index} to intakes: {error}",
-                            chunk_index=chunk_index,
-                            error=error,
-                        )
-
-                        raise Exception(error)
-
-                    logger.info(
-                        "Successfully pushed chunk {chunk_index} to intakes",
-                        chunk_index=chunk_index,
-                    )
-                    result = await response.json()
-                    result_ids.extend(result.get("event_ids", []))
-
-        return result_ids
 
     async def get_audit_events(self, last_ts: int) -> list[dict[str, Any]]:
         """
@@ -230,6 +136,7 @@ class AuditLogConnector(Connector):
     async def next_batch(self) -> None:
         """Fetches the next batch of events and pushes them to the intake."""
 
+        current_lag: int = 0
         batch_start_time = time.time()
         audit_events = await self.get_audit_events(self.last_ts)
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(audit_events))
@@ -243,7 +150,7 @@ class AuditLogConnector(Connector):
                 batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_data]
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
 
-                await self._push_data_to_intake(events=batch_of_events)
+                await self.push_data_to_intakes(events=batch_of_events)
 
                 self.log(
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
@@ -252,8 +159,7 @@ class AuditLogConnector(Connector):
 
                 # compute the lag
                 now = time.time()
-                current_lag = now - self.last_ts / 1000
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag))
+                current_lag = int(now - self.last_ts / 1000)
             else:
                 self.log(
                     message="No events to forward ",
@@ -265,6 +171,8 @@ class AuditLogConnector(Connector):
                 level="warn",
             )
 
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
@@ -274,8 +182,8 @@ class AuditLogConnector(Connector):
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
-            time.sleep(delta_sleep)
+            logger.info(f"Next batch in the future. Waiting {delta_sleep} seconds")
+            await asyncio.sleep(delta_sleep)
 
     def run(self) -> None:  # pragma: no cover
         """Runs Github audit logs."""

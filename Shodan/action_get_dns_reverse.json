@@ -1,27 +1,27 @@
 {
-    "uuid": "72be4c27-4a56-454e-8e43-da655e294cde",
-    "name": "Lookup DNS",
-    "docker_parameters": "get-dns/reverse",
-    "description": "Look up the hostnames that have been defined for the given list of IP addresses.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "get_dns_reverse",
-        "properties": {
-            "ips": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "description": "List of IP addresses; example \"74.125.227.230\""
-            }
+  "uuid": "72be4c27-4a56-454e-8e43-da655e294cde",
+  "name": "Lookup DNS",
+  "docker_parameters": "get-dns/reverse",
+  "description": "Look up the hostnames that have been defined for the given list of IP addresses.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "get_dns_reverse",
+    "properties": {
+      "ips": {
+        "type": "array",
+        "items": {
+          "type": "string"
         },
-        "required": ["ips"]
+        "description": "List of IP addresses; example \"74.125.227.230\""
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "type": "object"
-        }
-    }
+    "required": [
+      "ips"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {}
+  }
 }

@@ -12,7 +12,7 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
-from client.http_client import SalesforceHttpClient
+from client.http_client import LogType, SalesforceHttpClient
 from salesforce import SalesforceModule
 from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from utils.file_utils import csv_file_as_rows, delete_file
@@ -22,6 +22,12 @@ class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     """SalesforceConnector configuration."""
 
     frequency: int = 600
+    fetch_daily_logs: bool = False
+
+    @property
+    def log_type(self) -> LogType:
+        """Get log type."""
+        return LogType.DAILY if self.fetch_daily_logs else LogType.HOURLY
 
 
 class SalesforceConnector(AsyncConnector):
@@ -95,7 +101,7 @@ class SalesforceConnector(AsyncConnector):
             datetime: last event date
         """
         _last_event_date = self.last_event_date
-        log_files = await self.salesforce_client.get_log_files(_last_event_date)
+        log_files = await self.salesforce_client.get_log_files(_last_event_date, self.configuration.log_type)
 
         logger.info(
             "Found {count} log files to process since {date}",

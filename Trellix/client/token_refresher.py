@@ -6,12 +6,14 @@ from asyncio import Lock, Task
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional, Set
 from urllib.parse import urlencode
+from posixpath import join as urljoin
 
 from aiohttp import BasicAuth, ClientSession
 from loguru import logger
 from yarl import URL
 
 from .schemas.token import HttpToken, Scope, TrellixToken
+from .errors import APIError, AuthenticationFailed
 
 
 class TrellixTokenRefresher(object):
@@ -31,7 +33,14 @@ class TrellixTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, client_id: str, client_secret: str, api_key: str, base_url: str, scopes: Set[Scope]):
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        api_key: str,
+        base_url: str,
+        scopes: Set[Scope],
+    ):
         """
         Initialize TrellixTokenRefresher.
 
@@ -70,7 +79,12 @@ class TrellixTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls, client_id: str, client_secret: str, api_key: str, auth_url: str, scopes: Set[Scope]
+        cls,
+        client_id: str,
+        client_secret: str,
+        api_key: str,
+        auth_url: str,
+        scopes: Set[Scope],
     ) -> "TrellixTokenRefresher":
         """
         Get singleton TrellixTokenRefresher instance for specified set of scopes.
@@ -105,9 +119,11 @@ class TrellixTokenRefresher(object):
             "scope": "+".join(self.scopes),
         }
 
-        return URL("{0}/iam/v1.1/token".format(self.base_url)).with_query(
-            urlencode(params, safe="+", encoding="utf-8")
-        )
+        auth_url = self.base_url
+        if not auth_url.endswith("/token"):
+            auth_url = urljoin(auth_url, "token")
+
+        return URL(auth_url).with_query(urlencode(params, safe="+", encoding="utf-8"))
 
     async def refresh_token(self) -> None:
         """
@@ -118,12 +134,29 @@ class TrellixTokenRefresher(object):
         headers = {"x-api-header": self.api_key}
 
         async with self.session().post(
-            self.auth_url, headers=headers, auth=BasicAuth(self.client_id, self.client_secret), json={}
+            self.auth_url,
+            headers=headers,
+            auth=BasicAuth(self.client_id, self.client_secret),
+            json={},
         ) as response:
             logger.info(response.url)
+
+            # raise an exception for any server error
+            if response.status >= 500:
+                error_description = await response.text()
+                raise APIError(error_description)
+
             response_data = await response.json()
 
-            self._token = TrellixToken(token=HttpToken(**response_data), scopes=self.scopes, created_at=time.time())
+            # raise an exception for any client error
+            if response.status >= 400:
+                raise AuthenticationFailed.from_http_response(response_data)
+
+            self._token = TrellixToken(
+                token=HttpToken(**response_data),
+                scopes=self.scopes,
+                created_at=time.time(),
+            )
 
             await self._schedule_token_refresh(self._token.token.expires_in)
 

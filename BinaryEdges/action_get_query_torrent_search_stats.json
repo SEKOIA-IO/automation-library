@@ -1,44 +1,47 @@
 {
-    "uuid": "1cf2afa7-87c6-4724-9f2b-c95c8b2ae6cf",
-    "name": "Get torrent statistics",
-    "docker_parameters": "get-query/torrent/search/stats",
-    "description": "Statistics of events for the given query. Can be used with specific parameters and/or full-text search.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Get torrent statistics",
-        "properties": {
-            "query": {
-                "in": "query",
-                "type": "string"
-            },
-            "type": {
-                "in": "query",
-                "type": "string"
-            },
-            "days": {
-                "in": "query",
-                "type": "integer"
-            },
-            "order": {
-                "in": "query",
-                "type": "string"
-            }
-        },
-        "required": ["query", "type"]
+  "uuid": "1cf2afa7-87c6-4724-9f2b-c95c8b2ae6cf",
+  "name": "Get torrent statistics",
+  "docker_parameters": "get-query/torrent/search/stats",
+  "description": "Statistics of events for the given query. Can be used with specific parameters and/or full-text search.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get torrent statistics",
+    "properties": {
+      "query": {
+        "in": "query",
+        "type": "string"
+      },
+      "type": {
+        "in": "query",
+        "type": "string"
+      },
+      "days": {
+        "in": "query",
+        "type": "integer"
+      },
+      "order": {
+        "in": "query",
+        "type": "string"
+      }
     },
-    "results": {
-        "type": "array",
-        "items": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "integer"
-                },
-                "doc_count": {
-                    "type": "integer"
-                }
-            }
+    "required": [
+      "query",
+      "type"
+    ]
+  },
+  "results": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "integer"
+        },
+        "doc_count": {
+          "type": "integer"
         }
+      }
     }
+  }
 }

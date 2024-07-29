@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List
 
 from withsecure.incident_operation_action import IncidentOperationAction
 
@@ -8,12 +9,25 @@ class ActionArguments(BaseModel):
     comment: str
 
 
+class ItemKeys(BaseModel):
+    incidentId: str
+    comment: str
+
+
+class CommentIncidentResponse(BaseModel):
+    items: List[ItemKeys]
+
+
 class CommentIncident(IncidentOperationAction):
-    def run(self, arguments: ActionArguments) -> None:
+    results_model = CommentIncidentResponse
+
+    def run(self, arguments: ActionArguments) -> CommentIncidentResponse:
         parameters = {}
         parameters["comment"] = arguments.comment
 
         # execute the operation
-        self._execute_operation_on_incident(
+        response = self._execute_operation_on_incident(
             operation_name="CommentIncident", target=arguments.target, parameters=parameters
         )
+
+        return CommentIncidentResponse(items=response.get("items", {}))

@@ -1,282 +1,282 @@
 {
-    "uuid": "73948f6d-263f-43f5-b9c9-cd418c035744",
-    "name": "Deny Countermeasure",
-    "docker_parameters": "patch-alerts/countermeasures/{cm_uuid}/deny",
-    "description": "Mark as denied a countermeasure",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+  "uuid": "73948f6d-263f-43f5-b9c9-cd418c035744",
+  "name": "Deny Countermeasure",
+  "docker_parameters": "patch-alerts/countermeasures/{cm_uuid}/deny",
+  "description": "Mark as denied a countermeasure",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "deny_a_countermeasure",
+    "properties": {
+      "cm_uuid": {
+        "type": "string",
+        "in": "path"
+      },
+      "comment": {
         "type": "object",
-        "title": "deny_a_countermeasure",
         "properties": {
-            "cm_uuid": {
-                "type": "string",
-                "in": "path"
-            },
-            "comment": {
-                "type": "object",
-                "properties": {
-                    "content": {
-                        "type": "string",
-                        "description": "Content of the comment"
-                    },
-                    "author": {
-                        "type": "string",
-                        "maxLength": 32,
-                        "description": "Author of the comment"
-                    }
-                },
-                "required": [
-                    "content"
-                ],
-                "in": "body"
-            }
+          "content": {
+            "type": "string",
+            "description": "Content of the comment"
+          },
+          "author": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "Author of the comment"
+          }
         },
         "required": [
-            "cm_uuid",
-            "body"
-        ]
+          "content"
+        ],
+        "in": "body"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "action_steps": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "status": {
-                            "type": "string",
-                            "description": "Status of the action step"
-                        },
-                        "created_by": {
-                            "type": "string",
-                            "description": "UUID of profile that created the action step"
-                        },
-                        "action_order": {
-                            "type": "string",
-                            "description": "Position in the execution order of action steps"
-                        },
-                        "denied_by": {
-                            "type": "string",
-                            "description": "UUID of profile that denied the action step"
-                        },
-                        "object": {
-                            "type": "object",
-                            "description": "Object associated to the action step"
-                        },
-                        "assignee": {
-                            "type": "string",
-                            "description": "UUID of the profile assigned to the progress of the action step"
-                        },
-                        "activated_by_type": {
-                            "type": "string",
-                            "description": "Type of the profile that activated the action step"
-                        },
-                        "comments": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "created_by": {
-                                        "type": "string",
-                                        "description": "The identifier of the creator of the comment"
-                                    },
-                                    "content": {
-                                        "type": "string",
-                                        "description": "Content of the comment"
-                                    },
-                                    "author": {
-                                        "type": "string",
-                                        "description": "Author of the comment"
-                                    },
-                                    "date": {
-                                        "type": "integer",
-                                        "format": "int32"
-                                    },
-                                    "created_by_type": {
-                                        "type": "string",
-                                        "description": "The type of the creator of the comment"
-                                    },
-                                    "uuid": {
-                                        "type": "string",
-                                        "format": "uuid",
-                                        "description": "Identifier of the comment"
-                                    }
-                                },
-                                "required": [
-                                    "author",
-                                    "content",
-                                    "created_by",
-                                    "created_by_type",
-                                    "date",
-                                    "uuid"
-                                ]
-                            }
-                        },
-                        "created_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Date the action step was created"
-                        },
-                        "activated_by": {
-                            "type": "string",
-                            "description": "UUID of profile that activated the action step"
-                        },
-                        "activated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Date the action step was activated"
-                        },
-                        "description": {
-                            "type": "string",
-                            "description": "Description of the action step"
-                        },
-                        "denied_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Date the action step was denied"
-                        },
-                        "name": {
-                            "type": "string",
-                            "description": "Name of the action step"
-                        },
-                        "created_by_type": {
-                            "type": "string",
-                            "description": "Type of the profile that created the action step"
-                        },
-                        "denied_by_type": {
-                            "type": "string",
-                            "description": "Type of the profile that denied the action step"
-                        }
-                    }
-                }
-            },
-            "activated_by_type": {
-                "type": "string",
-                "description": "Type of the profile that activated the countermeasure"
-            },
-            "comments": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "created_by": {
-                            "type": "string",
-                            "description": "The identifier of the creator of the comment"
-                        },
-                        "content": {
-                            "type": "string",
-                            "description": "Content of the comment"
-                        },
-                        "author": {
-                            "type": "string",
-                            "description": "Author of the comment"
-                        },
-                        "date": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "created_by_type": {
-                            "type": "string",
-                            "description": "The type of the creator of the comment"
-                        },
-                        "uuid": {
-                            "type": "string",
-                            "format": "uuid",
-                            "description": "Identifier of the comment"
-                        }
-                    },
-                    "required": [
-                        "author",
-                        "content",
-                        "created_by",
-                        "created_by_type",
-                        "date",
-                        "uuid"
-                    ]
-                }
-            },
-            "activated_at": {
-                "type": "string",
-                "format": "date-time",
-                "description": "Date the countermeasure was activated"
-            },
-            "relevance": {
-                "type": "integer",
-                "format": "int32",
-                "description": "Relevance of the countermeasure"
-            },
-            "denied_by_type": {
-                "type": "string",
-                "description": "Type of the profile that denied the countermeasure"
-            },
+    "required": [
+      "cm_uuid",
+      "body"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "action_steps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
             "status": {
-                "type": "string",
-                "description": "(deprecated) Status of the countermeasure"
+              "type": "string",
+              "description": "Status of the action step"
             },
             "created_by": {
-                "type": "string",
-                "description": "UUID of profile that created the countermeasure"
+              "type": "string",
+              "description": "UUID of profile that created the action step"
             },
-            "model_uuid": {
-                "type": "string",
-                "description": "UUID of the model from which this countermeasure has been created"
-            },
-            "activated_by": {
-                "type": "string",
-                "description": "UUID of profile that activated the countermeasure"
-            },
-            "description": {
-                "type": "string",
-                "description": "Description of the countermeasure"
-            },
-            "name": {
-                "type": "string",
-                "description": "Name of the countermeasure"
-            },
-            "uuid": {
-                "type": "string",
-                "description": "UUID of the countermeasure"
-            },
-            "duration": {
-                "type": "string",
-                "description": "Estimated duration to apply the countermeasures"
-            },
-            "alert_uuid": {
-                "type": "string",
-                "description": "UUID of the alert related to the countermeasure"
-            },
-            "denied_at": {
-                "type": "string",
-                "format": "date-time",
-                "description": "Date the countermeasure was denied"
-            },
-            "created_by_type": {
-                "type": "string",
-                "description": "Type of the profile that created the countermeasure"
-            },
-            "course_of_action": {
-                "type": "object",
-                "description": "(deprecated) STIX2 object course of action"
-            },
-            "dynamic_relevance": {
-                "type": "integer",
-                "format": "int32",
-                "description": "Dynamic relevance of the countermeasure"
+            "action_order": {
+              "type": "string",
+              "description": "Position in the execution order of action steps"
             },
             "denied_by": {
-                "type": "string",
-                "description": "UUID of profile that denied the countermeasure"
+              "type": "string",
+              "description": "UUID of profile that denied the action step"
+            },
+            "object": {
+              "type": "object",
+              "description": "Object associated to the action step"
             },
             "assignee": {
-                "type": "string",
-                "description": "UUID of the profile assigned to the progress of the countermeasure"
+              "type": "string",
+              "description": "UUID of the profile assigned to the progress of the action step"
+            },
+            "activated_by_type": {
+              "type": "string",
+              "description": "Type of the profile that activated the action step"
+            },
+            "comments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "created_by": {
+                    "type": "string",
+                    "description": "The identifier of the creator of the comment"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Content of the comment"
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "Author of the comment"
+                  },
+                  "date": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "created_by_type": {
+                    "type": "string",
+                    "description": "The type of the creator of the comment"
+                  },
+                  "uuid": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Identifier of the comment"
+                  }
+                },
+                "required": [
+                  "author",
+                  "content",
+                  "created_by",
+                  "created_by_type",
+                  "date",
+                  "uuid"
+                ]
+              }
             },
             "created_at": {
-                "type": "string",
-                "format": "date-time",
-                "description": "Date the countermeasure was created"
+              "type": "string",
+              "format": "date-time",
+              "description": "Date the action step was created"
+            },
+            "activated_by": {
+              "type": "string",
+              "description": "UUID of profile that activated the action step"
+            },
+            "activated_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Date the action step was activated"
+            },
+            "description": {
+              "type": "string",
+              "description": "Description of the action step"
+            },
+            "denied_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Date the action step was denied"
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the action step"
+            },
+            "created_by_type": {
+              "type": "string",
+              "description": "Type of the profile that created the action step"
+            },
+            "denied_by_type": {
+              "type": "string",
+              "description": "Type of the profile that denied the action step"
             }
+          }
         }
+      },
+      "activated_by_type": {
+        "type": "string",
+        "description": "Type of the profile that activated the countermeasure"
+      },
+      "comments": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "created_by": {
+              "type": "string",
+              "description": "The identifier of the creator of the comment"
+            },
+            "content": {
+              "type": "string",
+              "description": "Content of the comment"
+            },
+            "author": {
+              "type": "string",
+              "description": "Author of the comment"
+            },
+            "date": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "created_by_type": {
+              "type": "string",
+              "description": "The type of the creator of the comment"
+            },
+            "uuid": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifier of the comment"
+            }
+          },
+          "required": [
+            "author",
+            "content",
+            "created_by",
+            "created_by_type",
+            "date",
+            "uuid"
+          ]
+        }
+      },
+      "activated_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Date the countermeasure was activated"
+      },
+      "relevance": {
+        "type": "integer",
+        "format": "int32",
+        "description": "Relevance of the countermeasure"
+      },
+      "denied_by_type": {
+        "type": "string",
+        "description": "Type of the profile that denied the countermeasure"
+      },
+      "status": {
+        "type": "string",
+        "description": "(deprecated) Status of the countermeasure"
+      },
+      "created_by": {
+        "type": "string",
+        "description": "UUID of profile that created the countermeasure"
+      },
+      "model_uuid": {
+        "type": "string",
+        "description": "UUID of the model from which this countermeasure has been created"
+      },
+      "activated_by": {
+        "type": "string",
+        "description": "UUID of profile that activated the countermeasure"
+      },
+      "description": {
+        "type": "string",
+        "description": "Description of the countermeasure"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name of the countermeasure"
+      },
+      "uuid": {
+        "type": "string",
+        "description": "UUID of the countermeasure"
+      },
+      "duration": {
+        "type": "string",
+        "description": "Estimated duration to apply the countermeasures"
+      },
+      "alert_uuid": {
+        "type": "string",
+        "description": "UUID of the alert related to the countermeasure"
+      },
+      "denied_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Date the countermeasure was denied"
+      },
+      "created_by_type": {
+        "type": "string",
+        "description": "Type of the profile that created the countermeasure"
+      },
+      "course_of_action": {
+        "type": "object",
+        "description": "(deprecated) STIX2 object course of action"
+      },
+      "dynamic_relevance": {
+        "type": "integer",
+        "format": "int32",
+        "description": "Dynamic relevance of the countermeasure"
+      },
+      "denied_by": {
+        "type": "string",
+        "description": "UUID of profile that denied the countermeasure"
+      },
+      "assignee": {
+        "type": "string",
+        "description": "UUID of the profile assigned to the progress of the countermeasure"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Date the countermeasure was created"
+      }
     }
+  }
 }

@@ -3,10 +3,10 @@ import queue
 import threading
 import time
 from collections.abc import Generator
-from datetime import datetime, timedelta
 from functools import cached_property
 
 import orjson
+import requests.exceptions
 from requests.auth import AuthBase
 from requests.exceptions import HTTPError, StreamConsumedError
 from sekoia_automation.connector import Connector
@@ -16,7 +16,7 @@ from sekoia_automation.timer import RepeatedTimer
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
 from crowdstrike_falcon.exceptions import StreamNotAvailable
-from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type
+from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type, compute_refresh_interval
 from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
 from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
 from crowdstrike_falcon.logging import get_logger
@@ -122,7 +122,7 @@ class VerticlesCollector:
                 error,
                 message=(
                     f"Failed to collect verticles for detection {detection_id}: "
-                    "{error.response.status_code} {error.response.reason}"
+                    f"{error.response.status_code} {error.response.reason}"
                 ),
             )
         except Exception as error:
@@ -190,7 +190,7 @@ class EventStreamReader(threading.Thread):
 
     @property
     def refresh_interval(self) -> int:
-        return int(self.stream_info["refreshActiveSessionInterval"])
+        return compute_refresh_interval(int(self.stream_info["refreshActiveSessionInterval"]))
 
     def log(self, *args, **kwargs):
         self.connector.log(*args, **kwargs)
@@ -204,12 +204,20 @@ class EventStreamReader(threading.Thread):
         """
         logger.debug("refresh the event stream", refresh_url={refresh_url})
 
-        self.client.post(
+        response = self.client.post(
             url=refresh_url,
             json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
         )
-
-        logger.info("succesfully refreshed event stream", refresh_url=refresh_url)
+        if not response.ok:
+            logger.error(
+                "Failed to refresh the event stream",
+                refresh_url=refresh_url,
+                status_code=response.status_code,
+                content=response.text,
+            )
+            self.log(level="error", message="failed to refresh the event stream")
+        else:
+            logger.info("successfully refreshed event stream", refresh_url=refresh_url)
 
     def refresh_stream_timer(self):
         return self.refresh_stream(refresh_url=self.stream_info["refreshActiveSessionURL"])

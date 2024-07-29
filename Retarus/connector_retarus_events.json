@@ -1,19 +1,37 @@
 {
-    "description": "Retarus events connector",
-    "docker_parameters": "retarus_connector",
-    "name": "Retarus",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "ws_url": {"description": "Retarus websocket URL", "type": "string", "format": "uri"},
-            "ws_key": {"description": "Retarus websocket auth key", "type": "string"}
-        },
-        "required": ["ws_url", "ws_key"],
-        "secrets": ["ws_key"],
-        "title": "Retarus events",
-        "type": "object"
+  "description": "Retarus events connector",
+  "docker_parameters": "retarus_connector",
+  "name": "Retarus",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ws_url": {
+        "description": "Retarus websocket URL",
+        "type": "string",
+        "format": "uri",
+        "default": "wss://events.retarus.com/email/siem/v1/websocket?channel=sekoiaio"
+      },
+      "ws_key": {
+        "description": "Retarus websocket auth key",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
     },
-    "uuid": "f7f7cb83-40d3-4861-8e93-058a1e771777",
-    "slug": "retarus",
-    "results": {}
+    "required": [
+      "ws_url",
+      "ws_key",
+      "intake_key"
+    ],
+    "secrets": [
+      "ws_key"
+    ],
+    "title": "Retarus events",
+    "type": "object"
+  },
+  "uuid": "f7f7cb83-40d3-4861-8e93-058a1e771777",
+  "slug": "retarus",
+  "results": {}
 }

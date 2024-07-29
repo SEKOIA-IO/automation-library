@@ -1,29 +1,29 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Censys",
-        "type": "object",
-        "properties": {
-            "api_user_id": {
-                "type": "string",
-                "description": "Censys API user ID"
-            },
-            "api_user_secret": {
-                "type": "string",
-                "description": "Censys API user secret"
-            }
-        },
-        "required": [
-            "api_user_id",
-            "api_user_secret"
-        ],
-        "secrets": [
-            "api_user_secret"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Censys",
+    "type": "object",
+    "properties": {
+      "api_user_id": {
+        "type": "string",
+        "description": "Censys API user ID"
+      },
+      "api_user_secret": {
+        "type": "string",
+        "description": "Censys API user secret"
+      }
     },
-    "description": "[Censys](https://censys.io/) is Cybersecurity company discovering and inventoring assets exposed on Internet. The Censys API provides programmatic access to the same data accessible through the web interface",
-    "name": "Censys",
-    "uuid": "48a7eb68-f319-4498-b3ed-461d690e6d05",
-    "slug": "censys",
-    "version": "1.24"
+    "required": [
+      "api_user_id",
+      "api_user_secret"
+    ],
+    "secrets": [
+      "api_user_secret"
+    ]
+  },
+  "description": "[Censys](https://censys.io/) is Cybersecurity company discovering and inventoring assets exposed on Internet. The Censys API provides programmatic access to the same data accessible through the web interface",
+  "name": "Censys",
+  "uuid": "48a7eb68-f319-4498-b3ed-461d690e6d05",
+  "slug": "censys",
+  "version": "1.25.0"
 }

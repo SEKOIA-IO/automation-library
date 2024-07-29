@@ -1,5 +1,6 @@
 """Contains tests for AbstractAwsS3QueuedConnector."""
 
+import os
 from gzip import compress
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -88,6 +89,7 @@ def abstract_queued_connector(
     Returns:
         AbstractAwsS3QueuedConnector:
     """
+    os.environ["AWS_BATCH_SIZE"] = "1"
     connector = AbstractAwsS3QueuedConnector(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = aws_s3_queued_config

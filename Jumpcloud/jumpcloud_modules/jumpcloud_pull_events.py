@@ -166,6 +166,7 @@ failed with status {response.status_code} - {response.reason}"
                 yield next_events
 
         # save the most recent date
+        current_lag: int = 0
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
 
@@ -173,13 +174,14 @@ failed with status {response.status_code} - {response.reason}"
             with self.context as cache:
                 cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
 
-            now = datetime.now(timezone.utc)
-            current_lag = now - self.from_date
+            delta_time = datetime.now(timezone.utc) - self.from_date
+            current_lag = int(delta_time.total_seconds())
             self.log(
-                message=f"Current lag {int(current_lag.total_seconds())} seconds.",
+                message=f"Current lag {current_lag} seconds.",
                 level="info",
             )
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def next_batch(self):
         # save the starting time

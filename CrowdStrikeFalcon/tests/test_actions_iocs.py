@@ -2,6 +2,7 @@ import os
 
 import pytest
 import requests_mock
+from datetime import date, timedelta
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.action import CrowdstrikeAction
@@ -457,6 +458,162 @@ def test_remove_indicators():
         assert result is None
 
 
+def test_remove_expired_indicators():
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                    "4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+                ]
+            },
+        )
+        mock.register_uri(
+            "DELETE",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                    "4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+                ]
+            },
+        )
+        result = action.remove_expired_indicators()
+        assert result is None
+        history = mock.request_history
+        assert mock.call_count == 3  # One call to OAUTH2 token, one call to search and one to delete
+        assert (
+            "ids=0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716&ids=4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b"
+            in history[2].url
+        )
+
+
+def test_remove_expired_indicators_by_steps():
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                ]
+                * 1002
+            },
+        )
+        deletion_mock = mock.register_uri(
+            "DELETE",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                ]
+            },
+        )
+        result = action.remove_expired_indicators()
+        assert result is None
+        assert deletion_mock.call_count == 2  # One call for the 1000 first indicators, the second for the last one
+
+
+def test_remove_old_indicators():
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                    "4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+                ]
+            },
+        )
+        mock.register_uri(
+            "DELETE",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                    "4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+                ]
+            },
+        )
+        result = action.remove_old_indicators(7)
+        assert result is None
+        history = mock.request_history
+        assert mock.call_count == 3  # One call to OAUTH2 token, one call to search and one to delete
+        assert (
+            "ids=0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716&ids=4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b"
+            in history[2].url
+        )
+
+
+def test_remove_old_indicators_by_steps():
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                ]
+                * 1002
+            },
+        )
+        deletion_mock = mock.register_uri(
+            "DELETE",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1",
+            json={
+                "resources": [
+                    "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
+                ]
+            },
+        )
+        result = action.remove_old_indicators(7)
+        assert result is None
+        assert deletion_mock.call_count == 2  # One call for the 1000 first indicators, the second for the last one
+
+
 def test_create_indicators():
     action = configured_action(CrowdstrikeActionPushIOCsBlock)
     with requests_mock.Mocker() as mock:
@@ -479,6 +636,69 @@ def test_create_indicators():
         )
         result = action.create_indicators([sample_data])
         assert result is None
+
+
+def test_run():
+    action = configured_action(CrowdstrikeActionPushIOCsBlock)
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/iocs/queries/indicators/v1?filter=source%3A%27Sekoia.io%27%2Bexpired%3Atrue",
+            json={
+                "resources": [
+                    "4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+                ]
+            },
+        )
+        mock.register_uri(
+            "DELETE",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1?ids=4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+            json={
+                "resources": [
+                    "4999492aa2ebcc763adb04d6333187e4481da18027726d99e9d227a99715381b",
+                ]
+            },
+        )
+        mock.register_uri(
+            "GET",
+            f"https://my.fake.sekoia/iocs/queries/indicators/v1?filter=source%3A%27Sekoia.io%27%2Bmodified_on%3A%3C%3D%27{date.today() - timedelta(7)}%27",
+            json={
+                "resources": [
+                    "d791a4b131d4c31b87eb4eed0700fc1c2e8d0cd3595b90cb9029ebd249f5e813",
+                ]
+            },
+        )
+        mock.register_uri(
+            "DELETE",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1?ids=d791a4b131d4c31b87eb4eed0700fc1c2e8d0cd3595b90cb9029ebd249f5e813",
+            json={
+                "resources": [
+                    "d791a4b131d4c31b87eb4eed0700fc1c2e8d0cd3595b90cb9029ebd249f5e813",
+                ]
+            },
+        )
+
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/iocs/entities/indicators/v1",
+            json={"resources": ["0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716"]},
+        )
+        sample_data = action.get_payload(
+            type="sha256", value="0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716"
+        )
+
+        results = action.run({"stix_objects": [STIX_OBJECT_IPv4, STIX_OBJECT_FILE_HASH], "valid_for": 7})
+        assert results is None
 
 
 @pytest.mark.skipif(

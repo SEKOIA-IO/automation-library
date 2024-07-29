@@ -7,6 +7,7 @@ import orjson
 from netskope_api.iterator.const import Const
 from netskope_api.iterator.netskope_iterator import NetskopeIterator
 from pydantic import Field
+from requests.exceptions import ConnectionError
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.exceptions import ModuleConfigurationError
 
@@ -42,7 +43,14 @@ class NetskopeEventConsumer(Thread):
         batch_start_time = time.time()
 
         # Fetch next events
-        response = self.iterator.next()
+        try:
+            response = self.iterator.next()
+        except ConnectionError as error:
+            if "connection aborted" in str(error).lower():
+                return
+
+            raise error
+
         if response.status_code == 204:
             self.connector.log(message=f"No events to forward for {self.name}", level="info")
         if response.status_code == 403:
@@ -99,10 +107,13 @@ class NetskopeEventConsumer(Thread):
         )
 
         # compute the lag
+        current_lag: int = 0
         if most_recent_timestamp > 0:
             now = time.time()
-            current_lag = now - most_recent_timestamp
-            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(int(current_lag))
+            current_lag = int(now - most_recent_timestamp)
+
+        # report the lag
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(current_lag)
 
         # get the sleeping time from the response. Otherwise, compute the remaining sleeping time.
         delta_sleep = content.get("wait_time", 30 - batch_duration)
@@ -136,6 +147,13 @@ class NetskopeEventConnector(Connector):
     @cached_property
     def tenant_hostname(self):
         return get_tenant_hostname(self.module.configuration.base_url)
+
+    @cached_property
+    def _user_agent(self):
+        return "sekoiaio-connector/{}-{}".format(
+            self.module.manifest.get("slug"),
+            self.module.manifest.get("version"),
+        )
 
     @cached_property
     def dataexports(self) -> list[tuple[NetskopeEventType, NetskopeAlertType | None]]:
@@ -178,6 +196,7 @@ class NetskopeEventConnector(Connector):
             Const.NSKP_TENANT_HOSTNAME: self.tenant_hostname,
             Const.NSKP_EVENT_TYPE: event_type.value,
             Const.NSKP_ITERATOR_NAME: self.get_index_name(event_type, alert_type),
+            Const.NSKP_USER_AGENT: self._user_agent,
         }
 
         if event_type == NetskopeEventType.ALERT:

@@ -1,13 +1,13 @@
 {
-    "configuration": {
-        "type": "object",
-        "title": "Module configuration",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {}
-    },
-    "description": "This module exposes utility actions",
-    "name": "Utils",
-    "uuid": "07cce76b-a319-40ee-a0cf-1ba433431e21",
-    "slug": "utils",
-    "version": "1.3.1"
+  "configuration": {
+    "type": "object",
+    "title": "Module configuration",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {}
+  },
+  "description": "This module exposes utility actions",
+  "name": "Utils",
+  "uuid": "07cce76b-a319-40ee-a0cf-1ba433431e21",
+  "slug": "utils",
+  "version": "1.4.0"
 }

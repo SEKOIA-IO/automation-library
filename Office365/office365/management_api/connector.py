@@ -1,77 +1,33 @@
+import asyncio
 import json
+import os
 import time
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 from time import sleep
 
 from prometheus_client import Counter, Histogram
-from sekoia_automation.connector import Connector
+from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.storage import get_data_path
 
+from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+
+from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
 from .errors import FailedToActivateO365Subscription
+from .helpers import split_date_range
 from .office365_client import Office365API
 
-# Declare prometheus metrics
-prom_namespace = "office365_intakes"
 
-OUTGOING_EVENTS = Counter(
-    name="forwarded_events",
-    documentation="Number of events forwarded to SEKOIA.IO",
-    namespace=prom_namespace,
-    labelnames=["datasource", "intake_key"],
-)
-
-FORWARD_EVENTS_DURATION = Histogram(
-    name="forward_events_duration",
-    documentation="Duration to collect and forward events",
-    namespace=prom_namespace,
-    labelnames=["datasource", "intake_key"],
-)
-
-
-class Office365Connector(Connector):
+class Office365Connector(AsyncConnector):
     configuration: Office365Configuration
 
-    @cached_property
-    def _last_pull_date(self) -> Path:
-        return get_data_path().joinpath(f"o365_{self.configuration.intake_key}_last_pull")
-
-    @property
-    def last_pull_date(self) -> datetime:
-        """Reads the last events pull date from S3.
-
-        Office365 can return events from up to 7 days ago. If the last pull date is older than that, or if no
-        last pull date is found, we return a "7 days ago" date instead. If the stored date is timezone-naive or not
-        in UTC, we raise an error to avoid the risk of confusions => all dates must be timezone-aware,
-        this is an arbitrary choice to avoid any inconsistencies.
-
-        Returns: Last pull date or now.
-
-        """
-        start_date = datetime.now(UTC)
-        try:
-            last_pull_date = datetime.fromisoformat(self._last_pull_date.read_text())
-        except Exception:
-            return start_date
-
-        if not last_pull_date or datetime.now(UTC) - last_pull_date > timedelta(days=7):
-            return start_date - timedelta(days=7)
-
-        return last_pull_date
-
-    @last_pull_date.setter
-    def last_pull_date(self, new_last_pull_date: datetime) -> None:
-        """Stores the last events pull date on S3.
-
-        We expect stored date to be always timezone-aware and in UTC.
-
-        Args:
-          new_last_pull_date: Date to be stored
-
-        """
-        self._last_pull_date.write_text(new_last_pull_date.isoformat())
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.limit_of_events_to_push = int(os.getenv("OFFICE365_BATCH_SIZE", 10000))
+        self.frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
 
     @cached_property
     def client(self) -> Office365API:
@@ -85,76 +41,95 @@ class Office365Connector(Connector):
             tenant_id=self.configuration.tenant_id,
         )
 
-    def _split_date_range(
-        self, start_date: datetime, end_date: datetime, delta: timedelta
-    ) -> list[tuple[datetime, datetime]]:
-        """Splits a date range in shorter intervals with a set max duration
-
-        This is a recursive method that, given a start and end date, will create a first tuple for the first 30
-        minutes of the interval, then call itself to create the tuples of the subsequent 30 minutes intervals and
-        append them at the end of the list of intervals.
-        The last interval of the list may be of less than 30 minutes if the global interval duration is not a multiple
-        of 30 minutes.
-
-        Args:
-            start_date (datetime): Current start date of the to-be-split interval
-            end_date (datetime): End date of the to-be-split interval
-            delta (timedelta): Max duration of the splits
-
-        Returns:
-            list[tuple[datetime, datetime]]: A list of subintervals covering of all the global interval
-        """
-        if end_date - start_date <= delta:
-            return [(start_date, end_date)]
-        else:
-            return [(start_date, start_date + delta)] + self._split_date_range(start_date + delta, end_date, delta)
-
-    def pull_content(self, start_pull_date: datetime, end_pull_date: datetime) -> list[str]:
+    async def pull_content(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[list[str], None]:
         """Pulls content from Office 365 subscriptions
 
         Args:
-            start_pull_date (datetime): Start date of the pull interval
-            end_pull_date (datetime): End date of the pull interval
+            start_date (datetime): Start date of the interval
+            end_date (datetime): End date of the interval
 
         Returns:
-            list[dict]: List of events recevied for the pull interval
+            list[dict]: List of events recevied for the interval
         """
         pulled_events: list[str] = []
 
-        content_types = self.client.list_subscriptions()
-        for start_date, end_date in self._split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
-            for content_type in content_types:
-                # Get the paginated contents from a subscription
-                for contents in self.client.get_subscription_contents(
-                    content_type, start_time=start_date, end_time=end_date
-                ):
-                    for content in contents:
-                        events = self.client.get_content(content["contentUri"])
-                        for event in events:
-                            pulled_events.append(json.dumps(event))
+        content_types = await self.client.list_subscriptions()
+        for content_type in content_types:
+            # Get the paginated contents from a subscription
+            async for contents in self.client.get_subscription_contents(
+                content_type, start_time=start_date, end_time=end_date
+            ):
+                for content in contents:
+                    events = await self.client.get_content(content["contentUri"])
+                    for event in events:
+                        pulled_events.append(json.dumps(event))
 
-        return pulled_events
+                if len(pulled_events) > self.limit_of_events_to_push:
+                    yield pulled_events
+                    pulled_events = []
 
-    def forward_events(self, events: list[str]):
+        if len(pulled_events) > 0:
+            yield pulled_events
+
+    async def send_events(self, events: list[str]):
         """Sends event to Sekoia intake
 
         Args:
             events (list[dict]): Events to forward to intake
         """
         self.log(f"Pushing {len(events)} event(s) to intake", level="info")
-        OUTGOING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="office365").inc(len(events))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
 
-        self.push_events_to_intakes(events)
+        await self.push_data_to_intakes(events=events)
 
-    def activate_subscriptions(self):
+    async def activate_subscriptions(self):
         """Activates an Office 365 subscriptions"""
         try:
-            self.client.activate_subscriptions()
+            await self.client.activate_subscriptions()
         except FailedToActivateO365Subscription as exp:
             self.log_exception(
                 exception=exp,
                 message="An exception occurred when trying to subscribe to Office365 events.",
             )
+
+    async def forward_next_batches(self, checkpoint: Checkpoint):
+        start_time = time.time()
+        start_pull_date = checkpoint.offset
+        end_pull_date = datetime.now(UTC)
+
+        for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
+            async for list_of_events in self.pull_content(start_date, end_date):
+                await self.send_events(list_of_events)
+
+        # get the ending time and compute the duration to forward the events
+        end_time = time.time()
+        batch_duration = end_time - start_time
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+
+        checkpoint.offset = end_pull_date
+
+        # compute the remaining sleeping time. If greater than 0, sleep
+        delta_sleep = self.frequency - batch_duration
+        if delta_sleep > 0:
+            await asyncio.sleep(delta_sleep)
+
+    async def forward_events_forever(self, checkpoint: Checkpoint):
+        while self.running:
+            await self.forward_next_batches(checkpoint)
+
+    async def collect_events(self):
+        await self.activate_subscriptions()
+
+        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
+
+        while self.running:
+            try:
+                await self.forward_events_forever(checkpoint)
+
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")
+
+        await self.client.close()
 
     def run(self):
         """Main execution thread
@@ -164,21 +139,8 @@ class Office365Connector(Connector):
         Then loop every 60 seconds, pull events using the Office 365 API and forward them.
         When stopped, the clear_cache is stopped and joined as well so that we wait for it to end gracefully.
         """
-        self.activate_subscriptions()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.collect_events())
 
-        while self.running:
-            start_time = time.time()
-            start_pull_date = self.last_pull_date
-            end_pull_date = datetime.now(UTC)
-
-            events = self.pull_content(start_pull_date, end_pull_date)
-            self.forward_events(events)
-
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="office365").observe(
-                time.time() - start_time
-            )
-
-            self.last_pull_date = end_pull_date
-            sleep(60)
-
-        self._executor.shutdown(wait=True)
+        loop.close()

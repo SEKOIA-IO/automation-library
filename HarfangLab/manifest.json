@@ -1,30 +1,30 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "url": {
-                "description": "URL of the HarfangLab instance",
-                "type": "string",
-                "format": "uri"
-            },
-            "api_token": {
-                "description": "Authentication token for the API",
-                "type": "string"
-            }
-        },
-        "required": [
-            "url",
-            "api_token"
-        ],
-        "title": "Arguments",
-        "type": "object",
-        "secrets": [
-            "api_token"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "url": {
+        "description": "URL of the HarfangLab instance",
+        "type": "string",
+        "format": "uri"
+      },
+      "api_token": {
+        "description": "Authentication token for the API",
+        "type": "string"
+      }
     },
-    "description": "HarfangLab is an Endpoint detection and response (EDR) solution certified by ANSSI since 2020",
-    "name": "HarfangLab",
-    "uuid": "8380240b-61a4-48b7-93e4-044a7ee2309b",
-    "slug": "harfanglab",
-    "version": "1.21"
+    "required": [
+      "url",
+      "api_token"
+    ],
+    "title": "Arguments",
+    "type": "object",
+    "secrets": [
+      "api_token"
+    ]
+  },
+  "description": "HarfangLab is an Endpoint detection and response (EDR) solution certified by ANSSI since 2020",
+  "name": "HarfangLab",
+  "uuid": "8380240b-61a4-48b7-93e4-044a7ee2309b",
+  "slug": "harfanglab",
+  "version": "1.22.0"
 }

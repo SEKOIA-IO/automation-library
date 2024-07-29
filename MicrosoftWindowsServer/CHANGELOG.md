@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.1.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-01-10 - 1.0.4
 
-### Change
+### Changed
 
 - move server configuration to trigger lvl
 

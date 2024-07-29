@@ -7,9 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-23 - 1.19.3
+
+### Fixed
+
+- Change the way the refresh interval is calculated to keep the datafeed active
+
+## 2024-07-22 - 1.19.2
+
+### Changed
+
+- Log on refresh url errors
+
+## 2024-05-28 - 1.19.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-03-18 - 1.18.1
+
+### Fixed
+
+- Change the way to paginate CrowdStrike responses
+- Add intermediate steps when deleting indicators
+
+## 2024-03-17 - 1.18.0
+
+### Added
+
+- Add method to remove expired indicators
+- Add method to remove old indicators
+
 ## 2024-02-21 - 1.17.4
 
-### Add
+### Added
 
 - Add some logs for http response
 
@@ -52,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed default refresh time
 - Fixed bug with an exception propagation
 
-## 2023-11-22 - 1.15
+## 2023-11-22 - 1.15.0
 
 ### Changed
 

@@ -1,0 +1,41 @@
+{
+  "description": "Get findings from a Bitsight",
+  "docker_parameters": "bitsight_findings",
+  "name": "[BETA] Fetch new findings from Bitsight",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "batch_limit": {
+        "type": "integer",
+        "description": "Maximum number of events to send in a single batch",
+        "default": 10000
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key"
+    ],
+    "title": "Bitsight findings",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "The findings from Bitsight"
+  },
+  "uuid": "1b7e8b57-71b0-49b1-8d04-d936b984b91c"
+}

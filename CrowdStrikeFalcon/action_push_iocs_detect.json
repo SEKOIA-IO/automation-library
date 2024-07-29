@@ -1,26 +1,31 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "stix_objects_path": {
-                "description": "Filepath of the STIX objects fetched from the collection",
-                "type": "string"
-            },
-            "sekoia_base_url": {
-                "description": "[Optional] Sekoia base url, used to generate direct links to IOCs",
-                "default": "https://app.sekoia.io",
-                "type": "string"
-            }
-        },
-        "required": [
-            "stix_objects_path"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "stix_objects_path": {
+        "description": "Filepath of the STIX objects fetched from the collection",
+        "type": "string"
+      },
+      "sekoia_base_url": {
+        "description": "[Optional] Sekoia base url, used to generate direct links to IOCs",
+        "default": "https://app.sekoia.io",
+        "type": "string"
+      },
+      "valid_for": {
+        "type": "integer",
+        "description": "If set, the playbook will remove IOCs that are older than valid_for days based on the Last modified date in CrowdStrike",
+        "minimum": 1
+      }
     },
-    "description": "Enable detections on the provided IOCs: md5 / sha256 file hashes, IPv4/v6 address, domains",
-    "docker_parameters": "push_iocs_detect",
-    "name": "Push IOCs for detection",
-    "results": {},
-    "uuid": "eb921379-3c53-4f64-a622-73e0b7ac99ed"
+    "required": [
+      "stix_objects_path"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Enable detections on the provided IOCs: md5 / sha256 file hashes, IPv4/v6 address, domains",
+  "docker_parameters": "push_iocs_detect",
+  "name": "Push IOCs for detection",
+  "results": {},
+  "uuid": "eb921379-3c53-4f64-a622-73e0b7ac99ed"
 }

@@ -26,7 +26,10 @@
       },
       "filter_id": {
         "description": "The Filter ID used to retrieve events",
-        "type": ["integer", "string"]
+        "type": [
+          "integer",
+          "string"
+        ]
       }
     },
     "required": [

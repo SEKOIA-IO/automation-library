@@ -1,0 +1,59 @@
+{
+  "description": "Get last alerts from Fastly WAF",
+  "docker_parameters": "fastly_waf",
+  "name": "Fetch new alerts from Fastly WAF [BETA]",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "email": {
+        "type": "string",
+        "description": "User's email"
+      },
+      "token": {
+        "type": "string",
+        "description": "API token"
+      },
+      "corp": {
+        "type": "string",
+        "description": "Corporation name"
+      },
+      "site": {
+        "type": "string",
+        "description": "Site name"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key",
+      "email",
+      "token",
+      "corp",
+      "site"
+    ],
+    "secrets": [
+      "token"
+    ],
+    "title": "The configuration to fetch new logs",
+    "type": "object"
+  },
+  "uuid": "46dcb5cc-d238-4449-89e7-322178e35b16"
+}

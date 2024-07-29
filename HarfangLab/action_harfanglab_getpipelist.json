@@ -1,52 +1,51 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "target_agents": {
-                "description": "Targeted agents identifier",
-                "type": "string"
-            },
-            "target_groups": {
-                "description": "Targeted groups identifier",
-                "type": "string"
-            }
-        },
-        "required": [],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "target_agents": {
+        "description": "Targeted agents identifier",
+        "type": "string"
+      },
+      "target_groups": {
+        "description": "Targeted groups identifier",
+        "type": "string"
+      }
     },
-    "description": "Get the list of named pipe on the systems",
-    "docker_parameters": "harfanglab_get_pipe_list",
-    "name": "List named pipes",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "id": {
-                "description": "Identifier of the job",
-                "type": "str"
-            },
-            "action": {
-                "description": "Name of job action",
-                "type": "str"
-            },
-            "creationtime": {
-                "description": "Creation date of the job",
-                "type": "string"
-            },
-            "parameters": {
-                "description": "Parameters of the job",
-                "type": "object"
-            }
-        },
-        "required": [
-            "id",
-            "action",
-            "creationtime",
-            "parameters"
-        ],
-        "title": "Results",
+    "required": [],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Get the list of named pipe on the systems",
+  "docker_parameters": "harfanglab_get_pipe_list",
+  "name": "List named pipes",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "id": {
+        "description": "Identifier of the job",
+        "type": "string"
+      },
+      "action": {
+        "description": "Name of job action",
+        "type": "string"
+      },
+      "creationtime": {
+        "description": "Creation date of the job",
+        "type": "string"
+      },
+      "parameters": {
+        "description": "Parameters of the job",
         "type": "object"
-
+      }
     },
-    "uuid": "a1151541-ab34-4d7c-80a1-b2e05f8e91ec"
+    "required": [
+      "id",
+      "action",
+      "creationtime",
+      "parameters"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "a1151541-ab34-4d7c-80a1-b2e05f8e91ec"
 }

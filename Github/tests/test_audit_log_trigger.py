@@ -1,8 +1,8 @@
 """Contains tests for AuditLogConnector."""
 
+from posixpath import join as urljoin
 from typing import Any
 from unittest.mock import MagicMock
-from posixpath import join as urljoin
 
 import pytest
 from aioresponses import aioresponses
@@ -45,6 +45,7 @@ def connector_with_api_key(symphony_storage, session_faker, intake_response):
     )
 
     trigger.configuration = {
+        "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
     }
 
@@ -76,30 +77,11 @@ def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake
     )
 
     trigger.configuration = {
+        "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
     }
 
     yield trigger
-
-
-@pytest.mark.asyncio
-async def test_connector_session_and_rate_limiter(symphony_storage):
-    """
-    Test AuditLogConnector session and rate limiter.
-
-    Args:
-        symphony_storage: str
-    """
-    assert AuditLogConnector._session is None
-    assert AuditLogConnector._rate_limiter is None
-
-    rate_limiter = AuditLogConnector.rate_limiter()
-
-    assert AuditLogConnector._rate_limiter == rate_limiter
-
-    async with AuditLogConnector.session() as session:
-        assert AuditLogConnector._rate_limiter == rate_limiter
-        assert AuditLogConnector._session == session
 
 
 @pytest.mark.asyncio
@@ -130,7 +112,7 @@ async def test_next_batch_with_api_key(connector_with_api_key, github_response, 
     with aioresponses() as mocked_responses:
         audit_logs_url = (
             connector_with_api_key.github_client.audit_logs_url
-            + "?order=asc&phrase=created%253A%253E{0}".format(connector_with_api_key.last_ts)
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_api_key.last_ts)
         )
 
         mocked_responses.get(
@@ -172,7 +154,7 @@ async def test_next_batch_with_pem_file(connector_with_pem_file, github_response
 
         audit_logs_url = (
             connector_with_pem_file.github_client.audit_logs_url
-            + "?order=asc&phrase=created%253A%253E{0}".format(connector_with_pem_file.last_ts)
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_pem_file.last_ts)
         )
 
         mocked_responses.get(

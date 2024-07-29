@@ -1,33 +1,33 @@
 {
-    "configuration": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "TEHTRIS",
-        "type": "object",
-        "properties": {
-            "apikey": {
-                "description": "The APIkey to authenticate call to the API",
-                "type": "string"
-            },
-            "tenant_id": {
-                "description": "The identifier of your tenant (most of the time, your tenant id is a trigram in the url of your TETHRIS instance; eg: https://{tenant_id}.tehtris.net)",
-                "type": "string"
-            },
-            "alternative_url": {
-                "description": "The alternative url to contact the TEHTRIS instance",
-                "type": "string"
-            }
-        },
-        "required": [
-            "apikey",
-            "tenant_id"
-        ],
-        "secrets": [
-            "apikey"
-        ]
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "TEHTRIS",
+    "type": "object",
+    "properties": {
+      "apikey": {
+        "description": "The APIkey to authenticate call to the API",
+        "type": "string"
+      },
+      "tenant_id": {
+        "description": "The identifier of your tenant (most of the time, your tenant id is a trigram in the url of your TETHRIS instance; eg: https://{tenant_id}.tehtris.net)",
+        "type": "string"
+      },
+      "alternative_url": {
+        "description": "The alternative url to contact the TEHTRIS instance",
+        "type": "string"
+      }
     },
-    "description": "[TEHTRIS](https://tehtris.com) is a cybersecurity company offering products designed to protect endpoints against knwon and unknown threats",
-    "name": "TEHTRIS",
-    "uuid": "1528d749-d353-4e38-ab1b-6e01d7595569",
-    "slug": "tehtris",
-    "version": "1.14.2"
+    "required": [
+      "apikey",
+      "tenant_id"
+    ],
+    "secrets": [
+      "apikey"
+    ]
+  },
+  "description": "[TEHTRIS](https://tehtris.com) is a cybersecurity company offering products designed to protect endpoints against knwon and unknown threats",
+  "name": "TEHTRIS",
+  "uuid": "1528d749-d353-4e38-ab1b-6e01d7595569",
+  "slug": "tehtris",
+  "version": "1.15.1"
 }

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-06-06 - 1.0.2
+
+### Fixed
+
+- Fix the way to compute the lag on events, when no events were fetched from the API
+
+## 2024-05-30 - 1.0.1
+
+### Fixed
+
+- Fix the way to compute the lag on events, when no events were fetched from the API
+
+## 2024-05-28 - 1.0.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-03-01 - 0.2.0
+
+### Added
+
+- Add connector for Fastly WAF Audit logs
+
 ## 2024-02-13 - 0.1.2
 
 ### Changed

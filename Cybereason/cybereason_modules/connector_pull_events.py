@@ -313,14 +313,11 @@ class CybereasonEventConnector(Connector):
             else:
                 yield from self.enrich_generic_malop(malop)
 
-        # save the most recent date
+        # save the most recent date and compute the lag
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
-
-        # compute the lag
-        now = int(time.time())
-        current_lag = now - int(most_recent_date_seen / 1000)
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+            current_lag = int(time.time() - (most_recent_date_seen / 1000))
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def next_batch(self):
         """
@@ -335,6 +332,8 @@ class CybereasonEventConnector(Connector):
         if len(batch_of_events) > 0:
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
             self.push_events_to_intakes(events=batch_of_events)
+        else:
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()

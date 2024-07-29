@@ -1,55 +1,59 @@
 {
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "query": {
-                "description": "Query to execute",
-                "type": "string"
-            },
-            "last_run": {
-                "description": "Date of the last run",
-                "type": "string"
-            },
-            "index": {
-                "description": "Name of the index to search",
-                "type": "string",
-                "enum": ["ipv4", "websites", "certificates"]
-            },
-            "fields": {
-                "description": "Fields to return",
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            },
-            "max_requests": {
-                "description": "Maximum number of requests to send to the API. Useful to avoid spending too much credits on the same query. 0 is no limit. Defaults to 1",
-                "type": "integer"
-            }
-        },
-        "required": [
-            "query",
-            "index"
-        ],
-        "title": "Arguments",
-        "type": "object"
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "query": {
+        "description": "Query to execute",
+        "type": "string"
+      },
+      "last_run": {
+        "description": "Date of the last run",
+        "type": "string"
+      },
+      "index": {
+        "description": "Name of the index to search",
+        "type": "string",
+        "enum": [
+          "ipv4",
+          "websites",
+          "certificates"
+        ]
+      },
+      "fields": {
+        "description": "Fields to return",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "max_requests": {
+        "description": "Maximum number of requests to send to the API. Useful to avoid spending too much credits on the same query. 0 is no limit. Defaults to 1",
+        "type": "integer"
+      }
     },
-    "description": "Search items from Censys API",
-    "docker_parameters": "censys-search",
-    "name": "Search",
-    "results": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-            "result_path": {
-                "description": "Path of results file",
-                "type": "string"
-            }
-        },
-        "required": [
-            "result_path"
-        ],
-        "title": "Results",
-        "type": "object"
+    "required": [
+      "query",
+      "index"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Search items from Censys API",
+  "docker_parameters": "censys-search",
+  "name": "Search",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result_path": {
+        "description": "Path of results file",
+        "type": "string"
+      }
     },
-    "uuid": "46d958ca-5965-4289-abb3-45e65865a1b9"
+    "required": [
+      "result_path"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "46d958ca-5965-4289-abb3-45e65865a1b9"
 }

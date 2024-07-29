@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-30 - 1.15.1
+
+### Fixed
+
+- Fix the way to compute the lag on events, when no events were fetched from the API
+
+## 2024-05-28 - 1.15.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
 ## 2024-02-13 - 1.14.2
 
 ### Changed
@@ -19,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add timeout to HTTP requests
 
-## 2023-11-22 - 1.13
+## 2023-11-22 - 1.13.0
 
 ### Changed
 
@@ -37,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - add more details when facing issues with responses from Tehtris
 
-## 2023-10-26 - 1.12
+## 2023-10-26 - 1.12.0
 
 ### Added
 

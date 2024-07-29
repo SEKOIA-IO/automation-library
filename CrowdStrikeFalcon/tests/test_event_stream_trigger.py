@@ -121,6 +121,36 @@ def test_refresh_stream(trigger):
         reader.refresh_stream(refresh_url)
 
 
+def test_refresh_stream_failed(trigger):
+    refresh_url = "https://my.fake.sekoia/refresh_url"
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            [
+                {
+                    "json": {
+                        "access_token": "foo-token",
+                        "token_type": "bearer",
+                        "expires_in": 1799,
+                    }
+                },
+                {"json": {}},
+            ],
+        )
+        mock.register_uri("POST", refresh_url, status_code=500, text="Internal error")
+        reader = EventStreamReader(
+            trigger,
+            "",
+            {"refreshActiveSessionInterval": "50", "refreshActiveSessionURL": "https://my.fake.sekoia/refresh_url"},
+            "sio-00000",
+        )
+
+        reader.refresh_stream(refresh_url)
+        assert trigger.log.called
+
+
 def test_read_stream(trigger):
     fake_stream = {
         "dataFeedURL": "https://firehose.eu-1.crowdstrike.com/sensors/entities/datafeed/v1/0?appId=sio-00000",

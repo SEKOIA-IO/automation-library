@@ -1,6 +1,7 @@
 # flake8: noqa: E402
 import os
 from datetime import datetime, timedelta
+from posixpath import join as urljoin
 
 from tenacity import Retrying, wait_exponential, stop_after_attempt
 
@@ -82,6 +83,8 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         api_key = self.module.configuration["api_key"]
         base_url = self.module.configuration["base_url"]
 
+        self.log(f"Base URL provided is {base_url}", level="info")
+
         self._validate_api_key(base_url, api_key)
 
         if not self._message_processor.is_alive():
@@ -155,6 +158,10 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             self.log("Invalid JSON message received from LiveAPI", level="error")
             return
 
+        if message.get("authenticated"):
+            # Ignore auth messages
+            return
+
         # We can only manage v2 events
         if str(message.get("metadata", {}).get("version")) != "2":
             self.log("Received event with version not handled by the trigger", level="info", event=message)
@@ -177,6 +184,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
 
     def _validate_api_key(self, base_url: str, api_key: str):
         """Ensure submitted APIKey is valid, raise a exception if not."""
+        url = urljoin(base_url, "api/v1/me").replace("/api/api", "/api")  # In case base_url ends with /api
         for attempt in Retrying(
             reraise=True,
             wait=wait_exponential(max=10),
@@ -184,7 +192,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         ):
             with attempt:
                 response = requests.get(
-                    f"{base_url}/v1/me",
+                    url,
                     headers={"Authorization": f"Bearer {api_key}", "User-Agent": user_agent()},
                 )
                 # Retry 5xx errors

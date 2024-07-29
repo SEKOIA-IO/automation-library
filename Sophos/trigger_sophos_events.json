@@ -28,7 +28,7 @@
         "description": "A list of type to exclude from the pulling",
         "type": "array",
         "items": {
-            "type": "string"
+          "type": "string"
         }
       }
     },

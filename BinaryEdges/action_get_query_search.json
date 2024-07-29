@@ -1,117 +1,119 @@
 {
-    "uuid": "902fb65d-2e04-44a0-b00c-67a159b185bd",
-    "name": "Search events",
-    "docker_parameters": "get-query/search",
-    "description": "Events based on a Query. List of recent events for the given query, including details of exposed ports and services. Can be used with [specific parameters](https://docs.binaryedge.io/image-search/) and/or full-text search.",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Search events",
-        "properties": {
-            "query": {
-                "in": "query",
-                "type": "string"
-            },
-            "page": {
-                "in": "query",
-                "type": "integer"
-            },
-            "only_ips": {
-                "in": "query",
-                "type": "integer"
-            }
-        },
-        "required": ["query"]
+  "uuid": "902fb65d-2e04-44a0-b00c-67a159b185bd",
+  "name": "Search events",
+  "docker_parameters": "get-query/search",
+  "description": "Events based on a Query. List of recent events for the given query, including details of exposed ports and services. Can be used with [specific parameters](https://docs.binaryedge.io/image-search/) and/or full-text search.",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Search events",
+    "properties": {
+      "query": {
+        "in": "query",
+        "type": "string"
+      },
+      "page": {
+        "in": "query",
+        "type": "integer"
+      },
+      "only_ips": {
+        "in": "query",
+        "type": "integer"
+      }
     },
-    "results": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string"
-            },
-            "total": {
-                "type": "integer"
-            },
-            "page": {
-                "type": "integer"
-            },
-            "pagesize": {
-                "type": "integer"
-            },
-            "events": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "origin": {
-                            "type": "object",
-                            "properties": {
-                                "type": {
-                                    "type": "string"
-                                },
-                                "module": {
-                                    "type": "string"
-                                },
-                                "country": {
-                                    "type": "string"
-                                },
-                                "ts": {
-                                    "type": "integer"
-                                },
-                                "ip": {
-                                    "type": "string"
-                                },
-                                "port": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "target": {
-                            "type": "object",
-                            "properties": {
-                                "ip": {
-                                    "type": "string"
-                                },
-                                "port": {
-                                    "type": "integer"
-                                },
-                                "protocol": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "result": {
-                            "type": "object",
-                            "properties": {
-                                "data": {
-                                    "type": "object",
-                                    "properties": {
-                                        "service": {
-                                            "type": "object",
-                                            "properties": {
-                                                "name": {
-                                                    "type": "string"
-                                                },
-                                                "method": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        },
-                                        "state": {
-                                            "type": "object",
-                                            "properties": {
-                                                "state": {
-                                                    "type": "string"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+    "required": [
+      "query"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "page": {
+        "type": "integer"
+      },
+      "pagesize": {
+        "type": "integer"
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "origin": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "module": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string"
+                },
+                "ts": {
+                  "type": "integer"
+                },
+                "ip": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer"
                 }
+              }
+            },
+            "target": {
+              "type": "object",
+              "properties": {
+                "ip": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer"
+                },
+                "protocol": {
+                  "type": "string"
+                }
+              }
+            },
+            "result": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "service": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "method": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
+          }
         }
+      }
     }
+  }
 }

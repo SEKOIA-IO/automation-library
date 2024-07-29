@@ -1,21 +1,22 @@
 {
-    "uuid": "2f29eed3-be01-4222-871f-cdf74cb199b5",
-    "name": "Delete an asset",
-    "docker_parameters": "delete-assets/{uuid}",
-    "description": "Delete the requested asset",
-    "arguments": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "title": "Delete an asset",
-        "properties": {
-            "uuid": {
-                "type": "string",
-                "in": "path",
-                "description": "The identifier of the asset"
-            }
-        },
-        "required": [
-            "uuid"
-        ]
-    }
+  "uuid": "2f29eed3-be01-4222-871f-cdf74cb199b5",
+  "name": "Delete an asset",
+  "docker_parameters": "delete-assets/{uuid}",
+  "description": "Delete the requested asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Delete an asset",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path",
+        "description": "The identifier of the asset"
+      }
+    },
+    "required": [
+      "uuid"
+    ]
+  },
+  "results": {}
 }

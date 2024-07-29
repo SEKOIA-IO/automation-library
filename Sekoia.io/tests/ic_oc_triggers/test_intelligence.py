@@ -1,11 +1,10 @@
 import os
 import time
 from threading import Thread
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, patch
 import pytest
 import requests_mock
 from requests import Response
-from sekoia_automation.storage import write
 
 from sekoiaio.triggers.intelligence import (
     FeedConsumptionTrigger,
@@ -38,9 +37,19 @@ def trigger(data_storage):
 
 def test_url_generation(trigger):
     expected_url = (
-        "https://api.sekoia.io/v2/inthreat/collections/"
+        "https://api.sekoia.io/api/v2/inthreat/collections/"
         "d6092c37-d8d7-45c3-8aff-c4dc26030608/objects"
         "?limit=200&include_revoked=False&skip_expired=true"
+    )
+    assert expected_url == trigger.url
+
+
+def test_url_generation_modified_after(trigger):
+    trigger.configuration["modified_after"] = "2021-09-01T00:00:00Z"
+    expected_url = (
+        "https://api.sekoia.io/api/v2/inthreat/collections/"
+        "d6092c37-d8d7-45c3-8aff-c4dc26030608/objects"
+        "?limit=200&include_revoked=False&skip_expired=true&modified_after=2021-09-01T00:00:00Z"
     )
     assert expected_url == trigger.url
 
