@@ -12,6 +12,7 @@ sekoia-automation-sdk = { version = "^1.13.0", extras = ["all"] }
 async-lru = "^2.0.2"
 aiohttp = "^3.8.5"
 aiolimiter = "^1.1.0"
+aiohttp-retry = "^2.8.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
