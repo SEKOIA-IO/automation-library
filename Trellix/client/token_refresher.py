@@ -160,6 +160,15 @@ class TrellixTokenRefresher(object):
 
             await self._schedule_token_refresh(self._token.token.expires_in)
 
+    def _compute_refresh_time(self, expires_in: int) -> int:
+        """
+        Compute a refresh intervale with a safety margin
+        This margin is depends on the refresh interval and a maximum of five minutes.
+        The refresh interval is a minimum of 30 seconds
+        """
+        delta = min(300, int(expires_in / 6))
+        return max(30, expires_in - delta)
+
     async def _schedule_token_refresh(self, expires_in: int) -> None:
         """
         Schedule token refresh.
@@ -170,7 +179,7 @@ class TrellixTokenRefresher(object):
         await self.close()
 
         async def _refresh() -> None:
-            await asyncio.sleep(expires_in)
+            await asyncio.sleep(self._compute_refresh_time(expires_in))
             await self.refresh_token()
 
         self._token_refresh_task = asyncio.create_task(_refresh())
