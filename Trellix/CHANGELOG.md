@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-29 - 1.8.4
+
+### Changed
+
+- add a safety margin for the refresh token
+
+### Fixed
+
+- add retries on failed http requests
+- handle 429 HTTP responses
+
 ## 2024-07-23 - 1.8.3
 
 ### Fixed
