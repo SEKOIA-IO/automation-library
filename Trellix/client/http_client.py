@@ -4,9 +4,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Optional, Set
 
-from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
-from aiohttp_retry import RetryClient
+from aiohttp_retry import RetryClient, ExponentialRetry, RetryOptionsBase
 from yarl import URL
 
 from .schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
@@ -17,13 +16,14 @@ from .schemas.attributes.epo_events import EpoEventAttributes
 from .schemas.token import Scope
 from .schemas.trellix_response import TrellixResponse
 from .token_refresher import TrellixTokenRefresher
+from .retry import RetryWithRateLimiter
 
 
 class TrellixHttpClient(object):
     """Class for Trellix http client."""
 
     _client: Optional["TrellixHttpClient"] = None
-    _session: ClientSession | None = None
+    _session: RetryClient | None = None
     _rate_limiter: AsyncLimiter | None = None
 
     def __init__(
@@ -93,15 +93,15 @@ class TrellixHttpClient(object):
 
     @classmethod
     @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[ClientSession, None]:
+    async def session(cls) -> AsyncGenerator[RetryClient, None]:
         """
         Get configured session with rate limiter.
 
         Yields:
-            AsyncGenerator[ClientSession, None]:
+            AsyncGenerator[RetryClient, None]:
         """
         if cls._session is None:
-            cls._session = RetryClient()
+            cls._session = RetryClient(retry_options=RetryWithRateLimiter(ExponentialRetry(statuses={429})))
 
         if cls._rate_limiter:
             async with cls._rate_limiter:
