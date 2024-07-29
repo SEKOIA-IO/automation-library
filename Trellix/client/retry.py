@@ -1,3 +1,5 @@
+from typing import Any
+
 from aiohttp_retry import RetryOptionsBase
 from aiohttp import ClientResponse
 
@@ -13,7 +15,7 @@ class RetryWithRateLimiter(RetryOptionsBase):
     def __init__(self, retry_options: RetryOptionsBase):
         self._wrapped_retry_options = retry_options
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._wrapped_retry_options, name)
 
     def get_timeout(self, attempt: int, response: ClientResponse | None = None) -> float:
