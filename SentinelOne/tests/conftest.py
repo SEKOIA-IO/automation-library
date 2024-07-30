@@ -38,25 +38,17 @@ def sentinelone_hostname():
 @pytest.fixture(scope="session")
 def sentinelone_module(sentinelone_hostname):
     module = SentinelOneModule()
-    module.configuration = SentinelOneConfiguration(hostname=sentinelone_hostname, api_token="1234567890")
+    module.configuration = {"hostname": sentinelone_hostname, "api_token": "1234567890"}
     return module
 
 
 @pytest.fixture
-def connector(symphony_storage):
-    connector = SentinelOneLogsConnector(data_path=symphony_storage)
-    connector.configuration = SentinelOneLogsConnectorConfiguration(
-        client_id="foo",
-        client_secret="bar",
-        api_key="baz",
-        intake_uuid="0000",
-        management_domain="management.domain",
-        uuid=uuid.uuid4(),
-        intake_key="qux",
-    )
+def connector(symphony_storage, sentinelone_module):
+    connector = SentinelOneLogsConnector(module=sentinelone_module, data_path=symphony_storage)
+    connector.configuration = {"intake_key": "intake_key", "frequency": 60}
 
-    connector.module.configuration = {}
     connector.log = Mock()
+    connector.push_events_to_intakes = Mock()
 
     yield connector
 
@@ -133,7 +125,6 @@ def threat_2():
 def activity_consumer(connector):
     consumer = SentinelOneActivityLogsConsumer(connector)
     consumer.management_client = Mock()
-    consumer.push_events_to_intakes = Mock()
     consumer.start = Mock()
     consumer.is_alive = Mock(return_value=False)
 
@@ -144,7 +135,6 @@ def activity_consumer(connector):
 def threat_consumer(connector):
     consumer = SentinelOneThreatLogsConsumer(connector)
     consumer.management_client = Mock()
-    consumer.push_events_to_intakes = Mock()
     consumer.start = Mock()
     consumer.is_alive = Mock(return_value=False)
 

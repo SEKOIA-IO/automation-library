@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
 
