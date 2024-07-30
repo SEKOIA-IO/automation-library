@@ -13,6 +13,9 @@ from . import MimecastModule
 from .client import ApiClient
 from .helpers import download_batches, get_upper_second
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .logging import get_logger
+
+logger = get_logger()
 
 
 class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
@@ -108,21 +111,19 @@ class MimecastSIEMWorker(Thread):
 
             batch_urls = [item["url"] for item in result.get("value", [])]
             events = download_batches(urls=batch_urls)
+            logger.debug("Collected events", nb_url=len(events))
 
             # The cursor is a date, not a datetime. Thus, we have to download all events from the
             # day's start and then filter out all events with timestamps before `from_date`
             events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
+            logger.debug("Filtered events", nb_url=len(events))
 
             if len(events) > 0:
                 INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                 yield events
 
             else:
-                self.log(
-                    message=f"{self.log_type}: The last page of events was empty. "
-                    f"Waiting {self.connector.configuration.frequency}s before fetching next page",
-                    level="info",
-                )
+                logger.info("The last page of events was empty", log_type=self.log_type)
                 return
 
             next_page_token = result.get("@nextPage")
@@ -187,7 +188,7 @@ class MimecastSIEMWorker(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-        self.log(message=f"{self.log_type}: Fetched and forwarded events in {batch_duration} seconds", level="info")
+        logger.info("Fetched and forwarded events", log_type=self.log_type, duration=batch_duration)
         FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep
