@@ -1,7 +1,6 @@
 import os
 import queue
 import time
-from pathlib import Path
 from typing import Any, Optional
 
 from sekoia_automation.connector import Connector
@@ -18,7 +17,9 @@ class RetarusConnector(Connector):
         super().__init__(*args, **kwargs)
 
         # create the events queue
-        self.events_queue: queue.Queue = queue.Queue(maxsize=int(os.environ.get("QUEUE_SIZE", 10000)))
+        self.events_queue: queue.Queue = queue.Queue(
+            maxsize=int(os.environ.get("QUEUE_SIZE", 10000))
+        )
 
         # Arguments for the polling of events from the queue
         self.queue_get_limit = 10
@@ -30,14 +31,18 @@ class RetarusConnector(Connector):
         self.log(message="Retarus Events Trigger has started", level="info")
 
         # start the consumer
-        consumer = RetarusEventsConsumer(self.configuration, self.events_queue, self.log, self.log_exception)
+        consumer = RetarusEventsConsumer(
+            self.configuration, self.events_queue, self.log, self.log_exception
+        )
         consumer.start()
 
         while self.running:
             # if the consumer is dead, we spawn a new one
             if not consumer.is_alive() and consumer.is_running:
                 self.log(message="Restart event consumer", level="warning")
-                consumer = RetarusEventsConsumer(self.configuration, self.events_queue, self.log, self.log_exception)
+                consumer = RetarusEventsConsumer(
+                    self.configuration, self.events_queue, self.log, self.log_exception
+                )
                 consumer.start()
 
             # Send events to Symphony
@@ -47,7 +52,9 @@ class RetarusConnector(Connector):
                     message="Forward an event to the intake",
                     level="info",
                 )
-                OUTGOING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                OUTGOING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(
+                    len(events)
+                )
                 self.push_events_to_intakes(events=events)
 
             # Wait 5 seconds for the next supervision
@@ -77,7 +84,11 @@ class RetarusConnector(Connector):
         i: int = 0
         while len(result) < self.queue_get_limit and i < self.queue_get_retries:
             try:
-                result.append(self.events_queue.get(block=self.queue_get_block, timeout=self.queue_get_timeout))
+                result.append(
+                    self.events_queue.get(
+                        block=self.queue_get_block, timeout=self.queue_get_timeout
+                    )
+                )
             except queue.Empty:
                 i += 1
                 self.log(message="Empty queue", level="DEBUG")
