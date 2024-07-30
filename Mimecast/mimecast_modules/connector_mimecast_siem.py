@@ -136,6 +136,7 @@ class MimecastSIEMWorker(Thread):
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
+        current_lag: int = 0
 
         try:
             for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -157,9 +158,11 @@ class MimecastSIEMWorker(Thread):
                 # save in context the most recent date seen
                 self.most_recent_date_seen = most_recent_date_seen
 
-        now = datetime.now(timezone.utc)
-        current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(int(current_lag.total_seconds()))
+                # Update the current lag only if the most_recent_date_seen was updated
+                delta_time = datetime.now(timezone.utc) - most_recent_date_seen
+                current_lag = int(delta_time.total_seconds())
+
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(current_lag)
 
     def next_batch(self) -> None:
         # save the starting time
@@ -183,7 +186,6 @@ class MimecastSIEMWorker(Thread):
                     message=f"{self.log_type}: No events to forward",
                     level="info",
                 )
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
