@@ -33,8 +33,8 @@ class RetarusEventsConsumer(Thread):
     def create_websocket(self) -> WebSocketApp:
         """Creates a WebSocket inside a Thread
 
-        Returns:
-            Tuple[WebSocketApp, Thread]: The websocket we opened, The thread in which it will run
+        Return:
+            WebSocketApp: The websocket we opened
         """
         return WebSocketApp(
             url=self.configuration.ws_url,
@@ -76,7 +76,9 @@ class RetarusEventsConsumer(Thread):
 
     def run(self):
         """Start the websocket thread then wait for the stop event to be set and close the websocket when it happens"""
-        self.log(message=f"Connection to stream {self.configuration.ws_url}", level="info")
+        self.log(
+            message=f"Connection to stream {self.configuration.ws_url}", level="info"
+        )
         while self.is_running:
             self.websocket = self.create_websocket()
             teardown = self.websocket.run_forever()
@@ -86,7 +88,9 @@ class RetarusEventsConsumer(Thread):
                 return
 
             if not teardown:
-                self.log("Websocket event loop stopped for an unknown reason", level="error")
+                self.log(
+                    "Websocket event loop stopped for an unknown reason", level="error"
+                )
 
             self.log("Failure in the websocket event loop", level="warning")
 
