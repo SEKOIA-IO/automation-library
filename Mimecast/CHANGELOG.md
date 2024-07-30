@@ -6,3 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## 2024-07-30 - 1.0.1
+
+### Changed
+
+- Changed the way to log some information
+- Changed the way to log message when no events are forwarded
+
+### Fixed
+
+- Fixed the way to compute the events lag
+
+## 2024-06-14 - 1.0.0
+
+### Added
+
+- Initial version of the connector
