@@ -10,7 +10,7 @@ INCOMING_MESSAGES = Counter(
     name="collected_messages",
     documentation="Number of messages consumed from the event_hub",
     namespace=prom_namespace,
-    labelnames=["intake_key"],
+    labelnames=["intake_key", "datasource"],
 )
 
 OUTCOMING_EVENTS = Counter(
