@@ -169,6 +169,7 @@ class MimecastSIEMWorker(Thread):
         batch_start_time = time.time()
 
         # Fetch next batch
+        has_forwarded_events: bool = False
         for events in self.fetch_events():
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
@@ -180,12 +181,14 @@ class MimecastSIEMWorker(Thread):
                 )
                 OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
+                has_forwarded_events = True
 
-            else:
-                self.log(
-                    message=f"{self.log_type}: No events to forward",
-                    level="info",
-                )
+        # log if no events were collected and forwarded
+        if not has_forwarded_events:
+            self.log(
+                message=f"{self.log_type}: No events to forward",
+                level="info",
+            )
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
