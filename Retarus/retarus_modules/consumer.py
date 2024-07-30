@@ -30,6 +30,10 @@ class RetarusEventsConsumer(Thread):
         """Sets the stop event"""
         self._stop_event.set()
 
+        # close the websocket
+        if self.websocket:
+            self.websocket.close()
+
     def create_websocket(self) -> WebSocketApp:
         """Creates a WebSocket inside a Thread
 
