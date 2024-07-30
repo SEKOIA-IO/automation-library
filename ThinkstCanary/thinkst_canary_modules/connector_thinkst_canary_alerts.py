@@ -144,6 +144,7 @@ class ThinkstCanaryAlertsConnector(Connector):
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_id_seen = self.from_id
         most_recent_timestamp_seen = None  # for the event lag calculation
+        current_lag: int = 0
 
         try:
             for page in self.fetch_pages(most_recent_id_seen):
@@ -170,10 +171,12 @@ class ThinkstCanaryAlertsConnector(Connector):
                     cache["most_recent_id_seen"] = most_recent_id_seen
 
         if most_recent_timestamp_seen:
-            # no events - no lag
-            now = datetime.now(timezone.utc)
-            current_lag = now - most_recent_timestamp_seen
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+            # Update the current lag only if the most_recent_timestamp_seen was defined
+            delta_time = datetime.now(timezone.utc) - most_recent_timestamp_seen
+            current_lag = int(delta_time.total_seconds())
+
+        # Update the events lag
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
     def next_batch(self) -> None:
         # save the starting time
