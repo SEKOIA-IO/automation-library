@@ -13,6 +13,9 @@ from . import MimecastModule
 from .client import ApiClient
 from .helpers import download_batches, get_upper_second
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .logging import get_logger
+
+logger = get_logger()
 
 
 class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
@@ -108,21 +111,19 @@ class MimecastSIEMWorker(Thread):
 
             batch_urls = [item["url"] for item in result.get("value", [])]
             events = download_batches(urls=batch_urls)
+            logger.debug("Collected events", nb_url=len(events))
 
             # The cursor is a date, not a datetime. Thus, we have to download all events from the
             # day's start and then filter out all events with timestamps before `from_date`
             events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
+            logger.debug("Filtered events", nb_url=len(events))
 
             if len(events) > 0:
                 INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                 yield events
 
             else:
-                self.log(
-                    message=f"{self.log_type}: The last page of events was empty. "
-                    f"Waiting {self.connector.configuration.frequency}s before fetching next page",
-                    level="info",
-                )
+                logger.info("The last page of events was empty", log_type=self.log_type)
                 return
 
             next_page_token = result.get("@nextPage")
@@ -135,6 +136,7 @@ class MimecastSIEMWorker(Thread):
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = self.from_date
+        current_lag: int = 0
 
         try:
             for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -156,15 +158,18 @@ class MimecastSIEMWorker(Thread):
                 # save in context the most recent date seen
                 self.most_recent_date_seen = most_recent_date_seen
 
-        now = datetime.now(timezone.utc)
-        current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(int(current_lag.total_seconds()))
+                # Update the current lag only if the most_recent_date_seen was updated
+                delta_time = datetime.now(timezone.utc) - most_recent_date_seen
+                current_lag = int(delta_time.total_seconds())
+
+        EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(current_lag)
 
     def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time.time()
 
         # Fetch next batch
+        has_forwarded_events: bool = False
         for events in self.fetch_events():
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
@@ -176,18 +181,19 @@ class MimecastSIEMWorker(Thread):
                 )
                 OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key).inc(len(batch_of_events))
                 self.connector.push_events_to_intakes(events=batch_of_events)
+                has_forwarded_events = True
 
-            else:
-                self.log(
-                    message=f"{self.log_type}: No events to forward",
-                    level="info",
-                )
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
+        # log if no events were collected and forwarded
+        if not has_forwarded_events:
+            self.log(
+                message=f"{self.log_type}: No events to forward",
+                level="info",
+            )
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
-        self.log(message=f"{self.log_type}: Fetched and forwarded events in {batch_duration} seconds", level="info")
+        logger.info("Fetched and forwarded events", log_type=self.log_type, duration=batch_duration)
         FORWARD_EVENTS_DURATION.labels(intake_key=self.connector.configuration.intake_key).observe(batch_duration)
 
         # compute the remaining sleeping time. If greater than 0, sleep

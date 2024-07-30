@@ -12,6 +12,7 @@ requests-ratelimiter = "^0.6.0"
 python-dateutil = "^2.9.0.post0"
 orjson = "^3.10.3"
 aiohttp = "^3.9.5"
+structlog = "^24.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
