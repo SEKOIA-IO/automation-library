@@ -58,8 +58,6 @@ def test_forward_events_integration(symphony_storage):
     time.sleep(20)
     trigger.stop()
     thread.join()
-    calls = [
-        call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list
-    ]
+    calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
     trigger.log_exception.assert_not_called()
     assert len(calls) > 0
