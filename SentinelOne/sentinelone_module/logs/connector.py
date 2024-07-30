@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
+from logging import getLogger
 from threading import Event, Thread
 from time import sleep, time
 
@@ -15,10 +16,12 @@ from sekoia_automation.connector import Connector
 from sekoia_automation.storage import PersistentJSON
 
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
-from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
 
 # Declare prometheus metrics
 prom_namespace = "symphony_module_common"
+
+logger = getLogger()
 
 
 class SentinelOneLogsConsumer(Thread):
@@ -32,6 +35,7 @@ class SentinelOneLogsConsumer(Thread):
         self.context = PersistentJSON("context.json", connector._data_path)
         self.log = connector.log
         self.configuration = connector.configuration
+        self.connector = connector
         self.module = connector.module
 
         self._stop_event = Event()
@@ -56,9 +60,7 @@ class SentinelOneLogsConsumer(Thread):
         Returns:
             Management: SentinelOne client instance
         """
-        return Management(
-            hostname=self.module.configuration["hostname"], api_token=self.module.configuration["api_token"]
-        )
+        return Management(hostname=self.module.configuration.hostname, api_token=self.module.configuration.api_token)
 
     @property
     def _cache_last_event_date(self) -> datetime:
@@ -88,38 +90,40 @@ class SentinelOneLogsConsumer(Thread):
         return last_event_date
 
     @staticmethod
-    def _serialize_events(events: list[Activity] | list[Threat]) -> list:
+    def _serialize_events(events: list[Activity] | list[Threat] | list[dict]) -> list:
         """Serializes a list of events by generating a dict and converting it to JSON
 
         Args:
-            events (list[Activity] | list[Threat]): List of events to serialize
+            events (list[Activity] | list[Threat] | list[dict]): List of events to serialize
 
         Returns:
             list: List of json dumped as strings
         """
         serialized_events = []
         for event in events:
-            non_empty_json = {k: v for (k, v) in event.__dict__.items() if v is not None}
+            event_dict = event if isinstance(event, dict) else event.__dict__
+            non_empty_json = {k: v for (k, v) in event_dict.items() if v is not None}
             non_empty_json_str = json.dumps(non_empty_json)
             serialized_events.append(non_empty_json_str)
         return serialized_events
 
-    def _get_latest_event_timestamp(self, events: list[Activity] | list[Threat]) -> datetime:
+    def _get_latest_event_timestamp(self, events: list[Activity] | list[Threat] | list[dict]) -> datetime:
         """Searches for the most recent timestamp from a list of events
 
         Args:
-            events (list[Activity] | list[Threat]): List of events to
+            events (list[Activity] | list[Threat] | list[dict]): List of events to
 
         Returns:
             datetime: Timestamp of the most recent event of the list
         """
         latest_event_datetime: datetime | None = None
         for event in events:
-            if event.createdAt is not None:
+            event_dict = event if isinstance(event, dict) else event.__dict__
+            if event_dict.get("createdAt") is not None:
                 if latest_event_datetime is None:
-                    latest_event_datetime = datetime.fromisoformat(event.createdAt)
+                    latest_event_datetime = datetime.fromisoformat(event_dict["createdAt"])
                 else:
-                    event_created_at = datetime.fromisoformat(event.createdAt)
+                    event_created_at = datetime.fromisoformat(event_dict["createdAt"])
                     if event_created_at > latest_event_datetime:
                         latest_event_datetime = event_created_at
 
@@ -131,6 +135,27 @@ class SentinelOneLogsConsumer(Thread):
     def pull_events(self):
         raise NotImplementedError
 
+    def next_batch(self):
+        # save the starting time
+        batch_start_time = time()
+
+        # get the batch
+        self.pull_events()
+
+        # get the ending time and compute the duration to fetch the events
+        batch_end_time = time()
+        batch_duration = int(batch_end_time - batch_start_time)
+        logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
+            batch_duration
+        )
+
+        # compute the remaining sleeping time. If greater than 0, sleep
+        delta_sleep = self.configuration.frequency - batch_duration
+        if delta_sleep > 0:
+            logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
+            sleep(delta_sleep)
+
     def run(self):
         """Main loop for the connector
 
@@ -140,21 +165,13 @@ class SentinelOneLogsConsumer(Thread):
         try:
             self.management_client.system.get_info()
         except UnauthorizedException as unauthorized_exception:
-            self.log(f"Connector {self.configuration.uuid} unauthorized to retrieve system info", level="warning")
+            self.log(f"Connector is unauthorized to retrieve system info", level="warning")
             raise unauthorized_exception
 
         while self.running:
-            start_time = time()
+            self.next_batch()
 
-            self.pull_events()
-
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
-                time() - start_time
-            )
-
-            sleep(60)
-
-        self._executor.shutdown(wait=True)
+        self.connector._executor.shutdown(wait=True)
 
 
 class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
@@ -166,12 +183,15 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
 
-        while True:
+        while self.running:
             # Fetch activities
             activities = self.management_client.activities.get(query_filter)
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
+                len(activities.data)
+            )
 
             # Push events
-            self.push_events_to_intakes(self._serialize_events(activities.data))
+            self.connector.push_events_to_intakes(self._serialize_events(activities.data))
 
             # Update context with latest event date
             latest_event_timestamp = self._get_latest_event_timestamp(activities.data)
@@ -200,14 +220,14 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
 
-        while True:
+        while self.running:
             # Fetch threats
             threats = self.management_client.client.get(endpoint="threats", params=query_filter.filters)
 
             # Push events
-            self.push_events_to_intakes(self._serialize_events(threats.data))
+            self.connector.push_events_to_intakes(self._serialize_events(threats.data))
 
-            # Update context with latest event date
+            # Update context with the latest event date
             latest_event_timestamp = self._get_latest_event_timestamp(threats.data)
             with self.context as cache:
                 cache["last_event_date"] = latest_event_timestamp.isoformat()

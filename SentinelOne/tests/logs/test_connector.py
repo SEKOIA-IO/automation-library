@@ -104,7 +104,7 @@ def test_run_consumer_fail_get_info(activity_consumer):
     with pytest.raises(UnauthorizedException):
         activity_consumer.run()
     activity_consumer.log.assert_called_once_with(
-        f"Connector {activity_consumer.configuration.uuid} unauthorized to retrieve system info", level="warning"
+        f"Connector is unauthorized to retrieve system info", level="warning"
     )
 
 

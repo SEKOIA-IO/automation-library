@@ -17,7 +17,7 @@ OUTCOMING_EVENTS = Counter(
     name="forwarded_events",
     documentation="Number of events forwarded to Sekoia.io",
     namespace=prom_namespace,
-    labelnames=["intake_key"],
+    labelnames=["intake_key", "datasource"],
 )
 
 FORWARD_EVENTS_DURATION = Histogram(
