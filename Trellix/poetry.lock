@@ -162,6 +162,20 @@ yarl = ">=1.0,<2.0"
 speedups = ["Brotli", "aiodns", "brotlicffi"]
 
 [[package]]
+name = "aiohttp-retry"
+version = "2.8.3"
+description = "Simple retry client for aiohttp"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "aiohttp_retry-2.8.3-py3-none-any.whl", hash = "sha256:3aeeead8f6afe48272db93ced9440cf4eda8b6fd7ee2abb25357b7eb28525b45"},
+    {file = "aiohttp_retry-2.8.3.tar.gz", hash = "sha256:9a8e637e31682ad36e1ff9f8bcba912fcfc7d7041722bc901a4b948da4d71ea9"},
+]
+
+[package.dependencies]
+aiohttp = "*"
+
+[[package]]
 name = "aioitertools"
 version = "0.11.0"
 description = "itertools and builtins for AsyncIO and mixed iterables"
@@ -2908,4 +2922,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "0dd321521e64575f30bb02f531a1dc5ea365618f74d8085050375631f99ba05b"
+content-hash = "176937bc458df6ff12915d30ad4e04003cd302519cb8d5e55f146b418d801f00"
