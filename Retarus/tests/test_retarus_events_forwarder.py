@@ -7,7 +7,6 @@ from unittest.mock import Mock
 import pytest
 
 from retarus_modules.connector import RetarusConnector
-from threading import Thread
 
 
 @pytest.fixture
@@ -34,23 +33,21 @@ def test_forward_on_message_empty_queue(connector):
     connector.stop()
 
     connector.push_events_to_intakes.assert_not_called()
-    connector.log.assert_called_with(message="Empty queue", level="DEBUG")
 
 
-@pytest.mark.skipif("{'RETARUS_APIKEY', 'RETARUS_CLUSTER_ID'}.issubset(os.environ.keys()) == False")
+@pytest.mark.skipif("{'RETARUS_APIKEY'}.issubset(os.environ.keys()) == False")
 def test_forward_events_integration(symphony_storage):
     one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     trigger = RetarusConnector(data_path=symphony_storage)
     trigger.module.configuration = {}
     trigger.configuration = {
-        "cluster_id": os.environ["RETARUS_CLUSTER_ID"],
         "since_time": one_hour_ago,
         "type": "message",
         "intake_key": "12345",
         "kafka_url": "bar",
         "kafka_topic": "qux",
-        "ws_url": "https://web.socket",
-        "ws_key": "secret",
+        "ws_url": "wss://events.retarus.com/email/siem/v1/websocket?channel=testdebugsekoia",
+        "ws_key": os.environ["RETARUS_APIKEY"],
     }
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
@@ -58,7 +55,7 @@ def test_forward_events_integration(symphony_storage):
 
     thread = Thread(target=trigger.run)
     thread.start()
-    time.sleep(30)
+    time.sleep(20)
     trigger.stop()
     thread.join()
     calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]

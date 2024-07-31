@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-30 - 1.1.2
+
+### Fixed
+
+- Fix the connector's retry mechanism when it encounters an error
+
 ## 2024-07-19 - 1.1.1
 
 ### Added

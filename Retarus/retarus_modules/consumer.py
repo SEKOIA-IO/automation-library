@@ -1,8 +1,7 @@
 from queue import Queue
 from threading import Event, Thread
-from typing import Tuple, Callable
+from typing import Callable
 
-import orjson
 from websocket import WebSocketApp, WebSocketTimeoutException
 
 from retarus_modules.configuration import RetarusConfig
@@ -11,7 +10,13 @@ from retarus_modules.configuration import RetarusConfig
 class RetarusEventsConsumer(Thread):
     """Handler for receiving events from a websocket"""
 
-    def __init__(self, configuration: RetarusConfig, queue: Queue, logger: Callable, logger_exception: Callable):
+    def __init__(
+        self,
+        configuration: RetarusConfig,
+        queue: Queue,
+        logger: Callable,
+        logger_exception: Callable,
+    ):
         super().__init__()
         self.queue = queue
         self.configuration = configuration
@@ -25,23 +30,23 @@ class RetarusEventsConsumer(Thread):
         """Sets the stop event"""
         self._stop_event.set()
 
-    def create_websocket(self) -> Tuple[WebSocketApp, Thread]:
+        # close the websocket
+        if self.websocket:
+            self.websocket.close()
+
+    def create_websocket(self) -> WebSocketApp:
         """Creates a WebSocket inside a Thread
 
-        Returns:
-            Tuple[WebSocketApp, Thread]: The websocket we opened, The thread in which it will run
+        Return:
+            WebSocketApp: The websocket we opened
         """
-        websocket = WebSocketApp(
+        return WebSocketApp(
             url=self.configuration.ws_url,
             header=[f"Authorization: Bearer {self.configuration.ws_key}"],
             on_message=self.on_message,
             on_error=self.on_error,
             on_close=self.on_close,
         )
-        websocket_thread = Thread(target=websocket.run_forever)
-        websocket_thread.daemon = True
-
-        return websocket, websocket_thread
 
     def on_message(self, _, event: str) -> None:
         """Callback method called when the websocket receives a message
@@ -76,13 +81,18 @@ class RetarusEventsConsumer(Thread):
     def run(self):
         """Start the websocket thread then wait for the stop event to be set and close the websocket when it happens"""
         self.log(message=f"Connection to stream {self.configuration.ws_url}", level="info")
+        while self.is_running:
+            self.websocket = self.create_websocket()
+            teardown = self.websocket.run_forever()
 
-        websocket, websocket_thread = self.create_websocket()
-        websocket_thread.start()
+            # The worker is stopping, exit here
+            if not self.is_running:
+                return
 
-        self._stop_event.wait()
+            if not teardown:
+                self.log("Websocket event loop stopped for an unknown reason", level="error")
 
-        websocket.close()
+            self.log("Failure in the websocket event loop", level="warning")
 
     @property
     def is_running(self) -> bool:

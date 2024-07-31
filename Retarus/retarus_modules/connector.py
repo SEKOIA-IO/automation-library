@@ -1,7 +1,6 @@
 import os
 import queue
 import time
-from pathlib import Path
 from typing import Any, Optional
 
 from sekoia_automation.connector import Connector
