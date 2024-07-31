@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-31 - 1.8.5
+
+### Added
+
+- add frequency parameter with connectors pause
+- add a daily rate limiting parameter
+
+### Changed
+
+- move rate-limiting and page size parameters in connectors configuration
+
 ## 2024-07-29 - 1.8.4
 
 ### Changed
