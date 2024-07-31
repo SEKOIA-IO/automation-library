@@ -157,3 +157,4 @@ class TrellixEpoConnector(AsyncConnector):
 
             except Exception as e:
                 self.log_exception(e, message="Error while running Trellix EPO")
+                time.sleep(self.configuration.frequency)

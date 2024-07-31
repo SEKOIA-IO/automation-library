@@ -295,3 +295,4 @@ class TrellixEdrConnector(AsyncConnector):
 
             except Exception as e:
                 self.log_exception(e, message="Error while running Trellix EDR")
+                time.sleep(self.configuration.frequency)
