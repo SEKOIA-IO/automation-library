@@ -43,6 +43,8 @@ def connector(
     trigger.configuration = {
         "intake_key": session_faker.word(),
         "intake_server": session_faker.uri(),
+        "ratelimit_per_minute": session_faker.random.randint(1000, 100000),
+        "records_per_request": session_faker.random.randint(1, 100),
     }
 
     return trigger
@@ -108,7 +110,7 @@ async def test_trellix_connector_get_epo_events(
         expected_edr_result = [epo_event_response.dict() for _ in range(0, session_faker.pyint(max_value=100))]
 
         mocked_responses.get(
-            http_client.epo_events_url(current_date, limit=connector.module.configuration.records_per_request),
+            http_client.epo_events_url(current_date, limit=connector.configuration.records_per_request),
             status=200,
             payload={
                 "data": orjson.loads(orjson.dumps(expected_edr_result).decode("utf-8")),

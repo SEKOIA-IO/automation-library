@@ -4,6 +4,11 @@
     "title": "Trigger Trellix EDR configuration",
     "type": "object",
     "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Interval, in seconds, between two fetches of events",
+        "default": 300
+      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",
@@ -17,6 +22,21 @@
         "type": "integer",
         "description": "The max size of chunks for the batch processing",
         "default": 1000
+      },
+      "ratelimit_per_minute": {
+        "description": "Maximum number of requests per minute",
+        "default": 60,
+        "type": "integer"
+      },
+      "ratelimit_per_day": {
+        "description": "Maximum number of requests per day",
+        "default": 2000,
+        "type": "integer"
+      },
+      "records_per_request": {
+        "description": "Number of records to fetch per 1 request",
+        "default": 100,
+        "type": "integer"
       }
     },
     "required": [

@@ -21,6 +21,11 @@ from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EV
 class TrellixEdrConnectorConfig(DefaultConnectorConfiguration):
     """Configuration for TrellixEdrConnector."""
 
+    frequency: int = 300
+    ratelimit_per_minute: int = 60
+    ratelimit_per_day: int = 2000
+    records_per_request: int = 100
+
 
 class TrellixEdrConnector(AsyncConnector):
     """TrellixEdrConnector class to work with EDR events."""
@@ -75,7 +80,8 @@ class TrellixEdrConnector(AsyncConnector):
         if self._trellix_client is not None:
             return self._trellix_client
 
-        rate_limiter = AsyncLimiter(self.module.configuration.ratelimit_per_minute)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
+        daily_rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_day)
 
         self._trellix_client = TrellixHttpClient(
             client_id=self.module.configuration.client_id,
@@ -84,6 +90,7 @@ class TrellixEdrConnector(AsyncConnector):
             auth_url=self.module.configuration.auth_url,
             base_url=self.module.configuration.base_url,
             rate_limiter=rate_limiter,
+            rate_limiter_per_day=daily_rate_limiter,
         )
 
         return self._trellix_client
@@ -98,7 +105,7 @@ class TrellixEdrConnector(AsyncConnector):
         start_date = self.last_event_date("alerts")
         alerts = await self.trellix_client.get_edr_alerts(
             start_date,
-            self.module.configuration.records_per_request,
+            self.configuration.records_per_request,
         )
 
         result: list[str] = await self.push_data_to_intakes(
@@ -137,7 +144,7 @@ class TrellixEdrConnector(AsyncConnector):
             threats = await self.trellix_client.get_edr_threats(
                 start_date,
                 end_date,
-                self.module.configuration.records_per_request,
+                self.configuration.records_per_request,
                 offset,
             )
 
@@ -156,7 +163,7 @@ class TrellixEdrConnector(AsyncConnector):
                 result.extend(await self.get_threat_detections(threat.id, start_date, end_date))
                 result.extend(await self.get_threat_affectedhosts(threat.id, start_date, end_date))
 
-            offset = offset + self.module.configuration.records_per_request
+            offset = offset + self.configuration.records_per_request
 
             if len(threats) == 0:
                 break
@@ -186,7 +193,7 @@ class TrellixEdrConnector(AsyncConnector):
                 threat_id,
                 start_date,
                 end_date,
-                self.module.configuration.records_per_request,
+                self.configuration.records_per_request,
                 offset,
             )
 
@@ -196,7 +203,7 @@ class TrellixEdrConnector(AsyncConnector):
             ]
 
             result.extend(await self.push_data_to_intakes(result_data))
-            offset = offset + self.module.configuration.records_per_request
+            offset = offset + self.configuration.records_per_request
 
             if len(detections) == 0:
                 break
@@ -223,7 +230,7 @@ class TrellixEdrConnector(AsyncConnector):
                 threat_id,
                 start_date,
                 end_date,
-                self.module.configuration.records_per_request,
+                self.configuration.records_per_request,
                 offset,
             )
 
@@ -233,7 +240,7 @@ class TrellixEdrConnector(AsyncConnector):
             ]
 
             result.extend(await self.push_data_to_intakes(result_data))
-            offset = offset + self.module.configuration.records_per_request
+            offset = offset + self.configuration.records_per_request
 
             if len(affectedhosts) == 0:
                 break
@@ -272,14 +279,19 @@ class TrellixEdrConnector(AsyncConnector):
 
                     self.log(message=log_message, level="info")
 
+                    processing_time = processing_end - processing_start
                     logger.info(
                         "Processing took {processing_time} seconds",
-                        processing_time=(processing_end - processing_start),
+                        processing_time=processing_time,
                     )
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
-                    )
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+
+                    # compute the remaining sleeping time. If greater than 0 and no messages where fetched, pause the connector
+                    delta_sleep = self.configuration.frequency - processing_time
+                    if len(message_ids) == 0 and delta_sleep > 0:
+                        self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                        time.sleep(delta_sleep)
 
             except Exception as e:
                 self.log_exception(e, message="Error while running Trellix EDR")
