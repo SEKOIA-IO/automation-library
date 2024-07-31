@@ -25,6 +25,7 @@ class TrellixHttpClient(object):
     _client: Optional["TrellixHttpClient"] = None
     _session: RetryClient | None = None
     _rate_limiter: AsyncLimiter | None = None
+    _rate_limiter_per_day: AsyncLimiter | None = None
 
     def __init__(
         self,
@@ -34,6 +35,7 @@ class TrellixHttpClient(object):
         auth_url: str,
         base_url: str,
         rate_limiter: AsyncLimiter | None = None,
+        rate_limiter_per_day: AsyncLimiter | None = None,
     ):
         """
         Initialize TrellixHttpClient.
@@ -52,6 +54,8 @@ class TrellixHttpClient(object):
         self.base_url = base_url
         if rate_limiter:
             self.set_rate_limiter(rate_limiter)
+        if rate_limiter_per_day:
+            self.set_rate_limiter_per_day(rate_limiter_per_day)
 
     @classmethod
     async def instance(
@@ -92,6 +96,16 @@ class TrellixHttpClient(object):
         cls._rate_limiter = rate_limiter
 
     @classmethod
+    def set_rate_limiter_per_day(cls, rate_limiter: AsyncLimiter) -> None:
+        """
+        Set rate limiter for the day
+
+        Args:
+            rate_limiter:
+        """
+        cls._rate_limiter_per_day = rate_limiter
+
+    @classmethod
     @asynccontextmanager
     async def session(cls) -> AsyncGenerator[RetryClient, None]:
         """
@@ -103,7 +117,11 @@ class TrellixHttpClient(object):
         if cls._session is None:
             cls._session = RetryClient(retry_options=RetryWithRateLimiter(ExponentialRetry(statuses={429})))
 
-        if cls._rate_limiter:
+        if cls._rate_limiter and cls._rate_limiter_per_day:
+            async with cls._rate_limiter_per_day:
+                async with cls._rate_limiter:
+                    yield cls._session
+        elif cls._rate_limiter:
             async with cls._rate_limiter:
                 yield cls._session
         else:
