@@ -21,6 +21,8 @@ from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EV
 class TrellixEdrConnectorConfig(DefaultConnectorConfiguration):
     """Configuration for TrellixEdrConnector."""
 
+    frequency: int = 300
+
 
 class TrellixEdrConnector(AsyncConnector):
     """TrellixEdrConnector class to work with EDR events."""
@@ -272,14 +274,19 @@ class TrellixEdrConnector(AsyncConnector):
 
                     self.log(message=log_message, level="info")
 
+                    processing_time = processing_end - processing_start
                     logger.info(
                         "Processing took {processing_time} seconds",
-                        processing_time=(processing_end - processing_start),
+                        processing_time=processing_time,
                     )
 
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
-                    )
+                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+
+                    # compute the remaining sleeping time. If greater than 0 and no messages where fetched, pause the connector
+                    delta_sleep = self.configuration.frequency - processing_time
+                    if len(message_ids) == 0 and delta_sleep > 0:
+                        self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                        time.sleep(delta_sleep)
 
             except Exception as e:
                 self.log_exception(e, message="Error while running Trellix EDR")
