@@ -23,6 +23,7 @@ class TrellixEdrConnectorConfig(DefaultConnectorConfiguration):
 
     frequency: int = 300
     ratelimit_per_minute: int = 60
+    ratelimit_per_day: int = 2000
     records_per_request: int = 100
 
 
@@ -80,6 +81,7 @@ class TrellixEdrConnector(AsyncConnector):
             return self._trellix_client
 
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
+        daily_rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_day)
 
         self._trellix_client = TrellixHttpClient(
             client_id=self.module.configuration.client_id,
@@ -88,6 +90,7 @@ class TrellixEdrConnector(AsyncConnector):
             auth_url=self.module.configuration.auth_url,
             base_url=self.module.configuration.base_url,
             rate_limiter=rate_limiter,
+            rate_limiter_per_day=daily_rate_limiter,
         )
 
         return self._trellix_client
