@@ -5,14 +5,6 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "api_key": {
-        "description": "API key",
-        "type": "string"
-      },
-      "management_domain": {
-        "description": "Management domain",
-        "type": "string"
-      },
       "frequency": {
         "type": "integer",
         "description": "Batch frequency in seconds",
@@ -28,7 +20,7 @@
         "type": "string"
       }
     },
-    "required": ["api_key", "management_domain", "intake_key"],
+    "required": ["intake_key"],
     "secrets": [],
     "title": "SentinelOne logs connector",
     "type": "object"

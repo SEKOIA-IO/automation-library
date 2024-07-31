@@ -14,6 +14,7 @@
         "type": "string"
       }
     },
+    "required": ["hostname", "api_token"],
     "secrets": ["api_token"]
   },
   "description": "This module interacts with the SentinelOne",

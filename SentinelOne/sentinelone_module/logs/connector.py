@@ -15,6 +15,7 @@ from management.mgmtsdk_v2_1.mgmt import Management
 from sekoia_automation.connector import Connector
 from sekoia_automation.storage import PersistentJSON
 
+from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
 
@@ -186,6 +187,8 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
         while self.running:
             # Fetch activities
             activities = self.management_client.activities.get(query_filter)
+            logger.debug("activities: received %d events" % len(activities.data))
+
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
                 len(activities.data)
             )
@@ -202,9 +205,14 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
                 len(activities.data)
             )
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
-                (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-            )
+
+            if len(activities.data) > 0:
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
+                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
+                )
+
+            else:
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(0)
 
             if activities.pagination["nextCursor"] is None:
                 break
@@ -223,6 +231,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         while self.running:
             # Fetch threats
             threats = self.management_client.client.get(endpoint="threats", params=query_filter.filters)
+            logger.debug("threats: received %d events" % len(threats.data))
 
             # Push events
             self.connector.push_events_to_intakes(self._serialize_events(threats.data))
@@ -236,9 +245,14 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
                 len(threats.data)
             )
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
-                (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-            )
+
+            if len(threats.data) > 0:
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
+                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
+                )
+
+            else:
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(0)
 
             if threats.pagination["nextCursor"] is None:
                 break
@@ -250,6 +264,7 @@ CONSUMER_TYPES = {"activity": SentinelOneActivityLogsConsumer, "threat": Sentine
 
 
 class SentinelOneLogsConnector(Connector):
+    module: SentinelOneModule
     configuration: SentinelOneLogsConnectorConfiguration
 
     def start_consumers(self) -> dict:
