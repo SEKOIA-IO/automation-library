@@ -4,6 +4,11 @@
     "title": "connector Trellix ePO configuration",
     "type": "object",
     "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Interval, in seconds, between two fetches of events",
+        "default": 300
+      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",
