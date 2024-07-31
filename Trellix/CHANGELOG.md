@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-31 - 1.8.6
+
+### Fixed
+
+- add pause when an exception is raised
+
 ## 2024-07-31 - 1.8.5
 
 ### Added
