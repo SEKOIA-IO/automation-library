@@ -22,6 +22,8 @@ class TrellixEdrConnectorConfig(DefaultConnectorConfiguration):
     """Configuration for TrellixEdrConnector."""
 
     frequency: int = 300
+    ratelimit_per_minute: int = 60
+    records_per_request: int = 100
 
 
 class TrellixEdrConnector(AsyncConnector):
@@ -77,7 +79,7 @@ class TrellixEdrConnector(AsyncConnector):
         if self._trellix_client is not None:
             return self._trellix_client
 
-        rate_limiter = AsyncLimiter(self.module.configuration.ratelimit_per_minute)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         self._trellix_client = TrellixHttpClient(
             client_id=self.module.configuration.client_id,
@@ -100,7 +102,7 @@ class TrellixEdrConnector(AsyncConnector):
         start_date = self.last_event_date("alerts")
         alerts = await self.trellix_client.get_edr_alerts(
             start_date,
-            self.module.configuration.records_per_request,
+            self.configuration.records_per_request,
         )
 
         result: list[str] = await self.push_data_to_intakes(
@@ -139,7 +141,7 @@ class TrellixEdrConnector(AsyncConnector):
             threats = await self.trellix_client.get_edr_threats(
                 start_date,
                 end_date,
-                self.module.configuration.records_per_request,
+                self.configuration.records_per_request,
                 offset,
             )
 
@@ -158,7 +160,7 @@ class TrellixEdrConnector(AsyncConnector):
                 result.extend(await self.get_threat_detections(threat.id, start_date, end_date))
                 result.extend(await self.get_threat_affectedhosts(threat.id, start_date, end_date))
 
-            offset = offset + self.module.configuration.records_per_request
+            offset = offset + self.configuration.records_per_request
 
             if len(threats) == 0:
                 break
@@ -188,7 +190,7 @@ class TrellixEdrConnector(AsyncConnector):
                 threat_id,
                 start_date,
                 end_date,
-                self.module.configuration.records_per_request,
+                self.configuration.records_per_request,
                 offset,
             )
 
@@ -198,7 +200,7 @@ class TrellixEdrConnector(AsyncConnector):
             ]
 
             result.extend(await self.push_data_to_intakes(result_data))
-            offset = offset + self.module.configuration.records_per_request
+            offset = offset + self.configuration.records_per_request
 
             if len(detections) == 0:
                 break
@@ -225,7 +227,7 @@ class TrellixEdrConnector(AsyncConnector):
                 threat_id,
                 start_date,
                 end_date,
-                self.module.configuration.records_per_request,
+                self.configuration.records_per_request,
                 offset,
             )
 
@@ -235,7 +237,7 @@ class TrellixEdrConnector(AsyncConnector):
             ]
 
             result.extend(await self.push_data_to_intakes(result_data))
-            offset = offset + self.module.configuration.records_per_request
+            offset = offset + self.configuration.records_per_request
 
             if len(affectedhosts) == 0:
                 break

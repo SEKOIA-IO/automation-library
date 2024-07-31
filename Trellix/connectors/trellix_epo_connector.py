@@ -22,6 +22,8 @@ class TrellixEpoConnectorConfig(DefaultConnectorConfiguration):
     """TellixEpoConnector configuration."""
 
     frequency: int = 300
+    ratelimit_per_minute: int = 60
+    records_per_request: int = 100
 
 
 class TrellixEpoConnector(AsyncConnector):
@@ -78,7 +80,7 @@ class TrellixEpoConnector(AsyncConnector):
         if self._trellix_client is not None:
             return self._trellix_client
 
-        rate_limiter = AsyncLimiter(self.module.configuration.ratelimit_per_minute)
+        rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         self._trellix_client = TrellixHttpClient(
             client_id=self.module.configuration.client_id,
@@ -100,7 +102,7 @@ class TrellixEpoConnector(AsyncConnector):
         """
         events = await self.trellix_client.get_epo_events(
             self.last_event_date,
-            self.module.configuration.records_per_request,
+            self.configuration.records_per_request,
         )
 
         result: list[str] = await self.push_data_to_intakes(

@@ -51,6 +51,8 @@ def connector(
     connector.configuration = {
         "intake_key": session_faker.word(),
         "intake_server": session_faker.uri(),
+        "ratelimit_per_minute": session_faker.random.randint(1000, 100000),
+        "records_per_request": session_faker.random.randint(1, 100),
     }
 
     return connector
@@ -118,7 +120,7 @@ async def test_trellix_connector_get_alert_events(
         ]
 
         mocked_responses.get(
-            http_client.edr_alerts_url(current_date, limit=connector.module.configuration.records_per_request),
+            http_client.edr_alerts_url(current_date, limit=connector.configuration.records_per_request),
             status=200,
             payload={
                 "data": orjson.loads(orjson.dumps(expected_edr_result).decode("utf-8")),
@@ -149,7 +151,7 @@ async def test_trellix_connector_get_detection_events(
     # Starting from 1 hour ago
     end_date = datetime.now(timezone.utc).replace(microsecond=0)
     start_date = end_date - timedelta(hours=1)
-    limit = connector.module.configuration.records_per_request
+    limit = connector.configuration.records_per_request
 
     threat_id = str(session_faker.pyint())
 
@@ -223,7 +225,7 @@ async def test_trellix_connector_get_affectedhosts_events(
     # Starting from 1 hour ago
     end_date = datetime.now(timezone.utc).replace(microsecond=0)
     start_date = end_date - timedelta(hours=1)
-    limit = connector.module.configuration.records_per_request
+    limit = connector.configuration.records_per_request
 
     threat_id = str(session_faker.pyint())
 
@@ -307,7 +309,7 @@ async def test_trellix_connector_get_threats_events(
     with connector.context as cache:
         cache["threats"] = start_date.isoformat()
 
-    limit = connector.module.configuration.records_per_request
+    limit = connector.configuration.records_per_request
 
     threat_id_1 = str(session_faker.pyint())
     threat_id_2 = str(session_faker.pyint())

@@ -24,8 +24,6 @@ def module(session_faker: Faker) -> TrellixModule:
         "client_secret": session_faker.word(),
         "api_key": session_faker.word(),
         "delay": session_faker.random.randint(1, 10),
-        "ratelimit_per_minute": session_faker.random.randint(1000, 100000),
-        "records_per_request": session_faker.random.randint(1, 100),
         "auth_url": session_faker.uri(),
         "base_url": session_faker.uri(),
     }
