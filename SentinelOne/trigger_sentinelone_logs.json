@@ -1,0 +1,30 @@
+{
+  "description": "SentinelOne logs connector",
+  "docker_parameters": "sentinelone_log_connector",
+  "name": "SentinelOne logs connector",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": ["intake_key"],
+    "secrets": [],
+    "title": "SentinelOne logs connector",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "09b4d451-0445-4a4a-91ac-1241550cdbfd"
+}

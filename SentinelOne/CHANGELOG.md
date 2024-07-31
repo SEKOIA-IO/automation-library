@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-07-30 - 1.17.0
+
+### Added
+
+- Added connector for SentinelOne logs
+
 ## 2024-05-28 - 1.16.0
 
 ### Changed
