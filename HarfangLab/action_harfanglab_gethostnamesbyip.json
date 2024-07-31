@@ -1,0 +1,39 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "target_ip": {
+        "description": "Targeted IP address",
+        "type": "string"
+      },
+      "get_only_last_seen": {
+        "description": "Get the last seen hostname only",
+        "type": "boolean"
+      }
+    },
+    "required": [],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Get the hostname of a machine by its IP address",
+  "docker_parameters": "harfanglab_get_hostnames_by_ip",
+  "name": "Hostname by IP",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "hostnames": {
+        "description": "Hostnames",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      }
+    },
+    "required": [
+      "hostnames"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "0ecd45f2-f99a-4af2-920d-39cbbe94b322"
+}
