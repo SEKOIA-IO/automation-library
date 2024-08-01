@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-08-01 - 1.23.1
 
-### Correction
+### Fixed
 
 - IP are now taken from the `ip` field and put in the `ip` field of the getter.
 
