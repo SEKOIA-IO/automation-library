@@ -33,3 +33,17 @@ EVENTS_LAG = Gauge(
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )
+
+AVERAGE_MESSAGES_AGE = Gauge(
+    name="average_messages_age",
+    documentation="The average age of messages seen",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)
+
+OLDER_MESSAGE_AGE = Gauge(
+    name="older_message_age",
+    documentation="The age of the older message seen",
+    namespace=prom_namespace,
+    labelnames=["intake_key"],
+)
