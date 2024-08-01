@@ -14,7 +14,14 @@ from dateutil.parser import isoparse
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .metrics import (
+    EVENTS_LAG,
+    FORWARD_EVENTS_DURATION,
+    INCOMING_MESSAGES,
+    OUTCOMING_EVENTS,
+    OLDER_MESSAGE_AGE,
+    AVERAGE_MESSAGES_AGE,
+)
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
@@ -93,7 +100,11 @@ class AzureEventsHubTrigger(AsyncConnector):
                 ),
                 level="info",
             )
+
+            # reset the metrics
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+            AVERAGE_MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(0)
+            OLDER_MESSAGE_AGE.labels(intake_key=self.configuration.intake_key).set(0)
             await self.client.close()
 
         # acknowledge the messages
@@ -142,9 +153,19 @@ class AzureEventsHubTrigger(AsyncConnector):
         enqueued_times = [message.enqueued_time for message in messages if message.enqueued_time is not None]
         if len(enqueued_times) > 0:
             now = datetime.now(timezone.utc)
-            most_recent_enqueued_time = max(enqueued_times)
-            current_lag = now - most_recent_enqueued_time
-            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+            messages_age = [int((now - enqueued_time).total_seconds()) for enqueued_time in enqueued_times]
+
+            # Compute the distance from the most recent message consumed
+            current_lag = min(messages_age)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+
+            # Compute the distance from the older message consumed
+            max_lag = max(messages_age)
+            OLDER_MESSAGE_AGE.labels(intake_key=self.configuration.intake_key).set(max_lag)
+
+            # Compute the distance from the older message consumed
+            avg_lag = int(sum(messages_age) / len(messages_age))
+            AVERAGE_MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(avg_lag)
 
     async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
         self.log_exception(
