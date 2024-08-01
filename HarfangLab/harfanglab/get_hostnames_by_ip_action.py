@@ -23,7 +23,7 @@ class GetHostnamesByIP(Action):
         job_url = f"{instance_url}/api/data/endpoint/Agent/"
         params: dict = {"ipaddress": target_ip}
 
-        response = requests.get(url=job_url, json=params, headers={"Authorization": f"Token {api_token}"})
+        response = requests.get(url=job_url, params=params, headers={"Authorization": f"Token {api_token}"})
         response.raise_for_status()
 
         data = response.json()
