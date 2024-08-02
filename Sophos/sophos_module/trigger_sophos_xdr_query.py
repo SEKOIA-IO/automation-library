@@ -198,11 +198,12 @@ class SophosXDRQueryTrigger(SophosConnector):
                     ).json()
 
                     next_page_items = response_next_page.get("items", [])
-                    self._observe_items_events_lag(next_page_items)
-                    grouped_data.extend(next_page_items)
+                    next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
+                    self._observe_items_events_lag(next_messages)
+                    grouped_data.extend(next_messages)
                     self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
-                    self.push_events_to_intakes(events=grouped_data)
+                    self.push_events_to_intakes(events=next_messages)
                     self.events_sum += len(grouped_data)
                     next_key = response_next_page.get("pages", {}).get("nextKey")
 
