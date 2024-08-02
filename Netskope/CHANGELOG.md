@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-02 - 1.10.5
+
+### Added
+
+- add additional logger
+
+### Fixed
+
+- Handle when failing to decode the incoming message
+
 ## 2024-07-10 - 1.10.4
 
 ### Fixed
