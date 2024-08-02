@@ -192,7 +192,6 @@ class SophosXDRQueryTrigger(SophosConnector):
                 self.events_sum += len(messages)
 
                 while next_key:
-                    grouped_data = []
                     response_next_page: dict[str, Any] = self.client.get_query_results(
                         query_id, pagination, next_key
                     ).json()
@@ -200,11 +199,10 @@ class SophosXDRQueryTrigger(SophosConnector):
                     next_page_items = response_next_page.get("items", [])
                     next_messages = [orjson.dumps(message).decode("utf-8") for message in next_page_items]
                     self._observe_items_events_lag(next_page_items)
-                    grouped_data.extend(next_messages)
-                    self.log(message=f"Sending other batches of {len(grouped_data)} messages", level="info")
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(grouped_data))
+                    self.log(message=f"Sending other batches of {len(next_messages)} messages", level="info")
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(next_messages))
                     self.push_events_to_intakes(events=next_messages)
-                    self.events_sum += len(grouped_data)
+                    self.events_sum += len(next_messages)
                     next_key = response_next_page.get("pages", {}).get("nextKey")
 
                 most_recent_date_seen = now
