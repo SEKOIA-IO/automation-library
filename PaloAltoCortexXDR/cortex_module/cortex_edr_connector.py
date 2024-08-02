@@ -6,10 +6,11 @@ import orjson
 from typing import Optional, Dict, Any, Tuple, List
 
 from requests.exceptions import HTTPError
+from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
-from urllib3.exceptions import HTTPError as BaseHTTPError
 
+from cortex_module.helper import handle_fqdn
 from cortex_module.base import CortexConnector
 from cortex_module.client import ApiClient
 from cortex_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
@@ -68,17 +69,7 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     @cached_property
     def alert_url(self) -> str:
-        base_fqdn = self.module.configuration.fqdn.rstrip("/")
-
-        if base_fqdn.startswith("https://"):
-            if base_fqdn.endswith("/public_api/v1/alerts/get_alerts_multi_events"):
-                return base_fqdn
-            return f"{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
-
-        if base_fqdn.startswith("api-"):
-            return f"https://{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
-
-        return f"https://api-{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+        return handle_fqdn(self.module.configuration.fqdn)
 
     @cached_property
     def pagination_limit(self) -> int:
