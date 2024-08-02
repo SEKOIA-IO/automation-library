@@ -68,13 +68,13 @@ class CortexQueryEDRTrigger(CortexConnector):
 
     @cached_property
     def alert_url(self) -> str:
-        base_fqdn = self.module.configuration.fqdn.rstrip('/')
-        
+        base_fqdn = self.module.configuration.fqdn.rstrip("/")
+
         if base_fqdn.startswith("https://"):
             if base_fqdn.endswith("/public_api/v1/alerts/get_alerts_multi_events"):
                 return base_fqdn
             return f"{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
-        
+
         if base_fqdn.startswith("api-"):
             return f"https://{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
 
