@@ -170,10 +170,23 @@ def alert_response_0():
 
 
 def test_handle_fqdn():
-    assert handle_fqdn("https://api-XXXX.test.paloaltonetworks.com") == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
-    assert handle_fqdn("api-XXXX.test.paloaltonetworks.com") == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
-    assert handle_fqdn("XXXX.test.paloaltonetworks.com") == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
-    assert handle_fqdn("https://XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events") == "https://XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+    assert (
+        handle_fqdn("https://api-XXXX.test.paloaltonetworks.com")
+        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+    )
+    assert (
+        handle_fqdn("api-XXXX.test.paloaltonetworks.com")
+        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+    )
+    assert (
+        handle_fqdn("XXXX.test.paloaltonetworks.com")
+        == "https://api-XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+    )
+    assert (
+        handle_fqdn("https://XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events")
+        == "https://XXXX.test.paloaltonetworks.com/public_api/v1/alerts/get_alerts_multi_events"
+    )
+
 
 @freeze_time("2024-01-23 10:00:00")
 def test_getting_data_2(trigger, alert_response_2, alert_query_2):
