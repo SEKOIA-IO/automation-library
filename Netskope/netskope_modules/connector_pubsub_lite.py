@@ -15,7 +15,10 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
+from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class PubSubLiteConfig(DefaultConnectorConfiguration):
@@ -177,15 +180,22 @@ class PubSubLite(AsyncConnector):
                 )
                 events = self.process_messages(message_content)
 
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
-                for event in events:
-                    await self.events_queue.put(event)
+                # Put events in the forwarding queue
+                if events is not None:
+                    INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                    for event in events:
+                        await self.events_queue.put(event)
 
                 message.ack()
 
-    def process_messages(self, content: bytes) -> list[str]:
+    def process_messages(self, content: bytes) -> list[str] | None:
         # Netskope is putting multiple transaction events in 1 PubSub Lite message
-        return [event for event in content.decode("utf-8").split("\n") if len(event) > 0]
+        try:
+            return [event for event in content.decode("utf-8").split("\n") if len(event) > 0]
+        except Exception:
+            self.log(level="error", message="Unable to decode the content of a message")
+            logger.error("Failed to decode the content of a message", content=content)
+            return None
 
     def run(self) -> None:  # pragma: no cover
         self.log(message="PubSub Lite connector has started", level="info")

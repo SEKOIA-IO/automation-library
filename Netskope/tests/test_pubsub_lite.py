@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 from google.cloud.pubsub_v1.subscriber.message import Message
 from pytest import fixture
+import pytest
 
 from netskope_modules.connector_pubsub_lite import PubSubLite
 
@@ -55,6 +56,14 @@ def create_async_message(data: bytes, dt: datetime) -> Message:
 def test_configuration(trigger):
     trigger.set_credentials()
     assert trigger.CREDENTIALS_PATH.exists()
+
+
+@pytest.mark.parametrize(
+    "content,expected_events",
+    [(b"data1\ndata2\ndata3", ["data1", "data2", "data3"]), (b"data1\ndata\xd8\ndata3", None)],
+)
+def test_process_messages(trigger, content, expected_events):
+    assert trigger.process_messages(content) == expected_events
 
 
 def test_run(trigger, events_queue):
