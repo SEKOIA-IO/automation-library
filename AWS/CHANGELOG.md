@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-01 - 1.31.4
+
+### Added
+
+- Add two new metrics to follow the messages age
+
 ## 2024-07-22 - 1.31.3
 
 ### Added
