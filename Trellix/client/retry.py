@@ -1,7 +1,7 @@
 from typing import Any
 
-from aiohttp_retry import RetryOptionsBase
 from aiohttp import ClientResponse
+from aiohttp_retry import RetryOptionsBase
 
 
 class RetryWithRateLimiter(RetryOptionsBase):
