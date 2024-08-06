@@ -1,7 +1,6 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from logging import getLogger
 from threading import Event, Thread
 from time import sleep, time
 
@@ -16,13 +15,11 @@ from sekoia_automation.connector import Connector
 from sekoia_automation.storage import PersistentJSON
 
 from sentinelone_module.base import SentinelOneModule
+from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
 
-# Declare prometheus metrics
-prom_namespace = "symphony_module_common"
-
-logger = getLogger()
+logger = get_logger()
 
 
 class SentinelOneLogsConsumer(Thread):
@@ -146,7 +143,7 @@ class SentinelOneLogsConsumer(Thread):
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time()
         batch_duration = int(batch_end_time - batch_start_time)
-        logger.debug(f"Fetched and forwarded events in {batch_duration} seconds")
+        logger.debug(f"Fetched and forwarded events", duration=batch_duration)
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
             batch_duration
         )
@@ -154,7 +151,7 @@ class SentinelOneLogsConsumer(Thread):
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
-            logger.debug(f"Next batch in the future. Waiting {delta_sleep} seconds")
+            logger.debug(f"Next batch in the future. Pause the connector", pause=delta_sleep)
             sleep(delta_sleep)
 
     def run(self):
@@ -187,10 +184,11 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
         while self.running:
             # Fetch activities
             activities = self.management_client.activities.get(query_filter)
-            logger.debug("activities: received %d events" % len(activities.data))
+            nb_activities = len(activities.data)
+            logger.debug("Collected activities", nb=nb_activities)
 
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                len(activities.data)
+                nb_activities
             )
 
             # Push events
@@ -203,10 +201,10 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                len(activities.data)
+                nb_activities
             )
 
-            if len(activities.data) > 0:
+            if nb_activities > 0:
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
                 )
@@ -231,7 +229,8 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         while self.running:
             # Fetch threats
             threats = self.management_client.client.get(endpoint="threats", params=query_filter.filters)
-            logger.debug("threats: received %d events" % len(threats.data))
+            nb_threats = len(threats.data)
+            logger.debug("Collected nb_threats", nb=nb_threats)
 
             # Push events
             self.connector.push_events_to_intakes(self._serialize_events(threats.data))
@@ -242,11 +241,9 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 cache["last_event_date"] = latest_event_timestamp.isoformat()
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                len(threats.data)
-            )
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(nb_threats)
 
-            if len(threats.data) > 0:
+            if nb_threats > 0:
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
                 )
