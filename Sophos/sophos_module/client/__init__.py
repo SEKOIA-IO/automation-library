@@ -9,11 +9,20 @@ from sophos_module.client.auth import SophosApiAuthentication
 
 
 class ApiClient(requests.Session):
-    def __init__(self, auth: AuthBase, nb_retries: int = 5, ratelimit_per_second: int = 100):
+    def __init__(
+        self,
+        auth: AuthBase,
+        nb_retries: int = 5,
+        ratelimit_per_second: int = 10,
+        ratelimit_per_minute: int = 100,
+        ratelimit_per_hour: int = 1000,
+    ):
         super().__init__()
         self.auth = auth
         adapter = LimiterAdapter(
             per_second=ratelimit_per_second,
+            per_minute=ratelimit_per_minute,
+            per_hour=ratelimit_per_hour,
             max_retries=Retry(total=nb_retries, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]),
         )
         self.mount("http://", adapter)
@@ -23,8 +32,21 @@ class ApiClient(requests.Session):
 class SophosApiClient(ApiClient):
     auth: SophosApiAuthentication
 
-    def __init__(self, auth: SophosApiAuthentication, nb_retries: int = 5, ratelimit_per_second: int = 100) -> None:
-        super().__init__(auth=auth, nb_retries=nb_retries, ratelimit_per_second=ratelimit_per_second)
+    def __init__(
+        self,
+        auth: SophosApiAuthentication,
+        nb_retries: int = 5,
+        ratelimit_per_second: int = 10,
+        ratelimit_per_minute: int = 100,
+        ratelimit_per_hour: int = 1000,
+    ) -> None:
+        super().__init__(
+            auth=auth,
+            nb_retries=nb_retries,
+            ratelimit_per_second=ratelimit_per_second,
+            ratelimit_per_minute=ratelimit_per_minute,
+            ratelimit_per_hour=ratelimit_per_hour,
+        )
 
     def list_siem_events(self, parameters: dict[str, Any] | None = None) -> requests.Response:
         return self.get(
