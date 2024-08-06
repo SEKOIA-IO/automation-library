@@ -32,6 +32,7 @@ class SentinelOneLogsConsumer(Thread):
 
         self.context = PersistentJSON("context.json", connector._data_path)
         self.log = connector.log
+        self.log_exception = connector.log_exception
         self.configuration = connector.configuration
         self.connector = connector
         self.module = connector.module
@@ -137,23 +138,26 @@ class SentinelOneLogsConsumer(Thread):
         # save the starting time
         batch_start_time = time()
 
-        # get the batch
-        events_id = self.pull_events()
+        try:
+            # get the batch
+            events_id = self.pull_events()
 
-        # get the ending time and compute the duration to fetch the events
-        batch_end_time = time()
-        batch_duration = int(batch_end_time - batch_start_time)
-        logger.debug(f"Fetched and forwarded events", duration=batch_duration, nb_events=len(events_id))
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
-            batch_duration
-        )
+            # get the ending time and compute the duration to fetch the events
+            batch_end_time = time()
+            batch_duration = int(batch_end_time - batch_start_time)
+            logger.debug(f"Fetched and forwarded events", duration=batch_duration, nb_events=len(events_id))
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
+                batch_duration
+            )
 
-        # log the number of forwarded events
-        log_message = "No events to forward"
-        if len(events_id) > 0:
-            log_message = f"Fetched and forwarded {len(events_id)} events"
+            # log the number of forwarded events
+            log_message = "No events to forward"
+            if len(events_id) > 0:
+                log_message = f"Fetched and forwarded {len(events_id)} events"
 
-        self.log(message=log_message, level="info")
+            self.log(message=log_message, level="info")
+        except Exception as ex:
+            self.log_exception(ex, message="Failed to forward events")
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
