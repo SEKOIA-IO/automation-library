@@ -48,7 +48,7 @@ def connector(symphony_storage, sentinelone_module):
     connector.configuration = {"intake_key": "intake_key", "frequency": 60}
 
     connector.log = Mock()
-    connector.push_events_to_intakes = Mock()
+    connector.push_events_to_intakes = Mock(return_value=[])
 
     yield connector
 

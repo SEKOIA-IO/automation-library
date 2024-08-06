@@ -130,7 +130,7 @@ class SentinelOneLogsConsumer(Thread):
         else:
             return latest_event_datetime
 
-    def pull_events(self):
+    def pull_events(self) -> list:
         raise NotImplementedError
 
     def next_batch(self):
@@ -138,12 +138,12 @@ class SentinelOneLogsConsumer(Thread):
         batch_start_time = time()
 
         # get the batch
-        self.pull_events()
+        events_id = self.pull_events()
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time()
         batch_duration = int(batch_end_time - batch_start_time)
-        logger.debug(f"Fetched and forwarded events", duration=batch_duration)
+        logger.debug(f"Fetched and forwarded events", duration=batch_duration, nb_events=len(events_id))
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
             batch_duration
         )
@@ -173,7 +173,7 @@ class SentinelOneLogsConsumer(Thread):
 
 
 class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
-    def pull_events(self):
+    def pull_events(self) -> list:
         """Fetches activities from SentinelOne"""
         # Set  filters
         query_filter = ActivitiesFilter()
@@ -181,6 +181,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
 
+        events_id = []
         while self.running:
             # Fetch activities
             activities = self.management_client.activities.get(query_filter)
@@ -192,7 +193,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             )
 
             # Push events
-            self.connector.push_events_to_intakes(self._serialize_events(activities.data))
+            events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(activities.data)))
 
             # Update context with latest event date
             latest_event_timestamp = self._get_latest_event_timestamp(activities.data)
@@ -217,6 +218,8 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
             query_filter.apply(key="cursor", val=activities.pagination["nextCursor"])
 
+        return events_id
+
 
 class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
     def pull_events(self):
@@ -226,6 +229,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
 
+        events_id = []
         while self.running:
             # Fetch threats
             threats = self.management_client.client.get(endpoint="threats", params=query_filter.filters)
@@ -233,7 +237,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             logger.debug("Collected nb_threats", nb=nb_threats)
 
             # Push events
-            self.connector.push_events_to_intakes(self._serialize_events(threats.data))
+            events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(threats.data)))
 
             # Update context with the latest event date
             latest_event_timestamp = self._get_latest_event_timestamp(threats.data)
@@ -255,6 +259,8 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 break
 
             query_filter.apply(key="cursor", val=threats.pagination["nextCursor"])
+
+        return events_id
 
 
 CONSUMER_TYPES = {"activity": SentinelOneActivityLogsConsumer, "threat": SentinelOneThreatLogsConsumer}
