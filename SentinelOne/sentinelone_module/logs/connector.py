@@ -148,6 +148,13 @@ class SentinelOneLogsConsumer(Thread):
             batch_duration
         )
 
+        # log the number of forwarded events
+        log_message = "No events to forward"
+        if len(events_id) > 0:
+            log_message = f"Fetched and forwarded {len(events_id)} events"
+
+        self.log(message=log_message, level="info")
+
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
         if delta_sleep > 0:
