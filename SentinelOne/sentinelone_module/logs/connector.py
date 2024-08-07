@@ -28,7 +28,7 @@ class SentinelOneLogsConsumer(Thread):
     Each endpoint of SentinelOne logs API is consumed in its own separate thread.
     """
 
-    def __init__(self, connector: "SentinelOneLogsConnector"):
+    def __init__(self, connector: "SentinelOneLogsConnector",  consumer_type: str):
         super().__init__()
 
         self.context = PersistentJSON("context.json", connector._data_path)
@@ -37,6 +37,7 @@ class SentinelOneLogsConsumer(Thread):
         self.configuration = connector.configuration
         self.connector = connector
         self.module = connector.module
+        self.consumer_type = consumer_type
 
         self._stop_event = Event()
 
@@ -165,6 +166,9 @@ class SentinelOneLogsConsumer(Thread):
 
 
 class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
+    def __init__(self, connector: "SentinelOneLogsConnector"):
+        super().__init__(connector, "activity")
+
     def pull_events(self) -> list:
         """Fetches activities from SentinelOne"""
         # Set  filters
@@ -213,6 +217,9 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
 
 class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
+    def __init__(self, connector: "SentinelOneLogsConnector"):
+        super().__init__(connector, "threat")
+
     def pull_events(self):
         """Fetches threats from SentinelOne"""
         query_filter = ThreatQueryFilter()
