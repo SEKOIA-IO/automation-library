@@ -63,7 +63,7 @@ class SentinelOneLogsConsumer(Thread):
         return Management(hostname=self.module.configuration.hostname, api_token=self.module.configuration.api_token)
 
     @property
-    def _cache_last_event_date(self) -> datetime:
+    def most_recent_date_seen(self) -> datetime:
         """
         Get last event date.
 
@@ -74,7 +74,7 @@ class SentinelOneLogsConsumer(Thread):
         one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
 
         with self.context as cache:
-            last_event_date_str = cache.get("last_event_date")
+            last_event_date_str = cache.get("most_recent_date_seen")
 
         # If undefined, retrieve events from the last 1 hour
         if last_event_date_str is None:
@@ -191,7 +191,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             latest_event_timestamp = get_latest_event_timestamp(activities.data)
             if latest_event_timestamp is not None:
                 with self.context as cache:
-                    cache["last_event_date"] = latest_event_timestamp.isoformat()
+                    cache["most_recent_date_seen"] = latest_event_timestamp.isoformat()
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
                 )
@@ -232,7 +232,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             latest_event_timestamp = get_latest_event_timestamp(threats.data)
             if latest_event_timestamp is not None:
                 with self.context as cache:
-                    cache["last_event_date"] = latest_event_timestamp.isoformat()
+                    cache["most_recent_date_seen"] = latest_event_timestamp.isoformat()
 
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
