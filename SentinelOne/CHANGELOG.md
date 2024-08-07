@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-07 - 1.17.2
+
+### Changed
+
+- externalize the method to get the most recent date seen from the events
+
+### Fixed
+
+- fix the interactions with the context to be thread-safe
+- use the most recent date seen when query new events
+
 ## 2024-08-06 - 1.17.1
 
 ### Changed

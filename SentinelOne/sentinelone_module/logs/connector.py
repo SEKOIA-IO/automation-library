@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from threading import Event, Thread
+from threading import Event, Thread, Lock
 from time import sleep, time
 
 from dateutil.parser import isoparse
@@ -18,6 +18,7 @@ from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
+from sentinelone_module.logs.helpers import get_latest_event_timestamp
 
 logger = get_logger()
 
@@ -27,15 +28,15 @@ class SentinelOneLogsConsumer(Thread):
     Each endpoint of SentinelOne logs API is consumed in its own separate thread.
     """
 
-    def __init__(self, connector: "SentinelOneLogsConnector"):
+    def __init__(self, connector: "SentinelOneLogsConnector", consumer_type: str):
         super().__init__()
 
-        self.context = PersistentJSON("context.json", connector._data_path)
         self.log = connector.log
         self.log_exception = connector.log_exception
         self.configuration = connector.configuration
         self.connector = connector
         self.module = connector.module
+        self.consumer_type = consumer_type
 
         self._stop_event = Event()
 
@@ -62,7 +63,7 @@ class SentinelOneLogsConsumer(Thread):
         return Management(hostname=self.module.configuration.hostname, api_token=self.module.configuration.api_token)
 
     @property
-    def _cache_last_event_date(self) -> datetime:
+    def most_recent_date_seen(self) -> datetime:
         """
         Get last event date.
 
@@ -72,8 +73,8 @@ class SentinelOneLogsConsumer(Thread):
         now = datetime.now(UTC)
         one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
 
-        with self.context as cache:
-            last_event_date_str = cache.get("last_event_date")
+        with self.connector.context_lock, self.connector.context as cache:
+            last_event_date_str = cache.get(self.consumer_type, {}).get("most_recent_date_seen")
 
         # If undefined, retrieve events from the last 1 hour
         if last_event_date_str is None:
@@ -87,6 +88,14 @@ class SentinelOneLogsConsumer(Thread):
             return one_day_ago
 
         return last_event_date
+
+    @most_recent_date_seen.setter
+    def most_recent_date_seen(self, dt: datetime) -> None:
+        with self.connector.context_lock, self.connector.context as cache:
+            if self.consumer_type not in cache:
+                cache[self.consumer_type] = {}
+
+            cache[self.consumer_type]["most_recent_date_seen"] = dt.isoformat()
 
     @staticmethod
     def _serialize_events(events: list[Activity] | list[Threat] | list[dict]) -> list:
@@ -106,32 +115,7 @@ class SentinelOneLogsConsumer(Thread):
             serialized_events.append(non_empty_json_str)
         return serialized_events
 
-    def _get_latest_event_timestamp(self, events: list[Activity] | list[Threat] | list[dict]) -> datetime:
-        """Searches for the most recent timestamp from a list of events
-
-        Args:
-            events (list[Activity] | list[Threat] | list[dict]): List of events to
-
-        Returns:
-            datetime: Timestamp of the most recent event of the list
-        """
-        latest_event_datetime: datetime | None = None
-        for event in events:
-            event_dict = event if isinstance(event, dict) else event.__dict__
-            if event_dict.get("createdAt") is not None:
-                if latest_event_datetime is None:
-                    latest_event_datetime = datetime.fromisoformat(event_dict["createdAt"])
-                else:
-                    event_created_at = datetime.fromisoformat(event_dict["createdAt"])
-                    if event_created_at > latest_event_datetime:
-                        latest_event_datetime = event_created_at
-
-        if latest_event_datetime is None:
-            return self._cache_last_event_date
-        else:
-            return latest_event_datetime
-
-    def pull_events(self) -> list:
+    def pull_events(self, last_timestamp: datetime | None) -> list:
         raise NotImplementedError
 
     def next_batch(self):
@@ -140,7 +124,7 @@ class SentinelOneLogsConsumer(Thread):
 
         try:
             # get the batch
-            events_id = self.pull_events()
+            events_id = self.pull_events(self.most_recent_date_seen)
 
             # get the ending time and compute the duration to fetch the events
             batch_end_time = time()
@@ -184,13 +168,19 @@ class SentinelOneLogsConsumer(Thread):
 
 
 class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
-    def pull_events(self) -> list:
+    def __init__(self, connector: "SentinelOneLogsConnector"):
+        super().__init__(connector, "activity")
+
+    def pull_events(self, last_timestamp: datetime | None) -> list:
         """Fetches activities from SentinelOne"""
         # Set  filters
         query_filter = ActivitiesFilter()
         query_filter.apply(key="limit", val=1000)
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
+
+        if last_timestamp:
+            query_filter.apply(key="createdAt", val=last_timestamp.isoformat(), op="gt")
 
         events_id = []
         while self.running:
@@ -206,23 +196,19 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             # Push events
             events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(activities.data)))
 
-            # Update context with latest event date
-            latest_event_timestamp = self._get_latest_event_timestamp(activities.data)
-            with self.context as cache:
-                cache["last_event_date"] = latest_event_timestamp.isoformat()
-
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
                 nb_activities
             )
 
-            if nb_activities > 0:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
-                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-                )
+            # Update context with latest event date
+            current_lag: int = 0
+            latest_event_timestamp = get_latest_event_timestamp(activities.data)
+            if latest_event_timestamp is not None:
+                self.most_recent_date_seen = latest_event_timestamp
+                current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
-            else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(current_lag)
 
             if activities.pagination["nextCursor"] is None:
                 break
@@ -233,12 +219,18 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
 
 class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
-    def pull_events(self):
+    def __init__(self, connector: "SentinelOneLogsConnector"):
+        super().__init__(connector, "threat")
+
+    def pull_events(self, last_timestamp: datetime | None):
         """Fetches threats from SentinelOne"""
         query_filter = ThreatQueryFilter()
         query_filter.apply(key="limit", val=1000)
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
+
+        if last_timestamp:
+            query_filter.apply(key="createdAt", val=last_timestamp.isoformat(), op="gt")
 
         events_id = []
         while self.running:
@@ -250,21 +242,17 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             # Push events
             events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(threats.data)))
 
-            # Update context with the latest event date
-            latest_event_timestamp = self._get_latest_event_timestamp(threats.data)
-            with self.context as cache:
-                cache["last_event_date"] = latest_event_timestamp.isoformat()
-
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(nb_threats)
 
-            if nb_threats > 0:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
-                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-                )
+            # Update context with the latest event date
+            current_lag: int = 0
+            latest_event_timestamp = get_latest_event_timestamp(threats.data)
+            if latest_event_timestamp is not None:
+                self.most_recent_date_seen = latest_event_timestamp
+                current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
-            else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(current_lag)
 
             if threats.pagination["nextCursor"] is None:
                 break
@@ -280,6 +268,11 @@ CONSUMER_TYPES = {"activity": SentinelOneActivityLogsConsumer, "threat": Sentine
 class SentinelOneLogsConnector(Connector):
     module: SentinelOneModule
     configuration: SentinelOneLogsConnectorConfiguration
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.context = PersistentJSON("context.json", self._data_path)
+        self.context_lock = Lock()
 
     def start_consumers(self) -> dict:
         """Starts children threads for each supported type
