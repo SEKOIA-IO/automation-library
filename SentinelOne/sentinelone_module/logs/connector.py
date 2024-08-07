@@ -206,7 +206,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             latest_event_timestamp = get_latest_event_timestamp(activities.data)
             if latest_event_timestamp is not None:
                 self.most_recent_date_seen = latest_event_timestamp
-                current_lag = (datetime.now(UTC) - latest_event_timestamp).total_seconds()
+                current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(current_lag)
 
@@ -250,7 +250,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             latest_event_timestamp = get_latest_event_timestamp(threats.data)
             if latest_event_timestamp is not None:
                 self.most_recent_date_seen = latest_event_timestamp
-                current_lag = (datetime.now(UTC) - latest_event_timestamp).total_seconds()
+                current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(current_lag)
 

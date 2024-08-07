@@ -45,7 +45,9 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
         intake_key=activity_consumer.configuration.intake_key, type="activities"
     ).set.call_args_list == [
         call(0),
-        call((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(activity_2.createdAt)).total_seconds()),
+        call(
+            int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(activity_2.createdAt)).total_seconds())
+        ),
     ]
 
 
@@ -72,8 +74,8 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
     assert EVENTS_LAG.labels(
         intake_key=threat_consumer.configuration.intake_key, type="threats"
     ).set.call_args_list == [
-        call((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_1.createdAt)).total_seconds()),
-        call((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_2.createdAt)).total_seconds()),
+        call(int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_1.createdAt)).total_seconds())),
+        call(int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_2.createdAt)).total_seconds())),
     ]
 
 
