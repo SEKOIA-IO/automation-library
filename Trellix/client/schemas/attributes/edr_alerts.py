@@ -51,33 +51,33 @@ class EdrAlertAttributes(BaseModel):
             EdrAlertAttributes
         """
         return EdrAlertAttributes(
-            traceId=json.get("traceId") or json.get("Trace_Id"),
-            parentTraceId=json.get("parentTraceId") or json.get("Parent_Trace_Id"),
-            rootTraceId=json.get("rootTraceId") or json.get("Root_Trace_Id"),
-            aGuid=json.get("aGuid") or json.get("MAGUID"),
-            detectionDate=json.get("detectionDate") or json.get("DetectionDate"),
-            eventDate=json.get("eventDate") or json.get("Event_Date"),
+            traceId=json.get("Trace_Id"),
+            parentTraceId=json.get("Parent_Trace_Id"),
+            rootTraceId=json.get("Root_Trace_Id"),
+            aGuid=json.get("MAGUID"),
+            detectionDate=json.get("DetectionDate"),
+            eventDate=json.get("Event_Date"),
             # api docs does not have this field, and seems like we do not parse it in format
             # but for backward compatibility `eventType` by default is set to `alert`
-            eventType=json.get("eventType") or json.get("Event_Type") or "alert",
-            severity=json.get("severity") or json.get("Severity"),
-            score=json.get("score") or json.get("Score"),
-            detectionTags=json.get("detectionTags") or json.get("Detection_Tags"),
-            relatedTraceIds=json.get("relatedTraceIds") or json.get("Related_Trace_Id"),
-            ruleId=json.get("ruleId") or json.get("RuleId"),
-            rank=json.get("rank") or json.get("Rank"),
-            pid=json.get("pid") or json.get("Pid"),
-            version=json.get("version") or json.get("Version"),
-            parentsTraceId=json.get("parentsTraceId") or json.get("Parents_Trace_Id"),
-            processName=json.get("processName") or json.get("ProcessName"),
-            cmdLine=json.get("cmdLine") or json.get("CommandLine"),
-            hashId=json.get("hashId") or json.get("Hash_Id"),
-            h_os=json.get("h_os") or json.get("Host_OS"),
-            hostName=json.get("hostName") or json.get("Host_Name"),
+            eventType=json.get("Event_Type") or "alert",
+            severity=json.get("Severity"),
+            score=json.get("Score"),
+            detectionTags=json.get("Detection_Tags"),
+            relatedTraceIds=json.get("Related_Trace_Id"),
+            ruleId=json.get("RuleId"),
+            rank=json.get("Rank"),
+            pid=json.get("Pid"),
+            version=json.get("Version"),
+            parentsTraceId=json.get("Parents_Trace_Id"),
+            processName=json.get("ProcessName"),
+            cmdLine=json.get("CommandLine"),
+            hashId=json.get("Hash_Id"),
+            h_os=json.get("Host_OS"),
+            hostName=json.get("Host_Name"),
             # Api docs does not have these fields in separate keys, however `User` in new version contains:
             #  - `domain`
             #  - `Name`
             # So we split it into two fields: `user` and `domain`
-            user=json.get("user") or json.get("User", {}).get("name"),
-            domain=json.get("domain") or json.get("User", {}).get("domain"),
+            user=json.get("User", {}).get("name"),
+            domain=json.get("User", {}).get("domain"),
         )

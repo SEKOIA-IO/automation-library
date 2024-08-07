@@ -3,7 +3,7 @@
 import asyncio
 from shutil import rmtree
 from tempfile import mkdtemp
-from typing import List
+from typing import Any, List
 from unittest.mock import patch
 
 import pytest
@@ -172,7 +172,7 @@ def epo_event_response(session_faker) -> TrellixResponse[EpoEventAttributes]:
 
 
 @pytest.fixture
-def edr_alert_event_response(session_faker) -> TrellixResponse[EdrAlertAttributes]:
+def edr_alert_event_response(session_faker) -> tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]]:
     """
     Generate TrellixEdrResponse[EdrAlertAttributes].
 
@@ -182,34 +182,42 @@ def edr_alert_event_response(session_faker) -> TrellixResponse[EdrAlertAttribute
     Returns:
         TrellixResponse[EdrAlertAttributes]:
     """
-    return TrellixResponse[EdrAlertAttributes](
-        id=session_faker.uuid4(),
-        type=session_faker.word(),
-        attributes=EdrAlertAttributes(
-            traceId=session_faker.word(),
-            parentTraceId=session_faker.word(),
-            rootTraceId=session_faker.word(),
-            aGuid=session_faker.word(),
-            detectionDate=session_faker.date_time().isoformat(),
-            eventDate=session_faker.word(),
-            eventType=session_faker.word(),
-            severity=session_faker.word(),
-            score=session_faker.pyint(),
-            detectionTags=[session_faker.word(), session_faker.word()],
-            relatedTraceIds=[session_faker.word(), session_faker.word()],
-            ruleId=session_faker.word(),
-            rank=session_faker.pyint(),
-            pid=session_faker.pyint(),
-            version=session_faker.word(),
-            parentsTraceId=[session_faker.word(), session_faker.word()],
-            processName=session_faker.word(),
-            user=session_faker.word(),
-            cmdLine=session_faker.word(),
-            hashId=session_faker.word(),
-            h_os=session_faker.word(),
-            domain=session_faker.word(),
-            hostName=session_faker.word(),
-        ),
+    mocked_response = {
+        "id": session_faker.uuid4(),
+        "type": session_faker.word(),
+        "attributes": {
+            "Trace_Id": session_faker.uuid4(),
+            "Parent_Trace_Id": session_faker.uuid4(),
+            "Root_Trace_Id": session_faker.uuid4(),
+            "DetectionDate": session_faker.date_time().isoformat(),
+            "Event_Date": session_faker.date_time().isoformat(),
+            "Activity": session_faker.word(),
+            "Severity": session_faker.word(),
+            "Score": 25,
+            "Detection_Tags": [
+                session_faker.word(),
+                session_faker.word(),
+                session_faker.word(),
+            ],
+            "Related_Trace_Id": [session_faker.uuid4()],
+            "RuleId": session_faker.word(),
+            "Rank": 25,
+            "Pid": 6600,
+            "Version": session_faker.word(),
+            "Parents_Trace_Id": [session_faker.uuid4()],
+            "ProcessName": "SDXHelper.exe",
+            "User": {"domain": "CDA", "name": "cdaauto"},
+            "CommandLine": '"C:\\Program Files\\Microsoft Office\\Root\\Office16\\SDXHelper.exe" -Embedding',
+            "Hash_Id": "h7GhOs3Jm6Buj+LuzOOHBg==",
+            "Host_OS": "windows",
+            "Host_Name": "302W1022H264",
+            "MAGUID": "ADB3C24C-232B-11EF-3D71-005056AC48D2",
+            "Artifact": "Threat",
+        },
+    }
+
+    return mocked_response, TrellixResponse[EdrAlertAttributes](
+        **{**mocked_response, "attributes": EdrAlertAttributes.parse_response(mocked_response.get("attributes"))}
     )
 
 
