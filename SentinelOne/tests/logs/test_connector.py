@@ -22,6 +22,7 @@ class MockResponse:
 def test_pull_activities(activity_consumer, activity_1, activity_2):
     OUTCOMING_EVENTS.labels = MagicMock()
     EVENTS_LAG.labels = MagicMock()
+    most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
 
     # Test timestamp caching
     activity_1.createdAt = None
@@ -29,7 +30,7 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
     response_1 = MockResponse(pagination={"nextCursor": "foo"}, data=[activity_1])
     response_2 = MockResponse(pagination={"nextCursor": None}, data=[activity_2])
     activity_consumer.management_client.activities.get.side_effect = [response_1, response_2]
-    activity_consumer.pull_events()
+    activity_consumer.pull_events(most_recent_datetime_seen)
 
     assert activity_consumer.management_client.activities.get.call_count == 2
     assert activity_consumer.connector.push_events_to_intakes.call_args_list == [
@@ -52,11 +53,12 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
 def test_pull_threats(threat_consumer, threat_1, threat_2):
     OUTCOMING_EVENTS.labels = MagicMock()
     EVENTS_LAG.labels = MagicMock()
+    most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
 
     response_1 = MockResponse(pagination={"nextCursor": "foo"}, data=[threat_1])
     response_2 = MockResponse(pagination={"nextCursor": None}, data=[threat_2])
     threat_consumer.management_client.client.get.side_effect = [response_1, response_2]
-    threat_consumer.pull_events()
+    threat_consumer.pull_events(most_recent_datetime_seen)
 
     assert threat_consumer.management_client.client.get.call_count == 2
     assert threat_consumer.connector.push_events_to_intakes.call_args_list == [

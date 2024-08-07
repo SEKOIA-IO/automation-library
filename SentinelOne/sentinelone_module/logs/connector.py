@@ -115,7 +115,7 @@ class SentinelOneLogsConsumer(Thread):
             serialized_events.append(non_empty_json_str)
         return serialized_events
 
-    def pull_events(self) -> list:
+    def pull_events(self, last_timestamp: datetime | None) -> list:
         raise NotImplementedError
 
     def next_batch(self):
@@ -124,7 +124,7 @@ class SentinelOneLogsConsumer(Thread):
 
         try:
             # get the batch
-            events_id = self.pull_events()
+            events_id = self.pull_events(self.most_recent_date_seen)
 
             # get the ending time and compute the duration to fetch the events
             batch_end_time = time()
@@ -171,13 +171,16 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
     def __init__(self, connector: "SentinelOneLogsConnector"):
         super().__init__(connector, "activity")
 
-    def pull_events(self) -> list:
+    def pull_events(self, last_timestamp: datetime | None) -> list:
         """Fetches activities from SentinelOne"""
         # Set  filters
         query_filter = ActivitiesFilter()
         query_filter.apply(key="limit", val=1000)
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
+
+        if last_timestamp:
+            query_filter.apply(key="createdAt", val=last_timestamp.isoformat(), op="gt")
 
         events_id = []
         while self.running:
@@ -222,12 +225,15 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
     def __init__(self, connector: "SentinelOneLogsConnector"):
         super().__init__(connector, "threat")
 
-    def pull_events(self):
+    def pull_events(self, last_timestamp: datetime | None):
         """Fetches threats from SentinelOne"""
         query_filter = ThreatQueryFilter()
         query_filter.apply(key="limit", val=1000)
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
+
+        if last_timestamp:
+            query_filter.apply(key="createdAt", val=last_timestamp.isoformat(), op="gt")
 
         events_id = []
         while self.running:
