@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -92,7 +93,7 @@ async def test_trellix_connector_get_alert_events(
     connector: TrellixEdrConnector,
     session_faker: Faker,
     http_token: HttpToken,
-    edr_alert_event_response: TrellixResponse[EdrAlertAttributes],
+    edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]],
 ):
     """
     Test connector to get alert events.
@@ -101,7 +102,7 @@ async def test_trellix_connector_get_alert_events(
         connector: TrellixEdrConnector
         session_faker: Faker
         http_token: HttpToken
-        edr_alert_event_response: TrellixResponse[EdrAlertAttributes]
+        edr_alert_event_response: tuple[dict[str, Any], TrellixResponse[EdrAlertAttributes]]
     """
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
 
@@ -115,9 +116,8 @@ async def test_trellix_connector_get_alert_events(
 
         mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
 
-        expected_edr_result = [
-            edr_alert_event_response.dict(exclude_none=True) for _ in range(0, session_faker.pyint(max_value=100))
-        ]
+        expected_edr_result = [edr_alert_event_response[0] for _ in range(0, session_faker.pyint(max_value=100))]
+        expected_edr_result_dto = [edr_alert_event_response[1].dict() for _ in expected_edr_result]
 
         mocked_responses.get(
             http_client.edr_alerts_url(current_date, limit=connector.configuration.records_per_request),
@@ -129,7 +129,7 @@ async def test_trellix_connector_get_alert_events(
 
         result, _ = await connector.populate_alerts()
 
-        assert result == [orjson.dumps(event).decode("utf-8") for event in expected_edr_result]
+        assert result == [orjson.dumps(event).decode("utf-8") for event in expected_edr_result_dto]
 
 
 @pytest.mark.asyncio

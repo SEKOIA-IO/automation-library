@@ -4,10 +4,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Optional, Set
 
+from aiohttp_retry import ExponentialRetry, RetryClient
 from aiolimiter import AsyncLimiter
-from aiohttp_retry import RetryClient, ExponentialRetry, RetryOptionsBase
 from yarl import URL
 
+from .retry import RetryWithRateLimiter
 from .schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
 from .schemas.attributes.edr_alerts import EdrAlertAttributes
 from .schemas.attributes.edr_detections import EdrDetectionAttributes
@@ -16,7 +17,6 @@ from .schemas.attributes.epo_events import EpoEventAttributes
 from .schemas.token import Scope
 from .schemas.trellix_response import TrellixResponse
 from .token_refresher import TrellixTokenRefresher
-from .retry import RetryWithRateLimiter
 
 
 class TrellixHttpClient(object):
@@ -453,4 +453,9 @@ class TrellixHttpClient(object):
 
         data = await self._get_data(url, headers)
 
-        return [TrellixResponse[EdrAlertAttributes](**result) for result in data["data"]]
+        return [
+            TrellixResponse[EdrAlertAttributes](
+                **{**result, "attributes": EdrAlertAttributes.parse_response(result.get("attributes"))}
+            )
+            for result in data["data"]
+        ]

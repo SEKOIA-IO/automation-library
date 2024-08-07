@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-06 - 1.9.0
+
+### Fixed
+
+- add support of changed structure for Trellix alerts response
+
 ## 2024-07-31 - 1.8.6
 
 ### Fixed

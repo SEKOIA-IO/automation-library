@@ -4,16 +4,16 @@ import asyncio
 import time
 from asyncio import Lock, Task
 from contextlib import asynccontextmanager
+from posixpath import join as urljoin
 from typing import AsyncGenerator, Optional, Set
 from urllib.parse import urlencode
-from posixpath import join as urljoin
 
 from aiohttp import BasicAuth, ClientSession
 from loguru import logger
 from yarl import URL
 
-from .schemas.token import HttpToken, Scope, TrellixToken
 from .errors import APIError, AuthenticationFailed
+from .schemas.token import HttpToken, Scope, TrellixToken
 
 
 class TrellixTokenRefresher(object):

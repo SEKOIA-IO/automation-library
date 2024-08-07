@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 import pytest
 from aioresponses import aioresponses
 
+from client.errors import APIError, AuthenticationFailed
 from client.schemas.token import Scope
 from client.token_refresher import TrellixTokenRefresher
-from client.errors import APIError, AuthenticationFailed
 
 
 @pytest.mark.asyncio
