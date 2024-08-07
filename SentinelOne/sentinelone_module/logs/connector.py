@@ -18,6 +18,7 @@ from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
+from sentinelone_module.logs.helpers import get_latest_event_timestamp
 
 logger = get_logger()
 
@@ -106,31 +107,6 @@ class SentinelOneLogsConsumer(Thread):
             serialized_events.append(non_empty_json_str)
         return serialized_events
 
-    def _get_latest_event_timestamp(self, events: list[Activity] | list[Threat] | list[dict]) -> datetime:
-        """Searches for the most recent timestamp from a list of events
-
-        Args:
-            events (list[Activity] | list[Threat] | list[dict]): List of events to
-
-        Returns:
-            datetime: Timestamp of the most recent event of the list
-        """
-        latest_event_datetime: datetime | None = None
-        for event in events:
-            event_dict = event if isinstance(event, dict) else event.__dict__
-            if event_dict.get("createdAt") is not None:
-                if latest_event_datetime is None:
-                    latest_event_datetime = datetime.fromisoformat(event_dict["createdAt"])
-                else:
-                    event_created_at = datetime.fromisoformat(event_dict["createdAt"])
-                    if event_created_at > latest_event_datetime:
-                        latest_event_datetime = event_created_at
-
-        if latest_event_datetime is None:
-            return self._cache_last_event_date
-        else:
-            return latest_event_datetime
-
     def pull_events(self) -> list:
         raise NotImplementedError
 
@@ -206,17 +182,16 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             # Push events
             events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(activities.data)))
 
-            # Update context with latest event date
-            latest_event_timestamp = self._get_latest_event_timestamp(activities.data)
-            with self.context as cache:
-                cache["last_event_date"] = latest_event_timestamp.isoformat()
-
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
                 nb_activities
             )
 
-            if nb_activities > 0:
+            # Update context with latest event date
+            latest_event_timestamp = get_latest_event_timestamp(activities.data)
+            if latest_event_timestamp is not None:
+                with self.context as cache:
+                    cache["last_event_date"] = latest_event_timestamp.isoformat()
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
                 )
@@ -250,15 +225,15 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             # Push events
             events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(threats.data)))
 
-            # Update context with the latest event date
-            latest_event_timestamp = self._get_latest_event_timestamp(threats.data)
-            with self.context as cache:
-                cache["last_event_date"] = latest_event_timestamp.isoformat()
-
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(nb_threats)
 
-            if nb_threats > 0:
+            # Update context with the latest event date
+            latest_event_timestamp = get_latest_event_timestamp(threats.data)
+            if latest_event_timestamp is not None:
+                with self.context as cache:
+                    cache["last_event_date"] = latest_event_timestamp.isoformat()
+
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
                 )

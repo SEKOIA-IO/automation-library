@@ -43,7 +43,7 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
     assert EVENTS_LAG.labels(
         intake_key=activity_consumer.configuration.intake_key, type="activities"
     ).set.call_args_list == [
-        call(86400),  # nb of seconds in a day
+        call(0),
         call((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(activity_2.createdAt)).total_seconds()),
     ]
 
