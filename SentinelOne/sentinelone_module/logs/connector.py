@@ -89,6 +89,11 @@ class SentinelOneLogsConsumer(Thread):
 
         return last_event_date
 
+    @most_recent_date_seen.setter
+    def most_recent_date_seen(self, dt: datetime) -> None:
+        with self.context as cache:
+            cache["most_recent_date_seen"] = dt.isoformat()
+
     @staticmethod
     def _serialize_events(events: list[Activity] | list[Threat] | list[dict]) -> list:
         """Serializes a list of events by generating a dict and converting it to JSON
@@ -190,8 +195,8 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             # Update context with latest event date
             latest_event_timestamp = get_latest_event_timestamp(activities.data)
             if latest_event_timestamp is not None:
-                with self.context as cache:
-                    cache["most_recent_date_seen"] = latest_event_timestamp.isoformat()
+                self.most_recent_date_seen = latest_event_timestamp
+
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
                 )
@@ -231,8 +236,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             # Update context with the latest event date
             latest_event_timestamp = get_latest_event_timestamp(threats.data)
             if latest_event_timestamp is not None:
-                with self.context as cache:
-                    cache["most_recent_date_seen"] = latest_event_timestamp.isoformat()
+                self.most_recent_date_seen = latest_event_timestamp
 
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
                     (datetime.now(UTC) - latest_event_timestamp).total_seconds()
