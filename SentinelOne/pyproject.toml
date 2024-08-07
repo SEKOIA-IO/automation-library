@@ -12,6 +12,7 @@ sentinelone-management-sdk = {path = "sentinel-mgmt-sdk.tar.gz"}
 confluent-kafka = "^2.1.1"
 certifi = "^2023.7.22"
 protobuf = "^4.21.9"
+structlog = "^24.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

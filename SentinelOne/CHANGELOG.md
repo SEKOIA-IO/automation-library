@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-06 - 1.17.1
+
+### Changed
+
+- Change the way to log messages from the connector
+
+### Fixed
+
+- Handle when an exception occurs during the collect of events
+
 ## 2024-07-30 - 1.17.0
 
 ### Added
