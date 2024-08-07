@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from threading import Event, Thread
+from threading import Event, Thread, Lock
 from time import sleep, time
 
 from dateutil.parser import isoparse
@@ -28,10 +28,9 @@ class SentinelOneLogsConsumer(Thread):
     Each endpoint of SentinelOne logs API is consumed in its own separate thread.
     """
 
-    def __init__(self, connector: "SentinelOneLogsConnector",  consumer_type: str):
+    def __init__(self, connector: "SentinelOneLogsConnector", consumer_type: str):
         super().__init__()
 
-        self.context = PersistentJSON("context.json", connector._data_path)
         self.log = connector.log
         self.log_exception = connector.log_exception
         self.configuration = connector.configuration
@@ -74,8 +73,8 @@ class SentinelOneLogsConsumer(Thread):
         now = datetime.now(UTC)
         one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
 
-        with self.context as cache:
-            last_event_date_str = cache.get("most_recent_date_seen")
+        with self.connector.context_lock, self.connector.context as cache:
+            last_event_date_str = cache.get(self.consumer_type, {}).get("most_recent_date_seen")
 
         # If undefined, retrieve events from the last 1 hour
         if last_event_date_str is None:
@@ -92,8 +91,11 @@ class SentinelOneLogsConsumer(Thread):
 
     @most_recent_date_seen.setter
     def most_recent_date_seen(self, dt: datetime) -> None:
-        with self.context as cache:
-            cache["most_recent_date_seen"] = dt.isoformat()
+        with self.connector.context_lock, self.connector.context as cache:
+            if self.consumer_type not in cache:
+                cache[self.consumer_type] = {}
+
+            cache[self.consumer_type]["most_recent_date_seen"] = dt.isoformat()
 
     @staticmethod
     def _serialize_events(events: list[Activity] | list[Threat] | list[dict]) -> list:
@@ -266,6 +268,11 @@ CONSUMER_TYPES = {"activity": SentinelOneActivityLogsConsumer, "threat": Sentine
 class SentinelOneLogsConnector(Connector):
     module: SentinelOneModule
     configuration: SentinelOneLogsConnectorConfiguration
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.context = PersistentJSON("context.json", self._data_path)
+        self.context_lock = Lock()
 
     def start_consumers(self) -> dict:
         """Starts children threads for each supported type
