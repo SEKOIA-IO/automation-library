@@ -21,5 +21,5 @@ EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,
-    labelnames=["intake_key"],
+    labelnames=["intake_key", "type"],
 )
