@@ -202,16 +202,13 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             )
 
             # Update context with latest event date
+            current_lag: int = 0
             latest_event_timestamp = get_latest_event_timestamp(activities.data)
             if latest_event_timestamp is not None:
                 self.most_recent_date_seen = latest_event_timestamp
+                current_lag = (datetime.now(UTC) - latest_event_timestamp).total_seconds()
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(
-                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-                )
-
-            else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(current_lag)
 
             if activities.pagination["nextCursor"] is None:
                 break
@@ -249,16 +246,13 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(nb_threats)
 
             # Update context with the latest event date
+            current_lag: int = 0
             latest_event_timestamp = get_latest_event_timestamp(threats.data)
             if latest_event_timestamp is not None:
                 self.most_recent_date_seen = latest_event_timestamp
+                current_lag = (datetime.now(UTC) - latest_event_timestamp).total_seconds()
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
-                    (datetime.now(UTC) - latest_event_timestamp).total_seconds()
-                )
-
-            else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(0)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(current_lag)
 
             if threats.pagination["nextCursor"] is None:
                 break
