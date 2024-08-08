@@ -152,8 +152,16 @@ class TrellixTokenRefresher(object):
             if response.status >= 400:
                 raise AuthenticationFailed.from_http_response(response_data)
 
+            access_token = HttpToken(**response_data)
+            logger.info(
+                "Got new access token",
+                expires_in=access_token.expires_in,
+                token_type=access_token.token_type,
+                token_id=access_token.tid,
+            )
+
             self._token = TrellixToken(
-                token=HttpToken(**response_data),
+                token=access_token,
                 scopes=self.scopes,
                 created_at=time.time(),
             )
@@ -199,7 +207,7 @@ class TrellixTokenRefresher(object):
         Yields:
             TrellixToken:
         """
-        if self._token is None:
+        if self._token is None or self._token.is_expired():
             await self.refresh_token()
 
         if not self._token:

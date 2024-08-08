@@ -160,7 +160,8 @@ async def test_trellix_connector_get_detection_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        # Each mock for each request for fresh token. We should have 3 requests
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=3)
 
         first_request_expected_detections_result = [
             edr_detection_event_response.dict(exclude_none=True) for _ in range(0, session_faker.pyint(max_value=100))
@@ -234,7 +235,8 @@ async def test_trellix_connector_get_affectedhosts_events(
 
         token_refresher = await http_client._get_token_refresher(Scope.threats_set_of_scopes())
 
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        # Each mock for each request for fresh token. We should have 3 requests
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=3)
 
         first_request_expected_detections_result = [
             edr_affectedhost_event_response.dict(exclude_none=True)
@@ -328,7 +330,7 @@ async def test_trellix_connector_get_threats_events(
 
         # Mocks #1
         # We mock request to get token
-        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=http_token.dict(), repeat=100)
 
         # Mocks #2
         # We mock request to get threats. Let`s say we should send 2 requests. First request

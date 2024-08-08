@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-08 - 1.9.2
+
+### Fixed
+
+- Ensure we have a fresh access token when the previous one expired
+
 ## 2024-08-07 - 1.9.1
 
 ### Fixed

@@ -153,7 +153,7 @@ class TrellixEpoConnector(AsyncConnector):
                     delta_sleep = self.configuration.frequency - processing_time
                     if len(message_ids) == 0 and delta_sleep > 0:
                         self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
-                        time.sleep(delta_sleep)
+                        loop.run_until_complete(asyncio.sleep(delta_sleep))
 
             except Exception as e:
                 self.log_exception(e, message="Error while running Trellix EPO")

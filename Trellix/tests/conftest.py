@@ -74,7 +74,7 @@ def http_token(session_faker) -> HttpToken:
     return HttpToken(
         tid=session_faker.pyint(),
         token_type=session_faker.word(),
-        expires_in=session_faker.pyint(min_value=100, max_value=1000),
+        expires_in=session_faker.pyint(min_value=500, max_value=1000),
         access_token=session_faker.word(),
     )
 

@@ -235,3 +235,36 @@ async def test_trellix_refresher_auth_url(
     )
 
     assert token_refresher.auth_url.path == expected_auth_path
+
+
+@pytest.mark.asyncio
+async def test_trellix_refresher_always_provide_fresh_token(http_token, session_faker, token_refresher_session):
+    """
+    Test TrellixTokenRefresher.with_access_token method.
+
+    Args:
+        http_token: HttpToken
+        session_faker: Faker
+        token_refresher_session: MagicMock
+    """
+    token_refresher_session.post = MagicMock()
+    token_refresher_session.post.return_value.__aenter__.return_value.status = 200
+    token_refresher_session.post.return_value.__aenter__.return_value.json.side_effect = [
+        {"tid": 233264798, "token_type": "Bearer", "expires_in": 1, "access_token": "token_expired_quickly"},
+        {"tid": 233264799, "token_type": "Bearer", "expires_in": 600, "access_token": "fresh_token"},
+    ]
+
+    token_refresher = TrellixTokenRefresher(
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.word(),
+        session_faker.uri(),
+        Scope.complete_set_of_scopes(),
+    )
+
+    await token_refresher.refresh_token()
+
+    async with token_refresher.with_access_token() as token:
+        assert token.token.access_token == "fresh_token"
+
+    await token_refresher.close()
