@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-08 - 1.17.3
+
+### Changed
+
+- filter events to discard already collected ones
+
 ## 2024-08-07 - 1.17.2
 
 ### Changed

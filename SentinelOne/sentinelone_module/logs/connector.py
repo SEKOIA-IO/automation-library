@@ -4,6 +4,7 @@ from functools import cached_property
 from threading import Event, Thread, Lock
 from time import sleep, time
 
+from cachetools import LRUCache, Cache
 from dateutil.parser import isoparse
 from management.mgmtsdk_v2.entities.activity import Activity
 from management.mgmtsdk_v2.entities.threat import Threat
@@ -18,7 +19,7 @@ from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
-from sentinelone_module.logs.helpers import get_latest_event_timestamp
+from sentinelone_module.logs.helpers import get_latest_event_timestamp, filter_collected_events
 
 logger = get_logger()
 
@@ -37,6 +38,7 @@ class SentinelOneLogsConsumer(Thread):
         self.connector = connector
         self.module = connector.module
         self.consumer_type = consumer_type
+        self.events_cache: Cache = LRUCache(maxsize=1000)
 
         self._stop_event = Event()
 
@@ -193,17 +195,21 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
                 nb_activities
             )
 
+            # discard already collected events
+            selected_events = filter_collected_events(activities.data, lambda activity: activity.id, self.events_cache)
+
             # Push events
-            events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(activities.data)))
+            if len(selected_events) > 0:
+                events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                nb_activities
+                len(selected_events)
             )
 
             # Update context with latest event date
             current_lag: int = 0
-            latest_event_timestamp = get_latest_event_timestamp(activities.data)
+            latest_event_timestamp = get_latest_event_timestamp(selected_events)
             if latest_event_timestamp is not None:
                 self.most_recent_date_seen = latest_event_timestamp
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
@@ -239,15 +245,21 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             nb_threats = len(threats.data)
             logger.debug("Collected nb_threats", nb=nb_threats)
 
+            # discard already collected events
+            selected_events = filter_collected_events(threats.data, lambda threat: threat.id, self.events_cache)
+
             # Push events
-            events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(threats.data)))
+            if len(selected_events) > 0:
+                events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(nb_threats)
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
+                len(selected_events)
+            )
 
             # Update context with the latest event date
             current_lag: int = 0
-            latest_event_timestamp = get_latest_event_timestamp(threats.data)
+            latest_event_timestamp = get_latest_event_timestamp(selected_events)
             if latest_event_timestamp is not None:
                 self.most_recent_date_seen = latest_event_timestamp
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())

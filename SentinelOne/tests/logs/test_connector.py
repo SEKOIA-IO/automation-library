@@ -52,6 +52,23 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
 
 
 @freeze_time("1970-01-01 00:00:00")
+def test_pull_activities_donot_collect_activity_twice(activity_consumer, activity_1, activity_2):
+    OUTCOMING_EVENTS.labels = MagicMock()
+    EVENTS_LAG.labels = MagicMock()
+    most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
+
+    activity_consumer.management_client.activities.get.return_value = MockResponse(
+        pagination={"nextCursor": None}, data=[activity_1]
+    )
+    activity_consumer.pull_events(most_recent_datetime_seen)
+    activity_consumer.pull_events(most_recent_datetime_seen)
+
+    assert activity_consumer.connector.push_events_to_intakes.call_args_list == [
+        call(activity_consumer._serialize_events([activity_1])),
+    ]
+
+
+@freeze_time("1970-01-01 00:00:00")
 def test_pull_threats(threat_consumer, threat_1, threat_2):
     OUTCOMING_EVENTS.labels = MagicMock()
     EVENTS_LAG.labels = MagicMock()
@@ -76,6 +93,23 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
     ).set.call_args_list == [
         call(int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_1.createdAt)).total_seconds())),
         call(int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(threat_2.createdAt)).total_seconds())),
+    ]
+
+
+@freeze_time("1970-01-01 00:00:00")
+def test_pull_threats_donot_collect_threats_twice(threat_consumer, threat_1, threat_2):
+    OUTCOMING_EVENTS.labels = MagicMock()
+    EVENTS_LAG.labels = MagicMock()
+    most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
+
+    threat_consumer.management_client.client.get.return_value = MockResponse(
+        pagination={"nextCursor": None}, data=[threat_1]
+    )
+    threat_consumer.pull_events(most_recent_datetime_seen)
+    threat_consumer.pull_events(most_recent_datetime_seen)
+
+    assert threat_consumer.connector.push_events_to_intakes.call_args_list == [
+        call(threat_consumer._serialize_events([threat_1])),
     ]
 
 
