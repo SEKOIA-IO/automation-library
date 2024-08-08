@@ -1,6 +1,9 @@
 import pytest
 import os
 from unittest.mock import Mock, patch
+
+from freezegun import freeze_time
+
 from google_module.google_reports import GoogleReports
 
 import tempfile
@@ -121,6 +124,27 @@ def test_drive_connector_NK(trigger, drive_response_NK, drive_response):
 
                     dict_result = [json.loads(result) for result in results[0]]
                     assert dict_result[2]["id"]["time"] == "2023-08-07T11:02:37.532Z"
+
+
+def test_timestepper_corner_case(trigger):
+    with freeze_time("2024-08-01 05:44:32", tick=True) as frozen_time, patch(
+        "google_module.timestepper.time"
+    ) as mock_time:
+        mock_time.sleep.side_effect = lambda seconds: frozen_time.tick(datetime.timedelta(seconds=seconds))
+        with trigger.context as cache:
+            cache["most_recent_date_seen"] = "2024-08-01 04:50:32+00:00"
+
+        # if difference between `most_recent_date_seen - now() <= timedelta`, then it will be ok
+        # otherwise, we have to process a corner case
+        trigger.configuration.timedelta = 60
+        trigger.configuration.frequency = 10
+        trigger.configuration.start_time = 1
+
+        for i, (start, end) in enumerate(trigger.stepper.ranges()):
+            assert start < end
+
+            if i > 100:
+                break
 
 
 @pytest.mark.skipif(
