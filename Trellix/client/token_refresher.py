@@ -207,14 +207,10 @@ class TrellixTokenRefresher(object):
         Yields:
             TrellixToken:
         """
-        if self._token is None:
+        if self._token is None or self._token.is_expired():
             await self.refresh_token()
 
         if not self._token:
             raise ValueError("Token is not initialized")
-
-        # Ensure we have a fresh token if the previous one expired
-        if self._token.created_at + self._token.token.expires_in > time.time() - 300:
-            await self.refresh_token()
 
         yield self._token
