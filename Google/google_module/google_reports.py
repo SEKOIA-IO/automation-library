@@ -102,10 +102,17 @@ class GoogleReports(GoogleTrigger):
                 most_recent_date_seen = six_months_ago
 
             timeshift = timedelta(minutes=self.configuration.timedelta)
+
+            start = most_recent_date_seen
+            end = now - timeshift  # set the end of the period to the now minus the temporal shift
+            if start > end:
+                # this is a case when most_recent_date_seen > now() - timedelta
+                start = most_recent_date_seen - timeshift
+
             return TimeStepper(
                 self,
-                most_recent_date_seen,
-                now - timeshift,  # Set the end of the period to the now minus the temporal shift
+                start,
+                end,
                 timedelta(seconds=self.configuration.frequency),
                 timeshift,
             )
