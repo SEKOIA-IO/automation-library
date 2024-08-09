@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-09 - 1.9.3
+
+### Fixed
+
+- Update retry interval to minimum 5 seconds
+
 ## 2024-08-08 - 1.9.2
 
 ### Fixed
