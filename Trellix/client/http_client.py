@@ -115,7 +115,15 @@ class TrellixHttpClient(object):
             AsyncGenerator[RetryClient, None]:
         """
         if cls._session is None:
-            cls._session = RetryClient(retry_options=RetryWithRateLimiter(ExponentialRetry(statuses={429})))
+            cls._session = RetryClient(
+                retry_options=RetryWithRateLimiter(
+                    ExponentialRetry(
+                        attempts=3,
+                        start_timeout=5.0,
+                        statuses={429}
+                    )
+                )
+            )
 
         if cls._rate_limiter and cls._rate_limiter_per_day:
             async with cls._rate_limiter_per_day:
