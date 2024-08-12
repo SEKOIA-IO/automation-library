@@ -9,7 +9,7 @@ class GetEventFieldCommonValues(BaseGetEvents):
             query=arguments["query"],
             earliest_time=arguments["earliest_time"],
             latest_time=arguments["latest_time"],
-            limit=arguments.get("limit"),
+            limit=min(self.MAX_LIMIT, arguments.get("limit") or self.DEFAULT_LIMIT),
         )
 
         self.wait_for_search_job_execution(event_search_job_uuid=event_search_job_uuid)
