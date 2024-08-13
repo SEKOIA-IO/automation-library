@@ -28,7 +28,7 @@
         "type": "number",
         "description": "Maximum number of events to retrieve",
 	"minimum": 1,
-	"default": 20,
+	"default": 100,
 	"maximum": 100
       }
     },

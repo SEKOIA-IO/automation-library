@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-12 - 2.64.0
+
+### Changed
+
+- Enforce default and limit specified in action manifests
+
 ## 2024-08-02 - 2.63.0
 
 ### Changed

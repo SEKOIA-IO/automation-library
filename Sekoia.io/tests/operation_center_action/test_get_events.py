@@ -132,7 +132,7 @@ def test_not_events_found(requests_mock):
     requests_mock.get(
         (
             "https://fake.url/api/v1/sic/conf/events/search/jobs/"
-            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=1000&offset=0"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=100&offset=0"
         ),
         json={
             "items": [],
@@ -168,7 +168,7 @@ def test_not_events_found_but_total(requests_mock):
     requests_mock.get(
         (
             "https://fake.url/api/v1/sic/conf/events/search/jobs/"
-            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=1000&offset=0"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=100&offset=0"
         ),
         json={
             "items": [],
