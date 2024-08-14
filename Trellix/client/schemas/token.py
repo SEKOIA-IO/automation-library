@@ -370,4 +370,5 @@ class TrellixToken(BaseModel):
         Returns:
             bool:
         """
-        return self.created_at + self.token.expires_in > time() - 300
+        # Decrease time of expiration to avoid rate limiting problems
+        return self.created_at + self.token.expires_in > time() - 1

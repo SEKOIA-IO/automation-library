@@ -86,7 +86,4 @@ def test_trellix_token_expired(sample_trellix_token):
     assert sample_trellix_token.is_expired() is True
 
     sample_trellix_token.created_at = int(time()) - sample_trellix_token.token.expires_in - 1
-    assert sample_trellix_token.is_expired() is True
-
-    sample_trellix_token.created_at = int(time()) - sample_trellix_token.token.expires_in - 300
     assert sample_trellix_token.is_expired() is False

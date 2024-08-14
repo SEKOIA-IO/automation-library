@@ -247,52 +247,54 @@ class TrellixEdrConnector(AsyncConnector):
 
         return result
 
+    async def async_run(self) -> None:  # pragma: no cover
+        while self.running:
+            processing_start = time.time()
+
+            message_threats_ids, most_recent_threat_date = await self.populate_threats()
+            message_alerts_ids, most_recent_alert_date = await self.populate_alerts()
+
+            processing_end = time.time()
+
+            message_ids = message_alerts_ids + message_threats_ids
+
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
+                processing_end - most_recent_threat_date.timestamp()
+            )
+
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="alerts").set(
+                processing_end - most_recent_alert_date.timestamp()
+            )
+
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+
+            log_message = "No records to forward"
+            if len(message_ids) > 0:
+                log_message = "Pushed {0} records".format(len(message_ids))
+
+            self.log(message=log_message, level="info")
+
+            processing_time = processing_end - processing_start
+            logger.info(
+                "Processing took {processing_time} seconds",
+                processing_time=processing_time,
+            )
+
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
+
+            # compute the remaining sleeping time. If greater than 0 and no messages where fetched, pause the connector
+            delta_sleep = self.configuration.frequency - processing_time
+            if len(message_ids) == 0 and delta_sleep > 0:
+                self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+
+                await asyncio.sleep(delta_sleep)
+
     def run(self) -> None:  # pragma: no cover
         """Runs TrellixEdr."""
         while self.running:
             try:
                 loop = asyncio.get_event_loop()
-
-                while self.running:
-                    processing_start = time.time()
-
-                    message_threats_ids, most_recent_threat_date = loop.run_until_complete(self.populate_threats())
-                    message_alerts_ids, most_recent_alert_date = loop.run_until_complete(self.populate_alerts())
-
-                    processing_end = time.time()
-
-                    message_ids = message_alerts_ids + message_threats_ids
-
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(
-                        processing_end - most_recent_threat_date.timestamp()
-                    )
-
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="alerts").set(
-                        processing_end - most_recent_alert_date.timestamp()
-                    )
-
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
-
-                    log_message = "No records to forward"
-                    if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
-
-                    self.log(message=log_message, level="info")
-
-                    processing_time = processing_end - processing_start
-                    logger.info(
-                        "Processing took {processing_time} seconds",
-                        processing_time=processing_time,
-                    )
-
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(processing_time)
-
-                    # compute the remaining sleeping time. If greater than 0 and no messages where fetched, pause the connector
-                    delta_sleep = self.configuration.frequency - processing_time
-                    if len(message_ids) == 0 and delta_sleep > 0:
-                        self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
-                        loop.run_until_complete(asyncio.sleep(delta_sleep))
-
+                loop.run_until_complete(self.async_run())
             except Exception as e:
                 self.log_exception(e, message="Error while running Trellix EDR")
                 time.sleep(self.configuration.frequency)

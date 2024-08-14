@@ -26,9 +26,10 @@ class RetryWithRateLimiter(RetryOptionsBase):
             attempt: The number of attempts for the request
             response: The response of the previous attempt
         """
-        # Call the underlying retry options if the response is not defined or if the response is not a too many requests response (status code: 429)
+        # Call the underlying retry options if the response is not defined or if the response
+        # is not a too many requests response (status code: 429)
         if response is None or response.status != 429 or self.RETRY_AFTER_HEADER not in response.headers:
             return self._wrapped_retry_options.get_timeout(attempt, response)
 
         # Return the pause specified in the Retry-After header
-        return int(response.headers["Retry-After"])
+        return float(response.headers["Retry-After"])
