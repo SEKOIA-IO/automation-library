@@ -15,6 +15,9 @@ class BaseGetEvents(Action):
     http_session: Session
     events_api_path: str
 
+    DEFAULT_LIMIT = 100
+    MAX_LIMIT = 100
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
