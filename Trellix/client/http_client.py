@@ -371,7 +371,7 @@ class TrellixHttpClient(object):
 
         try:
             data = await self._get_data(url, headers)
-        except AuthenticationError:
+        except AuthenticationError:  # pragma: no cover
             headers = await self._request_headers(Scope.complete_set_of_scopes())
             data = await self._get_data(url, headers)
 
@@ -397,7 +397,7 @@ class TrellixHttpClient(object):
 
         try:
             data = await self._get_data(url, headers)
-        except AuthenticationError:
+        except AuthenticationError:  # pragma: no cover
             headers = await self._request_headers(Scope.complete_set_of_scopes())
             data = await self._get_data(url, headers)
 
@@ -424,7 +424,7 @@ class TrellixHttpClient(object):
 
         try:
             data = await self._get_data(url, headers)
-        except AuthenticationError:
+        except AuthenticationError:  # pragma: no cover
             headers = await self._request_headers(Scope.complete_set_of_scopes())
             data = await self._get_data(url, headers)
 
@@ -456,7 +456,7 @@ class TrellixHttpClient(object):
 
         try:
             data = await self._get_data(url, headers)
-        except AuthenticationError:
+        except AuthenticationError:  # pragma: no cover
             headers = await self._request_headers(Scope.complete_set_of_scopes())
             data = await self._get_data(url, headers)
 
@@ -478,7 +478,7 @@ class TrellixHttpClient(object):
 
         try:
             data = await self._get_data(url, headers)
-        except AuthenticationError:
+        except AuthenticationError:  # pragma: no cover
             headers = await self._request_headers(Scope.complete_set_of_scopes())
             data = await self._get_data(url, headers)
 
