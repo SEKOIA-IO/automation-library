@@ -200,7 +200,7 @@ class TrellixTokenRefresher(object):
             self._token_refresh_task.cancel()
 
     @asynccontextmanager
-    async def with_access_token(self) -> AsyncGenerator[TrellixToken, None]:
+    async def with_access_token(self) -> AsyncGenerator[TrellixToken, None]:  # pragma: no cover
         """
         Get access token.
 
