@@ -19,6 +19,10 @@ from .schemas.trellix_response import TrellixResponse
 from .token_refresher import TrellixTokenRefresher
 
 
+class AuthenticationError(ValueError):
+    """Authentication error."""
+
+
 class TrellixHttpClient(object):
     """Class for Trellix http client."""
 
@@ -181,6 +185,9 @@ class TrellixHttpClient(object):
         """
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:
+                if response.status == 401:
+                    raise AuthenticationError("Unauthorized for request. Refresh token and try again")
+
                 if response.status != 200:
                     raise Exception(
                         "Error while getting data from {0} status {1}: {2}".format(
@@ -362,7 +369,11 @@ class TrellixHttpClient(object):
         headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.epo_events_url(start_date, limit)
 
-        data = await self._get_data(url, headers)
+        try:
+            data = await self._get_data(url, headers)
+        except AuthenticationError:
+            headers = await self._request_headers(Scope.complete_set_of_scopes())
+            data = await self._get_data(url, headers)
 
         return [TrellixResponse[EpoEventAttributes](**result) for result in data["data"]]
 
@@ -384,7 +395,11 @@ class TrellixHttpClient(object):
         headers = await self._request_headers(Scope.threats_set_of_scopes())
         url = self.edr_threats_url(start_date, end_date, limit, offset)
 
-        data = await self._get_data(url, headers)
+        try:
+            data = await self._get_data(url, headers)
+        except AuthenticationError:
+            headers = await self._request_headers(Scope.complete_set_of_scopes())
+            data = await self._get_data(url, headers)
 
         return [TrellixResponse[EdrThreatAttributes](**result) for result in data["data"]]
 
@@ -407,7 +422,11 @@ class TrellixHttpClient(object):
         headers = await self._request_headers(Scope.threats_set_of_scopes())
         url = self.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit, offset)
 
-        data = await self._get_data(url, headers)
+        try:
+            data = await self._get_data(url, headers)
+        except AuthenticationError:
+            headers = await self._request_headers(Scope.complete_set_of_scopes())
+            data = await self._get_data(url, headers)
 
         return [TrellixResponse[EdrAffectedhostAttributes](**result) for result in data["data"]]
 
@@ -435,7 +454,11 @@ class TrellixHttpClient(object):
         headers = await self._request_headers(Scope.threats_set_of_scopes())
         url = self.edr_threat_detections_url(threat_id, start_date, end_date, limit, offset)
 
-        data = await self._get_data(url, headers)
+        try:
+            data = await self._get_data(url, headers)
+        except AuthenticationError:
+            headers = await self._request_headers(Scope.complete_set_of_scopes())
+            data = await self._get_data(url, headers)
 
         return [TrellixResponse[EdrDetectionAttributes](**result) for result in data["data"]]
 
@@ -453,7 +476,11 @@ class TrellixHttpClient(object):
         headers = await self._request_headers(Scope.threats_set_of_scopes())
         url = self.edr_alerts_url(start_date, limit)
 
-        data = await self._get_data(url, headers)
+        try:
+            data = await self._get_data(url, headers)
+        except AuthenticationError:
+            headers = await self._request_headers(Scope.complete_set_of_scopes())
+            data = await self._get_data(url, headers)
 
         return [
             TrellixResponse[EdrAlertAttributes](
