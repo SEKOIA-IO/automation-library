@@ -185,7 +185,7 @@ class TrellixHttpClient(object):
         """
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:
-                if response.status == 401:
+                if response.status == 401:  # pragma: no cover
                     raise AuthenticationError("Unauthorized for request. Refresh token and try again")
 
                 if response.status != 200:
