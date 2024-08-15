@@ -2,13 +2,15 @@ import csv
 import os
 import queue
 from datetime import datetime, timedelta, timezone
-from threading import Thread
+from threading import Thread, Lock
 from time import sleep
 
 import requests
+from dateutil.parser import isoparse
 from requests import Response
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.connector.workers import Worker, Workers
+from sekoia_automation.storage import PersistentJSON
 
 from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 
@@ -43,18 +45,36 @@ class EventCollector(Thread):
     def log_exception(self, *args, **kwargs):
         self.connector.log_exception(*args, **kwargs)
 
+    def save_most_recent_date_seen(self, dt: datetime) -> None:
+        self.connector.context_lock.acquire()
+        with self.connector.context as cache:
+            cache["most_recent_date_seen"] = dt.isoformat()
+        self.connector.context_lock.release()
+
     def _update_time_range(self):
+        self.save_most_recent_date_seen(self.end_date)
+
         self.start_date: datetime = self.end_date
         self.end_date: datetime = self.end_date + timedelta(seconds=self.configuration.frequency)
 
     def _init_time_range(self):
-        self.end_date = self.trigger_activation - timedelta(hours=self.configuration.start_time)
+        self.connector.context_lock.acquire()
+        with self.connector.context as cache:
+            most_recent_date_seen_str = cache.get("most_recent_date_seen")
+        self.connector.context_lock.release()
 
-        # Only apply timedelta if start_time is set to 0
-        if self.configuration.start_time == 0:
-            self.end_date = self.end_date - timedelta(minutes=self.configuration.timedelta)
+        if most_recent_date_seen_str is None:
+            self.end_date = self.trigger_activation - timedelta(hours=self.configuration.start_time)
 
-        self.start_date = self.end_date - timedelta(seconds=self.configuration.frequency)
+            # Only apply timedelta if start_time is set to 0
+            if self.configuration.start_time == 0:
+                self.end_date = self.end_date - timedelta(minutes=self.configuration.timedelta)
+
+            self.start_date = self.end_date - timedelta(seconds=self.configuration.frequency)
+
+        else:
+            self.start_date = isoparse(most_recent_date_seen_str)
+            self.end_date: datetime = self.end_date + timedelta(seconds=self.configuration.frequency)
 
     def _sleep_until_next_batch(self):
         """
@@ -239,6 +259,9 @@ class SkyhighSecuritySWGTrigger(Connector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
+        self.context = PersistentJSON("context.json", self._data_path)
+        self.context_lock = Lock()
+
     def run(self):  # pragma: no cover
         self.log(message="SkyhighSWG Trigger has started", level="info")
 
@@ -254,7 +277,7 @@ class SkyhighSecuritySWGTrigger(Connector):
         )
         forwarders.start()
 
-        # start the transofrmers
+        # start the transformers
         transformers = Workers.create(
             int(os.environ.get("NB_TRANSFORMERS", 1)), Transformer, self, collect_queue, forwarding_queue
         )
