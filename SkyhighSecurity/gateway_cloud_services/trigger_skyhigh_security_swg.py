@@ -74,7 +74,7 @@ class EventCollector(Thread):
 
         else:
             self.start_date = isoparse(most_recent_date_seen_str)
-            self.end_date: datetime = self.end_date + timedelta(seconds=self.configuration.frequency)
+            self.end_date: datetime = self.start_date + timedelta(seconds=self.configuration.frequency)
 
     def _sleep_until_next_batch(self):
         """
