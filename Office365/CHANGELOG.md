@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-21 - 2.17.10
+
+### Added
+
+- Added more verbose logging for auth errors
+
 ## 2024-07-03 - 2.17.9
 
 ### Fixed
