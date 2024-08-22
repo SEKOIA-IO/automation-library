@@ -10,3 +10,7 @@ class WithSecureModuleConfiguration(BaseModel):
 class RemoteOperationResponse(BaseModel):
     multistatus: list[Any]
     transactionId: str
+
+
+class ResponseActionResponse(BaseModel):
+    id: str | None = None
