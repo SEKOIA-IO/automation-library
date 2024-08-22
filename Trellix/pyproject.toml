@@ -10,7 +10,7 @@ orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 sekoia-automation-sdk = { version = "^1.13.0", extras = ["all"] }
 async-lru = "^2.0.2"
-aiohttp = "^3.8.5"
+aiohttp = "^3.10.2"
 aiolimiter = "^1.1.0"
 aiohttp-retry = "^2.8.3"
 
