@@ -17,6 +17,9 @@ from .errors import (
     FailedToGetO365SubscriptionContents,
     FailedToListO365Subscriptions,
 )
+from .logging import get_logger
+
+logger = get_logger()
 
 
 class Office365API:
@@ -52,9 +55,17 @@ class Office365API:
         response = await asyncio.get_event_loop().run_in_executor(None, self._app.acquire_token_for_client, scopes)
 
         if "access_token" not in response:
+            logger.error(
+                "Failed to get access token",
+                response=response,
+            )
             raise ApplicationAuthenticationFailed("Failed to get access token", response=response)
 
         if response.get("token_type", "").lower() != "bearer":
+            logger.error(
+                "Bearer Authentication not supported",
+                response=response,
+            )
             raise ApplicationAuthenticationFailed("Bearer Authentication not supported", response=response)
 
         self._token_expiration = time.time() + int(response["expires_in"])
