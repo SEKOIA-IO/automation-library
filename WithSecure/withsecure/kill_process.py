@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -10,14 +10,16 @@ class ActionArguments(BaseModel):
     target: str
     organization_id: str
 
-    match: str  # allowed values: processId, processName, processNameRegex, processPath, processPathRegex
+    match: Literal["processId", "processName", "processNameRegex", "processPath", "processPathRegex"]
     process_match_values: list[str]  # min items: 1, max items: 6
 
-    process_memory_dump: bool
-    memory_dump_flag: str  # allowed values: full, pmem
+    process_memory_dump: bool = False
+    memory_dump_flag: Literal["full", "pmem"]  # allowed values: full, pmem
 
 
 class KillProcess(ResponseAction):
+    results_model = ResponseActionResponse
+
     def run(self, arguments: ActionArguments) -> Any:
         parameters = {
             "match": arguments.match,

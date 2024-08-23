@@ -14,6 +14,8 @@ class ActionArguments(BaseModel):
 
 
 class EnumerateProcesses(ResponseAction):
+    results_model = ResponseActionResponse
+
     def run(self, arguments: ActionArguments) -> Any:
         parameters = {"maxFileHash": arguments.max_file_hash}
 

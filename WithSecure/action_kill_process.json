@@ -1,0 +1,72 @@
+{
+  "name": "Kill process",
+  "description": "Kill process.",
+  "uuid": "0df444da-369a-42b5-a371-a1dce78e967b",
+  "docker_parameters": "kill_process",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "organization_id": {
+        "title": "OrganizationId",
+        "description": "UUID of an organization.",
+        "type": "string"
+      },
+      "target": {
+        "title": "Device ID",
+        "description": "Device identifier on which action is created.",
+        "type": "string"
+      },
+      "match": {
+        "title": "Match",
+        "description": "Strategy used to match processes (processId,processName,processNameRegex,processPath,processPathRegex)",
+        "type": "string",
+        "enum": [
+          "processId",
+          "processName",
+          "processNameRegex",
+          "processPath",
+          "processPathRegex"
+        ]
+      },
+      "process_match_values": {
+        "title": "Process match values",
+        "description": "List of values that are used to match process to kill. Depending on selected strategy it might be list of identifiers, names or regular expressions.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minContains": 1,
+        "maxContains": 6
+      },
+      "process_memory_dump": {
+        "title": "Process memory dump",
+        "description": "Whether to run memory dump on process before killing it.",
+        "type": "boolean",
+        "default": false
+      },
+      "memory_dump_flag": {
+        "title": "Memory dump flag",
+        "description": "full - memory dump includes all accessible memory of process, pmem - only information necessary to capture process' stack traces",
+        "type": "string",
+        "enum": ["full", "pmem"]
+      }
+    },
+    "required": [
+      "target",
+      "organization_id",
+      "match",
+      "process_match_values",
+      "process_memory_dump",
+      "memory_dump_flag"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Response ID",
+        "type": "string"
+      }
+    }
+  }
+}

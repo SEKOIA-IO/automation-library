@@ -14,6 +14,8 @@ class ActionArguments(BaseModel):
 
 
 class KillThread(ResponseAction):
+    results_model = ResponseActionResponse
+
     def run(self, arguments: ActionArguments) -> Any:
         parameters = {"threadId": arguments.thread_id}
 

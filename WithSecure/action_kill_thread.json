@@ -1,0 +1,36 @@
+{
+  "name": "Kill thread",
+  "description": "Kill thread.",
+  "uuid": "4bc76949-62de-460a-b50d-f81d9b42c556",
+  "docker_parameters": "kill_thread",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "organization_id": {
+        "title": "OrganizationId",
+        "description": "UUID of an organization.",
+        "type": "string"
+      },
+      "target": {
+        "title": "Device ID",
+        "description": "Device identifier on which action is created.",
+        "type": "string"
+      },
+      "thread_id": {
+        "title": "Thread ID",
+        "description": "Thread ID",
+        "type": "integer"
+      }
+    },
+    "required": ["target", "organization_id", "thread_id"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Response ID",
+        "type": "string"
+      }
+    }
+  }
+}
