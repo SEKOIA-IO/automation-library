@@ -123,6 +123,7 @@ class SentinelOneLogsConsumer(Thread):
     def next_batch(self):
         # save the starting time
         batch_start_time = time()
+        batch_duration: int = 0
 
         try:
             # get the batch
