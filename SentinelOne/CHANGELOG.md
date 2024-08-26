@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-26 - 1.17.4
+
+### Fixed
+
+- handle threats as a dictionary, instead of an object
+- declare batch_duration variable
+
 ## 2024-08-08 - 1.17.3
 
 ### Changed
