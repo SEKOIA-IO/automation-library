@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-26 - 1.19.4
+
+### Fixed
+
+- Prevent event collect failure if the verticles collector authentication fails
+
 ## 2024-07-23 - 1.19.3
 
 ### Fixed
