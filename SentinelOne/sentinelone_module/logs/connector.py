@@ -246,7 +246,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             logger.debug("Collected nb_threats", nb=nb_threats)
 
             # discard already collected events
-            selected_events = filter_collected_events(threats.data, lambda threat: threat.id, self.events_cache)
+            selected_events = filter_collected_events(threats.data, lambda threat: threat["id"], self.events_cache)
 
             # Push events
             if len(selected_events) > 0:

@@ -107,17 +107,19 @@ def activity_2():
 
 @pytest.fixture
 def threat_1():
-    threat = Threat()
-    threat.createdAt = "2021-03-09T13:03:22.026416Z"
-    threat.id = (str(random.randint(0, 1000000)),)
+    threat = dict(
+        createdAt="2021-03-09T13:03:22.026416Z",
+        id=(str(random.randint(0, 1000000)),),
+    )
     yield threat
 
 
 @pytest.fixture
 def threat_2():
-    threat = Threat()
-    threat.createdAt = "2021-03-09T15:41:54.448862Z"
-    threat.id = (str(random.randint(0, 1000000)),)
+    threat = dict(
+        createdAt="2021-03-09T15:41:54.448862Z",
+        id=(str(random.randint(0, 1000000)),),
+    )
     yield threat
 
 
