@@ -1,7 +1,7 @@
 {
   "description": "Consume events from SentinelOne DeepVisibility\u2019s Kafka brokers",
   "docker_parameters": "sentinelone_deep_visibility_consumer",
-  "name": "Consume events from SentinelOne DeepVisibility",
+  "name": "[DEPRECATED] Consume events from SentinelOne DeepVisibility",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
