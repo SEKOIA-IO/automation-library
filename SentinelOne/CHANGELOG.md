@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-08-27 - 1.17.5
+
+### Changed
+
+- Change the name of the connectors
+
+
 ## 2024-08-26 - 1.17.4
 
 ### Fixed
