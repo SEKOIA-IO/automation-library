@@ -859,3 +859,29 @@ def test_read_stream_with_verticles(trigger):
             pass
 
         assert actual_events == expected_events
+
+
+def test_verticles_collector_with_invalid_credential(symphony_storage):
+    module = CrowdStrikeFalconModule()
+    trigger = EventStreamTrigger(module=module, data_path=symphony_storage)
+    # mock the log function of trigger that requires network access to the api for reporting
+    trigger.log = MagicMock()
+    trigger.module.configuration = {
+        "base_url": "https://my.fake.sekoia",
+        "client_id": "foo",
+        "client_secret": "bar",
+    }
+    trigger.configuration = {
+        "tg_username": "username",
+        "tg_password": "password",
+        "intake_key": "intake_key",
+        "tg_base_url": "https://my.fake.sekoia",
+    }
+    trigger.app_id = "sio-00000"
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
+            status_code=401,
+        )
+        trigger.verticles_collector
