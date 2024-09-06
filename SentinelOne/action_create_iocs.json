@@ -27,16 +27,17 @@
             "type": "array"
           }
         }
-      },
-      "required": [
-        "stix_objects_path"
-      ],
-      "title": "Arguments",
-      "type": "object"
+      }
     },
-    "description": "Push IOCs in the Threat Intelligence API of SentinelOne",
-    "docker_parameters": "sentinelone_iocs_create_iocs",
-    "name": "Create IOCs",
-    "uuid": "0c4541ac-c6f5-434a-83f2-a2ad03a84af5 "
-  }
+    "required": [
+      "stix_objects_path"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Push IOCs in the Threat Intelligence API of SentinelOne",
+  "docker_parameters": "sentinelone_iocs_create_iocs",
+  "name": "Create IOCs",
+  "results": {},
+  "uuid": "3483ff12-8b2e-4614-b9b0-5f6019cb2678"
 }

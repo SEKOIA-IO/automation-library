@@ -49,30 +49,30 @@
             ]
           }
         }
-      },
-      "required": [
-        "status"
-      ],
-      "title": "Arguments",
-      "type": "object"
+      }
     },
-    "description": "Update a threat incident in SentinelOne",
-    "docker_parameters": "sentinelone_threat_update_incident",
-    "name": "Update Threat Incident",
-    "results": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "properties": {
-        "affected": {
-          "description": "The number of threats incidents updated",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "affected"
-      ],
-      "title": "Results",
-      "type": "object"
+    "required": [
+      "status"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Update a threat incident in SentinelOne",
+  "docker_parameters": "sentinelone_threat_update_incident",
+  "name": "Update Threat Incident",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "affected": {
+        "description": "The number of threats incidents updated",
+        "type": "integer"
+      }
     },
-    "uuid": "0c4541ac-c6f5-434a-83f2-a2ad03a84af5 "
-  }
+    "required": [
+      "affected"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "0c4541ac-c6f5-434a-83f2-a2ad03a84af5"
 }

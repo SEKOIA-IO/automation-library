@@ -34,31 +34,31 @@
             }
           }
         }
-      },
-      "required": [
-        "text",
-        "filters"
-      ],
-      "title": "Arguments",
-      "type": "object"
+      }
     },
-    "description": "Create a threat note in SentinelOne",
-    "docker_parameters": "sentinelone_threat_create_threat_note",
-    "name": "Create Threat Note",
-    "results": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "properties": {
-        "affected": {
-          "description": "The number of threats to which the note was added",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "affected"
-      ],
-      "title": "Results",
-      "type": "object"
+    "required": [
+      "text",
+      "filters"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Create a threat note in SentinelOne",
+  "docker_parameters": "sentinelone_threat_create_threat_note",
+  "name": "Create Threat Note",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "affected": {
+        "description": "The number of threats to which the note was added",
+        "type": "integer"
+      }
     },
-    "uuid": "ec11369d-142e-4cdf-a5d8-0cd6b9f3198b"
-  }
+    "required": [
+      "affected"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "ec11369d-142e-4cdf-a5d8-0cd6b9f3198b"
 }
