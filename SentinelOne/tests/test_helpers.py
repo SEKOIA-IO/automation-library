@@ -28,36 +28,32 @@ def test_stix_to_indicators():
         "ipv6-addr": {"value": "IPV6"},
         "domain-name": {"value": "DNS"},
         "file": {"hashes.MD5": "MD5", "hashes.SHA1": "SHA1", "hashes.sha256": "SHA256"},
-        "url": {"value": "URL"}
+        "url": {"value": "URL"},
     }
 
-    stix_object = {
-        "type": "indicator",
-        "pattern_type": "stix",
-        "pattern": "[file:hashes.MD5 = '123456']"
-    }
+    stix_object = {"type": "indicator", "pattern_type": "stix", "pattern": "[file:hashes.MD5 = '123456']"}
 
     assert stix_to_indicators(stix_object, supported_types_map) == [{"type": "MD5", "value": "123456"}]
 
     stix_object = {
         "type": "indicator",
         "pattern_type": "stix",
-        "pattern": "[file:hashes.MD5 = '123456' AND file:hashes.SHA1 = 'abcdef']"
-    }
-
-    assert stix_to_indicators(stix_object, supported_types_map) == [
-        {"type": "MD5", "value": "123456"},
-        {"type": "SHA1", "value": "abcdef"}
-    ]
-
-    stix_object = {
-        "type": "indicator",
-        "pattern_type": "stix",
-        "pattern": "[file:hashes.MD5 = '123456' AND file:hashes.SHA1 = 'abcdef' AND file:hashes.sha256 = 'abcdef']"
+        "pattern": "[file:hashes.MD5 = '123456' AND file:hashes.SHA1 = 'abcdef']",
     }
 
     assert stix_to_indicators(stix_object, supported_types_map) == [
         {"type": "MD5", "value": "123456"},
         {"type": "SHA1", "value": "abcdef"},
-        {"type": "SHA256", "value": "abcdef"}
+    ]
+
+    stix_object = {
+        "type": "indicator",
+        "pattern_type": "stix",
+        "pattern": "[file:hashes.MD5 = '123456' AND file:hashes.SHA1 = 'abcdef' AND file:hashes.sha256 = 'abcdef']",
+    }
+
+    assert stix_to_indicators(stix_object, supported_types_map) == [
+        {"type": "MD5", "value": "123456"},
+        {"type": "SHA1", "value": "abcdef"},
+        {"type": "SHA256", "value": "abcdef"},
     ]

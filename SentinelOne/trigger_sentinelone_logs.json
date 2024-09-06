@@ -20,7 +20,9 @@
         "type": "string"
       }
     },
-    "required": ["intake_key"],
+    "required": [
+      "intake_key"
+    ],
     "secrets": [],
     "title": "SentinelOne logs connector",
     "type": "object"
