@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-09-06 - 1.18.0
+
+### Added
+
+- Add some new actions to sentinelone
+
 ## 2024-08-07 - 1.17.2
 
 ### Changed
