@@ -13,6 +13,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add some new actions to sentinelone
 
+## 2024-08-27 - 1.17.6
+
+### Changed
+
+- Change the name of the triggers
+
+## 2024-08-27 - 1.17.5
+
+### Changed
+
+- Change the name of the connectors
+
+## 2024-08-26 - 1.17.4
+
+### Fixed
+
+- handle threats as a dictionary, instead of an object
+- declare batch_duration variable
+
+## 2024-08-08 - 1.17.3
+
+### Changed
+
+- filter events to discard already collected ones
+
 ## 2024-08-07 - 1.17.2
 
 ### Changed

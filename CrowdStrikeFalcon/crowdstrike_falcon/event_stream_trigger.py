@@ -469,14 +469,18 @@ class EventStreamTrigger(Connector):
             )
             return None
 
-        tg_client = CrowdstrikeThreatGraphClient(
-            self.configuration.tg_base_url,
-            self.configuration.tg_username,
-            self.configuration.tg_password,
-            default_headers=self._http_default_headers,
-        )
+        try:
+            tg_client = CrowdstrikeThreatGraphClient(
+                self.configuration.tg_base_url,
+                self.configuration.tg_username,
+                self.configuration.tg_password,
+                default_headers=self._http_default_headers,
+            )
 
-        return VerticlesCollector(self, tg_client, self.client)
+            return VerticlesCollector(self, tg_client, self.client)
+        except Exception as error:
+            self.log_exception(error, message="Failed to start the verticles collector")
+            return None
 
     def get_streams(self, app_id: str) -> dict[str, dict]:
         """
