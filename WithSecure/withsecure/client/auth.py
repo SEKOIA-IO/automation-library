@@ -10,7 +10,7 @@ from requests import PreparedRequest
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from withsecure.client.exceptions import AuthenticationError
-from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_BASE_URL, API_TIMEOUT, API_AUTH_RETRY_BACKOFF
+from withsecure.constants import API_AUTH_MAX_ATTEMPT, API_AUTH_RETRY_BACKOFF, API_BASE_URL, API_TIMEOUT
 from withsecure.helpers import human_readable_api_exception
 
 API_AUTHENTICATION_URL = urljoin(API_BASE_URL, "as/token.oauth2")

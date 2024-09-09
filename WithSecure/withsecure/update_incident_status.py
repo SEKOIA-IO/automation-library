@@ -1,8 +1,7 @@
 from pydantic import BaseModel
-from typing import Any
 
-from withsecure.models import RemoteOperationResponse
 from withsecure.incident_operation_action import IncidentOperationAction
+from withsecure.models import RemoteOperationResponse
 
 
 class ActionArguments(BaseModel):
