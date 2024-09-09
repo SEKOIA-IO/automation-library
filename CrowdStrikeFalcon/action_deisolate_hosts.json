@@ -1,0 +1,24 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ids": {
+        "type": "array",
+        "description": "List of host agent IDs to apply action to.",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "ids"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Lifts containment on the host and returns its network communications to normal.",
+  "docker_parameters": "deisolate_hosts",
+  "name": "Deisolate hosts",
+  "results": {},
+  "uuid": "e4b13855-15fa-48d9-9017-89aed01fd065"
+}
