@@ -38,16 +38,14 @@ def test_isolate_hosts_action():
             "POST",
             "https://my.fake.sekoia/devices/entities/devices-actions/v2?action_name=contain",
             complete_qs=True,
-            json={
-                "ids": ids
-            },
+            json={"ids": ids},
         )
 
         action.run({"ids": ids})
 
         history = mock.request_history
         assert mock.call_count == 2  # One call to OAUTH2 token, one call to isolate hosts
-        assert ("action_name=contain" in history[1].url)
+        assert "action_name=contain" in history[1].url
 
 
 def test_deisolate_hosts_action():
@@ -67,13 +65,11 @@ def test_deisolate_hosts_action():
             "POST",
             "https://my.fake.sekoia/devices/entities/devices-actions/v2?action_name=lift_containment",
             complete_qs=True,
-            json={
-                "ids": ids
-            },
+            json={"ids": ids},
         )
 
         action.run({"ids": ids})
 
         history = mock.request_history
         assert mock.call_count == 2  # One call to OAUTH2 token, one call to isolate hosts
-        assert ("action_name=lift_containment" in history[1].url)
+        assert "action_name=lift_containment" in history[1].url

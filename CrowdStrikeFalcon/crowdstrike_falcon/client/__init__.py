@@ -14,6 +14,7 @@ from crowdstrike_falcon.client.retry import Retry
 
 class HostAction(enum.Enum):
     """Mapping of available device actions based on docs."""
+
     lift_containment = "lift_containment"
     contain = "contain"
     hide_host = "hide_host"
