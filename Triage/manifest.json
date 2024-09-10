@@ -15,6 +15,10 @@
         "type": "string",
         "description": "API endpoint (url)",
         "format": "uri"
+      },
+      "exclude_signed": {
+        "type": "boolean",
+        "description": "Do not retrieve report with signed binary"
       }
     },
     "secrets": [
@@ -25,5 +29,5 @@
   "name": "Triage",
   "uuid": "919705ab-7a64-493e-a92b-4049fafea325",
   "slug": "triage",
-  "version": "1.36.0"
+  "version": "1.37.0"
 }
