@@ -42,6 +42,7 @@ class FortigateAddFQDNAction(Action):
             base_ip: str = firewall.get("base_ip")
             base_port: str = firewall.get("base_port")
             api_key: str = firewall.get("api_key")
+            vdom: str = firewall.get("vdom", "root")
 
             try:
                 response: Response = requests.post(
@@ -50,7 +51,7 @@ class FortigateAddFQDNAction(Action):
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {api_key}",
                     },
-                    params={"vdom": "root"},
+                    params={"vdom": vdom},
                     data=json.dumps(payload),
                     verify=False,
                     timeout=10,
