@@ -11,7 +11,7 @@ from connectors.s3.trigger_s3_flowlogs_parquet import AwsS3FlowLogsParquetRecord
 from connectors.s3.trigger_s3_logs import AwsS3LogsTrigger
 from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
 from connectors.trigger_sqs_messages import AwsSqsMessagesTrigger
-from connectors.s3.trigger_s3_parquet import AwsS3ParquetRecordsTrigger
+from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
 
 if __name__ == "__main__":
     init_logging()
@@ -26,6 +26,6 @@ if __name__ == "__main__":
     module.register(AwsSqsMessagesTrigger, "aws_sqs_messages_trigger")
     module.register(AwsS3FlowLogsTrigger, "aws_s3_flowlogs_trigger")
     module.register(AwsS3CloudFrontTrigger, "aws_s3_cloudfront_trigger")
-    module.register(AwsS3ParquetRecordsTrigger, "aws_s3_oscf_trigger")
+    module.register(AwsS3OcsfTrigger, "aws_s3_oscf_trigger")
 
     module.run()
