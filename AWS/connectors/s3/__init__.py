@@ -98,6 +98,12 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return data
 
+    def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict]:
+        """
+        Extract the records from the SQS message
+        """
+        return orjson.loads(sqs_message).get("Records", [])
+
     async def next_batch(self, previous_processing_end: float | None = None) -> tuple[list[str], list[int]]:
         """
         Get next batch of messages.
@@ -128,7 +134,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     timestamps_to_log.append(message_timestamp)
                     try:
                         # Records is a list of strings
-                        message_records.extend(orjson.loads(message).get("Records", []))
+                        message_records.extend(self._get_notifs_from_sqs_message(message))
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
