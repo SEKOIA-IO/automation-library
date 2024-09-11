@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-05-28 - 1.29.0
+
+### Added
+
+- Added VDOM as a parameter
+
 ## 2024-05-28 - 1.28.0
 
 ### Changed

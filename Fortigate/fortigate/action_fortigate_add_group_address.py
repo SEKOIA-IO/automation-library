@@ -27,7 +27,7 @@ class FortigateAddGroupAddress(Action):
             self.base_ip: str = firewall.get("base_ip")
             self.base_port: str = firewall.get("base_port")
             self.api_key: str = firewall.get("api_key")
-            self.vdom: str = "root"
+            self.vdom: str = firewall.get("vdom", "root")
 
             objects = [["name", name]]
 
