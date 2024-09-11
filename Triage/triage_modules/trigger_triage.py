@@ -39,7 +39,7 @@ class TriageTrigger(Trigger):
 
     @property
     def exclude_signed(self):
-        return self.module.configuration["exclude_signed"]
+        return self.configuration.get("exclude_signed", False)
 
     @property
     def frequency(self):

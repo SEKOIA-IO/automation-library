@@ -34,11 +34,11 @@ def trigger(symphony_storage):
     trigger.module.configuration = {
         "api_key": "toto",
         "api_url": "https://api.tria.ge/",
-        "exclude_signed": False,
     }
     trigger.configuration = {
         "frequency": 604800,
         "malware_list": ["icedid", "qakbot", "kdfjzkhfehvfjz"],
+        "exclude_signed": False,
     }
     trigger.send_event = Mock()
     trigger.log = Mock()
@@ -51,11 +51,11 @@ def trigger2(symphony_storage):
     trigger.module.configuration = {
         "api_key": "toto",
         "api_url": "https://api.tria.ge/",
-        "exclude_signed": True,
     }
     trigger.configuration = {
         "frequency": 604800,
         "malware_list": [],
+        "exclude_signed": True,
     }
     trigger.send_event = Mock()
     trigger.log = Mock()
