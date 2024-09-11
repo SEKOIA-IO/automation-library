@@ -104,6 +104,12 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         """
         return orjson.loads(sqs_message).get("Records", [])
 
+    def _get_object_from_notification(self, notification: dict) -> tuple[str | None, str | None]:
+        """
+        Extract the object information from notificiation
+        """
+        return notification.get("s3", {}).get("bucket", {}).get("name"), notification.get("s3", {}).get("object", {}).get("key")
+
     async def next_batch(self, previous_processing_end: float | None = None) -> tuple[list[str], list[int]]:
         """
         Get next batch of messages.
@@ -141,8 +147,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
                 for record in message_records:
                     try:
-                        s3_bucket = record.get("s3", {}).get("bucket", {}).get("name")
-                        s3_key = record.get("s3", {}).get("object", {}).get("key")
+                        s3_bucket, s3_key = self._get_object_from_notification(record)
 
                         if s3_bucket is None:
                             raise ValueError("Bucket is undefined", record)
