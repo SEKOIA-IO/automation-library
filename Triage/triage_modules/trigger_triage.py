@@ -121,8 +121,15 @@ class TriageConfigsTrigger(TriageTrigger):
         try:
             # Get static report for PE metadata
             static_report = self.client.static_report(sample_id=sample_id)
-            sig = static_report.get("files")[0]["metadata"]["pe"]["code_sign"]["signers"][0]["validity"]["trusted"]
-            return sig
+            signers = static_report.get("files")[0]["metadata"]["pe"]["code_sign"]["signers"]
+            for value in signers:
+                if isinstance(value["validity"]["trusted"], list):
+                    for entry in value["validity"]["trusted"]:
+                        if entry:
+                            signature = entry
+                else:
+                    signature = value["validity"]["trusted"]
+            return signature
         except (KeyError, TypeError):
             return False
 

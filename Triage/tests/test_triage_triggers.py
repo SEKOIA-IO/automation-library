@@ -22,6 +22,7 @@ from tests.data import (
     query_qakbot,
     query_240828_btyyeszang,
     query_240828_btyyeszang_static,
+    query_240908_tpps3axgmd_static,
 )
 from triage_modules.trigger_triage import TriageConfigsTrigger
 
@@ -118,12 +119,16 @@ def triage_mock():
             json=query_210609_c67qy7hmpe_static,
         )
         m.get(
-            "https://api.tria.ge/v0/samples/240828_btyyeszang/overview.json",
+            "https://api.tria.ge/v0/samples/240828-btyyeszang/overview.json",
             json=query_240828_btyyeszang,
         )
         m.get(
-            "https://api.tria.ge/v0/samples/240828_btyyeszang/reports/static",
+            "https://api.tria.ge/v0/samples/240828-btyyeszang/reports/static",
             json=query_240828_btyyeszang_static,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/240908-tpps3axgmd/reports/static",
+            json=query_240908_tpps3axgmd_static,
         )
         yield m
 
@@ -230,7 +235,13 @@ def test_check_sample_without_signature(trigger2, triage_mock):
 
 def test_check_sample_with_signature(trigger2, triage_mock):
     # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
-    sample_signature = trigger2.check_sample_signature("240828_btyyeszang")
+    sample_signature = trigger2.check_sample_signature("240828-btyyeszang")
+    assert sample_signature is True
+
+
+def test_check_report_with_multiple_signatures(trigger2, triage_mock):
+    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    sample_signature = trigger2.check_sample_signature("240908-tpps3axgmd")
     assert sample_signature is True
 
 
