@@ -10,17 +10,20 @@ azure-identity = "^1.16.1"
 pydantic = "^1.9.1"
 sekoia-automation-sdk = "^1.13.0"
 msgraph-sdk = "^1.0.0a16"
-pytest-asyncio = "^0.21.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
-black = {version = "^22.6.0", allow-prereleases = true}
+mypy = "^0.991"
+autoflake = "^1.4"
+isort = "^5.10.1"
+black = { version = "^24.4.2", extras = ["colorama"] }
 flake8 = "^4.0.1"
-mypy = "^0.961"
 pytest-clarity = "^1.0.1"
-types-requests = "^2.32.0.20240907"
+pytest-asyncio = "^0.21.1"
+types-requests = "*"
+poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
 
 [build-system]
 requires = [ "poetry-core>=1.0.0",]
@@ -35,6 +38,18 @@ include = '\.pyi?$'
 profile = "black"
 line_length = 119
 
+#[tool.mypy]
+#strict = true
+#ignore_missing_imports = true
+#allow_subclassing_any = true
+#allow_untyped_calls = true
+#pretty = true
+#show_error_codes = true
+#implicit_reexport = true
+#allow_untyped_decorators = true
+#warn_return_any = true
+#exclude = ["tests/*"]
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra"
@@ -47,3 +62,12 @@ omit = [
     "tests/*",
     "main.py",
 ]
+
+[tool.poe.tasks.lint]
+sequence = [
+    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
+    { cmd = "poetry run black ." },
+    { cmd = "poetry run isort ." },
+    { cmd = "poetry run mypy ." },
+]
+help = "Make code linting and formatting."

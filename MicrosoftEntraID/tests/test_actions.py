@@ -1,13 +1,14 @@
+import json
+from unittest.mock import AsyncMock, patch
+
+import pytest
+import requests
+
 from azure_ad.base import AzureADModule, MicrosoftGraphAction
+from azure_ad.delete_app import DeleteApplicationAction
 from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
 from azure_ad.get_user_authentication_methods import GetUserAuthenticationMethodsAction
 from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction, ResetUserPasswordAction
-from azure_ad.delete_app import DeleteApplicationAction
-
-from unittest.mock import AsyncMock, patch
-import pytest
-import requests
-import json
 
 
 def configured_action(action: MicrosoftGraphAction):

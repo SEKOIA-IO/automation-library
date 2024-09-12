@@ -1,16 +1,15 @@
+import asyncio
 from functools import cached_property
+from traceback import format_exc
 
-from azure.identity.aio import ClientSecretCredential  # async credentials only
+import sentry_sdk
 from azure.identity import UsernamePasswordCredential
+from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
 from pydantic import BaseModel, Field, root_validator
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
-
-import sentry_sdk
-from traceback import format_exc
-import asyncio
 
 
 class AzureADConfiguration(BaseModel):
