@@ -108,7 +108,9 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         """
         Extract the object information from notificiation
         """
-        return notification.get("s3", {}).get("bucket", {}).get("name"), notification.get("s3", {}).get("object", {}).get("key")
+        return notification.get("s3", {}).get("bucket", {}).get("name"), notification.get("s3", {}).get(
+            "object", {}
+        ).get("key")
 
     async def next_batch(self, previous_processing_end: float | None = None) -> tuple[list[str], list[int]]:
         """
