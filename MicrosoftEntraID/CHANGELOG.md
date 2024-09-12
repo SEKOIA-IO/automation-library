@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-09-11 - 2.8.1
+
+### Fixed
+
+- Provide a better error message when some of the required fields are missing
+
 ## 2024-05-28 - 2.8.0
 
 ### Changed

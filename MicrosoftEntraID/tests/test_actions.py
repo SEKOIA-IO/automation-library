@@ -171,6 +171,14 @@ async def test_get_user_authentication_methods():
         assert results == value_expected
 
 
+@pytest.mark.asyncio
+async def test_get_user_authentication_methods_should_raise_exception():
+    action = configured_action(GetUserAuthenticationMethodsAction)
+
+    with pytest.raises(ValueError):
+        await action.run({})
+
+
 SIGN_INS: list[dict] = [
     {
         "id": "1c60ed7c-be49-4e52-b7ff-20ec6df96800",
