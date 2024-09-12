@@ -98,13 +98,13 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return data
 
-    def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict]:
+    def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict[str, Any]]:
         """
         Extract the records from the SQS message
         """
-        return orjson.loads(sqs_message).get("Records", [])
+        return orjson.loads(sqs_message).get("Records") or []
 
-    def _get_object_from_notification(self, notification: dict) -> tuple[str | None, str | None]:
+    def _get_object_from_notification(self, notification: dict[str, Any]) -> tuple[str | None, str | None]:
         """
         Extract the object information from notificiation
         """

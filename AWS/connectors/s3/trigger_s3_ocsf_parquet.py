@@ -16,13 +16,13 @@ class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
 
     name = "AWS S3 OCSF records"
 
-    def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict]:
+    def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict[str, Any]]:
         """
         Extract the records from the SQS message
         """
         return [orjson.loads(sqs_message)]
 
-    def _get_object_from_notification(self, notification: dict) -> tuple[str | None, str | None]:
+    def _get_object_from_notification(self, notification: dict[str, Any]) -> tuple[str | None, str | None]:
         """
         Extract the object information from notificiation
         """
@@ -50,6 +50,6 @@ class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
         events = []
         for record in records:
             if len(record) > 0:
-                events.append(orjson.dumps(record))
+                events.append(orjson.dumps(record).decode("utf-8"))
 
         return events
