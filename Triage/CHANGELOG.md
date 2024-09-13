@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-09-13 - 1.37.0
+
+### Changed
+
+- Add the option `exclude_signed`: filter out binary with a trusted signature
+
 ## 2024-05-28 - 1.36.0
 
 ### Changed
