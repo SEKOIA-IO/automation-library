@@ -15,10 +15,6 @@
         "type": "string",
         "description": "API endpoint (url)",
         "format": "uri"
-      },
-      "exclude_signed": {
-        "type": "boolean",
-        "description": "Do not retrieve report with signed binary"
       }
     },
     "secrets": [
