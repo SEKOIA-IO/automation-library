@@ -139,7 +139,7 @@ class TrellixTokenRefresher(object):
             auth=BasicAuth(self.client_id, self.client_secret),
             json={},
         ) as response:
-            logger.info(response.url)
+            logger.debug(response.url)
 
             # raise an exception for any server error
             if response.status >= 500:
@@ -154,10 +154,9 @@ class TrellixTokenRefresher(object):
 
             access_token = HttpToken(**response_data)
             logger.info(
-                "Got new access token",
+                "Got new access token with expiration in {expires_in} at {created_at}",
                 expires_in=access_token.expires_in,
-                token_type=access_token.token_type,
-                token_id=access_token.tid,
+                created_at=time.time(),
             )
 
             self._token = TrellixToken(
@@ -186,8 +185,12 @@ class TrellixTokenRefresher(object):
         """
         await self.close()
 
+        refresh_in = self._compute_refresh_time(expires_in)
+
+        logger.info("Scheduling token refresh in {refresh_in} seconds {at}", refresh_in=refresh_in, at=time.time())
+
         async def _refresh() -> None:
-            await asyncio.sleep(self._compute_refresh_time(expires_in))
+            await asyncio.sleep(refresh_in)
             await self.refresh_token()
 
         self._token_refresh_task = asyncio.create_task(_refresh())
