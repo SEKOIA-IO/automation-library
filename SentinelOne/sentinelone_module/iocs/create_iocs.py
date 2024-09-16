@@ -55,7 +55,7 @@ class CreateIOCsAction(SentinelOneAction):
 
     def get_valid_indicators(self, stix_objects):
         seen_values = defaultdict(list)
-        results = {"valid": [], "revoked": []}
+        results = {"valid": []}
         for object in stix_objects:
             # Extract value and type from pattern
             self.log(message=f"Object in stix_objects {str(object)}", level="debug")
@@ -67,7 +67,6 @@ class CreateIOCsAction(SentinelOneAction):
 
                 # Handle revoked objects
                 if object.get("revoked", False):
-                    results["revoked"].append(result)
                     continue
 
                 # Ignore this IOC if the same value has already been processed
@@ -97,7 +96,7 @@ class CreateIOCsAction(SentinelOneAction):
             self.log("Empty or missing STIX objects received from the data source.")
 
         indicators = self.get_valid_indicators(stix_objects)
-        if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
+        if len(indicators["valid"]) == 0:
             self.log("Received indicators were not valid and/or not supported")
             return
         df_indicators = pd.DataFrame(indicators["valid"])

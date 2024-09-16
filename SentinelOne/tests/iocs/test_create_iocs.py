@@ -80,7 +80,6 @@ def test_get_valid_indicators(symphony_storage, sentinelone_module):
 
     indicators = create_iocs_action.get_valid_indicators(stix_objects)
 
-    assert len(indicators["revoked"]) == 0
     assert len(indicators["valid"]) == 1
     assert indicators["valid"][0]["createdTime"]
     assert indicators["valid"][0]["validUntil"]
