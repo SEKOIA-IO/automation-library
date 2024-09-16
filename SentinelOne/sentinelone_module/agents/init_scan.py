@@ -8,7 +8,7 @@ from sentinelone_module.filters import BaseFilters
 class InitiateScanArguments(BaseFilters):
     account_ids: list[str] | None
     group_ids: list[str] | None
-    ids: list[str] | None
+    uuids: list[str] | None
     site_ids: list[str] | None
 
     class Config:

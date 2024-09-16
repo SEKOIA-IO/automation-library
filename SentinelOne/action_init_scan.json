@@ -2,8 +2,8 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "ids": {
-        "description": "The list of Agent IDs to filter by",
+      "uuids": {
+        "description": "The list of Agent uuids to filter by",
         "type": "array",
         "items": {
           "type": "string"
