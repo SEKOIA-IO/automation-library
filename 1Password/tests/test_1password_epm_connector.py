@@ -8,7 +8,7 @@ from onepassword_modules.connector_1password_epm import OnePasswordConnector, Si
 
 
 @pytest.fixture
-def trigger(data_storage, patch_datetime_now):
+def trigger(data_storage):
     module = OnePasswordModule()
     module.configuration = {"api_token": "myapikey", "base_url": "https://example.com"}
 
