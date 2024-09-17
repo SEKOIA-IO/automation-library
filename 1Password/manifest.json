@@ -24,5 +24,6 @@
   "description": "1Password's Enterprise Password Manager offers robust security features for businesses, enabling secure sharing and management of passwords and sensitive data across teams, with advanced admin controls and seamless integration into existing workflows.",
   "name": "1Password",
   "uuid": "56f9e1f6-95ba-45ed-867b-44fb3183934d",
+  "slug": "one-password",
   "version": "0.1.0"
 }
