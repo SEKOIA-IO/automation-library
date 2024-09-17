@@ -1,24 +1,10 @@
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
 
 from onepassword_modules import OnePasswordModule
 from onepassword_modules.connector_1password_epm import OnePasswordConnector, SignInAttemptsEndpoint
-
-
-@pytest.fixture
-def fake_time():
-    yield datetime(2023, 12, 14, 0, 0, 1, tzinfo=timezone.utc)
-
-
-@pytest.fixture
-def patch_datetime_now(fake_time):
-    with patch("onepassword_modules.connector_1password_epm.datetime") as mock_datetime:
-        mock_datetime.now.return_value = fake_time
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
-        yield mock_datetime
 
 
 @pytest.fixture
@@ -33,6 +19,7 @@ def trigger(data_storage, patch_datetime_now):
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
 
+    trigger.get_allowed_endpoints = ["signinattempts", "itemusages", "auditevents"]
     yield trigger
 
 
@@ -129,3 +116,38 @@ def test_next_batch_without_events(trigger, message_1, message_2):
 
         assert trigger.push_events_to_intakes.call_count == 0
         mock_time.sleep.assert_called_once_with(44)
+
+
+def test_start_consumers(trigger):
+    with patch("onepassword_modules.connector_1password_epm.OnePasswordEndpoint.start") as mock_start:
+        consumers = trigger.start_consumers()
+        assert consumers is not None
+        assert "signinattempts" in consumers
+        assert "itemusages" in consumers
+        assert "auditevents" in consumers
+
+        assert mock_start.called
+
+
+def test_supervise_consumers(trigger):
+    with patch("onepassword_modules.connector_1password_epm.OnePasswordEndpoint.start") as mock_start:
+        consumers = {
+            "signinattempts": Mock(**{"is_alive.return_value": False, "running": True}),
+            "itemusages": None,
+            "auditevents": Mock(**{"is_alive.return_value": False, "running": False}),
+        }
+        trigger.supervise_consumers(consumers)
+        assert mock_start.call_count == 2
+
+
+def test_stop_consumers(trigger):
+    consumers = {
+        "signinattempts": Mock(**{"is_alive.return_value": False}),
+        "itemusages": Mock(**{"is_alive.return_value": False}),
+        "auditevents": Mock(**{"is_alive.return_value": True}),
+    }
+
+    trigger.stop_consumers(consumers)
+
+    assert consumers["auditevents"] is not None
+    assert consumers["auditevents"].stop.called
