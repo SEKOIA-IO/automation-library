@@ -1,0 +1,29 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "1Password",
+    "type": "object",
+    "properties": {
+       "base_url": {
+        "description": "1Password base URL",
+        "type": "string"
+      },
+      "api_token": {
+        "description": "API token",
+        "type": "string"
+      }
+    },
+    "required": [
+      "base_url",
+      "api_token"
+    ],
+    "secrets": [
+      "api_token"
+    ]
+  },
+  "description": "1Password's Enterprise Password Manager offers robust security features for businesses, enabling secure sharing and management of passwords and sensitive data across teams, with advanced admin controls and seamless integration into existing workflows.",
+  "name": "1Password",
+  "uuid": "56f9e1f6-95ba-45ed-867b-44fb3183934d",
+  "slug": "one-password",
+  "version": "0.1.0"
+}
