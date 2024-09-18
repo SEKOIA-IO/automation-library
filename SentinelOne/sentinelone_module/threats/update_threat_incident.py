@@ -11,7 +11,7 @@ class UpdateThreatIncidentFilters(BaseFilters):
     site_ids: list[str] | None
     agent_ids: list[str] | None
     ids: list[str] | None
-    analyst_verdict: str | None
+    analyst_verdicts: str | None
 
     class Config:
         query_filter_class = ThreatQueryFilter
