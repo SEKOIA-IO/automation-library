@@ -102,7 +102,7 @@ class CreateIOCsAction(SentinelOneAction):
             self.log("Received indicators were not valid and/or not supported")
             return
         df_indicators = pd.DataFrame(indicators["valid"])
-        
+
         self.log("Start sending indicators to SentinelOne !!")
         response = self.client.threat_intel.create_or_update_ioc(
             df_indicators, query_filter=arguments.get_query_filters()
