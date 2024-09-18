@@ -91,7 +91,7 @@ class CreateIOCsAction(SentinelOneAction):
             self.sekoia_base_url = arguments.sekoia_base_url
 
         self.log("Starting looking for stix_objects in the provided path")
-        stix_objects = self.json_argument("stix_objects", arguments.model_dump())
+        stix_objects = self.json_argument("stix_objects", arguments.dict())
 
         if not stix_objects:
             self.log("Empty or missing STIX objects received from the data source.")
