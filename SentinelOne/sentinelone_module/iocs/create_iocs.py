@@ -90,16 +90,20 @@ class CreateIOCsAction(SentinelOneAction):
         if arguments.sekoia_base_url:
             self.sekoia_base_url = arguments.sekoia_base_url
 
-        stix_objects = self.json_argument("stix_objects", arguments)
+        self.log("Starting looking for stix_objects in the provided path")
+        stix_objects = self.json_argument("stix_objects", arguments.model_dump())
 
         if not stix_objects:
             self.log("Empty or missing STIX objects received from the data source.")
 
+        self.log("Start getting valid indicators")
         indicators = self.get_valid_indicators(stix_objects)
         if len(indicators["valid"]) == 0:
             self.log("Received indicators were not valid and/or not supported")
             return
         df_indicators = pd.DataFrame(indicators["valid"])
+        
+        self.log("Start sending indicators to SentinelOne !!")
         response = self.client.threat_intel.create_or_update_ioc(
             df_indicators, query_filter=arguments.get_query_filters()
         )
