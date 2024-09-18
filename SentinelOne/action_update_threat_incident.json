@@ -50,8 +50,8 @@
               "type": "string"
             }
           },
-          "analyst_verdict": {
-            "description": "Verdict of the analyst",
+          "analyst_verdicts": {
+            "description": "Verdicts of the analyst",
             "type": "string",
             "enum": [
               "False_positive",
