@@ -1,6 +1,6 @@
 import string
 
-from sentinelone_module.helpers import generate_password
+from sentinelone_module.helpers import generate_password, is_a_supported_stix_indicator, stix_to_indicators
 
 
 def assert_password(password: str):
@@ -14,3 +14,46 @@ def assert_password(password: str):
 def test_generate_password():
     assert_password(generate_password())
     assert_password(generate_password(6))
+
+
+def test_is_a_supported_stix_indicator():
+    assert is_a_supported_stix_indicator({"type": "indicator", "pattern_type": "stix"})
+    assert not is_a_supported_stix_indicator({"type": "indicator", "pattern_type": "not_stix"})
+    assert not is_a_supported_stix_indicator({"type": "not_indicator", "pattern_type": "stix"})
+
+
+def test_stix_to_indicators():
+    supported_types_map = {
+        "ipv4-addr": {"value": "IPV4"},
+        "ipv6-addr": {"value": "IPV6"},
+        "domain-name": {"value": "DNS"},
+        "file": {"hashes.MD5": "MD5", "hashes.SHA1": "SHA1", "hashes.sha256": "SHA256"},
+        "url": {"value": "URL"},
+    }
+
+    stix_object = {"type": "indicator", "pattern_type": "stix", "pattern": "[file:hashes.MD5 = '123456']"}
+
+    assert stix_to_indicators(stix_object, supported_types_map) == [{"type": "MD5", "value": "123456"}]
+
+    stix_object = {
+        "type": "indicator",
+        "pattern_type": "stix",
+        "pattern": "[file:hashes.MD5 = '123456' AND file:hashes.SHA1 = 'abcdef']",
+    }
+
+    assert stix_to_indicators(stix_object, supported_types_map) == [
+        {"type": "MD5", "value": "123456"},
+        {"type": "SHA1", "value": "abcdef"},
+    ]
+
+    stix_object = {
+        "type": "indicator",
+        "pattern_type": "stix",
+        "pattern": "[file:hashes.MD5 = '123456' AND file:hashes.SHA1 = 'abcdef' AND file:hashes.sha256 = 'abcdef']",
+    }
+
+    assert stix_to_indicators(stix_object, supported_types_map) == [
+        {"type": "MD5", "value": "123456"},
+        {"type": "SHA1", "value": "abcdef"},
+        {"type": "SHA256", "value": "abcdef"},
+    ]

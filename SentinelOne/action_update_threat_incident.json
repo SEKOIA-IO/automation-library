@@ -1,0 +1,90 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "status": {
+        "description": "Status applied to the incident",
+        "type": "string",
+        "enum": [
+          "unresolved",
+          "in_progress",
+          "resolved"
+        ]
+      },
+      "filters": {
+        "description": "Filters to select the threats to update",
+        "type": "object",
+        "properties": {
+          "agent_ids": {
+            "description": "The list of Agent IDs to filter by",
+            "type": "array",
+             "items": {
+                "type": "string"
+              }
+          },
+          "account_ids": {
+            "description": "The list of Account IDs to filter by",
+            "type": "array",
+            "items": {
+                "type": "string"
+              }
+          },
+          "group_ids": {
+            "description": "The list of network group to filter by",
+            "type": "array",
+            "items": {
+                "type": "string"
+              }
+          },
+          "site_ids": {
+            "description": "The list of Site IDs to filter by",
+            "type": "array",
+            "items": {
+                "type": "string"
+              }
+          },
+          "ids": {
+            "description": "The list of Agent IDs to filter by",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "analyst_verdict": {
+            "description": "Verdict of the analyst",
+            "type": "string",
+            "enum": [
+              "False_positive",
+              "Suspicious",
+              "True_positive",
+              "Undefined"
+            ]
+          }
+        }
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Update a threat incident in SentinelOne",
+  "docker_parameters": "sentinelone_threat_update_incident",
+  "name": "Update Threat Incident",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "affected": {
+        "description": "The number of threats incidents updated",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "affected"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "0c4541ac-c6f5-434a-83f2-a2ad03a84af5"
+}

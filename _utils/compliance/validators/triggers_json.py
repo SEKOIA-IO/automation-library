@@ -37,6 +37,7 @@ class TriggersJSONValidator(Validator):
             return
 
         if not isinstance(raw.get("name"), str):
+            print(f"raw_name: {raw.get('name')}, type : {type(raw.get('name'))}")
             result.errors.append(
                 CheckError(filepath=path, error=f"`name` is not present")
             )
