@@ -173,8 +173,10 @@ class TrellixTokenRefresher(object):
         This margin is depends on the refresh interval and a maximum of five minutes.
         The refresh interval is a minimum of 30 seconds
         """
-        delta = min(300, int(expires_in / 6))
-        return max(30, expires_in - delta)
+        # delta = min(300, int(expires_in / 6))
+        # return max(30, expires_in - delta)
+
+        return min(300, expires_in)
 
     async def _schedule_token_refresh(self, expires_in: int) -> None:
         """

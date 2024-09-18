@@ -291,10 +291,11 @@ class TrellixEdrConnector(AsyncConnector):
 
     def run(self) -> None:  # pragma: no cover
         """Runs TrellixEdr."""
+        loop = asyncio.get_event_loop()
+
         while self.running:
             try:
-                loop = asyncio.get_event_loop()
                 loop.run_until_complete(self.async_run())
             except Exception as e:
                 self.log_exception(e, message="Error while running Trellix EDR")
-                time.sleep(self.configuration.frequency)
+                loop.run_until_complete(asyncio.sleep(self.configuration.frequency))

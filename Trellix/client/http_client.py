@@ -30,6 +30,7 @@ class TrellixHttpClient(object):
     _session: RetryClient | None = None
     _rate_limiter: AsyncLimiter | None = None
     _rate_limiter_per_day: AsyncLimiter | None = None
+    _token_refresher: Optional[TrellixTokenRefresher] = None
 
     def __init__(
         self,
@@ -143,9 +144,14 @@ class TrellixHttpClient(object):
         Returns:
             TrellixTokenRefresher:
         """
-        return await TrellixTokenRefresher.instance(
+        if self._token_refresher:
+            return self._token_refresher
+
+        self._token_refresher = await TrellixTokenRefresher.instance(
             self.client_id, self.client_secret, self.api_key, self.auth_url, scopes
         )
+
+        return self._token_refresher
 
     async def _request_headers(self, scopes: Set[Scope], encoding: bool = True) -> dict[str, str]:
         """
