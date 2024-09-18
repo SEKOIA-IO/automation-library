@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-09-06 - 1.18.1
 
-### Updated
+### Changed
 
 - Update analyst_verdict variable
 
