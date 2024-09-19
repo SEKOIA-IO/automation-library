@@ -1,4 +1,3 @@
-from logging import get_logger
 from threading import Event
 from typing import Any
 
@@ -6,6 +5,7 @@ from sekoia_automation.action import Action
 
 from withsecure.client import ApiClient
 from withsecure.constants import API_RESPONSE_ACTIONS_URL, API_TIMEOUT
+from withsecure.logging import get_logger
 
 logger = get_logger()
 
