@@ -15,17 +15,6 @@ def arguments():
     )
 
 
-def test_get_payload(symphony_storage, sentinelone_module):
-    create_iocs_action = CreateIOCsAction(module=sentinelone_module, data_path=symphony_storage)
-    payload = create_iocs_action.get_payload("md5value test", "MD5")
-
-    assert payload == {
-        "value": "md5value test",
-        "type": "MD5",
-        "source": "Sekoia.io",
-    }
-
-
 def test_get_valid_indicators(symphony_storage, sentinelone_module):
     create_iocs_action = CreateIOCsAction(module=sentinelone_module, data_path=symphony_storage)
     stix_objects = [
@@ -81,8 +70,8 @@ def test_get_valid_indicators(symphony_storage, sentinelone_module):
     indicators = create_iocs_action.get_valid_indicators(stix_objects)
 
     assert len(indicators["valid"]) == 1
-    assert indicators["valid"][0]["createdTime"]
-    assert indicators["valid"][0]["validUntil"]
+    assert indicators["valid"][0].creationTime
+    assert indicators["valid"][0].validUntil
 
 
 def test_create_iocs(symphony_storage, sentinelone_hostname, sentinelone_module, arguments):
