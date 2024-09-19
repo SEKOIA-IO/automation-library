@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## 2024-09-06 - 1.18.1
+## 2024-09-18 - 1.18.2
+
+### Fixed
+
+- Fix create_iocs type problem
+
+## 2024-09-18 - 1.18.1
 
 ### Changed
 
