@@ -17,13 +17,11 @@ class EnumerateProcesses(ResponseAction):
     results_model = ResponseActionResponse
 
     def run(self, arguments: ActionArguments) -> Any:
-        parameters = {"maxFileHash": arguments.max_file_hash}
 
         response = self._execute_operation_on_device(
             action_type="enumerateProcesses",
             organization_id=arguments.organization_id,
             target=arguments.target,
-            parameters=parameters,
         )
 
         return ResponseActionResponse(id=response.get("id"))

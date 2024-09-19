@@ -23,6 +23,7 @@ class ResponseAction(Action):
             "type": action_type,
             "organizationId": organization_id,
             "targets": [target],
+            "parameters": {},
         }
         if parameters:
             # add only parameters with values

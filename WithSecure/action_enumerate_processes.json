@@ -15,11 +15,6 @@
         "title": "Device ID",
         "description": "Device identifier on which action is created.",
         "type": "string"
-      },
-      "max_file_hash": {
-        "title": "Max file hash",
-        "description": "Maximum file size to hash, in MB. Prevents excessive delays when hashing large files.",
-        "type": "integer"
       }
     },
     "required": ["target", "organization_id"]
