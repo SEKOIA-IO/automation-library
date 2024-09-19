@@ -1,3 +1,4 @@
+from logging import get_logger
 from threading import Event
 from typing import Any
 
@@ -5,6 +6,8 @@ from sekoia_automation.action import Action
 
 from withsecure.client import ApiClient
 from withsecure.constants import API_RESPONSE_ACTIONS_URL, API_TIMEOUT
+
+logger = get_logger()
 
 
 class ResponseAction(Action):
@@ -46,6 +49,15 @@ class ResponseAction(Action):
             json=request_payload,
             headers=headers,
         )
+
+        if not response.ok:
+            response_json = response.json()
+            logger.error(
+                response_json["message"],
+                code=response_json["code"],
+                transaction_id=response_json["transactionId"],
+            )
+
         response.raise_for_status()
 
         return response.json()
