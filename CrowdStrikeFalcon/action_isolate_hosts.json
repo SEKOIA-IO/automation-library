@@ -1,0 +1,24 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ids": {
+        "type": "array",
+        "description": "List of host agent IDs to apply action to.",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "ids"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Contains the host and stops any network communications to locations other than the CrowdStrike cloud and IPs specified in your containment policy.",
+  "docker_parameters": "isolate_hosts",
+  "name": "Isolate hosts",
+  "results": {},
+  "uuid": "3140f928-a766-45c3-80b5-ab92444629e8"
+}

@@ -9,6 +9,7 @@ import requests_mock
 from tests.data import (
     query_210609_8ddyb8de5s,
     query_210609_c67qy7hmpe,
+    query_210609_c67qy7hmpe_static,
     query_210614_dgzch44pyn,
     query_211006_qkva7sbdgj,
     query_211118_a13draede7,
@@ -19,6 +20,9 @@ from tests.data import (
     query_icedid,
     query_kdfjzkhfehvfjz,
     query_qakbot,
+    query_240828_btyyeszang,
+    query_240828_btyyeszang_static,
+    query_240908_tpps3axgmd_static,
 )
 from triage_modules.trigger_triage import TriageConfigsTrigger
 
@@ -35,6 +39,24 @@ def trigger(symphony_storage):
     trigger.configuration = {
         "frequency": 604800,
         "malware_list": ["icedid", "qakbot", "kdfjzkhfehvfjz"],
+        "exclude_signed": False,
+    }
+    trigger.send_event = Mock()
+    trigger.log = Mock()
+    return trigger
+
+
+@pytest.fixture
+def trigger2(symphony_storage):
+    trigger = TriageConfigsTrigger()
+    trigger.module.configuration = {
+        "api_key": "toto",
+        "api_url": "https://api.tria.ge/",
+    }
+    trigger.configuration = {
+        "frequency": 604800,
+        "malware_list": [],
+        "exclude_signed": True,
     }
     trigger.send_event = Mock()
     trigger.log = Mock()
@@ -91,6 +113,22 @@ def triage_mock():
         m.get(
             "https://api.tria.ge/v1/samples/230220-tbqs7sah7x/overview.json",
             json=query_230220_tbqs7sah7x,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/210609-c67qy7hmpe/reports/static",
+            json=query_210609_c67qy7hmpe_static,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/240828-btyyeszang/overview.json",
+            json=query_240828_btyyeszang,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/240828-btyyeszang/reports/static",
+            json=query_240828_btyyeszang_static,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/240908-tpps3axgmd/reports/static",
+            json=query_240908_tpps3axgmd_static,
         )
         yield m
 
@@ -161,6 +199,50 @@ def test_get_sample_iocs(trigger, triage_mock):
             "94ab8ddb32a8431c4a17312a97b4cc4a53dfef3957bf5dc627449ed8e88427df",
         ],
     }
+
+
+def test_get_sample_unsigned_iocs_exclude_signed_on(trigger2, triage_mock):
+    # ASSERT THAT SAMPLE_IOCS OF A SPECIFIC ANALYSIS WITHOUT SIGNATURE CORRESPONDS WHEN EXCLUDE SIGNED IS ON
+    sample_iocs = trigger2.get_sample_iocs("icedid", "210609-c67qy7hmpe")
+    assert sample_iocs == {
+        "sample_c2s": ["dilmopozira.top"],
+        "sample_urls": [],
+        "sample_hashes": [
+            "a99f6f41e94c0c9dac365e9bd194391c",
+            "12c8adf784f2e3072cd6142d87c052e3fddde059",
+            "0d78a33a77954db9c2fd31198710d9beef5f8e1b5147890231896f5628bc4a2b",
+            "569184b18e66eaa908744acfddc83ec954d1e62d69c254634c60e48f8f5b036b"
+            "94ab8ddb32a8431c4a17312a97b4cc4a53dfef3957bf5dc627449ed8e88427df",
+        ],
+    }
+
+
+def test_get_sample_signed_iocs_exclude_signed_on(trigger2, triage_mock):
+    # ASSERT THAT SAMPLE_IOCS OF A SPECIFIC ANALYSIS WITH a SIGNED BINARY CORRESPONDS WHEN EXCLUDE SIGNED IS ON
+    sample_iocs = trigger2.get_sample_iocs("icedid", "240828_btyyeszang")
+    assert sample_iocs == {
+        "sample_c2s": [],
+        "sample_urls": [],
+        "sample_hashes": [],
+    }
+
+
+def test_check_sample_without_signature(trigger2, triage_mock):
+    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    sample_signature = trigger2.check_sample_signature("210609-c67qy7hmpe")
+    assert sample_signature is False
+
+
+def test_check_sample_with_signature(trigger2, triage_mock):
+    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    sample_signature = trigger2.check_sample_signature("240828-btyyeszang")
+    assert sample_signature is True
+
+
+def test_check_report_with_multiple_signatures(trigger2, triage_mock):
+    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    sample_signature = trigger2.check_sample_signature("240908-tpps3axgmd")
+    assert sample_signature is True
 
 
 def test_get_malware_iocs(trigger, triage_mock):

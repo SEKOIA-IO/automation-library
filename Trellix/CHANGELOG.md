@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-10-13 - 1.10.0
+
+### Changed
+
+- Change event loop initialization and token refresh workflow
+
+## 2024-10-13 - 1.9.4
+
+### Added
+
+- More logs over token refresh interval
+
 ## 2024-08-09 - 1.9.3
 
 ### Fixed

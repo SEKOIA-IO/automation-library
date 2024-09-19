@@ -16,6 +16,10 @@
           "type": "string",
           "description": "Malware name in Triage"
         }
+      },
+      "exclude_signed": {
+        "type": "boolean",
+        "description": "Do not retrieve report with signed binary"
       }
     },
     "required": [

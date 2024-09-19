@@ -33,10 +33,12 @@ class IncidentOperationAction(Action):
             response = client.post(API_COMMENT_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers)
             response.raise_for_status()
             operation_result = response.json()
+
         if operation_name == "UpdateStatusIncident":
             response = client.patch(API_LIST_INCIDENT_URL, timeout=API_TIMEOUT, json=payload, headers=headers)
             response.raise_for_status()
             operation_result = response.json()
+
         if operation_name == "ListDetectionForIncident":
             params = {"incidentId": target}
             detections = []
@@ -45,8 +47,9 @@ class IncidentOperationAction(Action):
             jsonify_response = response.json()
             detections.extend(jsonify_response.get("items", []))
 
+            # Docs: https://connect.withsecure.com/api-reference/elements#delete-/devices/v1/devices
             while jsonify_response.get("nextAnchor"):
-                params["anchor"] = payload["nextAnchor"]
+                params["anchor"] = jsonify_response["nextAnchor"]
                 response = client.get(API_LIST_DETECTION_URL, timeout=API_TIMEOUT, params=params, headers=headers)
                 response.raise_for_status()
                 jsonify_response = response.json()

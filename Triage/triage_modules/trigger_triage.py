@@ -38,6 +38,10 @@ class TriageTrigger(Trigger):
         return self.module.configuration["api_url"]
 
     @property
+    def exclude_signed(self):
+        return self.configuration.get("exclude_signed", False)
+
+    @property
     def frequency(self):
         return self.configuration["frequency"]
 
@@ -113,6 +117,22 @@ class TriageConfigsTrigger(TriageTrigger):
             self.log_exception(ex)
             return []
 
+    def check_sample_signature(self, sample_id: str) -> bool:
+        try:
+            # Get static report for PE metadata
+            static_report = self.client.static_report(sample_id=sample_id)
+            signers = static_report.get("files")[0]["metadata"]["pe"]["code_sign"]["signers"]
+            for value in signers:
+                if isinstance(value["validity"]["trusted"], list):
+                    for entry in value["validity"]["trusted"]:
+                        if entry:
+                            signature = entry
+                else:
+                    signature = value["validity"]["trusted"]
+            return signature
+        except (KeyError, TypeError):
+            return False
+
     def get_sample_iocs(self, malware: str, sample_id: str) -> dict:
         sample_iocs: dict[str, list] = dict()
         sample_iocs["sample_c2s"] = list()
@@ -121,6 +141,12 @@ class TriageConfigsTrigger(TriageTrigger):
 
         try:
             data = self.client.overview_report(sample_id=sample_id)
+            if self.exclude_signed:
+                sig = self.check_sample_signature(sample_id=sample_id)
+                # Check if the first submitted binary is signed then return nothing
+                if sig:
+                    self.log(f"PE in {sample_id} report has a trusted signature")
+                    return sample_iocs
         except ServerError as ex:
             self.log(f"Requests to Triage failed: {str(ex)}", level="error")
             return sample_iocs

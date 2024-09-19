@@ -101,8 +101,6 @@ class SecurityEventsConnector(Connector):
 
         headers = {"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
 
-        url = API_SECURITY_EVENTS_URL
-
         try:
             response = self.__get_events(data=data, headers=headers)
             response.raise_for_status()
