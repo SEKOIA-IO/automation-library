@@ -1,7 +1,7 @@
 from collections import defaultdict
 import pandas as pd
 
-from management.mgmtsdk_v2_1.services.threat_intelligence import IocQueryFilter
+from management.mgmtsdk_v2_1.services.threat_intelligence import IocQueryFilter, Ioc
 from pydantic import BaseModel
 
 from sentinelone_module.base import SentinelOneAction
@@ -46,13 +46,6 @@ class CreateIOCsAction(SentinelOneAction):
         super().__init__(*args, **kwargs)
         self.sekoia_base_url = self.DEFAULT_SEKOIA_BASE_URL
 
-    def get_payload(self, value, type):
-        return {
-            "value": value,
-            "type": type,
-            "source": "Sekoia.io",
-        }
-
     def get_valid_indicators(self, stix_objects):
         seen_values = defaultdict(list)
         results = {"valid": []}
@@ -63,7 +56,6 @@ class CreateIOCsAction(SentinelOneAction):
             for indicator in indicators:
                 ioc_value = indicator["value"]
                 ioc_type = indicator["type"]
-                result = self.get_payload(value=ioc_value, type=ioc_type)
 
                 # Handle revoked objects
                 if object.get("revoked", False):
@@ -76,13 +68,17 @@ class CreateIOCsAction(SentinelOneAction):
                 # Add expiration and creation data if exists
                 valid_until = object.get("valid_until")
                 created_time = object.get("created")
-                if valid_until:
-                    result["validUntil"] = valid_until
-                if created_time:
-                    result["createdTime"] = created_time
 
                 seen_values[ioc_type].append(ioc_value)
-                results["valid"].append(result)
+                results["valid"].append(
+                    Ioc(
+                        value=ioc_value,
+                        type=ioc_type,
+                        validUntil=valid_until,
+                        creationTime=created_time,
+                        randomize_empty=False,
+                    )
+                )
 
         return results
 
@@ -101,11 +97,10 @@ class CreateIOCsAction(SentinelOneAction):
         if len(indicators["valid"]) == 0:
             self.log("Received indicators were not valid and/or not supported")
             return
-        df_indicators = pd.DataFrame(indicators["valid"])
 
         self.log("Start sending indicators to SentinelOne !!")
         response = self.client.threat_intel.create_or_update_ioc(
-            df_indicators, query_filter=arguments.get_query_filters()
+            indicators["valid"], query_filter=arguments.get_query_filters()
         )
 
         # Return the response as a list of JSON objects
