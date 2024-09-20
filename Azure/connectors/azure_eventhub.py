@@ -19,8 +19,7 @@ from .metrics import (
     FORWARD_EVENTS_DURATION,
     INCOMING_MESSAGES,
     OUTCOMING_EVENTS,
-    OLDER_MESSAGE_AGE,
-    AVERAGE_MESSAGES_AGE,
+    MESSAGES_AGE,
 )
 
 
@@ -103,8 +102,7 @@ class AzureEventsHubTrigger(AsyncConnector):
 
             # reset the metrics
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
-            AVERAGE_MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(0)
-            OLDER_MESSAGE_AGE.labels(intake_key=self.configuration.intake_key).set(0)
+            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(0)
             await self.client.close()
 
         # acknowledge the messages
@@ -159,13 +157,9 @@ class AzureEventsHubTrigger(AsyncConnector):
             current_lag = min(messages_age)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
-            # Compute the distance from the older message consumed
-            max_lag = max(messages_age)
-            OLDER_MESSAGE_AGE.labels(intake_key=self.configuration.intake_key).set(max_lag)
-
-            # Compute the distance from the older message consumed
-            avg_lag = int(sum(messages_age) / len(messages_age))
-            AVERAGE_MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(avg_lag)
+            # Monitor the age of all messages
+            for age in messages_age:
+                MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(age)
 
     async def handle_exception(self, partition_context: PartitionContext, exception: Exception) -> None:
         self.log_exception(
