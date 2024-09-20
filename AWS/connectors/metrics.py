@@ -37,7 +37,7 @@ EVENTS_LAG = Gauge(
 
 MESSAGES_AGE = Histogram(
     name="messages_age",
-    documentation="The average age of messages seen",
+    documentation="The age of messages seen",
     namespace=prom_aws_namespace,
     labelnames=["intake_key"],
 )
