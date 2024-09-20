@@ -1,4 +1,5 @@
 """Tests related to token refresher."""
+
 import asyncio
 from unittest.mock import MagicMock
 
