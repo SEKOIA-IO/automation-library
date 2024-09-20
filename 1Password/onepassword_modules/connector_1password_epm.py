@@ -74,7 +74,7 @@ class OnePasswordEndpoint(Thread):
     def fetch_page(self, cursor: str | None) -> dict[str, Any]:
         url = urljoin(self.connector.base_url, self.METHOD_URI)
         end_datetime = datetime.now().astimezone(timezone.utc).replace(microsecond=0)
-        start_datetime = end_datetime - timedelta(days=30)
+        start_datetime = end_datetime - timedelta(hours=1)
 
         data: dict[str, str | int] = {}
         if cursor:
