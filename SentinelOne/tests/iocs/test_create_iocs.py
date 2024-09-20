@@ -72,6 +72,7 @@ def test_get_valid_indicators(symphony_storage, sentinelone_module):
     assert len(indicators["valid"]) == 1
     assert indicators["valid"][0].creationTime
     assert indicators["valid"][0].validUntil
+    assert indicators["valid"][0].source == "Sekoia.io"
 
 
 def test_create_iocs(symphony_storage, sentinelone_hostname, sentinelone_module, arguments):

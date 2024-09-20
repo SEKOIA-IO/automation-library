@@ -74,6 +74,7 @@ class CreateIOCsAction(SentinelOneAction):
                     Ioc(
                         value=ioc_value,
                         type=ioc_type,
+                        source="Sekoia.io",
                         validUntil=valid_until,
                         creationTime=created_time,
                         randomize_empty=False,
