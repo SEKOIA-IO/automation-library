@@ -3,12 +3,13 @@
 from prometheus_client import Counter, Gauge, Histogram
 
 # Declare common prometheus metrics
+prom_azure_namespace = "symphony_module_azure"
 prom_namespace = "symphony_module_common"
 
 INCOMING_MESSAGES = Counter(
     name="collected_messages",
     documentation="Number of messages consumed from the event_hub",
-    namespace=prom_namespace,
+    namespace=prom_azure_namespace,
     labelnames=["intake_key"],
 )
 
@@ -33,16 +34,9 @@ EVENTS_LAG = Gauge(
     labelnames=["intake_key"],
 )
 
-AVERAGE_MESSAGES_AGE = Gauge(
-    name="average_messages_age",
-    documentation="The average age of messages seen",
-    namespace=prom_namespace,
-    labelnames=["intake_key"],
-)
-
-OLDER_MESSAGE_AGE = Gauge(
-    name="older_message_age",
-    documentation="The age of the older message seen",
-    namespace=prom_namespace,
+MESSAGES_AGE = Gauge(
+    name="messages_age",
+    documentation="The age of messages seen",
+    namespace=prom_azure_namespace,
     labelnames=["intake_key"],
 )

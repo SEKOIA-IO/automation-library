@@ -3,13 +3,14 @@
 from prometheus_client import Counter, Gauge, Histogram
 
 # Declare common prometheus metrics
+prom_aws_namespace = "symphony_module_aws"
 prom_namespace = "symphony_module_common"
 
 
 INCOMING_EVENTS = Counter(
     name="collected_events",
     documentation="Number of collected events from AWS S3",
-    namespace=prom_namespace,
+    namespace=prom_aws_namespace,
     labelnames=["intake_key"],
 )
 
@@ -34,16 +35,9 @@ EVENTS_LAG = Gauge(
     labelnames=["intake_key"],
 )
 
-AVERAGE_MESSAGES_AGE = Gauge(
-    name="average_messages_age",
-    documentation="The average age of messages seen",
-    namespace=prom_namespace,
-    labelnames=["intake_key"],
-)
-
-OLDER_MESSAGE_AGE = Gauge(
-    name="older_message_age",
-    documentation="The age of the older message seen",
-    namespace=prom_namespace,
+MESSAGES_AGE = Histogram(
+    name="messages_age",
+    documentation="The age of messages seen",
+    namespace=prom_aws_namespace,
     labelnames=["intake_key"],
 )

@@ -11,7 +11,7 @@ from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, AVERAGE_MESSAGES_AGE, OLDER_MESSAGE_AGE
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, MESSAGES_AGE
 
 
 class AwsModuleConfiguration(BaseModel):
@@ -78,8 +78,6 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                 while self.running:
                     processing_start = time.time()
                     current_lag: int = 0
-                    avg_lag: int = 0
-                    max_lag: int = 0
 
                     batch_result: tuple[list[str], list[int]] = loop.run_until_complete(self.next_batch())
                     message_ids, messages_timestamp = batch_result
@@ -102,15 +100,15 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                             int(processing_end - message_timestamp / 1000) for message_timestamp in messages_timestamp
                         ]
                         current_lag = min(messages_age)
-                        avg_lag = int(sum(messages_age) / len(messages_age))
-                        max_lag = max(messages_age)
+
+                        for age in messages_age:
+                            MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(age)
                     else:
                         self.log(message="No records to forward", level="info")
+                        MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).observe(0)
 
                     # report the current lag
                     EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
-                    AVERAGE_MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(avg_lag)
-                    OLDER_MESSAGE_AGE.labels(intake_key=self.configuration.intake_key).set(max_lag)
 
                     # compute the remaining sleeping time. If greater than 0 and no messages were fetched, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
