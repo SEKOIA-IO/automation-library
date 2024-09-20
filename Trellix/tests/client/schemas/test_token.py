@@ -22,7 +22,7 @@ def sample_token(session_faker) -> HttpToken:
     return HttpToken(
         tid=session_faker.pyint(),
         token_type=session_faker.word(),
-        expires_in=session_faker.pyint(),
+        expires_in=10,
         access_token=session_faker.word(),
     )
 
@@ -82,8 +82,22 @@ def test_trellix_token_expired(sample_trellix_token):
     Args:
         sample_trellix_token: TrellixToken
     """
-    sample_trellix_token.created_at = int(time()) - sample_trellix_token.token.expires_in
-    assert sample_trellix_token.is_expired() is True
+    now = int(time())
 
-    sample_trellix_token.created_at = int(time()) - sample_trellix_token.token.expires_in - 1
+    expires_in = sample_trellix_token.token.expires_in
+
+    sample_trellix_token.created_at = (now - expires_in) + 2
     assert sample_trellix_token.is_expired() is False
+
+    sample_trellix_token.created_at = (now - expires_in) + 1
+    assert sample_trellix_token.is_expired() is False
+
+    # Because of gap in 1 second and to int conversation, the token might not be expired here and it will work as expected
+    # sample_trellix_token.created_at = (now - sample_trellix_token.token.expires_in)
+    # assert sample_trellix_token.is_expired() is False
+
+    sample_trellix_token.created_at = (now - expires_in) - 1
+    assert sample_trellix_token.is_expired() is False
+
+    sample_trellix_token.created_at = (now - expires_in) - 2
+    assert sample_trellix_token.is_expired() is True

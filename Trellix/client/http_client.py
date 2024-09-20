@@ -7,7 +7,6 @@ from typing import Any, AsyncGenerator, Optional, Set
 from aiohttp_retry import ExponentialRetry, RetryClient
 from aiolimiter import AsyncLimiter
 from yarl import URL
-from loguru import logger
 
 from .retry import RetryWithRateLimiter
 from .schemas.attributes.edr_affectedhosts import EdrAffectedhostAttributes
@@ -122,7 +121,9 @@ class TrellixHttpClient(object):
         """
         if cls._session is None:
             cls._session = RetryClient(
-                retry_options=RetryWithRateLimiter(ExponentialRetry(attempts=3, start_timeout=5.0, statuses={429}))
+                retry_options=RetryWithRateLimiter(
+                    ExponentialRetry(attempts=3, start_timeout=5.0, statuses={429}, max_timeout=60.0)
+                )
             )
 
         if cls._rate_limiter and cls._rate_limiter_per_day:
@@ -163,7 +164,6 @@ class TrellixHttpClient(object):
         Returns:
             dict[str, str]:
         """
-
         token_refresher = await self._get_token_refresher(scopes)
         async with token_refresher.with_access_token() as trellix_token:
             headers = {
@@ -193,7 +193,6 @@ class TrellixHttpClient(object):
         async with self.session() as session:
             async with session.get(url, headers=headers) as response:
                 if response.status == 401:  # pragma: no cover
-                    logger.info("Unauthorized for request. Refresh token and try again")
                     raise AuthenticationError("Unauthorized for request. Refresh token and try again")
 
                 if response.status != 200:
@@ -376,7 +375,6 @@ class TrellixHttpClient(object):
         """
         headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.epo_events_url(start_date, limit)
-        logger.info("Request `get_epo_events` to {url}".format(url=url))
 
         try:
             data = await self._get_data(url, headers)
@@ -403,7 +401,6 @@ class TrellixHttpClient(object):
         """
         headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_threats_url(start_date, end_date, limit, offset)
-        logger.info("Request `get_edr_threats` to {url}".format(url=url))
 
         try:
             data = await self._get_data(url, headers)
@@ -431,7 +428,6 @@ class TrellixHttpClient(object):
         """
         headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit, offset)
-        logger.info("Request to `get_edr_threat_affectedhosts` {url}".format(url=url))
 
         try:
             data = await self._get_data(url, headers)
@@ -464,7 +460,6 @@ class TrellixHttpClient(object):
         """
         headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_threat_detections_url(threat_id, start_date, end_date, limit, offset)
-        logger.info("Request `get_edr_threat_detections` to {url}".format(url=url))
 
         try:
             data = await self._get_data(url, headers)
@@ -487,7 +482,6 @@ class TrellixHttpClient(object):
         """
         headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_alerts_url(start_date, limit)
-        logger.info("Request `get_edr_alerts` to {url}".format(url=url))
 
         try:
             data = await self._get_data(url, headers)
