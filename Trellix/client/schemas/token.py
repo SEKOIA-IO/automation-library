@@ -340,7 +340,7 @@ class TrellixToken(BaseModel):
         Returns:
             bool:
         """
-        return self.is_expired() and self.is_valid_for_scopes(scopes or [])
+        return not self.is_expired() and self.is_valid_for_scopes(scopes or [])
 
     def is_valid_for_scope(self, scope: Scope) -> bool:
         """
@@ -371,4 +371,4 @@ class TrellixToken(BaseModel):
             bool:
         """
         # Decrease time of expiration to avoid rate limiting problems
-        return self.created_at + self.token.expires_in > time() - 1
+        return (self.created_at + self.token.expires_in) < (int(time()) - 1)

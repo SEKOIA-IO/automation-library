@@ -121,7 +121,9 @@ class TrellixHttpClient(object):
         """
         if cls._session is None:
             cls._session = RetryClient(
-                retry_options=RetryWithRateLimiter(ExponentialRetry(attempts=3, start_timeout=5.0, statuses={429}))
+                retry_options=RetryWithRateLimiter(
+                    ExponentialRetry(attempts=3, start_timeout=5.0, statuses={429}, max_timeout=60.0)
+                )
             )
 
         if cls._rate_limiter and cls._rate_limiter_per_day:
@@ -162,7 +164,6 @@ class TrellixHttpClient(object):
         Returns:
             dict[str, str]:
         """
-
         token_refresher = await self._get_token_refresher(scopes)
         async with token_refresher.with_access_token() as trellix_token:
             headers = {
@@ -398,7 +399,7 @@ class TrellixHttpClient(object):
         Returns:
             Tuple[list[TrellixResponse[EdrThreatAttributes]], bool]:
         """
-        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_threats_url(start_date, end_date, limit, offset)
 
         try:
@@ -425,7 +426,7 @@ class TrellixHttpClient(object):
         Returns:
             list[TrellixResponse[EdrAffectedhostAttributes]]:
         """
-        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_threat_affectedhosts_url(threat_id, start_date, end_date, limit, offset)
 
         try:
@@ -457,7 +458,7 @@ class TrellixHttpClient(object):
         Returns:
             list[dict[str, str]]:
         """
-        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_threat_detections_url(threat_id, start_date, end_date, limit, offset)
 
         try:
@@ -479,7 +480,7 @@ class TrellixHttpClient(object):
         Returns:
             list[TrellixResponse[EdrAlertAttributes]]:
         """
-        headers = await self._request_headers(Scope.threats_set_of_scopes())
+        headers = await self._request_headers(Scope.complete_set_of_scopes())
         url = self.edr_alerts_url(start_date, limit)
 
         try:

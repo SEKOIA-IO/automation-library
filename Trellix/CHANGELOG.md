@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-10-19 - 1.10.1
+
+### Changed
+
+- Change auth scopes
+
 ## 2024-10-13 - 1.10.0
 
 ### Changed

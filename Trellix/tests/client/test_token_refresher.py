@@ -1,5 +1,6 @@
 """Tests related to token refresher."""
 
+import asyncio
 from unittest.mock import MagicMock
 
 import pytest
@@ -250,7 +251,7 @@ async def test_trellix_refresher_always_provide_fresh_token(http_token, session_
     token_refresher_session.post = MagicMock()
     token_refresher_session.post.return_value.__aenter__.return_value.status = 200
     token_refresher_session.post.return_value.__aenter__.return_value.json.side_effect = [
-        {"tid": 233264798, "token_type": "Bearer", "expires_in": 1, "access_token": "token_expired_quickly"},
+        {"tid": 233264798, "token_type": "Bearer", "expires_in": 2, "access_token": "token_expired_quickly"},
         {"tid": 233264799, "token_type": "Bearer", "expires_in": 600, "access_token": "fresh_token"},
     ]
 
@@ -263,6 +264,21 @@ async def test_trellix_refresher_always_provide_fresh_token(http_token, session_
     )
 
     await token_refresher.refresh_token()
+
+    async with token_refresher.with_access_token() as token:
+        assert token.token.access_token == "token_expired_quickly"
+
+    await asyncio.sleep(1)
+
+    async with token_refresher.with_access_token() as token:
+        assert token.token.access_token == "token_expired_quickly"
+
+    await asyncio.sleep(1)
+
+    async with token_refresher.with_access_token() as token:
+        assert token.token.access_token == "fresh_token"
+
+    await asyncio.sleep(1)
 
     async with token_refresher.with_access_token() as token:
         assert token.token.access_token == "fresh_token"
