@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+
+## 2024-09-19 - 2.16.0
+
+### Added
+
+- Added action to enumerate processes
+- Added action to kill thread
+- Added action to kill process
+
 ## 2024-09-09 - 2.15.1
 
 ### Fixed

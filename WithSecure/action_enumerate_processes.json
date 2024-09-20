@@ -1,0 +1,31 @@
+{
+  "name": "Enumerate processes",
+  "description": "Enumerate processes.",
+  "uuid": "faf313f2-8713-4992-8809-85039946ff8a",
+  "docker_parameters": "enumerate_processes",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "organization_id": {
+        "title": "OrganizationId",
+        "description": "UUID of an organization.",
+        "type": "string"
+      },
+      "target": {
+        "title": "Device ID",
+        "description": "Device identifier on which action is created.",
+        "type": "string"
+      }
+    },
+    "required": ["target", "organization_id"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "title": "Response ID",
+        "type": "string"
+      }
+    }
+  }
+}
