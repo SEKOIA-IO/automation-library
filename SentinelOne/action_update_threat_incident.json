@@ -71,7 +71,7 @@
   },
   "description": "Update a threat incident in SentinelOne",
   "docker_parameters": "sentinelone_threat_update_incident",
-  "name": "[BETA] Update Threat Incident",
+  "name": "Update Threat Incident",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
