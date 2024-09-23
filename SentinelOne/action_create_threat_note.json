@@ -57,7 +57,7 @@
   },
   "description": "Create a threat note in SentinelOne",
   "docker_parameters": "sentinelone_threat_create_threat_note",
-  "name": "[BETA] Create Threat Note",
+  "name": "Create Threat Note",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
