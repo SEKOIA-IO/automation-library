@@ -31,5 +31,8 @@
   "name": "Darktrace",
   "uuid": "0637f7c2-d68b-49cc-a1fc-ab7d0836e7ee",
   "slug": "darktrace",
-  "version": "1.7.1"
+  "version": "1.7.1",
+  "categories": [
+    "network"
+  ]
 }

@@ -32,5 +32,8 @@
   "name": "Cybereason",
   "uuid": "b96361fb-a01b-4ae7-8927-9622b9ea0acf",
   "slug": "cybereason",
-  "version": "1.13.2"
+  "version": "1.13.2",
+  "categories": [
+    "endpoint"
+  ]
 }

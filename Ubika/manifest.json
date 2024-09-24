@@ -11,5 +11,8 @@
   "name": "Ubika",
   "uuid": "0c82ee9b-f645-47f9-8e16-a689cfc246c4",
   "slug": "ubika",
-  "version": "1.0.1"
+  "version": "1.0.1",
+  "categories": [
+    "network"
+  ]
 }

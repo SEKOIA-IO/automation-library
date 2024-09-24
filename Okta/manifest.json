@@ -26,5 +26,8 @@
   "name": "Okta",
   "uuid": "4ef895d1-3f21-4678-8d0a-5c39c37210fe",
   "slug": "okta",
-  "version": "2.8.0"
+  "version": "2.8.0",
+  "categories": [
+    "iam"
+  ]
 }

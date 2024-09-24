@@ -18,5 +18,8 @@
   "name": "Onyphe",
   "uuid": "3d20c308-bc7f-492f-99b0-211614a58116",
   "slug": "onyphe",
-  "version": "1.23.0"
+  "version": "1.23.0",
+  "categories": [
+    "threat_intelligence"
+  ]
 }

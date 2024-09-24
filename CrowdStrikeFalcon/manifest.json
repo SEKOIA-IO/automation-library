@@ -32,5 +32,8 @@
     "secrets": [
       "client_secret"
     ]
-  }
+  },
+  "categories": [
+    "endpoint"
+  ]
 }

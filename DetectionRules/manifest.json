@@ -4,5 +4,8 @@
   "name": "Detection Rules",
   "uuid": "fd4754b9-aff6-4865-92c7-bb0b1d5605c0",
   "slug": "detection-rules",
-  "version": "1.25.0"
+  "version": "1.25.0",
+  "categories": [
+    "threat_intelligence"
+  ]
 }

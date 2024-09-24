@@ -46,5 +46,8 @@
       "api_key",
       "access_secret"
     ]
-  }
+  },
+  "categories": [
+    "endpoint"
+  ]
 }

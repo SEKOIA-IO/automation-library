@@ -28,5 +28,8 @@
   "name": "Bitsight",
   "uuid": "59b7f559-0a07-456f-b1c0-41d9fbe6ad4a",
   "slug": "bitsight",
-  "version": "1.0.2"
+  "version": "1.0.2",
+  "categories": [
+    "threat_intelligence"
+  ]
 }
