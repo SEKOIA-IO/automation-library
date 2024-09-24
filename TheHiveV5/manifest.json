@@ -31,5 +31,8 @@
   "name": "The Hive V5",
   "uuid": "d6c96586-707c-451f-b9f6-d31b3291f87d",
   "slug": "thehivev5",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "categories": [
+    "collaboration_tools"
+  ]
 }
