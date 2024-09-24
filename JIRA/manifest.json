@@ -32,5 +32,8 @@
     "secrets": [
       "api_key"
     ]
-  }
+  },
+  "categories": [
+    "Collaboration Tools"
+  ]
 }

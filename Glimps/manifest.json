@@ -25,5 +25,8 @@
     "secrets": [
       "api_key"
     ]
-  }
+  },
+  "categories": [
+    "Threat Intelligence"
+  ]
 }

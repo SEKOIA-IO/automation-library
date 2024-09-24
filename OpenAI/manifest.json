@@ -20,5 +20,8 @@
     "secrets": [
       "api_key"
     ]
-  }
+  },
+  "categories": [
+    "Generic"
+  ]
 }

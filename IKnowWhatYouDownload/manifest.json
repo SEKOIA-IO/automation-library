@@ -25,5 +25,8 @@
   "name": "IKnowWhatYouDownload",
   "uuid": "3c334ccd-91be-49d5-9267-915db6ab588e",
   "slug": "iknowwhatyoudownload",
-  "version": "1.24.0"
+  "version": "1.24.0",
+  "categories": [
+    "Threat Intelligence"
+  ]
 }
