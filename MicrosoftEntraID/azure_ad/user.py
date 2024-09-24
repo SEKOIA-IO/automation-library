@@ -43,7 +43,7 @@ class GetUserAction(MicrosoftGraphAction):
 
     async def run(self, arguments: RequiredSingleUserArguments):
         query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
-            select=",".join(GetUserResults.schema()["properties"].keys()),
+            select=GetUserResults.schema()["properties"].keys(),
         )
         request_configuration = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration(
             options=[ResponseHandlerOption(NativeResponseHandler())], query_parameters=query_params

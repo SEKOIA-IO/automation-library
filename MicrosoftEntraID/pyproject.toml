@@ -8,7 +8,7 @@ authors = []
 python = ">=3.10,<3.12"
 azure-identity = "^1.16.1"
 pydantic = "^1.9.1"
-sekoia-automation-sdk = "^1.13.0"
+sekoia-automation-sdk = "^1.14.1"
 msgraph-sdk = "^1.0.0a16"
 pytest-asyncio = "^0.21.1"
 
@@ -18,7 +18,7 @@ pytest-cov = "*"
 requests-mock = "*"
 black = {version = "^22.6.0", allow-prereleases = true}
 flake8 = "^4.0.1"
-mypy = "^0.961"
+mypy = "^1.11.2"
 pytest-clarity = "^1.0.1"
 
 [build-system]
