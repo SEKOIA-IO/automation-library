@@ -24,6 +24,6 @@
   "slug": "pagerduty",
   "version": "1.21.0",
   "categories": [
-    "applicative"
+    "Applicative"
   ]
 }
