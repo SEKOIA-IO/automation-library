@@ -48,6 +48,9 @@
       "account_password",
       "intake_key"
     ],
+    "secrets": [
+      "account_password"
+    ],
     "title": "MessageTrace Events",
     "type": "object"
   },

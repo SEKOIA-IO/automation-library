@@ -53,6 +53,9 @@
       "client_secret",
       "intake_key"
     ],
+    "secrets": [
+      "client_secret"
+    ],
     "title": "MessageTrace Events",
     "type": "object"
   },
