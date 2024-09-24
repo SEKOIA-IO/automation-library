@@ -143,7 +143,7 @@ async def test_get_user_authentication_methods():
             }
         ],
     }
-    value_expected = {
+    value_expected = [{
         "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
         "userPrincipalName": "jean.test@test.onmicrosoft.com",
         "userDisplayName": "Jean Test",
@@ -155,7 +155,7 @@ async def test_get_user_authentication_methods():
         "isPasswordlessCapable": False,
         "methodsRegistered": ["mobilePhone", "windowsHelloForBusiness"],
         "defaultMfaMethod": "mobilePhone",
-    }
+    }]
 
     response = requests.Response()
     response._content = json.dumps(expected).encode("utf-8")
