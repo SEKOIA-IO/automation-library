@@ -7,14 +7,9 @@
     "title": "RequiredSingleUserArguments",
     "type": "object",
     "properties": {
-      "id": {
-        "title": "Id",
-        "description": "ID of the user. id or userPrincipalName should be specified.",
-        "type": "string"
-      },
       "userPrincipalName": {
         "title": "Userprincipalname",
-        "description": "Principal Name of the user. id or userPrincipalName should be specified.",
+        "description": "Principal name of the user, which may correspond to their Azure email address.",
         "type": "string"
       }
     }
@@ -34,6 +29,14 @@
       "userDisplayName": {
         "title": "Userdisplayname",
         "type": "string"
+      },
+      "userType": {
+        "title": "Usertype",
+        "type": "string"
+      },
+      "isAdmin": {
+        "title": "Isadmin",
+        "type": "boolean"
       },
       "isSsprRegistered": {
         "title": "Isssprregistered",
@@ -66,8 +69,23 @@
           "type": "string"
         }
       },
-      "defaultMfaMethod": {
-        "title": "Defaultmfamethod",
+      "isSystemPreferredAuthenticationMethodEnabled": {
+        "title": "Issystempreferredauthenticationmethodenabled",
+        "type": "boolean"
+      },
+      "systemPreferredAuthenticationMethods": {
+        "title": "Systempreferredauthenticationmethods",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "userPreferredMethodForSecondaryAuthentication": {
+        "title": "Userpreferredmethodforsecondaryauthentication",
+        "type": "string"
+      },
+      "lastUpdatedDateTime": {
+        "title": "Lastupdateddatetime",
         "type": "string"
       }
     },
