@@ -17,16 +17,16 @@ class GetUserAuthenticationMethodsAction(MicrosoftGraphAction):
 
     async def run(self, arguments):
         query_params = None
-        if arguments.get('userPrincipalName'):
+        if arguments.get("userPrincipalName"):
             query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
                 filter=f"userPrincipalName eq '{arguments.get('userPrincipalName')}'"
             )
-            
+
         request_configuration = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration(
             options=[ResponseHandlerOption(NativeResponseHandler())], query_parameters=query_params
         )
 
         response = await self.query_user_auth_methods(request_configuration)
         response.raise_for_status()
- 
+
         return response.json().get("value")
