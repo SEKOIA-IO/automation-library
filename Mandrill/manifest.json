@@ -20,5 +20,8 @@
   "name": "Mandrill",
   "uuid": "bc2699a6-93e5-4d74-816d-4186d6eb3ce8",
   "slug": "mandrill",
-  "version": "2.10.0"
+  "version": "2.10.0",
+  "categories": [
+    "Applicative"
+  ]
 }

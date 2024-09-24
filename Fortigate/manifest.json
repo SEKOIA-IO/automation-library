@@ -28,12 +28,20 @@
               "default": "root"
             }
           },
-          "required": ["api_key", "base_ip", "base_port"]
+          "required": [
+            "api_key",
+            "base_ip",
+            "base_port"
+          ]
         }
       }
     },
-    "required": ["firewalls"],
-    "secrets": ["api_key"]
+    "required": [
+      "firewalls"
+    ],
+    "secrets": [
+      "api_key"
+    ]
   },
   "title": "Fortigate FW Configuration",
   "type": "object",
@@ -41,5 +49,8 @@
   "name": "Fortigate Firewalls",
   "uuid": "ca9a9497-bcd2-4d0c-b0c1-72699231feb2",
   "slug": "fortigate",
-  "version": "1.29.0"
+  "version": "1.29.0",
+  "categories": [
+    "Network"
+  ]
 }

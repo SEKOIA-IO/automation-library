@@ -22,5 +22,8 @@
   "name": "PagerDuty",
   "uuid": "97864342-32c5-4076-b590-ba0179db9233",
   "slug": "pagerduty",
-  "version": "1.21.0"
+  "version": "1.21.0",
+  "categories": [
+    "Applicative"
+  ]
 }

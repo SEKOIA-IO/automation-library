@@ -17,7 +17,10 @@
         "type": "string"
       }
     },
-    "required": ["target", "organization_id"]
+    "required": [
+      "target",
+      "organization_id"
+    ]
   },
   "results": {
     "type": "object",

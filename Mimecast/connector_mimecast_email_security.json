@@ -27,8 +27,12 @@
         "type": "string"
       }
     },
-    "required": ["intake_key"],
-    "secrets": ["token"],
+    "required": [
+      "intake_key"
+    ],
+    "secrets": [
+      "token"
+    ],
     "title": "The configuration to fetch new events",
     "type": "object"
   },

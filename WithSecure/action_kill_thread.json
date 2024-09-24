@@ -22,7 +22,11 @@
         "type": "integer"
       }
     },
-    "required": ["target", "organization_id", "thread_id"]
+    "required": [
+      "target",
+      "organization_id",
+      "thread_id"
+    ]
   },
   "results": {
     "type": "object",

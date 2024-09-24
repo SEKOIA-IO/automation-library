@@ -25,5 +25,8 @@
   "name": "Broadcom Cloud Secure Web Gateway",
   "uuid": "c56d64b8-b70f-4bab-a334-b4d5a4a25214",
   "slug": "broadcom-cloud-swg",
-  "version": "1.1.0"
+  "version": "1.1.0",
+  "categories": [
+    "Network"
+  ]
 }

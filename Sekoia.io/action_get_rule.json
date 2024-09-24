@@ -14,7 +14,9 @@
         "in": "path"
       }
     },
-    "required": ["uuid"]
+    "required": [
+      "uuid"
+    ]
   },
   "results": {
     "type": "object",
@@ -63,7 +65,13 @@
               "description": "The description of the parameter"
             }
           },
-          "required": ["uuid", "name", "value", "default", "description"]
+          "required": [
+            "uuid",
+            "name",
+            "value",
+            "default",
+            "description"
+          ]
         }
       },
       "all_entities": {
@@ -204,7 +212,11 @@
             "description": "Alert type description"
           }
         },
-        "required": ["uuid", "category_uuid", "value"]
+        "required": [
+          "uuid",
+          "category_uuid",
+          "value"
+        ]
       },
       "alert_category": {
         "type": "object",
@@ -221,7 +233,10 @@
             "description": "Alert category name"
           }
         },
-        "required": ["uuid", "name"]
+        "required": [
+          "uuid",
+          "name"
+        ]
       },
       "tags": {
         "type": "array",
@@ -241,7 +256,10 @@
               "description": "The name of the tag"
             }
           },
-          "required": ["uuid", "name"]
+          "required": [
+            "uuid",
+            "name"
+          ]
         }
       },
       "source": {

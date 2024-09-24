@@ -31,7 +31,9 @@
         "type": "boolean"
       }
     },
-    "required": ["intake_key"],
+    "required": [
+      "intake_key"
+    ],
     "title": "Thinkst Canary connector",
     "type": "object",
     "secrets": []
