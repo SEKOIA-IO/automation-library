@@ -4,7 +4,7 @@
     "title": "1Password",
     "type": "object",
     "properties": {
-       "base_url": {
+      "base_url": {
         "description": "1Password base URL",
         "type": "string"
       },

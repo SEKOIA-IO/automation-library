@@ -28,12 +28,20 @@
               "default": "root"
             }
           },
-          "required": ["api_key", "base_ip", "base_port"]
+          "required": [
+            "api_key",
+            "base_ip",
+            "base_port"
+          ]
         }
       }
     },
-    "required": ["firewalls"],
-    "secrets": ["api_key"]
+    "required": [
+      "firewalls"
+    ],
+    "secrets": [
+      "api_key"
+    ]
   },
   "title": "Fortigate FW Configuration",
   "type": "object",

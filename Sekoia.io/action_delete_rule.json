@@ -18,7 +18,9 @@
         "default": ""
       }
     },
-    "required": ["uuid"]
+    "required": [
+      "uuid"
+    ]
   },
   "results": {}
 }

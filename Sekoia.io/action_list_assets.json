@@ -12,9 +12,9 @@
         "in": "query",
         "type": "integer",
         "description": "The number of assets to return",
-	"minimum": 1,
-	"default": 20,
-	"maximum": 100
+        "minimum": 1,
+        "default": 20,
+        "maximum": 100
       },
       "offset": {
         "in": "query",

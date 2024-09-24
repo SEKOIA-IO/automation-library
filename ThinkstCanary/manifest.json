@@ -13,8 +13,13 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "auth_token"],
-    "secrets": ["auth_token"]
+    "required": [
+      "base_url",
+      "auth_token"
+    ],
+    "secrets": [
+      "auth_token"
+    ]
   },
   "description": "Thinkst Canary specializes in innovative cybersecurity solutions, particularly using honeypot technology to detect and alert on threats within networks. They provide early warnings of breaches with minimal false positives.",
   "name": "Thinkst Canary",
