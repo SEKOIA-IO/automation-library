@@ -9,5 +9,6 @@
   "description": "Aruba Networks is a leading provider of networking solutions, specializing in wireless and wired infrastructure, security, and management tools, enabling businesses to create secure and high-performance digital experiences for their users and devices.",
   "name": "Aruba Network",
   "uuid": "278bdd50-d8d1-4d0a-9a30-9b23494a8dfa",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "aruba-network"
 }

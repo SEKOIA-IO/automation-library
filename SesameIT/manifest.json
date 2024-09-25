@@ -9,5 +9,6 @@
   "description": "Sesame IT is a european leader in cyberdefense. Its mission consists in reducing the economic and human costs of cybercrime.",
   "name": "SesameIT",
   "uuid": "d382947e-4493-4e0b-90f1-870fe6e6ef1e",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "sesameit"
 }

@@ -9,5 +9,6 @@
   "description": "",
   "name": "Tenable",
   "uuid": "0ef9b9af-8a95-455a-bf2c-6268af6bb5a5",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "tenable"
 }

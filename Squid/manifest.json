@@ -9,5 +9,6 @@
   "description": "",
   "name": "Squid",
   "uuid": "ddd506ea-2da4-4803-8ee6-dd94fcd92d5f",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "squid"
 }

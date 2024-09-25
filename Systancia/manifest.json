@@ -9,5 +9,6 @@
   "description": "Systancia is a leading provider of cybersecurity and virtualization solutions, specializing in identity and access management, application delivery, and virtual desktop infrastructure, catering to businesses' needs for secure and agile IT environments.",
   "name": "Systancia",
   "uuid": "befdae89-f0c2-407a-b3a4-0d38eb3b1cfa",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "systancia"
 }

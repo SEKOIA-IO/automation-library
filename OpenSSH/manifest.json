@@ -9,5 +9,6 @@
   "description": "",
   "name": "OpenSSH",
   "uuid": "513392a0-8081-4adb-9612-b0093eec745b",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "openssh"
 }

@@ -9,5 +9,6 @@
   "description": "Broadcom is a technology company that supplies semiconductor and infrastructure software solutions.",
   "name": "Broadcom",
   "uuid": "b58b7f4d-4384-4e30-ad46-cba0c36cdb5e",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "broadcom"
 }

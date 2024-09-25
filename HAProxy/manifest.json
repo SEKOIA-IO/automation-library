@@ -9,5 +9,6 @@
   "description": "",
   "name": "HAProxy",
   "uuid": "e3997649-c041-44d6-9952-a68aaa96b1a3",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "haproxy"
 }

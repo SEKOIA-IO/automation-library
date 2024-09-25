@@ -9,5 +9,6 @@
   "description": "",
   "name": "Umbrella",
   "uuid": "184a2337-d5a2-475c-bd6e-741b5dce3607",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "umbrella"
 }

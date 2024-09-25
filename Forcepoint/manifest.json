@@ -9,5 +9,6 @@
   "description": "Forcepoint is a cybersecurity company providing firewall, cloud access security broker and data protection solutions.",
   "name": "Forcepoint",
   "uuid": "cae5b5e9-6fd1-4333-befb-09576a690985",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "forcepoint"
 }

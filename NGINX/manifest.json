@@ -9,5 +9,6 @@
   "description": "",
   "name": "NGINX",
   "uuid": "5f4ed350-3521-4bc8-94b9-bb23ee73c6aa",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "slug": "nginx"
 }
