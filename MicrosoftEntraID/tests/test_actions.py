@@ -158,7 +158,7 @@ async def test_get_user_authentication_methods():
             "defaultMfaMethod": "mobilePhone",
         }
     ]
-    
+
     final_value_expected = {"authenticationResults": value_expected}
 
     response = requests.Response()
