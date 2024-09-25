@@ -158,6 +158,8 @@ async def test_get_user_authentication_methods():
             "defaultMfaMethod": "mobilePhone",
         }
     ]
+    
+    final_value_expected = {"authenticationResults": value_expected}
 
     response = requests.Response()
     response._content = json.dumps(expected).encode("utf-8")
@@ -170,7 +172,7 @@ async def test_get_user_authentication_methods():
     ):
         results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
 
-        assert results == value_expected
+        assert results == final_value_expected
 
 
 SIGN_INS: list[dict] = [
