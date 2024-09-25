@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "HAProxy",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "",
+  "name": "HAProxy",
+  "uuid": "e3997649-c041-44d6-9952-a68aaa96b1a3",
+  "version": "1.0.0"
+}

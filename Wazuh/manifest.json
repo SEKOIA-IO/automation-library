@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Wazuh",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Wazuh is an Endpoint Detection and Response solution.",
+  "name": "Wazuh",
+  "uuid": "abdbefde-f2e2-4400-914f-b4d2123bbe41",
+  "version": "1.0.0"
+}

@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Unbound",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "",
+  "name": "Unbound",
+  "uuid": "ddfada96-2d86-428b-9e3b-3c873921692f",
+  "version": "1.0.0"
+}

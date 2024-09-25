@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Varonis",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Varonis is a software company providing solutions to track, analyze and protect data.",
+  "name": "Varonis",
+  "uuid": "dc637598-de55-4c8d-8a38-5f613bce2d3c",
+  "version": "1.0.0"
+}

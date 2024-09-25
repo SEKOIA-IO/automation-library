@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Apache",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Apache is a free open-source cross-platform web server software.",
+  "name": "Apache",
+  "uuid": "fb40a8f6-5b06-4866-80ab-88faf6adb129",
+  "version": "1.0.0"
+}

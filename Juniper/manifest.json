@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Juniper",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Juniper Networks is a leading provider of networking solutions, specializing in high-performance routers, switches, and security products, delivering innovative and reliable infrastructure for businesses and service providers globally.",
+  "name": "Juniper",
+  "uuid": "759bcde6-01eb-4d3c-a5ed-0944e69760b6",
+  "version": "1.0.0"
+}

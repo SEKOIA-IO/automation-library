@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Clavister",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Clavister is a cybersecurity company specializing in network security solutions, including next-generation firewalls, SD-WAN, and VPN technologies. They focus on providing robust, scalable security for enterprises, service providers, and public sector organizations.",
+  "name": "Clavister",
+  "uuid": "c8e5ebda-8481-4e8d-bfb8-2e6c32870ff3",
+  "version": "1.0.0"
+}

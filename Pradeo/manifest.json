@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Pradeo",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Pradeo Security is a leading provider of cybersecurity solutions for mobile phone fleet that focuses on security analytics and incident response.  Their suite of products helps organizations detect and respond to emerging threats in real-time, leveraging highly accurate applications analysis.  Pradeo's solutions cater to various industries, including finance, healthcare, and government, offering advanced threat detection, vulnerability  assessment, and compliance management capabilities.",
+  "name": "Pradeo",
+  "uuid": "97666d3d-c5fe-4946-a910-fa199934ad21",
+  "version": "1.0.0"
+}

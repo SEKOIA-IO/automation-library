@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "F5 Networks",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "",
+  "name": "F5 Networks",
+  "uuid": "04fe0c00-78e9-4fa9-a6d8-38ca190d9dad",
+  "version": "1.0.0"
+}

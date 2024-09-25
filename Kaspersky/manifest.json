@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Kaspersky",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Kaspersky is a global cybersecurity company known for its advanced antivirus and cybersecurity solutions, offering comprehensive protection against malware, cyber threats, and online security risks for individuals and businesses.",
+  "name": "Kaspersky",
+  "uuid": "c76d56f4-706c-4f9e-ae51-dc3f2cefe67b",
+  "version": "1.0.0"
+}

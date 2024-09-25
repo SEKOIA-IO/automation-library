@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Eset",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "ESET is a global cybersecurity company known for its antivirus and security software solutions for both businesses and consumers, providing advanced threat detection and malware protection.",
+  "name": "Eset",
+  "uuid": "91140c5a-770f-44c6-81ce-ea57daf3fe34",
+  "version": "1.0.0"
+}

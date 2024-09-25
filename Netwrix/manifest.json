@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Netwrix",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Netwrix is a Texas-based private IT security software company that develops software to help companies identify and secure sensitive data and assist with compliance auditing.",
+  "name": "Netwrix",
+  "uuid": "12e455fe-7249-11ed-a1eb-0242ac120002",
+  "version": "1.0.0"
+}

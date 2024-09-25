@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Claroty",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Claroty is a cybersecurity company specializing in industrial control systems (ICS) and operational technology (OT) security, offering solutions for monitoring, threat detection, and protection of critical infrastructure.",
+  "name": "Claroty",
+  "uuid": "e215ed98-7ff2-4a01-b5fc-aa6bda025ea6",
+  "version": "1.0.0"
+}

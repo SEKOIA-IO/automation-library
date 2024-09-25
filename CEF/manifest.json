@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CEF",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "ArcSight's Common Event Format (CEF) is an open log management standard.",
+  "name": "CEF",
+  "uuid": "cf6d31fc-44ee-4ce9-a276-f1542c86aad4",
+  "version": "1.0.0"
+}

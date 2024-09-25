@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Cyberwatch",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Cyberwatch is a cybersecurity company offering solutions to detect vulnerabilities and check the compliance in your services.",
+  "name": "Cyberwatch",
+  "uuid": "e05b711d-3e8d-4ccb-ad91-93fa4f948492",
+  "version": "1.0.0"
+}

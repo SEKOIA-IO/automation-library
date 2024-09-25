@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Cisco",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "",
+  "name": "Cisco",
+  "uuid": "9d2df369-f0dc-4704-8e61-89f74dc1fc06",
+  "version": "1.0.0"
+}
