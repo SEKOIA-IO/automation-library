@@ -16,7 +16,7 @@
   },
   "results": {
     "title": "GetUserAuthenticationMethodsResults",
-    "type": "object",
+    "type": "array",
     "properties": {
       "id": {
         "title": "Id",
