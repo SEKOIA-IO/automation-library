@@ -41,7 +41,7 @@
   "name": "Microsoft Entra ID",
   "uuid": "3abf7928-65ef-4a5f-ba3e-5fbe56123d0c",
   "slug": "azure-ad",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "categories": [
     "IAM"
   ]
