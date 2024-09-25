@@ -185,7 +185,11 @@ class AzureEventsHubTrigger(AsyncConnector):
 
                     except Exception as ex:
                         self.log_exception(ex, message="Failed to consume messages")
+                        self.client.close()
                         raise ex
 
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
+
+        self.log(message="Azure EventHub Trigger is stopping", level="info")
+        self.client.close()
