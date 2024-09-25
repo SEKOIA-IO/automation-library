@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-09-25 - 2.5.5
+
+### Fix
+
+- Close correctly the EventHub client when stopping the connector
+
 ## 2024-09-20 - 2.5.4
 
 ### Changed
