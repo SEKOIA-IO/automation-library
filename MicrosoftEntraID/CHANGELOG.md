@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2024-09-25 - 2.8.3
+
+### Fixed
+
+- Fix results json ( Add items to results )
+
 ## 2024-09-25 - 2.8.2
 
 ### Fixed
