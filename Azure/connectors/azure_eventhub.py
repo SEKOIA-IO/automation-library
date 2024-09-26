@@ -160,7 +160,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             message="Error raised when consuming messages",
         )
 
-    async def receive_events(self):
+    async def receive_events(self) -> None:
         try:
             await self.client.receive_batch(
                 on_event_batch=self.handle_messages,
