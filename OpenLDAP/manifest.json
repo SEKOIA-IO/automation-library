@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "OpenLDAP",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "OpenLDAP (Lightweight Directory Access Protocol) is an open-source implementation of a directory service protocol. It helps organizations to maintain and manage a centralized directory of user information, such as names, addresses, and other attributes.",
+  "name": "OpenLDAP",
+  "uuid": "8098db1d-071c-4d07-b5a0-3bcad7021463",
+  "version": "1.0.0",
+  "slug": "openldap"
+}

@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Forcepoint",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Forcepoint is a cybersecurity company providing firewall, cloud access security broker and data protection solutions.",
+  "name": "Forcepoint",
+  "uuid": "cae5b5e9-6fd1-4333-befb-09576a690985",
+  "version": "1.0.0",
+  "slug": "forcepoint"
+}

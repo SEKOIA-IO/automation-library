@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "BIND",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "BIND, which stands for Berkeley Internet Name Daemon, is an implementation of the Domain Name System (DNS).",
+  "name": "BIND",
+  "uuid": "85644f99-ee16-4593-b56b-ae74c9b9b0a6",
+  "version": "1.0.0",
+  "slug": "bind"
+}

@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Wallix",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Wallix is a Cybersecurity company offers solutions for Identity and Access Management",
+  "name": "Wallix",
+  "uuid": "29e11ced-ad75-4a5e-ad8d-9e47227bb218",
+  "version": "1.0.0",
+  "slug": "wallix"
+}

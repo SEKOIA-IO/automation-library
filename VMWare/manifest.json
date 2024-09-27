@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "VMWare",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "VMware is a virtualization technology company. It's offering software hypervisors serving virtual computers, virtual storages or virtual networks.",
+  "name": "VMWare",
+  "uuid": "32131dce-2899-4271-997d-5c6d1f79360d",
+  "version": "1.0.0",
+  "slug": "vmware"
+}

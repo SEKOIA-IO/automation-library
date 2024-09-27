@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Infoblox",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Infloblox is a cybersecurity company providing products to identify and control connected devices to networks.",
+  "name": "Infoblox",
+  "uuid": "53e51955-a3d3-410f-ad12-d110a8142c0d",
+  "version": "1.0.0",
+  "slug": "infoblox"
+}

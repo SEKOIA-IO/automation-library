@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "SonicWall",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Sonic Wall is a cybersecurity company specialized in content control and network security.",
+  "name": "SonicWall",
+  "uuid": "44d88f8b-84e8-400c-bf1e-eeef54ff8bf4",
+  "version": "1.0.0",
+  "slug": "sonicwall"
+}

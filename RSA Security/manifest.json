@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "RSA Security",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "RSA Security is a computer and network security company providing encryption standards and security software.",
+  "name": "RSA Security",
+  "uuid": "ef6cec98-5616-43cb-bb55-9445316b36f2",
+  "version": "1.0.0",
+  "slug": "rsa-securid"
+}

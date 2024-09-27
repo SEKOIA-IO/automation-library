@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Daspren",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Daspren is a DeepTech startup that emerged from the Inria Rennes research center, that provides zero-day protection against malware attacks.",
+  "name": "Daspren",
+  "uuid": "06e2d4bd-e1e1-4061-9deb-184e9bcd5245",
+  "version": "1.0.0",
+  "slug": "daspren"
+}

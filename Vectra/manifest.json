@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Vectra",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "AI-driven cybersecurity platform that detects attacker behaviors to protect your users and hosts from being compromised, regardless of location.",
+  "name": "Vectra",
+  "uuid": "45a8b20d-60f4-4384-b5d9-8ec0efcf604c",
+  "version": "1.0.0",
+  "slug": "vectra"
+}
