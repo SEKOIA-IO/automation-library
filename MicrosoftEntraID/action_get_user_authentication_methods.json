@@ -16,91 +16,97 @@
   },
   "results": {
     "title": "GetUserAuthenticationMethodsResults",
-    "type": "array",
-    "items": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "title": "Id",
-          "type": "string"
-        },
-        "userPrincipalName": {
-          "title": "Userprincipalname",
-          "type": "string"
-        },
-        "userDisplayName": {
-          "title": "Userdisplayname",
-          "type": "string"
-        },
-        "userType": {
-          "title": "Usertype",
-          "type": "string"
-        },
-        "isAdmin": {
-          "title": "Isadmin",
-          "type": "boolean"
-        },
-        "isSsprRegistered": {
-          "title": "Isssprregistered",
-          "type": "boolean"
-        },
-        "isSsprEnabled": {
-          "title": "Isssprenabled",
-          "type": "boolean"
-        },
-        "isSsprCapable": {
-          "title": "Isssprcapable",
-          "type": "boolean"
-        },
-        "isMfaRegistered": {
-          "title": "Ismfaregistered",
-          "type": "boolean"
-        },
-        "isMfaCapable": {
-          "title": "Ismfacapable",
-          "type": "boolean"
-        },
-        "isPasswordlessCapable": {
-          "title": "Ispasswordlesscapable",
-          "type": "boolean"
-        },
-        "methodsRegistered": {
-          "title": "Methodsregistered",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "isSystemPreferredAuthenticationMethodEnabled": {
-          "title": "Issystempreferredauthenticationmethodenabled",
-          "type": "boolean"
-        },
-        "systemPreferredAuthenticationMethods": {
-          "title": "Systempreferredauthenticationmethods",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "userPreferredMethodForSecondaryAuthentication": {
-          "title": "Userpreferredmethodforsecondaryauthentication",
-          "type": "string"
-        },
-        "lastUpdatedDateTime": {
-          "title": "Lastupdateddatetime",
-          "type": "string"
+    "type": "object",
+    "properties": {
+      "authenticationResults": {
+        "title": "Authentication results",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "userPrincipalName": {
+              "title": "Userprincipalname",
+              "type": "string"
+            },
+            "userDisplayName": {
+              "title": "Userdisplayname",
+              "type": "string"
+            },
+            "userType": {
+              "title": "Usertype",
+              "type": "string"
+            },
+            "isAdmin": {
+              "title": "Isadmin",
+              "type": "boolean"
+            },
+            "isSsprRegistered": {
+              "title": "Isssprregistered",
+              "type": "boolean"
+            },
+            "isSsprEnabled": {
+              "title": "Isssprenabled",
+              "type": "boolean"
+            },
+            "isSsprCapable": {
+              "title": "Isssprcapable",
+              "type": "boolean"
+            },
+            "isMfaRegistered": {
+              "title": "Ismfaregistered",
+              "type": "boolean"
+            },
+            "isMfaCapable": {
+              "title": "Ismfacapable",
+              "type": "boolean"
+            },
+            "isPasswordlessCapable": {
+              "title": "Ispasswordlesscapable",
+              "type": "boolean"
+            },
+            "methodsRegistered": {
+              "title": "Methodsregistered",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "isSystemPreferredAuthenticationMethodEnabled": {
+              "title": "Issystempreferredauthenticationmethodenabled",
+              "type": "boolean"
+            },
+            "systemPreferredAuthenticationMethods": {
+              "title": "Systempreferredauthenticationmethods",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "userPreferredMethodForSecondaryAuthentication": {
+              "title": "Userpreferredmethodforsecondaryauthentication",
+              "type": "string"
+            },
+            "lastUpdatedDateTime": {
+              "title": "Lastupdateddatetime",
+              "type": "string"
+            }
+          },
+          "required": [
+          "id",
+          "userPrincipalName",
+          "isSsprRegistered",
+          "isSsprEnabled",
+          "isSsprCapable",
+          "isMfaRegistered",
+          "isMfaCapable",
+          "isPasswordlessCapable"
+          ]
         }
-      },
-      "required": [
-      "id",
-      "userPrincipalName",
-      "isSsprRegistered",
-      "isSsprEnabled",
-      "isSsprCapable",
-      "isMfaRegistered",
-      "isMfaCapable",
-      "isPasswordlessCapable"
-      ]
+      }
     }
   }
 }

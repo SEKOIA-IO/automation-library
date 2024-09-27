@@ -29,4 +29,4 @@ class GetUserAuthenticationMethodsAction(MicrosoftGraphAction):
         response = await self.query_user_auth_methods(request_configuration)
         response.raise_for_status()
 
-        return response.json().get("value")
+        return {"authenticationResults": response.json().get("value")}
