@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-09-30 - 2.5.5
+
+### Changed
+
+- Change the way we run async workflow
+
 ## 2024-09-20 - 2.5.4
 
 ### Changed
