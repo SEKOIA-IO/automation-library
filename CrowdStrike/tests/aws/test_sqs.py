@@ -162,7 +162,7 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
             MaxNumberOfMessages=6,
             MessageAttributeNames=["All"],
             AttributeNames=["All"],
-            VisibilityTimeout=0,
+            VisibilityTimeout=60,
         )
 
         mock_sqs.delete_message.assert_any_call(QueueUrl=queue_url, ReceiptHandle=receipt_handle_1)
