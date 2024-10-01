@@ -72,7 +72,7 @@ def test_securityalertstrigger_retrieve_alert_from_api(alert_trigger, sample_not
 
 
 def test_securityalertstrigger_retrieve_alert_from_api_exp_raised(
-        alert_trigger, samplenotif_alert_created, requests_mock
+    alert_trigger, samplenotif_alert_created, requests_mock
 ):
     alert_uuid = samplenotif_alert_created["attributes"]["uuid"]
     requests_mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", status_code=500)
@@ -92,10 +92,10 @@ def test_securityalertstrigger_retrieve_alert_not_json(alert_trigger, samplenoti
 
 
 def test_securityalertstrigger_handle_alert_send_message(
-        alert_trigger,
-        sample_notifications,
-        sample_sicalertapi_mock,
-        sample_sicalertapi,
+    alert_trigger,
+    sample_notifications,
+    sample_sicalertapi_mock,
+    sample_sicalertapi,
 ):
     alert_trigger.send_event = MagicMock()
 
@@ -144,12 +144,12 @@ def test_single_event_triggers(alert_created_trigger, sample_sicalertapi_mock, s
 
 
 def test_single_event_triggers_updated(
-        alert_created_trigger,
-        sample_sicalertapi_mock,
-        module_configuration,
-        symphony_storage,
-        samplenotif_alert_updated,
-        sample_notifications,
+    alert_created_trigger,
+    sample_sicalertapi_mock,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_updated,
+    sample_notifications,
 ):
     trigger = AlertUpdatedTrigger()
     trigger.configuration = {}
@@ -172,12 +172,12 @@ def test_single_event_triggers_updated(
 
 
 def test_single_event_triggers_status_changed(
-        alert_created_trigger,
-        sample_sicalertapi_mock,
-        module_configuration,
-        symphony_storage,
-        samplenotif_alert_status_changed,
-        sample_notifications,
+    alert_created_trigger,
+    sample_sicalertapi_mock,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_status_changed,
+    sample_notifications,
 ):
     trigger = AlertStatusChangedTrigger()
     trigger.configuration = {}
@@ -200,12 +200,12 @@ def test_single_event_triggers_status_changed(
 
 
 def test_single_event_triggers_comments_added(
-        alert_created_trigger,
-        sample_sicalertapi,
-        module_configuration,
-        symphony_storage,
-        samplenotif_alert_comment_created,
-        sample_notifications,
+    alert_created_trigger,
+    sample_sicalertapi,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_comment_created,
+    sample_notifications,
 ):
     trigger = AlertCommentCreatedTrigger()
     trigger.configuration = {}
@@ -229,7 +229,7 @@ def test_single_event_triggers_comments_added(
                 "date": 0,
                 "created_by": "string",
                 "created_by_type": "string",
-                "unseen": True
+                "unseen": True,
             },
         )
         # Calling the trigger with an alert commentadded notification should create an event
@@ -245,7 +245,7 @@ def test_single_event_triggers_comments_added(
 
 
 def test_alert_trigger_filter_by_rule(
-        alert_trigger, samplenotif_alert_created, sample_sicalertapi_mock, sample_sicalertapi
+    alert_trigger, samplenotif_alert_created, sample_sicalertapi_mock, sample_sicalertapi
 ):
     alert_trigger.send_event = MagicMock()
     with sample_sicalertapi_mock:

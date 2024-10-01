@@ -247,8 +247,7 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
     )
     def _retrieve_comment_from_alertapi(self, alert_uuid: str, comment_uuid: str):
         api_url = urljoin(
-            self.module.configuration["base_url"],
-            f"api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}"
+            self.module.configuration["base_url"], f"api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}"
         )
 
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api

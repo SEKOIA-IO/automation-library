@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-09-30 - 2.64.2
+
+### Changed
+
+- Return more information in Sekoia Alert comment trigger 
+
 ## 2024-08-30 - 2.64.1
 
 ### Changed
