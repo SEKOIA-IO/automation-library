@@ -38,7 +38,7 @@
   "name": "Sophos",
   "uuid": "0de5216e-19b0-4ad3-9b91-a547cfaf52ca",
   "slug": "sophos",
-  "version": "1.16.5",
+  "version": "1.17.0",
   "categories": [
     "Endpoint"
   ]
