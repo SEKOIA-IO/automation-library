@@ -1,10 +1,4 @@
-from urllib.parse import urljoin
-
-from action_base import SophosEDRAction
-
-from .logging import get_logger
-
-logger = get_logger()
+from sophos_module.action_base import SophosEDRAction
 
 
 class ActionSophosEDRScan(SophosEDRAction):

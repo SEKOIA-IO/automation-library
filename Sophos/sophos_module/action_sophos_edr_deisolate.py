@@ -1,4 +1,4 @@
-from action_base import SophosEDRAction
+from sophos_module.action_base import SophosEDRAction
 
 
 class ActionSophosEDRDeIsolateEndpoint(SophosEDRAction):
