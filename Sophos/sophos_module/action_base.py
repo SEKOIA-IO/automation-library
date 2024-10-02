@@ -1,5 +1,6 @@
 from abc import ABC
 from functools import cached_property
+from typing import Any, Callable
 from urllib.parse import urljoin
 
 from sekoia_automation.action import Action
@@ -30,14 +31,17 @@ class SophosEDRAction(Action, ABC):
         url = urljoin(self.module.configuration.api_host, "whoami/v1")
         response = self.client.get(url).json()
 
-        return response["apiHosts"]["dataRegion"]
+        return str(response["apiHosts"]["dataRegion"])
 
-    def call_endpoint(self, method: str, url: str, data: dict | None = None, use_region_url: bool = False):
+    def call_endpoint(
+        self, method: str, url: str, data: dict[str, Any] | None = None, use_region_url: bool = False
+    ) -> Any:
         assert method.lower() in ("get", "post", "patch")
 
         base_url = self.region_base_url if use_region_url else self.module.configuration.api_host
         url = urljoin(base_url, url)
 
+        func: Callable[[Any], Any]
         if method.lower() == "post":
             func = self.client.post
 
@@ -65,3 +69,5 @@ class SophosEDRAction(Action, ABC):
                 doc_url=raw.get("docUrl"),
             )
             response.raise_for_status()
+
+        return {}

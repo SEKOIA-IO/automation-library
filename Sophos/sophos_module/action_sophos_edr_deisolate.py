@@ -1,8 +1,10 @@
+from typing import Any
+
 from sophos_module.action_base import SophosEDRAction
 
 
 class ActionSophosEDRDeIsolateEndpoint(SophosEDRAction):
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: dict[str, Any]) -> Any:
         endpoints_ids = arguments["endpoints_ids"]
         comment = arguments.get("comment")
 

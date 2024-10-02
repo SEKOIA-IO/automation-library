@@ -1,8 +1,10 @@
+from typing import Any
+
 from sophos_module.action_base import SophosEDRAction
 
 
 class ActionSophosEDRScan(SophosEDRAction):
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: dict[str, Any]) -> Any:
         endpoint_id = arguments["endpoint_id"]
 
         return self.call_endpoint(
