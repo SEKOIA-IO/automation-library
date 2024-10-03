@@ -12,4 +12,4 @@ class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
         if comment:
             data["comment"] = comment
 
-        return self.call_endpoint(method="post", url="endpoint/v1/endpoints/isolation", data=data)
+        return self.call_endpoint(method="post", url="endpoint/v1/endpoints/isolation", data=data, use_region_url=True)

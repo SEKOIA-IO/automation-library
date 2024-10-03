@@ -4,7 +4,10 @@
     "properties": {
       "endpoints_ids": {
         "description": "List of endpoints ID",
-        "type": "array"
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": ["endpoints_ids"],
