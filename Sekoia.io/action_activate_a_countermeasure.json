@@ -33,7 +33,7 @@
     },
     "required": [
       "cm_uuid",
-      "body"
+      "comment"
     ]
   },
   "results": {
