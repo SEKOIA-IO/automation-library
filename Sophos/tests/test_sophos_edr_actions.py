@@ -1,6 +1,3 @@
-import os
-from unittest.mock import Mock
-
 import pytest
 import requests.exceptions
 import requests_mock
@@ -210,7 +207,7 @@ def test_error(module):
                 "message": "Invalid request",
             },
         )
-        deisolate_action = ActionSophosEDRIsolateEndpoint(module)
+        deisolate_action = ActionSophosEDRDeIsolateEndpoint(module)
 
         with pytest.raises(requests.exceptions.HTTPError):
             deisolate_action.run({"endpoints_ids": ["0b44b37f-2299-47c8-bf5d-589995f8de96"]})
