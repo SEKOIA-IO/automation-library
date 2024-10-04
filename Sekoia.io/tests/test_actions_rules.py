@@ -1,7 +1,7 @@
 from urllib.parse import unquote as url_decoder
 
 import requests_mock
-
+from tenacity import wait_none
 from sekoiaio.operation_center import GetRule, EnableRule, DisableRule, DeleteRule, CreateRule, UpdateRule
 
 module_base_url = "http://fake.url/"
@@ -10,7 +10,6 @@ apikey = "fake_api_key"
 
 
 def test_get_rule_success():
-
     action: GetRule = GetRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
@@ -52,9 +51,9 @@ def test_get_rule_success():
 
 
 def test_enable_rule_failure():
-
     action: EnableRule = EnableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action._wait_param = lambda: wait_none()
 
     ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = None
@@ -64,32 +63,31 @@ def test_enable_rule_failure():
         mock.put(f"{base_url}{ressource}/enabled", json=expected_response, status_code=500)
         results: dict = action.run(arguments)
         assert results == expected_response
-        assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "PUT"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}/enabled"
 
 
 def test_get_rule_failure():
-
     action: GetRule = GetRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action._wait_param = lambda: wait_none()
+
     ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = None
     with requests_mock.Mocker() as mock:
         mock.get(f"{base_url}{ressource}", json=expected_response, status_code=500)
         results: dict = action.run({"uuid": "fake_uuid"})
         assert results == expected_response
-        assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "GET"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
 
 def test_delete_rule_failure():
-
     action: DeleteRule = DeleteRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action._wait_param = lambda: wait_none()
     ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = None
     arguments = {"uuid": "fake_uuid"}
@@ -97,16 +95,15 @@ def test_delete_rule_failure():
         mock.delete(f"{base_url}{ressource}", json=expected_response, status_code=500)
         results: dict = action.run(arguments)
         assert results == expected_response
-        assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "DELETE"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
 
 def test_create_rule_failure():
-
     action: CreateRule = CreateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action._wait_param = lambda: wait_none()
     ressource = "conf/rules-catalog/rules"
     expected_response = None
     arguments = {
@@ -137,16 +134,15 @@ def test_create_rule_failure():
         mock.post(f"{base_url}{ressource}", json=expected_response, status_code=500)
         results: dict = action.run(arguments)
         assert results == expected_response
-        assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "POST"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
 
 def test_update_rule_failure():
-
     action: UpdateRule = UpdateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action._wait_param = lambda: wait_none()
     ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = None
     arguments = {
@@ -179,16 +175,15 @@ def test_update_rule_failure():
         mock.put(f"{base_url}{ressource}", json=expected_response, status_code=500)
         results: dict = action.run(arguments)
         assert results == expected_response
-        assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "PUT"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
 
 def test_disable_rule_failure():
-
     action: DisableRule = DisableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action._wait_param = lambda: wait_none()
 
     ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = None
@@ -199,16 +194,15 @@ def test_disable_rule_failure():
         results: dict = action.run(arguments)
 
         assert results == expected_response
-        assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "PUT"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}/disabled"
 
 
 def test_delete_rule_success():
-
     action: DeleteRule = DeleteRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    action._wait_param = lambda: wait_none()
 
     ressource = "conf/rules-catalog/rules/fake_uuid"
     expected_response = {"message": "Rule deleted successfully"}
@@ -226,7 +220,6 @@ def test_delete_rule_success():
 
 
 def test_create_rule_success():
-
     action: CreateRule = CreateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
@@ -295,7 +288,6 @@ def test_create_rule_success():
 
 
 def test_update_rule_success():
-
     action: UpdateRule = UpdateRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
@@ -367,7 +359,6 @@ def test_update_rule_success():
 
 
 def test_enable_rule_success():
-
     action: EnableRule = EnableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
@@ -411,7 +402,6 @@ def test_enable_rule_success():
 
 
 def test_disable_rule_success():
-
     action: DisableRule = DisableRule()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
