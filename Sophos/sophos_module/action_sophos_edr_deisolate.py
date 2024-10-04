@@ -1,15 +1,11 @@
 from typing import Any
 
-from sophos_module.action_base import SophosEDRAction
+from sophos_module.action_sophos_edr_isolate import ActionSophosEDRIsolateEndpoint
 
 
-class ActionSophosEDRDeIsolateEndpoint(SophosEDRAction):
+class ActionSophosEDRDeIsolateEndpoint(ActionSophosEDRIsolateEndpoint):
     def run(self, arguments: dict[str, Any]) -> Any:
-        endpoints_ids = arguments["endpoints_ids"]
+        endpoint_id = arguments["endpoint_id"]
         comment = arguments.get("comment")
 
-        data = {"enabled": False, "ids": endpoints_ids}
-        if comment:
-            data["comment"] = comment
-
-        return self.call_endpoint(method="post", url="endpoint/v1/endpoints/isolation", data=data, use_region_url=True)
+        return self.set_isolation_status(endpoint_id=endpoint_id, enabled=False, comment=comment)

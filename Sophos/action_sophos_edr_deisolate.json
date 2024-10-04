@@ -2,15 +2,12 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "endpoints_ids": {
-        "description": "List of endpoints ID",
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
+      "endpoint_id": {
+        "description": "Endpoint ID",
+        "type": "string"
       }
     },
-    "required": ["endpoints_ids"],
+    "required": ["endpoint_id"],
     "title": "Arguments",
     "type": "object"
   },
