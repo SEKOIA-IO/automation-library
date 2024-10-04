@@ -20,35 +20,38 @@ def module(symphony_storage):
     return module
 
 
+def add_auth_mock(mock, host, module):
+    mock.post(
+        f"{module.configuration.oauth2_authorization_url}",
+        status_code=200,
+        json={
+            "access_token": "access_token",
+            "refresh_token": "refresh_token",
+            "token_type": "bearer",
+            "message": "OK",
+            "errorCode": "success",
+            "expires_in": 3600,
+        },
+    )
+
+    mock.get(
+        f"{module.configuration.api_host}/whoami/v1",
+        status_code=200,
+        json={
+            "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+            "idType": "tenant",
+            "apiHosts": {
+                "global": "https://api.central.sophos.com",
+                "dataRegion": host,
+            },
+        },
+    )
+
+
 def test_run_scan(module) -> None:
     with requests_mock.Mocker() as mock:
         host = "https://api-eu01.central.sophos.com"
-
-        mock.post(
-            f"{module.configuration.oauth2_authorization_url}",
-            status_code=200,
-            json={
-                "access_token": "access_token",
-                "refresh_token": "refresh_token",
-                "token_type": "bearer",
-                "message": "OK",
-                "errorCode": "success",
-                "expires_in": 3600,
-            },
-        )
-
-        mock.get(
-            f"{module.configuration.api_host}/whoami/v1",
-            status_code=200,
-            json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
-                "idType": "tenant",
-                "apiHosts": {
-                    "global": "https://api.central.sophos.com",
-                    "dataRegion": host,
-                },
-            },
-        )
+        add_auth_mock(mock, host, module)
 
         url = f"{host}/endpoint/v1/endpoints/0b44b37f-2299-47c8-bf5d-589995f8de96/scans"
         mock.post(
@@ -64,150 +67,80 @@ def test_run_scan(module) -> None:
 
 
 def test_isolate_endpoint(module):
+    message = {
+        "enabled": True,
+        "lastEnabledAt": "2024-10-03 09.50.54 UTC",
+        "lastEnabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
+        "lastDisabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
+    }
+
     with requests_mock.Mocker() as mock:
         host = "https://api-eu01.central.sophos.com"
+        add_auth_mock(mock, host, module)
 
-        mock.post(
-            f"{module.configuration.oauth2_authorization_url}",
-            status_code=200,
-            json={
-                "access_token": "access_token",
-                "refresh_token": "refresh_token",
-                "token_type": "bearer",
-                "message": "OK",
-                "errorCode": "success",
-                "expires_in": 3600,
-            },
-        )
-
+        url = f"{host}/endpoint/v1/endpoints/0b44b37f-2299-47c8-bf5d-589995f8de96/isolation"
         mock.get(
-            f"{module.configuration.api_host}/whoami/v1",
-            status_code=200,
-            json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
-                "idType": "tenant",
-                "apiHosts": {
-                    "global": "https://api.central.sophos.com",
-                    "dataRegion": host,
-                },
-            },
-        )
-
-        url = f"{host}/endpoint/v1/endpoints/isolation"
-        mock.post(
             url,
-            json={
-                "items": [
-                    {
-                        "id": "5cb82c71-035e-43af-a23c-760d5e7da94d",
-                        "isolation": {
-                            "enabled": True,
-                            "lastEnabledAt": "2024-10-03 09.50.54 UTC",
-                            "lastEnabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
-                            "lastDisabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
-                        },
-                    }
-                ]
-            },
+            json=message,
+        )
+        mock.patch(
+            url,
+            json=message,
         )
         isolate_action = ActionSophosEDRIsolateEndpoint(module)
-        isolate_action.run({"endpoints_ids": ["0b44b37f-2299-47c8-bf5d-589995f8de96"]})
+        isolate_action.run({"endpoint_id": "0b44b37f-2299-47c8-bf5d-589995f8de96"})
 
 
 def test_deisolate_endpoint(module):
+    message = {
+        "enabled": False,
+        "lastEnabledAt": "2024-10-03 09.50.54 UTC",
+        "lastEnabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
+        "lastDisabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
+    }
+
     with requests_mock.Mocker() as mock:
         host = "https://api-eu01.central.sophos.com"
+        add_auth_mock(mock, host, module)
 
-        mock.post(
-            f"{module.configuration.oauth2_authorization_url}",
-            status_code=200,
-            json={
-                "access_token": "access_token",
-                "refresh_token": "refresh_token",
-                "token_type": "bearer",
-                "message": "OK",
-                "errorCode": "success",
-                "expires_in": 3600,
-            },
-        )
-
+        url = f"{host}/endpoint/v1/endpoints/0b44b37f-2299-47c8-bf5d-589995f8de96/isolation"
         mock.get(
-            f"{module.configuration.api_host}/whoami/v1",
-            status_code=200,
-            json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
-                "idType": "tenant",
-                "apiHosts": {
-                    "global": "https://api.central.sophos.com",
-                    "dataRegion": host,
-                },
-            },
+            url,
+            json=message,
+        )
+        mock.patch(
+            url,
+            json=message,
         )
 
-        url = f"{host}/endpoint/v1/endpoints/isolation"
-        mock.post(
-            url,
-            json={
-                "items": [
-                    {
-                        "id": "5cb82c71-035e-43af-a23c-760d5e7da94d",
-                        "isolation": {
-                            "enabled": False,
-                            "lastEnabledAt": "2024-10-03 09.50.54 UTC",
-                            "lastEnabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
-                            "lastDisabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
-                        },
-                    }
-                ]
-            },
-        )
         deisolate_action = ActionSophosEDRDeIsolateEndpoint(module)
-        deisolate_action.run({"endpoints_ids": ["0b44b37f-2299-47c8-bf5d-589995f8de96"]})
+        deisolate_action.run({"endpoint_id": "0b44b37f-2299-47c8-bf5d-589995f8de96"})
 
 
 def test_error(module):
+    message_1 = {
+        "enabled": True,
+        "lastEnabledAt": "2024-10-03 09.50.54 UTC",
+        "lastEnabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
+        "lastDisabledBy": {"id": "a1fac7fe-1cf3-46c8-9b8c-9976f518f726"},
+    }
+    message_2 = {
+        "error": "badRequest",
+        "correlationId": "c5bd922b-febb-45e2-a9f1-02fb2a8f88d9",
+        "requestId": "16e35810-0be1-430b-9978-d1e8f959a422",
+        "createdAt": "2024-10-03T13:52:36.194125443Z",
+        "message": "Invalid request",
+    }
     with requests_mock.Mocker() as mock:
         host = "https://api-eu01.central.sophos.com"
+        add_auth_mock(mock, host, module)
 
-        mock.post(
-            f"{module.configuration.oauth2_authorization_url}",
-            status_code=200,
-            json={
-                "access_token": "access_token",
-                "refresh_token": "refresh_token",
-                "token_type": "bearer",
-                "message": "OK",
-                "errorCode": "success",
-                "expires_in": 3600,
-            },
-        )
-
+        url = f"{host}/endpoint/v1/endpoints/0b44b37f-2299-47c8-bf5d-589995f8de96/isolation"
         mock.get(
-            f"{module.configuration.api_host}/whoami/v1",
-            status_code=200,
-            json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
-                "idType": "tenant",
-                "apiHosts": {
-                    "global": "https://api.central.sophos.com",
-                    "dataRegion": host,
-                },
-            },
-        )
-
-        url = f"{host}/endpoint/v1/endpoints/isolation"
-        mock.post(
             url,
-            status_code=400,
-            json={
-                "error": "badRequest",
-                "correlationId": "c5bd922b-febb-45e2-a9f1-02fb2a8f88d9",
-                "requestId": "16e35810-0be1-430b-9978-d1e8f959a422",
-                "createdAt": "2024-10-02T13:52:36.194125443Z",
-                "message": "Invalid request",
-            },
+            json=message_1,
         )
-        deisolate_action = ActionSophosEDRDeIsolateEndpoint(module)
+        mock.patch(url, json=message_2, status_code=400)
 
-        with pytest.raises(requests.exceptions.HTTPError):
-            deisolate_action.run({"endpoints_ids": ["0b44b37f-2299-47c8-bf5d-589995f8de96"]})
+        deisolate_action = ActionSophosEDRDeIsolateEndpoint(module)
+        deisolate_action.run({"endpoint_id": "0b44b37f-2299-47c8-bf5d-589995f8de96"})

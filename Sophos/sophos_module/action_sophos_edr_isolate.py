@@ -6,21 +6,21 @@ from sophos_module.action_base import SophosEDRAction
 
 
 class ActionSophosEDRIsolateEndpoint(SophosEDRAction):
-    def get_endpoint_isolation_status(self, endpoint_id: str) -> dict:
+    def get_endpoint_isolation_status(self, endpoint_id: str) -> Any:
         return self.call_endpoint(
             method="get", url=f"endpoint/v1/endpoints/{endpoint_id}/isolation", use_region_url=True
         )
 
-    def try_to_set_isolation_state(self, endpoint_id: str, enabled: bool, comment: str | None = None) -> dict:
-        data = {"enabled": enabled}
-        if comment:
+    def try_to_set_isolation_state(self, endpoint_id: str, enabled: bool, comment: str | None = None) -> Any:
+        data: dict[str, Any] = {"enabled": enabled}
+        if comment is not None:
             data["comment"] = comment
 
         return self.call_endpoint(
             method="patch", url=f"endpoint/v1/endpoints/{endpoint_id}/isolation", data=data, use_region_url=True
         )
 
-    def set_isolation_status(self, endpoint_id: str, enabled: bool, comment: str | None = None):
+    def set_isolation_status(self, endpoint_id: str, enabled: bool, comment: str | None = None) -> Any:
         """
         Sophos Endpoint API will return `Bad Request` every time you will
         try to enable/disable already enabled/disabled isolation on an endpoint,
