@@ -68,7 +68,6 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
-        self._stop_event = Event()
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
 
     @cached_property
