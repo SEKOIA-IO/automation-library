@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 import requests_mock
-
+from tenacity import wait_none
 from sekoiaio.intelligence_center.actions import PostBundleAction
 
 
@@ -66,6 +66,7 @@ def test_post_bundle_file(stix_bundle, symphony_storage):
 @patch.object(PostBundleAction, "error")
 def test_post_bundle_error(error_mock, stix_bundle):
     action = PostBundleAction()
+    action._wait_param = lambda: wait_none()
 
     action.module.configuration = {
         "base_url": "http://fake.url/",
