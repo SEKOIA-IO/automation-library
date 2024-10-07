@@ -35,5 +35,8 @@
   "name": "Nybble",
   "slug": "nybble",
   "uuid": "0664bc2d-8f09-410f-ab8f-e0e07911a6f4",
-  "version": "1.0.2"
+  "version": "1.0.2",
+  "categories": [
+    "Threat Intelligence"
+  ]
 }

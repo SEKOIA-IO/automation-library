@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Suricata",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "",
+  "name": "Suricata",
+  "uuid": "13e6390c-f94d-440b-addd-cd1da6b796dc",
+  "version": "1.0.0",
+  "slug": "suricata"
+}

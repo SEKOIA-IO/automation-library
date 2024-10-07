@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "EfficientIP",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "EfficientIP enables Network Automation and strengthens DNS Security with DDI Technology to control and secure anywhere access to your enterprise and cloud applications.",
+  "name": "EfficientIP",
+  "uuid": "4f3e2ee6-75be-4f16-adab-e3dd932e3e69",
+  "version": "1.0.0",
+  "slug": "efficientip"
+}

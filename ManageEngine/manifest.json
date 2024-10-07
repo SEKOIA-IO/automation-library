@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ManageEngine",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "ManageEngine is a software company known for its comprehensive IT management and security solutions, offering a wide range of tools for network, server, and endpoint management, as well as cybersecurity and IT service desk operations.",
+  "name": "ManageEngine",
+  "uuid": "c894a249-536d-4d73-8412-d922a3399889",
+  "version": "1.0.0",
+  "slug": "manage-engine"
+}

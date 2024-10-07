@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "OpenBSD",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "OpenBSD is a security-focused, opensource and free operating based on Berkeley Software Distribution",
+  "name": "OpenBSD",
+  "uuid": "77d450fd-f480-408e-a141-8ad534dbb25a",
+  "version": "1.0.0",
+  "slug": "openbsd"
+}

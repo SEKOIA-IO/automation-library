@@ -48,7 +48,10 @@
         "title": "Memory dump flag",
         "description": "full - memory dump includes all accessible memory of process, pmem - only information necessary to capture process' stack traces",
         "type": "string",
-        "enum": ["full", "pmem"]
+        "enum": [
+          "full",
+          "pmem"
+        ]
       }
     },
     "required": [

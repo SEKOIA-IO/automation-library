@@ -18,7 +18,7 @@
             "description": "The list of Account IDs to filter by",
             "type": "array",
             "items": {
-                "type": "string"
+              "type": "string"
             }
           },
           "group_ids": {

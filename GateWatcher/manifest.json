@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "GateWatcher",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Gatewatcher is a cybersecurity software provider specializing in advanced intrusion detection and is a market leader in high-performance solutions based on automation and machine learning methods.",
+  "name": "GateWatcher",
+  "uuid": "65d0b877-3e3c-4ce8-b184-1db084a1acd3",
+  "version": "1.0.0",
+  "slug": "gatewatcher"
+}

@@ -4,7 +4,6 @@ from .base_get_event import BaseGetEvents
 
 
 class GetEvents(BaseGetEvents):
-
     def run(self, arguments):
         limit = min(self.MAX_LIMIT, arguments.get("limit") or self.DEFAULT_LIMIT)
         self.configure_http_session()
