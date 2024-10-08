@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+import signal
 from datetime import datetime, timezone
 from functools import cached_property
 from threading import Event
@@ -69,10 +70,36 @@ class AzureEventsHubTrigger(AsyncConnector):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
+        self._current_task: Task | None = None
 
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
+
+    async def stop_current_task(self):
+        """
+        Stop the current async task
+        """
+        # if the current task is defined and not already cancelled
+        if self._current_task is not None and not self._current_task.cancelled():
+            # cancel the receiving task
+            self._current_task.cancel()
+
+            # wait for the task to handle the cancellation
+            await task
+
+            # clean the current task
+            self._current_task = None
+
+    def shutdown(self, signum, loop):
+        """
+        Shutdown the connector
+        """
+        # stop the connector
+        self.stop()
+
+        # stop the receiving task
+        loop.run_until_complete(self.stop_current_task)
 
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
@@ -178,17 +205,14 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     async def async_run(self) -> None:
         while self.running:
-            task = asyncio.create_task(self.receive_events())
+            self._current_task = asyncio.create_task(self.receive_events())
 
             try:
                 # Allow the task to run for the specified duration (10 minutes)
                 await asyncio.sleep(600)
 
-                # Cancel the receiving task after the duration
-                task.cancel()
-
-                # Wait for the task to handle the cancellation
-                await task
+                # Stop the receiving task after the duration
+                await self.stop_current_task()
 
             except asyncio.CancelledError:
                 self.log(message="Receiving task was cancelled", level="info")
@@ -204,4 +228,8 @@ class AzureEventsHubTrigger(AsyncConnector):
         self.log(message="Azure EventHub Trigger has started", level="info")
 
         loop = asyncio.get_event_loop()
+        loop.add_signal_handler(signal.SIGTERM, self.shutdown)
+        loop.add_signal_handler(signal.SIGINT, self.shutdown)
         loop.run_until_complete(self.async_run())
+
+        self.log(message="Azure EventHub Trigger has stopped", level="info")
