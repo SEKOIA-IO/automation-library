@@ -23,4 +23,4 @@ so that others can benefit from your work as well. Together, we can build even m
 
 ## Documentation
 
-Documentation is in the [doc](docs/README.md) directory.
+Documentation along with tutorials and examples are available on the [documentation website](https://docs.sekoia.io/integration/develop_integration/overview/).
