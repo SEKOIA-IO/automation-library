@@ -1,0 +1,19 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "endpoint_id": {
+        "description": "Endpoint ID",
+        "type": "string"
+      }
+    },
+    "required": ["endpoint_id"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Turn on endpoint isolation",
+  "docker_parameters": "sophos_edr_isolate_endpoint",
+  "name": "[BETA] Isolate endpoint",
+  "results": {},
+  "uuid": "91d24356-6537-4a3e-ba6f-19c7963db8fe"
+}

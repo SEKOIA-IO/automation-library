@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-02 - 1.17.0
+
+### Added
+
+- Added Sophos EDR endpoint actions
+
 ## 2024-08-06 - 1.16.5
 
 ### Fixed
