@@ -176,7 +176,7 @@ class AetherSecurityEventsTrigger(Trigger, AuthorizationMixin):
             self.log(
                 message=(
                     f"Request on Aether API to fetch events of tenant {self.module.configuration['account_id']} "
-                    f"failed with status {response.status_code} - {response.reason}"
+                    f"failed with status {response.status_code}: {response.content}"
                 ),
                 level="error",
             )
