@@ -1,7 +1,7 @@
 {
-  "uuid": "37782dd7-1308-4cd4-a73d-0a6cc69661e3",
+  "uuid": "f7581c54-b9b8-414c-96cd-f13168cac7ce",
   "name": "List Assets",
-  "docker_parameters": "get-assets",
+  "docker_parameters": "get-assets-v2",
   "description": "Return a list of assets according to the filters",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
