@@ -1,0 +1,559 @@
+{
+  "uuid": "37782dd7-1308-4cd4-a73d-0a6cc69661e3",
+  "name": "List Assets",
+  "docker_parameters": "get-assets",
+  "description": "Return a list of assets according to the filters",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "List assets",
+    "properties": {
+      "search": {
+        "in": "query",
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Search assets by name"
+      },
+      "uuids": {
+        "in": "query",
+        "anyOf": [
+          {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Filter by comma-separated list of asset UUIDs"
+      },
+      "community_uuids": {
+        "in": "query",
+        "anyOf": [
+          {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Filter by comma-separated list of community UUIDs"
+      },
+      "type": {
+        "in": "query",
+        "anyOf": [
+          {
+            "items": {
+              "enum": [
+                "host",
+                "account",
+                "network"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Filter by comma-separated list of asset types"
+      },
+      "category": {
+        "in": "query",
+        "anyOf": [
+          {
+            "items": {
+              "minLength": 1,
+              "pattern": "\\w+",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Filter by comma-separated list of asset categories"
+      },
+      "source": {
+        "in": "query",
+        "anyOf": [
+          {
+            "items": {
+              "enum": [
+                "manual",
+                "automatic",
+                "import"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Filter by comma-separated list of asset sources"
+      },
+      "reviewed": {
+        "in": "query",
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Filter reviewed assets only"
+      },
+      "criticality": {
+        "in": "query",
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Filter assets with higher criticality"
+      },
+      "sort": {
+        "in": "query",
+        "anyOf": [
+          {
+            "enum": [
+              "name",
+              "type",
+              "created_at",
+              "criticality"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Sort criterion"
+      },
+      "direction": {
+        "in": "query",
+        "anyOf": [
+          {
+            "enum": [
+              "desc",
+              "asc"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "Sort order"
+      },
+      "rule_uuid": {
+        "in":"query",
+        "anyOf": [
+          {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Rule Uuid"
+      },
+      "rule_version": {
+        "in":"query",
+        "anyOf": [
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Rule Version"
+      },
+      "offset": {
+        "default": 0,
+        "minimum": 0,
+        "description": "The position of the first asset to return",
+        "type": "integer"
+      },
+      "limit": {
+        "default": 20,
+        "maximum": 100,
+        "minimum": 1,
+        "description": "The number of assets to return",
+        "type": "integer"
+      }
+    }
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+              "uuid": {
+                "format": "uuid",
+                "title": "Uuid",
+                "type": "string"
+              },
+              "entity_uuid": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Entity Uuid"
+              },
+              "community_uuid": {
+                "format": "uuid",
+                "title": "Community Uuid",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "type": {
+                "title": "Type",
+                "type": "string"
+              },
+              "category": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Category"
+              },
+              "criticality": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Criticality"
+              },
+              "created_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Created At"
+              },
+              "created_by": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Created By"
+              },
+              "created_by_type": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Created By Type"
+              },
+              "updated_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Updated At"
+              },
+              "first_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "First Seen"
+              },
+              "last_seen": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Last Seen"
+              },
+              "nb_events": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Nb Events"
+              },
+              "nb_alerts": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Nb Alerts"
+              },
+              "nb_atoms": {
+                "default": 0,
+                "title": "Nb Atoms",
+                "type": "integer"
+              },
+              "atoms": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Atoms"
+              },
+              "props": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Props"
+              },
+              "tags": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Tags",
+                "type": "array"
+              },
+              "revoked": {
+                "default": false,
+                "title": "Revoked",
+                "type": "boolean"
+              },
+              "revoked_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Revoked At"
+              },
+              "revoked_by": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Revoked By"
+              },
+              "reviewed": {
+                "default": false,
+                "title": "Reviewed",
+                "type": "boolean"
+              },
+              "reviewed_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reviewed At"
+              },
+              "reviewed_by": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reviewed By"
+              },
+              "source": {
+                "default": "automatic",
+                "enum": [
+                  "manual",
+                  "automatic",
+                  "import"
+                ],
+                "title": "Source",
+                "type": "string"
+              },
+              "rule_uuid": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Rule Uuid"
+              },
+              "rule_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Rule Version"
+              },
+              "criticity": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Asset criticality (legacy compatibility with API v1.0)",
+                "title": "Criticity"
+              },
+              "asset_type": {
+                "anyOf": [
+                  {
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "description": "Asset type (legacy compatibility with API v1.0)",
+                "title": "Asset Type"
+              }
+            },
+            "required": [
+              "uuid",
+              "community_uuid",
+              "name",
+              "type"
+            ]
+        }
+      },
+      "total": {
+        "type": "integer",
+        "format": "int32"
+      }
+    }
+  }
+}
