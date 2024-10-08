@@ -212,6 +212,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
             else:
                 self.log(message="No messages to forward", level="info")
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
 
 
 class SophosXDRIOCQuery(SophosXDRQueryTrigger):
