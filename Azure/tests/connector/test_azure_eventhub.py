@@ -1,5 +1,6 @@
 import os
 import time
+import asyncio
 from threading import Thread
 from unittest.mock import AsyncMock, MagicMock, Mock
 
@@ -28,11 +29,18 @@ def test_forward_next_batches_integration(symphony_storage):
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
-    thread = Thread(target=trigger.run)
+
+    loop = asyncio.new_event_loop()
+
+    def run_trigger(trigger, loop):
+        asyncio.set_event_loop(loop)
+
+        trigger.run()
+
+    thread = Thread(target=run_trigger, args=(trigger, loop))
     thread.start()
     time.sleep(30)
-    trigger.client.close()
-    trigger.stop()
+    trigger.shutdown(9, loop)
     calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
 
     assert len(calls) > 0
