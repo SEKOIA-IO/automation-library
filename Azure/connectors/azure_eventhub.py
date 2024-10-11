@@ -1,11 +1,10 @@
 import asyncio
 import os
-import time
 import signal
+import time
 from asyncio import Task
 from datetime import datetime, timezone
 from functools import cached_property
-from threading import Event
 from typing import Any, Optional, cast
 
 import orjson
@@ -74,13 +73,13 @@ class AzureEventsHubTrigger(AsyncConnector):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
-        self._current_task: Task | None = None
+        self._current_task: Task[Any] | None = None
 
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
 
-    async def stop_current_task(self):
+    async def stop_current_task(self) -> None:
         """
         Stop the current async task
         """
@@ -92,7 +91,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             # clean the current task
             self._current_task = None
 
-    async def shutdown(self, signum, loop):
+    async def shutdown(self) -> None:
         """
         Shutdown the connector
         """
@@ -224,8 +223,8 @@ class AzureEventsHubTrigger(AsyncConnector):
         self.log(message="Azure EventHub Trigger has started", level="info")
 
         loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown(signal.SIGTERM, loop)))
-        loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown(signal.SIGTERM, loop)))
+        loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
+        loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
         loop.run_until_complete(self.async_run())
 
         self.log(message="Azure EventHub Trigger has stopped", level="info")

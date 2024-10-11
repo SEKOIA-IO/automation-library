@@ -1,21 +1,18 @@
-import os
-import threading
-import time
 import asyncio
+import os
+import time
 from multiprocessing import Process
 from shutil import rmtree
-from signal import signal, SIGINT, SIGKILL
 from tempfile import mkdtemp
 from threading import Thread
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from azure.eventhub import EventData
-
-from connectors.azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
-from execnet.gateway_base import pid
 from sekoia_automation import constants
 from sekoia_automation.module import Module
+
+from connectors.azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
 
 
 @pytest.mark.skipif(
@@ -205,6 +202,7 @@ def create_and_run_connector(data_storage, is_quick: bool = True) -> None:
 
     connector.run()
 
+
 def test_azure_eventhub_handling_stop_event_quick(data_storage):
     start_execution_time = time.time()
     process = Process(target=create_and_run_connector, args=(data_storage,))
@@ -232,7 +230,7 @@ def test_azure_eventhub_handling_stop_event_slow(data_storage):
     # 2 second for execution and 1 seconds for waiting the result
     # Lets try to stop the connector after the same 4 seconds, so behaviour should be more-less the same.
     # So the total execution time should be less or equal to 4 seconds + 1 second for
-     # the possible timing difference calculation
+    # the possible timing difference calculation
     time.sleep(4)
     process.terminate()
     process.join()
