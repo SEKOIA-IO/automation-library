@@ -1,6 +1,11 @@
 import os
+import threading
 import time
 import asyncio
+from multiprocessing import Process
+from shutil import rmtree
+from signal import signal, SIGINT, SIGKILL
+from tempfile import mkdtemp
 from threading import Thread
 from unittest.mock import AsyncMock, MagicMock, Mock
 
@@ -8,6 +13,9 @@ import pytest
 from azure.eventhub import EventData
 
 from connectors.azure_eventhub import AzureEventsHubConfiguration, AzureEventsHubTrigger, Client
+from execnet.gateway_base import pid
+from sekoia_automation import constants
+from sekoia_automation.module import Module
 
 
 @pytest.mark.skipif(
@@ -135,3 +143,99 @@ async def test_client_close():
 
     fake_client.close.assert_awaited_once()
     assert client._client is None
+
+
+@pytest.fixture
+def data_storage():
+    original_storage = constants.DATA_STORAGE
+    constants.DATA_STORAGE = mkdtemp()
+
+    yield constants.DATA_STORAGE
+
+    rmtree(constants.DATA_STORAGE)
+    constants.DATA_STORAGE = original_storage
+
+
+class AzureEventsHubTestTriggerQuick(AzureEventsHubTrigger):
+    # Override wait timeout to speed up the test execution and mock receive_events method
+    # In this case, we will sleep for 2 second and execute for 1 second
+    # So no task cancellation will happen
+    wait_timeout = 2
+    execution_time = 1
+
+    async def receive_events(self) -> None:
+        await asyncio.sleep(self.execution_time)
+
+
+class AzureEventsHubTestTriggerSlow(AzureEventsHubTestTriggerQuick):
+    # Override wait timeout to speed up the test execution and mock receive_events method
+    # In this case, we will sleep for 1 second and execute for 2 second
+    # So task cancellation will happen each iteration
+    wait_timeout = 1
+    execution_time = 2
+
+
+def create_and_run_connector(data_storage, is_quick: bool = True) -> None:
+    """
+    This function is used to test the AzureEventsHubTrigger run method and receiving signals to stop the connector.
+
+    We should run it in separate process!
+
+    Args:
+        data_storage:
+        is_quick:
+    """
+    module = Module()
+
+    connector = AzureEventsHubTestTriggerQuick(module=module, data_path=data_storage)
+    if not is_quick:
+        connector = AzureEventsHubTestTriggerSlow(module=module, data_path=data_storage)
+
+    connector.configuration = AzureEventsHubConfiguration.parse_obj(
+        {
+            "chunk_size": 1,
+            "hub_connection_string": "hub_connection_string",
+            "hub_name": "hub_name",
+            "hub_consumer_group": "hub_consumer_group",
+            "storage_connection_string": "storage_connection_string",
+            "storage_container_name": "storage_container_name",
+            "intake_key": "",
+        }
+    )
+
+    connector.run()
+
+def test_azure_eventhub_handling_stop_event_quick(data_storage):
+    start_execution_time = time.time()
+    process = Process(target=create_and_run_connector, args=(data_storage,))
+    process.start()
+
+    # So we can say that 1 iteration will take 2 seconds for quick connector
+    # 1 second for execution and 2 seconds for waiting the result
+    # Lets try to stop the connector after 5 seconds, so it should finish the execution not waiting for the next iteration
+    # So the total execution time should be less or equal to 6 seconds + 1 second for
+    # the possible timing difference calculation
+    time.sleep(5)
+    process.terminate()
+    process.join()
+    finish_execution_time = time.time()
+
+    assert finish_execution_time - start_execution_time <= 7
+
+
+def test_azure_eventhub_handling_stop_event_slow(data_storage):
+    start_execution_time = time.time()
+    process = Process(target=create_and_run_connector, args=(data_storage, False))
+    process.start()
+
+    # So we can say that 1 iteration will take 2 seconds for quick connector
+    # 2 second for execution and 1 seconds for waiting the result
+    # Lets try to stop the connector after the same 4 seconds, so behaviour should be more-less the same.
+    # So the total execution time should be less or equal to 4 seconds + 1 second for
+     # the possible timing difference calculation
+    time.sleep(4)
+    process.terminate()
+    process.join()
+    finish_execution_time = time.time()
+
+    assert finish_execution_time - start_execution_time <= 5
