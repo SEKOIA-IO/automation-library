@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-11 - 1.21.0
+
+### Added
+
+- Support of Alert API
+
 ## 2024-09-05 - 1.20.0
 
 ### Added

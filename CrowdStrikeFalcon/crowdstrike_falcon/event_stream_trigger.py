@@ -6,7 +6,6 @@ from collections.abc import Generator
 from functools import cached_property
 
 import orjson
-import requests.exceptions
 from requests.auth import AuthBase
 from requests.exceptions import HTTPError, StreamConsumedError
 from sekoia_automation.connector import Connector
@@ -16,10 +15,15 @@ from sekoia_automation.timer import RepeatedTimer
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
 from crowdstrike_falcon.exceptions import StreamNotAvailable
-from crowdstrike_falcon.helpers import get_detection_id, group_edges_by_verticle_type, compute_refresh_interval
+from crowdstrike_falcon.helpers import (
+    compute_refresh_interval,
+    get_detection_id,
+    get_epp_detection_composite_id,
+    group_edges_by_verticle_type,
+)
+from crowdstrike_falcon.logging import get_logger
 from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
 from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
-from crowdstrike_falcon.logging import get_logger
 
 logger = get_logger()
 
@@ -70,6 +74,29 @@ class VerticlesCollector:
             parent_process_graph_id = behavior.get("parent_details", {}).get("parent_process_graph_id")
             if parent_process_graph_id is not None:
                 graph_ids.add(parent_process_graph_id)
+
+        return graph_ids
+
+    def get_graph_ids_from_alert(self, alert_details: dict) -> set[str]:
+        """
+        Extract graph ids from an alert
+
+        :param dict alert_details: The alert
+        :return: A set of graph ids extracted from the alert
+        :rtype: set
+        """
+        # extract graph_ids from the resources
+        graph_ids = set()
+
+        # Get the triggering process graph id
+        triggering_process_graph_id = alert_details.get("triggering_process_graph_id")
+        if triggering_process_graph_id is not None:
+            graph_ids.add(triggering_process_graph_id)
+
+        # Get the parent process graph id
+        parent_process_graph_id = alert_details.get("parent_details", {}).get("process_graph_id")
+        if parent_process_graph_id is not None:
+            graph_ids.add(parent_process_graph_id)
 
         return graph_ids
 
@@ -129,6 +156,44 @@ class VerticlesCollector:
             self.log_exception(
                 error,
                 message=f"Failed to collect verticles for detection {detection_id}",
+            )
+
+    def collect_verticles_from_alert(self, composite_id: str) -> Generator[tuple[str, str, dict], None, None]:
+        """
+        Collect the verticles (events) from an alert
+
+        :param str detection_id: The identifier of the alert
+        """
+        try:
+            # get alert details from its identifier
+            alert_details = next(self.falcon_client.get_alert_details(composite_ids=[composite_id]))
+
+            # get graph ids from detection
+            graph_ids = self.get_graph_ids_from_alert(alert_details)
+
+            # for each group, get their verticles
+            yield from self.collect_verticles_from_graph_ids(graph_ids)
+
+        except HTTPError as error:
+            if error.response.status_code == 403:
+                # we don't have proper permissions - roll back to the old API
+                self.connector.use_alert_api = False
+                self.log(
+                    level="error", message="Not enough permissions to use Alert API - rollback to Detection API"
+                )
+
+            self.log_exception(
+                error,
+                message=(
+                    f"Failed to collect verticles for alert {composite_id}: "
+                    f"{error.response.status_code} {error.response.reason}"
+                ),
+            )
+
+        except Exception as error:
+            self.log_exception(
+                error,
+                message=f"Failed to collect verticles for alert {composite_id}",
             )
 
 
@@ -263,6 +328,10 @@ class EventStreamReader(threading.Thread):
                                         intake_key=self.connector.configuration.intake_key
                                     ).inc()
 
+                                    if self.connector.use_alert_api:
+                                        alert_id = get_epp_detection_composite_id(event)
+                                        self.collect_verticles_for_epp_detection(alert_id, event)
+
                                     detection_id = get_detection_id(event)
                                     self.collect_verticles(detection_id, event)
 
@@ -325,6 +394,43 @@ class EventStreamReader(threading.Thread):
                 },
                 "event": vertex,
             }
+            self.events_queue.put((self.stream_root_url, orjson.dumps(event).decode()))
+
+        self.log(message=f"Collected {nb_verticles} vertex", level="info")
+
+    def collect_verticles_for_epp_detection(self, composite_id: str | None, detection_event: dict):
+        if composite_id is None:
+            logger.info("Not a epp detection")
+            return
+
+        if self.verticles_collector is None:
+            logger.info("verticles collection disabled")
+            return
+
+        logger.info("Collect verticles for detection", composite_id=composite_id)
+
+        event_content = detection_event.get("event", {})
+        severity_name = event_content.get("SeverityName")
+        severity_code = event_content.get("Severity")
+
+        nb_verticles = 0
+        for (
+            source_vertex_id,
+            edge_type,
+            vertex,
+        ) in self.verticles_collector.collect_verticles_from_alert(composite_id):
+            nb_verticles += 1
+            event = {
+                "metadata": {
+                    "detectionIdString": composite_id,
+                    "eventType": "Vertex",
+                    "edge": {"sourceVertexId": source_vertex_id, "type": edge_type},
+                    "severity": {"name": severity_name, "code": severity_code},
+                },
+                "event": vertex,
+            }
+            logger.info("event", event=event)
+            exit()
             self.events_queue.put((self.stream_root_url, orjson.dumps(event).decode()))
 
         self.log(message=f"Collected {nb_verticles} vertex", level="info")
@@ -429,6 +535,11 @@ class EventStreamTrigger(Connector):
         self.f_stop = threading.Event()
 
         self._network_sleep_on_retry = 60
+
+        # Detect API will be taken down in favor of the Alert API as well as that
+        # DetectionSummaryEvent will be replaced by EppDetectionSummaryEvent. By default,
+        # we'll try to use the new API, but we'll fail if permissions are not set.
+        self.use_alert_api = True
 
     def generate_app_id(self):
         return f"sio-{time.time()}"

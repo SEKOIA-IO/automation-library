@@ -93,6 +93,23 @@ def get_detection_id(event: dict) -> str | None:
     return event.get("event", {}).get("DetectId")
 
 
+def get_epp_detection_composite_id(event: dict) -> str | None:
+    """
+    For EPP detection summary event, return the identifier of the detection.
+    Otherwise, return None
+
+    :param dict event: The event
+    :return: identifier of the detection if the event is a detection summary event, None otherwise
+    :rtype: str | None
+    """
+    # Is a epp detection summary event?
+    event_type = event.get("metadata", {}).get("eventType")
+    if event_type != "EppDetectionSummaryEvent":
+        return None
+
+    return event.get("event", {}).get("CompositeId")
+
+
 def is_a_supported_stix_indicator(stix_object):
     # Check if object is an indicator
     if stix_object.get("type") != "indicator":

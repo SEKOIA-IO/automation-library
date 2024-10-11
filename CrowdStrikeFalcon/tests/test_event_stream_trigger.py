@@ -23,6 +23,7 @@ from crowdstrike_falcon.event_stream_trigger import (
 def trigger(symphony_storage):
     module = CrowdStrikeFalconModule()
     trigger = EventStreamTrigger(module=module, data_path=symphony_storage)
+    trigger.use_alert_api = False
     # mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()
     trigger.module.configuration = {

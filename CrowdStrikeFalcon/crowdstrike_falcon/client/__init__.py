@@ -117,6 +117,14 @@ class CrowdstrikeFalconClient(ApiClient):
             **kwargs,
         )
 
+    def get_alert_details(self, composite_ids: list[str], **kwargs) -> Generator[dict, None, None]:
+        yield from self.request_endpoint(
+            "POST",
+            "/alerts/entities/alerts/v2",
+            json={"composite_ids": composite_ids},
+            **kwargs,
+        )
+
     def find_indicators(self, fql_filter, **kwargs) -> Generator[dict, None, None]:
         yield from self.request_endpoint(
             "GET",
