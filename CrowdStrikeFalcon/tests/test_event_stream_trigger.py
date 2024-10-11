@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import orjson
 import pytest
+import requests.exceptions
 import requests_mock
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
@@ -488,6 +489,45 @@ def test_verticle_collector_get_graph_ids_from_alert(verticles_collector):
         "pid:835449907c99453085a924a16e967be5:58913928",
         "pid:835449907c99453085a924a16e967be5:27242182487",
     }
+
+
+def test_verticle_collector_get_alert_details_wo_permissions(trigger, verticles_collector):
+    trigger.use_alert_api = True
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/alerts/entities/alerts/v2",
+            json={
+                "meta": {
+                    "query_time": 0.05286448,
+                    "writes": {"resources_affected": 0},
+                    "powered_by": "detectsapi",
+                    "trace_id": "2d80bb22-a21b-4adc-ae09-e6e155f87eb9",
+                },
+                "errors": [
+                    {
+                        "code": 403,
+                        "message": "don't have proper permissions",
+                    }
+                ],
+                "resources": [],
+            },
+            status_code=403,
+        )
+
+        _ = list(verticles_collector.collect_verticles_from_alert(composite_id="id:123456"))
+        assert trigger.use_alert_api is False
 
 
 def test_verticle_collector_collect_verticles_from_graph_ids(verticles_collector):
