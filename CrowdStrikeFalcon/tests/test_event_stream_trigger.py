@@ -461,6 +461,35 @@ def test_verticle_collector_get_graph_ids_from_detection(verticles_collector):
     }
 
 
+def test_verticle_collector_get_graph_ids_from_alert(verticles_collector):
+    alert_details = {
+        "composite_id": "ad5f82e879a9c5d6b5b442eb37e50551:ind:835449907c99453085a924a16e967be5:17212155109-1-2",
+        "control_graph_id": "ctg:835449907c99453085a924a16e967be5:17212155109",
+        "parent_details": {
+            "cmdline": "/usr/lib/git-core/git fetch --update-head-ok",
+            "filename": "git",
+            "filepath": "/usr/lib/git-core/git",
+            "local_process_id": "1",
+            "md5": "1bc29b36f623ba82aaf6724fd3b16718",
+            "process_graph_id": "pid:835449907c99453085a924a16e967be5:27242182487",
+            "process_id": "1",
+            "sha256": "5d5b09f6dcb2d53a5fffc60c4ac0d55fabdf556069d6631545f42aa6e3500f2e",
+            "timestamp": "2024-08-28T09:15:58Z",
+            "user_graph_id": "uid:ee11cbb19052e40b07aac0ca060c23ee:0",
+            "user_name": "root",
+        },
+        "triggering_process_graph_id": "pid:835449907c99453085a924a16e967be5:58913928",
+        "type": "ldt",
+        "updated_timestamp": "2024-08-28T11:32:04.582157884Z",
+        "user_name": "root",
+    }
+
+    assert verticles_collector.get_graph_ids_from_alert(alert_details) == {
+        "pid:835449907c99453085a924a16e967be5:58913928",
+        "pid:835449907c99453085a924a16e967be5:27242182487",
+    }
+
+
 def test_verticle_collector_collect_verticles_from_graph_ids(verticles_collector):
     graph_ids = {
         "pid:835449907c99453085a924a16e967be5:8322695771",
@@ -718,6 +747,307 @@ def test_read_stream_with_verticles(trigger):
                     "trace_id": "13787250-fc0f-49a6-9191-d809e30afdfb",
                 },
                 "resources": [detection],
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            f"https://my.fake.sekoia/threatgraph/combined/edges/v1?edge_type={edge_type}&ids={parent_process_graph_id}",  # noqa: E501
+            json={
+                "errors": [],
+                "meta": {},
+                "resources": [
+                    {
+                        "edge_type": edge_type,
+                        "id": "pid:835449907c99453085a924a16e967be5:6494700150",
+                        "source_vertex_id": parent_process_graph_id,
+                    },
+                    {
+                        "edge_type": edge_type,
+                        "id": "pid:835449907c99453085a924a16e967be5:6492874271",
+                        "source_vertex_id": parent_process_graph_id,
+                    },
+                ],
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            f"https://my.fake.sekoia/threatgraph/combined/edges/v1?edge_type={edge_type}&ids={triggering_process_graph_id}",  # noqa: E501
+            json={
+                "errors": [],
+                "meta": {},
+                "resources": [
+                    {
+                        "edge_type": edge_type,
+                        "id": "pid:835449907c99453085a924a16e967be5:6463227462",
+                        "source_vertex_id": triggering_process_graph_id,
+                    }
+                ],
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/threatgraph/entities/processes/v1?scope=device&"
+            f"ids={verticle1['id']}&"
+            f"ids={verticle2['id']}",
+            json={
+                "errors": [],
+                "meta": {},
+                "resources": [verticle1, verticle2],
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            f"https://my.fake.sekoia/threatgraph/entities/processes/v1?scope=device&ids={verticle3['id']}",
+            json={
+                "errors": [],
+                "meta": {},
+                "resources": [verticle3],
+            },
+        )
+
+        mock.register_uri(
+            "POST",
+            f"https://my.fake.sekoia/sensors/entities/datafeed-actions/v1/0?appId=sio-00000&action_name=refresh_active_stream_session",
+            json={},
+        )
+
+        reader = EventStreamReader(
+            trigger,
+            stream["dataFeedURL"].split("?")[0],
+            stream,
+            "sio-00000",
+            0,
+            trigger.client,
+            trigger.verticles_collector,
+        )
+
+        reader.start()
+
+        time.sleep(1)
+        reader.stop()
+        reader.join()
+
+        expected_verticles = [
+            {
+                "metadata": {
+                    "detectionIdString": detection_id,
+                    "eventType": "Vertex",
+                    "edge": {
+                        "sourceVertexId": parent_process_graph_id,
+                        "type": edge_type,
+                    },
+                    "severity": {
+                        "name": severity_name,
+                        "code": severity_code,
+                    },
+                },
+                "event": verticle1,
+            },
+            {
+                "metadata": {
+                    "detectionIdString": detection_id,
+                    "eventType": "Vertex",
+                    "edge": {
+                        "sourceVertexId": parent_process_graph_id,
+                        "type": edge_type,
+                    },
+                    "severity": {
+                        "name": severity_name,
+                        "code": severity_code,
+                    },
+                },
+                "event": verticle2,
+            },
+            {
+                "metadata": {
+                    "detectionIdString": detection_id,
+                    "eventType": "Vertex",
+                    "edge": {
+                        "sourceVertexId": triggering_process_graph_id,
+                        "type": edge_type,
+                    },
+                    "severity": {
+                        "name": severity_name,
+                        "code": severity_code,
+                    },
+                },
+                "event": verticle3,
+            },
+        ]
+        expected_events = {orjson.dumps(msg).decode() for msg in (event, *expected_verticles)}
+
+        assert trigger.events_queue.qsize() == len(expected_events)
+        actual_events = set()
+        try:
+            while (msg := trigger.events_queue.get(timeout=1)) is not None:
+                actual_events.add(msg[1])
+        except queue.Empty:
+            pass
+
+        assert actual_events == expected_events
+
+
+def test_read_stream_with_verticles_with_alert(trigger):
+    trigger.use_alert_api = True
+    detection_id = "ldt:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:11111111111"
+
+    stream = {
+        "dataFeedURL": "https://my.fake.sekoia/sensors/entities/datafeed/v1/stream?q=1",
+        "sessionToken": {
+            "token": "my_token==",
+            "expiration": "2022-07-06T12:39:24.017018689Z",
+        },
+        "refreshActiveSessionURL": (
+            "https://my.fake.sekoia/sensors/entities/datafeed-actions"
+            "/v1/0?appId=sio-00000&action_name=refresh_active_stream_session"
+        ),
+        "refreshActiveSessionInterval": 1800,
+    }
+
+    severity_code = 5
+    severity_name = "Critical"
+    event = {
+        "metadata": {
+            "customerIDString": "11111111111111111111111111111111",
+            "offset": 174,
+            "eventType": "EppDetectionSummaryEvent",
+            "eventCreationTime": 1657110865303,
+            "version": "1.0",
+        },
+        "event": {
+            "ProcessStartTime": 1656688889,
+            "ProcessEndTime": 0,
+            "ProcessId": 22164474048,
+            "ParentProcessId": 22163465296,
+            "ComputerName": "nsewmkzevukn-vm",
+            "UserName": "Administrator",
+            "DetectName": "Overwatch Detection",
+            "DetectDescription": "Falcon Overwatch has identified malicious activity carried out by a suspected or known eCrime operator. This activity has been raised for critical action and should be investigated urgently.",  # noqa: E501
+            "Severity": severity_code,
+            "SeverityName": severity_name,
+            "FileName": "explorer.exe",
+            "FilePath": "\\Device\\HarddiskVolume2\\Windows",
+            "CommandLine": "C:\\Windows\\Explorer.EXE",
+            "SHA256String": "249cb3cb46fd875196e7ed4a8736271a64ff2d8132357222a283be53e7232ed3",
+            "MD5String": "d45bd7c7b7bf977246e9409d63435231",
+            "SHA1String": "0000000000000000000000000000000000000000",
+            "MachineDomain": "nsewmkzevukn-vm",
+            "CompositeId": detection_id,
+        },
+    }
+
+    parent_process_graph_id = "pid:835449907c99453085a924a16e967be5:8322695771"
+    triggering_process_graph_id = "pid:835449907c99453085a924a16e967be5:8302912087"
+
+    alert_details = {
+        # "composite_id": "ad5f82e879a9c5d6b5b442eb37e50551:ind:835449907c99453085a924a16e967be5:17212155109-1-2",
+        "composite_id": detection_id,
+        "control_graph_id": "ctg:835449907c99453085a924a16e967be5:17212155109",
+        "parent_details": {
+            "cmdline": "/usr/lib/git-core/git fetch --update-head-ok",
+            "filename": "git",
+            "filepath": "/usr/lib/git-core/git",
+            "local_process_id": "1",
+            "md5": "1bc29b36f623ba82aaf6724fd3b16718",
+            "process_graph_id": parent_process_graph_id,
+            "process_id": "1",
+            "sha256": "5d5b09f6dcb2d53a5fffc60c4ac0d55fabdf556069d6631545f42aa6e3500f2e",
+            "timestamp": "2024-08-28T09:15:58Z",
+            "user_graph_id": "uid:ee11cbb19052e40b07aac0ca060c23ee:0",
+            "user_name": "root",
+        },
+        "triggering_process_graph_id": triggering_process_graph_id,
+        "type": "ldt",
+        "updated_timestamp": "2024-08-28T11:32:04.582157884Z",
+        "user_name": "root",
+    }
+
+    verticle1 = {
+        "id": "pid:835449907c99453085a924a16e967be5:6494700150",
+        "customer_id": "11111111111111111111111111111111",
+        "scope": "device",
+        "object_id": "8322695771",
+        "device_id": "835449907c99453085a924a16e967be5",
+        "vertex_type": "process",
+        "timestamp": "2022-07-30T20:22:29Z",
+        "properties": {},
+    }
+    verticle2 = {
+        "id": "pid:835449907c99453085a924a16e967be5:6492874271",
+        "customer_id": "11111111111111111111111111111111",
+        "scope": "device",
+        "object_id": "8302912087",
+        "device_id": "835449907c99453085a924a16e967be5",
+        "vertex_type": "process",
+        "timestamp": "2022-07-30T20:21:51Z",
+        "properties": {},
+    }
+    verticle3 = {
+        "id": "pid:835449907c99453085a924a16e967be5:6463227462",
+        "customer_id": "11111111111111111111111111111111",
+        "scope": "device",
+        "object_id": "6463227462",
+        "device_id": "835449907c99453085a924a16e967be5",
+        "vertex_type": "process",
+        "timestamp": "2022-07-30T20:24:12Z",
+        "properties": {},
+    }
+
+    edge_type = "child_process"
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
+            json={
+                "resources": [
+                    "child_process",
+                ]
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/sensors/entities/datafeed/v2?appId=sio-00000",
+            json={
+                "errors": [],
+                "meta": {
+                    "query_time": 0.008346086,
+                    "trace_id": "13787250-fc0f-49a6-9191-d809e30afdfb",
+                },
+                "resources": [stream],
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/sensors/entities/datafeed/v1/stream?q=1",
+            content=orjson.dumps(event) + b"\n",
+        )
+
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/alerts/entities/alerts/v2",
+            json={
+                "errors": [],
+                "meta": {
+                    "query_time": 0.008346086,
+                    "trace_id": "13787250-fc0f-49a6-9191-d809e30afdfb",
+                },
+                "resources": [alert_details],
             },
         )
 

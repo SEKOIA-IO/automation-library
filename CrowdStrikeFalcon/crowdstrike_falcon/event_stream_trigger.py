@@ -427,8 +427,6 @@ class EventStreamReader(threading.Thread):
                 },
                 "event": vertex,
             }
-            logger.info("event", event=event)
-            exit()
             self.events_queue.put((self.stream_root_url, orjson.dumps(event).decode()))
 
         self.log(message=f"Collected {nb_verticles} vertex", level="info")
