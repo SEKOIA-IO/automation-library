@@ -12,10 +12,10 @@ import requests_mock
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
 from crowdstrike_falcon.event_stream_trigger import (
+    EventForwarder,
     EventStreamReader,
     EventStreamTrigger,
     VerticlesCollector,
-    EventForwarder,
 )
 
 

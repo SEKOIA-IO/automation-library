@@ -178,9 +178,7 @@ class VerticlesCollector:
             if error.response.status_code == 403:
                 # we don't have proper permissions - roll back to the old API
                 self.connector.use_alert_api = False
-                self.log(
-                    level="error", message="Not enough permissions to use Alert API - rollback to Detection API"
-                )
+                self.log(level="error", message="Not enough permissions to use Alert API - rollback to Detection API")
 
             self.log_exception(
                 error,

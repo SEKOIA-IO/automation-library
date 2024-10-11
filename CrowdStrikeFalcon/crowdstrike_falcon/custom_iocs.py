@@ -1,7 +1,7 @@
 from collections import defaultdict
-from typing import Dict, List
-from posixpath import join as urljoin
 from datetime import date, timedelta
+from posixpath import join as urljoin
+from typing import Dict, List
 
 from crowdstrike_falcon.action import CrowdstrikeAction
 from crowdstrike_falcon.helpers import stix_to_indicators

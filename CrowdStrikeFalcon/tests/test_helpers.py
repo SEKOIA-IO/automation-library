@@ -2,10 +2,10 @@ import pytest
 
 from crowdstrike_falcon.helpers import (
     VerticleID,
+    compute_refresh_interval,
     get_detection_id,
     get_extended_verticle_type,
     group_edges_by_verticle_type,
-    compute_refresh_interval,
 )
 
 

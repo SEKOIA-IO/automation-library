@@ -1,7 +1,7 @@
 import enum
 from collections.abc import Generator
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import requests
 from requests.auth import AuthBase, HTTPBasicAuth
