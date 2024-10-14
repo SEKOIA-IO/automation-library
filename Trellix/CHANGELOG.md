@@ -7,19 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2024-10-19 - 1.10.1
+## 2024-10-14 - 1.10.2
+
+### Added
+
+- Add more logs to observer the EDR connector
+
+## 2024-09-19 - 1.10.1
 
 ### Changed
 
 - Change auth scopes
 
-## 2024-10-13 - 1.10.0
+## 2024-09-13 - 1.10.0
 
 ### Changed
 
 - Change event loop initialization and token refresh workflow
 
-## 2024-10-13 - 1.9.4
+## 2024-09-13 - 1.9.4
 
 ### Added
 
