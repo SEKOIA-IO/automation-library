@@ -984,7 +984,6 @@ def test_read_stream_with_verticles_with_alert(trigger):
     triggering_process_graph_id = "pid:835449907c99453085a924a16e967be5:8302912087"
 
     alert_details = {
-        # "composite_id": "ad5f82e879a9c5d6b5b442eb37e50551:ind:835449907c99453085a924a16e967be5:17212155109-1-2",
         "composite_id": detection_id,
         "control_graph_id": "ctg:835449907c99453085a924a16e967be5:17212155109",
         "parent_details": {
