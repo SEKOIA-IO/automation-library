@@ -1,8 +1,8 @@
 import os
+from datetime import date, timedelta
 
 import pytest
 import requests_mock
-from datetime import date, timedelta
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.action import CrowdstrikeAction

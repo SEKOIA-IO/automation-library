@@ -1,7 +1,7 @@
 import enum
 from collections.abc import Generator
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import requests
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -114,6 +114,14 @@ class CrowdstrikeFalconClient(ApiClient):
             "POST",
             "/detects/entities/summaries/GET/v1",
             json={"ids": detection_ids},
+            **kwargs,
+        )
+
+    def get_alert_details(self, composite_ids: list[str], **kwargs) -> Generator[dict, None, None]:
+        yield from self.request_endpoint(
+            "POST",
+            "/alerts/entities/alerts/v2",
+            json={"composite_ids": composite_ids},
             **kwargs,
         )
 
