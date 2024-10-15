@@ -31,6 +31,24 @@ class JobTriggerResult(BaseModel):
     parameters: Optional[Dict[str, Any]]
 
 
+class JobStatus(BaseModel):
+
+    instance: int  # number of job actions to be executed
+
+    # status when running (in exec-time order)
+    waiting: int
+    running: int
+    injecting: int
+
+    # status when ended
+    done: int
+    error: int
+    canceled: int
+
+    def is_running(self) -> bool:
+        return (self.waiting + self.running + self.injecting) > 0
+
+
 class HostnameEntry(BaseModel):
     hostname: str
     ipaddress: str
