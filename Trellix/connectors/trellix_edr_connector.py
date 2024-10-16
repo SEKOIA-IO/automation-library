@@ -107,7 +107,7 @@ class TrellixEdrConnector(AsyncConnector):
             start_date,
             self.configuration.records_per_request,
         )
-        logger.info("Got alerts", start_date=start_date, total=len(alerts))
+        logger.info("Got {total} alerts from {start_date}", start_date=start_date, total=len(alerts))
 
         result: list[str] = await self.push_data_to_intakes(
             [orjson.dumps(event.dict()).decode("utf-8") for event in alerts]
@@ -148,7 +148,13 @@ class TrellixEdrConnector(AsyncConnector):
                 self.configuration.records_per_request,
                 offset,
             )
-            logger.info("Got threats", start_date=start_date, end_date=end_date, offset=offset, total=len(threats))
+            logger.info(
+                "Got {total} threats from {start_date} to {end_date} and offset {offset}",
+                start_date=start_date,
+                end_date=end_date,
+                offset=offset,
+                total=len(threats),
+            )
 
             result_data = [orjson.dumps(event.dict(exclude_none=True)).decode("utf-8") for event in threats]
             result.extend(await self.push_data_to_intakes(result_data))
@@ -199,7 +205,7 @@ class TrellixEdrConnector(AsyncConnector):
                 offset,
             )
             logger.info(
-                "Got dectections",
+                "Got {total} dectections for threat {threat_id} from {start_date} to {end_date} and offset {offset}",
                 threat_id=threat_id,
                 start_date=start_date,
                 end_date=end_date,
@@ -244,7 +250,7 @@ class TrellixEdrConnector(AsyncConnector):
                 offset,
             )
             logger.info(
-                "Got affectedhosts",
+                "Got {total} affectedhosts for threat {threat_id} from {start_date} to {end_date} and offset {offset}",
                 threat_id=threat_id,
                 start_date=start_date,
                 end_date=end_date,
