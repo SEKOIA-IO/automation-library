@@ -26,20 +26,25 @@ class UpdateAlertStatus(Action):
 
     @retry(
         reraise=True,
-        wait=wait_exponential(max=10),
-        stop=stop_after_attempt(5),
+        wait=wait_exponential(max=300),
+        stop=stop_after_attempt(10),
     )
     def perform_request(self, alert_uuid: str, status: str):
-
-        result = requests.patch(
-            self.url(alert_uuid), headers=self.headers, json={"action_uuid": STATUS_UUIDS[status.upper()]}
-        )
-        if not result.ok:
+        if status in STATUS_UUIDS.values():
+            result = requests.patch(self.url(alert_uuid), headers=self.headers, json={"action_uuid": status})
+        elif status.upper() in STATUS_UUIDS:
+            result = requests.patch(
+                self.url(alert_uuid), headers=self.headers, json={"action_uuid": STATUS_UUIDS[status.upper()]}
+            )
+        else:
+            self.error(f"Invalid status: {status}")
+            return
+        if result.status_code >= 500:
             self.error(f"Could not change alert {alert_uuid} status, status code: {result.status_code}")
             result.raise_for_status()
         return result.json()
 
     def run(self, arguments: dict):
-        status = arguments.get("status")
-        alert_uuid = arguments.get("alert_uuid")
+        status = arguments["status"]
+        alert_uuid = arguments["uuid"]
         return self.perform_request(alert_uuid, status)

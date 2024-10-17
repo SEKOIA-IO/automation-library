@@ -32,7 +32,6 @@ from sekoiaio.operation_center import (
     PostCommentOnAlert,
     PredictStateOfAlert,
     ReturnsAsset,
-    TriggerActionOnAlertWorkflow,
     UpdateRule,
     GetIntake,
     GetEntity,
