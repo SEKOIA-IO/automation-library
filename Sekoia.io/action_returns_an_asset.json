@@ -4,13 +4,12 @@
   "docker_parameters": "get-assets/{uuid}",
   "description": "Return an asset according its identifier",
   "arguments": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema~": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "title": "Get Asset",
+    "title": "Asset getter arguments",
     "properties": {
       "uuid": {
         "type": "string",
-        "in": "path",
         "description": "The identifier of the asset"
       }
     },
