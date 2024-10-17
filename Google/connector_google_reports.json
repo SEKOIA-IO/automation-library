@@ -26,7 +26,8 @@
           "meet",
           "token",
           "user_accounts",
-          "keep"
+          "keep",
+          "vault"
         ],
         "default": "drive"
       },
