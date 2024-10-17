@@ -12,6 +12,14 @@ In the context of our development, it's essential to distinguish between account
 
 ## Must-Do
 
+### Mypy type checking
+
+Before submitting a PR, please run mypy against your code, using
+
+```python
+poetry run mypy  --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
+```
+
 ### Versioning
 
 When working on an existing module, adhere to the following versioning practice:
