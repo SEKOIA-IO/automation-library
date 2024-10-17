@@ -37,6 +37,7 @@ from sekoiaio.operation_center import (
     GetIntake,
     GetEntity,
 )
+from sekoiaio.operation_center.get_asset import GetAsset
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
 from sekoiaio.operation_center.get_event_field_common_values import GetEventFieldCommonValues
 from sekoiaio.operation_center.get_events import GetEvents
@@ -85,9 +86,10 @@ if __name__ == "__main__":
     module.register(SynchronizeAssetsWithAD, "synchronize-assets")
     module.register(TriggerActionOnAlertWorkflow, "patch-alerts/{uuid}/workflow")
     module.register(PushEventToIntake, "push-events-to-intake")
-    module.register(ListAssets, "get-assets")
-    module.register(DeletesAsset, "delete-assets/{uuid}")
-    module.register(ReturnsAsset, "get-assets/{uuid}")
+    module.register(ListAssets, "get-assets-v2")
+    module.register(DeletesAsset, "delete-assets-v2/{uuid}")
+    module.register(GetAsset, "get-assets/{uuid}")
+    module.register(ReturnsAsset, "get-assets-v2/{uuid}")
     module.register(UpdateRule, "put-rules/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
     module.register(AddIOCtoIOCCollectionAction, "add_ioc_to_ioc_collection")
