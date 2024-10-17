@@ -53,7 +53,7 @@ class JobExecutor(Action):
 
         return job_result
 
-    def wait_for_job_completion(self) -> None:
+    def wait_for_job_completion(self) -> None:  # pragma: no cover
         """Wait until all job actions are done. Caution, can wait forever."""
 
         job_status: JobStatus | None = None
