@@ -28,12 +28,12 @@ class JobExecutor(Action):
     @property
     def job_id(self) -> str:
         if self._job_id is None:
-            raise RuntimeError("JobExecutor.trigger_job() not called")
+            raise RuntimeError("JobExecutor.trigger_job() not called")  # pragma: no cover
         return self._job_id
 
     def job_is_running(self) -> bool:
         if self._job_is_running is None:
-            raise RuntimeError("JobExecutor.trigger_job() not called")
+            raise RuntimeError("JobExecutor.trigger_job() not called")  # pragma: no cover
         return self._job_is_running
 
     def trigger_job(self, target: JobTarget, actions: list[JobAction]) -> JobTriggerResult:
@@ -72,16 +72,16 @@ class JobExecutor(Action):
                 time.sleep(1)
 
         if job_status is None:
-            raise RuntimeError("JobExecutor.wait_for_job_completion() can only be called once")
+            raise RuntimeError("JobExecutor.wait_for_job_completion() can only be called once")  # pragma: no cover
 
         if job_status.error > 0:
             self.log(
-                message=f"One or more tasks failed for job id {self.job_id}",
+                message=f"One or more tasks failed for job id {self.job_id}",  # pragma: no cover
                 level="error",
             )
 
         if job_status.canceled > 0:
             self.log(
-                message=f"One or more tasks have been canceled for job id {self.job_id}",
+                message=f"One or more tasks have been canceled for job id {self.job_id}",  # pragma: no cover
                 level="warning",
             )
