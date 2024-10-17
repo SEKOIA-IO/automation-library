@@ -1,7 +1,7 @@
 {
-  "uuid": "37782dd7-1308-4cd4-a73d-0a6cc69661e3",
+  "uuid": "f7581c54-b9b8-414c-96cd-f13168cac7ce",
   "name": "List Assets",
-  "docker_parameters": "get-assets",
+  "docker_parameters": "get-assets-v2",
   "description": "Return a list of assets according to the filters",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -169,7 +169,7 @@
         "description": "Sort order"
       },
       "rule_uuid": {
-        "in":"query",
+        "in": "query",
         "anyOf": [
           {
             "items": {
@@ -185,7 +185,7 @@
         "description": "Rule Uuid"
       },
       "rule_version": {
-        "in":"query",
+        "in": "query",
         "anyOf": [
           {
             "items": {
@@ -220,334 +220,331 @@
       "items": {
         "type": "array",
         "items": {
-            "type": "object",
-            "properties": {
-              "uuid": {
-                "format": "uuid",
-                "title": "Uuid",
-                "type": "string"
-              },
-              "entity_uuid": {
-                "anyOf": [
-                  {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Entity Uuid"
-              },
-              "community_uuid": {
-                "format": "uuid",
-                "title": "Community Uuid",
-                "type": "string"
-              },
-              "name": {
-                "title": "Name",
-                "type": "string"
-              },
-              "type": {
-                "title": "Type",
-                "type": "string"
-              },
-              "category": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Category"
-              },
-              "criticality": {
-                "anyOf": [
-                  {
-                    "type": "integer"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Criticality"
-              },
-              "created_at": {
-                "anyOf": [
-                  {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Created At"
-              },
-              "created_by": {
-                "anyOf": [
-                  {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Created By"
-              },
-              "created_by_type": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Created By Type"
-              },
-              "updated_at": {
-                "anyOf": [
-                  {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Updated At"
-              },
-              "first_seen": {
-                "anyOf": [
-                  {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "First Seen"
-              },
-              "last_seen": {
-                "anyOf": [
-                  {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Last Seen"
-              },
-              "nb_events": {
-                "anyOf": [
-                  {
-                    "type": "integer"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Nb Events"
-              },
-              "nb_alerts": {
-                "anyOf": [
-                  {
-                    "type": "integer"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Nb Alerts"
-              },
-              "nb_atoms": {
-                "default": 0,
-                "title": "Nb Atoms",
-                "type": "integer"
-              },
-              "atoms": {
-                "anyOf": [
-                  {
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Atoms"
-              },
-              "props": {
-                "anyOf": [
-                  {
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Props"
-              },
-              "tags": {
-                "default": [],
-                "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "format": "uuid",
+              "description": "The identifier of the asset",
+              "type": "string"
+            },
+            "entity_uuid": {
+              "anyOf": [
+                {
+                  "format": "uuid",
                   "type": "string"
                 },
-                "title": "Tags",
-                "type": "array"
-              },
-              "revoked": {
-                "default": false,
-                "title": "Revoked",
-                "type": "boolean"
-              },
-              "revoked_at": {
-                "anyOf": [
-                  {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Revoked At"
-              },
-              "revoked_by": {
-                "anyOf": [
-                  {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Revoked By"
-              },
-              "reviewed": {
-                "default": false,
-                "title": "Reviewed",
-                "type": "boolean"
-              },
-              "reviewed_at": {
-                "anyOf": [
-                  {
-                    "format": "date-time",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Reviewed At"
-              },
-              "reviewed_by": {
-                "anyOf": [
-                  {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Reviewed By"
-              },
-              "source": {
-                "default": "automatic",
-                "enum": [
-                  "manual",
-                  "automatic",
-                  "import"
-                ],
-                "title": "Source",
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "community_uuid": {
+              "format": "uuid",
+              "type": "string",
+              "description": "The community of the asset"
+            },
+            "name": {
+              "description": "The name of the asset",
+              "type": "string"
+            },
+            "type": {
+              "description": "The type of the asset",
+              "type": "string"
+            },
+            "category": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "The category of the asset"
+            },
+            "criticality": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Criticality"
+            },
+            "created_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "The creation date of the asset"
+            },
+            "created_by": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Created By"
+            },
+            "created_by_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "type of the asset creator"
+            },
+            "updated_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "The modification date of the asset"
+            },
+            "first_seen": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "First Seen"
+            },
+            "last_seen": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Last Seen"
+            },
+            "nb_events": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Nb Events"
+            },
+            "nb_alerts": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Nb Alerts"
+            },
+            "nb_atoms": {
+              "default": 0,
+              "title": "Nb Atoms",
+              "type": "integer"
+            },
+            "atoms": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Atoms"
+            },
+            "props": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Props"
+            },
+            "tags": {
+              "default": [],
+              "items": {
                 "type": "string"
               },
-              "rule_uuid": {
-                "anyOf": [
-                  {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Rule Uuid"
-              },
-              "rule_version": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Rule Version"
-              },
-              "criticity": {
-                "anyOf": [
-                  {
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "description": "Asset criticality (legacy compatibility with API v1.0)",
-                "title": "Criticity"
-              },
-              "asset_type": {
-                "anyOf": [
-                  {
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "description": "Asset type (legacy compatibility with API v1.0)",
-                "title": "Asset Type"
-              }
+              "title": "Tags",
+              "type": "array"
             },
-            "required": [
-              "uuid",
-              "community_uuid",
-              "name",
-              "type"
-            ]
+            "revoked": {
+              "default": false,
+              "title": "Revoked",
+              "type": "boolean"
+            },
+            "revoked_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Revoked At"
+            },
+            "revoked_by": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Revoked By"
+            },
+            "reviewed": {
+              "default": false,
+              "title": "Reviewed",
+              "type": "boolean"
+            },
+            "reviewed_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reviewed At"
+            },
+            "reviewed_by": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reviewed By"
+            },
+            "source": {
+              "default": "automatic",
+              "enum": [
+                "manual",
+                "automatic",
+                "import"
+              ],
+              "title": "Source",
+              "type": "string"
+            },
+            "rule_uuid": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Rule Uuid"
+            },
+            "rule_version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Rule Version"
+            },
+            "criticity": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "The criticality of the asset"
+            },
+            "asset_type": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "The type of the asset"
+            }
+          },
+          "required": [
+            "uuid",
+            "community_uuid",
+            "name",
+            "type"
+          ]
         }
       },
       "total": {
