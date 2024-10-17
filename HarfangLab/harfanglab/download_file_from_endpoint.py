@@ -27,19 +27,6 @@ class DownloadFileFromEndpointAction(JobExecutor):
     _artefact_info_fetched: bool = False
 
     @property
-    def artefact_id(self) -> str:
-        if not self._artefact_info_fetched:
-            raise RuntimeError("DownloadFileFromEndpointAction.fetch_artefact_info() not called")
-        if self._artefact_info is None:
-            # Note: This raise is mostly for semantic/mypy purpose and should never
-            # happen in real life (an error will always raise before)
-            raise RuntimeError(
-                "DownloadFileFromEndpointAction.fetch_artefact_info() has been called, "
-                "but '_artifact_info' is still None - Something really strange and wrong happen"
-            )
-        return self._artefact_info["id"]
-
-    @property
     def artefact_sha256(self) -> str:
         if not self._artefact_info_fetched:
             raise RuntimeError("DownloadFileFromEndpointAction.fetch_artefact_info() not called")
