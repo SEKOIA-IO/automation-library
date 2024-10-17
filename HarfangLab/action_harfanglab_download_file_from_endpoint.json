@@ -1,0 +1,39 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "id": {
+        "description": "Identifier of the endpoint agent",
+        "type": "string"
+      },
+      "path": {
+        "description": "Absolute path to the file to download from the endpoint",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "path"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Download an arbitrary file from an HarfangLab endpoint",
+  "docker_parameters": "harfanglab_download_file_from_endpoint",
+  "name": "Download File from Endpoint",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "path": {
+        "description": "Downloaded file's path",
+        "type": "string"
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "10906548-7003-4316-914a-1203a690730d"
+}

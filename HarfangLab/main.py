@@ -1,4 +1,5 @@
 # third parties
+from harfanglab.download_file_from_endpoint import DownloadFileFromEndpointAction
 from sekoia_automation.module import Module
 
 from harfanglab.endpoint_actions import (
@@ -23,4 +24,5 @@ if __name__ == "__main__":
     module.register(EndpointAgentIsolationAction, "harfanglab_endpoint_agent_isolation")
     module.register(EndpointAgentDeisolationAction, "harfanglab_endpoint_agent_deisolation")
     module.register(GetHostnamesByIP, "harfanglab_get_hostnames_by_ip")
+    module.register(DownloadFileFromEndpointAction, "harfanglab_download_file_from_endpoint")
     module.run()
