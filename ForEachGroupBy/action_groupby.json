@@ -1,0 +1,35 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "key": {
+        "description": "GroupBy element by value for a specific key",
+        "type": "string"
+      },
+      "value": {
+        "description": "GroupBy element with a specific value for a specific key",
+        "type": "string"
+      },
+      "input": {
+        "description": "Input Data to sort",
+        "type": "array"
+      }
+    },
+    "required": [
+      "key"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "GroupBy",
+  "docker_parameters": "action_groupby",
+  "name": "GroupBy",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "required": [],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "576c1fcd-bcec-4c7e-b96d-185faaf770b6"
+}
