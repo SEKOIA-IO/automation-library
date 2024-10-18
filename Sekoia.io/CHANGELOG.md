@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-18 - 2.64.5
+
+### Changed
+
+- Change `Update Alert Status` to support `status names` as input 
+
 ## 2024-10-08 - 2.64.4
 
 ### Changed
