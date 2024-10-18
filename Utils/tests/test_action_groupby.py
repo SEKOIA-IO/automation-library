@@ -1,5 +1,5 @@
 import pytest
-from groupby.action_groupby import GroupProcessor
+from utils.action_groupby import GroupProcessor
 
 
 class TestGroupProcessor:

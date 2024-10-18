@@ -11,8 +11,10 @@ class GroupProcessor(Action):
         filter_key = arguments.get("filter_key", None)  # key to filter by, if provided
         filter_value = arguments.get("filter_value", None)  # value to filter by, if provided
         input_data = arguments.get("input", [])  # input array of elements
-
-        # Dictionary to hold grouped elements
+        
+        # Assert that input_data is a list
+        assert isinstance(input_data, list), "Input data must be a list"
+        
         grouped = {}
 
         # Group elements by the specified key
