@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-18 - 1.4.1
+
+### Changed
+
+- Add groupby action
+
 ## 2024-05-28 - 1.4.0
 
 ### Changed
