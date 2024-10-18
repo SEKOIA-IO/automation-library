@@ -3,12 +3,13 @@ from sekoia_automation.action import Action
 
 class GroupProcessor(Action):
     """
-    Action to groupby element for a list
+    Action to group items in a list by a specified key and optionally filter them.
     """
 
     def run(self, arguments):
-        key = arguments.get("key", 0)  # key to group by
-        value = arguments.get("value", None)  # value to filter by, if provided
+        group_key = arguments.get("group_key", 0)  # key to group by
+        filter_key = arguments.get("filter_key", None)  # key to filter by, if provided
+        filter_value = arguments.get("filter_value", None)  # value to filter by, if provided
         input_data = arguments.get("input", [])  # input array of elements
 
         # Dictionary to hold grouped elements
@@ -16,23 +17,38 @@ class GroupProcessor(Action):
 
         # Group elements by the specified key
         for element in input_data:
-            group_key = element.get(key)
-            if group_key not in grouped:
-                grouped[group_key] = []
-            grouped[group_key].append(element)
+            group_value = element.get(group_key)
+            if group_value not in grouped:
+                grouped[group_value] = []
+            grouped[group_value].append(element)
 
-        # Prepare to return groups one by one
-        total_groups = len(grouped)
+        # Prepare filtered groups
+        filtered_groups = {}
+
+        # Apply filtering to the grouped elements
+        for group_value, elements in grouped.items():
+            if filter_key is not None:
+                if filter_value is not None:
+                    filtered_elements = [elem for elem in elements if (elem.get(filter_key) == filter_value)]
+                else:
+                    filtered_elements = [elem for elem in elements if (elem.get(filter_key) is not None)]
+            else:
+                filtered_elements = elements
+
+            # Store only non-empty filtered groups
+            if filtered_elements:
+                filtered_groups[group_value] = filtered_elements
+
+        # Calculate total groups and set up for yielding
+        total_groups = len(filtered_groups)
         group_index = 0
 
-        # If a value is specified, filter the group
-        if value is not None:
-            for group_key, elements in grouped.items():
-                filtered_elements = [elem for elem in elements if elem.get(key) == value]
-                if filtered_elements:
-                    yield {"group_index": 0, "total_groups": 1, "group_data": filtered_elements}
-        else:
-            # If no value is specified, just return all grouped elements
-            for group_key, elements in grouped.items():
-                yield {"group_index": group_index, "total_groups": total_groups, "group_data": elements}
-                group_index += 1
+        # Yield each filtered group with appropriate indexing
+        for group_value, elements in filtered_groups.items():
+            yield {
+                "group_index": group_index,
+                "total_groups": total_groups,
+                "group_value": group_value,  # Added group_value to the output
+                "group_data": elements,
+            }
+            group_index += 1

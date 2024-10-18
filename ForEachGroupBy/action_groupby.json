@@ -2,12 +2,16 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "key": {
+      "group_key": {
         "description": "GroupBy element by value for a specific key",
         "type": "string"
       },
-      "value": {
-        "description": "GroupBy element with a specific value for a specific key",
+      "filter_key": {
+        "description": "GroupBy element with filter for a specific key",
+        "type": "string"
+      },
+      "filter_value": {
+        "description": "GroupBy element with a filter for a specific value on a specific key",
         "type": "string"
       },
       "input": {
@@ -16,7 +20,7 @@
       }
     },
     "required": [
-      "key"
+      "group_key", "input"
     ],
     "title": "Arguments",
     "type": "object"
