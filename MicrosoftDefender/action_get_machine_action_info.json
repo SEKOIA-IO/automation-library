@@ -1,0 +1,17 @@
+{
+  "name": "Get action info",
+  "description": "Retrieve the status of an action of the machine",
+  "uuid": "6c54078a-86ba-52de-a668-6e317d937701",
+  "docker_parameters": "GetMachineAction",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "action_id": {
+        "description": "Action ID",
+        "type": "string"
+      }
+    },
+    "required": ["action_id"]
+  },
+  "results": {}
+}
