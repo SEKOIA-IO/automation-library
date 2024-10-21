@@ -1,13 +1,9 @@
 import requests_mock
+
+from microsoftdefender_modules import MicrosoftDefenderModule
+from microsoftdefender_modules.action_isolate_machine import IsolateMachineAction
 from microsoftdefender_modules.action_restrict_code_execution import RestrictCodeExecutionAction
 from microsoftdefender_modules.action_scan_machine import ScanMachineAction
-from microsoftdefender_modules.action_stop_and_quarantine_file import StopAndQuarantineFileAction
-from microsoftdefender_modules.action_unisolate_machine import UnIsolateMachineAction
-from microsoftdefender_modules.action_unrestrict_code_execution import UnRestrictCodeExecutionAction
-from microsoftdefender_modules.action_update_alert import UpdateAlertAction
-from microsoftdefender_modules import MicrosoftDefenderModule, MicrosoftDefenderModuleConfiguration
-from microsoftdefender_modules.action_get_machine_action import GetMachineAction
-from microsoftdefender_modules.action_isolate_machine import IsolateMachineAction
 
 
 def configured_action(action):
@@ -40,13 +36,32 @@ def test_isolate_machine_action():
         mock.register_uri(
             "POST",
             "https://api.securitycenter.microsoft.com/api/machines/1234/isolate",
-            json={}
+            json={
+                "@odata.context": "https://api.securitycenter.microsoft.com/api/$metadata#MachineActions/$entity",
+                "id": "6b001073-5500-4205-8287-6f1184936f67",
+                "type": "Isolate",
+                "title": None,
+                "requestor": "Integration MSGraph Security API",
+                "requestorComment": "New new comment",
+                "status": "Pending",
+                "machineId": "1234",
+                "computerDnsName": "windows11",
+                "creationDateTimeUtc": "2024-10-21T11:25:48.3308187Z",
+                "lastUpdateDateTimeUtc": "2024-10-21T11:25:48.330819Z",
+                "cancellationRequestor": None,
+                "cancellationComment": None,
+                "cancellationDateTimeUtc": None,
+                "errorHResult": 0,
+                "scope": None,
+                "externalId": None,
+                "requestSource": "PublicApi",
+                "relatedFileInfo": None,
+                "commands": [],
+                "troubleshootInfo": None,
+            },
         )
 
-        result = action.run(arguments={
-            "machine_id": "1234",
-            "comment": "Some comment"
-        })
+        result = action.run(arguments={"machine_id": "1234", "comment": "Some comment"})
 
         assert result is not None
 
@@ -68,13 +83,32 @@ def test_scan_machine_action():
         mock.register_uri(
             "POST",
             "https://api.securitycenter.microsoft.com/api/machines/1234/runAntiVirusScan",
-            json={}
+            json={
+                "@odata.context": "https://api.securitycenter.microsoft.com/api/$metadata#MachineActions/$entity",
+                "id": "0696c900-b8ce-42ce-96f6-1b68268b7bea",
+                "type": "RunAntiVirusScan",
+                "title": None,
+                "requestor": "Integration MSGraph Security API",
+                "requestorComment": "New new comment",
+                "status": "Pending",
+                "machineId": "1234",
+                "computerDnsName": "windows11",
+                "creationDateTimeUtc": "2024-10-21T11:26:49.6894208Z",
+                "lastUpdateDateTimeUtc": "2024-10-21T11:26:49.6894212Z",
+                "cancellationRequestor": None,
+                "cancellationComment": None,
+                "cancellationDateTimeUtc": None,
+                "errorHResult": 0,
+                "scope": None,
+                "externalId": None,
+                "requestSource": "PublicApi",
+                "relatedFileInfo": None,
+                "commands": [],
+                "troubleshootInfo": None,
+            },
         )
 
-        result = action.run(arguments={
-            "machine_id": "1234",
-            "comment": "Some comment"
-        })
+        result = action.run(arguments={"machine_id": "1234", "comment": "Some comment"})
 
         assert result is not None
 
@@ -96,12 +130,31 @@ def test_restrict_code_execution_action():
         mock.register_uri(
             "POST",
             "https://api.securitycenter.microsoft.com/api/machines/1234/restrictCodeExecution",
-            json={}
+            json={
+                "@odata.context": "https://api.securitycenter.microsoft.com/api/$metadata#MachineActions/$entity",
+                "id": "ed74c544-91d4-414d-8805-5c26e028ef7e",
+                "type": "RestrictCodeExecution",
+                "title": None,
+                "requestor": "Integration MSGraph Security API",
+                "requestorComment": "New new comment",
+                "status": "Pending",
+                "machineId": "1234",
+                "computerDnsName": "windows11",
+                "creationDateTimeUtc": "2024-10-21T11:27:58.1447302Z",
+                "lastUpdateDateTimeUtc": "2024-10-21T11:27:58.1447307Z",
+                "cancellationRequestor": None,
+                "cancellationComment": None,
+                "cancellationDateTimeUtc": None,
+                "errorHResult": 0,
+                "scope": None,
+                "externalId": None,
+                "requestSource": "PublicApi",
+                "relatedFileInfo": None,
+                "commands": [],
+                "troubleshootInfo": None,
+            },
         )
 
-        result = action.run(arguments={
-            "machine_id": "1234",
-            "comment": "Some comment"
-        })
+        result = action.run(arguments={"machine_id": "1234", "comment": "Some comment"})
 
         assert result is not None
