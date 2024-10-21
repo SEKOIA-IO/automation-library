@@ -1,5 +1,5 @@
 {
-  "name": "MergeAssets",
+  "name": "Merge Assets",
   "description": "Merge a list of assets into a targeted asset",
   "uuid": "86fc9d59-3c54-56f3-8266-1c9d80030a48",
   "docker_parameters": "merge-assets",
