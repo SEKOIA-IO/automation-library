@@ -4,7 +4,7 @@ import pathlib
 import re
 import unittest.mock
 from collections.abc import Iterator
-from typing import Any, Optional, TypeAlias
+from typing import Any, Optional, Type, TypeAlias
 
 import pytest
 import requests_mock
@@ -33,6 +33,7 @@ class _fake_response:
                     "agentid": _fake_agent_id,
                 },
                 "job_id": _fake_job_id,
+                "download_status": 0,
                 "sha256": _fake_sha256_digest,
             }
         ],
@@ -66,6 +67,19 @@ class _fake_response:
                     "agentid": _fake_agent_id + "-missmatch-suffix",
                 },
                 "job_id": _fake_job_id,
+            }
+        ],
+    }
+
+    artefact_info_download_fail_on_endpoint: JSONResponse = {
+        "count": 1,
+        "results": [
+            {
+                "agent": {
+                    "agentid": _fake_agent_id,
+                },
+                "job_id": _fake_job_id,
+                "download_status": 1,
             }
         ],
     }
@@ -166,28 +180,38 @@ def test_download_file_from_endpoint_success(symphony_storage) -> None:
 
 
 @pytest.mark.parametrize(
-    "fake_response, error_msg_pattern",
+    "fake_response, error_type, error_msg_pattern",
     [
         (
             _fake_response.artefact_info_no_result,
+            ValueError,
             f"No artefact info available for job {_fake_job_id}",
         ),
         (
             _fake_response.artefact_info_too_many_results,
+            ValueError,
             "Expected 1 result maximum",
         ),
         (
             _fake_response.artefact_info_missmatch_job_id,
+            ValueError,
             "Given job id and the one in the fetched artefact info missmatch",
         ),
         (
             _fake_response.artefact_info_missmatch_agent_id,
+            ValueError,
             "Given agent id and the one in the fetched artefact info missmatch",
+        ),
+        (
+            _fake_response.artefact_info_download_fail_on_endpoint,
+            ValueError,
+            "Something went wrong while downloading the file on endpoint",
         ),
     ],
 )
 def test_fetch_artefact_info_fail(
     fake_response: JSONResponse,
+    error_type: Type[BaseException],
     error_msg_pattern: str,
 ) -> None:
     """Test scenario - Misc fail scenario on artefact info fetching."""
@@ -202,7 +226,7 @@ def test_fetch_artefact_info_fail(
             json=fake_response,
         )
 
-        with pytest.raises(ValueError, match=error_msg_pattern):
+        with pytest.raises(error_type, match=error_msg_pattern):
             _run_action()
 
 

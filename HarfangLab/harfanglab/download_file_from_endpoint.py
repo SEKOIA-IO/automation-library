@@ -63,10 +63,7 @@ class DownloadFileFromEndpointAction(JobExecutor):
         results_count: int = response.json()["count"]
 
         if results_count == 0:
-            raise ValueError(
-                f"No artefact info available for job {job_id} - "
-                f"Does the targeted file exist on endpoint {agent_id}?"
-            )
+            raise ValueError(f"No artefact info available for job {job_id}")
 
         if results_count > 1:
             raise ValueError(f"Expected 1 result maximum, got {results_count} for job {job_id}")
@@ -85,6 +82,13 @@ class DownloadFileFromEndpointAction(JobExecutor):
             raise ValueError(
                 f"Given agent id and the one in the fetched artefact info missmatch "
                 f"(expected '{agent_id}', got '{artefact_info['agent']['agentid']}')"
+            )
+
+        # Status 0 mean a successful download on endpoint, anything else other is an error.
+        if artefact_info["download_status"] != 0:
+            raise ValueError(
+                f"Something went wrong while downloading the file on endpoint - "
+                f"Does the targeted file exist on endpoint {agent_id}?"
             )
 
         self._artefact_info = artefact_info
