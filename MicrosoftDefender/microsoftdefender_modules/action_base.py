@@ -1,7 +1,10 @@
 from abc import ABC
 from functools import cached_property
+from typing import Any
+from urllib.parse import urljoin
 
 import requests
+from requests import Response
 from sekoia_automation.action import Action
 
 from . import MicrosoftDefenderModule
@@ -28,3 +31,25 @@ class MicrosoftDefenderBaseAction(Action, ABC):
         if not response.ok:
             self.log(message=raw["error"]["message"], level="error")
             logger.info(raw["error"]["message"], code=raw["error"]["code"], target=raw["error"]["target"])
+
+    def call_api(self, method: str, url_path: str, args: dict[str, Any], arg_mapping: dict[str, str]) -> Response:
+        formatted_url = url_path.format(**args)  # allows substitution in URL
+        url = urljoin(self.client.base_url, formatted_url)
+
+        data = {}
+        for arg_name, arg_value in args.items():
+            data_name = arg_mapping.get(arg_name)
+            if data_name:
+                data[data_name] = arg_value
+
+        if method.lower() == "post":
+            response = self.client.post(url, json=data)
+
+        elif method.lower() == "patch":
+            response = self.client.patch(url, json=data)
+
+        else:
+            response = self.client.get(url, json=data)
+
+        self.process_response(response)
+        return response.json()

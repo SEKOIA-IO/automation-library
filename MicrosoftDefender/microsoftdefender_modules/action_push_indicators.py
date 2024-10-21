@@ -44,6 +44,24 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         url = urljoin(self.client.base_url, "api/indicators/BatchDelete")
         return self.client.post(url, json={"IndicatorIds": indicators_ids})
 
+    def remove_indicators(self, indicators: list[dict[str, Any]]) -> Response | None:
+        indicators_ids = [obj["id"] for obj in indicators]
+        if len(indicators_ids) > 0:
+            self.log("Removing %d indicators" % len(indicators_ids), level="info")
+
+            response = self.delete_indicators_by_ids(indicators_ids=indicators_ids)
+            self.process_response(response)
+
+            return response
+
+        return None
+
+    def create_indicators(self, indicators: list[dict[str, Any]]) -> Response:
+        response = self.import_indicators(indicators=indicators)
+        self.process_response(response)
+
+        return response
+
     @staticmethod
     def get_payload(value: Any, type: Any, args: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -98,18 +116,6 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
                 results["valid"].append(result)
 
         return results
-
-    def remove_indicators(self, indicators: list[dict[str, Any]]) -> None:
-        indicators_ids = [obj["id"] for obj in indicators]
-        if len(indicators_ids) > 0:
-            self.log("Removing %d indicators" % len(indicators_ids), level="info")
-
-            response = self.delete_indicators_by_ids(indicators_ids=indicators_ids)
-            self.process_response(response)
-
-    def create_indicators(self, indicators: list[dict[str, Any]]) -> None:
-        response = self.import_indicators(indicators=indicators)
-        self.process_response(response)
 
     def run(self, arguments: Any) -> Any:
         if arguments.get("sekoia_base_url"):

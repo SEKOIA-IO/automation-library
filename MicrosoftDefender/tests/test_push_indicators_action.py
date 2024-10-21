@@ -1,9 +1,4 @@
-from unittest.mock import patch
-
-import pytest
 import requests_mock
-from freezegun import freeze_time
-from sekoia_automation.action import Action
 
 from microsoftdefender_modules import MicrosoftDefenderModule
 from microsoftdefender_modules.action_push_indicators import PushIndicatorsAction
@@ -331,88 +326,11 @@ STIX_OBJECT_FILE_HASH = {
     "x_ic_external_refs": ["indicator--99048ce7-4cb0-4ac9-a28b-c2738fcd39be"],
 }
 
-LIST_INDICATORS_RESPONSE = {
-    "@odata.context": "https://api.securitycenter.microsoft.com/api/$metadata#Indicators",
-    "value": [
-        {
-            "id": "1",
-            "indicatorValue": "220e7d15b011d7fac48f2bd61114db1022197f7f",
-            "indicatorType": "FileSha1",
-            "action": "Audit",
-            "createdBy": "47153b63-b22d-494f-ac5b-bc91ee748ec1",
-            "severity": "Informational",
-            "category": 1,
-            "application": "demo-test",
-            "educateUrl": None,
-            "bypassDurationHours": None,
-            "title": "demo",
-            "description": "demo2",
-            "recommendedActions": "nothing",
-            "creationTimeDateTimeUtc": "2024-10-17T16:13:26.184623Z",
-            "expirationTime": "2024-12-12T00:00:00Z",
-            "lastUpdateTime": "2024-10-17T16:13:26.184623Z",
-            "lastUpdatedBy": None,
-            "rbacGroupNames": [],
-            "rbacGroupIds": [],
-            "notificationId": None,
-            "notificationBody": None,
-            "version": None,
-            "mitreTechniques": [],
-            "historicalDetection": False,
-            "lookBackPeriod": None,
-            "generateAlert": True,
-            "additionalInfo": None,
-            "createdByDisplayName": "Integration MSGraph Security API",
-            "externalId": None,
-            "createdBySource": "PublicApi",
-            "certificateInfo": None,
-        },
-        {
-            "id": "2",
-            "indicatorValue": "2233223322332233223322332233223322332233223322332233223322332222",
-            "indicatorType": "FileSha256",
-            "action": "Audit",
-            "createdBy": "47153b63-b22d-494f-ac5b-bc91ee748ec1",
-            "severity": "Medium",
-            "category": 1,
-            "application": "demo-test2",
-            "educateUrl": None,
-            "bypassDurationHours": None,
-            "title": "demo2",
-            "description": "demo2",
-            "recommendedActions": "nothing",
-            "creationTimeDateTimeUtc": "2024-10-17T16:13:26.184623Z",
-            "expirationTime": "2024-12-12T00:00:00Z",
-            "lastUpdateTime": "2024-10-17T16:13:26.184623Z",
-            "lastUpdatedBy": None,
-            "rbacGroupNames": [],
-            "rbacGroupIds": [],
-            "notificationId": None,
-            "notificationBody": None,
-            "version": None,
-            "mitreTechniques": [],
-            "historicalDetection": False,
-            "lookBackPeriod": None,
-            "generateAlert": True,
-            "additionalInfo": None,
-            "createdByDisplayName": "Integration MSGraph Security API",
-            "externalId": None,
-            "createdBySource": "PublicApi",
-            "certificateInfo": None,
-        },
-    ],
-}
-
-RESPONSE_NO_INDICATORS = {
-    "@odata.context": "https://api.securitycenter.microsoft.com/api/$metadata#Indicators",
-    "value": [],
-}
-
 
 def test_push_indicators():
     action = configured_action(PushIndicatorsAction)
 
-    with requests_mock.Mocker() as mock, freeze_time("2024-10-01 09:44:32", tick=False) as frozen_time:
+    with requests_mock.Mocker() as mock:
         mock.register_uri(
             "GET",
             "https://login.microsoftonline.com/test_tenant_id/oauth2/token",
@@ -424,9 +342,33 @@ def test_push_indicators():
         )
 
         mock.register_uri(
-            "GET",
-            "https://api.securitycenter.microsoft.com/api/indicators?$filter=expirationTime+le+2024-10-01T09:44:32Z",
-            json={},
+            "POST",
+            "https://api.securitycenter.microsoft.com/api/indicators/import",
+            json={
+                "@odata.context": "https://api.securitycenter.microsoft.com/api/$metadata#Collection(microsoft.windowsDefenderATP.api.ImportIndicatorResult)",
+                "value": [
+                    {
+                        "id": "1",
+                        "indicator": "220e7d15b011d7fac48f2bd61114db1022197f7f",
+                        "isFailed": False,
+                        "failureReason": None,
+                    },
+                    {
+                        "id": "2",
+                        "indicator": "2233223322332233223322332233223322332233223322332233223322332222",
+                        "isFailed": False,
+                        "failureReason": None,
+                    },
+                ],
+            },
         )
 
-        results = action.run({"stix_objects": [STIX_OBJECT_IPv4, STIX_OBJECT_FILE_HASH]})
+        results = action.run(
+            {
+                "stix_objects": [STIX_OBJECT_IPv4, STIX_OBJECT_FILE_HASH],
+                "severity": "Medium",
+                "action": "Warn",
+                "generate_alert": False,
+            }
+        )
+        assert results is None

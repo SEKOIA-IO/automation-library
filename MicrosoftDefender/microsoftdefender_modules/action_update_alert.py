@@ -6,6 +6,19 @@ from .action_base import MicrosoftDefenderBaseAction
 
 class UpdateAlertAction(MicrosoftDefenderBaseAction):
     def run(self, arguments: Any) -> Any:
+        return self.call_api(
+            method="PATCH",
+            url_path="api/alerts/{alert_id}/",
+            args=arguments,
+            arg_mapping={
+                "comment": "Comment",
+                "status": "Status",
+                "classification": "Classification",
+                "owner": "assignedTo",
+                "determination": "Determination",
+            },
+        )
+
         alert_id = arguments["alert_id"]
         comment = arguments.get("comment")
         status = arguments.get("status")  # New, InProgress, Resolved
