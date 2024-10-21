@@ -8,10 +8,10 @@ from .retry import Retry
 class ApiClient(requests.Session):
     def __init__(
         self,
-        base_url: str,
         app_id: str,
         app_secret: str,
         tenant_id: str,
+        base_url: str = "https://api.securitycenter.microsoft.com",
         nb_retries: int = 5,
         ratelimit_per_minute: int = 45,
     ):

@@ -1,5 +1,4 @@
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urljoin
 
@@ -48,41 +47,14 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
     @staticmethod
     def get_payload(value: Any, type: Any, args: dict[str, Any]) -> dict[str, Any]:
         return {
-            "createdBySource": "PublicApi",  #  "Sekoia.io",
+            "title": "indicator",
+            "createdByDisplayName": "Sekoia.io",
             "indicatorType": type,
             "indicatorValue": value,
             "severity": args["severity"],
             "action": args["action"],
-            "generateAlert": args["generateAlert"],
+            "generateAlert": args["generate_alert"],
         }
-
-    def remove_expired_indicators(self) -> None:
-        ids_to_remove = []
-
-        current_utc = "%sZ" % datetime.utcnow().isoformat()
-
-        # get indicators with `expirationTime` lesser or equal to current datetime
-        response = self.list_indicators(q=f"expirationTime+le+{current_utc}")
-        self.process_response(response)
-
-        raw = response.json()
-        for item in raw["value"]:
-            ids_to_remove.append(item["id"])
-
-        self.remove_indicators(indicators=ids_to_remove)
-
-    def remove_old_indicators(self, valid_for: int) -> None:
-        ids_to_remove = []
-
-        dt = "%sZ" % (datetime.utcnow() - timedelta(days=valid_for)).isoformat()
-        response = self.list_indicators(q=f"creationTimeDateTimeUtc+le+{dt}")
-        self.process_response(response)
-
-        raw = response.json()
-        for item in raw["value"]:
-            ids_to_remove.append(item["id"])
-
-        self.remove_indicators(indicators=ids_to_remove)
 
     def get_reference_url(self, object_id: str) -> str:
         return urljoin(self.sekoia_base_url, f"intelligence/objects/{object_id}")
@@ -130,6 +102,8 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
     def remove_indicators(self, indicators: list[dict[str, Any]]) -> None:
         indicators_ids = [obj["id"] for obj in indicators]
         if len(indicators_ids) > 0:
+            self.log("Removing %d indicators" % len(indicators_ids), level="info")
+
             response = self.delete_indicators_by_ids(indicators_ids=indicators_ids)
             self.process_response(response)
 
@@ -140,12 +114,6 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
     def run(self, arguments: Any) -> Any:
         if arguments.get("sekoia_base_url"):
             self.sekoia_base_url = arguments.get("sekoia_base_url")
-
-        # Cleanup expired and old indicators before proceeding with adding new ones
-        valid_for = arguments.get("valid_for", 0)
-        self.remove_expired_indicators()
-        if valid_for > 0:
-            self.remove_old_indicators(valid_for)
 
         stix_objects = self.json_argument("stix_objects", arguments)
         if stix_objects is None or len(stix_objects) == 0:

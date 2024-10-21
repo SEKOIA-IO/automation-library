@@ -30,16 +30,17 @@
       },
       "severity": {
         "description": "Severity",
-        "type": "string"
+        "type": "string",
+        "enum": [
+          "Informational",
+          "Low",
+          "Medium",
+          "High"
+        ]
       },
       "generate_alert": {
         "description": "Generate Alert?",
         "type": "boolean"
-      },
-      "valid_for": {
-        "type": "integer",
-        "description": "If set, the playbook will remove IOCs that are older than valid_for days",
-        "minimum": 1
       }
     },
     "required": ["stix_objects_path", "action", "severity", "generate_alert"],
