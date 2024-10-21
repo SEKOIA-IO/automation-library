@@ -80,7 +80,7 @@ if __name__ == "__main__":
     module.register(ReportsGetReport, "get-reports/{uuid}")
     module.register(GetEventFieldCommonValues, "get-event-field-common-values")
     module.register(GetEvents, "get-events")
-    module.register(MergeAssets, "MergeAssets")
+    module.register(MergeAssets, "merge-assets")
     module.register(TriggerActionOnAlertWorkflow, "patch-alerts/{uuid}/workflow")
     module.register(PushEventToIntake, "push-events-to-intake")
     module.register(ListAssets, "get-assets")
