@@ -40,6 +40,7 @@ from sekoiaio.operation_center import (
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
 from sekoiaio.operation_center.get_event_field_common_values import GetEventFieldCommonValues
 from sekoiaio.operation_center.get_events import GetEvents
+from sekoiaio.operation_center.assets_merge import MergeAssets
 from sekoiaio.operation_center.push_event_to_intake import PushEventToIntake
 from sekoiaio.triggers.alerts import (
     AlertCommentCreatedTrigger,
@@ -79,6 +80,7 @@ if __name__ == "__main__":
     module.register(ReportsGetReport, "get-reports/{uuid}")
     module.register(GetEventFieldCommonValues, "get-event-field-common-values")
     module.register(GetEvents, "get-events")
+    module.register(MergeAssets, "MergeAssets")
     module.register(TriggerActionOnAlertWorkflow, "patch-alerts/{uuid}/workflow")
     module.register(PushEventToIntake, "push-events-to-intake")
     module.register(ListAssets, "get-assets")
