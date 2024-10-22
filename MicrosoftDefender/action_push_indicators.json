@@ -31,12 +31,7 @@
       "severity": {
         "description": "Severity",
         "type": "string",
-        "enum": [
-          "Informational",
-          "Low",
-          "Medium",
-          "High"
-        ]
+        "enum": ["Informational", "Low", "Medium", "High"]
       },
       "generate_alert": {
         "description": "Generate Alert?",

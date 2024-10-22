@@ -1,4 +1,5 @@
 from microsoftdefender_modules import MicrosoftDefenderModule
+from microsoftdefender_modules.action_cancel_machine_action import CancelMachineAction
 from microsoftdefender_modules.action_get_machine_action import GetMachineAction
 from microsoftdefender_modules.action_isolate_machine import IsolateMachineAction
 from microsoftdefender_modules.action_push_indicators import PushIndicatorsAction
@@ -20,4 +21,5 @@ if __name__ == "__main__":
     module.register(RestrictCodeExecutionAction, "RestrictCodeExecutionAction")
     module.register(UnIsolateMachineAction, "UnIsolateMachineAction")
     module.register(IsolateMachineAction, "IsolateMachineAction")
+    module.register(CancelMachineAction, "CancelMachineAction")
     module.run()
