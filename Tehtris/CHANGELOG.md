@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-05-30 - 1.15.2
+
+### Fixed
+
+- Remove duplicates from results when fetch new events from the API
+
 ## 2024-05-30 - 1.15.1
 
 ### Fixed

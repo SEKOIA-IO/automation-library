@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -35,6 +36,40 @@ def trigger(symphony_storage, patch_datetime_now):
         "filter_id": "uuid",
     }
     yield trigger
+
+
+def message(event_id: int) -> dict[str, Any]:
+    # flake8: noqa
+    return {
+        "rflId": 1,
+        "time": "2022-10-19T12:00:00.163407+00:00",
+        "lvl": 5,
+        "module": "das",
+        "eventName": "HeuristicAlert",
+        "ipSrc": "1.2.3.4",
+        "ipDst": "5.6.7.8",
+        "egKBId": 110000031301810,
+        "description": "Suspect spawn tree detected\n─ (Example\\doe-j) C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe (24644)\n── (Example\\doe-j) C:\\Windows\\System32\\cmd.exe (24876)\n\nNo remediation taken",
+        "os_release__": "11",
+        "pid": 24876,
+        "domain__": "example.org",
+        "os_version__": "10.0.22621",
+        "cmdline": 'C:\\WINDOWS\\system32\\cmd.exe /d /c "C:\\Users\\doe-j\\AppData\\Local\\Programs\\IT Hit\\IT Hit Edit Doc Opener Host 5\\NativeHost.exe" chrome-extension://mdfaonmaoigngflemfmkboffllkopopm/ --parent-window=0 < \\\\.\\pipe\\LOCAL\\edge.nativeMessaging.in.c7c2f388b0eb2f77 > \\\\.\\pipe\\LOCAL\\edge.nativeMessaging.out.c7c2f388b0eb2f77',
+        "username": "Example\\doe-j",
+        "pCreateDatetime": "2022-10-19T12:00:00.098346+00:00",
+        "location": "",
+        "os_server__": False,
+        "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "ppid": 24644,
+        "uuid__": "3be682e9-5568-4dbf-8e2d-5b36159945da",
+        "path": "C:\\Windows\\System32\\cmd.exe",
+        "tag": "YBE_PDT_WIN",
+        "uid": f"{event_id};windows;HOST01;example.org",
+        "os__": "windows",
+        "os_architecture__": "x86_64",
+        "hostname__": "HOST01",
+        "id": event_id,
+    }
 
 
 @pytest.fixture
@@ -118,6 +153,61 @@ def test_fetch_events(trigger, message1, message2):
         )
 
         assert next(trigger.fetch_events()) == [message1, message2]
+
+
+def test_fetch_events_without_duplicates(trigger, message1, message2):
+    with requests_mock.Mocker() as mock:
+        first_batch = [
+            message(1),
+            message(2),
+            message(3),
+        ]
+
+        second_batch = [
+            message(2),
+            message(3),
+            message(4),
+            message(5),
+        ]
+
+        mock.get(
+            "https://abc.api.tehtris.net/api/xdr/v1/event",
+            status_code=200,
+            json=first_batch,
+        )
+
+        result_first = next(trigger.fetch_events())
+        assert [event["id"] for event in result_first] == [1, 2, 3]
+        assert [event["uid"] for event in result_first] == [
+            "1;windows;HOST01;example.org",
+            "2;windows;HOST01;example.org",
+            "3;windows;HOST01;example.org",
+        ]
+
+        assert trigger.events_cache == {
+            "1;windows;HOST01;example.org": None,
+            "2;windows;HOST01;example.org": None,
+            "3;windows;HOST01;example.org": None,
+        }
+
+        mock.get(
+            "https://abc.api.tehtris.net/api/xdr/v1/event",
+            status_code=200,
+            json=second_batch,
+        )
+
+        result_second = next(trigger.fetch_events())
+
+        assert [event["id"] for event in result_second] == [4, 5]
+        assert [event["uid"] for event in result_second] == [
+            "4;windows;HOST01;example.org",
+            "5;windows;HOST01;example.org",
+        ]
+        assert len(result_second) == 2
+        assert trigger.events_cache == {
+            "4;windows;HOST01;example.org": None,
+            "5;windows;HOST01;example.org": None,
+        }
 
 
 def test_fetch_events_pagination(trigger, message1, message2):

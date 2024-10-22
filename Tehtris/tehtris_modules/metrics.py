@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 # Declare google prometheus metrics
 prom_namespace_tehtris = "symphony_module_tehtris"
