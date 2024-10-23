@@ -19,7 +19,7 @@ class TestGroupProcessor:
             ],
         }
 
-        resp = list(processor.run(arguments))
+        resp = processor.run(arguments)
 
         # Check we have the expected number of groups
         assert len(resp["results"]) == 3  # A, B, C
@@ -51,7 +51,7 @@ class TestGroupProcessor:
             ],
         }
 
-        resp = list(processor.run(arguments))
+        resp = processor.run(arguments)
 
         assert len(resp["results"]) == 2
 
@@ -77,7 +77,7 @@ class TestGroupProcessor:
             ],
         }
 
-        resp = list(processor.run(arguments))
+        resp = processor.run(arguments)
 
         assert len(resp["results"]) == 2
 
