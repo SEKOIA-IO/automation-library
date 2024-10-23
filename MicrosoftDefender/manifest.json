@@ -7,7 +7,16 @@
         "title": "Base Url",
         "description": "Base URL",
         "default": "https://api.securitycenter.microsoft.com",
-        "type": "string"
+        "type": "string",
+        "enum": [
+          "https://api.securitycenter.microsoft.com",
+          "https://us.api.security.microsoft.com",
+          "https://eu.api.security.microsoft.com",
+          "https://uk.api.security.microsoft.com",
+          "https://au.api.security.microsoft.com",
+          "https://swa.api.security.microsoft.com",
+          "https://ina.api.security.microsoft.com"
+        ]
       },
       "app_id": {
         "title": "App Id",

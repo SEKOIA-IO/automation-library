@@ -44,17 +44,20 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         url = urljoin(self.client.base_url, "api/indicators/BatchDelete")
         return self.client.post(url, json={"IndicatorIds": indicators_ids})
 
-    def remove_indicators(self, indicators: list[dict[str, Any]]) -> Response | None:
-        indicators_ids = [obj["id"] for obj in indicators]
-        if len(indicators_ids) > 0:
-            self.log("Removing %d indicators" % len(indicators_ids), level="info")
+    def remove_indicators(self, indicators: list[dict[str, Any]]) -> None:
+        ids_to_remove = []
 
-            response = self.delete_indicators_by_ids(indicators_ids=indicators_ids)
+        for indicator in indicators:
+            q = f"indicatorValue+eq+'{indicator['indicatorValue']}'"
+            response = self.list_indicators(q=q)
             self.process_response(response)
 
-            return response
+            found_indicators = response.json().get("value", [])
+            if len(found_indicators) > 0:
+                ids_to_remove.extend(ind.get("id") for ind in found_indicators)
 
-        return None
+        if len(ids_to_remove) > 0:
+            self.delete_indicators_by_ids(indicators_ids=ids_to_remove)
 
     def create_indicators(self, indicators: list[dict[str, Any]]) -> Response:
         response = self.import_indicators(indicators=indicators)
