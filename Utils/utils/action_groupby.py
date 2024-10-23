@@ -1,4 +1,5 @@
 from sekoia_automation.action import Action
+from typing import Any
 
 
 class GroupProcessor(Action):
@@ -6,7 +7,7 @@ class GroupProcessor(Action):
     Action to group items in a list by a specified key and optionally filter them.
     """
 
-    def run(self, arguments):
+    def run(self, arguments: dict):
         group_key = arguments.get("group_key", 0)  # key to group by
         filter_key = arguments.get("filter_key", None)  # key to filter by, if provided
         filter_value = arguments.get("filter_value", None)  # value to filter by, if provided
@@ -15,7 +16,7 @@ class GroupProcessor(Action):
         # Assert that input_data is a list
         assert isinstance(input_data, list), "Input data must be a list"
 
-        grouped = {}
+        grouped: dict[str, Any] = {}
 
         # Group elements by the specified key
         for element in input_data:
@@ -57,4 +58,4 @@ class GroupProcessor(Action):
                 }
             )
             group_index += 1
-        return response
+        return {"results": response}
