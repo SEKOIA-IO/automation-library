@@ -1,6 +1,7 @@
 from sekoia_automation.action import Action
 from typing import Any
 
+
 class GroupProcessor(Action):
     """
     Action to group items in a list by a specified key and optionally filter them.
