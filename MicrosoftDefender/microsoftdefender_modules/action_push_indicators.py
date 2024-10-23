@@ -45,7 +45,7 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         return self.client.post(url, json={"IndicatorIds": indicators_ids})
 
     def remove_indicators(self, indicators: list[dict[str, Any]]) -> None:
-        ids_to_remove = []
+        ids_to_remove: list[Any] = []
 
         for indicator in indicators:
             q = f"indicatorValue+eq+'{indicator['indicatorValue']}'"
