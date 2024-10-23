@@ -41,16 +41,20 @@ class GroupProcessor(Action):
             if filtered_elements:
                 filtered_groups[group_value] = filtered_elements
 
-        # Calculate total groups and set up for yielding
+        # Calculate total groups
         total_groups = len(filtered_groups)
         group_index = 0
 
-        # Yield each filtered group with appropriate indexing
+        response = []
+        # Fill each filtered group with appropriate indexing
         for group_value, elements in filtered_groups.items():
-            yield {
-                "group_index": group_index,
-                "total_groups": total_groups,
-                "group_value": group_value,  # Added group_value to the output
-                "group_data": elements,
-            }
+            response.append(
+                {
+                    "group_index": group_index,
+                    "total_groups": total_groups,
+                    "group_value": group_value,  # Added group_value to the output
+                    "group_data": elements,
+                }
+            )
             group_index += 1
+        return response

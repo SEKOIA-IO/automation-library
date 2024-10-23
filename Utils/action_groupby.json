@@ -33,7 +33,7 @@
     "properties": {},
     "required": [],
     "title": "Results",
-    "type": "object"
+    "type": "array"
   },
   "uuid": "576c1fcd-bcec-4c7e-b96d-185faaf770b6"
 }
