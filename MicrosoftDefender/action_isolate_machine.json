@@ -1,0 +1,26 @@
+{
+  "name": "Isolate a machine",
+  "description": "Isolate a machine",
+  "uuid": "e689812b-619e-50c3-9a74-6e8ddff9a793",
+  "docker_parameters": "IsolateMachineAction",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "machine_id": {
+        "description": "Machine ID",
+        "type": "string"
+      },
+      "comment": {
+        "description": "Comment",
+        "type": "string"
+      },
+      "isolation_type": {
+        "description": "Isolation Type",
+        "type": "string",
+        "enum": ["Full", "Selective"]
+      }
+    },
+    "required": ["machine_id", "comment"]
+  },
+  "results": {}
+}

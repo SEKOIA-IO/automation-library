@@ -1,0 +1,25 @@
+{
+  "name": "Stop and quarantine a file",
+  "description": "Stop and quarantine a file",
+  "uuid": "5d09d7b9-e2ae-5c30-8e37-9cf130b9b63f",
+  "docker_parameters": "StopAndQuarantineFileAction",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "machine_id": {
+        "description": "Machine ID",
+        "type": "string"
+      },
+      "comment": {
+        "description": "Comment",
+        "type": "string"
+      },
+      "sha1": {
+        "description": "SHA-1 hash of file to quarantine",
+        "type": "string"
+      }
+    },
+    "required": ["machine_id", "comment", "sha1"]
+  },
+  "results": {}
+}

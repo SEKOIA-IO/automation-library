@@ -1,0 +1,46 @@
+{
+  "name": "Push IOCs",
+  "description": "Push IOCs in the TI API of Microsoft Defender",
+  "uuid": "aac86ada-acb9-51ba-af6b-07b2cd6d35a1",
+  "docker_parameters": "PushIndicatorsAction",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "stix_objects_path": {
+        "description": "Filepath of the STIX objects fetched from the collection",
+        "type": "string"
+      },
+      "sekoia_base_url": {
+        "description": "[Optional] Sekoia base url, used to generate direct links to IOCs",
+        "default": "https://app.sekoia.io",
+        "type": "string"
+      },
+      "action": {
+        "description": "Action to apply",
+        "type": "string",
+        "enum": [
+          "Warn",
+          "Block",
+          "Audit",
+          "Alert",
+          "AlertAndBlock",
+          "BlockAndRemediate",
+          "Allowed"
+        ]
+      },
+      "severity": {
+        "description": "Severity",
+        "type": "string",
+        "enum": ["Informational", "Low", "Medium", "High"]
+      },
+      "generate_alert": {
+        "description": "Generate Alert?",
+        "type": "boolean"
+      }
+    },
+    "required": ["stix_objects_path", "action", "severity", "generate_alert"],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {}
+}
