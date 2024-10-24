@@ -1,0 +1,45 @@
+{
+    "uuid": "50fc3f07-ab5b-4dd6-a7ab-de86b31ebd44",
+    "name": "Create IOCs",
+    "description": "Create IOCs",
+    "docker_parameters": "harfanglab_create_iocs",
+    "arguments": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "stix_objects_path": {
+                "description": "Filepath of the STIX objects fetched from the collection",
+                "type": "string"
+            },
+            "sekoia_base_url": {
+                "description": "[Optional] Sekoia base url, used to generate direct links to IOCs",
+                "default": "https://app.sekoia.io",
+                "type": "string"
+            },
+            "source_id": {
+                "type": "string",
+                "description": "Source ID"
+            },
+            "block_on_agent":  {
+                "description": "Block on agent",
+                "type": "boolean"
+            },
+            "quarantine_on_agent":  {
+                "description": "Quarantine on agent",
+                "type": "boolean"
+            },
+            "detect_on_agent":  {
+                "description": "Endpoint detection",
+                "type": "boolean"
+            }
+        },
+        "required": [
+            "stix_objects_path",
+            "source_id",
+            "block_on_agent",
+            "quarantine_on_agent",
+            "detect_on_agent"
+        ]
+    },
+    "results": {}
+}

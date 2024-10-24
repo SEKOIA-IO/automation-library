@@ -8,9 +8,9 @@ from typing import Any, Optional, Type, TypeAlias
 
 import pytest
 import requests_mock
+
 from harfanglab.download_file_from_endpoint import DownloadFileFromEndpointAction
 from harfanglab.job_executor import JobExecutor
-
 
 JSONResponse: TypeAlias = dict[str, Any]
 

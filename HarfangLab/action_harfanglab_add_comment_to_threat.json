@@ -1,0 +1,25 @@
+{
+    "uuid": "99e720a6-9856-4d71-b190-357072100f88",
+    "name": "Add comment to Threat",
+    "description": "Add comment to Threat",
+    "docker_parameters": "harfanglab_add_comment_to_threat",
+    "arguments": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "Threat IDs",
+                "type": "string"
+            },
+            "comment": {
+                "description": "Comment to add",
+                "type": "string"
+            }
+        },
+        "required": [
+            "id",
+            "comment"
+        ]
+    },
+    "results": {}
+}

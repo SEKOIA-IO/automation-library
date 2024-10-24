@@ -1,0 +1,40 @@
+{
+    "uuid": "b87b9d40-2667-4792-ac93-2f35623cf3ab",
+    "name": "Update Threat status",
+    "description": "Update Threat status",
+    "docker_parameters": "harfanglab_update_threat_status",
+    "arguments": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "threat_ids": {
+                "description": "Threats IDs",
+                "type": "array",
+                "items": {
+                    "minimum": 1,
+                    "type": "integer"
+                }
+            },
+            "new_status": {
+                "description": "New status",
+                "type": "string",
+                "enum": [
+                    "closed",
+                    "false_positive",
+                    "investigating",
+                    "new"
+                ]
+            },
+            "update_by_query": {
+                "description": "Update by query",
+                "type": "boolean"
+            }
+        },
+        "required": [
+            "threat_ids",
+            "new_status",
+            "update_by_query"
+        ]
+    },
+    "results": {}
+}
