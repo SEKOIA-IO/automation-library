@@ -2,8 +2,10 @@ import time
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from typing import Any
 
 import orjson
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
@@ -31,6 +33,7 @@ class TehtrisEventConnector(Connector):
         super().__init__(*args, **kwargs)
         self.from_date = datetime.now(timezone.utc) - timedelta(minutes=1)
         self.fetch_events_limit = 100
+        self.events_cache: Cache = LRUCache(maxsize=1000)  # TODO: is it enough to have 1000 event ids in cache?
 
     @cached_property
     def client(self):
@@ -77,6 +80,21 @@ class TehtrisEventConnector(Connector):
             )
             return events
 
+    def _remove_duplicates(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        Remove duplicates events from the fetched events and update the cache with new ids.
+
+        Args:
+            events: list[dict[str, Any]]
+
+        Returns:
+            list[dict[str, Any]]:
+        """
+        result = [event for event in events if event["uid"] not in self.events_cache]
+        self.events_cache.update({event["uid"]: None for event in result})
+
+        return result
+
     def fetch_events(self) -> Generator[list, None, None]:
         has_more_message = True
         most_recent_date_seen = self.from_date
@@ -84,8 +102,11 @@ class TehtrisEventConnector(Connector):
 
         while has_more_message:
             # fetch events from the current context
-            next_events = self.__fetch_next_events(self.from_date, offset)
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(next_events))
+            fetched_events = self.__fetch_next_events(self.from_date, offset)
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(fetched_events))
+
+            # remove duplicates events from previous fetch
+            next_events = self._remove_duplicates(fetched_events)
 
             # if the number of fetched events equals the limit, additional events are remaining
             has_more_message = len(next_events) == self.fetch_events_limit
