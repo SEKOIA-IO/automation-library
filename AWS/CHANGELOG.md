@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-24 - 1.31.7
+
+### Fixed
+
+- Fix the parameter `skip_first` for the AWS VPC Flowlogs trigger and connector to not collect the CSV header
+
 ## 2024-09-20 - 1.31.6
 
 ### Changed
