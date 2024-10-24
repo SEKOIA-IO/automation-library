@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-24 - 1.25.0
+
+### Added
+
+- Added action to add comment to a threat
+- Added action to update threat status
+- Added action to create IOCs
 
 ## 2024-10-17 - 1.24.0
 
