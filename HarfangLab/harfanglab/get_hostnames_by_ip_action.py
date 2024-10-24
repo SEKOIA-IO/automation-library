@@ -33,7 +33,7 @@ class GetHostnamesByIP(Action):
         # Check if data is a dictionary with a key "results" or directly a list
         result = data.get("results") if isinstance(data, dict) else data
 
-        hostnames = [HostnameEntry(**entry) for entry in result]   # type: ignore
+        hostnames = [HostnameEntry(**entry) for entry in result]  # type: ignore
         if get_only_last_seen:
             most_recent_hostname = max(hostnames, key=lambda x: x.lastseen)
             hostnames_result = HostnamesResult(hostnames=[most_recent_hostname])
