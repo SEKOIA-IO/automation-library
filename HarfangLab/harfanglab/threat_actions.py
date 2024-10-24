@@ -1,4 +1,4 @@
-from HarfangLab.harfanglab.base import HarfanglabAction
+from harfanglab.base import HarfanglabAction
 
 base_url = "/api/data"
 

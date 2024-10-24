@@ -90,7 +90,7 @@ class CreateIOCs(Action):
         return results
 
     def delete_indicator_by_ids(self, indicator_ids: list[str]) -> None:
-        self.log(f"Removing {len(indicator_ids)} indicators from HarfangLab")
+        self.log(f"Removing {len(indicator_ids)} indicators from HarfangLab", level="info")
 
         for indicator_id in indicator_ids:
             self.client.delete(f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/{indicator_id}")
@@ -112,9 +112,9 @@ class CreateIOCs(Action):
 
     def create_indicators(self, indicators: list) -> None:
         if len(indicators) > 0:
-            self.log(f"Pushing {len(indicators)} new indicators to HarfangLab")
+            self.log(f"Pushing {len(indicators)} new indicators to HarfangLab", level="info")
             for ioc in indicators:
-                response = self.client.post(
+                self.client.post(
                     f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/",
                     json=ioc,
                 )
@@ -126,11 +126,11 @@ class CreateIOCs(Action):
         stix_objects = self.json_argument("stix_objects", arguments)
         if stix_objects is None or len(stix_objects) == 0:
             # Cleanup expired indicators before proceeding with adding new ones
-            self.log("Received stix_objects were empty")
+            self.log("Received stix_objects were empty", level="info")
 
         indicators = self.get_valid_indicators(stix_objects, args=arguments)
         if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
-            self.log("Received indicators were not valid and/or not supported")
+            self.log("Received indicators were not valid and/or not supported", level="info")
             return
 
         # Remove revoked and expired indicators before proceeding with adding new ones
