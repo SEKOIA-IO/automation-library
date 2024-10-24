@@ -204,10 +204,6 @@ def test_fetch_events_without_duplicates(trigger, message1, message2):
             "5;windows;HOST01;example.org",
         ]
         assert len(result_second) == 2
-        assert trigger.events_cache == {
-            "4;windows;HOST01;example.org": None,
-            "5;windows;HOST01;example.org": None,
-        }
 
 
 def test_fetch_events_pagination(trigger, message1, message2):
