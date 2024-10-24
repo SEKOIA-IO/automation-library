@@ -1,6 +1,7 @@
 {
     "uuid": "50fc3f07-ab5b-4dd6-a7ab-de86b31ebd44",
     "name": "Create IOCs",
+    "description": "Create IOCs",
     "docker_parameters": "harfanglab_create_iocs",
     "arguments": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
