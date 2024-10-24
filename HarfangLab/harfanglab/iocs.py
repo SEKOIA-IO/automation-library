@@ -50,8 +50,9 @@ class CreateIOCs(Action):
         Transform the IOC from the STIX format to the payload expected by HarfangLab
         """
 
-        seen_values = defaultdict(list)
-        results = {"valid": [], "revoked": [], "expired": []}
+        seen_values: defaultdict[str, list[str]] = defaultdict(list)
+        results: dict[str, Any] = {"valid": [], "revoked": [], "expired": []}
+
         for object in stix_objects:
             # Extract value and type from pattern
             self.log(message=f"object in stix_objects {str(object)}", level="debug")
