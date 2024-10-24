@@ -5,11 +5,11 @@
 # natives
 import requests_mock
 
-# third parties
-from harfanglab.models import HostnamesResult, HostnameEntry
-
 # internals
 from harfanglab.get_hostnames_by_ip_action import GetHostnamesByIP
+
+# third parties
+from harfanglab.models import HostnameEntry, HostnamesResult
 
 
 def test_get_hostnames_by_ip():

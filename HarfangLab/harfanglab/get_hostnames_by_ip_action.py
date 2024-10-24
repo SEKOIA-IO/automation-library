@@ -5,7 +5,7 @@ import requests
 from sekoia_automation.action import Action
 
 # third parties
-from harfanglab.models import HostnamesResult, HostnameEntry
+from harfanglab.models import HostnameEntry, HostnamesResult
 
 
 class GetHostnamesByIP(Action):
