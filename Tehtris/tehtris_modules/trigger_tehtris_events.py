@@ -91,7 +91,6 @@ class TehtrisEventConnector(Connector):
             list[dict[str, Any]]:
         """
         result = [event for event in events if event["uid"] not in self.events_cache]
-        self.events_cache.clear()
         self.events_cache.update({event["uid"]: None for event in result})
 
         return result
