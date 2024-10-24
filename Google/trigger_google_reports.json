@@ -27,7 +27,10 @@
           "token",
           "user_accounts",
           "keep",
-          "vault"
+          "vault",
+          "rules",
+          "saml",
+          "context_aware_access"
         ],
         "default": "drive"
       },
