@@ -6,10 +6,14 @@ from typing import Any
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
+from requests import Response
 from sekoia_automation.action import Action
 
 from .client import ApiClient
 from .helpers import stix_to_indicators
+from .logging import get_logger
+
+logger = get_logger()
 
 
 class CreateIOCs(Action):
@@ -29,6 +33,42 @@ class CreateIOCs(Action):
     @cached_property
     def client(self):
         return ApiClient(instance_url=self.module.configuration["url"], token=self.module.configuration["api_token"])
+
+    def _handle_response_error(self, response: Response) -> None:
+        if not response.ok:
+            logger.error(
+                "Failed request to HarfangLab API",
+                status_code=response.status_code,
+                reason=response.reason,
+                error=response.content,
+            )
+
+            message = f"Request to HarfangLab API failed with status {response.status_code} - {response.reason}"
+            self.log(message=message, level="error")
+            response.raise_for_status()
+
+    def api_delete_indicator(self, indicator_id: str):
+        response = self.client.delete(
+            f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/{indicator_id}", timeout=60
+        )
+        self._handle_response_error(response)
+        return response
+
+    def api_search_indicator(self, indicator_value: str):
+        response = self.client.get(
+            f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/",
+            params={"search": indicator_value},
+            timeout=60,
+        )
+        self._handle_response_error(response)
+        return response
+
+    def api_create_indicator(self, indicator: dict[str, Any]):
+        response = self.client.post(
+            f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/", json=indicator, timeout=60
+        )
+        self._handle_response_error(response)
+        return response
 
     def get_reference_url(self, id) -> str:
         return urljoin(self.sekoia_base_url, f"intelligence/objects/{id}")
@@ -93,17 +133,14 @@ class CreateIOCs(Action):
         self.log(f"Removing {len(indicator_ids)} indicators from HarfangLab", level="info")
 
         for indicator_id in indicator_ids:
-            self.client.delete(f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/{indicator_id}")
+            self.api_delete_indicator(indicator_id=indicator_id)
 
     def remove_indicators(self, indicators: list) -> None:
         ids_to_remove = []
 
         if len(indicators) > 0:
             for indicator in indicators:
-                response = self.client.get(
-                    f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/",
-                    params={"search": indicator["value"]},
-                )
+                response = self.api_search_indicator(indicator_value=indicator["value"])
                 found_ids = [item["id"] for item in response.json().get("results", [])]
                 ids_to_remove.extend(found_ids)
 
@@ -114,10 +151,7 @@ class CreateIOCs(Action):
         if len(indicators) > 0:
             self.log(f"Pushing {len(indicators)} new indicators to HarfangLab", level="info")
             for ioc in indicators:
-                self.client.post(
-                    f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/",
-                    json=ioc,
-                )
+                self.api_create_indicator(indicator=ioc)
 
     def run(self, arguments: Any) -> Any:
         if arguments.get("sekoia_base_url"):
