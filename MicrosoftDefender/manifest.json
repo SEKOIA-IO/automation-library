@@ -19,18 +19,18 @@
         ]
       },
       "app_id": {
-        "title": "App Id",
-        "description": "App ID",
+        "title": "Application (Client) ID",
+        "description": "The identifier of the Azure Application",
         "type": "string"
       },
       "app_secret": {
-        "title": "App Secret",
-        "description": "App Secret",
+        "title": "Client Secret",
+        "description": "The value of the secret associated to the Azure Application",
         "type": "string"
       },
       "tenant_id": {
-        "title": "Tenant Id",
-        "description": "Tenant ID",
+        "title": "Directory (tenant) IDd",
+        "description": "The identifier of the Azure Directory",
         "type": "string"
       }
     },
