@@ -7,10 +7,10 @@ from tenacity import retry, wait_exponential, stop_after_attempt
 
 STATUS_UUIDS = {
     "PENDING": "2efc4930-1442-4abb-acf2-58ba219a4fd0",
-    "ACKNOWLEDGE": "8f206505-af6d-433e-93f4-775d46dc7d0f",
+    "ACKNOWLEDGED": "8f206505-af6d-433e-93f4-775d46dc7d0f",
     "ONGOING": "1f2f88d5-ff5b-48bf-bbbc-00c2fff82d9f",
-    "REJECT": "4f68da89-38e0-4703-a6ab-652f02bdf24e",
-    "CLOSE": "1738b1c1-767d-489e-bada-19176621a007",
+    "REJECTED": "4f68da89-38e0-4703-a6ab-652f02bdf24e",
+    "CLOSED": "1738b1c1-767d-489e-bada-19176621a007",
 }
 
 

@@ -18,10 +18,10 @@
         "in": "body",
         "enum": [
           "Pending",
-          "Acknowledge",
+          "Acknowledged",
           "Ongoing",
-          "Reject",
-          "Close"
+          "Rejected",
+          "Closed"
         ]
       },
       "comment": {
