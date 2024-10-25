@@ -13,6 +13,7 @@ from microsoftdefender_modules.action_update_alert import UpdateAlertAction
 if __name__ == "__main__":
     module = MicrosoftDefenderModule()
     module.register(UpdateAlertAction, "UpdateAlertAction")
+    module.register(UpdateAlertAction, "AddCommentToAlert")
     module.register(GetMachineAction, "GetMachineAction")
     module.register(ScanMachineAction, "ScanMachineAction")
     module.register(PushIndicatorsAction, "PushIndicatorsAction")
