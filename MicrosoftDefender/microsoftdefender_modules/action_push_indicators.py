@@ -47,8 +47,8 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
     def find_indicators_by_value(
         self, values: list[str], batch_max_items: int = 6, batch_max_items_length: int = 5000
     ) -> list[dict[str, Any]]:
-        batches = []
-        current_batch = []
+        batches: list[list[str]] = []
+        current_batch: list[str] = []
         current_len = 0
 
         # Divide indicators in batches
@@ -85,7 +85,7 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         found_indicators = self.find_indicators_by_value(
             values=[indicator["indicatorValue"] for indicator in indicators]
         )
-        ids_to_remove = [ind.get("id") for ind in found_indicators]
+        ids_to_remove = [ind["id"] for ind in found_indicators]
 
         if len(ids_to_remove) > 0:
             self.delete_indicators_by_ids(indicators_ids=ids_to_remove)
