@@ -121,7 +121,7 @@ class CreateIOCs(Action):
                     current_datetime = datetime.now(timezone.utc)
                     valid_until_datetime = isoparse(valid_until)
                     if valid_until_datetime >= current_datetime:
-                        result["expired"].append(result)
+                        results["expired"].append(result)
                         continue
 
                 seen_values[ioc_type].append(ioc_value)
