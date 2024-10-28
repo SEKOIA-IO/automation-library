@@ -1,0 +1,41 @@
+{
+  "name": "Search in AD",
+  "description": "Search in AD",
+  "uuid": "4504636c-3d50-46ce-9e91-146aafa356b2",
+  "docker_parameters": "search-ad",
+  "arguments": {
+    "title": "SearchArguments",
+    "type": "object",
+    "properties": {
+      "search_filter": {
+        "title": "Search Filter",
+        "description": "LDAP filter to run your query on  see https://ldap3.readthedocs.io/en/latest/searches.html#the-ldap-filter)",
+        "type": "string"
+      },
+      "basedn": {
+        "title": "BaseDN",
+        "description": "The starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
+        "type": "string"
+      },
+      "attributes": {
+        "title": "Attributes",
+        "description": "Attributes you want to retrieve (default will be ALL) ",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "results": {
+        "type": "array"
+      }
+    },
+    "required": [],
+    "title": "Results",
+    "type": "object"
+  }
+}
