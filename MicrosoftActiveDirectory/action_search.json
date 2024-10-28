@@ -20,10 +20,16 @@
       "attributes": {
         "title": "Attributes",
         "description": "Attributes you want to retrieve (default will be ALL) ",
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {"type": "null"}
+        ],
+        "default": null
       }
     }
   },
