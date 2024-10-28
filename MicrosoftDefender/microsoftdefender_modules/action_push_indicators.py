@@ -29,6 +29,13 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         super().__init__(*args, **kwargs)
         self.sekoia_base_url = self.DEFAULT_SEKOIA_BASE_URL
 
+    def list_indicators(self, q: str | None = None) -> Response:
+        url = urljoin(self.client.base_url, "api/indicators")
+        if q:
+            url = url + "?$filter=" + q
+
+        return self.client.get(url)
+
     def import_indicators(self, indicators: list[dict[str, Any]]) -> Response:
         url = urljoin(self.client.base_url, "api/indicators/import")
         return self.client.post(url, json={"Indicators": indicators})
@@ -37,21 +44,47 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         url = urljoin(self.client.base_url, "api/indicators/BatchDelete")
         return self.client.post(url, json={"IndicatorIds": indicators_ids})
 
-    def find_indicators_by_value(self, values: list[str]) -> Response:
-        q_values = ",".join(f"'{item}'" for item in values)
-        q = f"indicatorValue+in+[{q_values}]"
+    def find_indicators_by_value(
+        self, values: list[str], batch_max_items: int = 6, batch_max_items_length: int = 5000
+    ) -> list[dict[str, Any]]:
+        batches = []
+        current_batch = []
+        current_len = 0
 
-        request_url = urljoin(self.client.base_url, f"api/indicators/?$filter={q}")
+        # Divide indicators in batches
+        for val in values:
+            item_length = len(val)
+            if (len(current_batch) + 1 > batch_max_items) or (current_len + item_length > batch_max_items_length):
+                batches.append(current_batch)
+                current_batch = []
+                current_len = 0
 
-        return self.client.get(request_url)
+            current_batch.append(val)
+            current_len += item_length
+
+        if len(current_batch) > 0:
+            batches.append(current_batch)
+
+        # Generate request for each batch
+        result = []
+        for batch in batches:
+            q_values = ",".join(f"'{item}'" for item in batch)
+            q = f"indicatorValue+in+[{q_values}]"
+
+            response = self.list_indicators(q)
+            self.process_response(response)
+
+            result.extend(response.json().get("value", []))
+
+        return result
 
     def remove_indicators(self, indicators: list[dict[str, Any]]) -> None:
         if len(indicators) == 0:
             return
 
-        response = self.find_indicators_by_value(values=[indicator["indicatorValue"] for indicator in indicators])
-
-        found_indicators = response.json().get("value", [])
+        found_indicators = self.find_indicators_by_value(
+            values=[indicator["indicatorValue"] for indicator in indicators]
+        )
         ids_to_remove = [ind.get("id") for ind in found_indicators]
 
         if len(ids_to_remove) > 0:
