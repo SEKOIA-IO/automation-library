@@ -29,13 +29,6 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         super().__init__(*args, **kwargs)
         self.sekoia_base_url = self.DEFAULT_SEKOIA_BASE_URL
 
-    def list_indicators(self, q: str | None = None) -> Response:
-        url = urljoin(self.client.base_url, "api/indicators")
-        if q:
-            url = url + "?$filter=" + q
-
-        return self.client.get(url)
-
     def import_indicators(self, indicators: list[dict[str, Any]]) -> Response:
         url = urljoin(self.client.base_url, "api/indicators/import")
         return self.client.post(url, json={"Indicators": indicators})
@@ -44,17 +37,22 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         url = urljoin(self.client.base_url, "api/indicators/BatchDelete")
         return self.client.post(url, json={"IndicatorIds": indicators_ids})
 
+    def find_indicators_by_value(self, values: list[str]) -> Response:
+        q_values = ",".join(f"'{item}'" for item in values)
+        q = f"indicatorValue+in+[{q_values}]"
+
+        request_url = urljoin(self.client.base_url, f"api/indicators/?$filter={q}")
+
+        return self.client.get(request_url)
+
     def remove_indicators(self, indicators: list[dict[str, Any]]) -> None:
-        ids_to_remove: list[Any] = []
+        if len(indicators) == 0:
+            return
 
-        for indicator in indicators:
-            q = f"indicatorValue+eq+'{indicator['indicatorValue']}'"
-            response = self.list_indicators(q=q)
-            self.process_response(response)
+        response = self.find_indicators_by_value(values=[indicator["indicatorValue"] for indicator in indicators])
 
-            found_indicators = response.json().get("value", [])
-            if len(found_indicators) > 0:
-                ids_to_remove.extend(ind.get("id") for ind in found_indicators)
+        found_indicators = response.json().get("value", [])
+        ids_to_remove = [ind.get("id") for ind in found_indicators]
 
         if len(ids_to_remove) > 0:
             self.delete_indicators_by_ids(indicators_ids=ids_to_remove)
