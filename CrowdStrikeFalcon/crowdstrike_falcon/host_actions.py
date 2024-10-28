@@ -1,8 +1,7 @@
-from abc import ABC
 from typing import Any
 
 from crowdstrike_falcon.action import CrowdstrikeAction
-from crowdstrike_falcon.client import HostAction
+from crowdstrike_falcon.client.schemas import HostAction
 
 
 class CrowdstrikeHostAction(CrowdstrikeAction):
