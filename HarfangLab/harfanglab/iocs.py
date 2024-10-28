@@ -120,7 +120,7 @@ class CreateIOCs(Action):
                 if valid_until:
                     current_datetime = datetime.now(timezone.utc)
                     valid_until_datetime = isoparse(valid_until)
-                    if valid_until_datetime >= current_datetime:
+                    if valid_until_datetime < current_datetime:
                         results["expired"].append(result)
                         continue
 
