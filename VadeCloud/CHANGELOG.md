@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-29 - 1.5.1
+
+### Fixed
+
+- Stop the trigger if it fail to authenticate 
+
 ## 2024-05-28 - 1.5.0
 
 ### Changed
