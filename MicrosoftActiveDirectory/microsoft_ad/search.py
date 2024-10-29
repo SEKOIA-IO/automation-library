@@ -1,6 +1,7 @@
 from .base import MicrosoftADAction
 from pydantic import BaseModel
 from typing import List
+from ldap3 import ALL_ATTRIBUTES
 
 
 class SearchArguments(BaseModel):
@@ -14,7 +15,7 @@ class SearchAction(MicrosoftADAction):
     description = "Search in your AD"
 
     def run(self, arguments: SearchArguments) -> dict:
-        attributes = arguments.attributes or "ALL_ATTRIBUTES"
+        attributes = arguments.attributes or ALL_ATTRIBUTES
         try:
             self.client.search(
                 search_base=arguments.basedn, search_filter=arguments.search_filter, attributes=attributes
