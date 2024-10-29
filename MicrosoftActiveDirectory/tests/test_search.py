@@ -1,5 +1,5 @@
-from search_in_ad_modules.base import MicrosoftADModule, MicrosoftADAction
-from search_in_ad_modules.search import SearchAction
+from microsoft_ad.base import MicrosoftADModule, MicrosoftADAction
+from microsoft_ad.search import SearchAction
 from unittest.mock import patch
 import pytest
 
