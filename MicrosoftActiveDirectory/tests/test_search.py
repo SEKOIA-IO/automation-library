@@ -21,6 +21,7 @@ def configured_action(action: MicrosoftADAction):
 def one_user_dn():
     return [["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com", 512]]
 
+
 def test_search():
     username = "Mick Lennon"
     search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
@@ -39,4 +40,3 @@ def test_search():
             results = action.run({"search_filter": search, "basedn": basedn})
 
             assert results is not None
-

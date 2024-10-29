@@ -11,5 +11,5 @@ if __name__ == "__main__":
     module.register(EnableUserAction, "EnableUserAction")
     module.register(DisableUserAction, "DisableUserAction")
     module.register(ResetUserPasswordAction, "ResetUserPasswordAction")
-    module.register(SearchAction, "search-ad")    
+    module.register(SearchAction, "search-ad")
     module.run()
