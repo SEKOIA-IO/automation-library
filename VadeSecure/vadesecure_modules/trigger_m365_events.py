@@ -60,9 +60,10 @@ class M365EventsTrigger(Trigger):
 
         except requests.exceptions.HTTPError as error:
             response = error.response
+            level = "critical" if response.status_code in [401, 403] else "error"
             self.log(
                 f"OAuth2 server responded {response.status_code} - {response.reason}",
-                level="error",
+                level=level,
             )
             raise error
 
