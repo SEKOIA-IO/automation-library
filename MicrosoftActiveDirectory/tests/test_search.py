@@ -62,3 +62,18 @@ def test_search_with_attributes():
             results = action.run({"search_filter": search, "basedn": basedn, "attributes": attributes})
 
             assert results is not None
+
+def test_search_in_base_exception():
+
+    username = "Mick Lennon"
+    search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
+    basedn = "dc=example,dc=com"
+    attributes = ["name"]
+    action = configured_action(SearchAction)
+
+    with patch('microsoft_ad.search.SearchAction.run', side_effect=Exception("mocked error")):
+        with pytest.raises(Exception) as exc_info:
+            action.run({"search_filter": search, "basedn": basedn, "attributes": attributes})
+        
+        # Verify the exception message
+        assert str(exc_info.value) == f"Failed to search in this base {basedn}"
