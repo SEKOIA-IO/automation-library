@@ -22,7 +22,7 @@ def one_user_dn():
     return [["CN=integration_test,CN=Users,DC=lab,DC=test,DC=com", 512]]
 
 
-def test_search():
+def test_search_no_attributes():
     username = "Mick Lennon"
     search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
     basedn = "dc=example,dc=com"
@@ -38,5 +38,27 @@ def test_search():
             mock_client.result.get.return_value = "success"
 
             results = action.run({"search_filter": search, "basedn": basedn})
+
+            assert results is not None
+
+
+def test_search_with_attributes():
+    username = "Mick Lennon"
+    search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
+    basedn = "dc=example,dc=com"
+    attributes = ["name"]
+
+    action = configured_action(SearchAction)
+    response = True
+
+    with patch(
+        "microsoft_ad.search.SearchAction.run",
+        return_value=one_user_dn,
+    ):
+        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+            mock_client.modify.return_value = response
+            mock_client.result.get.return_value = "success"
+
+            results = action.run({"search_filter": search, "basedn": basedn, "attributes": attributes})
 
             assert results is not None
