@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import Any
 from urllib.parse import urljoin
 
+import requests
 from dateutil.parser import isoparse
 from requests import Response
 from sekoia_automation.action import Action
@@ -47,14 +48,14 @@ class CreateIOCs(Action):
             self.log(message=message, level="error")
             response.raise_for_status()
 
-    def api_delete_indicator(self, indicator_id: str):
+    def api_delete_indicator(self, indicator_id: str) -> Response:
         response = self.client.delete(
             f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/{indicator_id}", timeout=60
         )
         self._handle_response_error(response)
         return response
 
-    def api_search_indicator(self, indicator_value: str):
+    def api_search_indicator(self, indicator_value: str) -> Response:
         response = self.client.get(
             f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/",
             params={"search": indicator_value},
@@ -63,7 +64,7 @@ class CreateIOCs(Action):
         self._handle_response_error(response)
         return response
 
-    def api_create_indicator(self, indicator: dict[str, Any]):
+    def api_create_indicator(self, indicator: dict[str, Any]) -> Response:
         response = self.client.post(
             f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/", json=indicator, timeout=60
         )
@@ -151,7 +152,24 @@ class CreateIOCs(Action):
         if len(indicators) > 0:
             self.log(f"Pushing {len(indicators)} new indicators to HarfangLab", level="info")
             for ioc in indicators:
-                self.api_create_indicator(indicator=ioc)
+                try:
+                    self.api_create_indicator(indicator=ioc)
+
+                except requests.HTTPError as error:
+                    if error.response.status_code == 400:
+                        # we could get this error if the ioc rule with
+                        # this type, value and source already exists
+                        if "already exists" in error.response.text:
+                            self.log("Ioc rule with this Type, Value and Source already exists.", level="info")
+                            logger.info(
+                                "Ioc rule with this Type, Value and Source already exists.",
+                                type=ioc["type"],
+                                value=ioc["value"],
+                                source=ioc["source_id"],
+                            )
+                            continue
+
+                    raise
 
     def run(self, arguments: Any) -> Any:
         if arguments.get("sekoia_base_url"):
@@ -163,7 +181,7 @@ class CreateIOCs(Action):
             self.log("Received stix_objects were empty", level="info")
 
         indicators = self.get_valid_indicators(stix_objects, args=arguments)
-        if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
+        if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0 and len(indicators["expired"]) == 0:
             self.log("Received indicators were not valid and/or not supported", level="info")
             return
 
