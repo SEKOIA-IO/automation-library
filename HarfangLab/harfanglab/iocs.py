@@ -55,10 +55,10 @@ class CreateIOCs(Action):
         self._handle_response_error(response)
         return response
 
-    def api_search_indicator(self, indicator_value: str) -> Response:
+    def api_search_indicator(self, indicator_value: str, source_id: str) -> Response:
         response = self.client.get(
             f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/",
-            params={"search": indicator_value},
+            params={"search": indicator_value, "source_id": source_id},
             timeout=60,
         )
         self._handle_response_error(response)
@@ -141,7 +141,9 @@ class CreateIOCs(Action):
 
         if len(indicators) > 0:
             for indicator in indicators:
-                response = self.api_search_indicator(indicator_value=indicator["value"])
+                response = self.api_search_indicator(
+                    indicator_value=indicator["value"], source_id=indicator["source_id"]
+                )
                 found_ids = [item["id"] for item in response.json().get("results", [])]
                 ids_to_remove.extend(found_ids)
 

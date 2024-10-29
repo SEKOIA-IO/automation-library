@@ -10,10 +10,10 @@ from typing import Any, TypeAlias
 
 import requests
 import tenacity
-from harfanglab.job_executor import JobExecutor
-from harfanglab.models import JobAction, JobTarget
 from tenacity import retry_if_exception_message, stop_after_delay, wait_exponential
 
+from harfanglab.job_executor import JobExecutor
+from harfanglab.models import JobAction, JobTarget
 
 StrOrUUID4: TypeAlias = str | uuid.UUID
 

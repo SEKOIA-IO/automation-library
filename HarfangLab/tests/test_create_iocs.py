@@ -123,6 +123,12 @@ def test_creating_iocs():
             },
         )
 
+        mock.register_uri(
+            "GET",
+            "https://test.hurukau.io/api/data/threat_intelligence/IOCRule/?search=77.91.78.118",
+            json={"count": 0, "next": None, "previous": None, "results": []},
+        )
+
         action.run(
             {
                 "stix_objects": [STIX_OBJECT_IPv4],
