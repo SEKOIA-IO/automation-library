@@ -19,10 +19,10 @@ class Checkpoint:
                 most_recent_date_seen_str = self._context.read_text()
                 most_recent_date_seen = isoparse(most_recent_date_seen_str)
 
-                # check if the date is older than the 30 days ago
-                thirty_days_ago = now - timedelta(days=30)
-                if most_recent_date_seen < thirty_days_ago:
-                    most_recent_date_seen = thirty_days_ago
+                # check if the date is older than the 7 days ago
+                one_week_ago = now - timedelta(days=7)
+                if most_recent_date_seen < one_week_ago:
+                    most_recent_date_seen = one_week_ago
             except Exception:
                 # if not defined, set the most recent date seen to now
                 most_recent_date_seen = now
