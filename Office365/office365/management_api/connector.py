@@ -139,8 +139,5 @@ class Office365Connector(AsyncConnector):
         Then loop every 60 seconds, pull events using the Office 365 API and forward them.
         When stopped, the clear_cache is stopped and joined as well so that we wait for it to end gracefully.
         """
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        loop = asyncio.get_event_loop()
         loop.run_until_complete(self.collect_events())
-
-        loop.close()
