@@ -64,7 +64,7 @@ def message(event_id: int) -> dict[str, Any]:
         "uuid__": "3be682e9-5568-4dbf-8e2d-5b36159945da",
         "path": "C:\\Windows\\System32\\cmd.exe",
         "tag": "YBE_PDT_WIN",
-        "uid": f"{event_id};windows;HOST01;example.org",
+        "uid": "65470575-d8d5-4c54-80ca-a5e33c7e3dbe;windows;HOST01;example.org",
         "os__": "windows",
         "os_architecture__": "x86_64",
         "hostname__": "HOST01",
@@ -178,16 +178,11 @@ def test_fetch_events_without_duplicates(trigger, message1, message2):
 
         result_first = next(trigger.fetch_events())
         assert [event["id"] for event in result_first] == [1, 2, 3]
-        assert [event["uid"] for event in result_first] == [
-            "1;windows;HOST01;example.org",
-            "2;windows;HOST01;example.org",
-            "3;windows;HOST01;example.org",
-        ]
 
         assert trigger.events_cache == {
-            "1;windows;HOST01;example.org": None,
-            "2;windows;HOST01;example.org": None,
-            "3;windows;HOST01;example.org": None,
+            1: None,
+            2: None,
+            3: None,
         }
 
         mock.get(
@@ -199,10 +194,6 @@ def test_fetch_events_without_duplicates(trigger, message1, message2):
         result_second = next(trigger.fetch_events())
 
         assert [event["id"] for event in result_second] == [4, 5]
-        assert [event["uid"] for event in result_second] == [
-            "4;windows;HOST01;example.org",
-            "5;windows;HOST01;example.org",
-        ]
         assert len(result_second) == 2
 
 
