@@ -12,17 +12,10 @@
         "type": "string",
         "in": "path"
       },
-      "status": {
+      "action_uuid": {
         "type": "string",
-        "description": "Title of the status to update the alert to",
-        "in": "body",
-        "enum": [
-          "Pending",
-          "Acknowledged",
-          "Ongoing",
-          "Rejected",
-          "Closed"
-        ]
+        "description": "UUID of the action to trigger",
+        "in": "body"
       },
       "comment": {
         "type": "string",
