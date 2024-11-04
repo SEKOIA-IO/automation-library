@@ -53,9 +53,9 @@ def test_checkpoint_greater_than_30_days(symphony_storage, checkpoint, intake_ke
         mock_datetime.now.return_value = now
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        # Timedelta is sligthly less than 30 days since a few microseconds elapsed between `now`
+        # Timedelta is sligthly less than 7 days since a few microseconds elapsed between `now`
         # and the moment `last_pull_date` is generated
-        assert (now - checkpoint.offset).days == 30
+        assert (now - checkpoint.offset).days == 7
 
 
 def test_checkpoint_save_last_date(symphony_storage, checkpoint, intake_key):
