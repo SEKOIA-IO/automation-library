@@ -8,6 +8,16 @@ PatchAlert = type(
     {"verb": "patch", "endpoint": base_url + "alerts/{uuid}", "query_parameters": []},
 )
 
+TriggerActionOnAlertWorkflow = type(
+    "TriggerActionOnAlertWorkflow",
+    (GenericAPIAction,),
+    {
+        "verb": "patch",
+        "endpoint": base_url + "alerts/{uuid}/workflow",
+        "query_parameters": [],
+    },
+)
+
 CreateNewIncident = type(
     "CreateNewIncident",
     (GenericAPIAction,),
