@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-04 - 2.18.1
+
+### Fixed
+
+- Reduce to 7 days the catch back in the past
+
 ## 2024-10-30 - 2.18.0
 
 ### Changed
