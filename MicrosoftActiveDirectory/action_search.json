@@ -36,10 +36,21 @@
   "results": {
     "type": "object",
     "properties": {
-      "results": {
+      "search_result": {
         "type": "array",
         "items": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "type": {
+              "type": "string"
+            }
+          }
         }
       }
     }

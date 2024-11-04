@@ -23,4 +23,4 @@ class SearchAction(MicrosoftADAction):
         except:
             raise Exception(f"Failed to search in this base {arguments.basedn}")
 
-        return self.client.response
+        return {"search_result": self.client.response}
