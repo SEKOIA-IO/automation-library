@@ -133,7 +133,11 @@ def mock_shodan_get_host_api(mock_shodan_get_host_api_response):
 
 def test_query_shodan(mock_shodan_api):
     shodan = GetShodanHostSearch()
-    shodan.module.configuration = {"key": "1", "base_url": "https://api.shodan.io", "api_key": "foo"}
+    shodan.module.configuration = {
+        "key": "1",
+        "base_url": "https://api.shodan.io",
+        "api_key": "foo",
+    }
     results: dict = shodan.run({"query": "Server:%20Burp%20Collaborator"})
     assert isinstance(orjson.dumps(results), bytes)
     assert len(results["matches"]) == 100

@@ -1,6 +1,11 @@
 import time
+from posixpath import join as urljoin
+
+import requests
 
 from sekoia_automation.action import GenericAPIAction
+from sekoia_automation.account_validator import AccountValidator
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from shodan.helpers import sanitize_node
 
@@ -107,3 +112,12 @@ class GetDNSReverse(ShodanAPIAction):
         """Adds concatenated ips arguments to path."""
         path = super().get_url(arguments)
         return f'{path}&ips={",".join(arguments.pop("ips"))}'
+
+
+class AccountValidation(AccountValidator):
+    @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=1, max=30))
+    def validate(self) -> bool:
+        base_url = self.module.configuration.get("base_url", "https://api.shodan.io/")
+        api_key = self.module.configuration["api_key"]
+        response = requests.get(urljoin(base_url, f"account/profile?key={api_key}"))
+        return response.ok
