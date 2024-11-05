@@ -144,7 +144,11 @@ class Office365Connector(AsyncConnector):
         Then loop every 60 seconds, pull events using the Office 365 API and forward them.
         When stopped, the clear_cache is stopped and joined as well so that we wait for it to end gracefully.
         """
+        self.log(message="Office365 Trigger has started", level="info")
+
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
         loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
         loop.run_until_complete(self.collect_events())
+
+        self.log(message="Office365 Trigger has stopped", level="info")
