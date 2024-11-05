@@ -1,16 +1,14 @@
 import asyncio
 import json
 import os
+import signal
 import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from pathlib import Path
-from time import sleep
 
-from prometheus_client import Counter, Histogram
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.storage import get_data_path
+from sekoia_automation.connector import Connector
 
 from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
@@ -28,6 +26,13 @@ class Office365Connector(AsyncConnector):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("OFFICE365_BATCH_SIZE", 10000))
         self.frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
+
+    async def shutdown(self) -> None:
+        """
+        Shutdown the connector
+        """
+        super(Connector, self).stop()
+        await self._session.close()
 
     @cached_property
     def client(self) -> Office365API:
@@ -131,7 +136,7 @@ class Office365Connector(AsyncConnector):
 
         await self.client.close()
 
-    def run(self):
+    def run(self):  # pragma: no cover
         """Main execution thread
 
         It starts by creating and launching the clear_cache subthread
@@ -139,5 +144,11 @@ class Office365Connector(AsyncConnector):
         Then loop every 60 seconds, pull events using the Office 365 API and forward them.
         When stopped, the clear_cache is stopped and joined as well so that we wait for it to end gracefully.
         """
+        self.log(message="Office365 Trigger has started", level="info")
+
         loop = asyncio.get_event_loop()
+        loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
+        loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
         loop.run_until_complete(self.collect_events())
+
+        self.log(message="Office365 Trigger has stopped", level="info")
