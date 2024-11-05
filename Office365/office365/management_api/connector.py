@@ -127,7 +127,7 @@ class Office365Connector(AsyncConnector):
 
         await self.client.close()
 
-    def run(self):
+    def run(self):  # pragma: no cover
         """Main execution thread
 
         It starts by creating and launching the clear_cache subthread
