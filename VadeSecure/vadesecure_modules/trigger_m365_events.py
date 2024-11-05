@@ -4,13 +4,9 @@ import uuid
 from typing import Any, Deque, Generator, Sequence
 
 import orjson
-import requests
-from sekoia_automation.storage import PersistentJSON
 
-from vadesecure_modules import VadeSecureModule
 from vadesecure_modules.m365_mixin import EventType, M365Mixin
 from vadesecure_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-from vadesecure_modules.models import VadeSecureTriggerConfiguration
 
 
 class M365EventsTrigger(M365Mixin):
@@ -24,16 +20,6 @@ class M365EventsTrigger(M365Mixin):
       hence last_message pointer is lost when the trigger stops.
     - A margin of 300sec is added to the expiration date of oauth2 token.
     """
-
-    module: VadeSecureModule
-    configuration: VadeSecureTriggerConfiguration
-    _http_session: requests.Session | None = None
-
-    def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
-        super().__init__(*args, **kwargs)
-
-        self.api_credentials: dict[str, Any] | None = None
-        self.context = PersistentJSON("context.json", self._data_path)
 
     def run(self) -> None:  # pragma: no cover
         """Run the trigger."""

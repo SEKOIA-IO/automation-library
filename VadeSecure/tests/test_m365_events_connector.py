@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
@@ -67,7 +67,9 @@ def test_fetch_events(trigger):
     trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
     trigger._fetch_next_events = MagicMock(return_value=[])
 
-    trigger._fetch_events()
+    with patch("vadesecure_modules.connector_m365_events.time.sleep"):
+        trigger._fetch_events()
+
     assert trigger.push_events_to_intakes.call_args_list == []
     assert len(trigger._fetch_next_events.call_args_list) == len(EventType)
 

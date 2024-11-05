@@ -3,19 +3,15 @@ import time
 from typing import Any, Deque
 
 import orjson
-import requests
 from sekoia_automation.connector import Connector
 
-from . import VadeSecureModule
 from .m365_mixin import EventType, M365Mixin
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from .models import VadeSecureConnectorConfiguration
 
 
 class M365EventsConnector(Connector, M365Mixin):
-    module: VadeSecureModule
     configuration: VadeSecureConnectorConfiguration
-    _http_session: requests.Session | None = None
 
     def _fetch_events(self) -> None:
         """
