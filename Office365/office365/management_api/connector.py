@@ -5,12 +5,8 @@ import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from pathlib import Path
-from time import sleep
 
-from prometheus_client import Counter, Histogram
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.storage import get_data_path
 
 from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
