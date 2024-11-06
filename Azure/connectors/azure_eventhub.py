@@ -60,9 +60,10 @@ class Client(object):
 
                 return  # exit the loop if no exception is raised
             except Exception as e:  # pragma: no cover
-                logger.exception(e)
+                logger.debug(e)
                 attempt += 1
                 if attempt > self._epoch_max_value:
+                    logger.error(f"Failed to receive messages after multiple attempts: {e}")
                     raise e
 
     async def close(self) -> None:
