@@ -5,7 +5,6 @@ from functools import cached_property
 from typing import Any
 from urllib.parse import urljoin
 
-import requests
 from dateutil.parser import isoparse
 from requests import Response
 from sekoia_automation.action import Action
@@ -65,10 +64,10 @@ class CreateIOCs(Action):
         return response
 
     def api_create_indicator(self, indicator: dict[str, Any]) -> Response:
+        # NOTE: unlike methods before, this function doesn't raise an exception in case of HTTP error
         response = self.client.post(
             f"{self.client.instance_url}/api/data/threat_intelligence/IOCRule/", json=indicator, timeout=60
         )
-        self._handle_response_error(response)
         return response
 
     def get_reference_url(self, id) -> str:
@@ -154,24 +153,21 @@ class CreateIOCs(Action):
         if len(indicators) > 0:
             self.log(f"Pushing {len(indicators)} new indicators to HarfangLab", level="info")
             for ioc in indicators:
-                try:
-                    self.api_create_indicator(indicator=ioc)
+                response = self.api_create_indicator(indicator=ioc)
+                if response.status_code == 400:
+                    # we could get this error if the ioc rule with
+                    # this type, value and source already exists
+                    if "already exists" in response.text:
+                        self.log("Ioc rule with this Type, Value and Source already exists.", level="info")
+                        logger.info(
+                            "Ioc rule with this Type, Value and Source already exists.",
+                            type=ioc["type"],
+                            value=ioc["value"],
+                            source=ioc["source_id"],
+                        )
+                        continue
 
-                except requests.HTTPError as error:
-                    if error.response.status_code == 400:
-                        # we could get this error if the ioc rule with
-                        # this type, value and source already exists
-                        if "already exists" in error.response.text:
-                            self.log("Ioc rule with this Type, Value and Source already exists.", level="info")
-                            logger.info(
-                                "Ioc rule with this Type, Value and Source already exists.",
-                                type=ioc["type"],
-                                value=ioc["value"],
-                                source=ioc["source_id"],
-                            )
-                            continue
-
-                    raise
+                self._handle_response_error(response)
 
     def run(self, arguments: Any) -> Any:
         if arguments.get("sekoia_base_url"):
