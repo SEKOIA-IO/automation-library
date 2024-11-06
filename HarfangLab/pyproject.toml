@@ -9,6 +9,9 @@ python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.13.0"
 pydantic = "^1.8.2"
 requests = "*"
+requests-ratelimiter = "^0.7.0"
+stix2-patterns = "^2.0.0"
+structlog = "^24.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

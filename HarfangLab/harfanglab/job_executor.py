@@ -1,6 +1,8 @@
+import time
+
 import requests
 from sekoia_automation.action import Action
-import time
+
 from harfanglab.models import JobAction, JobStatus, JobTarget, JobTriggerResult
 
 

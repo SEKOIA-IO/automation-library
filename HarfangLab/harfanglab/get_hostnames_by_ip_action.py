@@ -1,11 +1,13 @@
 # coding: utf-8
 
 # natives
+from typing import Any
+
 import requests
 from sekoia_automation.action import Action
 
 # third parties
-from harfanglab.models import HostnamesResult, HostnameEntry
+from harfanglab.models import HostnameEntry, HostnamesResult
 
 
 class GetHostnamesByIP(Action):
@@ -31,7 +33,7 @@ class GetHostnamesByIP(Action):
         # Check if data is a dictionary with a key "results" or directly a list
         result = data.get("results") if isinstance(data, dict) else data
 
-        hostnames = [HostnameEntry(**entry) for entry in result]
+        hostnames = [HostnameEntry(**entry) for entry in result]  # type: ignore
         if get_only_last_seen:
             most_recent_hostname = max(hostnames, key=lambda x: x.lastseen)
             hostnames_result = HostnamesResult(hostnames=[most_recent_hostname])
