@@ -6,6 +6,7 @@ from asyncio import Task
 from datetime import datetime, timezone
 from functools import cached_property
 from typing import Any, Optional, cast
+from loguru import logger
 
 import orjson
 from azure.eventhub import EventData
@@ -28,9 +29,10 @@ class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
 class Client(object):
     _client: EventHubConsumerClient | None = None
 
-    def __init__(self, configuration: AzureEventsHubConfiguration) -> None:
+    def __init__(self, configuration: AzureEventsHubConfiguration, epoch_max_value: int | None = None) -> None:
         self.configuration = configuration
         self._client = None
+        self._epoch_max_value = epoch_max_value
 
     @cached_property
     def checkpoint_store(self) -> BlobCheckpointStore:
@@ -49,10 +51,19 @@ class Client(object):
 
     async def receive_batch(self, *args: Any, **kwargs: Optional[Any]) -> None:
         self._client = self._new_client()
-        try:
-            await self._client.receive_batch(*args, **kwargs)  # type: ignore
-        finally:
-            await self.close()
+
+        attempt = 0
+        while True:
+            try:
+                await self._client.receive_batch(owner_level=attempt, *args, **kwargs)  # type: ignore
+                await self.close()
+
+                return # exit the loop if no exception is raised
+            except Exception as e:  # pragma: no cover
+                logger.exception(e)
+                attempt += 1
+                if attempt > self._epoch_max_value:
+                    raise e
 
     async def close(self) -> None:
         if self._client:
@@ -73,11 +84,12 @@ class AzureEventsHubTrigger(AsyncConnector):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
+        self._epoch_max_value = int(os.environ.get("EPOCH_MAX_VALUE", "100"), 10)
         self._current_task: Task[Any] | None = None
 
     @cached_property
     def client(self) -> Client:
-        return Client(self.configuration)
+        return Client(self.configuration, self._epoch_max_value)
 
     async def stop_current_task(self) -> None:
         """
@@ -190,6 +202,7 @@ class AzureEventsHubTrigger(AsyncConnector):
                 on_event_batch=self.handle_messages,
                 on_error=self.handle_exception,
                 max_wait_time=self._consumption_max_wait_time,
+                epoch_max_value=self._epoch_max_value
             )
 
         except asyncio.CancelledError:
