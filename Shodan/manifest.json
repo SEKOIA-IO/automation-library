@@ -26,7 +26,7 @@
   "name": "Shodan",
   "uuid": "25c9c44e-b3dc-4485-a2cb-4e9a116bc8fd",
   "slug": "shodan",
-  "version": "1.26.0",
+  "version": "1.26.1",
   "categories": [
     "Threat Intelligence"
   ],
