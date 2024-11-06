@@ -29,7 +29,7 @@ class MicrosoftDefenderBaseAction(Action, ABC):
     def process_response(self, response: requests.Response) -> None:
         raw = response.json()
         if not response.ok:
-            self.log(message=raw["error"]["message"], level="error")
+            self.error(message=raw["error"]["message"])
             logger.info(raw["error"]["message"], code=raw["error"]["code"], target=raw["error"]["target"])
 
     def call_api(self, method: str, url_path: str, args: dict[str, Any], arg_mapping: dict[str, str]) -> Response:

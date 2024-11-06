@@ -14,7 +14,7 @@
     ],
     "properties": {
       "alert_id": {
-        "description": "Machine ID",
+        "description": "Alert ID",
         "type": "string"
       },
       "status": {
