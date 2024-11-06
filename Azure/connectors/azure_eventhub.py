@@ -62,7 +62,7 @@ class Client(object):
             except Exception as e:  # pragma: no cover
                 logger.debug(e)
                 attempt += 1
-                if attempt > self._epoch_max_value:
+                if attempt > (self._epoch_max_value or 0):
                     logger.error(f"Failed to receive messages after multiple attempts: {e}")
                     raise e
 
