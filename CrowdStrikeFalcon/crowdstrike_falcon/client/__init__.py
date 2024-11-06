@@ -1,7 +1,7 @@
 import enum
 from collections.abc import Generator
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import requests
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -10,15 +10,7 @@ from requests_ratelimiter import LimiterAdapter
 
 from crowdstrike_falcon.client.auth import CrowdStrikeFalconApiAuthentication
 from crowdstrike_falcon.client.retry import Retry
-
-
-class HostAction(enum.Enum):
-    """Mapping of available device actions based on docs."""
-
-    lift_containment = "lift_containment"
-    contain = "contain"
-    hide_host = "hide_host"
-    unhide_host = "unhide_host"
+from crowdstrike_falcon.client.schemas import HostAction, UpdateAlertParameter
 
 
 class ApiClient(requests.Session):
@@ -117,6 +109,14 @@ class CrowdstrikeFalconClient(ApiClient):
             **kwargs,
         )
 
+    def get_alert_details(self, composite_ids: list[str], **kwargs) -> Generator[dict, None, None]:
+        yield from self.request_endpoint(
+            "POST",
+            "/alerts/entities/alerts/v2",
+            json={"composite_ids": composite_ids},
+            **kwargs,
+        )
+
     def find_indicators(self, fql_filter, **kwargs) -> Generator[dict, None, None]:
         yield from self.request_endpoint(
             "GET",
@@ -148,6 +148,18 @@ class CrowdstrikeFalconClient(ApiClient):
             "/devices/entities/devices-actions/v2",
             params={"action_name": action.value},
             json={"ids": ids},
+        )
+
+    def update_alerts(
+        self, ids: list[str], action_parameters: list[UpdateAlertParameter]
+    ) -> Generator[dict, None, None]:
+        yield from self.request_endpoint(
+            "PATCH",
+            "/alerts/entities/alerts/v3",
+            json={
+                "composite_ids": ids,
+                "action_parameters": [action_param.dict() for action_param in action_parameters],
+            },
         )
 
 

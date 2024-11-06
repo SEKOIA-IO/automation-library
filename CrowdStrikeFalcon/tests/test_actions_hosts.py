@@ -2,10 +2,7 @@ import requests_mock
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.action import CrowdstrikeAction
-from crowdstrike_falcon.host_actions import (
-    CrowdstrikeActionIsolateHosts,
-    CrowdstrikeActionDeIsolateHosts,
-)
+from crowdstrike_falcon.host_actions import CrowdstrikeActionDeIsolateHosts, CrowdstrikeActionIsolateHosts
 
 
 def configured_action(action: CrowdstrikeAction):

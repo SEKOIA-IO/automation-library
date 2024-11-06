@@ -7,12 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-24 - 1.25.0
+
+### Added
+
+- Added action to add comment to a threat
+- Added action to update threat status
+- Added action to create IOCs
+
+## 2024-10-17 - 1.24.0
+
+### Added
+
+- Added functionality to download a file on endpoint
+
 ## 2024-08-01 - 1.23.1
 
 ### Fixed
 
 - IP are now taken from the `ip` field and put in the `ip` field of the getter.
-
 
 ## 2024-07-26 - 1.23.0
 

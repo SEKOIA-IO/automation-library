@@ -1,0 +1,43 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "group_key": {
+        "description": "GroupBy element by value for a specific key",
+        "type": "string"
+      },
+      "filter_key": {
+        "description": "GroupBy element with filter for a specific key",
+        "type": "string"
+      },
+      "filter_value": {
+        "description": "GroupBy element with a filter for a specific value on a specific key",
+        "type": "string"
+      },
+      "input": {
+        "description": "Input Data to sort",
+        "type": "array"
+      }
+    },
+    "required": [
+      "group_key", "input"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "GroupBy",
+  "docker_parameters": "action_groupby",
+  "name": "GroupBy",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "results": {
+        "type": "array"
+      }
+    },
+    "required": [],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "576c1fcd-bcec-4c7e-b96d-185faaf770b6"
+}

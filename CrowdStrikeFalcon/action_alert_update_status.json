@@ -1,0 +1,35 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ids": {
+        "type": "array",
+        "description": "List of alert IDs to apply action to.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "new_status": {
+        "type": "string",
+        "description": "The new status to apply to the alerts.",
+        "enum": [
+          "new",
+          "in_progress",
+          "closed",
+          "reopened"
+        ]
+      }
+    },
+    "required": [
+      "ids",
+      "new_status"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Update the status for the specified alerts..",
+  "docker_parameters": "alert_update_status",
+  "name": "Update alert status",
+  "results": {},
+  "uuid": "bc725034-0cbb-49e1-9113-1106ff35f03f"
+}

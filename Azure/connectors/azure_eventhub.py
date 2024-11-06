@@ -1,9 +1,10 @@
 import asyncio
 import os
+import signal
 import time
+from asyncio import Task
 from datetime import datetime, timezone
 from functools import cached_property
-from threading import Event
 from typing import Any, Optional, cast
 
 import orjson
@@ -66,14 +67,37 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     configuration: AzureEventsHubConfiguration
 
+    # The maximum time to wait for new messages before closing the client
+    wait_timeout = 600
+
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
-        self._stop_event = Event()
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
+        self._current_task: Task[Any] | None = None
 
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
+
+    async def stop_current_task(self) -> None:
+        """
+        Stop the current async task
+        """
+        # if the current task is defined and not already cancelled
+        if self._current_task is not None and not self._current_task.cancelled():
+            # cancel the receiving task
+            self._current_task.cancel()
+
+            # clean the current task
+            self._current_task = None
+
+    async def shutdown(self) -> None:
+        """
+        Shutdown the connector
+        """
+        self.stop()
+        await self.stop_current_task()
+        self.log("Shutting down the trigger")
 
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
@@ -83,7 +107,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             # got messages, we forward them
             await self.forward_events(messages)
 
-        else:
+        else:  # pragma: no cover
             # We reached the max_wait_time, close the current client
             self.log(
                 message=(
@@ -142,7 +166,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
 
         enqueued_times = [message.enqueued_time for message in messages if message.enqueued_time is not None]
-        if len(enqueued_times) > 0:
+        if len(enqueued_times) > 0:  # pragma: no cover
             now = datetime.now(timezone.utc)
             messages_age = [int((now - enqueued_time).total_seconds()) for enqueued_time in enqueued_times]
 
@@ -179,17 +203,14 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     async def async_run(self) -> None:
         while self.running:
-            task = asyncio.create_task(self.receive_events())
+            self._current_task = asyncio.create_task(self.receive_events())
 
             try:
-                # Allow the task to run for the specified duration (10 minutes)
-                await asyncio.sleep(600)
+                # Allow the task to run for the specified duration (10 minutes default)
+                await asyncio.sleep(self.wait_timeout)
 
-                # Cancel the receiving task after the duration
-                task.cancel()
-
-                # Wait for the task to handle the cancellation
-                await task
+                # Stop the receiving task after the duration
+                await self.stop_current_task()
 
             except asyncio.CancelledError:
                 self.log(message="Receiving task was cancelled", level="info")
@@ -198,11 +219,12 @@ class AzureEventsHubTrigger(AsyncConnector):
                 # Ensure the client is closed properly
                 await self.client.close()
 
-            # Sleep for a short period before starting the next cycle
-            await asyncio.sleep(5)  # Adjust if necessary
-
     def run(self) -> None:  # pragma: no cover
         self.log(message="Azure EventHub Trigger has started", level="info")
 
         loop = asyncio.get_event_loop()
+        loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
+        loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
         loop.run_until_complete(self.async_run())
+
+        self.log(message="Azure EventHub Trigger has stopped", level="info")

@@ -44,4 +44,4 @@ The entrypoint of the module is the file `main.py`. This file declares the actio
 
 A module must be represented as a Python class, based on ['Module'](https://github.com/SEKOIA-IO/sekoia-automation-sdk/blob/main/sekoia_automation/module.py) from [sekoia-automation-sdk](https://github.com/SEKOIA-IO/sekoia-automation-sdk/), with its configuration as a [pydantic model](https://docs.pydantic.dev/).
 
-See [Azure Active Directory module code](https://github.com/SEKOIA-IO/automation-library/blob/main/AzureActiveDirectory/azure_ad/base.py)
+See [Azure Active Directory module code](https://github.com/SEKOIA-IO/automation-library/tree/main/Azure)

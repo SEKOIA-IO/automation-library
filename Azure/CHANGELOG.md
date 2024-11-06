@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-30 - 2.6.0
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+
+## 2024-10-14 - 2.5.6
+
+### Fixed
+
+- Fix the way to handle graceful shutdown with async tasks
+
 ## 2024-09-30 - 2.5.5
 
 ### Changed

@@ -47,6 +47,7 @@ class ApplicationName(str, Enum):
     CHROME = "chrome"
     DATA_STUDIO = "data_studio"
     KEEP = "keep"
+    VAULT = "vault"
 
 
 class GoogleReportsConfig(DefaultConnectorConfiguration):

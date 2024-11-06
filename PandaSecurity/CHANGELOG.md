@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-08 - 1.23.1
+
+### Changed
+
+- Add the content of response when getting an error from the API
+
 ## 2024-05-28 - 1.23.0
 
 ### Changed

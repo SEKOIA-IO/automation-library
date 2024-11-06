@@ -1,0 +1,50 @@
+{
+  "name": "Merge Assets",
+  "description": "Merge a list of assets into a targeted asset",
+  "uuid": "86fc9d59-3c54-56f3-8266-1c9d80030a48",
+  "docker_parameters": "merge-assets",
+  "arguments": {
+    "title": "Arguments",
+    "type": "object",
+    "properties": {
+      "destination": {
+        "title": "Destination",
+        "type": "string"
+      },
+      "sources": {
+        "title": "Sources",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "destination",
+      "sources"
+    ]
+  },
+  "results": {
+    "title": "Response",
+    "type": "object",
+    "properties": {
+      "status_code": {
+        "title": "Status Code",
+        "type": "integer"
+      },
+      "headers": {
+        "title": "Headers",
+        "type": "object"
+      },
+      "text": {
+        "title": "Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status_code",
+      "headers",
+      "text"
+    ]
+  }
+}

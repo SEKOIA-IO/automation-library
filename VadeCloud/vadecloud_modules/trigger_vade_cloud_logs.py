@@ -87,11 +87,11 @@ class VadeCloudConsumer(Thread):
                 raise ValueError("Response does not contain any valid data")
 
             http_error_code = error_response.status_code
-            if http_error_code == 404:
-                self.log(message=f"Wrong password or login", level="error")
+            if http_error_code in [401, 403, 404]:
+                self.log(message=f"Wrong password or login", level="critical")
 
             if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
-                self.log(message=f"Invalide account type, it should be User not Admin", level="error")
+                self.log(message=f"Invalide account type, it should be User not Admin", level="critical")
 
             raise error
 
@@ -121,14 +121,17 @@ class VadeCloudConsumer(Thread):
         if not response.ok:
             message = f"Request on Vade Cloud API to fetch `{self.name}` logs failed with status {response.status_code} - {response.reason}"
 
-            try:
-                error = response.json()
-                message = f"{message}: {error['error']}"
+            if response.status_code in [401, 403]:
+                self.log(message=message, level="critical")
+            else:
+                try:
+                    error = response.json()
+                    message = f"{message}: {error['error']}"
 
-            except requests.exceptions.JSONDecodeError as e:  # pragma: no cover
-                self.log(message="Cannot parse not 200 response as json {0}".format(str(e)), level="debug")
+                except requests.exceptions.JSONDecodeError as e:  # pragma: no cover
+                    self.log(message="Cannot parse not 200 response as json {0}".format(str(e)), level="debug")
 
-            raise FetchEventException(message)
+                raise FetchEventException(message)
 
     def iterate_through_pages(self, from_timestamp: int) -> Generator[list[dict[str, Any]], None, None]:
         page_num = 0

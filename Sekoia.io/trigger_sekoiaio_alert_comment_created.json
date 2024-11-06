@@ -16,6 +16,24 @@
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
+      "comment": {
+        "description": "Alert comment (object containing comment uuid, content, author, date).",
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          }
+        }
+      },
       "file_path": {
         "description": "File path to the alert on disk.",
         "type": "string"
@@ -76,6 +94,7 @@
       "alert_type",
       "alert_uuid",
       "created_at",
+      "comment",
       "entity",
       "short_id",
       "status",

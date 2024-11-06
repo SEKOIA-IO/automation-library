@@ -26,7 +26,11 @@
           "meet",
           "token",
           "user_accounts",
-          "keep"
+          "keep",
+          "vault",
+          "rules",
+          "saml",
+          "context_aware_access"
         ],
         "default": "drive"
       },

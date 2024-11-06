@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-04 - 2.64.8
+
+### Fixed
+
+- Revert `Update Alert Status` changes from 2.64.7 to maintain compatibility
+
+## 2024-10-18 - 2.64.7
+
+### Changed
+
+- Change `Update Alert Status` to support `status names` as input 
+
+## 2024-10-08 - 2.64.6
+
+### Changed
+
+- Changed the displayed name of the module
+
+## 2024-10-08 - 2.64.5
+
+### Added
+
+- Add a module to merge assets
+
+
+## 2024-10-08 - 2.64.4
+
+### Changed
+
+- Return more information in Sekoia Alert comment trigger 
+
 ## 2024-10-04 - 2.64.3
 
 ### Changed

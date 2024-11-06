@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-30 - 1.3.2
+
+### Fixed
+
+- Modify the module result
+
+## 2024-10-28 - 1.3.1
+
+### Added
+
+- Add a module to search in AD
+
 ## 2024-05-28 - 1.3.0
 
 ### Changed
