@@ -92,11 +92,12 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         if len(ids_to_remove) > 0:
             self.delete_indicators_by_ids(indicators_ids=ids_to_remove)
 
-    def create_indicators(self, indicators: list[dict[str, Any]]) -> Response:
+    def create_indicators(self, indicators: list[dict[str, Any]]) -> None:
+        if len(indicators) == 0:
+            return
+
         response = self.import_indicators(indicators=indicators)
         self.process_response(response)
-
-        return response
 
     @staticmethod
     def get_payload(value: Any, type: Any, args: dict[str, Any]) -> dict[str, Any]:
@@ -119,7 +120,7 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
         """
 
         seen_values: dict[str, set[str]] = defaultdict(set)
-        results: dict[str, Any] = {"valid": [], "revoked": []}
+        results: dict[str, Any] = {"valid": [], "revoked": [], "expired": []}
 
         for object in stix_objects:
             # Extract value and type from pattern
@@ -147,6 +148,7 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
                     current_datetime = datetime.now(timezone.utc)
                     valid_until_datetime = isoparse(valid_until)
                     if valid_until_datetime < current_datetime:
+                        results["expired"].append(result)
                         continue
 
                 # Add a direct link in description if the data is originating from Sekoia.io
@@ -167,7 +169,7 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
             self.log("Received stix_objects were empty")
 
         indicators = self.get_valid_indicators(stix_objects, arguments)
-        if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
+        if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0 and len(indicators["expired"]) == 0:
             self.log("Received indicators were not valid and/or not supported")
             return
 

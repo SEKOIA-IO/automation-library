@@ -1,3 +1,6 @@
+from copy import deepcopy
+from datetime import datetime, timedelta
+
 import requests_mock
 
 from microsoftdefender_modules import MicrosoftDefenderModule
@@ -372,3 +375,30 @@ def test_push_indicators():
             }
         )
         assert results is None
+
+
+def test_expired_indicators():
+    action = configured_action(PushIndicatorsAction)
+
+    arguments = {
+        "severity": "Medium",
+        "action": "Warn",
+        "generate_alert": False,
+        "valid_for": 1,
+    }
+
+    indicators = action.get_valid_indicators([STIX_OBJECT_IPv4, STIX_OBJECT_FILE_HASH], arguments)
+    assert len(indicators["expired"]) == 2
+    assert len(indicators["valid"]) == 0
+
+    expiration_in_the_future = "%sZ" % (datetime.utcnow() + timedelta(days=1)).isoformat()
+
+    STIX_OBJECT_IPv4_2 = deepcopy(STIX_OBJECT_IPv4)
+    STIX_OBJECT_IPv4_2["valid_until"] = expiration_in_the_future
+
+    STIX_OBJECT_FILE_HASH_2 = deepcopy(STIX_OBJECT_FILE_HASH)
+    STIX_OBJECT_FILE_HASH_2["valid_until"] = expiration_in_the_future
+
+    indicators = action.get_valid_indicators([STIX_OBJECT_IPv4_2, STIX_OBJECT_FILE_HASH_2], arguments)
+    assert len(indicators["expired"]) == 0
+    assert len(indicators["valid"]) == 2
