@@ -58,7 +58,7 @@ class Client(object):
                 await self._client.receive_batch(owner_level=attempt, *args, **kwargs)  # type: ignore
                 await self.close()
 
-                return # exit the loop if no exception is raised
+                return  # exit the loop if no exception is raised
             except Exception as e:  # pragma: no cover
                 logger.exception(e)
                 attempt += 1
@@ -202,7 +202,7 @@ class AzureEventsHubTrigger(AsyncConnector):
                 on_event_batch=self.handle_messages,
                 on_error=self.handle_exception,
                 max_wait_time=self._consumption_max_wait_time,
-                epoch_max_value=self._epoch_max_value
+                epoch_max_value=self._epoch_max_value,
             )
 
         except asyncio.CancelledError:
