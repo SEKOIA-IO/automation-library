@@ -1,7 +1,9 @@
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urljoin
 
+from dateutil.parser import isoparse
 from requests import Response
 
 from .action_base import MicrosoftDefenderBaseAction
@@ -141,6 +143,11 @@ class PushIndicatorsAction(MicrosoftDefenderBaseAction):
                 valid_until = object.get("valid_until")
                 if valid_until:
                     result["expirationTime"] = valid_until
+
+                    current_datetime = datetime.now(timezone.utc)
+                    valid_until_datetime = isoparse(valid_until)
+                    if valid_until_datetime < current_datetime:
+                        continue
 
                 # Add a direct link in description if the data is originating from Sekoia.io
                 if "x_ic_observable_types" in object.keys():
