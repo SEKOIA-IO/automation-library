@@ -5,7 +5,6 @@ from microsoftdefender_modules.action_isolate_machine import IsolateMachineActio
 from microsoftdefender_modules.action_push_indicators import PushIndicatorsAction
 from microsoftdefender_modules.action_restrict_code_execution import RestrictCodeExecutionAction
 from microsoftdefender_modules.action_scan_machine import ScanMachineAction
-from microsoftdefender_modules.action_stop_and_quarantine_file import StopAndQuarantineFileAction
 from microsoftdefender_modules.action_unisolate_machine import UnIsolateMachineAction
 from microsoftdefender_modules.action_unrestrict_code_execution import UnRestrictCodeExecutionAction
 from microsoftdefender_modules.action_update_alert import UpdateAlertAction
@@ -17,7 +16,6 @@ if __name__ == "__main__":
     module.register(GetMachineAction, "GetMachineAction")
     module.register(ScanMachineAction, "ScanMachineAction")
     module.register(PushIndicatorsAction, "PushIndicatorsAction")
-    module.register(StopAndQuarantineFileAction, "StopAndQuarantineFileAction")
     module.register(UnRestrictCodeExecutionAction, "UnRestrictCodeExecutionAction")
     module.register(RestrictCodeExecutionAction, "RestrictCodeExecutionAction")
     module.register(UnIsolateMachineAction, "UnIsolateMachineAction")

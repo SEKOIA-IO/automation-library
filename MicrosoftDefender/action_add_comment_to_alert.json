@@ -1,6 +1,6 @@
 {
-  "name": "Update an alert",
-  "description": "Update an alert",
+  "name": "Comment an alert",
+  "description": "Comment an alert",
   "uuid": "fa181daa-4278-4c0a-956f-6f90c8f69db3",
   "docker_parameters": "AddCommentToAlert",
   "arguments": {
@@ -8,7 +8,7 @@
     "required": ["alert_id", "comment"],
     "properties": {
       "alert_id": {
-        "description": "Machine ID",
+        "description": "Alert ID",
         "type": "string"
       },
       "comment": {
