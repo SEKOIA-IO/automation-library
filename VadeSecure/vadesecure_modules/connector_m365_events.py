@@ -81,6 +81,7 @@ class M365EventsConnector(Connector, M365Mixin):
                     message=f"No {event_type} events to forward",
                     level="info",
                 )  # pragma: no cover
+                EVENTS_LAG.labels(type=event_type, intake_key=self.configuration.intake_key).set(0)
 
             # get the ending time and compute the duration to fetch the events
             batch_end_time = time.time()

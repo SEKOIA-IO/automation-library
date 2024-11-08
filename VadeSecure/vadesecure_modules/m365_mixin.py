@@ -25,12 +25,9 @@ class EventType(Enum):
 class M365Mixin(Trigger, ABC):
     module: VadeSecureModule
     configuration: VadeSecureTriggerConfiguration
-    _http_session: requests.Session | None = None
 
     def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
-
-        self.api_credentials: dict[str, Any] | None = None
         self.context = PersistentJSON("context.json", self._data_path)
 
     @cached_property
