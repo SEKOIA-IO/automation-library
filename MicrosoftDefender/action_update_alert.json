@@ -1,0 +1,66 @@
+{
+  "name": "Update an alert",
+  "description": "Update an alert",
+  "uuid": "65329072-2bae-543b-91b8-15e928cb927d",
+  "docker_parameters": "UpdateAlertAction",
+  "arguments": {
+    "type": "object",
+    "anyOf": [
+      { "required": ["alert_id", "status"] },
+      { "required": ["alert_id", "classification"] },
+      { "required": ["alert_id", "determination"] },
+      { "required": ["alert_id", "comment"] },
+      { "required": ["alert_id", "owner"] }
+    ],
+    "properties": {
+      "alert_id": {
+        "description": "Alert ID",
+        "type": "string"
+      },
+      "status": {
+        "description": "Status",
+        "type": "string",
+        "enum": ["New", "InProgress", "Resolved"]
+      },
+      "classification": {
+        "description": "Classification of the alert",
+        "type": "string",
+        "enum": [
+          "TruePositive",
+          "FalsePositive",
+          "InformationalExpectedActivity"
+        ]
+      },
+      "determination": {
+        "description": "Determination of the alert",
+        "type": "string",
+        "enum": [
+          "Multistage attack",
+          "Malicious user activity",
+          "Compromised account",
+          "Malware",
+          "Phishing",
+          "Unwanted software",
+
+          "Security test",
+          "Line-of-business application",
+          "Confirmed activity",
+
+          "Not malicious",
+          "Not enough data to validate",
+
+          "Other"
+        ]
+      },
+      "comment": {
+        "description": "Comment",
+        "type": "string"
+      },
+      "owner": {
+        "description": "Owner of the alert",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}
