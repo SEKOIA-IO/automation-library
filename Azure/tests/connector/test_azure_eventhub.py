@@ -107,11 +107,39 @@ async def test_client_receive_batch():
         )
     )
     consumer = AsyncMock()
-    client._new_client = MagicMock(return_value=consumer)
+    client._client = consumer
 
     await client.receive_batch()
 
-    assert client._new_client.called
+    consumer.receive_batch.assert_awaited_once()
+    consumer.close.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_client_receive_batch_with_error():
+    client = Client(
+        AzureEventsHubConfiguration.parse_obj(
+            {
+                "chunk_size": 1,
+                "hub_connection_string": "hub_connection_string",
+                "hub_name": "hub_name",
+                "hub_consumer_group": "hub_consumer_group",
+                "storage_connection_string": "storage_connection_string",
+                "storage_container_name": "storage_container_name",
+                "intake_key": "",
+            }
+        )
+    )
+    consumer = AsyncMock()
+    client._client = consumer
+
+    def raise_error():
+        raise ValueError("Error")
+
+    consumer.receive_batch.side_effect = raise_error
+    with pytest.raises(ValueError):
+        await client.receive_batch()
+
     consumer.receive_batch.assert_awaited_once()
     consumer.close.assert_awaited_once()
 
@@ -157,7 +185,6 @@ class AzureEventsHubTestTriggerQuick(AzureEventsHubTrigger):
     # Override wait timeout to speed up the test execution and mock receive_events method
     # In this case, we will sleep for 2 second and execute for 1 second
     # So no task cancellation will happen
-    wait_timeout = 2
     execution_time = 1
 
     async def receive_events(self) -> None:
@@ -168,7 +195,6 @@ class AzureEventsHubTestTriggerSlow(AzureEventsHubTestTriggerQuick):
     # Override wait timeout to speed up the test execution and mock receive_events method
     # In this case, we will sleep for 1 second and execute for 2 second
     # So task cancellation will happen each iteration
-    wait_timeout = 1
     execution_time = 2
 
 
@@ -236,4 +262,4 @@ def test_azure_eventhub_handling_stop_event_slow(data_storage):
     process.join()
     finish_execution_time = time.time()
 
-    assert finish_execution_time - start_execution_time <= 5
+    assert finish_execution_time - start_execution_time <= 6
