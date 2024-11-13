@@ -32,22 +32,22 @@
         ]
       },
       "determination": {
-        "description": "Determination of the alert",
+        "description": "Determination of the alert.\nThe determination must match the classification (see https://learn.microsoft.com/en-us/defender-endpoint/api/update-alert)",
         "type": "string",
         "enum": [
-          "Multistage attack",
-          "Malicious user activity",
-          "Compromised account",
+          "MultiStagedAttack",
+          "MaliciousUserActivity",
+          "CompromisedUser",
           "Malware",
           "Phishing",
-          "Unwanted software",
+          "UnwantedSoftware",
 
-          "Security test",
-          "Line-of-business application",
-          "Confirmed activity",
+          "SecurityTesting",
+          "LineOfBusinessApplication",
+          "ConfirmedActivity",
 
-          "Not malicious",
-          "Not enough data to validate",
+          "NotMalicious",
+          "InsufficientData",
 
           "Other"
         ]
