@@ -17,5 +17,33 @@
     },
     "required": ["machine_id", "comment"]
   },
-  "results": {}
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "description": "The identifier of the action",
+        "type": "string"
+      },
+      "type": {
+        "description": "The type of the action",
+        "type": "string"
+      },
+      "status": {
+        "description": "The status of the action",
+        "type": "string"
+      },
+      "requestor": {
+        "description": "Identify who executed the action",
+        "type": "string"
+      },
+      "title": {
+        "description": "The title of the action",
+        "type": "string"
+      },
+      "machineid": {
+        "description": "The identifier of the machine",
+        "type": "string"
+      }
+    }
+  }
 }
