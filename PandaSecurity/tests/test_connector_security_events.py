@@ -18,7 +18,7 @@ def trigger(symphony_storage):
         "api_key": "api_key",
     }
     trigger.configuration = {"frequency": 604800}
-    trigger.send_event = Mock()
+    trigger.push_events_to_intakes = Mock()
     trigger.log = Mock()
     return trigger
 
@@ -28,7 +28,7 @@ def test_fetch_events(trigger):
     trigger._fetch_next_events = MagicMock(return_value=[])
 
     trigger._fetch_events()
-    assert trigger.send_event.call_args_list == []
+    assert trigger.push_events_to_intakes.call_args_list == []
     assert len(trigger._fetch_next_events.call_args_list) == len(EVENT_TYPES)
 
 

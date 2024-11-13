@@ -1,3 +1,5 @@
 # This is a list of files we ignore
 
 Sekoia.io/main.py
+
+PandaSecurity/connector_security_events.json
