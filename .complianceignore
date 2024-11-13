@@ -1,3 +1,6 @@
 # This is a list of files we ignore
 
 Sekoia.io/main.py
+
+# In VadeSecure trigger and connector are different
+VadeSecure/connector_m365_events.json
