@@ -1,10 +1,17 @@
-from sekoia_automation.module import Module
+from glimps.models import GlimpsModule
 
-from glimps import RetrieveAnalysis, SearchPreviousAnalysis, SubmitFileToBeAnalysed
+from glimps.submit_file_to_be_analysed_action import SubmitFileWaitForResult
+from glimps.search_analysis_by_sha256_action import SearchPreviousAnalysis
+from glimps.get_status_action import GetStatus
+from glimps.submit_file_to_be_analysed_action import SubmitFileToBeAnalysed
+from glimps.retrieve_analysis_action import RetrieveAnalysis
+
 
 if __name__ == "__main__":
-    module = Module()
-    module.register(RetrieveAnalysis, "get-results/{uuid}")
-    module.register(SearchPreviousAnalysis, "get-search/{sha256}")
-    module.register(SubmitFileToBeAnalysed, "post-submit")
+    module = GlimpsModule()
+    module.register(SubmitFileWaitForResult, "SubmitFileWaitForResult")
+    module.register(SearchPreviousAnalysis, "SearchPreviousAnalysis")
+    module.register(GetStatus, "GetStatus")
+    module.register(SubmitFileToBeAnalysed, "SubmitFileToBeAnalysed")
+    module.register(RetrieveAnalysis, "RetrieveAnalysis")
     module.run()
