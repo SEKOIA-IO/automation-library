@@ -16,6 +16,7 @@ class AetherSecurityEventsConnectorConfiguration(DefaultConnectorConfiguration):
 
 class AetherSecurityEventsConnector(SecurityEventsMixin, Connector):
     configuration: AetherSecurityEventsConnectorConfiguration
+    seconds_without_events = 0  # disable check
 
     def _fetch_events(self) -> None:
         """

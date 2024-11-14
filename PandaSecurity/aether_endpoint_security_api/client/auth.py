@@ -27,7 +27,7 @@ class ApiKeyAuthentication(AuthBase):
         access_secret: str,
         audience: str | None = None,
         nb_retries: int = 5,
-        ratelimit_per_minute: int = 20,
+        ratelimit_per_second: int = 20,
     ):
         self.__base_url = base_url
         self.__audience = audience
@@ -46,7 +46,7 @@ class ApiKeyAuthentication(AuthBase):
         self.__http_session.mount(
             "https://",
             LimiterAdapter(
-                per_minute=ratelimit_per_minute,
+                per_second=ratelimit_per_second,
                 max_retries=Retry(
                     total=nb_retries,
                     backoff_factor=1,

@@ -14,7 +14,8 @@ class ApiClient(requests.Session):
         access_secret: str,
         audience: str | None = None,
         nb_retries: int = 5,
-        ratelimit_per_minute: int = 20,
+        # https://www.watchguard.com/help/docs/API/Content/en-US/api_get_started/api_limits.html
+        rate_limit_per_second: int = 500,
     ):
         super().__init__()
         self.auth = ApiKeyAuthentication(
@@ -23,13 +24,13 @@ class ApiClient(requests.Session):
             access_id=access_id,
             access_secret=access_secret,
             audience=audience,
-            ratelimit_per_minute=ratelimit_per_minute,
+            ratelimit_per_second=rate_limit_per_second,
             nb_retries=nb_retries,
         )
         self.mount(
             "https://",
             LimiterAdapter(
-                per_minute=ratelimit_per_minute,
+                per_second=rate_limit_per_second,
                 max_retries=Retry(
                     total=nb_retries,
                     backoff_factor=1,
