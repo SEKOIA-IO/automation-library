@@ -22,8 +22,9 @@
         "type": "string"
       },
       "hub_consumer_group": {
-        "description": "The consumer group to supplied to the hub. Custom group name will be assigned if it is empty.",
-        "type": "string"
+        "description": "The consumer group to supplied to the hub",
+        "type": "string",
+        "default": "sekoiaio"
       },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",

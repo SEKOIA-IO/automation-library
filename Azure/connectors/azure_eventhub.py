@@ -19,7 +19,7 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MES
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
     hub_connection_string: str
     hub_name: str
-    hub_consumer_group: str | None = None
+    hub_consumer_group: str
     storage_connection_string: str
     storage_container_name: str
 
@@ -39,11 +39,9 @@ class Client(object):
 
     def client(self) -> EventHubConsumerClient:
         if self._client is None:
-            consumer_group = self.configuration.hub_consumer_group or f"sekoia-{self.configuration.hub_name}"
-
             self._client = EventHubConsumerClient.from_connection_string(
                 self.configuration.hub_connection_string,
-                consumer_group,
+                self.configuration.hub_consumer_group,
                 eventhub_name=self.configuration.hub_name,
                 checkpoint_store=self.checkpoint_store,
                 uamqp_transport=True,
@@ -74,6 +72,7 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
+        self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
         self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
         self._has_more_events = True
 
@@ -169,6 +168,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         await self.client.receive_batch(
             on_event_batch=self.handle_messages,
             on_error=self.handle_exception,
+            max_wait_time=self._consumption_max_wait_time,
         )
 
     async def async_run(self) -> None:
@@ -176,7 +176,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             try:
                 await self.receive_events()
 
-            except Exception as ex:
+            except Exception as ex:  # pragma: no cover
                 self.log_exception(ex, message="Failed to consume messages")
                 self._has_more_events = False
 

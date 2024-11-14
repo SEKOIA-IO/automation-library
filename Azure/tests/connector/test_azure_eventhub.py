@@ -229,7 +229,7 @@ def create_and_run_connector(data_storage, is_quick: bool = True) -> None:
     connector.run()
 
 
-def test_azure_eventhub_handling_stop_event_quick(data_storage):
+def test_azure_eventhub_handling_stop_event_quick_10_seconds(data_storage):
     start_execution_time = time.time()
     process = Process(target=create_and_run_connector, args=(data_storage,))
     process.start()
@@ -244,10 +244,10 @@ def test_azure_eventhub_handling_stop_event_quick(data_storage):
     process.join()
     finish_execution_time = time.time()
 
-    assert finish_execution_time - start_execution_time <= 7
+    assert finish_execution_time - start_execution_time <= 11
 
 
-def test_azure_eventhub_handling_stop_event_slow(data_storage):
+def test_azure_eventhub_handling_stop_event_slow_10_seconds(data_storage):
     start_execution_time = time.time()
     process = Process(target=create_and_run_connector, args=(data_storage, False))
     process.start()
@@ -262,4 +262,17 @@ def test_azure_eventhub_handling_stop_event_slow(data_storage):
     process.join()
     finish_execution_time = time.time()
 
-    assert finish_execution_time - start_execution_time <= 6
+    assert finish_execution_time - start_execution_time <= 11
+
+
+def test_azure_eventhub_handling_stop_event_slow_20_seconds(data_storage):
+    start_execution_time = time.time()
+    process = Process(target=create_and_run_connector, args=(data_storage, False))
+    process.start()
+
+    time.sleep(10)
+    process.terminate()
+    process.join()
+    finish_execution_time = time.time()
+
+    assert finish_execution_time - start_execution_time <= 21
