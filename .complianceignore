@@ -2,4 +2,6 @@
 
 Sekoia.io/main.py
 
+# In these modules trigger and connector are different
+VadeSecure/connector_m365_events.json
 PandaSecurity/connector_security_events.json

@@ -17,5 +17,13 @@
       }
     }
   },
-  "results": {}
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "description": "The identifier of the alert",
+        "type": "string"
+      }
+    }
+  }
 }
