@@ -1,10 +1,12 @@
 import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from operator import itemgetter
 from threading import Event, Lock, Thread
 from typing import Generator
 
 import orjson
+import requests
 from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -149,6 +151,31 @@ class MimecastSIEMWorker(Thread):
                         most_recent_date_seen = get_upper_second(last_event_date)  # get the upper second
 
                     yield next_events
+
+        except requests.exceptions.HTTPError as error:
+            error_response = error.response
+            if error_response is None:
+                raise ValueError("Response does not contain any valid data")
+
+            http_error_code = error_response.status_code
+            error_message = ", ".join(map(itemgetter("message"), error_response.json().get("fail", [])))
+            if http_error_code == 401:
+                message = "Authentication failed"
+
+                if error_message is not None and len(error_message) > 0:
+                    message = f"{message}: {error_message}"
+
+                self.log(message=message, level="critical")
+
+            if http_error_code == 403:
+                message = "Permission denied"
+
+                if error_message is not None and len(error_message) > 0:
+                    message = f"{message}: {error_message}"
+
+                self.log(message=message, level="critical")
+
+            raise error
 
         finally:
             # save the most recent date
