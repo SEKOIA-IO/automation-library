@@ -4,13 +4,19 @@ from datetime import datetime
 from typing import Deque
 
 import orjson
-from sekoia_automation.connector import Connector
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from .security_events_mixin import EVENT_TYPES, SecurityEventsMixin
 
 
+class AetherSecurityEventsConnectorConfiguration(DefaultConnectorConfiguration):
+    frequency: int = 43200
+
+
 class AetherSecurityEventsConnector(SecurityEventsMixin, Connector):
+    configuration: AetherSecurityEventsConnectorConfiguration
+
     def _fetch_events(self) -> None:
         """
         Successively queries the watchguard aether events pages while more are available

@@ -4,12 +4,12 @@ from unittest.mock import MagicMock, Mock
 import pytest
 import requests_mock
 
-from aether_endpoint_security_api.trigger_security_events import EVENT_TYPES, AetherSecurityEventsTrigger
+from aether_endpoint_security_api.connector_security_events import EVENT_TYPES, AetherSecurityEventsConnector
 
 
 @pytest.fixture
 def trigger(symphony_storage):
-    trigger = AetherSecurityEventsTrigger()
+    trigger = AetherSecurityEventsConnector()
     trigger.module.configuration = {
         "base_url": "https://api.usa.cloud.watchguard.com",
         "account_id": "account-id",
@@ -17,9 +17,10 @@ def trigger(symphony_storage):
         "access_secret": "password",
         "api_key": "api_key",
     }
-    trigger.configuration = {"frequency": 604800}
+    trigger.configuration = {"frequency": 604800, "intake_key": "intake_key"}
     trigger.push_events_to_intakes = Mock()
     trigger.log = Mock()
+    trigger.log_exception = MagicMock()
     return trigger
 
 
