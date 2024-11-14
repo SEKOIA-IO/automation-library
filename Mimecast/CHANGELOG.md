@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-14 - 1.0.2
+
+### Fixed
+
+- Stop the connector if the authentication failed or if the permissions are denied
+
 ## 2024-07-30 - 1.0.1
 
 ### Changed
