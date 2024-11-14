@@ -209,6 +209,9 @@ class MimecastSIEMWorker(Thread):
             except Exception as error:
                 self.log_exception(error, message=f"{self.log_type}: Failed to forward events")
 
+                # In case of exception, pause the thread before the next attempt
+                time.sleep(self.connector.configuration.frequency)
+
 
 class MimecastSIEMConnector(Connector):
     module: MimecastModule
