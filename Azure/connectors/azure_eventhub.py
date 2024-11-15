@@ -173,7 +173,7 @@ class AzureEventsHubTrigger(AsyncConnector):
             max_wait_time=self._consumption_max_wait_time,
         )
 
-    async def async_run(self) -> None: # pragma: no cover
+    async def async_run(self) -> None:  # pragma: no cover
         while self.running:
             try:
                 await self.receive_events()
