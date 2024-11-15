@@ -65,91 +65,76 @@
       "status": {
         "title": "Status",
         "description": "false means an error occured",
-        "default": false,
         "type": "boolean"
       },
       "special_status_code": {
         "title": "Special Status Code",
         "description": "special error code, 0 means no special case",
-        "default": 0,
         "type": "integer"
       },
       "uuid": {
         "title": "Uuid",
         "description": "Unique analysis identifier",
-        "default": "",
         "type": "string"
       },
       "sha256": {
         "title": "Sha256",
         "description": "string hex encoded input file SHA256",
-        "default": "",
         "type": "string"
       },
       "sha1": {
         "title": "Sha1",
         "description": "string hex encoded input file SHA1",
-        "default": "",
         "type": "string"
       },
       "md5": {
         "title": "Md5",
         "description": "string hex encoded input file MD5",
-        "default": "",
         "type": "string"
       },
       "ssdeep": {
         "title": "Ssdeep",
         "description": "string input file SSDeep",
-        "default": "",
         "type": "string"
       },
       "is_malware": {
         "title": "Is Malware",
         "description": "analysis result, is a malware or not",
-        "default": false,
         "type": "boolean"
       },
       "score": {
         "title": "Score",
         "description": "highest score given by probes",
-        "default": 0,
         "type": "integer"
       },
       "done": {
         "title": "Done",
         "description": "is analysis finished",
-        "default": false,
         "type": "boolean"
       },
       "timestamp": {
         "title": "Timestamp",
         "description": "timestamp of the start of analysis in milliseconds",
-        "default": 0,
         "type": "integer"
       },
       "file_count": {
         "title": "File Count",
         "description": "amount of file in the submission (input + extracted)",
-        "default": 0,
         "type": "integer"
       },
       "duration": {
         "title": "Duration",
         "description": "duration of the analysis in milliseconds",
-        "default": 0,
         "type": "integer"
       },
       "filetype": {
         "title": "Filetype",
         "description": "type of the file",
-        "default": "",
         "type": "string"
       },
       "size": {
         "title": "Size",
         "description": "input file size (in bytes)",
-        "default": 0,
         "type": "integer"
       },
       "sid": {
@@ -208,6 +193,23 @@
         }
       }
     },
+    "required": [
+      "status",
+      "special_status_code",
+      "uuid",
+      "sha256",
+      "sha1",
+      "md5",
+      "ssdeep",
+      "is_malware",
+      "score",
+      "done",
+      "timestamp",
+      "file_count",
+      "duration",
+      "filetype",
+      "size"
+    ],
     "definitions": {
       "AvResult": {
         "title": "AvResult",
