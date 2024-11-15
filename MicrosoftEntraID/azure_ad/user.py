@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-import asyncio
 
 from .base import MicrosoftGraphAction, RequiredSingleUserArguments, RequiredTwoUserArguments
 
@@ -43,7 +42,8 @@ class GetUserAction(MicrosoftGraphAction):
 
     async def run(self, arguments: RequiredSingleUserArguments):
         query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
-            select=GetUserResults.schema()["properties"].keys(),
+            # select requires a list of strings, so we need to convert the keys of the schema to a list
+            select=list(GetUserResults.schema()["properties"].keys()),
         )
         request_configuration = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration(
             options=[ResponseHandlerOption(NativeResponseHandler())], query_parameters=query_params

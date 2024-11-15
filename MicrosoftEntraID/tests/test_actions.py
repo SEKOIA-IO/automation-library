@@ -1,16 +1,20 @@
+import json
+from typing import Type, Any, Optional
+from unittest.mock import AsyncMock, patch
+
+import pytest
+import requests
+from kiota_abstractions.request_adapter import RequestAdapter
+from msgraph import GraphServiceClient
+
 from azure_ad.base import AzureADModule, MicrosoftGraphAction
+from azure_ad.delete_app import DeleteApplicationAction
 from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
 from azure_ad.get_user_authentication_methods import GetUserAuthenticationMethodsAction
 from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction, ResetUserPasswordAction
-from azure_ad.delete_app import DeleteApplicationAction
-
-from unittest.mock import AsyncMock, patch
-import pytest
-import requests
-import json
 
 
-def configured_action(action: MicrosoftGraphAction):
+def configured_action(action: Type[MicrosoftGraphAction]):
     module = AzureADModule()
     a = action(module)
 
@@ -23,6 +27,35 @@ def configured_action(action: MicrosoftGraphAction):
     }
 
     return a
+
+
+class TestRequestAdapter(RequestAdapter):
+    def __init__(self, send_async: Optional[requests.Response] = None):
+        self._send_async = send_async
+
+    def get_serialization_writer_factory(self) -> Any:
+        pass
+
+    async def send_collection_async(self, request_info: Any, parsable_factory: Any, error_map: Any) -> Any:
+        pass
+
+    async def send_collection_of_primitive_async(self, request_info: Any, response_type: Any, error_map: Any) -> Any:
+        pass
+
+    async def send_primitive_async(self, request_info: Any, response_type: str, error_map: Any) -> Any:
+        pass
+
+    async def send_no_response_content_async(self, request_info: Any, error_map: Any) -> Any:
+        pass
+
+    def enable_backing_store(self, backing_store_factory: Any) -> Any:
+        pass
+
+    async def convert_to_native_async(self, request_info: Any) -> Any:
+        pass
+
+    async def send_async(self, request_info: Any, parsable_factory: Any, error_map: Any) -> Any:
+        return self._send_async
 
 
 @pytest.mark.asyncio
@@ -63,6 +96,47 @@ async def test_get_user():
         results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
 
         assert results == expected_user
+
+
+@pytest.mark.asyncio
+async def test_get_user_1():
+    action = configured_action(GetUserAction)
+    expected_user = {
+        "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
+        "accountEnabled": True,
+        "city": None,
+        "companyName": None,
+        "country": None,
+        "createdDateTime": "2022-02-01T15:44:02Z",
+        "creationType": None,
+        "deletedDateTime": None,
+        "department": None,
+        "displayName": "Jean Test",
+        "jobTitle": None,
+        "lastPasswordChangeDateTime": "2022-02-04T14:08:49Z",
+        "mail": None,
+        "mobilePhone": None,
+        "assignedLicenses": [{"disabledPlans": [], "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968"}],
+        "identities": [
+            {
+                "signInType": "userPrincipalName",
+                "issuer": "test.onmicrosoft.com",
+                "issuerAssignedId": "jean.test@test.onmicrosoft.com",
+            }
+        ],
+        "userPrincipalName": "jean.test@test.onmicrosoft.com",
+    }
+
+    response = requests.Response()
+    response._content = json.dumps(expected_user).encode("utf-8")
+    response.status_code = 200
+
+    mocked_adapter = TestRequestAdapter(send_async=response)
+    graph_client = GraphServiceClient(request_adapter=mocked_adapter)
+    action._client = graph_client
+
+    results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+    assert results == expected_user
 
 
 @pytest.mark.asyncio

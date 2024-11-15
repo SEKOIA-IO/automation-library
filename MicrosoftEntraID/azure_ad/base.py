@@ -47,17 +47,21 @@ class AsyncAction(Action):
 class MicrosoftGraphAction(AsyncAction):
     module: AzureADModule
 
-    @cached_property
-    def client(self):
-        credentials = ClientSecretCredential(
-            tenant_id=self.module.configuration.tenant_id,
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-        )
-        auth_provider = AzureIdentityAuthenticationProvider(credentials)
-        adapter = GraphRequestAdapter(auth_provider)
+    _client: GraphServiceClient | None = None
 
-        return GraphServiceClient(request_adapter=adapter)
+    @cached_property
+    def client(self) -> GraphServiceClient:
+        if self._client is None:
+            credentials = ClientSecretCredential(
+                tenant_id=self.module.configuration.tenant_id,
+                client_id=self.module.configuration.client_id,
+                client_secret=self.module.configuration.client_secret,
+            )
+            auth_provider = AzureIdentityAuthenticationProvider(credentials)
+            adapter = GraphRequestAdapter(auth_provider)
+            self._client = GraphServiceClient(request_adapter=adapter)
+
+        return self._client
 
     @cached_property
     def delegated_client(self):
