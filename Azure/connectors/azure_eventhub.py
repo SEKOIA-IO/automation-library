@@ -87,7 +87,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         Shutdown the connector
         """
         self.log("Shutting down the trigger")
-        loop.run_until_complete(self.client.close())
+        loop.call_soon(self.client.close())
         self.stop()
 
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
