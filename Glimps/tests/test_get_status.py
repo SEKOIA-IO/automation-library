@@ -1,16 +1,16 @@
 import pytest
 import os
 import json
-from glimps.models import GlimpsConfiguration, ProfileStatus
+from glimps.models import GLIMPSConfiguration, ProfileStatus
 from glimps.get_status_action import GetStatus
 from unittest.mock import patch
 import requests
 
 
-@pytest.mark.skipif("'GLIMPS_API_KEY' not in os.environ.keys()")
+@pytest.mark.skipif("{'GLIMPS_API_KEY', 'GLIMPS_API_URL'}.issubset(os.environ.keys()) == False")
 def test_integration_get_status():
     action = GetStatus()
-    action.module.configuration = GlimpsConfiguration(
+    action.module.configuration = GLIMPSConfiguration(
         api_key=os.environ["GLIMPS_API_KEY"], base_url="https://gmalware.ggp.glimps.re"
     )
 
@@ -21,9 +21,7 @@ def test_integration_get_status():
 
 def test_get_status_error(token):
     action = GetStatus()
-    action.module.configuration = GlimpsConfiguration(
-        api_key=token, base_url="https://gmalware.ggp.glimps.re"
-    )
+    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
 
     with patch("gdetect.api.Client._request") as mock:
         r = requests.Response()
@@ -40,9 +38,7 @@ def test_get_status_error(token):
 
 def test_get_status_ok(token):
     action = GetStatus()
-    action.module.configuration = GlimpsConfiguration(
-        api_key=token, base_url="https://gmalware.ggp.glimps.re"
-    )
+    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
 
     with patch("gdetect.api.Client._request") as mock:
         r = requests.Response()

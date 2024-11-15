@@ -7,8 +7,8 @@ import pytest
 from sekoia_automation import constants
 from glimps.retrieve_analysis_action import RetrieveAnalysis
 from glimps.search_analysis_by_sha256_action import SearchPreviousAnalysis
-from glimps.submit_file_to_be_analysed_action import SubmitFileWaitForResult
-from glimps.models import GlimpsConfiguration
+from glimps.submit_file_to_be_analysed_action import WaitForFile
+from glimps.models import GLIMPSConfiguration
 
 
 @pytest.fixture(scope="session")
@@ -30,31 +30,25 @@ def symphony_storage():
 @pytest.fixture(scope="session")
 def set_up_retrieve_analysis_action(token):
     action = RetrieveAnalysis()
-    action.module.configuration = GlimpsConfiguration(
-        api_key=token, base_url="https://gmalware.ggp.glimps.re"
-    )
+    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
     return action
 
 
 @pytest.fixture(scope="session")
 def set_up_search_analysis_action(token):
     action = SearchPreviousAnalysis()
-    action.module.configuration = GlimpsConfiguration(
-        api_key=token, base_url="https://gmalware.ggp.glimps.re"
-    )
+    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
     return action
 
 
 @pytest.fixture(scope="session")
 def set_up_wait_for_action(token, symphony_storage):
-    action = SubmitFileWaitForResult(data_path=symphony_storage)
-    action.module.configuration = GlimpsConfiguration(
-        api_key=token, base_url="https://gmalware.ggp.glimps.re"
-    )
+    action = WaitForFile(data_path=symphony_storage)
+    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
     return action
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def analysis_result():
     uuid = "1da0cb84-c5cc-4832-8882-4a7e9df11ed2"
     mock_analysis_result = {

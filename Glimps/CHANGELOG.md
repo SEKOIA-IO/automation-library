@@ -11,13 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Waitfor action : submit a file to Glimps detect and wit for analysis to finish
-- Get status action : get Glimps detect profile status
-- export submission : export analysis result in a given format and layout
+- Waitfor action: submit a file to GLIMPS detect and wait for analysis to finish
+- Get status action: get GLIMPS detect profile status
+- Export submission: export analysis result in a given format and layout
 
 ### Changed
 
-- use Glimps py-gdetect client to perform actions
+- Upgrade sekoia-automation-sdk
+- Use GLIMPS py-gdetect client to perform actions
 
 ## 2024-05-28 - 1.13.0
 

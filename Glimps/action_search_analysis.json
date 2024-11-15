@@ -9,7 +9,7 @@
     "properties": {
       "sha256": {
         "title": "Sha256",
-        "description": "sha256 of file to search",
+        "description": "SHA256 of file to search",
         "type": "string"
       }
     },
@@ -21,153 +21,24 @@
     "title": "AnalysisResponse",
     "type": "object",
     "properties": {
-      "status": {
-        "title": "Status",
-        "description": "false means an error occured",
-        "type": "boolean"
+      "analysis": {
+        "title": "Analysis",
+        "description": "Analysis response details",
+        "allOf": [
+          {
+            "$ref": "#/definitions/AnalysisDetails"
+          }
+        ]
       },
-      "special_status_code": {
-        "title": "Special Status Code",
-        "description": "special error code, 0 means no special case",
-        "type": "integer"
-      },
-      "uuid": {
-        "title": "Uuid",
-        "description": "Unique analysis identifier",
+      "view_url": {
+        "title": "View Url",
+        "description": "Analysis URL",
+        "default": "",
         "type": "string"
-      },
-      "sha256": {
-        "title": "Sha256",
-        "description": "string hex encoded input file SHA256",
-        "type": "string"
-      },
-      "sha1": {
-        "title": "Sha1",
-        "description": "string hex encoded input file SHA1",
-        "type": "string"
-      },
-      "md5": {
-        "title": "Md5",
-        "description": "string hex encoded input file MD5",
-        "type": "string"
-      },
-      "ssdeep": {
-        "title": "Ssdeep",
-        "description": "string input file SSDeep",
-        "type": "string"
-      },
-      "is_malware": {
-        "title": "Is Malware",
-        "description": "analysis result, is a malware or not",
-        "type": "boolean"
-      },
-      "score": {
-        "title": "Score",
-        "description": "highest score given by probes",
-        "type": "integer"
-      },
-      "done": {
-        "title": "Done",
-        "description": "is analysis finished",
-        "type": "boolean"
-      },
-      "timestamp": {
-        "title": "Timestamp",
-        "description": "timestamp of the start of analysis in milliseconds",
-        "type": "integer"
-      },
-      "file_count": {
-        "title": "File Count",
-        "description": "amount of file in the submission (input + extracted)",
-        "type": "integer"
-      },
-      "duration": {
-        "title": "Duration",
-        "description": "duration of the analysis in milliseconds",
-        "type": "integer"
-      },
-      "filetype": {
-        "title": "Filetype",
-        "description": "type of the file",
-        "type": "string"
-      },
-      "size": {
-        "title": "Size",
-        "description": "input file size (in bytes)",
-        "type": "integer"
-      },
-      "sid": {
-        "title": "Sid",
-        "description": "analysis UUID handled by GLIMPS malware finder - expert\ncould be used to construct expert link like:\nhttps://gmalware.useddomain.glimps.re/expert/en/analysis/results/advanced/${SID}",
-        "type": "string"
-      },
-      "token": {
-        "title": "Token",
-        "description": "token that can be used to view analysis result in expert view",
-        "type": "string"
-      },
-      "error": {
-        "title": "Error",
-        "description": "error message if Status is false",
-        "type": "string"
-      },
-      "errors": {
-        "title": "Errors",
-        "description": "error message by services",
-        "type": "object",
-        "additionalProperties": {
-          "type": "string"
-        }
-      },
-      "filenames": {
-        "title": "Filenames",
-        "description": "list of analysed filename",
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "malwares": {
-        "title": "Malwares",
-        "description": "list of malware names found in analysis",
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "files": {
-        "title": "Files",
-        "description": "array of submission files (input file and extracted sub-files)",
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/FileResult"
-        }
-      },
-      "threats": {
-        "title": "Threats",
-        "description": "Summary of threats found in submission. Each submission file reaching threshold score will add an entry. Entry keys are the SHA256 of files",
-        "type": "object",
-        "additionalProperties": {
-          "$ref": "#/definitions/Threat"
-        }
       }
     },
     "required": [
-      "status",
-      "special_status_code",
-      "uuid",
-      "sha256",
-      "sha1",
-      "md5",
-      "ssdeep",
-      "is_malware",
-      "score",
-      "done",
-      "timestamp",
-      "file_count",
-      "duration",
-      "filetype",
-      "size"
+      "analysis"
     ],
     "definitions": {
       "AvResult": {
@@ -318,6 +189,159 @@
           "ssdeep",
           "file_size",
           "mime"
+        ]
+      },
+      "AnalysisDetails": {
+        "title": "AnalysisDetails",
+        "type": "object",
+        "properties": {
+          "status": {
+            "title": "Status",
+            "description": "False means an error occured",
+            "type": "boolean"
+          },
+          "special_status_code": {
+            "title": "Special Status Code",
+            "description": "Special error code, 0 means no special case",
+            "type": "integer"
+          },
+          "uuid": {
+            "title": "Uuid",
+            "description": "Unique analysis identifier",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "description": "String hex encoded input file SHA256",
+            "type": "string"
+          },
+          "sha1": {
+            "title": "Sha1",
+            "description": "String hex encoded input file SHA1",
+            "type": "string"
+          },
+          "md5": {
+            "title": "Md5",
+            "description": "String hex encoded input file MD5",
+            "type": "string"
+          },
+          "ssdeep": {
+            "title": "Ssdeep",
+            "description": "File's SSDeep",
+            "type": "string"
+          },
+          "is_malware": {
+            "title": "Is Malware",
+            "description": "Analysis verdict, malware or not",
+            "type": "boolean"
+          },
+          "score": {
+            "title": "Score",
+            "description": "Highest score given by the services, of all the files in the submission",
+            "type": "integer"
+          },
+          "done": {
+            "title": "Done",
+            "description": "Analysis status, true if analysis is done",
+            "type": "boolean"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "description": "Timestamp of the start of analysis in milliseconds",
+            "type": "integer"
+          },
+          "file_count": {
+            "title": "File Count",
+            "description": "Amount of file in the submission (input + extracted)",
+            "type": "integer"
+          },
+          "duration": {
+            "title": "Duration",
+            "description": "Duration of the analysis in milliseconds",
+            "type": "integer"
+          },
+          "filetype": {
+            "title": "Filetype",
+            "description": "Type of the file",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "description": "Input file size (in bytes)",
+            "type": "integer"
+          },
+          "sid": {
+            "title": "Sid",
+            "description": "Analysis ID on GLIMPS Malware Expert\ncould be used to construct expert link like:\nhttps://gmalware.useddomain.glimps.re/expert/en/analysis/results/advanced/${SID}",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "description": "Token that can be used to view analysis result in expert view",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "description": "Error message if Status is false",
+            "type": "string"
+          },
+          "errors": {
+            "title": "Errors",
+            "description": "Error message by services",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "filenames": {
+            "title": "Filenames",
+            "description": "List of analysed filename",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "malwares": {
+            "title": "Malwares",
+            "description": "List of malware names found in analysis",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "files": {
+            "title": "Files",
+            "description": "Array of submission files (input file and extracted sub-files)",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/FileResult"
+            }
+          },
+          "threats": {
+            "title": "Threats",
+            "description": "Summary of threats found in submission. Each submission file reaching threshold score will add an entry. Entry keys are files' SHA256",
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/Threat"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "special_status_code",
+          "uuid",
+          "sha256",
+          "sha1",
+          "md5",
+          "ssdeep",
+          "is_malware",
+          "score",
+          "done",
+          "timestamp",
+          "file_count",
+          "duration",
+          "filetype",
+          "size"
         ]
       }
     }

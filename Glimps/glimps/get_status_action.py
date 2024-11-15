@@ -1,8 +1,8 @@
-from glimps.base import GlimpsAction
+from glimps.base import GLIMPSAction
 from glimps.models import ProfileStatus
 
 
-class GetStatus(GlimpsAction):
+class GetStatus(GLIMPSAction):
     """Action to retrieve profile status"""
 
     name = "Get profile status"

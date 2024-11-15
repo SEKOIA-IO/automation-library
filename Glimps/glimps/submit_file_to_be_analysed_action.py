@@ -1,9 +1,9 @@
-from glimps.base import GlimpsAction
+from glimps.base import GLIMPSAction
 from glimps.models import SubmitArgument, SubmitResponse
-from glimps.models import WaitForResultArgument, AnalysisResponse
+from glimps.models import WaitForResultArgument, AnalysisDetails, AnalysisResponse
 
 
-class SubmitFileToBeAnalysed(GlimpsAction):
+class SubmitFile(GLIMPSAction):
     """Action to submit a file for glimps malware analysis"""
 
     name = "Analyse a file"
@@ -24,7 +24,7 @@ class SubmitFileToBeAnalysed(GlimpsAction):
         return response
 
 
-class SubmitFileWaitForResult(GlimpsAction):
+class WaitForFile(GLIMPSAction):
     """Action to submit a file to GLIMPS Detect and wait for a result"""
 
     name = "Analyse a file and wait for result"
@@ -32,7 +32,7 @@ class SubmitFileWaitForResult(GlimpsAction):
     results_model = AnalysisResponse
 
     def run(self, arguments: WaitForResultArgument) -> AnalysisResponse:
-        analysis = self.gdetect_client.waitfor(
+        raw_analysis = self.gdetect_client.waitfor(
             self._data_path.joinpath(arguments.file_name),
             bypass_cache=arguments.bypass_cache,
             pull_time=arguments.pull_time,
@@ -42,6 +42,7 @@ class SubmitFileWaitForResult(GlimpsAction):
             description=arguments.description,
             archive_password=arguments.archive_pwd,
         )
-        response: AnalysisResponse = AnalysisResponse.parse_obj(analysis)
+        details = AnalysisDetails.parse_obj(raw_analysis)
+        view_token: str = self._get_token_view_url(raw_analysis)
 
-        return response
+        return AnalysisResponse(analysis=details, view_url=view_token)

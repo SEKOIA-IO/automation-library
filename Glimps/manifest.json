@@ -5,7 +5,7 @@
   "description": "[Glimps](https://www.glimps.fr/) offers a DeepLearning solution to detect, analyze and classify malwares. It enables faster responses during incidents with a detailed understanding of the threat",
   "version": "1.14.0",
   "configuration": {
-    "title": "GlimpsConfiguration",
+    "title": "GLIMPSConfiguration",
     "type": "object",
     "properties": {
       "api_key": {

@@ -3,25 +3,25 @@ import pytest
 from unittest.mock import patch
 
 from glimps.retrieve_analysis_action import RetrieveAnalysis
-from glimps.submit_file_to_be_analysed_action import SubmitFileToBeAnalysed
+from glimps.submit_file_to_be_analysed_action import SubmitFile
 from glimps.models import (
     SubmitArgument,
     SubmitResponse,
     AnalysisResponse,
-    GlimpsConfiguration,
+    GLIMPSConfiguration,
     GetAnalysisByUUIDArgument,
 )
 from gdetect import BadUUIDError
 
 
-@pytest.mark.skipif("'GLIMPS_API_KEY' not in os.environ.keys()")
+@pytest.mark.skipif("{'GLIMPS_API_KEY', 'GLIMPS_API_URL'}.issubset(os.environ.keys()) == False")
 def test_integration_retrieve_analysis(add_file_to_storage):
     symphony_storage, file, _ = add_file_to_storage
-    module_configuration = GlimpsConfiguration(
+    module_configuration = GLIMPSConfiguration(
         api_key=os.environ["GLIMPS_API_KEY"],
-        base_url="https://gmalware.ggp.glimps.re",
+        base_url=os.environ["GLIMPS_API_URL"],
     )
-    prepare = SubmitFileToBeAnalysed(data_path=symphony_storage)
+    prepare = SubmitFile(data_path=symphony_storage)
     prepare.module.configuration = module_configuration
 
     arguments = SubmitArgument(file_name=file)
@@ -37,7 +37,7 @@ def test_integration_retrieve_analysis(add_file_to_storage):
 
     response = action.run(arguments)
     assert response is not None
-    assert response.get("status") is True
+    assert response.get("analysis").get("status") is True
 
 
 def test_retrieve_analysis(set_up_retrieve_analysis_action, analysis_result):
@@ -48,9 +48,24 @@ def test_retrieve_analysis(set_up_retrieve_analysis_action, analysis_result):
         mock.return_value = mock_analysis_result
         response: AnalysisResponse = action.run(arguments)
 
-    assert response.get("status") is True
-    assert response.get("uuid") == uuid
-    assert response.get("error") is None
+    assert response.get("analysis").get("status") is True
+    assert response.get("analysis").get("uuid") == uuid
+    assert response.get("analysis").get("error") is None
+
+
+def test_retrieve_analysis_view_token(set_up_retrieve_analysis_action, analysis_result):
+    action: RetrieveAnalysis = set_up_retrieve_analysis_action
+    uuid, mock_analysis_result = analysis_result
+    mock_analysis_result.update({"token": "sometoken"})
+    arguments = GetAnalysisByUUIDArgument(uuid=uuid)
+    with patch("gdetect.api.Client.get_by_uuid") as mock:
+        mock.return_value = mock_analysis_result
+        response: AnalysisResponse = action.run(arguments)
+
+    assert response.get("analysis").get("status") is True
+    assert response.get("analysis").get("uuid") == uuid
+    assert response.get("analysis").get("error") is None
+    assert response.get("view_url") is not None and response.get("view_url") != ""
 
 
 def test_retrieve_analysis_error(set_up_retrieve_analysis_action):

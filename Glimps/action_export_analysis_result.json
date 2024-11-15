@@ -14,17 +14,17 @@
       },
       "format": {
         "title": "Format",
-        "description": "export format",
+        "description": "Export format",
         "type": "string"
       },
       "layout": {
         "title": "Layout",
-        "description": "export layout",
+        "description": "Export layout",
         "type": "string"
       },
       "is_full": {
         "title": "Is Full",
-        "description": "should export full analysis or summarized",
+        "description": "Export full analysis or summarized",
         "default": false,
         "type": "string"
       }
