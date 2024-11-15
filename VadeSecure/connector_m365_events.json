@@ -41,7 +41,6 @@
     "required": [
       "frequency",
       "tenant_id",
-      "intake_server",
       "intake_key"
     ],
     "title": "M365 Events",
