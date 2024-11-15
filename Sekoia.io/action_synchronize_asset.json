@@ -22,8 +22,8 @@
     },
     "required": [
       "community_uuid",
-      "user_data",
-      "asset_configuration"
+      "user_ad_data",
+      "asset_synchronization_configuration"
     ]
   },
   "results": {
