@@ -84,9 +84,10 @@ class AzureEventsHubTrigger(AsyncConnector):
         """
         Shutdown the connector
         """
-        self.stop()
-        await self.client.close()
         self.log("Shutting down the trigger")
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.client.close())
+        self.stop()
 
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
@@ -187,8 +188,8 @@ class AzureEventsHubTrigger(AsyncConnector):
         self.log("Azure EventHub Trigger has started")
 
         loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
-        loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
+        loop.add_signal_handler(signal.SIGTERM, lambda: self.shutdown())
+        loop.add_signal_handler(signal.SIGINT, lambda: self.shutdown())
         loop.run_until_complete(self.async_run())
 
         self.log("Azure EventHub Trigger has stopped")
