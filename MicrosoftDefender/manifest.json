@@ -34,12 +34,21 @@
         "type": "string"
       }
     },
-    "required": ["app_id", "app_secret", "tenant_id"],
-    "secrets": ["app_secret"]
+    "required": [
+      "app_id",
+      "app_secret",
+      "tenant_id"
+    ],
+    "secrets": [
+      "app_secret"
+    ]
   },
   "description": " [Microsoft Defender for Endpoint](https://learn.microsoft.com/en-us/defender-endpoint/) is an Endpoint Detection and Response (EDR) product that monitors the security of endpoints. The module required, at least, the Microsoft Defender for Endpoint plan 1",
   "name": "MicrosoftDefender",
   "slug": "microsoft-defender",
   "uuid": "ce491d8d-87a8-45af-a7c5-ede98c4a4ba3",
+  "categories": [
+    "Endpoint"
+  ],
   "version": "1.0.0"
 }
