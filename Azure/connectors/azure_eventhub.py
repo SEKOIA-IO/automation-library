@@ -82,7 +82,7 @@ class AzureEventsHubTrigger(AsyncConnector):
     def client(self) -> Client:
         return Client(self.configuration)
 
-    async def shutdown(self, loop: AbstractEventLoop) -> None:
+    def shutdown(self, loop: AbstractEventLoop) -> None:
         """
         Shutdown the connector
         """
