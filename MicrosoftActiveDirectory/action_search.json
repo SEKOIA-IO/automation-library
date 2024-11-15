@@ -37,7 +37,10 @@
     "type": "object",
     "properties": {
       "search_result": {
-        "type": "array"
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
       }
     }
   }
