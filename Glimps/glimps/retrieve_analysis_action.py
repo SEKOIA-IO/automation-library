@@ -1,8 +1,8 @@
-from glimps.base import GlimpsAction
-from glimps.models import AnalysisResponse, GetAnalysisByUUIDArgument
+from glimps.base import GLIMPSAction
+from glimps.models import AnalysisDetails, GetAnalysisByUUIDArgument, AnalysisResponse
 
 
-class RetrieveAnalysis(GlimpsAction):
+class RetrieveAnalysis(GLIMPSAction):
     """Action to get a result by uuid"""
 
     name = "Retrieve analysis"
@@ -10,6 +10,8 @@ class RetrieveAnalysis(GlimpsAction):
     results_model = AnalysisResponse
 
     def run(self, arguments: GetAnalysisByUUIDArgument) -> AnalysisResponse:
-        analysis = self.gdetect_client.get_by_uuid(arguments.uuid)
-        response = AnalysisResponse.parse_obj(analysis)
-        return response
+        raw_analysis = self.gdetect_client.get_by_uuid(arguments.uuid)
+        details = AnalysisDetails.parse_obj(raw_analysis)
+        view_token: str = self._get_token_view_url(raw_analysis)
+
+        return AnalysisResponse(analysis=details, view_url=view_token)

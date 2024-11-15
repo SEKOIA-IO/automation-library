@@ -1,8 +1,8 @@
-from glimps.base import GlimpsAction
+from glimps.base import GLIMPSAction
 from glimps.models import ExportSubmissionArguments
 
 
-class ExportSubmission(GlimpsAction):
+class ExportSubmission(GLIMPSAction):
     """Action to export analysis result with the requested layout and format"""
 
     name = "Export analysis result"

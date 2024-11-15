@@ -7,9 +7,9 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
+sekoia-automation-sdk = "^1.17.0"
 tenacity = "*"
-gdetect = "^0.7.0"
+gdetect = "^0.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

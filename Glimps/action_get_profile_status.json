@@ -10,22 +10,22 @@
     "properties": {
       "daily_quota": {
         "title": "Daily Quota",
-        "description": "Number of submissions authorized for the profile within 24h.",
+        "description": "Number of submissions authorized for the profile within 24h",
         "type": "integer"
       },
       "available_daily_quota": {
         "title": "Available Daily Quota",
-        "description": "Number of submissions still available within 24h. It's a sliding window, so a new slot will be released 24h after each submission.",
+        "description": "Number of submissions still available within 24h. It's a sliding window, so a new slot will be released 24h after each submission",
         "type": "integer"
       },
       "cache": {
         "title": "Cache",
-        "description": "If True, the profile is configured to use cached result by default.",
+        "description": "If True, the profile is configured to use cached result by default",
         "type": "boolean"
       },
       "estimated_analysis_duration": {
         "title": "Estimated Analysis Duration",
-        "description": "t's an estimation of the duration for the next submissions in milliseconds. It's based on the average time of submissions and the submission queue state. The real duration could differ from the estimation.",
+        "description": "Estimation of the duration for the next submissions in milliseconds. It's based on the average time of submissions and the submission queue state. The real duration could differ from the estimation",
         "type": "integer"
       }
     },
