@@ -56,11 +56,6 @@
         "default": false,
         "type": "boolean"
       },
-      "error": {
-        "title": "Error",
-        "description": "error string",
-        "type": "string"
-      },
       "uuid": {
         "title": "Uuid",
         "description": "uuid of the submitted analysis",

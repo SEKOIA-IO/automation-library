@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Waitfor action : submit a file to Glimps detect and wit for analysis to finish
 - Get status action : get Glimps detect profile status
+- export submission : export analysis result in a given format and layout
 
 ### Changed
 
