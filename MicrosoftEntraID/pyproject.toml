@@ -34,6 +34,9 @@ include = '\.pyi?$'
 profile = "black"
 line_length = 119
 
+[tool.mypy]
+exclude = ["tests/*"]
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra"
