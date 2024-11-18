@@ -10,14 +10,7 @@
     "properties": {
       "search": {
         "in": "query",
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["string", "null"],
         "description": "Search assets by name"
       },
       "uuids": {
@@ -111,26 +104,12 @@
       },
       "reviewed": {
         "in": "query",
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["boolean", "null"],
         "description": "Filter reviewed assets only"
       },
       "criticality": {
         "in": "query",
-        "anyOf": [
-          {
-            "type": "integer"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["integer", "null"],
         "description": "Filter assets with higher criticality"
       },
       "sort": {
@@ -253,29 +232,12 @@
               "type": "string"
             },
             "category": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["string", "object", "null"],
               "default": null,
               "description": "The category of the asset"
             },
             "criticality": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["integer", "null"],
               "default": null,
               "title": "Criticality"
             },
@@ -306,14 +268,7 @@
               "title": "Created By"
             },
             "created_by_type": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["string", "null"],
               "default": null,
               "title": "type of the asset creator"
             },
@@ -357,26 +312,12 @@
               "title": "Last Seen"
             },
             "nb_events": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["integer", "null"],
               "default": null,
               "title": "Nb Events"
             },
             "nb_alerts": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["integer", "null"],
               "default": null,
               "title": "Nb Alerts"
             },
@@ -386,26 +327,12 @@
               "type": "integer"
             },
             "atoms": {
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["object", "null"],
               "default": null,
               "title": "Atoms"
             },
             "props": {
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["object", "null"],
               "default": null,
               "title": "Props"
             },
@@ -503,38 +430,17 @@
               "title": "Rule Uuid"
             },
             "rule_version": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["string", "null"],
               "default": null,
               "title": "Rule Version"
             },
             "criticity": {
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["object", "null"],
               "default": null,
               "description": "The criticality of the asset"
             },
             "asset_type": {
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "type": ["object", "null"],
               "default": null,
               "description": "The type of the asset"
             }

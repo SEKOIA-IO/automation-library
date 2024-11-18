@@ -59,14 +59,7 @@
         "type": "string"
       },
       "category": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["string", "null"],
         "default": null,
         "in": "body"
       },
@@ -78,27 +71,13 @@
         "type": "integer"
       },
       "props": {
-        "anyOf": [
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["object", "null"],
         "default": null,
         "description": "Attach contextual properties",
         "in": "body"
       },
       "atoms": {
-        "anyOf": [
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["object", "null"],
         "default": null,
         "description": "Attach detection properties",
         "in": "body"
@@ -168,29 +147,12 @@
         "type": "string"
       },
       "category": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["object", "string", "null"],
         "default": null,
         "description": "The category of the asset"
       },
       "criticality": {
-        "anyOf": [
-          {
-            "type": "integer"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["integer", "null"],
         "default": null,
         "title": "Criticality"
       },
@@ -221,14 +183,7 @@
         "title": "Created By"
       },
       "created_by_type": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["string", "null"],
         "default": null,
         "title": "type of the asset creator"
       },
@@ -272,26 +227,12 @@
         "title": "Last Seen"
       },
       "nb_events": {
-        "anyOf": [
-          {
-            "type": "integer"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["integer", "null"],
         "default": null,
         "title": "Nb Events"
       },
       "nb_alerts": {
-        "anyOf": [
-          {
-            "type": "integer"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["integer", "null"],
         "default": null,
         "title": "Nb Alerts"
       },
@@ -301,26 +242,12 @@
         "type": "integer"
       },
       "atoms": {
-        "anyOf": [
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["object", "null"],   
         "default": null,
         "title": "Atoms"
       },
       "props": {
-        "anyOf": [
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["object", "null"],
         "default": null,
         "title": "Props"
       },
@@ -418,38 +345,17 @@
         "title": "Rule Uuid"
       },
       "rule_version": {
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["string", "null"],
         "default": null,
         "title": "Rule Version"
       },
       "criticity": {
-        "anyOf": [
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["object", "null"],
         "default": null,
         "description": "The criticality of the asset"
       },
       "asset_type": {
-        "anyOf": [
-          {
-            "type": "object"
-          },
-          {
-            "type": "null"
-          }
-        ],
+        "type": ["object", "null"],
         "default": null,
         "description": "The type of the asset"
       }
