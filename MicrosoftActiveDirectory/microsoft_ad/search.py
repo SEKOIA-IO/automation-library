@@ -14,6 +14,28 @@ class SearchAction(MicrosoftADAction):
     name = "Search"
     description = "Search in your AD"
 
+    def make_serializable(self, data):
+        if isinstance(data, bytes):
+            try:
+                return data.decode('utf-8')
+            except UnicodeDecodeError:
+                return data.hex()
+        elif isinstance(data, (list, tuple)):
+            return [self.make_serializable(item) for item in data]
+        elif hasattr(data, 'entry_to_json'):
+            return data.entry_to_json()
+        elif isinstance(data, dict):
+            return {key: self.make_serializable(value) for key, value in data.items()}
+        else:
+            return data
+    
+    def transform_ldap_results(self, entries):
+        transformed = []
+        for entry in entries:
+            serialized_entry = self.make_serializable(entry)
+            transformed.append(serialized_entry)
+        return transformed
+
     def run(self, arguments: SearchArguments) -> dict:
         attributes = arguments.attributes or ALL_ATTRIBUTES
         try:
@@ -23,4 +45,4 @@ class SearchAction(MicrosoftADAction):
         except:
             raise Exception(f"Failed to search in this base {arguments.basedn}")
 
-        return {"search_result": self.client.response}
+        return {"search_result": self.transform_ldap_results(self.client.response)}

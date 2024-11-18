@@ -2,7 +2,7 @@ from microsoft_ad.base import MicrosoftADModule, MicrosoftADAction
 from microsoft_ad.search import SearchAction
 from unittest.mock import patch
 import pytest
-
+import json
 
 def configured_action(action: MicrosoftADAction):
     module = MicrosoftADModule()
@@ -78,3 +78,38 @@ def test_search_in_base_exception():
 
         # Verify the exception message
         assert str(exc_info.value) == f"Failed to search in this base {basedn}"
+
+
+def test_ldap_action_serialization():
+    action = configured_action(SearchAction)
+    entries = [
+    {
+        'dn': 'CN=John Doe,OU=Users,DC=example,DC=com',
+        'attributes': {
+            'cn': [b'John Doe'],
+            'mail': [b'john.doe@example.com'],
+            'objectGUID': b'\x12\x34\x56\x78\x90',
+            'memberOf': [
+                b'CN=Group1,DC=example,DC=com',
+                b'CN=Group2,DC=example,DC=com'
+            ]
+        }
+    },
+    {
+        'dn': 'CN=Jane Smith,OU=Users,DC=example,DC=com',
+        'attributes': {
+            'cn': [b'Jane Smith'],
+            'mail': [b'jane.smith@example.com'],
+            'objectGUID': b'\x98\x76\x54\x32\x10',
+            'memberOf': [
+                b'CN=Group1,DC=example,DC=com',
+                b'CN=Admins,DC=example,DC=com'
+            ]
+        }
+    }
+    ]
+    results = action.transform_ldap_results(entries)    
+    try:
+        json.dumps(results)
+    except (TypeError, ValueError) as e:
+        assert False, f"Serialization failed: {str(e)}"
