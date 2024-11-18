@@ -7,6 +7,7 @@ from typing import Any
 import orjson
 from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -33,30 +34,14 @@ class TehtrisEventConnector(Connector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.from_date = self.most_recent_date_seen
+
+        self.cursor = CheckpointDatetime(
+            path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
+        )
+        self.from_date = self.cursor.offset
+
         self.fetch_events_limit = 100
         self.events_cache: Cache = LRUCache(maxsize=1000)  # TODO: is it enough to have 1000 event ids in cache?
-
-    @property
-    def most_recent_date_seen(self):
-        now = datetime.now(timezone.utc)
-
-        with self.context as cache:
-            most_recent_date_seen_str = cache.get("most_recent_date_seen")
-
-        # if undefined, retrieve events from the last minute
-        if most_recent_date_seen_str is None:
-            return now - timedelta(minutes=1)
-
-        # parse the most recent date seen
-        most_recent_date_seen = isoparse(most_recent_date_seen_str)
-
-        # we don't retrieve messages older than one hour
-        one_hour_ago = now - timedelta(hours=1)
-        if most_recent_date_seen < one_hour_ago:
-            most_recent_date_seen = one_hour_ago
-
-        return most_recent_date_seen
 
     @cached_property
     def client(self):
@@ -157,8 +142,7 @@ class TehtrisEventConnector(Connector):
             self.from_date = most_recent_date_seen
 
             # save in context the most recent date seen
-            with self.context as cache:
-                cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
+            self.cursor.offset = self.from_date
 
             delta_time = datetime.now(timezone.utc) - most_recent_date_seen
             current_lag = int(delta_time.total_seconds())
