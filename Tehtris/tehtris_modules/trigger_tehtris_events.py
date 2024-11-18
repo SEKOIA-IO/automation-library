@@ -33,7 +33,6 @@ class TehtrisEventConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
 
         self.cursor = CheckpointDatetime(
             path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
