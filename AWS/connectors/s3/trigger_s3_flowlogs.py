@@ -4,6 +4,7 @@ import ipaddress
 from itertools import islice
 
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.metrics import DISCARDED_EVENTS
 
 
 class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):
@@ -50,11 +51,13 @@ class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
         Returns:
             list:
         """
-        records = [
-            record
-            for record in content.decode("utf-8").split(self.configuration.separator)
-            if len(record) > 0 and not self.check_all_ips_are_private(record)
-        ]
+        records = []
+        for record in content.decode("utf-8").split(self.configuration.separator):
+            if len(record) > 0:
+                if not self.check_all_ips_are_private(record):
+                    records.append(record)
+                else:
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
 
         if self.configuration.ignore_comments:  # pragma: no cover
             records = [record for record in records if not record.strip().startswith("#")]
