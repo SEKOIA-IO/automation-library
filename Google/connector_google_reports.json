@@ -30,7 +30,8 @@
           "vault",         
           "rules",
           "saml",
-          "context_aware_access"
+          "context_aware_access",
+          "chrome"
         ],
         "default": "drive"
       },

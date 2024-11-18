@@ -10,11 +10,11 @@ azure-identity = "^1.16.1"
 pydantic = "^1.9.1"
 sekoia-automation-sdk = "^1.14.1"
 msgraph-sdk = "^1.0.0a16"
-pytest-asyncio = "^0.21.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
+pytest-asyncio = "*"
 requests-mock = "*"
 black = {version = "^22.6.0", allow-prereleases = true}
 flake8 = "^4.0.1"
@@ -33,6 +33,9 @@ include = '\.pyi?$'
 [tool.isort]
 profile = "black"
 line_length = 119
+
+[tool.mypy]
+exclude = ["tests/*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

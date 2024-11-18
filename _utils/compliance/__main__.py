@@ -291,6 +291,8 @@ if __name__ == "__main__":
     elif args.action == "fix":
         if len(errors_to_fix) == 0:
             print("There is nothing we can fix automatically")
+
+        else:
             print()
             print("Fixing...")
             for error in errors_to_fix:

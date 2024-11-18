@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch, call
 
 import pytest
+import requests
 import requests_mock
 
 from mimecast_modules import MimecastModule
@@ -157,3 +158,81 @@ def test_stop_consumers(trigger):
     consumer_to_stop = consumers.get("to_stop")
     assert consumer_to_stop is not None
     assert consumer_to_stop.stop.called
+
+
+def test_authentication_failed(
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1
+):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "mimecast_modules.connector_mimecast_siem.download_batches"
+    ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
+        mock_download_batches.side_effect = [[batch_event_1], []]
+
+        mock_requests.post(
+            f"https://api.services.mimecast.com/oauth/token",
+            status_code=401,
+            json={"fail": [{"code": "InvalidClientIdentifier", "message": "Client credentials are invalid"}]},
+        )
+
+        mock_requests.get(
+            f"https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            [{"json": batch_events_response_1}, {"json": batch_events_response_empty}],
+        )
+
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time, end_time]
+
+        consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
+        with pytest.raises(requests.exceptions.HTTPError):
+            consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        assert trigger.log.mock_calls == [
+            call(level="critical", message="Authentication failed: Client credentials are invalid")
+        ]
+
+
+def test_permission_denied(
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1
+):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "mimecast_modules.connector_mimecast_siem.download_batches"
+    ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
+        mock_download_batches.side_effect = [[batch_event_1], []]
+
+        mock_requests.post(
+            f"https://api.services.mimecast.com/oauth/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "Bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock_requests.get(
+            f"https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            [
+                {
+                    "status_code": 403,
+                    "json": {
+                        "fail": [{"code": "app_forbidden", "message": "Forbidden to perform the requested operation"}]
+                    },
+                }
+            ],
+        )
+
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time, end_time]
+
+        consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
+        with pytest.raises(requests.exceptions.HTTPError):
+            consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 0
+        assert trigger.log.mock_calls == [
+            call(level="critical", message="Permission denied: Forbidden to perform the requested operation")
+        ]

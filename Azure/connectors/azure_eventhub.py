@@ -2,7 +2,6 @@ import asyncio
 import os
 import signal
 import time
-from asyncio import Task
 from datetime import datetime, timezone
 from functools import cached_property
 from typing import Any, Optional, cast
@@ -38,21 +37,25 @@ class Client(object):
             self.configuration.storage_connection_string, container_name=self.configuration.storage_container_name
         )
 
-    def _new_client(self) -> EventHubConsumerClient:
-        return EventHubConsumerClient.from_connection_string(
-            self.configuration.hub_connection_string,
-            self.configuration.hub_consumer_group,
-            eventhub_name=self.configuration.hub_name,
-            checkpoint_store=self.checkpoint_store,
-            uamqp_transport=True,
-        )
+    def client(self) -> EventHubConsumerClient:
+        if self._client is None:
+            self._client = EventHubConsumerClient.from_connection_string(
+                self.configuration.hub_connection_string,
+                self.configuration.hub_consumer_group,
+                eventhub_name=self.configuration.hub_name,
+                checkpoint_store=self.checkpoint_store,
+                uamqp_transport=True,
+            )
+
+        return self._client
 
     async def receive_batch(self, *args: Any, **kwargs: Optional[Any]) -> None:
-        self._client = self._new_client()
         try:
-            await self._client.receive_batch(*args, **kwargs)  # type: ignore
-        finally:
+            # Default value for max batch size is 300 if not provided.
+            await self.client().receive_batch(*args, **kwargs)  # type: ignore
+        except Exception as e:
             await self.close()
+            raise e
 
     async def close(self) -> None:
         if self._client:
@@ -67,36 +70,22 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     configuration: AzureEventsHubConfiguration
 
-    # The maximum time to wait for new messages before closing the client
-    wait_timeout = 600
-
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
-        self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "600"), 10)
-        self._current_task: Task[Any] | None = None
+        self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
+        self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
+        self._has_more_events = True
 
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
-
-    async def stop_current_task(self) -> None:
-        """
-        Stop the current async task
-        """
-        # if the current task is defined and not already cancelled
-        if self._current_task is not None and not self._current_task.cancelled():
-            # cancel the receiving task
-            self._current_task.cancel()
-
-            # clean the current task
-            self._current_task = None
 
     async def shutdown(self) -> None:
         """
         Shutdown the connector
         """
         self.stop()
-        await self.stop_current_task()
+        await self.client.close()
         self.log("Shutting down the trigger")
 
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
@@ -107,25 +96,20 @@ class AzureEventsHubTrigger(AsyncConnector):
             # got messages, we forward them
             await self.forward_events(messages)
 
+            # acknowledge the messages
+            await partition_context.update_checkpoint()
         else:  # pragma: no cover
             # We reached the max_wait_time, close the current client
             self.log(
-                message=(
-                    f"No new messages received from the last {self._consumption_max_wait_time} seconds. "
-                    "Close the current client"
-                ),
-                level="info",
+                message=(f"No new messages received from the last {self._frequency} seconds."),
             )
 
             # reset the metrics
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
             MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(0)
-            await self.client.close()
 
-        # acknowledge the messages
-        await partition_context.update_checkpoint()
-
-    def get_records_from_message(self, message: EventData) -> list[Any]:
+    @staticmethod
+    def get_records_from_message(message: EventData) -> list[Any]:
         """
         Return the records according to the body of the message
         """
@@ -150,18 +134,13 @@ class AzureEventsHubTrigger(AsyncConnector):
         ]
 
         if len(records) > 0:
-            self.log(
-                message=f"Forward {len(records)} events",
-                level="info",
-            )
+            self.log(f"Forward {len(records)} events")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(records))
             await self.push_data_to_intakes(events=records)
-
+            self._has_more_events = True
         else:
-            self.log(
-                message="No events to forward",
-                level="info",
-            )
+            self.log("No events to forward")
+            self._has_more_events = False
 
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(time.time() - start)
 
@@ -184,47 +163,32 @@ class AzureEventsHubTrigger(AsyncConnector):
             message="Error raised when consuming messages",
         )
 
+    # Only for easy mock purposed in tests
     async def receive_events(self) -> None:
-        try:
-            await self.client.receive_batch(
-                on_event_batch=self.handle_messages,
-                on_error=self.handle_exception,
-                max_wait_time=self._consumption_max_wait_time,
-            )
-
-        except asyncio.CancelledError:
-            # Handle the cancellation properly and ensure the client is closed.
-            await self.client.close()
-            raise
-
-        except Exception as ex:
-            self.log_exception(ex, message="Failed to consume messages")
-            raise ex
+        await self.client.receive_batch(
+            on_event_batch=self.handle_messages,
+            on_error=self.handle_exception,
+            max_wait_time=self._consumption_max_wait_time,
+        )
 
     async def async_run(self) -> None:
         while self.running:
-            self._current_task = asyncio.create_task(self.receive_events())
-
             try:
-                # Allow the task to run for the specified duration (10 minutes default)
-                await asyncio.sleep(self.wait_timeout)
+                await self.receive_events()
 
-                # Stop the receiving task after the duration
-                await self.stop_current_task()
+            except Exception as ex:  # pragma: no cover
+                self.log_exception(ex, message="Failed to consume messages")
+                self._has_more_events = False
 
-            except asyncio.CancelledError:
-                self.log(message="Receiving task was cancelled", level="info")
-
-            finally:
-                # Ensure the client is closed properly
-                await self.client.close()
+            if not self._has_more_events:
+                await asyncio.sleep(self._frequency)
 
     def run(self) -> None:  # pragma: no cover
-        self.log(message="Azure EventHub Trigger has started", level="info")
+        self.log("Azure EventHub Trigger has started")
 
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
         loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
         loop.run_until_complete(self.async_run())
 
-        self.log(message="Azure EventHub Trigger has stopped", level="info")
+        self.log("Azure EventHub Trigger has stopped")

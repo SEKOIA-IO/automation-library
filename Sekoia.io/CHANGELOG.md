@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-14 - 2.65.1
+
+### Changed
+
+- Add synchronize asset action
+
+## 2024-11-12 - 2.65.0
+
+### Changed
+
+- Remove attribute `rule.description` when fetching alerts
+
 ## 2024-11-04 - 2.64.8
 
 ### Fixed

@@ -1,10 +1,12 @@
 import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from operator import itemgetter
 from threading import Event, Lock, Thread
 from typing import Generator
 
 import orjson
+import requests
 from dateutil.parser import isoparse
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -150,6 +152,31 @@ class MimecastSIEMWorker(Thread):
 
                     yield next_events
 
+        except requests.exceptions.HTTPError as error:
+            error_response = error.response
+            if error_response is None:
+                raise ValueError("Response does not contain any valid data")
+
+            http_error_code = error_response.status_code
+            error_message = ", ".join(map(itemgetter("message"), error_response.json().get("fail", [])))
+            if http_error_code == 401:
+                message = "Authentication failed"
+
+                if error_message is not None and len(error_message) > 0:
+                    message = f"{message}: {error_message}"
+
+                self.log(message=message, level="critical")
+
+            if http_error_code == 403:
+                message = "Permission denied"
+
+                if error_message is not None and len(error_message) > 0:
+                    message = f"{message}: {error_message}"
+
+                self.log(message=message, level="critical")
+
+            raise error
+
         finally:
             # save the most recent date
             if most_recent_date_seen > self.from_date:
@@ -208,6 +235,9 @@ class MimecastSIEMWorker(Thread):
                 self.next_batch()
             except Exception as error:
                 self.log_exception(error, message=f"{self.log_type}: Failed to forward events")
+
+                # In case of exception, pause the thread before the next attempt
+                time.sleep(self.connector.configuration.frequency)
 
 
 class MimecastSIEMConnector(Connector):

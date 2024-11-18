@@ -1,0 +1,58 @@
+{
+  "name": "Scan a machine",
+  "description": "Run an Anti-Virus scan on a machine",
+  "uuid": "10ef25a1-1221-5fe2-b981-915519cd2233",
+  "docker_parameters": "ScanMachineAction",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "machine_id": {
+        "description": "Machine ID",
+        "type": "string"
+      },
+      "comment": {
+        "description": "Comment",
+        "type": "string"
+      },
+      "scan_type": {
+        "description": "Scan Type",
+        "type": "string",
+        "enum": ["Quick", "Full"]
+      }
+    },
+    "required": ["machine_id", "comment", "scan_type"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "description": "The identifier of the action",
+        "type": "string"
+      },
+      "type": {
+        "description": "The type of the action",
+        "type": "string"
+      },
+      "scope": {
+        "description": "The scope of the action",
+        "type": "string"
+      },
+      "status": {
+        "description": "The status of the action",
+        "type": "string"
+      },
+      "requestor": {
+        "description": "Identify who executed the action",
+        "type": "string"
+      },
+      "title": {
+        "description": "The title of the action",
+        "type": "string"
+      },
+      "machineid": {
+        "description": "The identifier of the machine",
+        "type": "string"
+      }
+    }
+  }
+}

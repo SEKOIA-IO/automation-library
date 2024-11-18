@@ -1,0 +1,49 @@
+{
+  "name": "Deisolate a machine",
+  "description": "Deisolate a machine",
+  "uuid": "1acfcd68-cfb3-5dce-b254-f97dd007e080",
+  "docker_parameters": "UnIsolateMachineAction",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "machine_id": {
+        "description": "Machine ID",
+        "type": "string"
+      },
+      "comment": {
+        "description": "Comment",
+        "type": "string"
+      }
+    },
+    "required": ["machine_id", "comment"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "description": "The identifier of the action",
+        "type": "string"
+      },
+      "type": {
+        "description": "The type of the action",
+        "type": "string"
+      },
+      "status": {
+        "description": "The status of the action",
+        "type": "string"
+      },
+      "requestor": {
+        "description": "Identify who executed the action",
+        "type": "string"
+      },
+      "title": {
+        "description": "The title of the action",
+        "type": "string"
+      },
+      "machineid": {
+        "description": "The identifier of the machine",
+        "type": "string"
+      }
+    }
+  }
+}

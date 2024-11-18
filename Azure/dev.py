@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--hub_connection_string", type=str, required=True)
     parser.add_argument("--hub_name", type=str, required=True)
-    parser.add_argument("--hub_consumer_group", type=str, required=True)
+    parser.add_argument("--hub_consumer_group", type=str, required=False)
     parser.add_argument("--storage_connection_string", type=str, required=True)
     parser.add_argument("--storage_container_name", type=str, required=True)
     parser.add_argument("--intake_key", type=str, required=True)

@@ -1,0 +1,50 @@
+{
+  "description": "Get last M365 Email Events",
+  "docker_parameters": "m365_events_connector",
+  "name": "Get M365 Email Events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds"
+      },
+      "tenant_id": {
+        "type": "string",
+        "description": "Identifier of your 365 Tenant"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 10000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "pagination_limit": {
+        "type": "integer",
+        "description": "Limit of records to fetch from the API per request",
+        "default": 100
+      },
+      "rate_limit": {
+        "type": "integer",
+        "description": "Limit of requests per second to VadeSecure API",
+        "default": 10
+      }
+    },
+    "required": [
+      "frequency",
+      "tenant_id",
+      "intake_key"
+    ],
+    "title": "M365 Events",
+    "type": "object"
+  },
+  "uuid": "d3860745-4433-4690-b025-378369ad7201"
+}

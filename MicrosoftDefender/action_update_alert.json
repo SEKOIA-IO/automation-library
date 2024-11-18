@@ -1,0 +1,124 @@
+{
+  "name": "Update an alert",
+  "description": "Update an alert",
+  "uuid": "65329072-2bae-543b-91b8-15e928cb927d",
+  "docker_parameters": "UpdateAlertAction",
+  "arguments": {
+    "type": "object",
+    "anyOf": [
+      {
+        "required": [
+          "alert_id",
+          "status"
+        ]
+      },
+      {
+        "required": [
+          "alert_id",
+          "classification"
+        ]
+      },
+      {
+        "required": [
+          "alert_id",
+          "determination"
+        ]
+      },
+      {
+        "required": [
+          "alert_id",
+          "comment"
+        ]
+      },
+      {
+        "required": [
+          "alert_id",
+          "owner"
+        ]
+      }
+    ],
+    "properties": {
+      "alert_id": {
+        "description": "Alert ID",
+        "type": "string"
+      },
+      "status": {
+        "description": "Status",
+        "type": "string",
+        "enum": [
+          "New",
+          "InProgress",
+          "Resolved"
+        ]
+      },
+      "classification": {
+        "description": "Classification of the alert",
+        "type": "string",
+        "enum": [
+          "TruePositive",
+          "FalsePositive",
+          "InformationalExpectedActivity"
+        ]
+      },
+      "determination": {
+        "description": "Determination of the alert.\nThe determination must match the classification (see https://learn.microsoft.com/en-us/defender-endpoint/api/update-alert)",
+        "type": "string",
+        "enum": [
+          "MultiStagedAttack",
+          "MaliciousUserActivity",
+          "CompromisedUser",
+          "Malware",
+          "Phishing",
+          "UnwantedSoftware",
+          "SecurityTesting",
+          "LineOfBusinessApplication",
+          "ConfirmedActivity",
+          "NotMalicious",
+          "InsufficientData",
+          "Other"
+        ]
+      },
+      "comment": {
+        "description": "Comment",
+        "type": "string"
+      },
+      "owner": {
+        "description": "Owner of the alert",
+        "type": "string"
+      }
+    }
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "description": "The identifier of the alert",
+        "type": "string"
+      },
+      "title": {
+        "description": "The title of the alert",
+        "type": "string"
+      },
+      "description": {
+        "description": "The description of the alert",
+        "type": "string"
+      },
+      "status": {
+        "description": "The status of the alert",
+        "type": "string"
+      },
+      "classification": {
+        "description": "The classification of the alert",
+        "type": "string"
+      },
+      "determination": {
+        "description": "The determination of the alert",
+        "type": "string"
+      },
+      "category": {
+        "description": "The category of the alert",
+        "type": "string"
+      }
+    }
+  }
+}

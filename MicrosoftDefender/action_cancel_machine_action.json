@@ -1,0 +1,49 @@
+{
+  "name": "Cancel machine action",
+  "description": "Cancel machine action",
+  "uuid": "d9c01e21-4215-4ac3-84ae-262c4bf9c2cd",
+  "docker_parameters": "CancelMachineAction",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "action_id": {
+        "description": "Action ID",
+        "type": "string"
+      },
+      "comment": {
+        "description": "Comment",
+        "type": "string"
+      }
+    },
+    "required": ["action_id", "comment"]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "description": "The identifier of the action",
+        "type": "string"
+      },
+      "type": {
+        "description": "The type of the action",
+        "type": "string"
+      },
+      "status": {
+        "description": "The status of the action",
+        "type": "string"
+      },
+      "requestor": {
+        "description": "Identify who executed the action",
+        "type": "string"
+      },
+      "title": {
+        "description": "The title of the action",
+        "type": "string"
+      },
+      "machineid": {
+        "description": "The identifier of the machine",
+        "type": "string"
+      }
+    }
+  }
+}

@@ -22,7 +22,7 @@
         "type": "string"
       },
       "hub_consumer_group": {
-        "description": "The consumergroup to supplied to the hub",
+        "description": "The consumer group to supplied to the hub",
         "type": "string",
         "default": "sekoiaio"
       },

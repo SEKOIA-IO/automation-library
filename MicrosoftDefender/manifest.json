@@ -1,0 +1,54 @@
+{
+  "configuration": {
+    "title": "MicrosoftDefenderModuleConfiguration",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "title": "Base Url",
+        "description": "Base URL",
+        "default": "https://api.securitycenter.microsoft.com",
+        "type": "string",
+        "enum": [
+          "https://api.securitycenter.microsoft.com",
+          "https://us.api.security.microsoft.com",
+          "https://eu.api.security.microsoft.com",
+          "https://uk.api.security.microsoft.com",
+          "https://au.api.security.microsoft.com",
+          "https://swa.api.security.microsoft.com",
+          "https://ina.api.security.microsoft.com"
+        ]
+      },
+      "app_id": {
+        "title": "Application (Client) ID",
+        "description": "The identifier of the Azure Application",
+        "type": "string"
+      },
+      "app_secret": {
+        "title": "Client Secret",
+        "description": "The value of the secret associated to the Azure Application",
+        "type": "string"
+      },
+      "tenant_id": {
+        "title": "Directory (tenant) IDd",
+        "description": "The identifier of the Azure Directory",
+        "type": "string"
+      }
+    },
+    "required": [
+      "app_id",
+      "app_secret",
+      "tenant_id"
+    ],
+    "secrets": [
+      "app_secret"
+    ]
+  },
+  "description": " [Microsoft Defender for Endpoint](https://learn.microsoft.com/en-us/defender-endpoint/) is an Endpoint Detection and Response (EDR) product that monitors the security of endpoints. The module required, at least, the Microsoft Defender for Endpoint plan 1",
+  "name": "MicrosoftDefender",
+  "slug": "microsoft-defender",
+  "uuid": "ce491d8d-87a8-45af-a7c5-ede98c4a4ba3",
+  "categories": [
+    "Endpoint"
+  ],
+  "version": "1.0.0"
+}

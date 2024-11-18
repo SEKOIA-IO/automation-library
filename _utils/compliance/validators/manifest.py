@@ -10,6 +10,18 @@ from semver import Version
 from .base import Validator
 from .models import CheckError, CheckResult
 
+ALLOWED_MANIFEST_CATEGORIES = {
+    "Applicative",
+    "Cloud Providers",
+    "Collaboration Tools",
+    "Email",
+    "Endpoint",
+    "Generic",
+    "IAM",
+    "Network",
+    "Threat Intelligence",
+}
+
 
 class ManifestValidator(Validator):
     @classmethod
@@ -117,6 +129,25 @@ class ManifestValidator(Validator):
                     error="`configuration` is not valid JSON schema",
                 )
             )
+
+        module_categories = manifest.get("categories", [])
+        if len(module_categories) == 0:
+            result.errors.append(
+                CheckError(
+                    filepath=manifest_path,
+                    error="`category` is non-existent or doesn't contain any category",
+                )
+            )
+
+        else:
+            for category in module_categories:
+                if category not in ALLOWED_MANIFEST_CATEGORIES:
+                    result.errors.append(
+                        CheckError(
+                            filepath=manifest_path,
+                            error=f"`category` could not contain value '{category}'",
+                        )
+                    )
 
     @staticmethod
     def is_valid_json_schema(schema: dict) -> bool:
