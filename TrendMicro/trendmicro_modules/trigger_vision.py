@@ -5,6 +5,7 @@ from typing import Generator
 from urllib.parse import urljoin
 
 import orjson
+import requests
 from dateutil.parser import isoparse
 from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointDatetime
@@ -12,7 +13,10 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import TrendMicroModule
 from .client import TrendMicroVisionApiClient
+from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class TrendMicroVisionOneConnectorConfiguration(DefaultConnectorConfiguration):
@@ -29,16 +33,30 @@ class TrendMicroVisionOneConnector(Connector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            # path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
-            path=self._data_path,
-            start_at=timedelta(days=30),
-            ignore_older_than=timedelta(days=140),
+            path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
         )
         self.from_date = self.cursor.offset
 
     @cached_property
     def client(self) -> TrendMicroVisionApiClient:
         return TrendMicroVisionApiClient(api_key=self.configuration.api_key)
+
+    def __handle_response_error(self, response: requests.Response) -> None:
+        if not response.ok:
+            message = f"Request on Trend Micro Vision One API to fetch events failed with status {response.status_code} - {response.reason}"
+            level = "critical" if response.status_code in [401, 403] else "error"
+
+            # enrich error logs with detail from the Okta API
+            try:
+                error = response.json()["error"]
+                logger.error(
+                    message, error_code=error["code"], error_message=error["message"], error_number=error["number"]
+                )
+
+            except Exception:
+                pass
+
+            self.log(message, level=level)
 
     def __fetch_events(self, from_date: datetime) -> Generator[list, None, None]:
         to_date = datetime.now(timezone.utc)
@@ -54,16 +72,17 @@ class TrendMicroVisionOneConnector(Connector):
 
         while self.running:
             response = self.client.get(url, params=query_params, timeout=60)
+            self.__handle_response_error(response)
 
             message = response.json()
             events = message.get("items", [])
 
             if events:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, type="vision_one").inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="vision_one").set(0)
                 return
 
             url = message.get("nextLink")
@@ -101,7 +120,9 @@ class TrendMicroVisionOneConnector(Connector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(int(current_lag.total_seconds()))
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="vision_one").set(
+            int(current_lag.total_seconds())
+        )
 
     def next_batch(self):
         # save the starting time
@@ -117,7 +138,9 @@ class TrendMicroVisionOneConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type="vision_one").inc(
+                    len(batch_of_events)
+                )
                 self.push_events_to_intakes(events=batch_of_events)
             else:
                 self.log(
@@ -129,7 +152,9 @@ class TrendMicroVisionOneConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="debug")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type="vision_one").observe(
+            batch_duration
+        )
 
         # compute the remaining sleeping time. If greater than 0, sleep
         delta_sleep = self.configuration.frequency - batch_duration
