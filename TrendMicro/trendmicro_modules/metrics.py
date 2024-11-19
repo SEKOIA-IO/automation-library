@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 # Declare prometheus metrics
 prom_namespace = "symphony_module_trend_micro_email_security"

@@ -1,0 +1,57 @@
+{
+  "description": "Get last logs from the Trend Micro Vision One",
+  "docker_parameters": "trend_micro_vision_one",
+  "name": "Fetch new alerts",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "format": "uri",
+        "enum": [
+          "https://api.xdr.trendmicro.com",
+          "https://api.au.xdr.trendmicro.com",
+          "https://api.eu.xdr.trendmicro.com",
+          "https://api.in.xdr.trendmicro.com",
+          "https://api.xdr.trendmicro.co.jp",
+          "https://api.sg.xdr.trendmicro.com",
+          "https://api.mea.xdr.trendmicro.com",
+          "https://api.usgov.xdr.trendmicro.com"
+        ],
+        "default": "https://api.xdr.trendmicro.com"
+      },
+      "api_key": {
+        "description": "Trend Micro api_key",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_key",
+      "base_url",
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ],
+    "title": "The configuration to fetch new logs",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "7aa5dd7c-d694-44dd-b605-66b7974dfb05"
+}
