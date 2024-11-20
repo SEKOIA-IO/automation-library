@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-20 - 1.32.1
+
+### Changed
+
+- Add a new metric to count the number of discarded events by the AWS VPC Flowlogs connector
+
 ## 2024-10-30 - 1.32.0
 
 ### Changed
