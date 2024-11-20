@@ -33,7 +33,10 @@ class TrendMicroVisionOneConnector(Connector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
+            # path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
+            path=self._data_path,
+            start_at=timedelta(days=30),
+            ignore_older_than=timedelta(days=140),
         )
         self.from_date = self.cursor.offset
 
@@ -69,9 +72,9 @@ class TrendMicroVisionOneConnector(Connector):
         }
 
         url = urljoin(self.configuration.base_url, "v3.0/workbench/alerts")
+        response = self.client.get(url, params=query_params, timeout=60)
 
         while self.running:
-            response = self.client.get(url, params=query_params, timeout=60)
             self.__handle_response_error(response)
 
             message = response.json()
@@ -88,6 +91,8 @@ class TrendMicroVisionOneConnector(Connector):
             url = message.get("nextLink")
             if url is None:
                 return
+
+            response = self.client.get(url, timeout=60)
 
     @staticmethod
     def get_upper_second(time: datetime) -> datetime:
