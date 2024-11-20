@@ -41,3 +41,10 @@ MESSAGES_AGE = Histogram(
     namespace=prom_aws_namespace,
     labelnames=["intake_key"],
 )
+
+DISCARDED_EVENTS = Counter(
+    name="discarded_events",
+    documentation="Number of events discarded from the collect",
+    namespace=prom_aws_namespace,
+    labelnames=["intake_key"],
+)

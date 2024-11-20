@@ -7,6 +7,7 @@ from typing import Any
 
 import orjson
 import pandas
+from connectors.metrics import DISCARDED_EVENTS
 
 from connectors.s3 import AbstractAwsS3QueuedConnector
 
@@ -55,7 +56,9 @@ class AwsS3FlowLogsParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
 
         records = []
         for record in df.to_dict(orient="records"):
-            if len(record) > 0 and not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
-                records.append(orjson.dumps(record).decode("utf-8"))
-
+            if len(record) > 0:
+                if not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
+                    records.append(orjson.dumps(record).decode("utf-8"))
+                else:
+                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
         return records
