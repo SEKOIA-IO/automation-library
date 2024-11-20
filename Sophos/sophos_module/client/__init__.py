@@ -16,6 +16,7 @@ class ApiClient(requests.Session):
         ratelimit_per_second: int = 10,
         ratelimit_per_minute: int = 100,
         ratelimit_per_hour: int = 1000,
+        ratelimit_per_day: int = 200000,
     ):
         super().__init__()
         self.auth = auth
@@ -23,6 +24,7 @@ class ApiClient(requests.Session):
             per_second=ratelimit_per_second,
             per_minute=ratelimit_per_minute,
             per_hour=ratelimit_per_hour,
+            per_day=ratelimit_per_day,
             max_retries=Retry(total=nb_retries, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504]),
         )
         self.mount("http://", adapter)
@@ -39,6 +41,7 @@ class SophosApiClient(ApiClient):
         ratelimit_per_second: int = 10,
         ratelimit_per_minute: int = 100,
         ratelimit_per_hour: int = 1000,
+        ratelimit_per_day: int = 200000,
     ) -> None:
         super().__init__(
             auth=auth,
@@ -46,6 +49,7 @@ class SophosApiClient(ApiClient):
             ratelimit_per_second=ratelimit_per_second,
             ratelimit_per_minute=ratelimit_per_minute,
             ratelimit_per_hour=ratelimit_per_hour,
+            ratelimit_per_day=ratelimit_per_day,
         )
 
     def list_siem_events(self, parameters: dict[str, Any] | None = None) -> requests.Response:
