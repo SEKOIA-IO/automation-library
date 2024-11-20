@@ -8,7 +8,7 @@
       "frequency": {
         "type": "integer",
         "description": "Batch frequency in seconds",
-        "default": 60
+        "default": 300
       },
       "chunk_size": {
         "type": "integer",
