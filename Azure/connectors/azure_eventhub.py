@@ -82,14 +82,6 @@ class AzureEventsHubTrigger(AsyncConnector):
     def client(self) -> Client:
         return Client(self.configuration)
 
-    def shutdown(self, loop: AbstractEventLoop) -> None:
-        """
-        Shutdown the connector
-        """
-        self.log("Shutting down the trigger")
-        loop.call_soon(self.client.close())
-        self.stop()
-
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
         Handle new messages
@@ -185,13 +177,12 @@ class AzureEventsHubTrigger(AsyncConnector):
             if not self._has_more_events:
                 await asyncio.sleep(self._frequency)
 
+        await self.client.close()
+
     def run(self) -> None:  # pragma: no cover
         self.log("Azure EventHub Trigger has started")
 
         loop = asyncio.get_event_loop()
-        for s in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(s, functools.partial(self.shutdown, loop=loop))
-
         loop.run_until_complete(self.async_run())
 
         self.log("Azure EventHub Trigger has stopped")
