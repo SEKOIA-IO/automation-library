@@ -16,7 +16,7 @@ def fake_time():
 
 @pytest.fixture
 def patch_datetime_now(fake_time):
-    with patch("tehtris_modules.trigger_tehtris_events.datetime") as mock_datetime:
+    with patch("sekoia_automation.checkpoint.datetime") as mock_datetime:
         mock_datetime.now.return_value = fake_time
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
         yield mock_datetime

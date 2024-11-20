@@ -7,7 +7,9 @@ from typing import Any
 import orjson
 from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.storage import PersistentJSON
 
 from tehtris_modules import TehtrisModule
 from tehtris_modules.client import ApiClient
@@ -31,7 +33,12 @@ class TehtrisEventConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.from_date = datetime.now(timezone.utc) - timedelta(minutes=1)
+
+        self.cursor = CheckpointDatetime(
+            path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
+        )
+        self.from_date = self.cursor.offset
+
         self.fetch_events_limit = 100
         self.events_cache: Cache = LRUCache(maxsize=1000)  # TODO: is it enough to have 1000 event ids in cache?
 
@@ -40,11 +47,6 @@ class TehtrisEventConnector(Connector):
         return ApiClient(self.module.configuration.apikey)
 
     def __fetch_next_events(self, from_date: datetime, offset: int):
-        # We don't retrieve messages older than one hour
-        one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
-        if from_date < one_hour_ago:
-            from_date = one_hour_ago
-
         params = {
             "fromDate": int(from_date.timestamp()),
             "limit": self.fetch_events_limit,
@@ -137,6 +139,10 @@ class TehtrisEventConnector(Connector):
         current_lag: int = 0
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
+
+            # save in context the most recent date seen
+            self.cursor.offset = self.from_date
+
             delta_time = datetime.now(timezone.utc) - most_recent_date_seen
             current_lag = int(delta_time.total_seconds())
 
@@ -192,5 +198,5 @@ class TehtrisEventConnector(Connector):
             time.sleep(delta_sleep)
 
     def run(self):
-        while True:
+        while self.running:
             self.next_batch()
