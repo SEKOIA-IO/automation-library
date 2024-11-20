@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-20 - 1.17.2
+
+### Fixed
+
+- Add the ratelimit per day
+- Increase the frequency to 5 minutes
+
 ## 2024-10-08 - 1.17.1
 
 ### Fixed
