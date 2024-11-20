@@ -13,7 +13,7 @@ from azure.eventhub import EventData
 from azure.eventhub.aio import EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblobaio import BlobCheckpointStore
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.connector import DefaultConnectorConfiguration
+from sekoia_automation.connector import DefaultConnectorConfiguration, Connector
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
 
@@ -165,6 +165,12 @@ class AzureEventsHubTrigger(AsyncConnector):
             max_wait_time=self._consumption_max_wait_time,
         )
 
+    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
+        """
+        Stop the connector
+        """
+        super(Connector, self).stop(*args, **kwargs)
+
     async def async_run(self) -> None:  # pragma: no cover
         while self.running:
             try:
@@ -174,10 +180,12 @@ class AzureEventsHubTrigger(AsyncConnector):
                 self.log_exception(ex, message="Failed to consume messages")
                 self._has_more_events = False
 
+            await self.client.close()
+
             if not self._has_more_events:
                 await asyncio.sleep(self._frequency)
 
-        await self.client.close()
+        await self._session.close()
 
     def run(self) -> None:  # pragma: no cover
         self.log("Azure EventHub Trigger has started")

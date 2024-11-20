@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-20 - 2.6.3
+
+### Fixed
+
+- Remove shutdown to simplify the workflow
+- Fix the way to handle stop
+
+
 ## 2024-11-15 - 2.6.2
 
 ### Fixed
