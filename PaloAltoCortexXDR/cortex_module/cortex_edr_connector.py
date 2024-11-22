@@ -147,27 +147,33 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
+    def forward_next_batch(self) -> None:
+        """
+        Collect and forward the next batch of alerts
+        """
+        start = time.time()
+        try:
+            self.get_all_alerts(self.pagination_limit)
+
+        except (HTTPError, BaseHTTPError) as ex:
+            self.log_exception(ex, message="Failed to get next batch of events")
+        except Exception as ex:
+            self.log_exception(ex, message="An unknown exception occurred")
+            raise
+
+        duration = int(time.time() - start)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+
+        delta_sleep = self.configuration.frequency - duration
+        if delta_sleep > 0:
+            time.sleep(delta_sleep)
+
     def run(self) -> None:
         """Run Cortex EDR Connector"""
 
         self.log(message="Cortex EDR Events Trigger has started", level="info")
         try:
             while self.running:
-                start = time.time()
-                try:
-                    self.get_all_alerts(self.pagination_limit)
-
-                except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to get next batch of events")
-                except Exception as ex:
-                    self.log_exception(ex, message="An unknown exception occurred")
-                    raise
-
-                duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                delta_sleep = self.configuration.frequency - duration
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
+                self.forward_next_batch()
         finally:
             self.log(message="Cortex Events Trigger has stopped", level="info")
