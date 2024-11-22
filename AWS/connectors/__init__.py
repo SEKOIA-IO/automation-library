@@ -8,7 +8,7 @@ from functools import cached_property
 from pydantic import BaseModel, Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
-from sekoia_automation.connector import DefaultConnectorConfiguration
+from sekoia_automation.connector import DefaultConnectorConfiguration, Connector
 from sekoia_automation.module import Module
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, MESSAGES_AGE
@@ -118,3 +118,9 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
 
             except Exception as e:
                 self.log_exception(e)
+
+    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
+        """
+        Stop the connector
+        """
+        super(Connector, self).stop(*args, **kwargs)
