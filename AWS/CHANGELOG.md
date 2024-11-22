@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-22 - 1.32.2
+
+### Fixed
+
+- Override the stop method due to an issue in the sdk (fix in progress)
+
 ## 2024-11-20 - 1.32.1
 
 ### Changed
