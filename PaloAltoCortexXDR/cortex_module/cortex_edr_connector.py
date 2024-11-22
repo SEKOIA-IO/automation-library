@@ -105,7 +105,12 @@ class CortexQueryEDRTrigger(CortexConnector):
         self.query["request_data"]["search_to"] = serch_to
         self.query["request_data"]["filters"][0]["value"] = creation_time
 
-        response_query = self.client.post(url=self.alert_url, json=self.query).json().get("reply")
+        # Get the alerts
+        response = self.client.post(url=self.alert_url, json=self.query)
+        response.raise_for_status()
+
+        # Extract the payload
+        response_query = response.json().get("reply", {})
 
         # extract alerts
         alerts = response_query.get("alerts") or []
