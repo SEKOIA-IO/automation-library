@@ -4,7 +4,7 @@ from freezegun import freeze_time
 import pytest
 import requests_mock
 from requests.exceptions import HTTPError
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
 
 from cortex_module.helper import handle_fqdn
 from cortex_module.base import CortexModule
@@ -312,3 +312,37 @@ def test_getting_data_400_http_code(trigger, alert_query_2):
 
         trigger.forward_next_batch()
         assert trigger.log_exception.called
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_with_authentication_failure(trigger, alert_query_2):
+    fqdn = trigger.module.configuration.fqdn
+    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+    with patch("cortex_module.cortex_edr_connector.time") as mock_time, requests_mock.Mocker() as mock:
+        mock.post(
+            alert_url,
+            status_code=401,
+        )
+
+        trigger.forward_next_batch()
+        assert trigger.log.mock_calls == [
+            call(level="critical", message="Authentication failed: Credentials are invalid")
+        ]
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_with_permission_failure(trigger, alert_query_2):
+    fqdn = trigger.module.configuration.fqdn
+    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+    with patch("cortex_module.cortex_edr_connector.time") as mock_time, requests_mock.Mocker() as mock:
+        mock.post(
+            alert_url,
+            status_code=403,
+        )
+
+        trigger.forward_next_batch()
+        assert trigger.log.mock_calls == [
+            call(level="critical", message="Permission denied: The operation isn't allowed for these credentials")
+        ]

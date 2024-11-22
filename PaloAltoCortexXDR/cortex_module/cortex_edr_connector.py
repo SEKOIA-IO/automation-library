@@ -161,7 +161,21 @@ class CortexQueryEDRTrigger(CortexConnector):
             self.get_all_alerts(self.pagination_limit)
 
         except (HTTPError, BaseHTTPError) as ex:
-            self.log_exception(ex, message="Failed to get next batch of events")
+            error_response = getattr(ex, "response", None)
+            if error_response is None:
+                self.log_exception(ex, message="Response does not contain any valid data")
+            else:
+                http_status_code = error_response.status_code
+
+                if http_status_code == 401:
+                    self.log(level="critical", message="Authentication failed: Credentials are invalid")
+                elif http_status_code == 403:
+                    self.log(
+                        level="critical",
+                        message="Permission denied: The operation isn't allowed for these credentials",
+                    )
+                else:
+                    self.log_exception(ex, message="Failed to get next batch of events")
         except Exception as ex:
             self.log_exception(ex, message="An unknown exception occurred")
             raise
