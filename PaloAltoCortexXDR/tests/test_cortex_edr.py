@@ -169,6 +169,11 @@ def alert_response_0():
     return {"reply": {"total_count": 0, "result_count": 0, "alerts": []}}
 
 
+@pytest.fixture
+def alert_response_empty():
+    return {"reply": {"total_count": 0, "result_count": 0, "alerts": None}}
+
+
 def test_handle_fqdn():
     assert (
         handle_fqdn("https://api-XXXX.test.paloaltonetworks.com")
@@ -271,6 +276,22 @@ def test_getting_data_0(trigger, alert_response_0, alert_query_2):
             alert_url,
             status_code=200,
             json=alert_response_0,
+            additional_matcher=lambda request: request.json() == alert_query_2,
+        )
+
+        assert trigger.get_alerts_events_by_offset(0, trigger.timestamp_cursor, 2) == (0, [])
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_getting_data_0(trigger, alert_response_empty, alert_query_2):
+    fqdn = trigger.module.configuration.fqdn
+    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            alert_url,
+            status_code=200,
+            json=alert_response_empty,
             additional_matcher=lambda request: request.json() == alert_query_2,
         )
 

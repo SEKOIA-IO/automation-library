@@ -106,7 +106,10 @@ class CortexQueryEDRTrigger(CortexConnector):
         self.query["request_data"]["filters"][0]["value"] = creation_time
 
         response_query = self.client.post(url=self.alert_url, json=self.query).json().get("reply")
-        combined_data = self.split_alerts_events(response_query.get("alerts"))
+
+        # extract alerts
+        alerts = response_query.get("alerts") or []
+        combined_data = self.split_alerts_events(alerts)
 
         return response_query["total_count"], combined_data
 
