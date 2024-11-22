@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## 2024-11-22 - 2.16.1
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
 
 ## 2024-09-19 - 2.16.0
 
