@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-22 - 1.1.4
+
+### Fixed
+
+- Fix the way to handle the responses
+- Handle HTTP errors
+
+### Changed
+
+- Stop the connector when credentials or permissions are invalids
+
 ## 2024-08-02 - 1.1.2
 
 ### Changed

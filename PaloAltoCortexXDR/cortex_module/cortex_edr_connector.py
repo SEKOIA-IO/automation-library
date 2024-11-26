@@ -105,8 +105,16 @@ class CortexQueryEDRTrigger(CortexConnector):
         self.query["request_data"]["search_to"] = serch_to
         self.query["request_data"]["filters"][0]["value"] = creation_time
 
-        response_query = self.client.post(url=self.alert_url, json=self.query).json().get("reply")
-        combined_data = self.split_alerts_events(response_query.get("alerts"))
+        # Get the alerts
+        response = self.client.post(url=self.alert_url, json=self.query)
+        response.raise_for_status()
+
+        # Extract the payload
+        response_query = response.json().get("reply", {})
+
+        # extract alerts
+        alerts = response_query.get("alerts") or []
+        combined_data = self.split_alerts_events(alerts)
 
         return response_query["total_count"], combined_data
 
@@ -144,27 +152,47 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
+    def forward_next_batch(self) -> None:
+        """
+        Collect and forward the next batch of alerts
+        """
+        start = time.time()
+        try:
+            self.get_all_alerts(self.pagination_limit)
+
+        except (HTTPError, BaseHTTPError) as ex:
+            error_response = getattr(ex, "response", None)
+            if error_response is None:
+                self.log_exception(ex, message="Response does not contain any valid data")
+            else:
+                http_status_code = error_response.status_code
+
+                if http_status_code == 401:
+                    self.log(level="critical", message="Authentication failed: Credentials are invalid")
+                elif http_status_code == 403:
+                    self.log(
+                        level="critical",
+                        message="Permission denied: The operation isn't allowed for these credentials",
+                    )
+                else:
+                    self.log_exception(ex, message="Failed to get next batch of events")
+        except Exception as ex:
+            self.log_exception(ex, message="An unknown exception occurred")
+            raise
+
+        duration = int(time.time() - start)
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
+
+        delta_sleep = self.configuration.frequency - duration
+        if delta_sleep > 0:
+            time.sleep(delta_sleep)
+
     def run(self) -> None:
         """Run Cortex EDR Connector"""
 
         self.log(message="Cortex EDR Events Trigger has started", level="info")
         try:
             while self.running:
-                start = time.time()
-                try:
-                    self.get_all_alerts(self.pagination_limit)
-
-                except (HTTPError, BaseHTTPError) as ex:
-                    self.log_exception(ex, message="Failed to get next batch of events")
-                except Exception as ex:
-                    self.log_exception(ex, message="An unknown exception occurred")
-                    raise
-
-                duration = int(time.time() - start)
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
-
-                delta_sleep = self.configuration.frequency - duration
-                if delta_sleep > 0:
-                    time.sleep(delta_sleep)
+                self.forward_next_batch()
         finally:
             self.log(message="Cortex Events Trigger has stopped", level="info")
