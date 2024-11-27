@@ -1,7 +1,7 @@
 from collections import defaultdict
-import pandas as pd
 
-from management.mgmtsdk_v2_1.services.threat_intelligence import IocQueryFilter, Ioc
+import pandas as pd
+from management.mgmtsdk_v2_1.services.threat_intelligence import Ioc, IocQueryFilter
 from pydantic import BaseModel
 
 from sentinelone_module.base import SentinelOneAction

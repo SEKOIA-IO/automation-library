@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 
+import pytest
 from cachetools import LRUCache
 from management.mgmtsdk_v2.entities.activity import Activity
 from management.mgmtsdk_v2.entities.threat import Threat
-import pytest
 
-from sentinelone_module.logs.helpers import get_latest_event_timestamp, filter_collected_events
+from sentinelone_module.logs.helpers import filter_collected_events, get_latest_event_timestamp
 
 
 @pytest.mark.parametrize(

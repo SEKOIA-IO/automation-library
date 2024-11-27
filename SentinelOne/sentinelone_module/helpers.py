@@ -1,8 +1,9 @@
 import re
 import secrets
 import string
-import six
 from datetime import UTC, datetime
+
+import six
 from stix2patterns.pattern import Pattern
 
 

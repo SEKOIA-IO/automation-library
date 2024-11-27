@@ -3,8 +3,8 @@ import requests_mock
 
 from sentinelone_module.threats.create_threat_note import (
     CreateThreatNoteAction,
-    ThreatNoteFilters,
     CreateThreatNoteArguments,
+    ThreatNoteFilters,
 )
 
 
