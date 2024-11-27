@@ -32,7 +32,7 @@ class SearchAction(MicrosoftADAction):
     def transform_ldap_results(self, entries):
         transformed = []
         for entry in entries:
-            serialized_entry = self.make_serializable(entry)
+            serialized_entry = self.make_serializable(entry["attributes"])
             transformed.append(serialized_entry)
         return transformed
 
