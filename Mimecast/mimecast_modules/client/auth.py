@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
+from threading import Lock
 
 import requests
+from pyrate_limiter import Limiter
 from requests.auth import AuthBase
 from requests_ratelimiter import LimiterAdapter
 from urllib3 import Retry
@@ -19,9 +21,7 @@ class MimecastCredentials:
 class ApiKeyAuthentication(AuthBase):
     AUTH_URL = "https://api.services.mimecast.com/oauth/token"
 
-    def __init__(
-        self, client_id: str, client_secret: str, ratelimit_per_second: int = 10, nb_retries: int = 5
-    ) -> None:
+    def __init__(self, client_id: str, client_secret: str, limiter: Limiter, nb_retries: int = 5) -> None:
         self.__client_id = client_id
         self.__client_secret = client_secret
 
@@ -30,7 +30,7 @@ class ApiKeyAuthentication(AuthBase):
         self.__http_session.mount(
             "https://",
             LimiterAdapter(
-                per_second=ratelimit_per_second,
+                limiter=limiter,
                 max_retries=Retry(
                     total=nb_retries,
                     backoff_factor=1,
@@ -38,7 +38,11 @@ class ApiKeyAuthentication(AuthBase):
             ),
         )
 
+        self.__lock = Lock()
+
     def get_credentials(self) -> MimecastCredentials:
+        self.__lock.acquire()
+
         current_dt = datetime.utcnow()
         if self.__credentials is None or current_dt + timedelta(seconds=300) >= self.__credentials.expires_at:
             response = self.__http_session.post(
@@ -57,8 +61,11 @@ class ApiKeyAuthentication(AuthBase):
             credentials.expires_at = current_dt + timedelta(seconds=api_credentials["expires_in"])
             self.__credentials = credentials
 
+        self.__lock.release()
+
         return self.__credentials
 
     def __call__(self, request):
         request.headers["Authorization"] = self.get_credentials().authorization
+
         return request
