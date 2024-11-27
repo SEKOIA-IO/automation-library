@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-22 - 1.19.0
+
+### Added
+
+- Support for SentinelOne Singularity
+
 ## 2024-09-23 - 1.18.5
 
 ### Added
