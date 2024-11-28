@@ -1,6 +1,6 @@
 {
   "uuid": "f7581c54-b9b8-414c-96cd-f13168cac7ce",
-  "name": "List Assets",
+  "name": "List Assets (V2)",
   "docker_parameters": "get-assets-v2",
   "description": "Return a list of assets according to the filters",
   "arguments": {

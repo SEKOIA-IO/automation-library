@@ -1,6 +1,6 @@
 {
   "uuid": "31e6e73a-ac13-41ca-9f1a-0a0e33fda801",
-  "name": "Delete an asset",
+  "name": "Delete an asset (V2)",
   "docker_parameters": "delete-assets-v2/{uuid}",
   "description": "Delete the requested asset",
   "arguments": {
