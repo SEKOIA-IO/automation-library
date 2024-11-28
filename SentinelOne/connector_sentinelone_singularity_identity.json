@@ -1,5 +1,5 @@
 {
-  "description": "Collect activities and threats from SentinelOne",
+  "description": "Collect alerts from SentinelOne Singularity Identity",
   "docker_parameters": "sentinelone_identity_connector",
   "name": "Collect SentinelOne Singularity Identity alerts",
   "arguments": {
