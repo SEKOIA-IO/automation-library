@@ -1,6 +1,6 @@
 {
   "uuid": "25ebfce7-f980-46e3-a2b8-0b59f1905acb",
-  "name": "Get Asset",
+  "name": "Get Asset (V2)",
   "docker_parameters": "get-assets-v2/{uuid}",
   "description": "Return an asset according to its identifier",
   "arguments": {

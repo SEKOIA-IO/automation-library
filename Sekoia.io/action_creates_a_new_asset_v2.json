@@ -1,6 +1,6 @@
 {
   "uuid": "ed063a4f-105e-437a-8afe-503735add6d4",
-  "name": "Create Asset",
+  "name": "Create Asset (V2)",
   "docker_parameters": "post-assets-v2",
   "description": "Create a new asset",
   "arguments": {
