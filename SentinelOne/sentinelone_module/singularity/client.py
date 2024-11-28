@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
+from urllib.parse import urljoin
 
 import orjson
 from aiolimiter import AsyncLimiter
@@ -40,7 +41,7 @@ class SingularityClient(object):
     async def _session(self) -> AsyncGenerator[Client, None]:
         if self._client is None:
             transport = AIOHTTPTransport(
-                url=f"{self.hostname}/web/api/v2.1/unifiedalerts/graphql",
+                url=urljoin(self.hostname, "/web/api/v2.1/unifiedalerts/graphql"),
                 headers={"Authorization": f"Bearer {self.api_token}"},
             )
 
