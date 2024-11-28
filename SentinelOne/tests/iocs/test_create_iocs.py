@@ -186,4 +186,5 @@ def test_create_iocs(symphony_storage, sentinelone_hostname, sentinelone_module,
 
         create_iocs_action.json_argument = MagicMock(return_value=stix_objects)
 
-        assert len(create_iocs_action.run(arguments)) == 1
+        assert len(create_iocs_action.run(arguments)["indicators"]) == 1
+        assert create_iocs_action.run(arguments)["indicators"][0]["updatedAt"] == "2018-02-27T04:49:26.257525Z"
