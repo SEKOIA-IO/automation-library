@@ -1,6 +1,6 @@
 import base64
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
+from posixpath import join as urljoin
 
 import requests
 from requests.auth import AuthBase
