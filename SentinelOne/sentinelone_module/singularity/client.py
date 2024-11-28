@@ -15,6 +15,12 @@ class ListAlertsResult(BaseModel):
     alerts: list[dict[str, Any]]
 
 
+class SentinelOneAPIErrors(Exception):
+    @classmethod
+    def from_response(cls, response: dict[str, Any]) -> "SentinelOneAPIErrors":
+        return cls(orjson.dumps(response["errors"]).decode("utf-8"))
+
+
 class SingularityClient(object):
     _client: Client | None = None
     _rate_limiter: AsyncLimiter | None = None
@@ -112,7 +118,7 @@ class SingularityClient(object):
         response = await self.query(query, variable_values=variables)
 
         if response.get("errors") is not None:
-            raise ValueError(orjson.dumps(response["errors"]).decode("utf-8"))
+            raise SentinelOneAPIErrors.from_response(response)
 
         return ListAlertsResult(
             total_count=response["alerts"]["totalCount"],
