@@ -1,5 +1,4 @@
 from collections import defaultdict
-import pandas as pd
 
 from management.mgmtsdk_v2_1.services.threat_intelligence import IocQueryFilter, Ioc
 from pydantic import BaseModel
@@ -107,4 +106,4 @@ class CreateIOCsAction(SentinelOneAction):
         # Return the response as a list of JSON objects
         final_response = [item.to_json() for item in response]
 
-        return final_response
+        return {"indicators": final_response}
