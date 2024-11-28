@@ -12,7 +12,7 @@ OUTCOMING_EVENTS = Counter(
 
 FORWARD_EVENTS_DURATION = Histogram(
     name="forward_events_duration",
-    documentation="Duration to collect and forward events from eventhub",
+    documentation="Duration to collect and forward events from SentinelOne",
     namespace=prom_namespace,
     labelnames=["intake_key"],
 )
