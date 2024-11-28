@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 import requests
@@ -16,7 +16,7 @@ def fake_time():
 
 @pytest.fixture
 def patch_datetime_now(fake_time):
-    with patch("mimecast_modules.connector_mimecast_siem.datetime") as mock_datetime:
+    with patch("sekoia_automation.checkpoint.datetime") as mock_datetime:
         mock_datetime.now.return_value = fake_time
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
         mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
@@ -113,11 +113,6 @@ def test_fetch_batches(
 
         assert trigger.push_events_to_intakes.call_count == 1
         mock_time.sleep.assert_called_once_with(44)
-
-
-def test_most_recent_datetime_seen(trigger, patch_datetime_now, fake_time):
-    consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
-    assert consumer.most_recent_date_seen == fake_time - timedelta(days=1)
 
 
 def test_start_consumers(trigger):
