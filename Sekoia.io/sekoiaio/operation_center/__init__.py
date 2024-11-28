@@ -298,7 +298,7 @@ UpdateCommentOfCase = type(
 )
 
 
-assets_base_url = "api/v1/asset-management/"
+assets_base_url = "api/v2/asset-management/"
 
 ListTypesForAssets = type(
     "ListTypesForAssets",
