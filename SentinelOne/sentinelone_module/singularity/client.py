@@ -41,7 +41,6 @@ class SingularityClient(object):
             self._client = Client(transport=transport)
 
         if self._rate_limiter is None:
-            # self._rate_limiter = AsyncLimiter(max_rate=1, time_period=3)  # 1 per 3 seconds
             self._rate_limiter = AsyncLimiter(max_rate=25, time_period=1)  # 25 requests per second
 
         async with self._rate_limiter:
