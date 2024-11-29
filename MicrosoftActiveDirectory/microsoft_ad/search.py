@@ -2,7 +2,8 @@ from .base import MicrosoftADAction
 from pydantic import BaseModel
 from typing import List
 from ldap3 import ALL_ATTRIBUTES
-
+from ldap3.core.timezone import OffsetTzInfo
+from datetime import datetime
 
 class SearchArguments(BaseModel):
     search_filter: str
@@ -26,6 +27,8 @@ class SearchAction(MicrosoftADAction):
             return data.entry_to_json()
         elif isinstance(data, dict):
             return {key: self.make_serializable(value) for key, value in data.items()}
+        if isinstance(data, datetime):
+            return data.isoformat()
         else:
             return data
 
