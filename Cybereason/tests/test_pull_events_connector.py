@@ -26,6 +26,15 @@ def patch_time(fake_time):
 
 
 @pytest.fixture
+def patch_datetime(fake_time):
+    with patch("sekoia_automation.checkpoint.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime.fromtimestamp(fake_time, tz=timezone.utc)
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
+        yield mock_datetime
+
+
+@pytest.fixture
 def mock_cybereason_api():
     with requests_mock.Mocker() as mock:
         jar = requests_mock.CookieJar()
@@ -174,7 +183,7 @@ def edr_suspicions():
 
 
 @pytest.fixture
-def trigger(symphony_storage, patch_time):
+def trigger(symphony_storage, patch_time, patch_datetime):
     module = CybereasonModule()
     trigger = CybereasonEventConnector(module=module, data_path=symphony_storage)
     trigger.log = MagicMock()

@@ -2,6 +2,7 @@ import signal
 import time
 from collections import defaultdict
 from collections.abc import Generator
+from datetime import timedelta
 from functools import cached_property
 from threading import Event
 from typing import Any
@@ -10,6 +11,7 @@ from posixpath import join as urljoin
 import orjson
 import requests
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 
 from cybereason_modules import CybereasonModule
 from cybereason_modules.client import ApiClient
@@ -45,7 +47,13 @@ class CybereasonEventConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.from_date: int = (int(time.time()) - 60) * 1000  # milliseconds
+        self.checkpoint = CheckpointTimestamp(
+            path=self._data_path,
+            time_unit=TimeUnit.MILLISECOND,
+            start_at=timedelta(minutes=1),
+            ignore_older_than=timedelta(hours=1)
+        )
+        self.from_date: int = self.checkpoint.offset
         self._stop_event = Event()  # Event to notify we must stop the thread
 
         # Register signal to terminate thread
@@ -265,15 +273,9 @@ class CybereasonEventConnector(Connector):
         Fetch the last malops from the Cybereason API
         """
         from_date = self.from_date
-        now = int(time.time()) * 1000  # milliseconds
-
-        # We don't retrieve messages older than one hour
-        one_hour_ago = now - 3600000
-        if from_date < one_hour_ago:
-            from_date = one_hour_ago
 
         # compute the ending time to retrieve malops (Currently, now)
-        to_date = now
+        to_date = int(time.time()) * 1000  # milliseconds
 
         # fetch malops for the timerange
         next_malops = self.fetch_malops(from_date, to_date)
@@ -316,6 +318,7 @@ class CybereasonEventConnector(Connector):
         # save the most recent date and compute the lag
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
+            self.checkpoint.offset = self.from_date
             current_lag = int(time.time() - (most_recent_date_seen / 1000))
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
