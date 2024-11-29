@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-28 - 1.18.7
+
+### Added
+
+- Add the account ids to required fields in create iocs actions
+
+
 ## 2024-11-28 - 1.18.6
 
 ### Fixed
