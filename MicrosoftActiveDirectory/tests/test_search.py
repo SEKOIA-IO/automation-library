@@ -6,6 +6,7 @@ import orjson
 import datetime
 from ldap3.core.timezone import OffsetTzInfo
 
+
 def configured_action(action: MicrosoftADAction):
     module = MicrosoftADModule()
     a = action(module)
@@ -90,7 +91,7 @@ def test_ldap_action_serialization():
             "attributes": {
                 "cn": [b"John Doe"],
                 "mail": [b"john.doe@example.com"],
-                "date": datetime.datetime(9999, 12, 31, 23, 59, 59, 999999, tzinfo=OffsetTzInfo(offset=0, name='UTC')),
+                "date": datetime.datetime(9999, 12, 31, 23, 59, 59, 999999, tzinfo=OffsetTzInfo(offset=0, name="UTC")),
                 "objectGUID": b"\x12\x34\x56\x78\x90",
                 "memberOf": [b"CN=Group1,DC=example,DC=com", b"CN=Group2,DC=example,DC=com"],
             },
@@ -100,7 +101,7 @@ def test_ldap_action_serialization():
             "attributes": {
                 "cn": [b"Jane Smith"],
                 "mail": [b"jane.smith@example.com"],
-                "date": datetime.datetime(2024, 11, 21, 15, 16, 38, tzinfo=datetime.timezone.utc), 
+                "date": datetime.datetime(2024, 11, 21, 15, 16, 38, tzinfo=datetime.timezone.utc),
                 "objectGUID": b"\x98\x76\x54\x32\x10",
                 "memberOf": [b"CN=Group1,DC=example,DC=com", b"CN=Admins,DC=example,DC=com"],
             },

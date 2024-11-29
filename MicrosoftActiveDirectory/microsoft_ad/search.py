@@ -5,6 +5,7 @@ from ldap3 import ALL_ATTRIBUTES
 from ldap3.core.timezone import OffsetTzInfo
 from datetime import datetime
 
+
 class SearchArguments(BaseModel):
     search_filter: str
     basedn: str
