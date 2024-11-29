@@ -1,0 +1,275 @@
+{
+  "uuid": "31e6e73a-ac13-41ca-9f1a-0a0e33fda801",
+  "name": "Delete an asset (V2)",
+  "docker_parameters": "delete-assets-v2/{uuid}",
+  "description": "Delete the requested asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Delete an asset",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path",
+        "description": "The identifier of the asset"
+      }
+    },
+    "required": [
+      "uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "format": "uuid",
+        "description": "The identifier of the asset",
+        "type": "string"
+      },
+      "entity_uuid": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "community_uuid": {
+        "format": "uuid",
+        "type": "string",
+        "description": "The community of the asset"
+      },
+      "name": {
+        "description": "The name of the asset",
+        "type": "string"
+      },
+      "type": {
+        "description": "The type of the asset",
+        "type": "string"
+      },
+      "category": {
+        "type": ["object", "string", "null"],
+        "default": null,
+        "description": "The category of the asset"
+      },
+      "criticality": {
+        "type": ["integer", "null"],
+        "default": null,
+        "title": "Criticality"
+      },
+      "created_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "The creation date of the asset"
+      },
+      "created_by": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Created By"
+      },
+      "created_by_type": {
+        "type": ["string", "null"],
+        "default": null,
+        "title": "type of the asset creator"
+      },
+      "updated_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "The modification date of the asset"
+      },
+      "first_seen": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "First Seen"
+      },
+      "last_seen": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Last Seen"
+      },
+      "nb_events": {
+        "type": ["integer", "null"],
+        "default": null,
+        "title": "Nb Events"
+      },
+      "nb_alerts": {
+        "type": ["integer", "null"],
+        "default": null,
+        "title": "Nb Alerts"
+      },
+      "nb_atoms": {
+        "default": 0,
+        "title": "Nb Atoms",
+        "type": "integer"
+      },
+      "atoms": {
+        "type": ["object", "null"],
+        "default": null,
+        "title": "Atoms"
+      },
+      "props": {
+        "type": ["object", "null"],
+        "default": null,
+        "title": "Props"
+      },
+      "tags": {
+        "default": [],
+        "items": {
+          "type": "string"
+        },
+        "title": "Tags",
+        "type": "array"
+      },
+      "revoked": {
+        "default": false,
+        "title": "Revoked",
+        "type": "boolean"
+      },
+      "revoked_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Revoked At"
+      },
+      "revoked_by": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Revoked By"
+      },
+      "reviewed": {
+        "default": false,
+        "title": "Reviewed",
+        "type": "boolean"
+      },
+      "reviewed_at": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Reviewed At"
+      },
+      "reviewed_by": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Reviewed By"
+      },
+      "source": {
+        "default": "automatic",
+        "enum": [
+          "manual",
+          "automatic",
+          "import"
+        ],
+        "title": "Source",
+        "type": "string"
+      },
+      "rule_uuid": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Rule Uuid"
+      },
+      "rule_version": {
+        "type": ["string", "null"],
+        "default": null,
+        "title": "Rule Version"
+      },
+      "criticity": {
+        "type": ["object", "null"],
+        "default": null,
+        "description": "The criticality of the asset"
+      },
+      "asset_type": {
+        "type": ["object", "null"],
+        "default": null,
+        "description": "The type of the asset"
+      }
+    },
+    "required": [
+      "uuid",
+      "community_uuid",
+      "name",
+      "type"
+    ]
+  }
+}

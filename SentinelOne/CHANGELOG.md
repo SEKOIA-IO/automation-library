@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for SentinelOne Singularity Identity
 
+## 2024-11-28 - 1.18.6
+
+### Fixed
+
+- Fix the result problem in create iocs action
+
 ## 2024-09-23 - 1.18.5
 
 ### Added

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-26 - 1.1.0
+
+### Added
+
+- Added `av`, `delivery`, `internal email protect`, `impersonation protect`, `attachment protect`, `spam`, `url protect` logs support
+
+### Changed
+
+- Changed the way rate limiting works - now it is shared across the threads
+
 ## 2024-11-14 - 1.0.2
 
 ### Fixed

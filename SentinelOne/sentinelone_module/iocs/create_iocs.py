@@ -107,4 +107,4 @@ class CreateIOCsAction(SentinelOneAction):
         # Return the response as a list of JSON objects
         final_response = [item.to_json() for item in response]
 
-        return final_response
+        return {"indicators": final_response}
