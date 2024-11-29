@@ -4,14 +4,14 @@ from collections import defaultdict
 from collections.abc import Generator
 from datetime import timedelta
 from functools import cached_property
+from posixpath import join as urljoin
 from threading import Event
 from typing import Any
-from posixpath import join as urljoin
 
 import orjson
 import requests
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from cybereason_modules import CybereasonModule
 from cybereason_modules.client import ApiClient
@@ -51,7 +51,7 @@ class CybereasonEventConnector(Connector):
             path=self._data_path,
             time_unit=TimeUnit.MILLISECOND,
             start_at=timedelta(minutes=1),
-            ignore_older_than=timedelta(hours=1)
+            ignore_older_than=timedelta(hours=1),
         )
         self.from_date: int = self.checkpoint.offset
         self._stop_event = Event()  # Event to notify we must stop the thread
