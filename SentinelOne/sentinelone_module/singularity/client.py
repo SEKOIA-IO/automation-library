@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
+from posixpath import join as urljoin
 from typing import Any, AsyncGenerator
-from urllib.parse import urljoin
 
 import orjson
 from aiolimiter import AsyncLimiter
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.exceptions import TransportServerError
+from graphql import ExecutionResult
 from pydantic import BaseModel
 
 
@@ -20,6 +22,12 @@ class SentinelOneAPIErrors(Exception):
     @classmethod
     def from_response(cls, response: dict[str, Any]) -> "SentinelOneAPIErrors":
         return cls(orjson.dumps(response["errors"]).decode("utf-8"))
+
+
+class SentinelOneServerError(SentinelOneAPIErrors):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
 
 
 class SingularityClient(object):
@@ -41,7 +49,7 @@ class SingularityClient(object):
     async def _session(self) -> AsyncGenerator[Client, None]:
         if self._client is None:
             transport = AIOHTTPTransport(
-                url=urljoin(self.hostname, "/web/api/v2.1/unifiedalerts/graphql"),
+                url=urljoin(self.hostname, "web/api/v2.1/unifiedalerts/graphql"),
                 headers={"Authorization": f"Bearer {self.api_token}"},
             )
 
@@ -55,7 +63,16 @@ class SingularityClient(object):
 
     async def query(self, query: str, variable_values: dict[str, Any] | None = None) -> dict[str, Any]:
         async with self._session() as session:
-            result: dict[str, Any] = await session.execute_async(gql(query), variable_values=variable_values)
+            try:
+                result: dict[str, Any] = await session.execute_async(gql(query), variable_values=variable_values)
+            except TransportServerError as e:
+                if e.code == 401:
+                    raise SentinelOneServerError(f"Status code {e.code}. Authentication failed") from e
+
+                if e.code == 403:
+                    raise SentinelOneServerError(f"Status code {e.code}. Permission denied") from e
+
+                raise e
 
             return result
 

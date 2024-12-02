@@ -14,7 +14,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-from sentinelone_module.singularity.client import SingularityClient
+from sentinelone_module.singularity.client import SentinelOneServerError, SingularityClient
 
 
 class SingularityConnectorConfig(DefaultConnectorConfiguration):
@@ -118,6 +118,12 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
 
                 if result == 0:
                     await asyncio.sleep(self.configuration.frequency)
+
+            except SentinelOneServerError as error:
+                # In case if we handle the server custom error we should raise critical message and then sleep.
+                # This will help to stop the connector in case if credentials are invalid or permissions denied.
+                self.log(message=error.message, level="critical")
+                await asyncio.sleep(self.configuration.frequency)
 
             except Exception as error:
                 self.log_exception(error)
