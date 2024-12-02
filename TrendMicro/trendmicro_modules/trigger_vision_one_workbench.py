@@ -19,15 +19,15 @@ from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUT
 logger = get_logger()
 
 
-class TrendMicroVisionOneConnectorConfiguration(DefaultConnectorConfiguration):
+class TrendMicroVisionOneWorkbenchConnectorConfiguration(DefaultConnectorConfiguration):
     base_url: str = Field(..., description="Base URL")
     api_key: str = Field(..., description="API key", secret=True)
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
 
 
-class TrendMicroVisionOneConnector(Connector):
+class TrendMicroVisionOneWorkbenchConnector(Connector):
     module: TrendMicroModule
-    configuration: TrendMicroVisionOneConnectorConfiguration
+    configuration: TrendMicroVisionOneWorkbenchConnectorConfiguration
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

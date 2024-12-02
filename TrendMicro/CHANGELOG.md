@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added Trend Micro Vision One connector
+- Added Trend Micro Vision One Workbench connector
 
 ## 2024-05-28 - 1.4.0
 

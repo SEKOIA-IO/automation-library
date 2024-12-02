@@ -39,7 +39,8 @@
       }
     },
     "required": [
-      "stix_objects_path"
+      "stix_objects_path",
+      "account_ids"
     ],
     "title": "Arguments",
     "type": "object"

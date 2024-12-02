@@ -1,6 +1,6 @@
 {
   "description": "Get last logs from the Trend Micro Vision One",
-  "docker_parameters": "trend_micro_vision_one",
+  "docker_parameters": "trend_micro_vision_one_workbench",
   "name": "Fetch new alerts",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
