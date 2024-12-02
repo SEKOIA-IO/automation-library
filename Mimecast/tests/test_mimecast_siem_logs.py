@@ -26,15 +26,14 @@ def patch_datetime_now(fake_time):
 @pytest.fixture
 def trigger(data_storage):
     module = MimecastModule()
-
+    module.configuration = {
+        "client_id": "user123",
+        "client_secret": "some-secret",
+    }
     trigger = MimecastSIEMConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
-    trigger.module.configuration = {
-        "client_id": "user123",
-        "client_secret": "some-secret",
-    }
     trigger.configuration = {"intake_key": "intake_key", "frequency": 60}
     yield trigger
 

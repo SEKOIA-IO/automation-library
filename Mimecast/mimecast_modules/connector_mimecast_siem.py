@@ -7,12 +7,14 @@ from typing import Generator
 
 import orjson
 import requests
+from dateutil.parser import isoparse
+from pyrate_limiter import Duration, Limiter, RequestRate
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import MimecastModule
-from .client import ApiClient
+from .client import ApiClient, ApiKeyAuthentication
 from .helpers import download_batches, get_upper_second
 from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
@@ -59,8 +61,9 @@ class MimecastSIEMWorker(Thread):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
-            client_id=self.connector.module.configuration.client_id,
-            client_secret=self.connector.module.configuration.client_secret,
+            auth=self.connector.api_auth,
+            limiter_batch=self.connector.limiter_batch,
+            limiter_default=self.connector.limiter_default,
         )
 
     @staticmethod
@@ -216,15 +219,37 @@ class MimecastSIEMConnector(Connector):
     module: MimecastModule
     configuration: MimecastSIEMConfiguration
 
-    TYPES_TO_GET = ("process", "journal", "receipt")
+    TYPES_TO_GET = (
+        "attachment protect",
+        "av",
+        "delivery",
+        "impersonation protect",
+        "internal email protect",
+        "journal",
+        "process",
+        "receipt",
+        "spam",
+        "url protect",
+    )
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self._stop_event = Event()
-
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
+
+        # 50 times within a 15 minutes fixed window
+        batch_rate = RequestRate(limit=50, interval=Duration.MINUTE * 15)
+        self.limiter_batch = Limiter(batch_rate)
+
+        default_rate = RequestRate(limit=20, interval=Duration.MINUTE)
+        self.limiter_default = Limiter(default_rate)
+
+        self.api_auth = ApiKeyAuthentication(
+            client_id=self.module.configuration.client_id,
+            client_secret=self.module.configuration.client_secret,
+            limiter=self.limiter_default,
+        )
 
     def start_consumers(self) -> dict[str, MimecastSIEMWorker]:
         consumers = {}
