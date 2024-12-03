@@ -78,7 +78,9 @@ class TrendMicroVisionOneWorkbenchConnector(Connector):
             events = message.get("items", [])
 
             if events:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, type="vision_one_workbench").inc(len(events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, type="vision_one_workbench").inc(
+                    len(events)
+                )
                 yield events
 
             else:
