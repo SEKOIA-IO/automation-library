@@ -37,7 +37,7 @@ class SearchAction(MicrosoftADAction):
         transformed = []
         for entry in entries:
             if "attributes" in entry:
-                serialized_entry = self.make_serializable(entry["attributes"])
+                serialized_entry = self.make_serializable(dict(entry["attributes"]))
                 transformed.append(serialized_entry)
         return transformed
 
