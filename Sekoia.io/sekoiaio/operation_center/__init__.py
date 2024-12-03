@@ -307,14 +307,15 @@ AddEventsToACase = type(
     },
 )
 
-assets_base_url = "api/v2/asset-management/"
+assets_v1_base_url ="api/v1/asset-management/"
+assets_v2_base_url = "api/v2/asset-management/"
 
 ListTypesForAssets = type(
     "ListTypesForAssets",
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "asset-types",
+        "endpoint": assets_v1_base_url + "asset-types",
         "query_parameters": [
             "match[uuid]",
             "match[name]",
@@ -331,7 +332,7 @@ ReturnsTypeForAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "asset-types/{uuid}",
+        "endpoint": assets_v1_base_url + "asset-types/{uuid}",
         "query_parameters": [],
     },
 )
@@ -341,7 +342,7 @@ ListAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "assets",
+        "endpoint": assets_v2_base_url + "assets",
         "query_parameters": [
             "limit",
             "offset",
@@ -367,7 +368,17 @@ CreatesNewAsset = type(
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": assets_base_url + "assets",
+        "endpoint": assets_v1_base_url + "assets",
+        "query_parameters": [],
+    },
+)
+
+CreatesNewAssetV2 = type(
+    "CreatesNewAssetV2",
+    (GenericAPIAction,),
+    {
+        "verb": "post",
+        "endpoint": assets_v2_base_url + "assets",
         "query_parameters": [],
     },
 )
@@ -377,7 +388,7 @@ DeletesAsset = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": assets_base_url + "assets/{uuid}",
+        "endpoint": assets_v2_base_url + "assets/{uuid}",
         "query_parameters": [],
     },
 )
@@ -387,7 +398,7 @@ ReturnsAsset = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "assets/{uuid}",
+        "endpoint": assets_v1_base_url + "assets/{uuid}",
         "query_parameters": [],
     },
 )
@@ -397,7 +408,7 @@ ListsAttributesOfAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "assets/{uuid}/attr",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/attr",
         "query_parameters": ["limit", "offset"],
     },
 )
@@ -407,7 +418,7 @@ AddsAttributeToAsset = type(
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": assets_base_url + "assets/{uuid}/attr",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/attr",
         "query_parameters": ["name", "value"],
     },
 )
@@ -417,7 +428,7 @@ DeletesAttributeFromAsset = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": assets_base_url + "assets/{uuid}/attr/{attribute_uuid}",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/attr/{attribute_uuid}",
         "query_parameters": [],
     },
 )
@@ -427,7 +438,7 @@ ReturnsAttributeOfAsset = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "assets/{uuid}/attr/{attribute_uuid}",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/attr/{attribute_uuid}",
         "query_parameters": [],
     },
 )
@@ -437,7 +448,7 @@ ListsKeysOfAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "assets/{uuid}/keys",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/keys",
         "query_parameters": ["limit", "offset"],
     },
 )
@@ -447,7 +458,7 @@ AddsKeyToAsset = type(
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": assets_base_url + "assets/{uuid}/keys",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/keys",
         "query_parameters": ["name", "value"],
     },
 )
@@ -457,7 +468,7 @@ DeletesKeyFromAsset = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": assets_base_url + "assets/{uuid}/keys/{key_uuid}",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/keys/{key_uuid}",
         "query_parameters": [],
     },
 )
@@ -467,7 +478,7 @@ ReturnsKeyOfAsset = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "assets/{uuid}/keys/{key_uuid}",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/keys/{key_uuid}",
         "query_parameters": [],
     },
 )
@@ -477,7 +488,7 @@ ListsOwnersOfAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "assets/{uuid}/owners",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/owners",
         "query_parameters": ["limit", "offset"],
     },
 )
@@ -487,7 +498,7 @@ AddsOwnersToAsset = type(
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": assets_base_url + "assets/{uuid}/owners",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/owners",
         "query_parameters": ["owners"],
     },
 )
@@ -497,7 +508,7 @@ DeletesOwnerFromAsset = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": assets_base_url + "assets/{uuid}/owners/{owner_uuid}",
+        "endpoint": assets_v1_base_url + "assets/{uuid}/owners/{owner_uuid}",
         "query_parameters": [],
     },
 )
@@ -507,7 +518,7 @@ ListsNamesForKeysOfAsset = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "attribute-names",
+        "endpoint": assets_v1_base_url + "attribute-names",
         "query_parameters": ["category", "type", "limit", "offset"],
     },
 )
@@ -517,7 +528,7 @@ ReturnsAttributeName = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "attribute-names/{uuid}",
+        "endpoint": assets_v1_base_url + "attribute-names/{uuid}",
         "query_parameters": [],
     },
 )
@@ -527,7 +538,7 @@ ListsCategoriesForAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "categories",
+        "endpoint": assets_v1_base_url + "categories",
         "query_parameters": ["limit", "offset"],
     },
 )
@@ -537,7 +548,7 @@ ReturnsCategoryForAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "categories/{uuid}",
+        "endpoint": assets_v1_base_url + "categories/{uuid}",
         "query_parameters": [],
     },
 )
@@ -547,7 +558,7 @@ ReturnsCategoryTypeForAssets = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": assets_base_url + "categories/{uuid}/types",
+        "endpoint": assets_v1_base_url + "categories/{uuid}/types",
         "query_parameters": ["limit", "offset"],
     },
 )
