@@ -1,11 +1,9 @@
-import pytest
-import requests_mock
 from unittest.mock import MagicMock
 
-from sentinelone_module.iocs.create_iocs import (
-    CreateIOCsAction,
-    CreateIOCsArguments,
-)
+import pytest
+import requests_mock
+
+from sentinelone_module.iocs.create_iocs import CreateIOCsAction, CreateIOCsArguments
 
 
 @pytest.fixture(scope="module")

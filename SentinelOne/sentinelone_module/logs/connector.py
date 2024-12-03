@@ -1,10 +1,10 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from threading import Event, Thread, Lock
+from threading import Event, Lock, Thread
 from time import sleep, time
 
-from cachetools import LRUCache, Cache
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from management.mgmtsdk_v2.entities.activity import Activity
 from management.mgmtsdk_v2.entities.threat import Threat
@@ -18,8 +18,8 @@ from sekoia_automation.storage import PersistentJSON
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
-from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
-from sentinelone_module.logs.helpers import get_latest_event_timestamp, filter_collected_events
+from sentinelone_module.logs.helpers import filter_collected_events, get_latest_event_timestamp
+from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -120,7 +120,7 @@ class SentinelOneLogsConsumer(Thread):
     def pull_events(self, last_timestamp: datetime | None) -> list:
         raise NotImplementedError
 
-    def next_batch(self):
+    def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time()
         batch_duration: int = 0

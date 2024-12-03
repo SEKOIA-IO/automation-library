@@ -81,7 +81,7 @@ class ExecuteRemoteScriptAction(SentinelOneAction):
         ):
             with attempt:
                 result = self.client.remote_scripts.status(parentTaskId=task_id)
-                execution_state = next(
+                execution_state: dict[str, str] = next(
                     execution for execution in result.json["data"] if execution["parentTaskId"] == task_id
                 )
 
