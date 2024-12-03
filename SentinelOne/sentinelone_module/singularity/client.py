@@ -49,7 +49,7 @@ class SingularityClient(object):
     async def _session(self) -> AsyncGenerator[Client, None]:
         if self._client is None:
             transport = AIOHTTPTransport(
-                url=urljoin(self.hostname, "web/api/v2.1/unifiedalerts/graphql"),
+                url=urljoin(f"https://{self.hostname}", "web/api/v2.1/unifiedalerts/graphql"),
                 headers={"Authorization": f"Bearer {self.api_token}"},
             )
 

@@ -14,7 +14,7 @@ def api_token():
 
 @pytest.fixture
 def hostname():
-    return "http://testhost"
+    return "testhost"
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ async def test_session(mock_limiter, mock_client, mock_transport, client):
         pass
 
     mock_transport.assert_called_once_with(
-        url=f"{client.hostname}/web/api/v2.1/unifiedalerts/graphql",
+        url=f"https://{client.hostname}/web/api/v2.1/unifiedalerts/graphql",
         headers={"Authorization": f"Bearer {client.api_token}"},
     )
     mock_client.assert_called_once_with(transport=mock_transport_instance)
