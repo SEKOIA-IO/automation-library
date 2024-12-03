@@ -78,11 +78,11 @@ class TrendMicroVisionOneWorkbenchConnector(Connector):
             events = message.get("items", [])
 
             if events:
-                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, type="vision_one").inc(len(events))
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, type="vision_one_workbench").inc(len(events))
                 yield events
 
             else:
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="vision_one").set(0)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="vision_one_workbench").set(0)
                 return
 
             url = message.get("nextLink")
@@ -122,7 +122,7 @@ class TrendMicroVisionOneWorkbenchConnector(Connector):
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="vision_one").set(
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="vision_one_workbench").set(
             int(current_lag.total_seconds())
         )
 
@@ -140,7 +140,7 @@ class TrendMicroVisionOneWorkbenchConnector(Connector):
                     message=f"Forwarded {len(batch_of_events)} events to the intake",
                     level="info",
                 )
-                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type="vision_one").inc(
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type="vision_one_workbench").inc(
                     len(batch_of_events)
                 )
                 self.push_events_to_intakes(events=batch_of_events)
@@ -154,7 +154,7 @@ class TrendMicroVisionOneWorkbenchConnector(Connector):
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="debug")
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type="vision_one").observe(
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type="vision_one_workbench").observe(
             batch_duration
         )
 
@@ -165,7 +165,7 @@ class TrendMicroVisionOneWorkbenchConnector(Connector):
             time.sleep(delta_sleep)
 
     def run(self) -> None:
-        self.log(message="Start fetching Trend Micro Vision One logs", level="info")
+        self.log(message="Start fetching Trend Micro Vision One Workbench alerts", level="info")
 
         while self.running:
             try:
