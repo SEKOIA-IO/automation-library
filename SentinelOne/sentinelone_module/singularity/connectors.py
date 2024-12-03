@@ -62,7 +62,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
             if cursor == "":  # TODO: Fix this in SDK in cursor handling.
                 cursor = None
 
-            start_time = last_event_date.timestamp() if not cursor else None
+            start_time = int(last_event_date.timestamp()) if not cursor else None
             data = await self.client.list_alerts(
                 product_name=self.product_name,
                 after=cursor,

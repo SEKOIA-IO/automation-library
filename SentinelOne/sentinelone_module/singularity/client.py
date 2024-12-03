@@ -77,7 +77,7 @@ class SingularityClient(object):
             return result
 
     async def list_alerts(
-        self, product_name: str, after: str | None = None, start_time: float | None = None
+        self, product_name: str, after: str | None = None, start_time: int | None = None
     ) -> ListAlertsResult:
         query = """
             query listAlerts($productName: String!, $after: String, $startDateTime: Long) {
