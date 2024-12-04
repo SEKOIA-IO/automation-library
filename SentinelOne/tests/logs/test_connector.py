@@ -39,7 +39,7 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
     ]
 
     assert OUTCOMING_EVENTS.labels(
-        intake_key=activity_consumer.configuration.intake_key, datasource="sentinelone"
+        intake_key=activity_consumer.configuration.intake_key
     ).inc.call_args_list == [call(1), call(1)]
     assert EVENTS_LAG.labels(
         intake_key=activity_consumer.configuration.intake_key, type="activities"
@@ -86,7 +86,7 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
     ]
 
     assert OUTCOMING_EVENTS.labels(
-        intake_key=threat_consumer.configuration.intake_key, datasource="sentinelone"
+        intake_key=threat_consumer.configuration.intake_key
     ).inc.call_args_list == [call(1), call(1)]
     assert EVENTS_LAG.labels(
         intake_key=threat_consumer.configuration.intake_key, type="threats"
@@ -137,7 +137,7 @@ def test_run_consumer(activity_consumer):
 
         pull_events.assert_called()
         FORWARD_EVENTS_DURATION.labels(
-            intake_key=activity_consumer.configuration.intake_key, datasource="sentinelone"
+            intake_key=activity_consumer.configuration.intake_key
         ).observe.assert_called()
 
 

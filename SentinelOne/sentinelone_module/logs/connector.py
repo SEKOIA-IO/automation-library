@@ -133,7 +133,7 @@ class SentinelOneLogsConsumer(Thread):
             batch_end_time = time()
             batch_duration = int(batch_end_time - batch_start_time)
             logger.debug(f"Fetched and forwarded events", duration=batch_duration, nb_events=len(events_id))
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                 batch_duration
             )
 
@@ -192,7 +192,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             nb_activities = len(activities.data)
             logger.debug("Collected activities", nb=nb_activities)
 
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(
                 nb_activities
             )
 
@@ -204,7 +204,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
                 events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(
                 len(selected_events)
             )
 
@@ -254,7 +254,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(
                 len(selected_events)
             )
 
