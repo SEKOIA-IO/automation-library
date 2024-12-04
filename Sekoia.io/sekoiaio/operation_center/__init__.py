@@ -307,7 +307,7 @@ AddEventsToACase = type(
     },
 )
 
-assets_v1_base_url ="api/v1/asset-management/"
+assets_v1_base_url = "api/v1/asset-management/"
 assets_v2_base_url = "api/v2/asset-management/"
 
 ListTypesForAssets = type(
@@ -383,6 +383,16 @@ CreatesNewAssetV2 = type(
 )
 
 DeletesAsset = type(
+    "DeletesAsset",
+    (GenericAPIAction,),
+    {
+        "verb": "delete",
+        "endpoint": assets_v1_base_url + "assets/{uuid}",
+        "query_parameters": [],
+    },
+)
+
+DeletesAssetV2 = type(
     "DeletesAsset",
     (GenericAPIAction,),
     {

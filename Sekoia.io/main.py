@@ -21,6 +21,7 @@ from sekoiaio.operation_center import (
     CreatesNewAssetV2,
     CreateRule,
     DeletesAsset,
+    DeletesAssetV2,
     DeleteRule,
     DenyCountermeasure,
     DisableRule,
@@ -90,7 +91,8 @@ if __name__ == "__main__":
     module.register(TriggerActionOnAlertWorkflow, "patch-alerts/{uuid}/workflow")
     module.register(PushEventToIntake, "push-events-to-intake")
     module.register(ListAssets, "get-assets-v2")
-    module.register(DeletesAsset, "delete-assets-v2/{uuid}")
+    module.register(DeletesAsset, "delete-assets/{uuid}")
+    module.register(DeletesAssetV2, "delete-assets-v2/{uuid}")
     module.register(GetAsset, "get-assets-v2/{uuid}")
     module.register(ReturnsAsset, "get-assets/{uuid}")
     module.register(UpdateRule, "put-rules/{uuid}")
