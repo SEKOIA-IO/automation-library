@@ -38,9 +38,10 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
         call(activity_consumer._serialize_events([activity_2])),
     ]
 
-    assert OUTCOMING_EVENTS.labels(
-        intake_key=activity_consumer.configuration.intake_key
-    ).inc.call_args_list == [call(1), call(1)]
+    assert OUTCOMING_EVENTS.labels(intake_key=activity_consumer.configuration.intake_key).inc.call_args_list == [
+        call(1),
+        call(1),
+    ]
     assert EVENTS_LAG.labels(
         intake_key=activity_consumer.configuration.intake_key, type="activities"
     ).set.call_args_list == [
@@ -85,9 +86,10 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
         call(threat_consumer._serialize_events([threat_2])),
     ]
 
-    assert OUTCOMING_EVENTS.labels(
-        intake_key=threat_consumer.configuration.intake_key
-    ).inc.call_args_list == [call(1), call(1)]
+    assert OUTCOMING_EVENTS.labels(intake_key=threat_consumer.configuration.intake_key).inc.call_args_list == [
+        call(1),
+        call(1),
+    ]
     assert EVENTS_LAG.labels(
         intake_key=threat_consumer.configuration.intake_key, type="threats"
     ).set.call_args_list == [
@@ -136,9 +138,7 @@ def test_run_consumer(activity_consumer):
         t.join()
 
         pull_events.assert_called()
-        FORWARD_EVENTS_DURATION.labels(
-            intake_key=activity_consumer.configuration.intake_key
-        ).observe.assert_called()
+        FORWARD_EVENTS_DURATION.labels(intake_key=activity_consumer.configuration.intake_key).observe.assert_called()
 
 
 def test_run_consumer_fail_get_info(activity_consumer):
