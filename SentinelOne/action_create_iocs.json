@@ -35,12 +35,14 @@
               "type": "string"
             }
           }
-        }
+        },
+        "required": [
+          "account_ids"
+        ]
       }
     },
     "required": [
-      "stix_objects_path",
-      "account_ids"
+      "stix_objects_path"
     ],
     "title": "Arguments",
     "type": "object"
