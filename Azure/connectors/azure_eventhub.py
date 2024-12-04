@@ -121,7 +121,7 @@ class AzureEventsHubTrigger(AsyncConnector):
     async def forward_events(self, messages: list[EventData]) -> None:
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
-                
+
         records = []
         for message in messages:
             body, body_type = self.get_records_from_message(message)
