@@ -133,9 +133,7 @@ class SentinelOneLogsConsumer(Thread):
             batch_end_time = time()
             batch_duration = int(batch_end_time - batch_start_time)
             logger.debug(f"Fetched and forwarded events", duration=batch_duration, nb_events=len(events_id))
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
-                batch_duration
-            )
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
             # log the number of forwarded events
             log_message = "No events to forward"
@@ -192,9 +190,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             nb_activities = len(activities.data)
             logger.debug("Collected activities", nb=nb_activities)
 
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                nb_activities
-            )
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(nb_activities)
 
             # discard already collected events
             selected_events = filter_collected_events(activities.data, lambda activity: activity.id, self.events_cache)
@@ -204,9 +200,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
                 events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                len(selected_events)
-            )
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
 
             # Update context with latest event date
             current_lag: int = 0
@@ -254,9 +248,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                len(selected_events)
-            )
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
 
             # Update context with the latest event date
             current_lag: int = 0
