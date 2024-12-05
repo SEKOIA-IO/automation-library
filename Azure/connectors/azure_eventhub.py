@@ -3,7 +3,7 @@ import os
 import time
 from datetime import datetime, timezone
 from functools import cached_property
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, Union
 
 import orjson
 from azure.eventhub import EventData
@@ -100,10 +100,12 @@ class AzureEventsHubTrigger(AsyncConnector):
             MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(0)
 
     @staticmethod
-    def get_records_from_message(message: EventData) -> list[Any]:
+    def get_records_from_message(message: EventData) -> tuple[list[Any], str]:
         """
         Return the records according to the body of the message
         """
+        body: Union[str, dict[str, Any]]
+        
         try:
             body = message.body_as_json()
             if isinstance(body, list):  # handle list of events
@@ -130,7 +132,7 @@ class AzureEventsHubTrigger(AsyncConnector):
                     if body_type == "json":
                         records.append(orjson.dumps(record).decode("utf-8"))
                     else:
-                        records.append(record.decode("utf-8"))
+                        records.append(record)
 
         if len(records) > 0:
             self.log(f"Forward {len(records)} events")
