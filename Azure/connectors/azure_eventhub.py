@@ -1,12 +1,9 @@
 import asyncio
-import functools
 import os
-import signal
 import time
-from asyncio import AbstractEventLoop
 from datetime import datetime, timezone
 from functools import cached_property
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, Union
 
 import orjson
 from azure.eventhub import EventData
@@ -103,29 +100,39 @@ class AzureEventsHubTrigger(AsyncConnector):
             MESSAGES_AGE.labels(intake_key=self.configuration.intake_key).set(0)
 
     @staticmethod
-    def get_records_from_message(message: EventData) -> list[Any]:
+    def get_records_from_message(message: EventData) -> tuple[list[Any], str]:
         """
         Return the records according to the body of the message
         """
-        body = message.body_as_json()
-        if isinstance(body, list):  # handle list of events
-            return body
-        elif isinstance(body, dict) and "records" in body:  # handle wrapped events
-            return cast(list[Any], body.get("records", []))
-        elif body.get("type") == "heartbeat":  # exclude heartbeat messages
-            return []
-        else:
-            return [body]
+        body: Union[str, dict[str, Any]]
+
+        try:
+            body = message.body_as_json()
+            if isinstance(body, list):  # handle list of events
+                return body, "json"
+            elif isinstance(body, dict) and "records" in body:  # handle wrapped events
+                return cast(list[Any], body.get("records", [])), "json"
+            elif body.get("type") == "heartbeat":  # exclude heartbeat messages
+                return [], "json"
+            else:
+                return [body], "json"
+        except:
+            body = message.body_as_str()
+            return [body], "str"
 
     async def forward_events(self, messages: list[EventData]) -> None:
         INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(messages))
         start = time.time()
-        records = [
-            orjson.dumps(record).decode("utf-8")
-            for message in messages
-            for record in self.get_records_from_message(message)
-            if record is not None
-        ]
+
+        records = []
+        for message in messages:
+            body, body_type = self.get_records_from_message(message)
+            for record in body:
+                if record is not None:
+                    if body_type == "json":
+                        records.append(orjson.dumps(record).decode("utf-8"))
+                    else:
+                        records.append(record)
 
         if len(records) > 0:
             self.log(f"Forward {len(records)} events")
