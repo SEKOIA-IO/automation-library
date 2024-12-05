@@ -105,7 +105,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         Return the records according to the body of the message
         """
         body: Union[str, dict[str, Any]]
-        
+
         try:
             body = message.body_as_json()
             if isinstance(body, list):  # handle list of events
