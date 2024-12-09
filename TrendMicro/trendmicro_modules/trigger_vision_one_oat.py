@@ -62,7 +62,7 @@ class TrendMicroVisionOneOATConnector(Connector):
     def __fetch_events(self, from_date: datetime) -> Generator[list, None, None]:
         to_date = datetime.now(timezone.utc)
 
-        query_params = {
+        query_params: dict[str, str | int] = {
             "detectedStartDateTime": from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "detectedEndDateTime": to_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "top": 200,  # items per page - could be 50, 100, 200
