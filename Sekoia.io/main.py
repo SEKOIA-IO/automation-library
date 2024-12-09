@@ -12,6 +12,7 @@ from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostRepor
 from sekoiaio.intelligence_center.actions import PostBundleAction, GetContextAction
 from sekoiaio.intelligence_center.upload_observables_inthreat import UploadObservablesAction
 from sekoiaio.intelligence_center.add_ioc_to_ioc_collection import AddIOCtoIOCCollectionAction
+from sekoiaio.operation_center.update_alert_status import UpdateAlertStatus
 from sekoiaio.operation_center import (
     ActivateCountermeasure,
     AddsAttributeToAsset,
@@ -86,6 +87,7 @@ if __name__ == "__main__":
     module.register(MergeAssets, "merge-assets")
     module.register(SynchronizeAssetsWithAD, "synchronize-assets")
     module.register(TriggerActionOnAlertWorkflow, "patch-alerts/{uuid}/workflow")
+    module.register(UpdateAlertStatus, "patch-alerts-v2/{uuid}/workflow")
     module.register(PushEventToIntake, "push-events-to-intake")
     module.register(ListAssets, "get-assets-v2")
     module.register(DeletesAsset, "delete-assets-v2/{uuid}")
