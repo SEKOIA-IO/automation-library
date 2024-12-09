@@ -1,10 +1,7 @@
 import pytest
 import requests_mock
 
-from sentinelone_module.threats.update_threat_incident import (
-    UpdateThreatIncidentAction,
-    UpdateThreatIncidentArguments,
-)
+from sentinelone_module.threats.update_threat_incident import UpdateThreatIncidentAction, UpdateThreatIncidentArguments
 
 
 @pytest.fixture(scope="module")

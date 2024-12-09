@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-12-04 - 1.19.4
+
+### Fixed
+
+- Fix the declaration of the create IoCs action
+
+## 2024-12-04 - 1.19.3
+
+### Fixed
+
+- Fix the metrics
+
+## 2024-12-03 - 1.19.2
+
+### Fixed
+
+- Fix the startDateTime parameter
+
+## 2024-12-03 - 1.19.1
+
+### Fixed
+
+- Fix the way to compute the address of the tenant in the SentinelOne Singularity Identity connector
+
+## 2024-11-30 - 1.19.0
+
+### Added
+
+- Support for SentinelOne Singularity Identity
+
+## 2024-11-28 - 1.18.7
+
+### Added
+
+- Add the account ids to required fields in create iocs actions
+
+
 ## 2024-11-28 - 1.18.6
 
 ### Fixed

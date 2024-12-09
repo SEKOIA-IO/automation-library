@@ -1,10 +1,7 @@
 import pytest
 import requests_mock
 
-from sentinelone_module.agents.init_scan import (
-    InitiateScanAction,
-    InitiateScanArguments,
-)
+from sentinelone_module.agents.init_scan import InitiateScanAction, InitiateScanArguments
 
 
 @pytest.fixture(scope="module")

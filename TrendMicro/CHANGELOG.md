@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added Trend Micro Vision One OAT connector
 
+## 2024-12-03 - 1.5.2
+
+### Changed
+
+- Changed metrics labels for Workbench alerts
+
 ## 2024-11-25 - 1.5.0
 
 ### Added

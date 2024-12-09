@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Sequence, Callable
+from typing import Callable, Sequence
 
 from cachetools import Cache
 from management.mgmtsdk_v2.entities.activity import Activity

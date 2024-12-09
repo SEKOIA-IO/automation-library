@@ -1,10 +1,10 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from threading import Event, Thread, Lock
+from threading import Event, Lock, Thread
 from time import sleep, time
 
-from cachetools import LRUCache, Cache
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from management.mgmtsdk_v2.entities.activity import Activity
 from management.mgmtsdk_v2.entities.threat import Threat
@@ -18,8 +18,8 @@ from sekoia_automation.storage import PersistentJSON
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
-from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, INCOMING_MESSAGES
-from sentinelone_module.logs.helpers import get_latest_event_timestamp, filter_collected_events
+from sentinelone_module.logs.helpers import filter_collected_events, get_latest_event_timestamp
+from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -120,7 +120,7 @@ class SentinelOneLogsConsumer(Thread):
     def pull_events(self, last_timestamp: datetime | None) -> list:
         raise NotImplementedError
 
-    def next_batch(self):
+    def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time()
         batch_duration: int = 0
@@ -133,9 +133,7 @@ class SentinelOneLogsConsumer(Thread):
             batch_end_time = time()
             batch_duration = int(batch_end_time - batch_start_time)
             logger.debug(f"Fetched and forwarded events", duration=batch_duration, nb_events=len(events_id))
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").observe(
-                batch_duration
-            )
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
             # log the number of forwarded events
             log_message = "No events to forward"
@@ -192,9 +190,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             nb_activities = len(activities.data)
             logger.debug("Collected activities", nb=nb_activities)
 
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                nb_activities
-            )
+            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(nb_activities)
 
             # discard already collected events
             selected_events = filter_collected_events(activities.data, lambda activity: activity.id, self.events_cache)
@@ -204,9 +200,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
                 events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                len(selected_events)
-            )
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
 
             # Update context with latest event date
             current_lag: int = 0
@@ -254,9 +248,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
                 events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, datasource="sentinelone").inc(
-                len(selected_events)
-            )
+            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
 
             # Update context with the latest event date
             current_lag: int = 0

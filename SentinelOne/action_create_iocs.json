@@ -35,7 +35,10 @@
               "type": "string"
             }
           }
-        }
+        },
+        "required": [
+          "account_ids"
+        ]
       }
     },
     "required": [
@@ -56,7 +59,7 @@
         "description": "All indicators pushed",
         "type": "array",
         "items": {
-          "type":"object",
+          "type": "object",
           "properties": {
             "source": {
               "type": "string"
