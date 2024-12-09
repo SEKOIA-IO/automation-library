@@ -38,6 +38,7 @@ def test_get_alert_success():
     expected_response = {
         "community_uuid": "string",
         "countermeasures": [],
+        "cases": [],
         "updated_at": 0,
         "source": "string",
         "updated_by_type": "string",
