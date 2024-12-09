@@ -15,6 +15,12 @@
       "stix": {
         "in": "query",
         "type": "boolean"
+      },
+      "cases": {
+        "in": "query",
+        "type": "boolean",
+        "description": "Get the cases associated with this alert",
+        "default": true
       }
     },
     "required": [
