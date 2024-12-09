@@ -714,6 +714,29 @@
       },
       "target": {
         "type": "string"
+      },
+      "cases": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "short_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "is_supplied": {
+              "type": "boolean"
+            },
+            "manual": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string"
+            }
+          }
+        }
       }
     }
   }
