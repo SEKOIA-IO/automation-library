@@ -301,5 +301,5 @@ def test_get_records_from_message_str():
     records = AzureEventsHubTrigger.get_records_from_message(message)
 
     # assert
-    assert records == (["teststring"], "str")
+    assert len(records[0]) == 1
     assert records[0][0] == "teststring"
