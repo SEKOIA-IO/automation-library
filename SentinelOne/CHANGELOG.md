@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-12-10 - 1.19.6
+
+### Fixed
+
+- Fix the product name in the SentineOne Identity connector
+
 ## 2024-12-04 - 1.19.5
 
 ### Fixed
