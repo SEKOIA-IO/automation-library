@@ -6,9 +6,9 @@ authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
-beautifulsoup4 = "^4.11.1"
-structlog = "^23.1.0"
+sekoia-automation-sdk = "^1.18.1"
+beautifulsoup4 = "^4.12.3"
+structlog = "^24.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
