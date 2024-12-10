@@ -59,6 +59,102 @@ class TestSynchronizeAssetsWithAD:
             community_uuid="community-1234",
         )
 
+    def test_on_asset_found_and_merge(self, requests_mock, action_instance, arguments):
+        """
+        Test the SynchronizeAssetsWithAD action for the scenario where multiple assets are found,
+        and one of them is edited while merging the others.
+        """
+        # Extract configuration from the mock module
+        base_url = action_instance.module.configuration["base_url"]
+        api_key = action_instance.module.configuration["api_key"]
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+
+        # URLs
+        assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+        merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
+        update_url = urljoin(base_url + "/", "v2/asset-management/assets/asset-uuid-1")
+        create_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+        # Helper functions to match specific GET requests
+        def match_asset_name(request):
+            search_query = request.qs.get("search", [None])[0]
+            also_search = "also_search_in_detection_properties" in request.qs
+            return search_query == "jdoe" and not also_search
+
+        def match_detection_properties(request):
+            return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+        # Mock GET request for asset name search (should return one asset)
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_asset_name,
+            json={
+                "total": 1,
+                "items": [{"uuid": "asset-uuid-1", "name": "jdoe", "atoms": []}],
+            },
+            status_code=200,
+        )
+
+        # Mock GET request for detection properties (should return two additional assets)
+        requests_mock.get(
+            assets_url,
+            additional_matcher=match_detection_properties,
+            json={
+                "total": 0,
+                "items": [],
+            },
+            status_code=200,
+        )
+
+        # Mock PUT request to update the destination asset
+        requests_mock.put(
+            update_url,
+            json={},  # Assume successful update with empty response
+            status_code=200,
+        )
+
+        # Execute the action
+        response: ResponseModel = action_instance.run(arguments)
+
+        # Assertions
+        assert response.created_asset is False, "Asset should not be created since it exists."
+        assert response.destination_asset == "asset-uuid-1", "Destination asset UUID mismatch."
+        assert set(response.found_assets) == {"asset-uuid-1"}, "Found assets mismatch."
+
+        # Verify that the correct number of requests were made
+        # Expected Requests:
+        # 1. GET asset name search
+        # 2. 2 GET for all the detection properties search
+        # 3. PUT update asset
+        # 4. POST merge assets
+        assert (
+            len(requests_mock.request_history) == 4
+        ), f"Expected 4 HTTP requests, got {len(requests_mock.request_history)}."
+
+        # Optionally, verify the payloads of PUT and POST requests
+        # Verify PUT request payload
+        put_requests = [req for req in requests_mock.request_history if req.method == "PUT"]
+        assert len(put_requests) == 1, "Expected one PUT request."
+        put_request = put_requests[0]
+        expected_put_payload = {
+            "name": "jdoe",
+            "description": "",
+            "type": "account",
+            "category": "user",
+            "reviewed": True,
+            "source": "manual",
+            "props": {"dept": "engineering"},
+            "atoms": [
+                {"email": ["jdoe@example.com"]},
+                {"department": ["engineering"]},
+            ],
+        }
+        assert put_request.json() == expected_put_payload, "PUT request payload mismatch."
+
     def test_multiple_assets_found_and_merge(self, requests_mock, action_instance, arguments):
         """
         Test the SynchronizeAssetsWithAD action for the scenario where multiple assets are found,
