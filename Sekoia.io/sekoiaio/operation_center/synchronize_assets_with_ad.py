@@ -129,7 +129,7 @@ class SynchronizeAssetsWithAD(Action):
 
         if asset_name_json.get("total", 0) == 1:
             if asset_name_json["items"][0].get("name") == asset_name:
-                # Asset exists
+                self.log(f"asset name search response: {asset_name_json}")
                 asset_record = asset_name_json["items"][0]
                 asset_uuid = asset_record["uuid"]
                 destination_asset = asset_uuid
@@ -150,7 +150,6 @@ class SynchronizeAssetsWithAD(Action):
                     put_request(endpoint=endpoint, json_data=payload_asset)
             else:
                 self.error(f"Unexpected asset name search response: {asset_name_json}")
-
         elif asset_name_json.get("total", 0) == 0:
             # Asset does not exist, create it
             created_asset = True
@@ -166,7 +165,6 @@ class SynchronizeAssetsWithAD(Action):
             sources_to_merge = list(found_assets)
             if sources_to_merge:
                 merge_assets(destination=destination_asset, sources=sources_to_merge)
-
         else:
             self.error(f"Unexpected asset name search response: {asset_name_json}")
 
