@@ -20,7 +20,7 @@
         "in": "query",
         "type": "boolean",
         "description": "Get the cases associated with this alert",
-        "default": true
+        "default": false
       }
     },
     "required": [
