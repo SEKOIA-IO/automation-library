@@ -287,7 +287,7 @@ def test_get_records_from_message_json():
     records = AzureEventsHubTrigger.get_records_from_message(message)
 
     # assert
-    assert len(records[0]) == 2
+    assert len(records[0]) == 3
     assert records[0][0] == {"name": "record1"}
     assert records[0][2] == {"name": "record2"}
 
