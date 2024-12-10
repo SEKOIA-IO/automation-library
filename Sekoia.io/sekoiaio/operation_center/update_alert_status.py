@@ -10,14 +10,16 @@ STATUS_UUIDS = {
     "ACKNOWLEDGED": "8f206505-af6d-433e-93f4-775d46dc7d0f",
     "ONGOING": "1f2f88d5-ff5b-48bf-bbbc-00c2fff82d9f",
     "REJECTED": "4f68da89-38e0-4703-a6ab-652f02bdf24e",
-    "CLOSED": "1738b1c1-767d-489e-bada-19176621a007"
+    "CLOSED": "1738b1c1-767d-489e-bada-19176621a007",
 }
 ACTION_UUIDS = [
-"937bdabf-6a08-434b-b6d3-d7447e4e452a",
-"c39a0a95-aa2c-4d0d-8d2e-d3decf426eea",
-"ade85d7b-7507-4026-bfc6-cc006d10ddac",
-"1390be4e-ced8-4dd6-9bed-573471b235ab"
+    "937bdabf-6a08-434b-b6d3-d7447e4e452a",
+    "c39a0a95-aa2c-4d0d-8d2e-d3decf426eea",
+    "ade85d7b-7507-4026-bfc6-cc006d10ddac",
+    "1390be4e-ced8-4dd6-9bed-573471b235ab",
 ]
+
+
 class UpdateAlertStatus(Action):
 
     def url(self, alert_uuid: str) -> str:
