@@ -11,18 +11,12 @@ class Arguments(BaseModel):
     community_uuid: str
 
 
-class ResponseModel(BaseModel):
-    found_assets: List[str]  # list of UUIDs
-    created_asset: bool
-    destination_asset: str  # UUID
-
-
 class SynchronizeAssetsWithAD(Action):
     """
     Action to synchronize asset with Active Directory (AD).
     """
 
-    def run(self, arguments: Arguments) -> ResponseModel:
+    def run(self, arguments: Arguments):
         user_ad_data = arguments.user_ad_data
         asset_conf = arguments.asset_synchronization_configuration
         community_uuid = arguments.community_uuid
@@ -128,8 +122,8 @@ class SynchronizeAssetsWithAD(Action):
         destination_asset = ""
 
         if asset_name_json.get("total", 0) == 1:
+            self.log(f"asset name search response: {asset_name_json}")
             if asset_name_json["items"][0].get("name") == asset_name:
-                self.log(f"asset name search response: {asset_name_json}")
                 asset_record = asset_name_json["items"][0]
                 asset_uuid = asset_record["uuid"]
                 destination_asset = asset_uuid
@@ -168,8 +162,9 @@ class SynchronizeAssetsWithAD(Action):
         else:
             self.error(f"Unexpected asset name search response: {asset_name_json}")
 
-        return ResponseModel(
-            found_assets=list(found_assets),
-            created_asset=created_asset,
-            destination_asset=destination_asset,
-        )
+        response = {
+            "found_assets": list(found_assets),
+            "created_asset": created_asset,
+            "destination_asset": destination_asset,
+        }
+        return response
