@@ -15,6 +15,12 @@
       "stix": {
         "in": "query",
         "type": "boolean"
+      },
+      "cases": {
+        "in": "query",
+        "type": "boolean",
+        "description": "Get the cases associated with this alert",
+        "default": false
       }
     },
     "required": [
@@ -714,6 +720,29 @@
       },
       "target": {
         "type": "string"
+      },
+      "cases": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "short_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "is_supplied": {
+              "type": "boolean"
+            },
+            "manual": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string"
+            }
+          }
+        }
       }
     }
   }

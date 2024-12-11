@@ -12,7 +12,7 @@ from sentinelone_module.deep_visibility.consumer import DeepVisibilityTrigger
 def trigger(symphony_storage):
     trigger = DeepVisibilityTrigger(data_path=symphony_storage)
     trigger.log = Mock()
-    trigger.module.configuration = {}
+    trigger.module.configuration = {"hostname": "fakehostname", "api_token": "aaaaa"}
     trigger.configuration = {
         "bootstrap_servers": "kafka:9092",
         "username": "username",

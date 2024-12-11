@@ -123,7 +123,7 @@ GetAlert = type(
     {
         "verb": "get",
         "endpoint": base_url + "alerts/{uuid}",
-        "query_parameters": ["stix"],
+        "query_parameters": ["stix", "cases"],
     },
 )
 

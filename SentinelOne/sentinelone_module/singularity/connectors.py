@@ -139,4 +139,4 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
 
 
 class SingularityIdentityConnector(AbstractSingularityConnector):
-    product_name = "identity"
+    product_name = "Identity"
