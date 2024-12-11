@@ -1,0 +1,32 @@
+{
+  "description": "Fetch the last security events",
+  "docker_parameters": "security_events_connector",
+  "name": "Fetch Security Events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds (default 12h)",
+        "default": 43200
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "frequency",
+      "intake_server",
+      "intake_key"
+    ],
+    "title": "Connector configuration",
+    "type": "object"
+  },
+  "uuid": "c69d4c31-8a75-4dea-9d51-5814ae73c54a"
+}
