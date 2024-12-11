@@ -122,7 +122,7 @@ class SynchronizeAssetsWithAD(Action):
         destination_asset = ""
 
         if asset_name_json.get("total", 0) == 1:
-            self.log(f"asset name search response: {asset_name_json}")
+            self.log(f"asset name search response: {asset_name_json} and payload asset is {payload_asset}")
             if asset_name_json["items"][0].get("name"):
                 if str(asset_name_json["items"][0]["name"]).lower() == asset_name.lower():
                     asset_record = asset_name_json["items"][0]
@@ -140,6 +140,7 @@ class SynchronizeAssetsWithAD(Action):
                         merge_assets(destination=destination_asset, sources=sources_to_merge)
 
                     endpoint = f"v2/asset-management/assets/{destination_asset}"
+                    self.log(f"put request: {endpoint} and payload asset is {payload_asset}")
                     put_request(endpoint=endpoint, json_data=payload_asset)
                 else:
                     self.error(f"Unexpected asset name search response: {asset_name_json}")
