@@ -125,6 +125,10 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 self.log(message=error.message, level="critical")
                 await asyncio.sleep(self.configuration.frequency)
 
+            except TimeoutError as error:
+                self.log(message="A timeout was raised by the client", level="warning")
+                await asyncio.sleep(self.configuration.frequency)
+
             except Exception as error:
                 self.log_exception(error)
                 await asyncio.sleep(self.configuration.frequency)
