@@ -101,6 +101,7 @@ def test_get_alert_missing_arg():
 
         assert mock.call_count == 0
 
+
 def test_add_events_to_case():
     action: AddEventsToACase = AddEventsToACase()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
