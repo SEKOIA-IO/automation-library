@@ -297,6 +297,15 @@ UpdateCommentOfCase = type(
     },
 )
 
+AddEventsToACase = type(
+    "AddEventsToACase",
+    (GenericAPIAction,),
+    {
+        "verb": "post",
+        "endpoint": base_url + "cases/{uuid}/events",
+        "query_parameters": [],
+    },
+)
 
 assets_base_url = "api/v2/asset-management/"
 

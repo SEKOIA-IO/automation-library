@@ -1,0 +1,28 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "uuid": {
+        "description": "UUID of the case",
+        "type": "string",
+        "in": "path"
+      },
+      "event_ids": {
+        "description": "List of event identifiers (__event_id) to add to the case. Do not use event.id which is a different identifier.",
+        "type": "array",
+        "in": "body"
+      }
+    },
+    "required": [
+      "uuid",
+      "event_ids"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Add events to a case",
+  "docker_parameters": "add_events_to_a_case",
+  "name": "Add events to a case",
+  "results": {},
+  "uuid": "0bcabc04-43b4-4564-b9b2-08b80e0e1ecf"
+}
