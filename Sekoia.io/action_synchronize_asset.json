@@ -32,7 +32,10 @@
     "properties": {
       "found_assets": {
         "title": "Assets found",
-        "type": "object"
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       },
       "created_asset": {
         "title": "Asset created",

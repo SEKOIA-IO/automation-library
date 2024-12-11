@@ -1,6 +1,7 @@
 from urllib.parse import urljoin
 from typing import List, Dict, Any
 import requests
+import json
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
@@ -11,18 +12,12 @@ class Arguments(BaseModel):
     community_uuid: str
 
 
-class ResponseModel(BaseModel):
-    found_assets: List[str]  # list of UUIDs
-    created_asset: bool
-    destination_asset: str  # UUID
-
-
 class SynchronizeAssetsWithAD(Action):
     """
     Action to synchronize asset with Active Directory (AD).
     """
 
-    def run(self, arguments: Arguments) -> ResponseModel:
+    def run(self, arguments: Arguments):
         user_ad_data = arguments.user_ad_data
         asset_conf = arguments.asset_synchronization_configuration
         community_uuid = arguments.community_uuid
@@ -63,14 +58,14 @@ class SynchronizeAssetsWithAD(Action):
                 self.error(f"HTTP GET request failed: {response.url} with status code {response.status_code}")
             return response.json()
 
-        def post_request(endpoint: str, json_data: Dict[str, Any]) -> Dict[str, Any]:
+        def post_request(endpoint: str, json_data: str) -> Dict[str, Any]:
             api_path = urljoin(base_url + "/", endpoint)
             response = session.post(api_path, json=json_data)
             if not response.ok:
                 self.error(f"HTTP POST request failed: {api_path} with status code {response.status_code}")
             return response.json()
 
-        def put_request(endpoint: str, json_data: Dict[str, Any]) -> None:
+        def put_request(endpoint: str, json_data: str) -> None:
             api_path = urljoin(base_url + "/", endpoint)
             response = session.put(api_path, json=json_data)
             if not response.ok:
@@ -100,11 +95,11 @@ class SynchronizeAssetsWithAD(Action):
                             found_assets.add(asset["uuid"])
 
         # Build asset payload
-        detection_properties = []
+        detection_properties = {}
         for prop, keys in detection_properties_config.items():
             values = [user_ad_data[key] for key in keys if key in user_ad_data and user_ad_data[key]]
             if values:
-                detection_properties.append({prop: values})
+                detection_properties[prop] = values
 
         contextual_properties_config = asset_conf.get("contextual_properties", {})
         custom_properties = {}
@@ -123,41 +118,43 @@ class SynchronizeAssetsWithAD(Action):
             "props": custom_properties,
             "atoms": detection_properties,
         }
+        json_payload_asset = json.dumps(payload_asset)
 
         created_asset = False
         destination_asset = ""
 
         if asset_name_json.get("total", 0) == 1:
-            if asset_name_json["items"][0].get("name") == asset_name:
-                # Asset exists
-                asset_record = asset_name_json["items"][0]
-                asset_uuid = asset_record["uuid"]
-                destination_asset = asset_uuid
-                created_asset = False
+            self.log(f"asset name search response: {asset_name_json} and payload asset is {json_payload_asset}")
+            if asset_name_json["items"][0].get("name"):
+                if str(asset_name_json["items"][0]["name"]).lower() == asset_name.lower():
+                    asset_record = asset_name_json["items"][0]
+                    asset_uuid = asset_record["uuid"]
+                    destination_asset = asset_uuid
+                    created_asset = False
 
-                # Ensure asset_uuid is in found_assets
-                found_assets.add(asset_uuid)
+                    # Ensure asset_uuid is in found_assets
+                    found_assets.add(asset_uuid)
 
-                # Remove destination_asset from sources to merge
-                sources_to_merge = list(found_assets - {destination_asset})
+                    # Remove destination_asset from sources to merge
+                    sources_to_merge = list(found_assets - {destination_asset})
 
-                if sources_to_merge:
-                    merge_assets(destination=destination_asset, sources=sources_to_merge)
+                    if sources_to_merge:
+                        merge_assets(destination=destination_asset, sources=sources_to_merge)
 
-                # Update the asset if it's not up to date:
-                if payload_asset["atoms"] != asset_record["atoms"]:  # criteria to define up to date asset to check
                     endpoint = f"v2/asset-management/assets/{destination_asset}"
-                    put_request(endpoint=endpoint, json_data=payload_asset)
+                    self.log(f"put request: {endpoint} and payload asset is {json_payload_asset}")
+                    put_request(endpoint=endpoint, json_data=json_payload_asset)
+                else:
+                    self.error(f"Unexpected asset name search response: {asset_name_json}")
             else:
                 self.error(f"Unexpected asset name search response: {asset_name_json}")
-
         elif asset_name_json.get("total", 0) == 0:
             # Asset does not exist, create it
             created_asset = True
 
             # Create the asset
             payload_asset["community_uuid"] = community_uuid
-            create_response = post_request(endpoint="v2/asset-management/assets", json_data=payload_asset)
+            create_response = post_request(endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset))
             destination_asset = create_response["uuid"]
             if not destination_asset:
                 self.error("Asset creation response does not contain 'uuid'.")
@@ -166,12 +163,12 @@ class SynchronizeAssetsWithAD(Action):
             sources_to_merge = list(found_assets)
             if sources_to_merge:
                 merge_assets(destination=destination_asset, sources=sources_to_merge)
-
         else:
             self.error(f"Unexpected asset name search response: {asset_name_json}")
 
-        return ResponseModel(
-            found_assets=list(found_assets),
-            created_asset=created_asset,
-            destination_asset=destination_asset,
-        )
+        response = {
+            "found_assets": list(found_assets),
+            "created_asset": created_asset,
+            "destination_asset": destination_asset,
+        }
+        return response
