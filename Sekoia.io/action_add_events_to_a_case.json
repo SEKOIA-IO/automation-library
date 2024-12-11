@@ -8,9 +8,9 @@
         "in": "path"
       },
       "event_ids": {
-        "description": "List of event identifiers to add to the case",
+        "description": "List of event identifiers (__event_id) to add to the case. Do not use event.id which is a different identifier.",
         "type": "array",
-        "in": "query"
+        "in": "body"
       }
     },
     "required": [

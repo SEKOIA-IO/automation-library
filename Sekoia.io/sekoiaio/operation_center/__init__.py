@@ -302,8 +302,8 @@ AddEventsToACase = type(
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": base_url + "cases/{case_uuid}/events",
-        "query_parameters": ["event_ids"],
+        "endpoint": base_url + "cases/{uuid}/events",
+        "query_parameters": [],
     },
 )
 
