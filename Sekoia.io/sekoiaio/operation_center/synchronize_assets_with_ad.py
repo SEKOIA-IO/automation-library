@@ -123,25 +123,28 @@ class SynchronizeAssetsWithAD(Action):
 
         if asset_name_json.get("total", 0) == 1:
             self.log(f"asset name search response: {asset_name_json}")
-            if asset_name_json["items"][0].get("name") == asset_name:
-                asset_record = asset_name_json["items"][0]
-                asset_uuid = asset_record["uuid"]
-                destination_asset = asset_uuid
-                created_asset = False
+            if asset_name_json["items"][0].get("name"):
+                if str(asset_name_json["items"][0]["name"]).lower() == asset_name.lower():
+                    asset_record = asset_name_json["items"][0]
+                    asset_uuid = asset_record["uuid"]
+                    destination_asset = asset_uuid
+                    created_asset = False
 
-                # Ensure asset_uuid is in found_assets
-                found_assets.add(asset_uuid)
+                    # Ensure asset_uuid is in found_assets
+                    found_assets.add(asset_uuid)
 
-                # Remove destination_asset from sources to merge
-                sources_to_merge = list(found_assets - {destination_asset})
+                    # Remove destination_asset from sources to merge
+                    sources_to_merge = list(found_assets - {destination_asset})
 
-                if sources_to_merge:
-                    merge_assets(destination=destination_asset, sources=sources_to_merge)
+                    if sources_to_merge:
+                        merge_assets(destination=destination_asset, sources=sources_to_merge)
 
-                # Update the asset if it's not up to date:
-                if payload_asset["atoms"] != asset_record["atoms"]:  # criteria to define up to date asset to check
-                    endpoint = f"v2/asset-management/assets/{destination_asset}"
-                    put_request(endpoint=endpoint, json_data=payload_asset)
+                    # Update the asset if it's not up to date:
+                    if payload_asset["atoms"] != asset_record["atoms"]:  # criteria to define up to date asset to check
+                        endpoint = f"v2/asset-management/assets/{destination_asset}"
+                        put_request(endpoint=endpoint, json_data=payload_asset)
+                else:
+                    self.error(f"Unexpected asset name search response: {asset_name_json}")
             else:
                 self.error(f"Unexpected asset name search response: {asset_name_json}")
         elif asset_name_json.get("total", 0) == 0:
