@@ -139,10 +139,8 @@ class SynchronizeAssetsWithAD(Action):
                     if sources_to_merge:
                         merge_assets(destination=destination_asset, sources=sources_to_merge)
 
-                    # Update the asset if it's not up to date:
-                    if payload_asset["atoms"] != asset_record["atoms"]:  # criteria to define up to date asset to check
-                        endpoint = f"v2/asset-management/assets/{destination_asset}"
-                        put_request(endpoint=endpoint, json_data=payload_asset)
+                    endpoint = f"v2/asset-management/assets/{destination_asset}"
+                    put_request(endpoint=endpoint, json_data=payload_asset)
                 else:
                     self.error(f"Unexpected asset name search response: {asset_name_json}")
             else:
