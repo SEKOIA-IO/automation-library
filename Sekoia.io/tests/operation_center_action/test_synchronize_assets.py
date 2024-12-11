@@ -7,7 +7,6 @@ from typing import List, Dict, Any
 from sekoiaio.operation_center.synchronize_assets_with_ad import (
     SynchronizeAssetsWithAD,
     Arguments,
-    ResponseModel,
     Action,
 )
 
@@ -118,12 +117,12 @@ class TestSynchronizeAssetsWithAD:
         )
 
         # Execute the action
-        response: ResponseModel = action_instance.run(arguments)
+        response = action_instance.run(arguments)
 
         # Assertions
-        assert response.created_asset is False, "Asset should not be created since it exists."
-        assert response.destination_asset == "asset-uuid-1", "Destination asset UUID mismatch."
-        assert set(response.found_assets) == {"asset-uuid-1"}, "Found assets mismatch."
+        assert response["created_asset"] is False, "Asset should not be created since it exists."
+        assert response["destination_asset"] == "asset-uuid-1", "Destination asset UUID mismatch."
+        assert set(response["found_assets"]) == {"asset-uuid-1"}, "Found assets mismatch."
 
         # Verify that the correct number of requests were made
         # Expected Requests:
@@ -224,12 +223,16 @@ class TestSynchronizeAssetsWithAD:
         )
 
         # Execute the action
-        response: ResponseModel = action_instance.run(arguments)
+        response = action_instance.run(arguments)
 
         # Assertions
-        assert response.created_asset is False, "Asset should not be created since it exists."
-        assert response.destination_asset == "asset-uuid-1", "Destination asset UUID mismatch."
-        assert set(response.found_assets) == {"asset-uuid-1", "asset-uuid-2", "asset-uuid-3"}, "Found assets mismatch."
+        assert response["created_asset"] is False, "Asset should not be created since it exists."
+        assert response["destination_asset"] == "asset-uuid-1", "Destination asset UUID mismatch."
+        assert set(response["found_assets"]) == {
+            "asset-uuid-1",
+            "asset-uuid-2",
+            "asset-uuid-3",
+        }, "Found assets mismatch."
 
         # Verify that the correct number of requests were made
         # Expected Requests:
