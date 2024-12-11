@@ -276,3 +276,30 @@ def test_azure_eventhub_handling_stop_event_slow_20_seconds(data_storage):
     finish_execution_time = time.time()
 
     assert finish_execution_time - start_execution_time <= 21
+
+
+def test_get_records_from_message_json():
+    # arrange
+    body = '{"records": [{"name": "record1"}, null, {"name": "record2"}]}'
+    message = EventData(body=body)
+
+    # act
+    records = AzureEventsHubTrigger.get_records_from_message(message)
+
+    # assert
+    assert len(records[0]) == 3
+    assert records[0][0] == {"name": "record1"}
+    assert records[0][2] == {"name": "record2"}
+
+
+def test_get_records_from_message_str():
+    # arrange
+    body = "teststring"
+    message = EventData(body=body)
+
+    # act
+    records = AzureEventsHubTrigger.get_records_from_message(message)
+
+    # assert
+    assert len(records[0]) == 1
+    assert records[0][0] == "teststring"
