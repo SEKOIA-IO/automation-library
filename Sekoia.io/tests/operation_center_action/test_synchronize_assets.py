@@ -1,4 +1,5 @@
 import pytest
+import json
 from urllib.parse import urljoin
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -147,12 +148,9 @@ class TestSynchronizeAssetsWithAD:
             "reviewed": True,
             "source": "manual",
             "props": {"dept": "engineering"},
-            "atoms": [
-                {"email": ["jdoe@example.com"]},
-                {"department": ["engineering"]},
-            ],
+            "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
         }
-        assert put_request.json() == expected_put_payload, "PUT request payload mismatch."
+        assert put_request.json() == json.dumps(expected_put_payload), "PUT request payload mismatch."
 
     def test_multiple_assets_found_and_merge(self, requests_mock, action_instance, arguments):
         """
@@ -257,12 +255,9 @@ class TestSynchronizeAssetsWithAD:
             "reviewed": True,
             "source": "manual",
             "props": {"dept": "engineering"},
-            "atoms": [
-                {"email": ["jdoe@example.com"]},
-                {"department": ["engineering"]},
-            ],
+            "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
         }
-        assert put_request.json() == expected_put_payload, "PUT request payload mismatch."
+        assert put_request.json() == json.dumps(expected_put_payload), "PUT request payload mismatch."
 
         # Verify POST merge request payload
         post_merge_requests = [
