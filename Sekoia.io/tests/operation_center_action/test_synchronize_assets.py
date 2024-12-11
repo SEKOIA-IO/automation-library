@@ -141,15 +141,15 @@ class TestSynchronizeAssetsWithAD:
         assert len(post_requests) == 1, "Expected one POST request."
         post_request = post_requests[0]
         expected_post_payload = {
-            'name': 'jdoe',
-            'description': '',
-            'type': 'account',
-            'category': 'user',
-            'reviewed': True,
-            'source': 'manual',
-            'props': {'dept': 'engineering'},
-            'atoms': {'email': ['jdoe@example.com'], 'department': ['engineering']},
-            'community_uuid': 'community-1234',
+            "name": "jdoe",
+            "description": "",
+            "type": "account",
+            "category": "user",
+            "reviewed": True,
+            "source": "manual",
+            "props": {"dept": "engineering"},
+            "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
+            "community_uuid": "community-1234",
         }
         assert post_request.json() == expected_post_payload, "POST request payload mismatch."
 
@@ -235,14 +235,14 @@ class TestSynchronizeAssetsWithAD:
         assert len(put_requests) == 1, "Expected one PUT request."
         put_request = put_requests[0]
         expected_put_payload = {
-            'name': 'jdoe',
-            'description': '',
-            'type': 'account',
-            'category': 'user',
-            'reviewed': True,
-            'source': 'manual',
-            'props': {'dept': 'engineering'},
-            'atoms': {'email': ['jdoe@example.com'], 'department': ['engineering']},
+            "name": "jdoe",
+            "description": "",
+            "type": "account",
+            "category": "user",
+            "reviewed": True,
+            "source": "manual",
+            "props": {"dept": "engineering"},
+            "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
         }
         assert put_request.json() == expected_put_payload, "PUT request payload mismatch."
 
@@ -342,14 +342,14 @@ class TestSynchronizeAssetsWithAD:
         assert len(put_requests) == 1, "Expected one PUT request."
         put_request = put_requests[0]
         expected_put_payload = {
-            'name': 'jdoe',
-            'description': '',
-            'type': 'account',
-            'category': 'user',
-            'reviewed': True,
-            'source': 'manual',
-            'props': {'dept': 'engineering'},
-            'atoms': {'email': ['jdoe@example.com'], 'department': ['engineering']},
+            "name": "jdoe",
+            "description": "",
+            "type": "account",
+            "category": "user",
+            "reviewed": True,
+            "source": "manual",
+            "props": {"dept": "engineering"},
+            "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
         }
         assert put_request.json() == expected_put_payload, "PUT request payload mismatch."
 
