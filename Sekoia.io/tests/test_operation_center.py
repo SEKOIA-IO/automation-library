@@ -3,7 +3,7 @@ from urllib.parse import unquote as url_decoder
 import pytest
 import requests_mock
 
-from sekoiaio.operation_center import GetAlert, ListAlerts
+from sekoiaio.operation_center import GetAlert, ListAlerts, AddEventsToACase
 
 module_base_url = "http://fake.url/"
 base_url = module_base_url + "api/v1/sic/"
@@ -99,3 +99,20 @@ def test_get_alert_missing_arg():
         pytest.raises(KeyError, action.run, arguments)
 
         assert mock.call_count == 0
+
+def test_add_events_to_case():
+    action: AddEventsToACase = AddEventsToACase()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    ressource = "cases/fake_uuid/events"
+    expected_response = {}
+    arguments = {"uuid": "fake_uuid", "event_ids": []}
+
+    with requests_mock.Mocker() as mock:
+        mock.post(f"{base_url}{ressource}", json=expected_response)
+
+        action.run(arguments)
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "POST"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}"
