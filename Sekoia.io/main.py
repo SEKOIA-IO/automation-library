@@ -97,7 +97,7 @@ if __name__ == "__main__":
     module.register(GetIntake, "get-intakes/{uuid}")
     module.register(GetEntity, "get-entities/{uuid}")
     module.register(GetCommunity, "get-communities/{uuid}")
-    module.register(AddEventsToACase, "cases/{uuid}/events")
+    module.register(AddEventsToACase, "add_events_to_a_case")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")
