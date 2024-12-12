@@ -1,3 +1,5 @@
+import logging
+import os
 from contextlib import asynccontextmanager
 from posixpath import join as urljoin
 from typing import Any, AsyncGenerator
@@ -7,8 +9,12 @@ from aiolimiter import AsyncLimiter
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportServerError
+from gql.transport.requests import log as requests_logger
 from graphql import ExecutionResult
 from pydantic import BaseModel
+
+
+requests_logger.setLevel(int(os.getenv("GQL_LOG_LEVEL", logging.WARNING))) # Warning level by default
 
 
 class ListAlertsResult(BaseModel):
