@@ -132,7 +132,9 @@ def message_1():
 
 def test_fetch_events(trigger, message_1):
     trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
-    with patch("trendmicro_modules.trigger_vision_one_oat.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch(
+        "trendmicro_modules.trigger_vision_one_base.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/oat/detections", json=message_1)
 
         batch_duration = 16  # the batch lasts 16 seconds
@@ -148,7 +150,9 @@ def test_fetch_events(trigger, message_1):
 
 def test_long_next_batch_should_not_sleep(trigger, message_1):
     trigger.cursor.offset = datetime(year=2024, month=11, day=1, tzinfo=timezone.utc)
-    with patch("trendmicro_modules.trigger_vision_one_oat.time") as mock_time, requests_mock.Mocker() as mock_requests:
+    with patch(
+        "trendmicro_modules.trigger_vision_one_base.time"
+    ) as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.register_uri("GET", "https://api.xdr.trendmicro.com/v3.0/oat/detections", json=message_1)
 
         batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
