@@ -151,9 +151,9 @@ class TestSynchronizeAssetsWithAD:
             "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
             "community_uuid": "community-1234",
         }
-        assert post_request.json() == json.dumps(expected_post_payload), "POST request payload mismatch."
+        assert post_request.json() == expected_post_payload, "POST request payload mismatch."
 
-    def test_on_asset_found_and_merge(self, requests_mock, action_instance, arguments):
+    def test_one_asset_found_and_merge(self, requests_mock, action_instance, arguments):
         """
         Test the SynchronizeAssetsWithAD action for the scenario where multiple assets are found,
         and one of them is edited while merging the others.
@@ -244,7 +244,7 @@ class TestSynchronizeAssetsWithAD:
             "props": {"dept": "engineering"},
             "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
         }
-        assert put_request.json() == json.dumps(expected_put_payload), "PUT request payload mismatch."
+        assert put_request.json() == expected_put_payload, "PUT request payload mismatch."
 
     def test_multiple_assets_found_and_merge(self, requests_mock, action_instance, arguments):
         """
@@ -351,7 +351,7 @@ class TestSynchronizeAssetsWithAD:
             "props": {"dept": "engineering"},
             "atoms": {"email": ["jdoe@example.com"], "department": ["engineering"]},
         }
-        assert put_request.json() == json.dumps(expected_put_payload), "PUT request payload mismatch."
+        assert put_request.json() == expected_put_payload, "PUT request payload mismatch."
 
         # Verify POST merge request payload
         post_merge_requests = [
@@ -368,3 +368,24 @@ class TestSynchronizeAssetsWithAD:
 
         # Assert 'sources' list contains the same elements, regardless of order
         assert set(post_merge["sources"]) == set(expected_merge_payload["sources"]), "Sources mismatch."
+
+    # def test_one_asset_found_and_merge_testapp(self):
+    #     # Extract configuration from the mock module
+    #     base_url = "https://app.test.sekoia.io"
+    #     api_key = "TO_ADD"
+
+    #     app_test_arg = Arguments( # TO COMPLETE
+    #         user_ad_data={},
+    #         asset_synchronization_configuration={},
+    #         community_uuid="",
+    #     )
+
+    #     configuration = {
+    #         "base_url": base_url,
+    #         "api_key": api_key,
+    #     }
+    #     module = MockModule(configuration=configuration)
+    #     action = SynchronizeAssetsWithAD()
+    #     action.module = module
+    #     # Execute the action
+    #     response = action.run(app_test_arg)

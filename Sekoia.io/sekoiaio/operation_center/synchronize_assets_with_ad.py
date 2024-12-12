@@ -60,14 +60,15 @@ class SynchronizeAssetsWithAD(Action):
 
         def post_request(endpoint: str, json_data: str) -> Dict[str, Any]:
             api_path = urljoin(base_url + "/", endpoint)
-            response = session.post(api_path, json=json_data)
+            response = session.post(api_path, data=json_data)
             if not response.ok:
                 self.error(f"HTTP POST request failed: {api_path} with status code {response.status_code}")
             return response.json()
 
         def put_request(endpoint: str, json_data: str) -> None:
             api_path = urljoin(base_url + "/", endpoint)
-            response = session.put(api_path, json=json_data)
+            response = session.put(api_path, data=json_data)
+            # print(f"\nresponse.status_code: {response.status_code}")
             if not response.ok:
                 self.error(f"HTTP PUT request failed: {api_path} with status code {response.status_code}")
 
