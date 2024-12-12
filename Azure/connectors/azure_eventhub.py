@@ -3,14 +3,15 @@ import os
 import time
 from datetime import datetime, timezone
 from functools import cached_property
-from typing import Any, Optional, cast, Union
+from typing import Any, Optional, Union, cast
 
 import orjson
 from azure.eventhub import EventData
 from azure.eventhub.aio import EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblobaio import BlobCheckpointStore
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.connector import DefaultConnectorConfiguration, Connector
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
+from sekoia_automation.storage import PersistentJSON
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
 
@@ -74,6 +75,7 @@ class AzureEventsHubTrigger(AsyncConnector):
         self._consumption_max_wait_time = int(os.environ.get("CONSUMER_MAX_WAIT_TIME", "10"), 10)  # 10 seconds default
         self._frequency = int(os.environ.get("FREQUENCY_MAX_TIME", "10"), 10)
         self._has_more_events = True
+        self.context = PersistentJSON("context.json", self._data_path)
 
     @cached_property
     def client(self) -> Client:
@@ -134,11 +136,20 @@ class AzureEventsHubTrigger(AsyncConnector):
                     else:
                         records.append(record)
 
+        # TODO: Check if it is useful to remove duplicates
+        with self.context as cache:
+            existed_records = cache.get("event_data", [])
+        records = [record for record in records if record not in existed_records]
+
         if len(records) > 0:
             self.log(f"Forward {len(records)} events")
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(records))
             await self.push_data_to_intakes(events=records)
             self._has_more_events = True
+
+            # TODO: Check if it is useful to remove duplicates
+            with self.context as cache:
+                cache["event_data"] = records
         else:
             self.log("No events to forward")
             self._has_more_events = False
