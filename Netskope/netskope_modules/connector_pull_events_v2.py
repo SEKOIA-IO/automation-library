@@ -178,14 +178,11 @@ class NetskopeEventConnector(Connector):
         ]
 
     @cached_property
-    def configuration_uuid(self) -> str | None:
-        if self.module.trigger_configuration_uuid is not None:
-            return self.module.trigger_configuration_uuid
-
-        elif self.module.connector_configuration_uuid is not None:
+    def configuration_uuid(self) -> str:
+        if self.module.connector_configuration_uuid is not None:
             return self.module.connector_configuration_uuid
 
-        return None
+        return self.module.trigger_configuration_uuid
 
     def get_index_name(self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> str:
         """
