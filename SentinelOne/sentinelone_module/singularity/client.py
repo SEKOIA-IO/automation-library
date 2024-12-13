@@ -14,7 +14,7 @@ from graphql import ExecutionResult
 from pydantic import BaseModel
 
 
-requests_logger.setLevel(int(os.getenv("GQL_LOG_LEVEL", logging.WARNING))) # Warning level by default
+requests_logger.setLevel(int(os.getenv("GQL_LOG_LEVEL", logging.WARNING)))  # Warning level by default
 
 
 class ListAlertsResult(BaseModel):
