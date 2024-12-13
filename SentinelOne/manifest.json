@@ -26,7 +26,7 @@
   "name": "SentinelOne",
   "uuid": "ff675e74-e5c1-47c8-a571-d207fc297464",
   "slug": "sentinelone",
-  "version": "1.19.7",
+  "version": "1.19.8",
   "categories": [
     "Endpoint"
   ]

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-12-13 - 1.19.8
+
+### Fixed
+
+- Fix the pagination system in the SentinelOne Singularity connector
+
 ## 2024-12-10 - 1.19.7
 
 ### Changed
