@@ -46,7 +46,7 @@ def patch_connector(
         return {
             "alerts": {
                 "totalCount": 0,
-                "pageInfo": {"endCursor": "cursor-1", "hasNextPage": False},
+                "pageInfo": {"endCursor": None, "hasNextPage": False},
                 "edges": [{"node": alert}, {"node": alert}],
             }
         }
