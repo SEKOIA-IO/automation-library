@@ -6,11 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
-## 2024-12-10 - 2.65.7
+
+## 2024-12-12 - 2.66.1
+
+### Added
+
+- Add an action to add events to a case
+
+## 2024-12-10 - 2.65.12
 
 ### Changed
 
 - Update synchronize asset action
+
+## 2024-11-27 - 2.65.7
+
+### Changed
+
+- Update get alert action with an option to get the associated cases
 
 ## 2024-11-27 - 2.65.4
 

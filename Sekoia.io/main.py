@@ -36,6 +36,7 @@ from sekoiaio.operation_center import (
     UpdateRule,
     GetIntake,
     GetEntity,
+    AddEventsToACase,
 )
 from sekoiaio.operation_center.get_asset import GetAsset
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
@@ -96,6 +97,7 @@ if __name__ == "__main__":
     module.register(GetIntake, "get-intakes/{uuid}")
     module.register(GetEntity, "get-entities/{uuid}")
     module.register(GetCommunity, "get-communities/{uuid}")
+    module.register(AddEventsToACase, "add_events_to_a_case")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

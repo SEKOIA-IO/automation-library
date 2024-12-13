@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2024-12-06 - 1.19.7
+## 2024-12-06 - 1.19.8
 
 ### Added
 
 - Add the new configuration part in sentinelOne action
+
+## 2024-12-10 - 1.19.7
+
+### Changed
+
+- Handle the timeout exception
+
 
 ## 2024-12-10 - 1.19.6
 
