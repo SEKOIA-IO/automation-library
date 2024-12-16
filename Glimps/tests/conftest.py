@@ -5,10 +5,9 @@ import hashlib
 import io
 import pytest
 from sekoia_automation import constants
-from glimps.retrieve_analysis_action import RetrieveAnalysis
-from glimps.search_analysis_by_sha256_action import SearchPreviousAnalysis
 from glimps.submit_file_to_be_analysed_action import WaitForFile
 from glimps.models import GLIMPSConfiguration
+from glimps.models import GLIMPSModule
 
 
 @pytest.fixture(scope="session")
@@ -28,24 +27,15 @@ def symphony_storage():
 
 
 @pytest.fixture(scope="session")
-def set_up_retrieve_analysis_action(token):
-    action = RetrieveAnalysis()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
-    return action
+def module(token):
+    module = GLIMPSModule()
+    module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
+    return module
 
 
 @pytest.fixture(scope="session")
-def set_up_search_analysis_action(token):
-    action = SearchPreviousAnalysis()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
-    return action
-
-
-@pytest.fixture(scope="session")
-def set_up_wait_for_action(token, symphony_storage):
-    action = WaitForFile(data_path=symphony_storage)
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
-    return action
+def set_up_wait_for_action(module, symphony_storage):
+    return WaitForFile(module=module, data_path=symphony_storage)
 
 
 @pytest.fixture

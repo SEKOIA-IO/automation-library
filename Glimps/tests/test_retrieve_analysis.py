@@ -40,8 +40,8 @@ def test_integration_retrieve_analysis(add_file_to_storage):
     assert response.get("analysis").get("status") is True
 
 
-def test_retrieve_analysis(set_up_retrieve_analysis_action, analysis_result):
-    action: RetrieveAnalysis = set_up_retrieve_analysis_action
+def test_retrieve_analysis(module, analysis_result):
+    action = RetrieveAnalysis(module=module)
     uuid, mock_analysis_result = analysis_result
     arguments = GetAnalysisByUUIDArgument(uuid=uuid)
     with patch("gdetect.api.Client.get_by_uuid") as mock:
@@ -53,8 +53,8 @@ def test_retrieve_analysis(set_up_retrieve_analysis_action, analysis_result):
     assert response.get("analysis").get("error") is None
 
 
-def test_retrieve_analysis_view_token(set_up_retrieve_analysis_action, analysis_result):
-    action: RetrieveAnalysis = set_up_retrieve_analysis_action
+def test_retrieve_analysis_view_token(module, analysis_result):
+    action = RetrieveAnalysis(module=module)
     uuid, mock_analysis_result = analysis_result
     mock_analysis_result.update({"token": "sometoken"})
     arguments = GetAnalysisByUUIDArgument(uuid=uuid)
@@ -68,8 +68,8 @@ def test_retrieve_analysis_view_token(set_up_retrieve_analysis_action, analysis_
     assert response.get("view_url") is not None and response.get("view_url") != ""
 
 
-def test_retrieve_analysis_error(set_up_retrieve_analysis_action):
-    action: RetrieveAnalysis = set_up_retrieve_analysis_action
+def test_retrieve_analysis_error(module):
+    action = RetrieveAnalysis(module=module)
     arguments = GetAnalysisByUUIDArgument(uuid="c5ff79ed-b2d2-4b1b-b93c-7197bdaa8445")
     with patch("gdetect.api.Client.get_by_uuid") as mock:
         mock.side_effect = Exception("random exception")
@@ -77,8 +77,8 @@ def test_retrieve_analysis_error(set_up_retrieve_analysis_action):
             action.run(arguments)
 
 
-def test_retrieve_analysis_gdetect_error(set_up_retrieve_analysis_action):
-    action: RetrieveAnalysis = set_up_retrieve_analysis_action
+def test_retrieve_analysis_gdetect_error(module):
+    action = RetrieveAnalysis(module=module)
     arguments = GetAnalysisByUUIDArgument(uuid="bad-uuid")
     with patch("gdetect.api.Client.get_by_uuid") as mock:
         mock.side_effect = BadUUIDError

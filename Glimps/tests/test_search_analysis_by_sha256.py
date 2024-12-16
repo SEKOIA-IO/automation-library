@@ -41,8 +41,8 @@ def test_integration_search_analysis(add_file_to_storage):
     assert response.get("analysis").get("uuid") == submit_response.get("uuid")
 
 
-def test_search_analysis(set_up_search_analysis_action, analysis_result):
-    action: SearchPreviousAnalysis = set_up_search_analysis_action
+def test_search_analysis(module, analysis_result):
+    action = SearchPreviousAnalysis(module=module)
     arguments = SearchAnalysisBySha256Argument(
         sha256="131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63ffbdfd8267"
     )
@@ -56,8 +56,8 @@ def test_search_analysis(set_up_search_analysis_action, analysis_result):
     assert response.get("analysis").get("uuid") == uuid
 
 
-def test_search_analysis_view_token(set_up_search_analysis_action, analysis_result):
-    action: SearchPreviousAnalysis = set_up_search_analysis_action
+def test_search_analysis_view_token(module, analysis_result):
+    action = SearchPreviousAnalysis(module=module)
     arguments = SearchAnalysisBySha256Argument(
         sha256="131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63ffbdfd8267"
     )
@@ -72,8 +72,8 @@ def test_search_analysis_view_token(set_up_search_analysis_action, analysis_resu
     assert response.get("view_url") is not None and response.get("view_url") != ""
 
 
-def test_search_analysis_error(set_up_search_analysis_action):
-    action: SearchPreviousAnalysis = set_up_search_analysis_action
+def test_search_analysis_error(module):
+    action = SearchPreviousAnalysis(module=module)
     arguments = SearchAnalysisBySha256Argument(
         sha256="131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63ffbdfd8267"
     )
@@ -83,8 +83,8 @@ def test_search_analysis_error(set_up_search_analysis_action):
             action.run(arguments)
 
 
-def test_retrieve_analysis_gdetect_error(set_up_search_analysis_action):
-    action: SearchPreviousAnalysis = set_up_search_analysis_action
+def test_retrieve_analysis_gdetect_error(module):
+    action = SearchPreviousAnalysis(module=module)
     arguments = SearchAnalysisBySha256Argument(sha256="bad-sha256")
     with patch("gdetect.api.Client.get_by_uuid") as mock:
         mock.side_effect = BadSHA256Error

@@ -19,9 +19,8 @@ def test_integration_get_status():
     assert response.get("daily_quota", 0) > 0
 
 
-def test_get_status_error(token):
-    action = GetStatus()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
+def test_get_status_error(module):
+    action = GetStatus(module=module)
 
     with patch("gdetect.api.Client._request") as mock:
         r = requests.Response()
@@ -36,9 +35,8 @@ def test_get_status_error(token):
         assert response.get("estimated_analysis_duration") == 0
 
 
-def test_get_status_ok(token):
-    action = GetStatus()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url="https://gmalware.ggp.glimps.re")
+def test_get_status_ok(module):
+    action = GetStatus(module=module)
 
     with patch("gdetect.api.Client._request") as mock:
         r = requests.Response()

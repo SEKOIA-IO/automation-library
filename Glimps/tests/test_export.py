@@ -44,9 +44,8 @@ def test_integration_get_export(add_file_to_storage):
     assert response.decode("utf-8") != ""
 
 
-def test_export_succeed(token):
-    action = ExportSubmission()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url=test_base_url)
+def test_export_succeed(module):
+    action = ExportSubmission(module=module)
     uuid = "1da0cb84-c5cc-4832-8882-4a7e9df11ed2"
     arguments = ExportSubmissionArguments(uuid=uuid, layout="fr", format="csv")
 
@@ -58,9 +57,8 @@ def test_export_succeed(token):
     assert response.decode("utf-8") != ""
 
 
-def test_export_error(token):
-    action = ExportSubmission()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url=test_base_url)
+def test_export_error(module):
+    action = ExportSubmission(module=module)
     uuid = "1da0cb84-c5cc-4832-8882-4a7e9df11ed2"
     arguments = ExportSubmissionArguments(uuid=uuid, layout="fr", format="csv")
 
@@ -70,17 +68,13 @@ def test_export_error(token):
             action.run(arguments)
 
 
-def test_export_bad_format(token):
-    action = ExportSubmission()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url=test_base_url)
+def test_export_bad_format():
     uuid = "1da0cb84-c5cc-4832-8882-4a7e9df11ed2"
     with pytest.raises(ValidationError):
         ExportSubmissionArguments(uuid=uuid, format="bad_format", layout="fr")
 
 
-def test_export_bad_layout(token):
-    action = ExportSubmission()
-    action.module.configuration = GLIMPSConfiguration(api_key=token, base_url=test_base_url)
+def test_export_bad_layout():
     uuid = "1da0cb84-c5cc-4832-8882-4a7e9df11ed2"
     with pytest.raises(ValidationError):
         ExportSubmissionArguments(uuid=uuid, format="csv", layout="bad_layout")
