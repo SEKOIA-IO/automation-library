@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -24,7 +23,7 @@ def mock_push_data_to_intakes() -> AsyncMock:
 
 
 @pytest.fixture
-def sentinel_module(symphony_storage: Path) -> SentinelOneModule:
+def sentinel_module() -> SentinelOneModule:
     """
     Create a SentinelOne module.
 

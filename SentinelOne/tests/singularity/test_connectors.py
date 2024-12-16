@@ -1,5 +1,6 @@
 import itertools
 import time
+from pathlib import Path
 from multiprocessing import Process
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -16,9 +17,9 @@ class CustomTestConnector(AbstractSingularityConnector):
 
 @pytest.fixture
 def custom_test_connector(
-    sentinel_module: SentinelOneModule, mock_push_data_to_intakes: AsyncMock
+    sentinel_module: SentinelOneModule, symphony_storage: Path, mock_push_data_to_intakes: AsyncMock
 ) -> CustomTestConnector:
-    connector = CustomTestConnector(sentinel_module)
+    connector = CustomTestConnector(module=sentinel_module, data_path=symphony_storage)
     connector.configuration = {
         "intake_key": "test_key",
         "intake_server": "http://test_server.test",
