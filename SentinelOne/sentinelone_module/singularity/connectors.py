@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import Any, Optional
 
 import orjson
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
@@ -14,6 +15,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from sentinelone_module.helpers import filter_collected_events
 from sentinelone_module.singularity.client import SentinelOneServerError, SingularityClient
 
 
@@ -36,6 +38,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
             start_at=timedelta(days=7),
             ignore_older_than=timedelta(days=7),
         )
+        self.events_cache: Cache = LRUCache(maxsize=10000)
 
     @cached_property
     def client(self) -> SingularityClient:
@@ -70,10 +73,10 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 after=cursor,
             )
 
+            alerts = filter_collected_events(data.alerts, lambda alert: alert["id"], self.events_cache)
+
             # Push the collected alerts
-            pushed_events = await self.push_data_to_intakes(
-                [orjson.dumps(alert).decode("utf-8") for alert in data.alerts]
-            )
+            pushed_events = await self.push_data_to_intakes([orjson.dumps(alert).decode("utf-8") for alert in alerts])
 
             result += len(pushed_events)
 
