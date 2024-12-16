@@ -1,0 +1,148 @@
+{
+  "uuid": "31d90d77-a480-408b-9ce3-d565ff161231",
+  "name": "[Deprecated] Get the results of an analysis",
+  "description": "",
+  "docker_parameters": "get-results/{uuid}",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get the results of an analysis",
+    "properties": {
+      "uuid": {
+        "in": "path",
+        "description": "Unique analysis identifier",
+        "example": "9618ae7e-e284-405d-8998-ff1e12c7ca27",
+        "type": "string"
+      }
+    },
+    "required": [
+      "uuid"
+    ]
+  },
+  "results": {
+    "properties": {
+      "done": {
+        "description": "is the analysis finished",
+        "type": "boolean"
+      },
+      "duration": {
+        "description": "duration of the analysis in milliseconds",
+        "example": 998,
+        "type": "integer"
+      },
+      "error": {
+        "description": "error message if Status is false",
+        "type": "string"
+      },
+      "errors": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "error message by services",
+        "type": "object"
+      },
+      "file_count": {
+        "description": "amount of file in the submission (input + extracted)",
+        "example": 1,
+        "type": "integer"
+      },
+      "filenames": {
+        "description": "list of analysed filename",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "files": {
+        "description": "array of submission files (input file and extracted sub-files)",
+        "items": {
+          "$ref": "#/components/schemas/fileEntry"
+        },
+        "type": "array"
+      },
+      "filetype": {
+        "description": "",
+        "type": "string"
+      },
+      "is_malware": {
+        "description": "analysis result, is a malware or not",
+        "type": "boolean"
+      },
+      "malwares": {
+        "description": "list of malware names found in analysis",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "md5": {
+        "description": "string hex encoded input file MD5",
+        "example": "8437115b99341df5becdb03a4d091654",
+        "type": "string"
+      },
+      "score": {
+        "description": "highest score given by probes",
+        "example": 1000,
+        "type": "integer"
+      },
+      "sha1": {
+        "description": "string hex encoded input file SHA1",
+        "example": "f9a0a612aa694acc24726ed8610981db9798dde0",
+        "type": "string"
+      },
+      "sha256": {
+        "description": "string hex encoded input file SHA256",
+        "example": "c253396cf740b03629b1a76f071eb3594099eebc130f47ae8fe15ef47679e209",
+        "type": "string"
+      },
+      "sid": {
+        "description": "analysis UUID handled by GLIMPS malware finder - expert\ncould be used to construct expert link like:\nhttps://gmalware.useddomain.glimps.re/expert/en/analysis/results/advanced/${SID}",
+        "example": "2z4zfg66Sm3k0Y2KcjgqoK",
+        "type": "string"
+      },
+      "size": {
+        "description": "input file size (in bytes)",
+        "type": "integer"
+      },
+      "ssdeep": {
+        "description": "string input file SSDeep",
+        "example": "384:4fpWcehzJFYKWYGWhdffa3zWzc3fpCLrsjHIX69URc+hmnulY1qHprFKt6zW8zZn:4fkcY/WYf/ffa3axfpWcehzJFYKWYGWv",
+        "type": "string"
+      },
+      "status": {
+        "description": "true => no error to report,\nfalse => an error occurred",
+        "type": "boolean"
+      },
+      "timestamp": {
+        "description": "timestamp of the start of analysis in milliseconds",
+        "type": "integer"
+      },
+      "token": {
+        "description": "token that can be used to view analysis result in expert view",
+        "type": "string"
+      },
+      "uuid": {
+        "description": "Unique analysis identifier",
+        "example": "9618ae7e-e284-405d-8998-ff1e12c7ca27",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "uuid",
+      "sid",
+      "sha256",
+      "sha1",
+      "md5",
+      "ssdeep",
+      "is_malware",
+      "score",
+      "done",
+      "timestamp",
+      "duration",
+      "filetype",
+      "filecount"
+    ],
+    "type": "object"
+  }
+}

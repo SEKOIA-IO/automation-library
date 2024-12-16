@@ -1,0 +1,45 @@
+{
+  "uuid": "8c7a4d68-e8b1-4c28-964e-c7a93e7a6e19",
+  "name": "[Deprecated] Analyse a file",
+  "description": "",
+  "docker_parameters": "post-submit",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Analyse a file",
+    "properties": {
+      "bypass-cache": {
+        "in": "query",
+        "type": "boolean",
+        "description": "ask the API to bypass cache and always submit the file to the orchestrator (optional)"
+      },
+      "file": {
+        "description": "The file to scan",
+        "type": "string",
+        "in": "body"
+      }
+    }
+  },
+  "results": {
+    "properties": {
+      "error": {
+        "description": "string describing error",
+        "type": "string"
+      },
+      "status": {
+        "default": false,
+        "description": "false => an error occurred",
+        "type": "boolean"
+      },
+      "uuid": {
+        "type": "string",
+        "description": "Unique analysis identifier",
+        "example": "9618ae7e-e284-405d-8998-ff1e12c7ca27"
+      }
+    },
+    "required": [
+      "status"
+    ],
+    "type": "object"
+  }
+}

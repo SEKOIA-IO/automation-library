@@ -16,6 +16,7 @@
       "base_url": {
         "title": "Base Url",
         "description": "Glimps detect url",
+        "format": "uri",
         "type": "string"
       }
     },
