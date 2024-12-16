@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-12-16 - 1.19.9
+
+### Changed
+
+- discard already collected alerts in the singularity connector
+
+### Fixed
+
+- Fix the start_time parameter into milliseconds in the singularity connector
+
 ## 2024-12-13 - 1.19.8
 
 ### Fixed
