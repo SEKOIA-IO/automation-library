@@ -60,7 +60,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
 
         # Set up parameters
         last_event_date = self.last_event_date.offset
-        start_time = int(last_event_date.timestamp())
+        start_time = int(last_event_date.timestamp() * 1000)  # convert the event date into a timestamp in millisecond
         cursor: str | None = None
         has_more_items: bool = True
 
