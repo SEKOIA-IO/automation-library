@@ -19,8 +19,10 @@ from sekoiaio.operation_center import (
     AddsKeyToAsset,
     AssociateNewAlertsOnCase,
     CreatesNewAsset,
+    CreatesNewAssetV2,
     CreateRule,
     DeletesAsset,
+    DeletesAssetV2,
     DeleteRule,
     DenyCountermeasure,
     DisableRule,
@@ -64,6 +66,7 @@ if __name__ == "__main__":
     module.register(AddsKeyToAsset, "post-assets/{uuid}/keys")
     module.register(AssociateNewAlertsOnCase, "patch-cases/{case_uuid}/alerts")
     module.register(CreatesNewAsset, "post-assets")
+    module.register(CreatesNewAssetV2, "post-assets-v2")
     module.register(CreateRule, "post-rules")
     module.register(DeleteRule, "delete-rules/{uuid}")
     module.register(DenyCountermeasure, "patch-alerts/countermeasures/{cm_uuid}/deny")
@@ -90,9 +93,10 @@ if __name__ == "__main__":
     module.register(UpdateAlertStatus, "patch-alerts-v2/{uuid}/workflow")
     module.register(PushEventToIntake, "push-events-to-intake")
     module.register(ListAssets, "get-assets-v2")
-    module.register(DeletesAsset, "delete-assets-v2/{uuid}")
-    module.register(GetAsset, "get-assets/{uuid}")
-    module.register(ReturnsAsset, "get-assets-v2/{uuid}")
+    module.register(DeletesAsset, "delete-assets/{uuid}")
+    module.register(DeletesAssetV2, "delete-assets-v2/{uuid}")
+    module.register(GetAsset, "get-assets-v2/{uuid}")
+    module.register(ReturnsAsset, "get-assets/{uuid}")
     module.register(UpdateRule, "put-rules/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
     module.register(AddIOCtoIOCCollectionAction, "add_ioc_to_ioc_collection")
