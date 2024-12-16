@@ -2,8 +2,10 @@ import re
 import secrets
 import string
 from datetime import UTC, datetime
+from typing import Callable, Sequence
 
 import six
+from cachetools import Cache
 from stix2patterns.pattern import Pattern
 
 
@@ -79,3 +81,27 @@ def stix_to_indicators(stix_object, supported_types_map):
             results.append({"type": ioc_type, "value": ioc_value})
 
     return results
+
+
+def filter_collected_events(events: Sequence, getter: Callable, cache: Cache) -> list:
+    """
+    Filter events that have already been filter_collected_events
+
+    Args:
+        events: The list of events to filter
+        getter: The callable to get the criteria to filter the events
+        cache: The cache that hold the list of collected events
+    """
+
+    selected_events = []
+    for event in events:
+        key = getter(event)
+
+        # If the event was already collected, discard it
+        if key is None or key in cache:
+            continue
+
+        cache[key] = True
+        selected_events.append(event)
+
+    return selected_events

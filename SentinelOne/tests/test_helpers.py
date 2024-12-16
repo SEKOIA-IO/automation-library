@@ -1,6 +1,13 @@
 import string
 
-from sentinelone_module.helpers import generate_password, is_a_supported_stix_indicator, stix_to_indicators
+import pytest
+from cachetools import LRUCache
+from sentinelone_module.helpers import (
+    filter_collected_events,
+    generate_password,
+    is_a_supported_stix_indicator,
+    stix_to_indicators,
+)
 
 
 def assert_password(password: str):
@@ -57,3 +64,33 @@ def test_stix_to_indicators():
         {"type": "SHA1", "value": "abcdef"},
         {"type": "SHA256", "value": "abcdef"},
     ]
+
+
+@pytest.mark.parametrize(
+    "events,getter,cache,expected_list",
+    [
+        (
+            ["key1", "key2", "key3", "key2", "key4"],
+            lambda x: x,
+            LRUCache(maxsize=256),
+            ["key1", "key2", "key3", "key4"],
+        ),
+        ([], lambda x: x, LRUCache(maxsize=256), []),
+        (["key1", "key2", "key3", "key4"], lambda x: x, LRUCache(maxsize=256), ["key1", "key2", "key3", "key4"]),
+        (
+            [
+                {"name": "key1"},
+                {"name": "key2"},
+                {"name": "key3"},
+                {"name": "key1"},
+                {"name": "key4"},
+                {"key": "key5"},
+            ],
+            lambda x: x.get("name"),
+            LRUCache(maxsize=256),
+            [{"name": "key1"}, {"name": "key2"}, {"name": "key3"}, {"name": "key4"}],
+        ),
+    ],
+)
+def test_filter_collected_events(events, getter, cache, expected_list):
+    assert filter_collected_events(events, getter, cache) == expected_list
