@@ -2,7 +2,7 @@
     "uuid": "efddd609-924f-4aad-a508-0955a4c8081f",
     "name": "Quarantine file",
     "description": "Quarantine a file",
-    "docker_parameters": "stormshield_restore_quarantined_file",
+    "docker_parameters": "stormshield_quarantine_file",
     "arguments": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
