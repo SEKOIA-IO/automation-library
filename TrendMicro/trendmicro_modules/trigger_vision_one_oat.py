@@ -3,6 +3,7 @@ from typing import Generator
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
+from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointDatetime
 
 from . import TrendMicroModule
@@ -13,37 +14,41 @@ from .trigger_vision_one_base import TrendMicroVisionOneBaseConfiguration, Trend
 logger = get_logger()
 
 
-class TrendMicroVisionOneWorkbenchConnectorConfiguration(TrendMicroVisionOneBaseConfiguration):
-    pass
+class TrendMicroVisionOneOATConnectorConfiguration(TrendMicroVisionOneBaseConfiguration):
+    filter: str | None = Field(None, description="Filter for events", max_length=4000)
 
 
-class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
-    CONNECTOR_TITLE = "Trend Micro Vision One Workbench Alerts"
-    CONNECTOR_METRICS_LABEL = "vision_one_workbench"
+class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
+    CONNECTOR_TITLE = "Trend Micro Vision One OAT"
+    CONNECTOR_METRICS_LABEL = "vision_one_oat"
 
     module: TrendMicroModule
-    configuration: TrendMicroVisionOneWorkbenchConnectorConfiguration
+    configuration: TrendMicroVisionOneOATConnectorConfiguration
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(minutes=1), ignore_older_than=timedelta(hours=1)
+            path=self._data_path, start_at=timedelta(hours=1), ignore_older_than=timedelta(days=14)
         )
         self.from_date = self.cursor.offset
 
     def __fetch_events(self, from_date: datetime) -> Generator[list, None, None]:
         to_date = datetime.now(timezone.utc)
 
-        query_params = {
-            "startDateTime": from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "endDateTime": to_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "dateTimeTarget": "createdDateTime",
-            "orderBy": "createdDateTime asc",
+        query_params: dict[str, str | int] = {
+            "detectedStartDateTime": from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "detectedEndDateTime": to_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "top": 200,  # items per page - could be 50, 100, 200
         }
+        if self.configuration.filter is not None:
+            headers = {"TMV1-Filter": self.configuration.filter}
 
-        url = urljoin(self.configuration.base_url, "v3.0/workbench/alerts")
-        response = self.client.get(url, params=query_params, timeout=60)
+        else:
+            headers = {}
+
+        url = urljoin(self.configuration.base_url, "v3.0/oat/detections")
+        response = self.client.get(url, params=query_params, headers=headers, timeout=60)
 
         while self.running:
             self.handle_response_error(response)
@@ -72,8 +77,8 @@ class TrendMicroVisionOneWorkbenchConnector(TrendMicroVisionOneBaseConnector):
 
         for next_events in self.__fetch_events(most_recent_date_seen):
             if next_events:
-                last_event = max(next_events, key=lambda x: x["createdDateTime"])
-                last_event_datetime = isoparse(last_event["createdDateTime"])
+                last_event = max(next_events, key=lambda x: x["detectedDateTime"])
+                last_event_datetime = isoparse(last_event["detectedDateTime"])
 
                 if last_event_datetime > most_recent_date_seen:
                     most_recent_date_seen = self.get_upper_second(last_event_datetime)
