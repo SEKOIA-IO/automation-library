@@ -29,7 +29,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(days=30), ignore_older_than=timedelta(days=365)
+            path=self._data_path, start_at=timedelta(hours=1), ignore_older_than=timedelta(days=14)
         )
         self.from_date = self.cursor.offset
 
