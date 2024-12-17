@@ -27,28 +27,28 @@ def test_integration_wait_task_with_CD(symphony_storage):
 @pytest.fixture
 def wait_task_succeded_message():
     return {
-            "taskId": "4050026d-9880-49ff-a658-b995c608464b",
-            "status": "Succeeded",
-            "requestTime": "2000-31-12T23:50:00Z",
-            "startTime": "2000-31-12T23:51:00Z",
-            "endTime": "2000-31-12T23:59:59Z",
-            "errorCode": 0,
-            "errorMessage": "string"
-            }
-    
-    
+        "taskId": "4050026d-9880-49ff-a658-b995c608464b",
+        "status": "Succeeded",
+        "requestTime": "2000-31-12T23:50:00Z",
+        "startTime": "2000-31-12T23:51:00Z",
+        "endTime": "2000-31-12T23:59:59Z",
+        "errorCode": 0,
+        "errorMessage": "string",
+    }
+
+
 @pytest.fixture
 def wait_task_failed_message():
     return {
-            "taskId": "4050026d-9880-49ff-a658-b995c608464b",
-            "status": "Failed",
-            "requestTime": "2000-31-12T23:50:00Z",
-            "startTime": "2000-31-12T23:51:00Z",
-            "endTime": "2000-31-12T23:59:59Z",
-            "errorCode": 0,
-            "errorMessage": "Error message"
-            }
-    
+        "taskId": "4050026d-9880-49ff-a658-b995c608464b",
+        "status": "Failed",
+        "requestTime": "2000-31-12T23:50:00Z",
+        "startTime": "2000-31-12T23:51:00Z",
+        "endTime": "2000-31-12T23:59:59Z",
+        "errorCode": 0,
+        "errorMessage": "Error message",
+    }
+
 
 def test_integration_wait_task_failed(symphony_storage, wait_task_failed_message):
     module_configuration = {
@@ -57,7 +57,7 @@ def test_integration_wait_task_failed(symphony_storage, wait_task_failed_message
     }
     action = WaitForTaskCompletionAction(data_path=symphony_storage)
     action.module.configuration = module_configuration
-    
+
     with requests_mock.Mocker() as mock:
         mock.get(
             "https://stormshield-api-example.eu/rest/api/v1/agents/tasks/foo",
@@ -65,7 +65,7 @@ def test_integration_wait_task_failed(symphony_storage, wait_task_failed_message
         )
 
         arguments = {"id": "foo"}
-        
+
         with pytest.raises(Exception) as excinfo:
             action.run(arguments)
 
@@ -79,7 +79,7 @@ def test_integration_wait_task_succeeded(symphony_storage, wait_task_succeded_me
     }
     action = WaitForTaskCompletionAction(data_path=symphony_storage)
     action.module.configuration = module_configuration
-    
+
     with requests_mock.Mocker() as mock:
         mock.get(
             "https://stormshield-api-example.eu/rest/api/v1/agents/tasks/foo",
@@ -90,4 +90,4 @@ def test_integration_wait_task_succeeded(symphony_storage, wait_task_succeded_me
         response = action.run(arguments)
 
         assert response is not None
-        assert response["status"].lower() == 'succeeded'
+        assert response["status"].lower() == "succeeded"

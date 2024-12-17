@@ -23,18 +23,19 @@ def test_integration_deisolate_agent_with_CD(symphony_storage):
     assert response is not None
     assert response["status"] == "success"
 
+
 @pytest.fixture
 def isolate_agent_message():
     return {
-            "taskId": "4050026d-9880-49ff-a658-b995c608464b",
-            "status": "Succeeded",
-            "requestTime": "2000-31-12T23:50:00Z",
-            "startTime": "2000-31-12T23:51:00Z",
-            "endTime": "2000-31-12T23:59:59Z",
-            "errorCode": 0,
-            "errorMessage": "string"
-            }
-    
+        "taskId": "4050026d-9880-49ff-a658-b995c608464b",
+        "status": "Succeeded",
+        "requestTime": "2000-31-12T23:50:00Z",
+        "startTime": "2000-31-12T23:51:00Z",
+        "endTime": "2000-31-12T23:59:59Z",
+        "errorCode": 0,
+        "errorMessage": "string",
+    }
+
 
 def test_integration_deisolate_agent_with_CD(symphony_storage, isolate_agent_message):
     module_configuration = {
@@ -43,7 +44,7 @@ def test_integration_deisolate_agent_with_CD(symphony_storage, isolate_agent_mes
     }
     action = EndpointAgentDeisolationAction(data_path=symphony_storage)
     action.module.configuration = module_configuration
-    
+
     with requests_mock.Mocker() as mock:
         mock.post(
             "https://stormshield-api-example.eu/rest/api/v1/agents/foo/tasks/network-deisolation",
@@ -54,4 +55,4 @@ def test_integration_deisolate_agent_with_CD(symphony_storage, isolate_agent_mes
         response = action.run(arguments)
 
         assert response is not None
-        assert response["status"].lower() == 'succeeded'
+        assert response["status"].lower() == "succeeded"
