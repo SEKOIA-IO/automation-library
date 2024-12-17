@@ -43,6 +43,7 @@ from sekoiaio.operation_center import (
     CreateCase,
     UpdatesCase,
     GetCase,
+    PostCommentOnCase,
 )
 from sekoiaio.operation_center.get_asset import GetAsset
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
@@ -110,6 +111,7 @@ if __name__ == "__main__":
     module.register(CreateCase, "create_case")
     module.register(UpdateCase, "update_case")
     module.register(GetCase, "get_case")
+    module.register(PostCommentOnCase, "post_comment_to_a_case")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

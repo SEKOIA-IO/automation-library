@@ -240,12 +240,12 @@ ListsAlertsAssociatedToCaseUuid = type(
     },
 )
 
-CreateNewCommentOnCase = type(
-    "CreateNewCommentOnCase",
+PostCommentOnCase = type(
+    "PostCommentOnCase",
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": base_url + "cases/{case_uuid}/comments",
+        "endpoint": base_url + "cases/{uuid}/comments",
         "query_parameters": [],
     },
 )
