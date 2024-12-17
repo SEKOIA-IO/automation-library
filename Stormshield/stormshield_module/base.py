@@ -82,6 +82,9 @@ class StormshieldAction(GenericAPIAction):
             ):
                 with attempt:
                     response: Response = self.get_response(url, body, headers)
+                    
+                    if response.json()["status"] in ["Pending", "Running"]:
+                        continue
 
         except RetryError:
             self.log_timeout_error(url, arguments)

@@ -15,7 +15,7 @@ class WaitForTaskCompletionAction(StormshieldAction):
         result = requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
         execution_state = result.json()["status"]
 
-        if execution_state.lower() == "succeeded":
-            return result
-        elif execution_state.lower() == "failed":
+        if execution_state.lower() == "failed":
             raise RemoteTaskExecutionFailedError(result.json()["errorMessage"])
+        
+        return result
