@@ -177,6 +177,13 @@ class NetskopeEventConnector(Connector):
             (NetskopeEventType.ALERT, NetskopeAlertType.UBA),
         ]
 
+    @cached_property
+    def configuration_uuid(self) -> str:
+        if self.module.connector_configuration_uuid is not None:
+            return self.module.connector_configuration_uuid
+
+        return self.module.trigger_configuration_uuid
+
     def get_index_name(self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> str:
         """
         return a index name for the iterator
@@ -188,7 +195,7 @@ class NetskopeEventConnector(Connector):
         if self.configuration.consumer_group and len(self.configuration.consumer_group) > 0:
             return self.configuration.consumer_group
 
-        return get_index_name(self.module.trigger_configuration_uuid, event_type, alert_type)
+        return get_index_name(self.configuration_uuid, event_type, alert_type)
 
     def create_iterator(self, event_type: NetskopeEventType, alert_type: NetskopeAlertType | None) -> NetskopeIterator:
         params: dict[str, str] = {
