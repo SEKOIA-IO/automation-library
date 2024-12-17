@@ -147,13 +147,13 @@ CreateNewBlock = type(
     },
 )
 
-CreatesNewCase = type(
-    "CreatesNewCase",
+CreateCase = type(
+    "CreateCase",
     (GenericAPIAction,),
     {
         "verb": "post",
         "endpoint": base_url + "cases",
-        "query_parameters": ["tags", "subscribers"],
+        "query_parameters": [],
     },
 )
 
@@ -194,18 +194,18 @@ GetCase = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": base_url + "cases/{case_uuid}",
+        "endpoint": base_url + "cases/{uuid}",
         "query_parameters": ["community_uuid"],
     },
 )
 
-UpdatesCase = type(
-    "UpdatesCase",
+UpdateCase = type(
+    "UpdateCase",
     (GenericAPIAction,),
     {
         "verb": "patch",
-        "endpoint": base_url + "cases/{case_uuid}",
-        "query_parameters": ["tags", "subscribers"],
+        "endpoint": base_url + "cases/{uuid}",
+        "query_parameters": [],
     },
 )
 
