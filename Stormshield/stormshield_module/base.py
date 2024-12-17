@@ -82,7 +82,7 @@ class StormshieldAction(GenericAPIAction):
             ):
                 with attempt:
                     response: Response = self.get_response(url, body, headers)
-                    
+
                     if response.json()["status"] in ["Pending", "Running"]:
                         continue
 

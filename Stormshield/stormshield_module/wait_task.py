@@ -17,5 +17,5 @@ class WaitForTaskCompletionAction(StormshieldAction):
 
         if execution_state.lower() == "failed":
             raise RemoteTaskExecutionFailedError(result.json()["errorMessage"])
-        
+
         return result
