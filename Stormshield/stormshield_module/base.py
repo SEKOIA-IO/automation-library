@@ -1,5 +1,6 @@
 from functools import cached_property
 from posixpath import join as urljoin
+from typing import Any
 import re
 import requests
 from requests import RequestException, Response
@@ -17,19 +18,19 @@ class StormshieldAction(GenericAPIAction):
     endpoint: str
 
     @cached_property
-    def api_token(self):
-        return self.module.configuration["api_token"]
+    def api_token(self): # type: ignore
+        return self.module.configuration.get("api_token")
 
     @cached_property
-    def base_url(self):
+    def base_url(self) -> str:
         config_url = self.module.configuration["url"].rstrip("/")
         api_path = "rest/api/v1"
         return urljoin(config_url, api_path)
 
-    def get_headers(self):
+    def get_headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_token}"}
 
-    def treat_failed_response(self, response: Response):
+    def treat_failed_response(self, response: Response) -> None:
         errors = {
             401: "Authentication failed: Invalid API key provided.",
             403: "Access denied: Insufficient permissions to access this resource.",
@@ -43,7 +44,7 @@ class StormshieldAction(GenericAPIAction):
         if message:
             raise Exception(f"Error : {message}")
 
-    def get_url(self, arguments):
+    def get_url(self, arguments: dict[str, Any]) -> str:
         match = re.findall("{(.*?)}", self.endpoint)
         for replacement in match:
             self.endpoint = self.endpoint.replace(f"{{{replacement}}}", str(arguments.pop(replacement)), 1)
@@ -51,7 +52,7 @@ class StormshieldAction(GenericAPIAction):
         path = urljoin(self.base_url, self.endpoint.lstrip("/"))
 
         if self.query_parameters:
-            query_arguments: list = []
+            query_arguments: list[str] = []
 
             for k in self.query_parameters:
                 if k in arguments:
@@ -65,10 +66,10 @@ class StormshieldAction(GenericAPIAction):
 
         return path
 
-    def get_response(self, url, body, headers) -> Response:
+    def get_response(self, url: str, body: dict[str, Any] | None, headers:dict[str, Any]) -> Response:
         return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
 
-    def run(self, arguments) -> dict | None:
+    def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
         headers = self.get_headers()
         url = self.get_url(arguments)
         body = self.get_body(arguments)

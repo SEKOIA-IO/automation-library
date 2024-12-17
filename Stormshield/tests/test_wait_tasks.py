@@ -16,7 +16,7 @@ def test_integration_wait_task_with_CD(symphony_storage):
     action = WaitForTaskCompletionAction(data_path=symphony_storage)
     action.module.configuration = module_configuration
 
-    arguments = {"id": os.environ["STORMSHIELD_AGENT_ID"]}
+    arguments = {"task_id": os.environ["STORMSHIELD_AGENT_ID"]}
 
     response = action.run(arguments)
 
@@ -64,7 +64,7 @@ def test_integration_wait_task_failed(symphony_storage, wait_task_failed_message
             json=wait_task_failed_message,
         )
 
-        arguments = {"id": "foo"}
+        arguments = {"task_id": "foo"}
 
         with pytest.raises(Exception) as excinfo:
             action.run(arguments)
@@ -86,7 +86,7 @@ def test_integration_wait_task_succeeded(symphony_storage, wait_task_succeded_me
             json=wait_task_succeded_message,
         )
 
-        arguments = {"id": "foo"}
+        arguments = {"task_id": "foo"}
         response = action.run(arguments)
 
         assert response is not None
