@@ -17,6 +17,7 @@ from aether_endpoint_security_api import (
     StopsDeviceIsolation,
     UninstallsProtectionFromDevices,
 )
+from aether_endpoint_security_api.connector_security_events import AetherSecurityEventsConnector
 from aether_endpoint_security_api.trigger_security_events import AetherSecurityEventsTrigger
 
 if __name__ == "__main__":
@@ -67,4 +68,5 @@ if __name__ == "__main__":
         "get-api/v1/accounts/{account_id}/unmanageddevices",
     )
     module.register(AetherSecurityEventsTrigger, "security_events_trigger")
+    module.register(AetherSecurityEventsConnector, "security_events_connector")
     module.run()
