@@ -11,7 +11,7 @@ class WaitForTaskCompletionAction(StormshieldAction):
     endpoint = "/agents/tasks/{task_id}"
     query_parameters: list[str] = []
 
-    def get_response(self, url: str, body: dict[str, Any] | None, headers:dict[str, Any]) -> Response:
+    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any]) -> Response:
         result = requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
         execution_state = result.json()["status"]
 

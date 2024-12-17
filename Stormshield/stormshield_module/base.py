@@ -18,7 +18,7 @@ class StormshieldAction(GenericAPIAction):
     endpoint: str
 
     @cached_property
-    def api_token(self): # type: ignore
+    def api_token(self):  # type: ignore
         return self.module.configuration.get("api_token")
 
     @cached_property
@@ -66,7 +66,7 @@ class StormshieldAction(GenericAPIAction):
 
         return path
 
-    def get_response(self, url: str, body: dict[str, Any] | None, headers:dict[str, Any]) -> Response:
+    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any]) -> Response:
         return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
