@@ -31,7 +31,7 @@
         "default": 60
       },
       "filter": {
-        "description": "Filter for retrieving a subset",
+        "description": "Filter for retrieving a subset (see https://automation.trendmicro.com/xdr/api-v3/#tag/Observed-Attack-Techniques/paths/~1v3.0~1oat~1detections/get)",
         "type": "string"
       },
       "intake_server": {
