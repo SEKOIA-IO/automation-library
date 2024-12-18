@@ -41,7 +41,7 @@ from sekoiaio.operation_center import (
     GetEntity,
     AddEventsToACase,
     CreateCase,
-    UpdatesCase,
+    UpdateCase,
     GetCase,
     PostCommentOnCase,
 )
