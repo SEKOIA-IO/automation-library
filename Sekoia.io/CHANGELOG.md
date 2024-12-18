@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2024-12-18 - 2.67.0
 
+### Added
+
 - Add an action to create a case
 - Add an action to modify a case
 - Add an action to get the details of a case
