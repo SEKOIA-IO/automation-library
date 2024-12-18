@@ -6,6 +6,11 @@
         "description": "UUID of the case",
         "type": "string",
         "in": "path"
+      },
+      "community_uuid": {
+        "description": "(Optional) Identifier of the community",
+        "type": "string",
+        "in": "query"
       }
     },
     "required": [
