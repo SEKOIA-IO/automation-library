@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Bitdefender",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Bitdefender is a global cybersecurity company renowned for its advanced antivirus software, providing comprehensive security solutions and threat intelligence for individuals and enterprises, safeguarding against evolving cyber threats.",
+  "name": "Bitdefender",
+  "uuid": "26277889-b91b-46d0-8bac-7f6b2f6fb9a3",
+  "version": "1.0.0",
+  "slug": "bitdefender"
+}
