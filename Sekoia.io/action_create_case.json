@@ -73,12 +73,7 @@
       }
     },
     "required": [
-      "title",
-      "description",
-      "status_uuid",
-      "priority",
-      "tags",
-      "subscribers"
+      "title"
     ],
     "title": "Arguments",
     "type": "object"
