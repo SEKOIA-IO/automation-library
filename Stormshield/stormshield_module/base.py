@@ -30,7 +30,7 @@ class StormshieldAction(GenericAPIAction):
 
     def get_headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_token}"}
-    
+
     def get_body(self, arguments: dict):
         res = {}
         for key, value in arguments.items():
@@ -42,7 +42,7 @@ class StormshieldAction(GenericAPIAction):
                 try:
                     new_key = key.replace("_path", "")
                     res[new_key] = self.json_argument(new_key, arguments)
-                except MissingActionArgumentFileError: # pragma: no cover
+                except MissingActionArgumentFileError:  # pragma: no cover
                     res[key] = value
         return res
 
