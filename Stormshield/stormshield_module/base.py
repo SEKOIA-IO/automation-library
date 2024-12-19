@@ -31,8 +31,8 @@ class StormshieldAction(GenericAPIAction):
     def get_headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_token}"}
 
-    def get_body(self, arguments: dict):
-        res = {}
+    def get_body(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        res: dict[str, Any] = {}
         for key, value in arguments.items():
             if isinstance(value, dict):
                 res[key] = self.get_body(value)
