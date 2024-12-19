@@ -12,6 +12,7 @@ from tenacity import (
 )
 
 from sekoia_automation.action import GenericAPIAction
+from sekoia_automation.exceptions import MissingActionArgumentFileError
 
 
 class StormshieldAction(GenericAPIAction):
@@ -29,6 +30,21 @@ class StormshieldAction(GenericAPIAction):
 
     def get_headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_token}"}
+    
+    def get_body(self, arguments: dict):
+        res = {}
+        for key, value in arguments.items():
+            if isinstance(value, dict):
+                res[key] = self.get_body(value)
+            elif isinstance(value, bool):
+                res[key] = str(value).lower()
+            else:
+                try:
+                    new_key = key.replace("_path", "")
+                    res[new_key] = self.json_argument(new_key, arguments)
+                except MissingActionArgumentFileError: # pragma: no cover
+                    res[key] = value
+        return res
 
     def treat_failed_response(self, response: Response) -> None:
         errors = {
@@ -58,7 +74,7 @@ class StormshieldAction(GenericAPIAction):
                 if k in arguments:
                     value = arguments.pop(k)
                     if isinstance(value, bool):
-                        value = str(value)
+                        value = str(value).lower()
                     query_arguments.append(f"{k}={value}")
 
             if query_arguments:
