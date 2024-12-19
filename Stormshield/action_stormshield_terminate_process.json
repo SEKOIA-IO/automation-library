@@ -17,7 +17,7 @@
             },
             "terminateProcessTree": {
                 "description": "Boolean to terminate the process tree",
-                "type": "string"
+                "type": "boolean"
             }
         },
         "required": [

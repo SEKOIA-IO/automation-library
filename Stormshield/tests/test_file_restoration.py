@@ -47,7 +47,7 @@ def test_integration_restore_file(symphony_storage, restore_file_message):
 
     with requests_mock.Mocker() as mock:
         mock.post(
-            "https://stormshield-api-example.eu/rest/api/v1/agents/foo/tasks/quarantined-file-restoration?fileHashSha256=hash",
+            "https://stormshield-api-example.eu/rest/api/v1/agents/foo/tasks/quarantined-file-restoration",
             json=restore_file_message,
         )
 

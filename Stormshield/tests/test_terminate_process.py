@@ -47,7 +47,7 @@ def test_integration_process_terminate(symphony_storage, process_terminate_messa
 
     with requests_mock.Mocker() as mock:
         mock.post(
-            "https://stormshield-api-example.eu/rest/api/v1/agents/foo/tasks/process-termination?processPath=C%3A%5CWindows%5Csystem32%5Cnotepad.exe",
+            "https://stormshield-api-example.eu/rest/api/v1/agents/foo/tasks/process-termination",
             json=process_terminate_message,
         )
 

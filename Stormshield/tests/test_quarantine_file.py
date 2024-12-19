@@ -47,7 +47,7 @@ def test_integration_quarantine_file(symphony_storage, quarantine_file_message):
 
     with requests_mock.Mocker() as mock:
         mock.post(
-            "https://stormshield-api-example.eu/rest/api/v1/agents/foo/tasks/file-quarantine?filePath=C%3A%5CUsers%5Cadmin%5CDownloads%5Cmalware.exe",
+            "https://stormshield-api-example.eu/rest/api/v1/agents/foo/tasks/file-quarantine",
             json=quarantine_file_message,
         )
 

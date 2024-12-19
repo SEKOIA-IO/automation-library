@@ -17,7 +17,7 @@
             },
             "overwriteExistingFile": {
                 "description": "Boolean to overwrite any existing file",
-                "type": "string"
+                "type": "boolean"
             }
         },
         "required": [

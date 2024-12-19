@@ -19,7 +19,7 @@ class StormshieldAction(GenericAPIAction):
 
     @cached_property
     def api_token(self):  # type: ignore
-        return self.module.configuration.get("api_token")
+        return self.module.configuration["api_token"]
 
     @cached_property
     def base_url(self) -> str:
@@ -58,7 +58,7 @@ class StormshieldAction(GenericAPIAction):
                 if k in arguments:
                     value = arguments.pop(k)
                     if isinstance(value, bool):
-                        value = int(value)
+                        value = str(value)
                     query_arguments.append(f"{k}={value}")
 
             if query_arguments:

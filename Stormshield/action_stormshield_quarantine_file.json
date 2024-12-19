@@ -17,7 +17,7 @@
             },
             "bypassExcludedDirectories": {
                 "description": "Boolean to bypass excluded directories",
-                "type": "string"
+                "type": "boolean"
             }
         },
         "required": [

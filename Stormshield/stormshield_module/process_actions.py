@@ -6,4 +6,4 @@ base_url = "/agents/{id}/tasks"
 class TerminateProcessAction(StormshieldAction):
     verb = "post"
     endpoint = base_url + "/process-termination"
-    query_parameters: list[str] = ["processPath", "terminateProcessTree"]
+    query_parameters: list[str] = []

@@ -13,7 +13,7 @@
             },
             "forceServerIsolation": {
                 "description": "Boolean to force the isolation",
-                "type": "string"
+                "type": "boolean"
             },
             "comment": {
                 "description": "Comment",
