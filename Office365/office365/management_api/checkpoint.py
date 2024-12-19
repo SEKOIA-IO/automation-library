@@ -11,23 +11,24 @@ class Checkpoint:
 
     @property
     def offset(self) -> datetime:
+        now = datetime.now(timezone.utc)
+
         if self._most_recent_date_seen is None:
-            now = datetime.now(timezone.utc)
 
             try:
                 # read the most recent date seen from the context
                 most_recent_date_seen_str = self._context.read_text()
                 most_recent_date_seen = isoparse(most_recent_date_seen_str)
-
-                # check if the date is older than the 7 days ago
-                one_week_ago = now - timedelta(days=7)
-                if most_recent_date_seen < one_week_ago:
-                    most_recent_date_seen = one_week_ago
             except Exception:
                 # if not defined, set the most recent date seen to now
                 most_recent_date_seen = now
 
             self._most_recent_date_seen = most_recent_date_seen
+
+        # check if the date is older than the 7 days ago
+        one_week_ago = now - timedelta(days=7)
+        if self._most_recent_date_seen < one_week_ago:
+            self._most_recent_date_seen = one_week_ago
 
         return self._most_recent_date_seen
 
