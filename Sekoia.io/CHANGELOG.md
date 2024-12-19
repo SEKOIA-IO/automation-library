@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+## 2024-12-18 - 2.67.0
+
+### Added
+
+- Add an action to create a case
+- Add an action to modify a case
+- Add an action to get the details of a case
+- Add an action to add a comment to a case
+
 ## 2024-12-09 - 2.66.2
 
 ### Changed
