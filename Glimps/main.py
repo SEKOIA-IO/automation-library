@@ -1,5 +1,4 @@
 from glimps.models import GLIMPSModule
-from sekoia_automation.module import Module
 
 from glimps.export_action import ExportSubmission
 from glimps.search_analysis_by_sha256_action import SearchPreviousAnalysis
@@ -23,7 +22,7 @@ if __name__ == "__main__":
     module.register(RetrieveAnalysis, "RetrieveAnalysis")
     
     # register deprecated actions
-    deprecated_module.register(DeprecatedRetrieveAnalysis, "get-results/{uuid}")
-    deprecated_module.register(DeprecatedSearchPreviousAnalysis, "get-search/{sha256}")
-    deprecated_module.register(DeprecatedSubmitFileToBeAnalysed, "post-submit")
+    module.register(DeprecatedRetrieveAnalysis, "get-results/{uuid}")
+    module.register(DeprecatedSearchPreviousAnalysis, "get-search/{sha256}")
+    module.register(DeprecatedSubmitFileToBeAnalysed, "post-submit")
     module.run()
