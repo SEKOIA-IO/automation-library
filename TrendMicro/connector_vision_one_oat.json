@@ -1,7 +1,7 @@
 {
-  "description": "Get last Workbench Alerts from the Trend Micro Vision One",
-  "docker_parameters": "trend_micro_vision_one_workbench",
-  "name": "Fetch new alerts",
+  "description": "Get last Observed Attack Techniques from the Trend Micro Vision One",
+  "docker_parameters": "trend_micro_vision_one_oat",
+  "name": "Fetch new logs",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -30,6 +30,10 @@
         "description": "Batch frequency in seconds",
         "default": 60
       },
+      "filter": {
+        "description": "Filter for retrieving a subset (see https://automation.trendmicro.com/xdr/api-v3/#tag/Observed-Attack-Techniques/paths/~1v3.0~1oat~1detections/get)",
+        "type": "string"
+      },
       "intake_server": {
         "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
         "default": "https://intake.sekoia.io",
@@ -52,5 +56,5 @@
     "title": "The configuration to fetch new logs",
     "type": "object"
   },
-  "uuid": "7aa5dd7c-d694-44dd-b605-66b7974dfb05"
+  "uuid": "3b5a417e-e86f-4fce-ac10-4c1d76d91b46"
 }

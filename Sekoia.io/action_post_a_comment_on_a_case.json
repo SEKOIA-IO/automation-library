@@ -1,0 +1,58 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "uuid": {
+        "description": "UUID of the case",
+        "type": "string",
+        "in": "path"
+      },
+      "content": {
+        "type": "string",
+        "description": "Content of the comment",
+        "in": "body"
+      }
+    },
+    "required": [
+      "uuid",
+      "content"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Add a new comment to a case",
+  "docker_parameters": "post_comment_to_a_case",
+  "name": "Comment case",
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "content": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string"
+      },
+      "created_by": {
+        "type": "string"
+      },
+      "created_by_type": {
+        "type": "string"
+      },
+      "updated_at": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "content",
+      "created_at",
+      "created_by",
+      "created_by_type",
+      "uuid"
+    ]
+  },
+  "uuid": "0fcabc04-43b4-4564-b9b2-08b80e0e1ecf"
+}

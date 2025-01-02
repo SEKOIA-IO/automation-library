@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import Any, Optional
 
 import orjson
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
@@ -14,6 +15,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from sentinelone_module.helpers import filter_collected_events
 from sentinelone_module.singularity.client import SentinelOneServerError, SingularityClient
 
 
@@ -36,7 +38,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
             start_at=timedelta(days=7),
             ignore_older_than=timedelta(days=7),
         )
-        self.last_checkpoint = CheckpointCursor(path=self.data_path)
+        self.events_cache: Cache = LRUCache(maxsize=10000)
 
     @cached_property
     def client(self) -> SingularityClient:
@@ -56,36 +58,38 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
     async def single_run(self) -> int:
         result = 0
 
+        # Set up parameters
         last_event_date = self.last_event_date.offset
-        while self.running:
-            cursor: str | None = self.last_checkpoint.offset
-            if cursor == "":  # TODO: Fix this in SDK in cursor handling.
-                cursor = None
+        start_time = int(last_event_date.timestamp() * 1000)  # convert the event date into a timestamp in millisecond
+        cursor: str | None = None
+        has_more_items: bool = True
 
-            start_time = int(last_event_date.timestamp()) if not cursor else None
+        # Iter over the responses
+        while self.running and has_more_items:
+            # Get the next alerts
             data = await self.client.list_alerts(
                 product_name=self.product_name,
+                start_time=start_time if cursor is None else None,
                 after=cursor,
-                start_time=start_time,
             )
 
-            pushed_events = await self.push_data_to_intakes(
-                [orjson.dumps(alert).decode("utf-8") for alert in data.alerts]
-            )
+            alerts = filter_collected_events(data.alerts, lambda alert: alert["id"], self.events_cache)
+
+            # Push the collected alerts
+            pushed_events = await self.push_data_to_intakes([orjson.dumps(alert).decode("utf-8") for alert in alerts])
 
             result += len(pushed_events)
 
+            # Save the most recent date seen
             for alert in data.alerts:
                 alert_detected_at = isoparse(alert["detectedAt"])
                 if alert_detected_at > last_event_date:
                     last_event_date = alert_detected_at
 
-            self.last_checkpoint.offset = data.end_cursor
+            # Update parameters for the next page (if exists)
+            cursor = data.end_cursor
+            has_more_items = data.has_next_page
 
-            if not data.has_next_page:
-                break
-
-        self.last_checkpoint.offset = ""
         self.last_event_date.offset = last_event_date
 
         return result

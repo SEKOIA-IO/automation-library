@@ -1,0 +1,556 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "title": {
+        "description": "title of the case",
+        "type": "string",
+        "in": "body"
+      },
+      "description": {
+        "description": "description of the case",
+        "type": "string",
+        "in": "body"
+      },
+      "status_uuid": {
+        "description": "identifier of case’s status",
+        "type": "string",
+        "in": "body"
+      },
+      "priority": {
+        "description": "priority of the case",
+        "type": "string",
+        "in": "body",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "tags": {
+        "description": "tags to associate to the case",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "string"
+        }
+      },
+      "subscribers": {
+        "description": "avatars to associate to the case",
+        "type": "array",
+        "in": "body",
+        "items": {
+          "type": "object",
+          "properties": {
+            "avatar_uuid": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "community_uuid": {
+        "description": "the identifier of the community to which the case is associated",
+        "type": "string",
+        "in": "body"
+      },
+      "verdict_uuid": {
+        "description": "Verdict of the case",
+        "type": "string",
+        "in": "body"
+      },
+      "custom_status_uuid": {
+        "description": "Custom status of the case",
+        "type": "string",
+        "in": "body"
+      },
+      "custom_priority_uuid": {
+        "description": "Custom priority of the case",
+        "type": "string",
+        "in": "body"
+      }
+    },
+    "required": [
+      "title"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Creates a new case",
+  "docker_parameters": "create_case",
+  "name": "Create case",
+  "results": {
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "short_id": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string"
+      },
+      "created_by": {
+        "type": "string"
+      },
+      "created_by_type": {
+        "type": "string"
+      },
+      "updated_at": {
+        "type": "string"
+      },
+      "updated_by": {
+        "type": "string"
+      },
+      "updated_by_type": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "priority": {
+        "default": "medium",
+        "description": "low|medium|high"
+      },
+      "status": {
+        "type": "string"
+      },
+      "status_uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "community_uuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "subscribers": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "avatar_uuid": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "avatar_uuid",
+            "type"
+          ]
+        }
+      },
+      "tags": {
+        "type": "array",
+        "description": "List of tags associated to the case",
+        "items": {
+          "type": "string"
+        }
+      },
+      "number_of_comments": {
+        "type": "integer"
+      },
+      "first_seen_at": {
+        "type": "string",
+        "format": "date-time",
+        "x-nullable": true,
+        "description": "Date and time of the first case event"
+      },
+      "last_seen_at": {
+        "type": "string",
+        "format": "date-time",
+        "x-nullable": true,
+        "description": "Date and time of the last case event"
+      },
+      "manual": {
+        "type": "boolean",
+        "x-nullable": true,
+        "description": "if True, indicates that the case was created manually"
+      },
+      "is_supplied": {
+        "type": "boolean",
+        "x-nullable": true,
+        "description": "if True, indicates that alerts can be automatically added to the case"
+      },
+      "verdict_uuid": {
+        "type": "string",
+        "format": "uuid",
+        "x-nullable": true,
+        "description": "UUID of the verdict associated to the case"
+      },
+      "verdict": {
+        "x-nullable": true,
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "label",
+          "level",
+          "stage"
+        ]
+      },
+      "custom_status_uuid": {
+        "type": "string",
+        "format": "uuid",
+        "x-nullable": true,
+        "description": "UUID of the custom status associated to the case"
+      },
+      "custom_status": {
+        "x-nullable": true,
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "label",
+          "level",
+          "stage"
+        ]
+      },
+      "custom_priority_uuid": {
+        "type": "string",
+        "format": "uuid",
+        "x-nullable": true,
+        "description": "UUID of the priority associated to the case"
+      },
+      "custom_priority": {
+        "x-nullable": true,
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "color",
+          "description",
+          "label",
+          "level"
+        ]
+      },
+      "number_of_alerts": {
+        "type": "integer"
+      },
+      "alerts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "integer"
+            },
+            "created_by": {
+              "type": "string"
+            },
+            "created_by_type": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "integer"
+            },
+            "updated_by": {
+              "type": "string"
+            },
+            "updated_by_type": {
+              "type": "string"
+            },
+            "community_uuid": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "short_id": {
+              "type": "string"
+            },
+            "entity": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "uuid"
+              ]
+            },
+            "urgency": {
+              "description": "    The alert urgency can have two different representations in the api: a numerical and a textual representation.        | Urgency | Value |        | Low | [0-20[ |        | Moderate | [20-40[ |        | High | [40-60[ |        | Major | [60-80[ |        | Urgent | [80-100] |",
+              "type": "object",
+              "properties": {
+                "current_value": {
+                  "type": "integer"
+                },
+                "value": {
+                  "type": "integer"
+                },
+                "severity": {
+                  "type": "integer"
+                },
+                "criticity": {
+                  "type": "integer"
+                },
+                "display": {
+                  "type": "string"
+                }
+              }
+            },
+            "alert_type": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                }
+              }
+            },
+            "status": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            },
+            "rule": {
+              "type": "object",
+              "properties": {
+                "uuid": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "pattern": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "pattern",
+                "uuid"
+              ]
+            },
+            "detection_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            },
+            "similar": {
+              "type": "integer"
+            },
+            "details": {
+              "type": "string"
+            },
+            "ttps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "type"
+                ]
+              }
+            },
+            "adversaries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "type"
+                ]
+              }
+            },
+            "stix": {
+              "type": "object"
+            },
+            "kill_chain_short_id": {
+              "type": "string"
+            },
+            "number_of_unseen_comments": {
+              "type": "integer"
+            },
+            "number_of_total_comments": {
+              "type": "integer"
+            },
+            "first_seen_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "last_seen_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "assets": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "time_to_ingest": {
+              "type": "integer"
+            },
+            "time_to_detect": {
+              "type": "integer"
+            },
+            "time_to_acknowledge": {
+              "type": "integer"
+            },
+            "time_to_respond": {
+              "type": "integer"
+            },
+            "time_to_resolve": {
+              "type": "integer"
+            },
+            "intake_uuids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "cases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "short_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "is_supplied": {
+                    "type": "boolean"
+                  },
+                  "manual": {
+                    "type": "boolean"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "community_uuid",
+      "created_at",
+      "created_by",
+      "created_by_type",
+      "short_id",
+      "status",
+      "status_uuid",
+      "title",
+      "uuid"
+    ]
+  },
+  "uuid": "0ccabc04-43b4-4564-b9b2-08b80e0e1ecf"
+}

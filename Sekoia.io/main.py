@@ -12,14 +12,17 @@ from sekoiaio.intelligence_center import CreateNewTrackerNotification, PostRepor
 from sekoiaio.intelligence_center.actions import PostBundleAction, GetContextAction
 from sekoiaio.intelligence_center.upload_observables_inthreat import UploadObservablesAction
 from sekoiaio.intelligence_center.add_ioc_to_ioc_collection import AddIOCtoIOCCollectionAction
+from sekoiaio.operation_center.update_alert_status import UpdateAlertStatus
 from sekoiaio.operation_center import (
     ActivateCountermeasure,
     AddsAttributeToAsset,
     AddsKeyToAsset,
     AssociateNewAlertsOnCase,
     CreatesNewAsset,
+    CreatesNewAssetV2,
     CreateRule,
     DeletesAsset,
+    DeletesAssetV2,
     DeleteRule,
     DenyCountermeasure,
     DisableRule,
@@ -37,6 +40,10 @@ from sekoiaio.operation_center import (
     GetIntake,
     GetEntity,
     AddEventsToACase,
+    CreateCase,
+    UpdateCase,
+    GetCase,
+    PostCommentOnCase,
 )
 from sekoiaio.operation_center.get_asset import GetAsset
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
@@ -63,6 +70,7 @@ if __name__ == "__main__":
     module.register(AddsKeyToAsset, "post-assets/{uuid}/keys")
     module.register(AssociateNewAlertsOnCase, "patch-cases/{case_uuid}/alerts")
     module.register(CreatesNewAsset, "post-assets")
+    module.register(CreatesNewAssetV2, "post-assets-v2")
     module.register(CreateRule, "post-rules")
     module.register(DeleteRule, "delete-rules/{uuid}")
     module.register(DenyCountermeasure, "patch-alerts/countermeasures/{cm_uuid}/deny")
@@ -86,11 +94,13 @@ if __name__ == "__main__":
     module.register(MergeAssets, "merge-assets")
     module.register(SynchronizeAssetsWithAD, "synchronize-assets")
     module.register(TriggerActionOnAlertWorkflow, "patch-alerts/{uuid}/workflow")
+    module.register(UpdateAlertStatus, "patch-alerts-v2/{uuid}/workflow")
     module.register(PushEventToIntake, "push-events-to-intake")
     module.register(ListAssets, "get-assets-v2")
-    module.register(DeletesAsset, "delete-assets-v2/{uuid}")
-    module.register(GetAsset, "get-assets/{uuid}")
-    module.register(ReturnsAsset, "get-assets-v2/{uuid}")
+    module.register(DeletesAsset, "delete-assets/{uuid}")
+    module.register(DeletesAssetV2, "delete-assets-v2/{uuid}")
+    module.register(GetAsset, "get-assets-v2/{uuid}")
+    module.register(ReturnsAsset, "get-assets/{uuid}")
     module.register(UpdateRule, "put-rules/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
     module.register(AddIOCtoIOCCollectionAction, "add_ioc_to_ioc_collection")
@@ -98,6 +108,10 @@ if __name__ == "__main__":
     module.register(GetEntity, "get-entities/{uuid}")
     module.register(GetCommunity, "get-communities/{uuid}")
     module.register(AddEventsToACase, "add_events_to_a_case")
+    module.register(CreateCase, "create_case")
+    module.register(UpdateCase, "update_case")
+    module.register(GetCase, "get_case")
+    module.register(PostCommentOnCase, "post_comment_to_a_case")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

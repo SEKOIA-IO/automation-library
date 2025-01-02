@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-12-18 - 2.67.0
+
+### Added
+
+- Add an action to create a case
+- Add an action to modify a case
+- Add an action to get the details of a case
+- Add an action to add a comment to a case
+
+## 2024-12-09 - 2.66.2
+
+### Changed
+
+- Change `Update Alert Status` to support `status names` as input 
+
 ## 2024-12-12 - 2.66.1
 
 ### Added
@@ -24,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update get alert action with an option to get the associated cases
+
+
+
 
 ## 2024-11-27 - 2.65.4
 

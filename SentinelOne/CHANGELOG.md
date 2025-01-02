@@ -7,11 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2024-12-06 - 1.19.8
+## 2024-12-06 - 1.19.10
 
 ### Added
 
 - Add the new configuration part in sentinelOne action
+
+## 2024-12-16 - 1.19.9
+
+### Changed
+
+- discard already collected alerts in the singularity connector
+
+### Fixed
+
+- Fix the start_time parameter into milliseconds in the singularity connector
+
+## 2024-12-13 - 1.19.8
+
+### Fixed
+
+- Fix the pagination system in the SentinelOne Singularity connector
 
 ## 2024-12-10 - 1.19.7
 
