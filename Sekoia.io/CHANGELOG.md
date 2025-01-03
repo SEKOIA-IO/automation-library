@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-03 - 2.67.1
+
+### Fixed
+
+- Fix `list asset` action's arguments types
+- Fix `create asset`'s url
+
+
 ## 2024-12-18 - 2.67.0
 
 ### Added
