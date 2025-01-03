@@ -33,7 +33,7 @@ ASSETV2_ATOM_OR_PROP_TO_V1_KEY = {
 class GetAsset(Action):
 
     def url(self, path: str) -> str:
-        return urljoin(self.module.configuration["base_url"], "api/v2/asset-management/", path)
+        return urljoin(self.module.configuration["base_url"], "api/v2/asset-management/assets/", path)
 
     @property
     def headers(self) -> dict:

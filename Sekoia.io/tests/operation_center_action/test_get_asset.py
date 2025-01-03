@@ -4,7 +4,7 @@ import uuid
 from sekoiaio.operation_center.get_asset import GetAsset
 
 module_base_url = "https://app.sekoia.fake/"
-base_url = module_base_url + "api/v2/asset-management/"
+base_url = module_base_url + "api/v2/asset-management/assets/"
 apikey = "fake_api_key"
 
 
