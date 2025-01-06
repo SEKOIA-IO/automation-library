@@ -20,6 +20,10 @@
       "exclude_signed": {
         "type": "boolean",
         "description": "Do not retrieve report with signed binary"
+      },
+      "exclude_suspicious_analysis": {
+        "type": "boolean",
+        "description": "Do not retrieve report with only one behavioral or with a score gap between two dynamic analysis"
       }
     },
     "required": [
