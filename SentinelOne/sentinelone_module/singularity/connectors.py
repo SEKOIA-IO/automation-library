@@ -14,8 +14,8 @@ from sekoia_automation.checkpoint import CheckpointCursor, CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from sentinelone_module.base import SentinelOneModule
-from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from sentinelone_module.helpers import filter_collected_events
+from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from sentinelone_module.singularity.client import SentinelOneServerError, SingularityClient
 
 
@@ -75,8 +75,15 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
 
             alerts = filter_collected_events(data.alerts, lambda alert: alert["id"], self.events_cache)
 
+            detailed_alerts = []
+            for alert in alerts:
+                alert_details = await self.client.get_alert_details(alert["id"]) or {}
+                detailed_alerts.append({**alert, **alert_details})
+
             # Push the collected alerts
-            pushed_events = await self.push_data_to_intakes([orjson.dumps(alert).decode("utf-8") for alert in alerts])
+            pushed_events = await self.push_data_to_intakes(
+                [orjson.dumps(detailed_alerts).decode("utf-8") for alert in alerts]
+            )
 
             result += len(pushed_events)
 

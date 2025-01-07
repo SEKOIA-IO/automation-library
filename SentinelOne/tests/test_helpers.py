@@ -2,6 +2,7 @@ import string
 
 import pytest
 from cachetools import LRUCache
+
 from sentinelone_module.helpers import (
     filter_collected_events,
     generate_password,

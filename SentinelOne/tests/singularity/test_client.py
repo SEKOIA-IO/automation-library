@@ -108,3 +108,16 @@ async def test_list_alerts(mock_query, client):
     assert result == ListAlertsResult(total_count=1, end_cursor="cursor", has_next_page=True, alerts=[alert])
 
     mock_query.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("sentinelone_module.singularity.client.SingularityClient.query", new_callable=AsyncMock)
+async def test_alert_details(mock_query, client):
+    details = {"some_details": "some_value"}
+
+    mock_query.return_value = {"alert": details}
+
+    result = await client.get_alert_details("alert_id")
+    assert result == details
+
+    mock_query.assert_called_once()

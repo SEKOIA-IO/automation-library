@@ -13,7 +13,6 @@ from gql.transport.requests import log as requests_logger
 from graphql import ExecutionResult
 from pydantic import BaseModel
 
-
 requests_logger.setLevel(int(os.getenv("GQL_LOG_LEVEL", logging.WARNING)))  # Warning level by default
 
 
@@ -81,6 +80,38 @@ class SingularityClient(object):
                 raise e
 
             return result
+
+    async def get_alert_details(self, alert_id: str) -> dict[str, Any] | None:
+        query = """
+            query alert($id: ID!) {
+                alert(id: $id) {
+                  analystVerdict
+                  analytics {
+                    category
+                  }
+                  asset {
+                    agentUuid
+                    agentVersion
+                    category
+                    name
+                    osType
+                    osVersion
+                    type
+                    subcategory
+                  }
+                  rawData
+                }
+            }
+        """
+
+        variables = {"id": alert_id}
+
+        response = await self.query(query, variable_values=variables)
+
+        if response.get("errors") is not None:
+            raise SentinelOneAPIErrors.from_response(response)
+
+        return response.get("alert")
 
     async def list_alerts(
         self, product_name: str, after: str | None = None, start_time: int | None = None

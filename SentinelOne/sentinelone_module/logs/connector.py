@@ -16,11 +16,11 @@ from sekoia_automation.connector import Connector
 from sekoia_automation.storage import PersistentJSON
 
 from sentinelone_module.base import SentinelOneModule
+from sentinelone_module.helpers import filter_collected_events
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
 from sentinelone_module.logs.helpers import get_latest_event_timestamp
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
-from sentinelone_module.helpers import filter_collected_events
 
 logger = get_logger()
 
