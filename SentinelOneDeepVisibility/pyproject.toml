@@ -3,6 +3,7 @@ name = "Automation Module for SentinelOne"
 description = ""
 version = "0.0"
 authors = []
+package-mode = false
 packages = [
     { include = "deep_visibility" },
 ]
