@@ -3,6 +3,7 @@ name = "aws-automation"
 description = ""
 version = "0.0"
 authors = []
+package-mode = false
 packages = [
     {include = "connectors"},
     {include = "aws_helpers"}
