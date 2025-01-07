@@ -3,6 +3,7 @@ name = "checks"
 version = "0.1.0"
 description = "Sekoia Automate Modules check"
 authors = []
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
