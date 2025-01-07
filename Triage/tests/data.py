@@ -4618,122 +4618,84 @@ query_241113_rawlystckq = {
 }
 
 query_250106_fypb1azkcr = {
-  "version": "0.3.0",
-  "sample": {
-    "id": "250106-fypb1azkcr",
-    "score": 10,
-    "target": "res.x86.elf",
-    "size": 21084,
-    "md5": "0f1de9ef58d6326904a0eed4fa21c717",
-    "sha1": "17f212986484b2f4ffee32255d761cb7cdeb9595",
-    "sha256": "e6b864387607633fb94de8e2b053ed80b338c9f6c95ef2501e7a59062fe69cfb",
-    "sha512": "3fa6a8079ab67501a676c11d04a7f4207a3eb6a32dfc73d4d05c935c52c0135f1f167edbaf7b3c8b34150f016e14fcbf809bfeb7bf58e17855e1b59c3b5e1726",
-    "ssdeep": "384:fhP0EbY0HbPn4kRwAzE5OX8OR6OxS1LJ+RX9STzLXHQsVC3WNE:OkdfdwL6RsNJFTXXHdVZNE",
-    "created": "2025-01-06T05:17:02Z",
-    "completed": "2025-01-06T05:19:36Z"
-  },
-  "tasks": [
-    {
-      "sample": "250106-fypb1azkcr",
-      "kind": "behavioral",
-      "name": "behavioral1",
-      "status": "reported",
-      "tags": [
-        "rootkit"
-      ],
-      "score": 7,
-      "target": "res.x86.elf",
-      "backend": "sbx4m72",
-      "resource": "ubuntu2404-amd64-20240523-en",
-      "os": "ubuntu-24.04-amd64",
-      "timeout": 150,
-      "sigs": 1
+    "version": "0.3.0",
+    "sample": {
+        "id": "250106-fypb1azkcr",
+        "score": 10,
+        "target": "res.x86.elf",
+        "size": 21084,
+        "md5": "0f1de9ef58d6326904a0eed4fa21c717",
+        "sha1": "17f212986484b2f4ffee32255d761cb7cdeb9595",
+        "sha256": "e6b864387607633fb94de8e2b053ed80b338c9f6c95ef2501e7a59062fe69cfb",
+        "sha512": "3fa6a8079ab67501a676c11d04a7f4207a3eb6a32dfc73d4d05c935c52c0135f1f167edbaf7b3c8b34150f016e14fcbf809bfeb7bf58e17855e1b59c3b5e1726",
+        "ssdeep": "384:fhP0EbY0HbPn4kRwAzE5OX8OR6OxS1LJ+RX9STzLXHQsVC3WNE:OkdfdwL6RsNJFTXXHdVZNE",
+        "created": "2025-01-06T05:17:02Z",
+        "completed": "2025-01-06T05:19:36Z",
     },
-    {
-      "sample": "250106-fypb1azkcr",
-      "kind": "static",
-      "name": "static1",
-      "status": "reported",
-      "tags": [
-        "family:mirai"
-      ],
-      "score": 10,
-      "sigs": 1
-    }
-  ],
-  "analysis": {
-    "score": 10,
-    "family": [
-      "mirai"
-    ],
-    "tags": [
-      "family:mirai",
-      "linux",
-      "rootkit"
-    ]
-  },
-  "targets": [
-    {
-      "tasks": [
-        "behavioral1"
-      ],
-      "score": 7,
-      "target": "res.x86.elf",
-      "size": 21084,
-      "md5": "0f1de9ef58d6326904a0eed4fa21c717",
-      "sha1": "17f212986484b2f4ffee32255d761cb7cdeb9595",
-      "sha256": "e6b864387607633fb94de8e2b053ed80b338c9f6c95ef2501e7a59062fe69cfb",
-      "sha512": "3fa6a8079ab67501a676c11d04a7f4207a3eb6a32dfc73d4d05c935c52c0135f1f167edbaf7b3c8b34150f016e14fcbf809bfeb7bf58e17855e1b59c3b5e1726",
-      "ssdeep": "384:fhP0EbY0HbPn4kRwAzE5OX8OR6OxS1LJ+RX9STzLXHQsVC3WNE:OkdfdwL6RsNJFTXXHdVZNE",
-      "tags": [
-        "rootkit"
-      ],
-      "signatures": [
+    "tasks": [
         {
-          "name": "Loads a kernel module",
-          "score": 7,
-          "tags": [
-            "rootkit"
-          ],
-          "desc": "Loads a Linux kernel module, potentially to achieve persistence"
+            "sample": "250106-fypb1azkcr",
+            "kind": "behavioral",
+            "name": "behavioral1",
+            "status": "reported",
+            "tags": ["rootkit"],
+            "score": 7,
+            "target": "res.x86.elf",
+            "backend": "sbx4m72",
+            "resource": "ubuntu2404-amd64-20240523-en",
+            "os": "ubuntu-24.04-amd64",
+            "timeout": 150,
+            "sigs": 1,
+        },
+        {
+            "sample": "250106-fypb1azkcr",
+            "kind": "static",
+            "name": "static1",
+            "status": "reported",
+            "tags": ["family:mirai"],
+            "score": 10,
+            "sigs": 1,
+        },
+    ],
+    "analysis": {"score": 10, "family": ["mirai"], "tags": ["family:mirai", "linux", "rootkit"]},
+    "targets": [
+        {
+            "tasks": ["behavioral1"],
+            "score": 7,
+            "target": "res.x86.elf",
+            "size": 21084,
+            "md5": "0f1de9ef58d6326904a0eed4fa21c717",
+            "sha1": "17f212986484b2f4ffee32255d761cb7cdeb9595",
+            "sha256": "e6b864387607633fb94de8e2b053ed80b338c9f6c95ef2501e7a59062fe69cfb",
+            "sha512": "3fa6a8079ab67501a676c11d04a7f4207a3eb6a32dfc73d4d05c935c52c0135f1f167edbaf7b3c8b34150f016e14fcbf809bfeb7bf58e17855e1b59c3b5e1726",
+            "ssdeep": "384:fhP0EbY0HbPn4kRwAzE5OX8OR6OxS1LJ+RX9STzLXHQsVC3WNE:OkdfdwL6RsNJFTXXHdVZNE",
+            "tags": ["rootkit"],
+            "signatures": [
+                {
+                    "name": "Loads a kernel module",
+                    "score": 7,
+                    "tags": ["rootkit"],
+                    "desc": "Loads a Linux kernel module, potentially to achieve persistence",
+                }
+            ],
+            "iocs": {"ips": ["224.0.0.251", "79.124.60.186"]},
         }
-      ],
-      "iocs": {
-        "ips": [
-          "224.0.0.251",
-          "79.124.60.186"
-        ]
-      }
-    }
-  ],
-  "signatures": [
-    {
-      "name": "Mirai family",
-      "score": 10,
-      "tags": [
-        "family:mirai"
-      ]
-    },
-    {
-      "name": "Loads a kernel module",
-      "score": 7,
-      "tags": [
-        "rootkit"
-      ],
-      "desc": "Loads a Linux kernel module, potentially to achieve persistence"
-    }
-  ],
-  "extracted": [
-    {
-      "tasks": [
-        "static1"
-      ],
-      "dumped_file": "res.x86.elf",
-      "resource": "sample",
-      "config": {
-        "family": "mirai",
-        "rule": "Mirai_x86"
-      }
-    }
-  ]
+    ],
+    "signatures": [
+        {"name": "Mirai family", "score": 10, "tags": ["family:mirai"]},
+        {
+            "name": "Loads a kernel module",
+            "score": 7,
+            "tags": ["rootkit"],
+            "desc": "Loads a Linux kernel module, potentially to achieve persistence",
+        },
+    ],
+    "extracted": [
+        {
+            "tasks": ["static1"],
+            "dumped_file": "res.x86.elf",
+            "resource": "sample",
+            "config": {"family": "mirai", "rule": "Mirai_x86"},
+        }
+    ],
 }
