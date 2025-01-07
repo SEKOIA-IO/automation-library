@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-07 - 1.0.1
+
+### Fixed
+
+- Fixed issue with incorrect cursor
+
 ## 2024-09-20 - 1.0.0
 
 ### Changed

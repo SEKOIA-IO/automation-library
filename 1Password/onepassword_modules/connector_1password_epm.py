@@ -1,14 +1,15 @@
 import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from pathlib import Path
 from threading import Event, Lock, Thread
-from typing import Any, Generator
+from typing import Generator
 from urllib.parse import urljoin
 
 import orjson
 from dateutil.parser import isoparse
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from sekoia_automation.storage import PersistentJSON
 
 from . import OnePasswordModule
 from .client import ApiClient
@@ -30,27 +31,17 @@ class OnePasswordEndpoint(Thread):
         self.name = self.FEATURE_NAME
 
         self.connector = connector
-        self.cursor = self.load_cursor()
+        self.cursor = CheckpointDatetime(
+            path=self.connector.data_path,
+            start_at=timedelta(hours=1),
+            ignore_older_than=timedelta(days=7),
+            subkey=self.name,
+            lock=self.connector.context_lock,
+        )
+        self.from_date = self.cursor.offset
 
     def log(self, *args, **kwargs) -> None:
         self.connector.log(*args, **kwargs)
-
-    def load_cursor(self) -> str | None:
-        self.connector.context_lock.acquire()
-        with self.connector.context as cache:
-            most_recent_cursor_seen = cache.get(self.FEATURE_NAME, {}).get("most_recent_cursor_seen")
-        self.connector.context_lock.release()
-
-        return most_recent_cursor_seen
-
-    def save_cursor(self, cursor: str | None) -> None:
-        self.connector.context_lock.acquire()
-        with self.connector.context as cache:
-            if self.FEATURE_NAME not in cache:
-                cache[self.FEATURE_NAME] = {"most_recent_cursor_seen": cursor}
-            else:
-                cache[self.FEATURE_NAME]["most_recent_cursor_seen"] = cursor
-        self.connector.context_lock.release()
 
     @property
     def running(self) -> bool:
@@ -71,52 +62,60 @@ class OnePasswordEndpoint(Thread):
     def extract_timestamp(self, event: dict) -> datetime:
         return isoparse(event["timestamp"])
 
-    def fetch_page(self, cursor: str | None) -> dict[str, Any]:
+    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
+        to_date = datetime.now().astimezone(timezone.utc)
         url = urljoin(self.connector.base_url, self.METHOD_URI)
-        end_datetime = datetime.now().astimezone(timezone.utc).replace(microsecond=0)
-        start_datetime = end_datetime - timedelta(hours=1)
 
-        data: dict[str, str | int] = {}
-        if cursor:
-            data["cursor"] = cursor
-
-        else:
-            data["limit"] = self.connector.configuration.chunk_size
-            data["start_time"] = start_datetime.isoformat()
-            data["end_time"] = end_datetime.isoformat()
+        data = {
+            "start_time": from_date.isoformat(),
+            "end_time": to_date.isoformat(),
+            "limit": self.connector.configuration.chunk_size,
+        }
 
         response = self.client.post(url, json=data)
-        return response.json()
-
-    def fetch_events(self) -> Generator[list, None, None]:
-        page = self.fetch_page(cursor=self.cursor)
-
         while self.running:
+            page = response.json()
             events = page.get("items", [])
-            self.cursor = page["cursor"]
 
             if len(events) > 0:
                 INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.name).inc(
                     len(events)
                 )
-                last_event = max(events, key=self.extract_timestamp)
-                last_event_datetime = self.extract_timestamp(last_event)
-
-                current_lag = int((datetime.now().astimezone(timezone.utc) - last_event_datetime).total_seconds())
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(current_lag)
                 yield events
 
             else:
-                self.save_cursor(cursor=self.cursor)
                 EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(0)
                 return
 
-            if not page.get("has_more"):
-                self.save_cursor(cursor=self.cursor)
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(0)
-                return
+            data = {"cursor": page["cursor"]}
+            response = self.client.post(url, json=data)
 
-            page = self.fetch_page(cursor=self.cursor)
+    def fetch_events(self) -> Generator[list, None, None]:
+        most_recent_date_seen = self.from_date
+
+        for next_events in self.__fetch_next_events(most_recent_date_seen):
+            if next_events:
+                last_event = max(next_events, key=self.extract_timestamp)
+                last_event_datetime = self.extract_timestamp(last_event)
+
+                # save the greater date ever seen
+                if last_event_datetime > most_recent_date_seen:
+                    most_recent_date_seen = last_event_datetime + timedelta(
+                        microseconds=1
+                    )  # is this step small enough?
+
+                # forward current events
+                yield next_events
+
+        if most_recent_date_seen > self.from_date:
+            self.cursor.offset = most_recent_date_seen
+            self.from_date = most_recent_date_seen
+
+            now = datetime.now(timezone.utc)
+            current_lag = now - most_recent_date_seen
+            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.name).set(
+                int(current_lag.total_seconds())
+            )
 
     def next_batch(self) -> None:
         # save the starting time
@@ -200,10 +199,13 @@ class OnePasswordConnector(Connector):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
-        self.context_lock = Lock()
 
+        self.context_lock = Lock()
         self.base_url = self.module.configuration.base_url
+
+    @property
+    def data_path(self) -> Path:
+        return self._data_path
 
     @cached_property
     def client(self) -> ApiClient:
