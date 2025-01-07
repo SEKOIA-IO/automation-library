@@ -3,6 +3,7 @@ name = "Automation Module for Whois"
 description = ""
 version = "0.0"
 authors = []
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
