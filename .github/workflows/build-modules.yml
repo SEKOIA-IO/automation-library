@@ -64,7 +64,6 @@ jobs:
         run: |
           pip install poetry
           poetry config virtualenvs.in-project true
-          poetry config installer.modern-installation false
 
       - name: Install Dependencies
         id: install-dependencies
