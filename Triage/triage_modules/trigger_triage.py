@@ -140,6 +140,8 @@ class TriageConfigsTrigger(TriageTrigger):
 
     def check_suspicious_analysis(self, sample_id: str, data: dict) -> bool:
         try:
+            tags: list()
+            tasks: list()
             tags = data.get("analysis")["tags"]
             if "linux" in tags:
                 return False
