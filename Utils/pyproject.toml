@@ -3,6 +3,7 @@ name = "FileUtils automation module"
 description = ""
 version = "0.0"
 authors = []
+package-mode = false
 
 
 [tool.poetry.dependencies]

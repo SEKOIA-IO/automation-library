@@ -9,7 +9,7 @@ RUN apt-get update -y && \
     apt-get -y install swig && \
     rm -rf /var/lib/apt/lists/*
 COPY poetry.lock pyproject.toml /app/
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+RUN poetry config virtualenvs.create false && poetry install --only main
 
 COPY . .
 
