@@ -14,7 +14,7 @@ WORKDIR /app/automation-library/build/
 COPY . .
 
 # Install dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+RUN poetry config virtualenvs.create false && poetry install --only main
 
 RUN useradd -ms /bin/bash sekoiaio-runtime
 USER sekoiaio-runtime

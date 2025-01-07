@@ -3,6 +3,7 @@ name = "Sekoia.io Automation Module to work with AWS S3 through SQS for CrowdStr
 version = "0.0"
 description = ""
 authors = []
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"

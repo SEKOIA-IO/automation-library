@@ -2,6 +2,7 @@
 name = "ipinfo-io"
 version = "0.1.0"
 authors = []
+package-mode = false
 description = ""
 readme = "README.md"
 packages = [{include = "ipinfo"}]
