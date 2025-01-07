@@ -3,6 +3,7 @@ name = "openai-module"
 version = "0.1.0"
 description = ""
 authors = []
+package-mode = false
 readme = "README.md"
 
 [tool.poetry.dependencies]
