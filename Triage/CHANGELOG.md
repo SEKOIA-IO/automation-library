@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-06 - 1.38.0
+
+### Changed
+
+- Add the option `exclude_suspicious_analysis`: filter out binary without enough dynamic analysis (<2) or a score gape between behavioral analysis
+
 ## 2024-09-13 - 1.37.0
 
 ### Changed
