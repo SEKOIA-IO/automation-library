@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-06 - 1.3.0
+
+### Changed
+
+- Add details to error message in case of Jira API error
+
 ## 2024-05-28 - 1.2.0
 
 ### Changed

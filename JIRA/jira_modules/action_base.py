@@ -55,6 +55,10 @@ class JIRAAction(Action):
     def _handle_response_error(self, response: requests.Response):
         if not response.ok:
             message = f"Request to JIRA API failed with status {response.status_code} - {response.reason}"
+            if response.status_code == 400:
+                data = response.json()
+                detailed_errors = data.get("errorMessages", [response.text])
+                message = f"{message}: \n {','.join(detailed_errors)}"
 
             self.log(message=message, level="error")
             response.raise_for_status()
