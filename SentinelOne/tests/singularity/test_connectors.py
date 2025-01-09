@@ -1,7 +1,7 @@
 import itertools
 import time
-from pathlib import Path
 from multiprocessing import Process
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -31,13 +31,15 @@ def custom_test_connector(
 
 
 def patch_connector(connector: AbstractSingularityConnector, alert_ids: list) -> AbstractSingularityConnector:
-
     alerts_count = len(alert_ids)
     first_page = itertools.islice(alert_ids, 0, alerts_count - 2)
     second_page = itertools.islice(alert_ids, alerts_count - 2, alerts_count)
 
     def gql_return_values(query, variable_values) -> dict[str, Any]:
-        if variable_values["after"] is None:
+        if variable_values.get("alert_id") is not None:
+            return {"alert": {"details": {"some_details": "some_values"}}}
+
+        if variable_values.get("after") is None:
             return {
                 "alerts": {
                     "totalCount": 1,
