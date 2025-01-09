@@ -142,14 +142,14 @@ class TriageConfigsTrigger(TriageTrigger):
         try:
             tags: list[str] = list()
             tasks: list[dict] = list()
-            tags = data.get("analysis")["tags"]
-            if "linux" in tags:
+            tags = data.get("analysis", {}).get("tags")
+            if len(tags) == 0 or "linux" in tags:
                 return False
-            tasks = data.get("tasks")
+            tasks = data.get("tasks", [])
             scores = []
             for t in tasks:
-                if t.get("kind") == "behavioral":
-                    scores.append(t.get("score"))
+                if t.get("kind") == "behavioral" and "score" in t:
+                    scores.append(t["score"])
             if len(scores) < 2:
                 self.log(f"PE in {sample_id} report does not have at least two dynamic analysis")
                 return True
