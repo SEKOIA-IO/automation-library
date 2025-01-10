@@ -82,7 +82,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
 
             # Push the collected alerts
             pushed_events = await self.push_data_to_intakes(
-                [orjson.dumps(detailed_alerts).decode("utf-8") for alert in alerts]
+                [orjson.dumps(alert).decode("utf-8") for alert in detailed_alerts]
             )
 
             result += len(pushed_events)
