@@ -70,9 +70,9 @@ class Office365Connector(AsyncConnector):
                     for event in events:
                         pulled_events.append(json.dumps(event))
 
-                if len(pulled_events) > self.limit_of_events_to_push:
-                    yield pulled_events
-                    pulled_events = []
+                    if len(pulled_events) > self.limit_of_events_to_push:
+                        yield pulled_events
+                        pulled_events = []
 
         if len(pulled_events) > 0:
             yield pulled_events
