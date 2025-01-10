@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-01-10 - 2.18.6
+
+### Changed
+
+- Allow configuration the time range interval from environment variables
+
 ## 2024-12-19 - 2.18.5
 
 ### Fixed
