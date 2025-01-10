@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-01-10 - 2.18.7
+
+### Fixed
+
+- Save the end date of each date range in the checkpoint, in order to always progress
+
 ## 2024-01-10 - 2.18.6
 
 ### Changed

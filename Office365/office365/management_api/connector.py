@@ -70,9 +70,9 @@ class Office365Connector(AsyncConnector):
                     for event in events:
                         pulled_events.append(json.dumps(event))
 
-                if len(pulled_events) > self.limit_of_events_to_push:
-                    yield pulled_events
-                    pulled_events = []
+                    if len(pulled_events) > self.limit_of_events_to_push:
+                        yield pulled_events
+                        pulled_events = []
 
         if len(pulled_events) > 0:
             yield pulled_events
@@ -106,14 +106,27 @@ class Office365Connector(AsyncConnector):
         for start_date, end_date in split_date_range(
             start_pull_date, end_pull_date, timedelta(minutes=self.time_range_interval)
         ):
+            intermediate_start_time = time.time()
+
+            # Get events for the current date range
             async for list_of_events in self.pull_content(start_date, end_date):
                 await self.send_events(list_of_events)
+
+            # get the ending time and compute the duration to forward the events
+            intermediate_end_time = time.time()
+            intermediate_batch_duration = intermediate_end_time - intermediate_start_time
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
+                intermediate_batch_duration
+            )
+
+            # save intermediate end date
+            checkpoint.offset = end_date
 
         # get the ending time and compute the duration to forward the events
         end_time = time.time()
         batch_duration = end_time - start_time
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
+        # save end date
         checkpoint.offset = end_pull_date
 
         # compute the remaining sleeping time. If greater than 0, sleep
