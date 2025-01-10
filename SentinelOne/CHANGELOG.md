@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-10 - 1.20.1
+
+### Fixed
+
+- Fix for singularity connector for iteration through correct list of items
+
 ## 2025-01-07 - 1.20.0
 
 ### Changed
