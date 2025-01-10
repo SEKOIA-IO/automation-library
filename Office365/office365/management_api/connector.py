@@ -26,6 +26,7 @@ class Office365Connector(AsyncConnector):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("OFFICE365_BATCH_SIZE", 10000))
         self.frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
+        self.time_range_interval = int(os.getenv("OFFICE365_TIME_RANGE_INTERVAL", 30))
 
     async def shutdown(self) -> None:
         """
@@ -102,7 +103,9 @@ class Office365Connector(AsyncConnector):
         start_pull_date = checkpoint.offset
         end_pull_date = datetime.now(UTC)
 
-        for start_date, end_date in split_date_range(start_pull_date, end_pull_date, timedelta(minutes=30)):
+        for start_date, end_date in split_date_range(
+            start_pull_date, end_pull_date, timedelta(minutes=self.time_range_interval)
+        ):
             async for list_of_events in self.pull_content(start_date, end_date):
                 await self.send_events(list_of_events)
 
