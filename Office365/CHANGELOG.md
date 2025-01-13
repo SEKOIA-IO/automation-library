@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-01-13 - 2.18.8
+
+### Fixed
+
+- Check if the HTTP client session is defined and not closed
+
 ## 2024-01-10 - 2.18.7
 
 ### Fixed
