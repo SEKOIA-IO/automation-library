@@ -9,7 +9,7 @@ package-mode = false
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.18.1"
 
-[tool.poetry.dev-dependencies]
+[poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
 isort = "*"
