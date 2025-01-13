@@ -21,4 +21,5 @@ class EsetDeIsolateEndpointAction(EsetBaseAction):
                 "targets": {"devicesUuids": device_uuids},
             }
         }
-        return self.client.post(url, json=payload, timeout=60)
+        response = self.client.post(url, json=payload, timeout=60)
+        return self.prepare_result(response)

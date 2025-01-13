@@ -33,4 +33,5 @@ class EsetScanAction(EsetBaseAction):
                 "triggers": [{"manual": {"expireTime": self.get_expire_time(task_expire_time)}}],
             }
         }
-        return self.client.post(url, json=payload, timeout=60)
+        response = self.client.post(url, json=payload, timeout=60)
+        return self.prepare_result(response)

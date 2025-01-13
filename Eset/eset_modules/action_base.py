@@ -2,6 +2,7 @@ from abc import ABC
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 
+import requests
 from sekoia_automation.action import Action
 
 from . import EsetModule
@@ -23,3 +24,7 @@ class EsetBaseAction(Action, ABC):
     def get_expire_time(task_expire_time: int) -> str:
         expire_time = datetime.now().astimezone(timezone.utc) + timedelta(minutes=task_expire_time)
         return expire_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @staticmethod
+    def prepare_result(response: requests.Response) -> dict:
+        return {"status_code": response.status_code, "body": response.json() if len(response.content) > 0 else {}}
