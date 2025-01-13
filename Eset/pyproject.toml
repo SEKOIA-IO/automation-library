@@ -12,6 +12,8 @@ sekoia-automation-sdk = "^1.18.1"
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
 isort = "*"
 black = "*"
 mypy = "*"
