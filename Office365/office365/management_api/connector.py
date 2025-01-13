@@ -33,7 +33,8 @@ class Office365Connector(AsyncConnector):
         Shutdown the connector
         """
         super(Connector, self).stop()
-        await self._session.close()
+        if self._session and not self._session.closed:
+            await self._session.close()
 
     @cached_property
     def client(self) -> Office365API:
