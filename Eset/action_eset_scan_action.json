@@ -1,0 +1,49 @@
+{
+  "name": "EsetScanAction",
+  "description": "Run scan",
+  "uuid": "f45530bc-b4af-5bff-89bb-581fa7ee4075",
+  "docker_parameters": "EsetScanAction",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Arguments",
+    "type": "object",
+    "required": ["device_uuids", "task_expire_time", "scan_profile", "cleaning_enabled", "shutdown_enabled"],
+    "properties": {
+      "device_uuids": {
+        "description": "Device UUIDs",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "task_expire_time": {
+        "description": "Task expire time (minutes)",
+        "type": "integer"
+      },
+      "scan_profile": {
+        "description": "Scan profile",
+        "type": "string",
+        "enum": [
+          "InDepth", "Smart", "ContextMenu", "MyProfile", "Custom"
+        ]
+      },
+      "display_name": {
+        "description": "Display name",
+        "type": "string"
+      },
+      "description": {
+        "description": "Description",
+        "type": "string"
+      },
+      "cleaning_enabled": {
+        "description": "Cleaning enabled",
+        "type": "boolean"
+      },
+      "shutdown_enabled": {
+        "description": "Shutdown enabled",
+        "type": "boolean"
+      }
+    }
+  },
+  "results": {}
+}

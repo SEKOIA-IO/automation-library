@@ -1,0 +1,34 @@
+{
+  "name": "EsetIsolateEndpointAction",
+  "description": "Isolate endpoint",
+  "uuid": "ed9f1a65-bb5c-56f6-872f-229b9f7c3188",
+  "docker_parameters": "EsetIsolateEndpointAction",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Arguments",
+    "type": "object",
+    "required": ["device_uuids", "task_expire_time"],
+    "properties": {
+      "device_uuids": {
+        "description": "Device UUIDs",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "task_expire_time": {
+        "description": "Task expire time (minutes)",
+        "type": "integer"
+      },
+      "display_name": {
+        "description": "Display name",
+        "type": "string"
+      },
+      "description": {
+        "description": "Description",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}
