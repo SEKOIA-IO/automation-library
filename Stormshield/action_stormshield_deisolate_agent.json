@@ -2,7 +2,7 @@
     "uuid": "81a8a1dd-fbb8-4add-ae07-83745ab5e981",
     "name": "Deisolate agent",
     "description": "Deisolate an agent",
-    "docker_parameters": "harfanglab_endpoint_agent_deisolation",
+    "docker_parameters": "stormshield_endpoint_agent_deisolation",
     "arguments": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

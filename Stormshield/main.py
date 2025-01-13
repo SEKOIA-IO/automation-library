@@ -8,7 +8,7 @@ from stormshield_module.wait_task import WaitForTaskCompletionAction
 if __name__ == "__main__":
     module = Module()
     module.register(EndpointAgentIsolationAction, "stormshield_endpoint_agent_isolation")
-    module.register(EndpointAgentDeisolationAction, "harfanglab_endpoint_agent_deisolation")
+    module.register(EndpointAgentDeisolationAction, "stormshield_endpoint_agent_deisolation")
     module.register(TerminateProcessAction, "stormshield_terminate_process")
     module.register(QuarantineFileAction, "stormshield_quarantine_file")
     module.register(RestoreQuarantinedFileAction, "stormshield_restore_quarantined_file")
