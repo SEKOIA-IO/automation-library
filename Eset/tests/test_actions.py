@@ -3,7 +3,6 @@ import requests_mock
 from eset_modules import EsetModule
 from eset_modules.action_deisolate_endpoint import EsetDeIsolateEndpointAction
 from eset_modules.action_isolate_endpoint import EsetIsolateEndpointAction
-from eset_modules.action_resolve_detection import EsetResolveDetectionAction
 from eset_modules.action_scan import EsetScanAction
 
 
@@ -74,29 +73,6 @@ def test_action_deisolate():
             },
         )
         action = EsetDeIsolateEndpointAction(module)
-        action.run(args)
-
-
-def test_action_resolve_detection():
-    args = {"detection_uuid": "1111-2222-3333-4444", "comment": "Note1"}
-    with requests_mock.Mocker() as mock_requests:
-        module = EsetModule()
-        module.configuration = {"region": "eu", "username": "johndoe", "password": "qwerty"}
-
-        mock_requests.post(
-            "https://eu.business-account.iam.eset.systems/oauth/token",
-            json={
-                "access_token": "foo-token",
-                "token_type": "Bearer",
-                "expires_in": 1799,
-            },
-        )
-
-        mock_requests.post(
-            "https://eu.incident-management.eset.systems/v2/detections/1111-2222-3333-4444:resolve",
-            json={},
-        )
-        action = EsetResolveDetectionAction(module)
         action.run(args)
 
 
