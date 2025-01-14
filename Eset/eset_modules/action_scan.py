@@ -11,8 +11,8 @@ class EsetScanAction(EsetBaseAction):
 
         display_name: str | None = arguments.get("display_name", "ScanAll")
         description: str | None = arguments.get("description", "OnDemandScanASAP")
-        cleaning_enabled: bool = arguments.get("cleaning_enabled", False)
-        shutdown_enabled: bool = arguments.get("shutdown_enabled", False)
+        cleaning_enabled: bool = arguments["cleaning_enabled"]
+        shutdown_enabled: bool = arguments["shutdown_enabled"]
 
         url = f"https://{self.module.configuration.region}.automation.eset.systems/v1/device_tasks"
 

@@ -77,7 +77,13 @@ def test_action_deisolate():
 
 
 def test_eset_scan_action():
-    args = {"device_uuids": ["1111-2222-3333-4444"], "task_expire_time": 60, "scan_profile": "Smart"}
+    args = {
+        "device_uuids": ["1111-2222-3333-4444"],
+        "task_expire_time": 60,
+        "scan_profile": "Smart",
+        "cleaning_enabled": False,
+        "shutdown_enabled": False,
+    }
     with requests_mock.Mocker() as mock_requests:
         module = EsetModule()
         module.configuration = {"region": "eu", "username": "johndoe", "password": "qwerty"}

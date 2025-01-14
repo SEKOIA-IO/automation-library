@@ -27,4 +27,4 @@ class EsetBaseAction(Action, ABC):
 
     @staticmethod
     def prepare_result(response: requests.Response) -> dict:
-        return {"status_code": response.status_code, "body": response.json() if len(response.content) > 0 else {}}
+        return {"status_code": response.status_code, "body": response.json() if len(response.content) > 0 else ""}
