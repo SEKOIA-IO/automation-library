@@ -3,6 +3,7 @@ import re
 import time
 from datetime import datetime
 from typing import Any
+from statistics import stdev
 
 from cached_property import cached_property
 from dateutil.relativedelta import relativedelta
@@ -40,6 +41,10 @@ class TriageTrigger(Trigger):
     @property
     def exclude_signed(self):
         return self.configuration.get("exclude_signed", False)
+
+    @property
+    def exclude_suspicious_analysis(self):
+        return self.configuration.get("exclude_suspicious_analysis", False)
 
     @property
     def frequency(self):
@@ -133,6 +138,29 @@ class TriageConfigsTrigger(TriageTrigger):
         except (KeyError, TypeError):
             return False
 
+    def check_suspicious_analysis(self, sample_id: str, data: dict) -> bool:
+        try:
+            tags: list[str] = list()
+            tasks: list[dict] = list()
+            tags = data.get("analysis", {}).get("tags")
+            if len(tags) == 0 or "linux" in tags:
+                return False
+            tasks = data.get("tasks", [])
+            scores = []
+            for t in tasks:
+                if t.get("kind") == "behavioral" and "score" in t:
+                    scores.append(t["score"])
+            if len(scores) < 2:
+                self.log(f"PE in {sample_id} report does not have at least two dynamic analysis")
+                return True
+            if stdev(scores) > 2.5:
+                self.log(f"PE in {sample_id} has an important score gap between some dynamic analysis")
+                return True
+            else:
+                return False
+        except (KeyError, TypeError):
+            return False
+
     def get_sample_iocs(self, malware: str, sample_id: str) -> dict:
         sample_iocs: dict[str, list] = dict()
         sample_iocs["sample_c2s"] = list()
@@ -146,6 +174,10 @@ class TriageConfigsTrigger(TriageTrigger):
                 # Check if the first submitted binary is signed then return nothing
                 if sig:
                     self.log(f"PE in {sample_id} report has a trusted signature")
+                    return sample_iocs
+            if self.exclude_suspicious_analysis:
+                suspicious = self.check_suspicious_analysis(sample_id=sample_id, data=data)
+                if suspicious:
                     return sample_iocs
         except ServerError as ex:
             self.log(f"Requests to Triage failed: {str(ex)}", level="error")
