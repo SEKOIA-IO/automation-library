@@ -1,5 +1,5 @@
 {
-    "uuid": "09d13b35-9f4e-4065-b98c-bf265dcee27b",
+    "uuid": "412163a9-cb1a-466b-9094-18e254f35738",
     "name": "Wait for a Stormshield task to complete",
     "description": "Wait until the status of the task is Succeeded or Failed",
     "docker_parameters": "stormshield_wait_for_task_completion",

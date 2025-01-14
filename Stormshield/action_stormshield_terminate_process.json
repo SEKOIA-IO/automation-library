@@ -1,5 +1,5 @@
 {
-    "uuid": "6d948fb8-f738-43d8-b3bb-b3aa847ba4f7",
+    "uuid": "d859980e-509d-432b-bfc0-3105525ac715",
     "name": "Terminate Stormshield process",
     "description": "Terminate a Stormshield process",
     "docker_parameters": "stormshield_terminate_process",

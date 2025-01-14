@@ -1,5 +1,5 @@
 {
-    "uuid": "81a8a1dd-fbb8-4add-ae07-83745ab5e981",
+    "uuid": "4857bd61-2a78-4148-bdf1-6eaf4a9c48c4",
     "name": "Deisolate agent",
     "description": "Deisolate an agent",
     "docker_parameters": "stormshield_endpoint_agent_deisolation",
