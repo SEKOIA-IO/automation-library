@@ -4,8 +4,11 @@ from unittest.mock import MagicMock, Mock, call, patch
 import pytest
 import requests
 import requests_mock
+from pyrate_limiter import Duration, Limiter, RequestRate
 
 from mimecast_modules import MimecastModule
+from mimecast_modules.client import ApiClient
+from mimecast_modules.client.auth import ApiKeyAuthentication
 from mimecast_modules.connector_mimecast_siem import MimecastSIEMConnector, MimecastSIEMWorker
 
 
@@ -24,11 +27,36 @@ def patch_datetime_now(fake_time):
 
 
 @pytest.fixture
-def trigger(data_storage):
+def client_id():
+    return "user123"
+
+
+@pytest.fixture
+def client_secret():
+    return "some-secret"
+
+
+@pytest.fixture
+def rate_limiter():
+    return Limiter(RequestRate(limit=50, interval=Duration.MINUTE * 15))
+
+
+@pytest.fixture
+def api_auth(client_id, client_secret, rate_limiter):
+    return ApiKeyAuthentication(client_id, client_secret, rate_limiter)
+
+
+@pytest.fixture
+def api_client(api_auth, rate_limiter):
+    return ApiClient(api_auth, rate_limiter, rate_limiter)
+
+
+@pytest.fixture
+def trigger(data_storage, client_id, client_secret):
     module = MimecastModule()
     module.configuration = {
-        "client_id": "user123",
-        "client_secret": "some-secret",
+        "client_id": client_id,
+        "client_secret": client_secret,
     }
     trigger = MimecastSIEMConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
@@ -81,7 +109,7 @@ def batch_event_1():
 
 
 def test_fetch_batches(
-    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
 ):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
@@ -107,21 +135,21 @@ def test_fetch_batches(
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
 
-        consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
+        consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
         consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
         mock_time.sleep.assert_called_once_with(44)
 
 
-def test_most_recent_datetime_seen(trigger, patch_datetime_now, fake_time):
-    consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
+def test_most_recent_datetime_seen(trigger, patch_datetime_now, fake_time, api_client):
+    consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
     assert consumer.most_recent_date_seen == fake_time - timedelta(days=1)
 
 
-def test_start_consumers(trigger):
+def test_start_consumers(trigger, api_client):
     with patch("mimecast_modules.connector_mimecast_siem.MimecastSIEMWorker.start") as mock_start:
-        consumers = trigger.start_consumers()
+        consumers = trigger.start_consumers(api_client)
 
         assert consumers is not None
 
@@ -132,7 +160,7 @@ def test_start_consumers(trigger):
         assert mock_start.called
 
 
-def test_supervise_consumers(trigger):
+def test_supervise_consumers(trigger, api_client):
     with patch("mimecast_modules.connector_mimecast_siem.MimecastSIEMWorker.start") as mock_start:
         consumers = {
             "a": Mock(**{"is_alive.return_value": False, "running": True}),
@@ -141,7 +169,7 @@ def test_supervise_consumers(trigger):
             "d": Mock(**{"is_alive.return_value": False, "running": False}),
         }
 
-        trigger.supervise_consumers(consumers)
+        trigger.supervise_consumers(consumers, api_client)
         assert mock_start.call_count == 2
 
 
@@ -160,7 +188,7 @@ def test_stop_consumers(trigger):
 
 
 def test_authentication_failed(
-    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
 ):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
@@ -183,7 +211,7 @@ def test_authentication_failed(
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
 
-        consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
+        consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
         with pytest.raises(requests.exceptions.HTTPError):
             consumer.next_batch()
 
@@ -194,7 +222,7 @@ def test_authentication_failed(
 
 
 def test_permission_denied(
-    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
 ):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
@@ -227,7 +255,7 @@ def test_permission_denied(
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
 
-        consumer = MimecastSIEMWorker(connector=trigger, log_type="process")
+        consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
         with pytest.raises(requests.exceptions.HTTPError):
             consumer.next_batch()
 

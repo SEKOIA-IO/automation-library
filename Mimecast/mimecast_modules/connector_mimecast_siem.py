@@ -28,10 +28,11 @@ class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
 
 
 class MimecastSIEMWorker(Thread):
-    def __init__(self, connector: "MimecastSIEMConnector", log_type: str):
+    def __init__(self, connector: "MimecastSIEMConnector", log_type: str, client: ApiClient):
         super().__init__()
         self.connector = connector
         self.log_type: str = log_type
+        self.client: ApiClient = client
 
         self.context = self.connector.context
         self.from_date = self.most_recent_date_seen
@@ -50,14 +51,6 @@ class MimecastSIEMWorker(Thread):
     @property
     def running(self):
         return not self._stop_event.is_set()
-
-    @cached_property
-    def client(self) -> ApiClient:
-        return ApiClient(
-            auth=self.connector.api_auth,
-            limiter_batch=self.connector.limiter_batch,
-            limiter_default=self.connector.limiter_default,
-        )
 
     @property
     def most_recent_date_seen(self):
@@ -272,26 +265,20 @@ class MimecastSIEMConnector(Connector):
         default_rate = RequestRate(limit=20, interval=Duration.MINUTE)
         self.limiter_default = Limiter(default_rate)
 
-        self.api_auth = ApiKeyAuthentication(
-            client_id=self.module.configuration.client_id,
-            client_secret=self.module.configuration.client_secret,
-            limiter=self.limiter_default,
-        )
-
-    def start_consumers(self) -> dict[str, MimecastSIEMWorker]:
+    def start_consumers(self, client: ApiClient) -> dict[str, MimecastSIEMWorker]:
         consumers = {}
         for consumer_name in self.TYPES_TO_GET:
-            consumers[consumer_name] = MimecastSIEMWorker(connector=self, log_type=consumer_name)
+            consumers[consumer_name] = MimecastSIEMWorker(connector=self, log_type=consumer_name, client=client)
             consumers[consumer_name].start()
 
         return consumers
 
-    def supervise_consumers(self, consumers: dict[str, MimecastSIEMWorker]) -> None:
+    def supervise_consumers(self, consumers: dict[str, MimecastSIEMWorker], client: ApiClient) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
                 self.log(message=f"Restarting `{consumer_name}` consumer", level="info")  # pragma: no cover
 
-                consumers[consumer_name] = MimecastSIEMWorker(connector=self, log_type=consumer_name)
+                consumers[consumer_name] = MimecastSIEMWorker(connector=self, log_type=consumer_name, client=client)
                 consumers[consumer_name].start()
 
     def stop_consumers(self, consumers: dict[str, MimecastSIEMWorker]):
@@ -301,9 +288,20 @@ class MimecastSIEMConnector(Connector):
                 consumer.stop()  # pragma: no cover
 
     def run(self) -> None:
-        consumers = self.start_consumers()
+        api_auth = ApiKeyAuthentication(
+            client_id=self.module.configuration.client_id,
+            client_secret=self.module.configuration.client_secret,
+            limiter=self.limiter_default,
+        )
+        client = ApiClient(
+            auth=api_auth,
+            limiter_batch=self.connector.limiter_batch,
+            limiter_default=self.connector.limiter_default,
+        )
+
+        consumers = self.start_consumers(client)
         while self.running:
-            self.supervise_consumers(consumers)
+            self.supervise_consumers(consumers, client)
             time.sleep(5)
 
         self.stop_consumers(consumers)
