@@ -295,8 +295,8 @@ class MimecastSIEMConnector(Connector):
         )
         client = ApiClient(
             auth=api_auth,
-            limiter_batch=self.connector.limiter_batch,
-            limiter_default=self.connector.limiter_default,
+            limiter_batch=self.limiter_batch,
+            limiter_default=self.limiter_default,
         )
 
         consumers = self.start_consumers(client)

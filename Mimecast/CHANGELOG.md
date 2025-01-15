@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-15 - 1.1.2
+
+### Fixed
+
+- Fix the initialization of the client
+
 ## 2025-01-15 - 1.1.1
 
 ### Fixed
