@@ -1,0 +1,42 @@
+{
+  "name": "AddAlertNoteAction",
+  "description": "Add note to alert",
+  "uuid": "a5495588-295a-5258-828a-ae72499fd9d9",
+  "docker_parameters": "action_add_alert_note",
+  "arguments": {
+    "type": "object",
+    "required": ["base_url", "api_key", "alert_id", "note"],
+    "secrets": ["api_key"],
+    "properties": {
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "format": "uri",
+        "enum": [
+          "https://api.xdr.trendmicro.com",
+          "https://api.au.xdr.trendmicro.com",
+          "https://api.eu.xdr.trendmicro.com",
+          "https://api.in.xdr.trendmicro.com",
+          "https://api.xdr.trendmicro.co.jp",
+          "https://api.sg.xdr.trendmicro.com",
+          "https://api.mea.xdr.trendmicro.com",
+          "https://api.usgov.xdr.trendmicro.com"
+        ],
+        "default": "https://api.xdr.trendmicro.com"
+      },
+      "api_key": {
+        "description": "Trend Micro api_key",
+        "type": "string"
+      },
+      "alert_id": {
+        "description": "Alert ID",
+        "type": "string"
+      },
+      "note": {
+        "description": "Note",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}

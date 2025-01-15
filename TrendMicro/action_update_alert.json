@@ -1,0 +1,61 @@
+{
+  "name": "UpdateAlertAction",
+  "description": "Update alert",
+  "uuid": "acbd08cc-e2d0-5a73-bbaf-ba7c6063c157",
+  "docker_parameters": "action_update_alert",
+  "arguments": {
+    "type": "object",
+    "required": [
+      "base_url",
+      "api_key",
+      "alert_id",
+      "status",
+      "investigation_result"
+    ],
+    "secrets": ["api_key"],
+    "properties": {
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "format": "uri",
+        "enum": [
+          "https://api.xdr.trendmicro.com",
+          "https://api.au.xdr.trendmicro.com",
+          "https://api.eu.xdr.trendmicro.com",
+          "https://api.in.xdr.trendmicro.com",
+          "https://api.xdr.trendmicro.co.jp",
+          "https://api.sg.xdr.trendmicro.com",
+          "https://api.mea.xdr.trendmicro.com",
+          "https://api.usgov.xdr.trendmicro.com"
+        ],
+        "default": "https://api.xdr.trendmicro.com"
+      },
+      "api_key": {
+        "description": "Trend Micro api_key",
+        "type": "string"
+      },
+      "alert_id": {
+        "description": "Alert ID",
+        "type": "string"
+      },
+      "status": {
+        "description": "Status",
+        "type": "string",
+        "enum": ["Open", "In Progress", "Closed"]
+      },
+      "investigation_result": {
+        "description": "Investigation result",
+        "type": "string",
+        "enum": [
+          "No findings",
+          "Noteworthy",
+          "True Positive",
+          "False Positive",
+          "Benign True Positive",
+          "Other Findings"
+        ]
+      }
+    }
+  },
+  "results": {}
+}

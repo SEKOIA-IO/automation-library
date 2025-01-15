@@ -1,0 +1,46 @@
+{
+  "name": "DeIsolateMachineAction",
+  "description": "Deisolate machine",
+  "uuid": "ef06e7c3-de9d-55ab-b250-d550aee579d3",
+  "docker_parameters": "action_deisolate_machine",
+  "arguments": {
+    "type": "object",
+    "required": ["base_url", "api_key", "agent_guids"],
+    "secrets": ["api_key"],
+    "properties": {
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "format": "uri",
+        "enum": [
+          "https://api.xdr.trendmicro.com",
+          "https://api.au.xdr.trendmicro.com",
+          "https://api.eu.xdr.trendmicro.com",
+          "https://api.in.xdr.trendmicro.com",
+          "https://api.xdr.trendmicro.co.jp",
+          "https://api.sg.xdr.trendmicro.com",
+          "https://api.mea.xdr.trendmicro.com",
+          "https://api.usgov.xdr.trendmicro.com"
+        ],
+        "default": "https://api.xdr.trendmicro.com"
+      },
+      "api_key": {
+        "description": "Trend Micro api_key",
+        "type": "string"
+      },
+      "agent_guids": {
+        "description": "Agents GUIDs",
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": {
+        "description": "Description",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}
