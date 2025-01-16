@@ -16,7 +16,7 @@ class TerminateProcessAction(TrendMicroVisionOneBaseAction):
 
         url = f"{base_url}/v3.0/response/endpoints/terminateProcess"
 
-        payload = []
+        payload: list[dict[str, Any]] = []
         for agent_guid in agent_guids:
             item = {"agentGuid": agent_guid, "fileSha1": file_sha1}
             if description:

@@ -14,7 +14,7 @@ class IsolateMachineAction(TrendMicroVisionOneBaseAction):
 
         url = f"{base_url}/v3.0/response/endpoints/isolate"
 
-        payload = []
+        payload: list[dict[str, Any]] = []
         for agent_guid in agent_guids:
             item = {"agentGuid": agent_guid}
 
