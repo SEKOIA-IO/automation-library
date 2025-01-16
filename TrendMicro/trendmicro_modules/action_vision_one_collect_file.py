@@ -15,14 +15,14 @@ class CollectFileAction(TrendMicroVisionOneBaseAction):
 
         url = f"{base_url}/v3.0/response/endpoints/collectFile"
 
-        if description:
-            payload = [
-                {"description": description, "agentGuid": agent_guid, "filePath": file_path}
-                for agent_guid in agent_guids
-            ]
+        payload = []
+        for agent_guid in agent_guids:
+            item = {"agentGuid": agent_guid, "filePath": file_path}
 
-        else:
-            payload = [{"agentGuid": agent_guid, "filePath": file_path} for agent_guid in agent_guids]
+            if description:
+                item["description"] = description
+
+            payload.append(item)
 
         response = client.post(url, json=payload, timeout=60)
         return self.process_response(response)
