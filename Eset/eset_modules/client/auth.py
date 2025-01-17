@@ -65,7 +65,6 @@ class EsetProtectApiAuthentication(AuthBase):
             credentials.access_token = api_credentials["access_token"]
             credentials.expires_at = current_dt + timedelta(seconds=api_credentials["expires_in"])
             self.__api_credentials = credentials
-            print(api_credentials)
 
         return self.__api_credentials
 

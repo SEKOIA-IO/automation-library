@@ -7,7 +7,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Arguments",
     "type": "object",
-    "required": ["device_uuids", "task_expire_time", "scan_profile", "cleaning_enabled", "shutdown_enabled"],
+    "required": ["device_uuids", "scan_profile", "cleaning_enabled", "shutdown_enabled"],
     "properties": {
       "device_uuids": {
         "description": "Device UUIDs",
@@ -15,10 +15,6 @@
         "items": {
           "type": "string"
         }
-      },
-      "task_expire_time": {
-        "description": "Task expire time (minutes)",
-        "type": "integer"
       },
       "scan_profile": {
         "description": "Scan profile",

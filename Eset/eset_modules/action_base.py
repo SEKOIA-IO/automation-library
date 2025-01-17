@@ -21,9 +21,9 @@ class EsetBaseAction(Action, ABC):
         )
 
     @staticmethod
-    def get_expire_time(task_expire_time: int) -> str:
-        expire_time = datetime.now().astimezone(timezone.utc) + timedelta(minutes=task_expire_time)
-        return expire_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    def get_create_time() -> str:
+        create_time = datetime.now().astimezone(timezone.utc)
+        return create_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @staticmethod
     def prepare_result(response: requests.Response) -> dict:

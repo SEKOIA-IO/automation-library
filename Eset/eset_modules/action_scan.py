@@ -6,7 +6,6 @@ from .action_base import EsetBaseAction
 class EsetScanAction(EsetBaseAction):
     def run(self, arguments: Any) -> Any:
         device_uuids: list[str] = arguments["device_uuids"]
-        task_expire_time: int = arguments["task_expire_time"]
         scan_profile: Literal["InDepth", "Smart", "ContextMenu", "MyProfile", "Custom"] = arguments["scan_profile"]
 
         display_name: str | None = arguments.get("display_name", "ScanAll")
@@ -30,7 +29,7 @@ class EsetScanAction(EsetBaseAction):
                 },
                 "description": description,
                 "displayName": display_name,
-                "triggers": [{"manual": {"expireTime": self.get_expire_time(task_expire_time)}}],
+                "triggers": [{"manual": {"createTime": self.get_create_time()}}],
             }
         }
         response = self.client.post(url, json=payload, timeout=60)
