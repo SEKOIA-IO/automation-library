@@ -1,0 +1,29 @@
+{
+  "name": "ForwardMessageAction",
+  "description": null,
+  "uuid": "afb77f00-b727-5549-94e6-9f774af11fa2",
+  "docker_parameters": "action_forward_message",
+  "arguments": {
+    "title": "ApplicationArguments",
+    "type": "object",
+    "required": ["user", "message_id"],
+    "properties": {
+      "user": {
+        "description": "User ID or User principal name",
+        "type": "string"
+      },
+      "message_id": {
+        "description": "Message ID",
+        "type": "string"
+      },
+      "recipients": {
+        "description": "Recipients",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "results": {}
+}
