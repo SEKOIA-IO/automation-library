@@ -1,5 +1,5 @@
 {
-  "uuid": "31d90d77-a480-408b-9ce3-d565ff161231",
+  "uuid": "21d90d77-a480-408b-9ce3-d565ff161231",
   "name": "[Deprecated] Get the results of an analysis",
   "description": "",
   "docker_parameters": "get-results/{uuid}",

@@ -20,7 +20,7 @@ if __name__ == "__main__":
     module.register(SubmitFile, "SubmitFile")
     module.register(GetStatus, "GetStatus")
     module.register(RetrieveAnalysis, "RetrieveAnalysis")
-    
+
     # register deprecated actions
     module.register(DeprecatedRetrieveAnalysis, "get-results/{uuid}")
     module.register(DeprecatedSearchPreviousAnalysis, "get-search/{sha256}")

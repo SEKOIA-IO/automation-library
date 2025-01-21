@@ -1,7 +1,7 @@
 {
   "name": "Search analysis",
   "description": "Search an analysis for a given sha256 input file",
-  "uuid": "f69ebe5f-3dd0-5e97-a3cc-51b46c891efc",
+  "uuid": "25b710b9-a849-46dd-ae47-447c1a350c7b",
   "docker_parameters": "SearchPreviousAnalysis",
   "arguments": {
     "title": "SearchAnalysisBySha256Argument",
