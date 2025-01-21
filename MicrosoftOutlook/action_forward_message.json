@@ -1,6 +1,6 @@
 {
   "name": "ForwardMessageAction",
-  "description": null,
+  "description": "Forward message",
   "uuid": "afb77f00-b727-5549-94e6-9f774af11fa2",
   "docker_parameters": "action_forward_message",
   "arguments": {

@@ -32,5 +32,8 @@
   "name": "Microsoft Outlook",
   "slug": "microsoft-outlook",
   "uuid": "26075aca-cd73-49d2-98f6-d03ac58e773d",
+  "categories": [
+    "Email"
+  ],
   "version": "0.1.0"
 }

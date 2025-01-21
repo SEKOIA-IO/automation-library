@@ -1,6 +1,6 @@
 {
   "name": "UpdateMessageAction",
-  "description": null,
+  "description": "Update message",
   "uuid": "52cd13b7-7fb3-5393-bc65-c988ef346fa3",
   "docker_parameters": "action_update_message",
   "arguments": {
