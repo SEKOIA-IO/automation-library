@@ -1,0 +1,66 @@
+{
+  "name": "[TEST] Analyse a file",
+  "description": "Submit file to Glimps Detect to be analysed",
+  "uuid": "04c3192f-532c-506d-ae0d-452b64d8718d",
+  "docker_parameters": "SubmitFile",
+  "arguments": {
+    "title": "SubmitArgument",
+    "type": "object",
+    "properties": {
+      "file_name": {
+        "title": "File Name",
+        "description": "Name of submitted file",
+        "type": "string"
+      },
+      "bypass_cache": {
+        "title": "Bypass Cache",
+        "description": "If true, file is analyzed, even if a result already exists",
+        "default": false,
+        "type": "boolean"
+      },
+      "user_tags": {
+        "title": "User Tags",
+        "description": "Analysis will be tagged with those tags",
+        "default": [],
+        "type": "array",
+        "items": {}
+      },
+      "description": {
+        "title": "Description",
+        "description": "Description added to the analysis",
+        "type": "string"
+      },
+      "archive_pwd": {
+        "title": "Archive Pwd",
+        "description": "Password used to extract archive",
+        "type": "string"
+      },
+      "push_timeout": {
+        "title": "Push Timeout",
+        "description": "Maximum time (in seconds) to wait for a response when submitting file",
+        "default": 30,
+        "type": "number"
+      }
+    },
+    "required": [
+      "file_name"
+    ]
+  },
+  "results": {
+    "title": "SubmitResponse",
+    "type": "object",
+    "properties": {
+      "status": {
+        "title": "Status",
+        "description": "False means that an error occured",
+        "default": false,
+        "type": "boolean"
+      },
+      "uuid": {
+        "title": "Uuid",
+        "description": "UUID of the submitted analysis",
+        "type": "string"
+      }
+    }
+  }
+}

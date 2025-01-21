@@ -1,0 +1,39 @@
+{
+  "name": "[TEST] Export analysis result",
+  "description": "Export analysis result with the requested layout and format",
+  "uuid": "8691dbce-10fb-5e7c-b0e4-a783f86612f6",
+  "docker_parameters": "ExportSubmission",
+  "arguments": {
+    "title": "ExportSubmissionArguments",
+    "type": "object",
+    "properties": {
+      "uuid": {
+        "title": "Uuid",
+        "description": "Unique analysis identifier",
+        "type": "string"
+      },
+      "format": {
+        "title": "Format",
+        "description": "Export format",
+        "type": "string"
+      },
+      "layout": {
+        "title": "Layout",
+        "description": "Export layout",
+        "type": "string"
+      },
+      "is_full": {
+        "title": "Is Full",
+        "description": "Export full analysis or summarized",
+        "default": false,
+        "type": "string"
+      }
+    },
+    "required": [
+      "uuid",
+      "format",
+      "layout"
+    ]
+  },
+  "results": {}
+}
