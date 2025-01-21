@@ -1,5 +1,5 @@
 {
-  "uuid": "ef64e033-6d2c-4883-9ef3-0c42b75c7864",
+  "uuid": "28608954-4683-49fe-a494-333d3254720b",
   "name": "[Deprecated] Search previous analysis",
   "description": "",
   "docker_parameters": "get-search/{sha256}",
