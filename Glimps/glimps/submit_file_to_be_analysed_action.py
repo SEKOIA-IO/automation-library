@@ -32,8 +32,9 @@ class WaitForFile(GLIMPSAction):
     results_model = AnalysisResponse
 
     def run(self, arguments: WaitForResultArgument) -> AnalysisResponse:
-        raw_analysis = self.gdetect_client.waitfor(
-            self._data_path.joinpath(arguments.file_name),
+        raw_analysis = self.gdetect_client.waitfor_reader(
+            arguments.file_name,
+            self._data_path.joinpath(arguments.file_name).open("rb"),
             bypass_cache=arguments.bypass_cache,
             pull_time=arguments.pull_time,
             push_timeout=arguments.push_timeout,
