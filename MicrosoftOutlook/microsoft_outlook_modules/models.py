@@ -6,12 +6,12 @@ class MicrosoftOutlookModuleConfiguration(BaseModel):
     client_id: str = Field(
         ...,
         description="Client ID. An application needs to be created in the Azure Portal and assigned relevant "
-                    "permissions. Its Client ID should then be used in this configuration.",
+        "permissions. Its Client ID should then be used in this configuration.",
         # noqa: E501
     )
     client_secret: str = Field(
         secret=True,
         description="Client Secret associated with the registered application. Admin Consent has to be granted to the "
-                    "application for it to work.",
+        "application for it to work.",
         # noqa: E501
     )
