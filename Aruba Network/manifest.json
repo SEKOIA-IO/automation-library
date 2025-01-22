@@ -10,5 +10,8 @@
   "name": "Aruba Network",
   "uuid": "278bdd50-d8d1-4d0a-9a30-9b23494a8dfa",
   "version": "1.0.0",
-  "slug": "aruba-network"
+  "slug": "aruba-network",
+  "categories": [
+	"Network"
+  ]
 }

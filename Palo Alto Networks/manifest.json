@@ -10,5 +10,6 @@
   "name": "Palo Alto Networks",
   "uuid": "64a3b634-605d-4d69-a203-3a53c0474cae",
   "version": "1.0.0",
-  "slug": "palo-alto-networks"
+  "slug": "palo-alto-networks",
+  "categories": ["Network"]
 }

@@ -10,5 +10,6 @@
   "name": "Ekinops",
   "uuid": "7441d91f-b553-41e2-b0f8-98ad78502f42",
   "version": "1.0.0",
-  "slug": "ekinops"
+  "slug": "ekinops",
+  "categories": ["Network"]
 }

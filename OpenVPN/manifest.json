@@ -10,5 +10,6 @@
   "name": "OpenVPN",
   "uuid": "e5a9020f-fe50-4514-9962-048b6fa3dfef",
   "version": "1.0.0",
-  "slug": "openvpn"
+  "slug": "openvpn",
+  "categories": ["Applicative", "Network"]
 }

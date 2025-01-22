@@ -10,5 +10,6 @@
   "name": "Tanium",
   "uuid": "b788522c-fa2f-4742-ab96-b37ff770e0cb",
   "version": "1.0.0",
-  "slug": "tanium"
+  "slug": "tanium",
+  "categories": ["Endpoint"]
 }

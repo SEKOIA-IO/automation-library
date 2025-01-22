@@ -10,5 +10,6 @@
   "name": "Pradeo",
   "uuid": "97666d3d-c5fe-4946-a910-fa199934ad21",
   "version": "1.0.0",
-  "slug": "pradeo"
+  "slug": "pradeo",
+  "categories": ["Endpoint"]
 }

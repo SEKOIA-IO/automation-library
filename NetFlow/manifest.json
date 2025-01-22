@@ -10,5 +10,6 @@
   "name": "NetFlow",
   "uuid": "5a9d0514-0ff0-46c7-bc24-7977d3842fe5",
   "version": "1.0.0",
-  "slug": "netflow"
+  "slug": "netflow",
+  "categories": ["Network"]
 }

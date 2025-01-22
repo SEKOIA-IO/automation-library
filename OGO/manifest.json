@@ -10,5 +10,6 @@
   "name": "OGO",
   "uuid": "ab4b0dc2-3358-4dff-ac89-36459646b30b",
   "version": "1.0.0",
-  "slug": "ogo"
+  "slug": "ogo",
+  "categories": ["Network"]
 }

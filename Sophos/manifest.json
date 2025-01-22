@@ -40,6 +40,6 @@
   "slug": "sophos",
   "version": "1.17.2",
   "categories": [
-    "Endpoint"
+    "Endpoint", "Network"
   ]
 }

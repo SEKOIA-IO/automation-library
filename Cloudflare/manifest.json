@@ -10,5 +10,6 @@
   "name": "Cloudflare",
   "uuid": "58789ce1-4cc6-420f-bc9e-7a443417707c",
   "version": "1.0.0",
-  "slug": "cloudflare"
+  "slug": "cloudflare",
+  "categories": ["Network"]
 }

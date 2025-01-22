@@ -10,5 +10,6 @@
   "name": "Unbound",
   "uuid": "ddfada96-2d86-428b-9e3b-3c873921692f",
   "version": "1.0.0",
-  "slug": "unbound"
+  "slug": "unbound",
+  "categories": ["Applicative", "Network"]
 }

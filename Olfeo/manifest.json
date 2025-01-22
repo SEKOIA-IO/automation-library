@@ -10,5 +10,6 @@
   "name": "Olfeo",
   "uuid": "f74ed0e8-a4e2-43e3-9bfc-a846c2c7d612",
   "version": "1.0.0",
-  "slug": "olfeo"
+  "slug": "olfeo",
+  "categories": ["Network"]
 }
