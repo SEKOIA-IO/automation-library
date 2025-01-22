@@ -2,7 +2,6 @@ from typing import Type
 
 import pytest
 import requests_mock
-from sekoia_automation.action import Action
 
 from microsoft_outlook_modules import MicrosoftOutlookModule
 from microsoft_outlook_modules.action_base import MicrosoftGraphActionBase

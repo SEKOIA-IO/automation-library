@@ -28,6 +28,9 @@ include = '\.pyi?$'
 profile = "black"
 line_length = 119
 
+[tool.mypy]
+exclude = ["tests/*"]
+
 [tool.coverage.run]
 omit = [
     "tests/*",
