@@ -80,7 +80,8 @@
       },
       "importance": {
         "description": "Message importance",
-        "type": "string"
+        "type": "string",
+        "enum": ["Low", "Normal", "High"]
       }
     }
   },
