@@ -1,0 +1,16 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "BeyondTrust",
+    "type": "object",
+    "properties": {}
+  },
+  "description": "BeyondTrust is a cybersecurity firm specializing in identity and access management solutions, focusing on protecting privileged accounts and securing remote access.",
+  "name": "BeyondTrust",
+  "slug": "beyondtrust",
+  "categories": [
+    "Endpoint"
+  ],
+  "uuid": "ab96c1e6-20b9-4589-aa9a-43d84043d857",
+  "version": "0.1.0"
+}
