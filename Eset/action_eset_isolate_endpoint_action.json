@@ -1,6 +1,6 @@
 {
-  "name": "EsetIsolateEndpointAction",
-  "description": "Isolate endpoint",
+  "name": "Isolate endpoints",
+  "description": "Isolate a list of endpoints",
   "uuid": "ed9f1a65-bb5c-56f6-872f-229b9f7c3188",
   "docker_parameters": "EsetIsolateEndpointAction",
   "arguments": {
@@ -10,18 +10,18 @@
     "required": ["device_uuids"],
     "properties": {
       "device_uuids": {
-        "description": "Device UUIDs",
+        "description": "The identifiers of the endpoints to isolate",
         "type": "array",
         "items": {
           "type": "string"
         }
       },
       "display_name": {
-        "description": "Display name",
+        "description": "A name for the action",
         "type": "string"
       },
       "description": {
-        "description": "Description",
+        "description": "The reason of the isolation",
         "type": "string"
       }
     }
