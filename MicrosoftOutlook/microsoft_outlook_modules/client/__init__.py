@@ -1,7 +1,7 @@
 import requests
 from requests_ratelimiter import LimiterAdapter
 
-from .auth import ApiKeyAuthentication
+from .auth import GraphApiAuthentication
 from .retry import Retry
 
 
