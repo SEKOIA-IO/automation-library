@@ -1,6 +1,6 @@
 {
-  "name": "ScanMachineAction",
-  "description": "Scan machine",
+  "name": "Init a scan",
+  "description": "Initialize a scan on the endpoints",
   "uuid": "dc8e5ee0-3bd7-57d7-bcf2-e9f313353d3c",
   "docker_parameters": "action_scan_machine",
   "arguments": {
@@ -29,7 +29,7 @@
         "type": "string"
       },
       "agent_guids": {
-        "description": "Agents GUIDs",
+        "description": "The identifiers of the endpoints to scan",
         "type": "array",
         "minItems": 1,
         "items": {
@@ -37,7 +37,7 @@
         }
       },
       "description": {
-        "description": "Description",
+        "description": "The reason of the action",
         "type": "string"
       }
     }
