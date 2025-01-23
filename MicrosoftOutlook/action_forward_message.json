@@ -1,0 +1,33 @@
+{
+  "name": "Forward a message",
+  "description": "Forward a message from the user's mailbox",
+  "uuid": "afb77f00-b727-5549-94e6-9f774af11fa2",
+  "docker_parameters": "action_forward_message",
+  "arguments": {
+    "title": "ApplicationArguments",
+    "type": "object",
+    "required": ["user", "message_id", "recipients"],
+    "properties": {
+      "user": {
+        "description": "The identifier or the principal name of the user",
+        "type": "string"
+      },
+      "message_id": {
+        "description": "The identifier of the message to forward",
+        "type": "string"
+      },
+      "comment": {
+        "description": "A comment to include",
+        "type": "string"
+      },
+      "recipients": {
+        "description": "The list of recipients of the forwarding",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "results": {}
+}
