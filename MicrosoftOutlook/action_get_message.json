@@ -1,6 +1,6 @@
 {
-  "name": "GetMessageAction",
-  "description": "Get message",
+  "name": "Get a message",
+  "description": "Get the detail of a message from the user's mailbox",
   "uuid": "dbff60fd-58a3-5b62-8138-84c7db955243",
   "docker_parameters": "action_get_message",
   "arguments": {
@@ -9,11 +9,11 @@
     "required": ["user", "message_id"],
     "properties": {
       "user": {
-        "description": "User ID or User principal name",
+        "description": "The identifier or the principal name of the user",
         "type": "string"
       },
       "message_id": {
-        "description": "Message ID",
+        "description": "The identifier of the message to get",
         "type": "string"
       }
     }

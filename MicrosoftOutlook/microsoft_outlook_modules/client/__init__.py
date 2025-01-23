@@ -15,7 +15,7 @@ class ApiClient(requests.Session):
         ratelimit_per_minute: int = 45,
     ):
         super().__init__()
-        self.auth = ApiKeyAuthentication(
+        self.auth = GraphApiAuthentication(
             app_id=app_id,
             app_secret=app_secret,
             tenant_id=tenant_id,

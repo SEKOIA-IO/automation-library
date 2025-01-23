@@ -1,6 +1,6 @@
 {
-  "name": "UpdateMessageAction",
-  "description": "Update message",
+  "name": "Update a message",
+  "description": "Update a message in the user's mailbox",
   "uuid": "52cd13b7-7fb3-5393-bc65-c988ef346fa3",
   "docker_parameters": "action_update_message",
   "arguments": {
@@ -34,52 +34,52 @@
     ],
     "properties": {
       "user": {
-        "description": "User ID or User principal name",
+        "description": "The identifier or the principal name of the user",
         "type": "string"
       },
       "message_id": {
-        "description": "Message ID",
+        "description": "The identifier of the message to delete",
         "type": "string"
       },
       "content": {
-        "description": "Message content",
+        "description": "The new content of the message",
         "type": "string"
       },
       "recipients": {
-        "description": "Recipients",
+        "description": "The new list of recipients",
         "type": "array",
         "items": {
           "type": "string"
         }
       },
       "bcc": {
-        "description": "BCC recipients",
+        "description": "The new list of BCC recipients",
         "type": "array",
         "items": {
           "type": "string"
         }
       },
       "cc": {
-        "description": "CC recipients",
+        "description": "The new list of CC recipients",
         "type": "array",
         "items": {
           "type": "string"
         }
       },
       "sender": {
-        "description": "Sender",
+        "description": "The new sender of the message",
         "type": "string"
       },
       "from": {
-        "description": "Mailbox owner",
+        "description": "The new mailbox owner of the message (from header)",
         "type": "string"
       },
       "subject": {
-        "description": "Message subject",
+        "description": "The new subject of the message",
         "type": "string"
       },
       "importance": {
-        "description": "Message importance",
+        "description": "The importance of the message",
         "type": "string",
         "enum": ["Low", "Normal", "High"]
       }

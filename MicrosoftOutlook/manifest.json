@@ -4,17 +4,17 @@
     "type": "object",
     "properties": {
       "tenant_id": {
-        "title": "Tenant Id",
+        "title": "Directory (tenant) ID",
         "description": "ID of the Azure AD tenant",
         "type": "string"
       },
       "client_id": {
-        "title": "Client Id",
+        "title": "Application (client) ID",
         "description": "Client ID. An application needs to be created in the Azure Portal and assigned relevant permissions. Its Client ID should then be used in this configuration.",
         "type": "string"
       },
       "client_secret": {
-        "title": "Client Secret",
+        "title": "The value of the client secret",
         "description": "Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",
         "type": "string"
       }

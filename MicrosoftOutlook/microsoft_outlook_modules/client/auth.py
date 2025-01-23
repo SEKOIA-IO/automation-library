@@ -17,7 +17,7 @@ class MicrosoftDefenderCredentials:
         return f"{self.token_type.title()} {self.access_token}"
 
 
-class ApiKeyAuthentication(AuthBase):
+class GraphApiAuthentication(AuthBase):
     def __init__(self, app_id: str, app_secret: str, tenant_id: str, ratelimit_per_minute: int):
         self.__app_id = app_id
         self.__app_secret = app_secret

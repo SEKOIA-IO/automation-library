@@ -1,6 +1,6 @@
 {
-  "name": "ForwardMessageAction",
-  "description": "Forward message",
+  "name": "Forward a message",
+  "description": "Forward a message from the user's mailbox",
   "uuid": "afb77f00-b727-5549-94e6-9f774af11fa2",
   "docker_parameters": "action_forward_message",
   "arguments": {
@@ -9,15 +9,15 @@
     "required": ["user", "message_id"],
     "properties": {
       "user": {
-        "description": "User ID or User principal name",
+        "description": "The identifier or the principal name of the user",
         "type": "string"
       },
       "message_id": {
-        "description": "Message ID",
+        "description": "The identifier of the message to forward",
         "type": "string"
       },
       "recipients": {
-        "description": "Recipients",
+        "description": "The list of recipients of the forwarding",
         "type": "array",
         "items": {
           "type": "string"
