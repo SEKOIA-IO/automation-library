@@ -11,5 +11,7 @@
   "uuid": "860b0ef2-ac9f-4736-a1c9-1cb66c04eef9",
   "version": "1.0.0",
   "slug": "ivanti",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

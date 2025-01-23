@@ -11,5 +11,7 @@
   "uuid": "a4b5ca63-c146-4658-ac3f-e24a018414bc",
   "version": "1.0.0",
   "slug": "fortinet",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

@@ -12,6 +12,7 @@
   "version": "1.0.0",
   "slug": "broadcom",
   "categories": [
-	"Endpoint", "Network"
+    "Endpoint",
+    "Network"
   ]
 }

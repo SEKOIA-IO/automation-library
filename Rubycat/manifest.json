@@ -11,5 +11,7 @@
   "uuid": "af50dc08-b4ec-4c6c-a730-10716bcdd695",
   "version": "1.0.0",
   "slug": "rubycat",
-  "categories": ["IAM"]
+  "categories": [
+    "IAM"
+  ]
 }

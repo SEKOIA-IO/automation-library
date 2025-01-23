@@ -11,5 +11,7 @@
   "uuid": "098a9876-36e7-4d67-b253-f1f91b8f3b53",
   "version": "1.0.0",
   "slug": "citrix",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

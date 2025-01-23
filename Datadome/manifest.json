@@ -11,5 +11,7 @@
   "uuid": "23052fab-0b25-4d11-af60-137d11300992",
   "version": "1.0.0",
   "slug": "datadome",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

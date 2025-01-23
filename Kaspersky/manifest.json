@@ -11,5 +11,7 @@
   "uuid": "c76d56f4-706c-4f9e-ae51-dc3f2cefe67b",
   "version": "1.0.0",
   "slug": "kaspersky",
-  "categories": ["Endpoint"]
+  "categories": [
+    "Endpoint"
+  ]
 }

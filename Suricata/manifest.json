@@ -11,5 +11,8 @@
   "uuid": "13e6390c-f94d-440b-addd-cd1da6b796dc",
   "version": "1.0.0",
   "slug": "suricata",
-  "categories": ["Applicative", "Network"]
+  "categories": [
+    "Applicative",
+    "Network"
+  ]
 }

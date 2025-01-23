@@ -11,5 +11,7 @@
   "uuid": "53e51955-a3d3-410f-ad12-d110a8142c0d",
   "version": "1.0.0",
   "slug": "infoblox",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

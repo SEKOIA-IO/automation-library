@@ -11,5 +11,7 @@
   "uuid": "759bcde6-01eb-4d3c-a5ed-0944e69760b6",
   "version": "1.0.0",
   "slug": "juniper",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

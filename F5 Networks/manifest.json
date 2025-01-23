@@ -11,5 +11,7 @@
   "uuid": "04fe0c00-78e9-4fa9-a6d8-38ca190d9dad",
   "version": "1.0.0",
   "slug": "f5-networks",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

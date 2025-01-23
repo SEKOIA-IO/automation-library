@@ -11,5 +11,7 @@
   "uuid": "12e455fe-7249-11ed-a1eb-0242ac120002",
   "version": "1.0.0",
   "slug": "netwrix",
-  "categories": ["IAM"]
+  "categories": [
+    "IAM"
+  ]
 }

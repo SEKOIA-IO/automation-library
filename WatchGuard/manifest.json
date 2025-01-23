@@ -11,5 +11,7 @@
   "uuid": "b3ab7e1c-c6cd-4bcd-90cd-b3f7a1e09891",
   "version": "1.0.0",
   "slug": "watchguard",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

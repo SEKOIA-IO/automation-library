@@ -11,5 +11,7 @@
   "uuid": "65d0b877-3e3c-4ce8-b184-1db084a1acd3",
   "version": "1.0.0",
   "slug": "gatewatcher",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

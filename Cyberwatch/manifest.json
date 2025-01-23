@@ -11,5 +11,7 @@
   "uuid": "e05b711d-3e8d-4ccb-ad91-93fa4f948492",
   "version": "1.0.0",
   "slug": "cyberwatch",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

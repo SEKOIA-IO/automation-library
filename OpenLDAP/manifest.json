@@ -11,5 +11,8 @@
   "uuid": "8098db1d-071c-4d07-b5a0-3bcad7021463",
   "version": "1.0.0",
   "slug": "openldap",
-  "categories": ["Applicative", "IAM"]
+  "categories": [
+    "Applicative",
+    "IAM"
+  ]
 }

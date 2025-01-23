@@ -11,5 +11,7 @@
   "uuid": "befdae89-f0c2-407a-b3a4-0d38eb3b1cfa",
   "version": "1.0.0",
   "slug": "systancia",
-  "categories": ["IAM"]
+  "categories": [
+    "IAM"
+  ]
 }

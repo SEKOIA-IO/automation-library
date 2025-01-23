@@ -11,5 +11,7 @@
   "uuid": "06e2d4bd-e1e1-4061-9deb-184e9bcd5245",
   "version": "1.0.0",
   "slug": "daspren",
-  "categories": ["Network"]
+  "categories": [
+    "Network"
+  ]
 }

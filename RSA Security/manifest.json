@@ -11,5 +11,7 @@
   "uuid": "ef6cec98-5616-43cb-bb55-9445316b36f2",
   "version": "1.0.0",
   "slug": "rsa-securid",
-  "categories": ["IAM"]
+  "categories": [
+    "IAM"
+  ]
 }
