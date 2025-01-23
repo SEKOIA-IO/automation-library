@@ -1,0 +1,45 @@
+{
+  "name": "Deisolate endpoints",
+  "description": "Deisolate a list of endpoints",
+  "uuid": "f683d1a5-e9ea-59b6-9e2b-d145a8602642",
+  "docker_parameters": "EsetDeIsolateEndpointAction",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Arguments",
+    "type": "object",
+    "required": ["device_uuids"],
+    "properties": {
+      "device_uuids": {
+        "description": "The identifiers of the endpoints to deisolate",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "display_name": {
+        "description": "A name for the action",
+        "type": "string"
+      },
+      "description": {
+        "description": "The reason of the deisolation",
+        "type": "string"
+      }
+    }
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "status_code": {
+        "description": "HTTP status code",
+        "type": "integer"
+      },
+      "body": {
+        "description": "API Response",
+        "type": "object"
+      }
+    },
+    "required": ["status_code", "body"],
+    "title": "Results",
+    "type": "object"
+  }
+}
