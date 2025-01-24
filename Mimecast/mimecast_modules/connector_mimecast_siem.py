@@ -68,10 +68,10 @@ class MimecastSIEMWorker(Thread):
         # parse the most recent date seen
         most_recent_date_seen = isoparse(most_recent_date_seen_str)
 
-        # We don't retrieve messages older than one day
-        one_day_ago = now - timedelta(days=1)
-        if most_recent_date_seen < one_day_ago:
-            most_recent_date_seen = one_day_ago
+        # We don't retrieve messages older than 7 days
+        seven_days_ago = now - timedelta(days=7)
+        if most_recent_date_seen < seven_days_ago:
+            most_recent_date_seen = seven_days_ago
 
         return most_recent_date_seen
 
