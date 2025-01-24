@@ -68,10 +68,10 @@ class MimecastSIEMWorker(Thread):
         # parse the most recent date seen
         most_recent_date_seen = isoparse(most_recent_date_seen_str)
 
-        # We don't retrieve messages older than one day
-        one_day_ago = now - timedelta(days=7)
-        if most_recent_date_seen < one_day_ago:
-            most_recent_date_seen = one_day_ago
+        # We don't retrieve messages older than 7 days
+        seven_days_ago = now - timedelta(days=7)
+        if most_recent_date_seen < seven_days_ago:
+            most_recent_date_seen = seven_days_ago
 
         return most_recent_date_seen
 
@@ -93,11 +93,16 @@ class MimecastSIEMWorker(Thread):
         return f"{base}.{ms}Z"
 
     def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
+        result_from_date = from_date.astimezone(timezone.utc)
+        one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        if result_from_date < one_week_ago:
+            result_from_date = one_week_ago
+
         url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
         params: dict[str, int | str] = {
             "pageSize": self.connector.configuration.chunk_size,
             "type": self.log_type,
-            "dateRangeStartsAt": from_date.strftime("%Y-%m-%d"),
+            "dateRangeStartsAt": result_from_date.strftime("%Y-%m-%d"),
         }
         response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
