@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "Squid is an open-source caching and forwarding HTTP proxy server that improves web performance and reduces bandwidth usage. It supports various protocols and provides content filtering and access control capabilities.",
   "name": "Squid",
   "uuid": "ddd506ea-2da4-4803-8ee6-dd94fcd92d5f",
   "version": "1.0.0",

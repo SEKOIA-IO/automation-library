@@ -21,7 +21,7 @@
       "api_user_secret"
     ]
   },
-  "description": "[Censys](https://censys.io/) is Cybersecurity company discovering and inventoring assets exposed on Internet. The Censys API provides programmatic access to the same data accessible through the web interface",
+  "description": "Censys is Cybersecurity company discovering and inventoring assets exposed on Internet. The Censys API provides programmatic access to the same data accessible through the web interface",
   "name": "Censys",
   "uuid": "48a7eb68-f319-4498-b3ed-461d690e6d05",
   "slug": "censys",

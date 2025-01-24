@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "ISC DHCP is a widely-used open-source software suite developed by the Internet Systems Consortium for managing and automating IP address allocation through the Dynamic Host Configuration Protocol (DHCP). It facilitates network management by assigning IP addresses and configurations to devices on a network.",
   "name": "ISC DHCP",
   "uuid": "143659e6-df43-4c3e-8bfc-a1e4f1776b56",
   "version": "1.0.0",

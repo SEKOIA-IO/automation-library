@@ -25,7 +25,7 @@
       "aws_secret_access_key"
     ]
   },
-  "description": "This module interacts with the SentinelOne DeepVisibility using AWS S3",
+  "description": "SentinelOne is a cybersecurity company that provides autonomous endpoint protection through AI-powered threat detection and response. This module collects telemetry from SentinelOne DeepVisibility (through AWS S3)",
   "name": "SentinelOneDeepVisibility",
   "uuid": "7282a633-0fc2-4b27-a185-3c94f5a3a36f",
   "slug": "sentinelonedeepvisibility",

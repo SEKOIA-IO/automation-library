@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "Suricata is an open-source network threat detection engine providing intrusion detection, intrusion prevention, and network security monitoring. It analyzes network traffic in real-time using advanced multi-threading capabilities.",
   "name": "Suricata",
   "uuid": "13e6390c-f94d-440b-addd-cd1da6b796dc",
   "version": "1.0.0",

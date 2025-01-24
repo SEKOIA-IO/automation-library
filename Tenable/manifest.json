@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "Tenable is a cybersecurity company specializing in vulnerability management and risk assessment solutions, known for its flagship product, Nessus. It helps organizations identify, assess, and prioritize security risks across their IT infrastructure.",
   "name": "Tenable",
   "uuid": "0ef9b9af-8a95-455a-bf2c-6268af6bb5a5",
   "version": "1.0.0",
