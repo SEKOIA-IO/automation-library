@@ -1,143 +1,206 @@
-import random
-import uuid
-from pathlib import Path
+"""Additional programmatic configuration for pytest."""
+
+import asyncio
+import time
 from shutil import rmtree
 from tempfile import mkdtemp
-from unittest.mock import Mock
+from typing import Any, List
+from unittest.mock import AsyncMock
 
 import pytest
-from management.mgmtsdk_v2.entities.activity import Activity
-from management.mgmtsdk_v2.entities.threat import Threat
+from faker import Faker
 from sekoia_automation import constants
 
-from sentinelone_module.base import SentinelOneConfiguration, SentinelOneModule
-from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
-from sentinelone_module.logs.connector import (
-    SentinelOneActivityLogsConsumer,
-    SentinelOneLogsConnector,
-    SentinelOneThreatLogsConsumer,
-)
+from wiz import WizModule, WizModuleConfig
+from wiz.client.gql_client import WizGqlClient
+from wiz.client.token_refresher import WizToken, WizTokenRefresher
+
+
+@pytest.fixture(scope="session")
+def faker_locale() -> List[str]:
+    """
+    Configure Faker to use correct locale.
+
+    Returns:
+        List[str]:
+    """
+    return ["en"]
+
+
+@pytest.fixture(scope="session")
+def faker_seed() -> int:
+    """
+    Configure Faker to use correct seed.
+
+    Returns:
+        int:
+    """
+    return 123456
+
+
+@pytest.fixture(scope="session")
+def session_faker(faker_locale: List[str], faker_seed: int) -> Faker:
+    """
+    Configure session lvl Faker to use correct seed and locale.
+
+    Args:
+        faker_locale: List[str]
+        faker_seed: int
+
+    Returns:
+        Faker:
+    """
+    instance = Faker(locale=faker_locale)
+    instance.seed_instance(seed=faker_seed)
+
+    return instance
 
 
 @pytest.fixture
-def symphony_storage():
+def http_token(session_faker) -> WizToken:
+    """
+    Generate WizToken.
+
+    Args:
+        session_faker: Faker
+
+    Returns:
+        HttpToken:
+    """
+    return WizToken(
+        access_token=session_faker.word(),
+        refresh_token=session_faker.word(),
+        token_type=session_faker.word(),
+        expires_in=5,  # in tests lets assume token expires in 5 seconds
+        created_at=time.time(),
+    )
+
+
+@pytest.fixture
+def symphony_storage() -> str:
+    """
+    Fixture for symphony temporary storage.
+
+    Yields:
+        str:
+    """
     original_storage = constants.DATA_STORAGE
     constants.DATA_STORAGE = mkdtemp()
 
-    yield Path(constants.DATA_STORAGE)
+    yield constants.DATA_STORAGE
 
     rmtree(constants.DATA_STORAGE)
-    constants.DATA_STORAGE = original_storage
+    constants.SYMPHONY_STORAGE = original_storage
 
 
 @pytest.fixture(scope="session")
-def sentinelone_hostname():
-    return "abcdef.sentinelone.net"
+def event_loop():
+    """
+    Create event loop for pytest.mark.asyncio.
+
+    Yields:
+        loop:
+    """
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+
+    yield loop
+
+    loop.close()
 
 
-@pytest.fixture(scope="session")
-def sentinelone_module(sentinelone_hostname):
-    module = SentinelOneModule()
-    module.configuration = {"hostname": sentinelone_hostname, "api_token": "1234567890"}
+@pytest.fixture
+def auth_url(session_faker) -> str:
+    return session_faker.uri()
+
+
+@pytest.fixture
+def tenant_url(session_faker) -> str:
+    return session_faker.uri()
+
+
+@pytest.fixture
+def wiz_gql_client(session_faker, auth_url, tenant_url) -> WizGqlClient:
+    client_id = session_faker.word()
+    client_secret = session_faker.word()
+
+    gql_client = WizGqlClient.create(client_id, client_secret, tenant_url)
+    gql_client.token_refresher = WizTokenRefresher(client_id, client_secret, auth_url)
+
+    return gql_client
+
+
+@pytest.fixture
+def module(symphony_storage, tenant_url, session_faker) -> WizModule:
+    module = WizModule()
+    module.configuration = WizModuleConfig(
+        client_id=session_faker.word(),
+        client_secret=session_faker.word(),
+        tenant_url=tenant_url,
+    )
+
     return module
 
 
 @pytest.fixture
-def connector(symphony_storage, sentinelone_module):
-    connector = SentinelOneLogsConnector(module=sentinelone_module, data_path=symphony_storage)
-    connector.configuration = {"intake_key": "intake_key", "frequency": 60}
-
-    connector.log = Mock()
-    connector.push_events_to_intakes = Mock(return_value=[])
-
-    yield connector
-
-
-@pytest.fixture
-def activity_1():
-    activity = Activity()
-    activity.accountId = "12345654789"
-    activity.accountName = "SERVICES NETWORK SECURITY (SNS France)"
-    activity.activityType = 5020
-    activity.agentId = None
-    activity.agentUpdatedVersion = None
-    activity.comments = None
-    activity.createdAt = "2021-03-09T13:03:22.026416Z"
-    activity.description = "<ManagementUser with id=, email='foo@bar.fr', user_scope='account'>"
-    activity.groupId = None
-    activity.groupName = None
-    activity.hash = None
-    activity.id = str(random.randint(0, 1000000))
-    activity.osFamily = None
-    activity.primaryDescription = "The management user Support SNS created Sekoia.io site."
-    activity.secondaryDescription = None
-    activity.siteId = "12345654789"
-    activity.siteName = "Sekoia.io"
-    activity.threatId = None
-    activity.updatedAt = "2021-03-09T13:03:22.021752Z"
-    activity.userId = "12345654789"
-    yield activity
+def alerts_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "issuesV2": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "createdAt": session_faker.date_time().isoformat(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": False,
+            },
+        }
+    }
 
 
 @pytest.fixture
-def activity_2():
-    activity = Activity()
-    activity.accountId = "12345654789"
-    activity.accountName = "SERVICES NETWORK SECURITY (SNS France)"
-    activity.activityType = 23
-    activity.agentId = None
-    activity.agentUpdatedVersion = None
-    activity.comments = None
-    activity.createdAt = "2021-03-09T15:41:54.448862Z"
-    activity.description = "<ManagementUser with id=, email='foo@bar.fr', user_scope='account'>"
-    activity.groupId = None
-    activity.groupName = None
-    activity.hash = None
-    activity.id = str(random.randint(0, 1000000))
-    activity.osFamily = None
-    activity.primaryDescription = "The management user Support SNS added user as Admin."
-    activity.secondaryDescription = None
-    activity.siteId = "12345654789"
-    activity.siteName = "Sekoia.io"
-    activity.threatId = None
-    activity.updatedAt = "2021-03-09T15:41:54.425005Z"
-    activity.userId = "12345654789"
-    yield activity
+def alerts_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "issuesV2": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "createdAt": session_faker.date_time().isoformat(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": True,
+            },
+        }
+    }
 
 
 @pytest.fixture
-def threat_1():
-    threat = dict(
-        createdAt="2021-03-09T13:03:22.026416Z",
-        id=(str(random.randint(0, 1000000)),),
-    )
-    yield threat
+def mock_push_data_to_intakes() -> AsyncMock:
+    """
+    Mocked push_data_to_intakes method.
 
+    Returns:
+        AsyncMock:
+    """
 
-@pytest.fixture
-def threat_2():
-    threat = dict(
-        createdAt="2021-03-09T15:41:54.448862Z",
-        id=(str(random.randint(0, 1000000)),),
-    )
-    yield threat
+    def side_effect_return_input(events: list[str]) -> list[str]:
+        """
+        Return input value.
 
+        Uses in side_effect to return input value from mocked function.
 
-@pytest.fixture
-def activity_consumer(connector):
-    consumer = SentinelOneActivityLogsConsumer(connector)
-    consumer.management_client = Mock()
-    consumer.start = Mock()
-    consumer.is_alive = Mock(return_value=False)
+        Args:
+            events: list[str]
 
-    yield consumer
+        Returns:
+            list[str]:
+        """
+        return events
 
-
-@pytest.fixture
-def threat_consumer(connector):
-    consumer = SentinelOneThreatLogsConsumer(connector)
-    consumer.management_client = Mock()
-    consumer.start = Mock()
-    consumer.is_alive = Mock(return_value=False)
-
-    yield consumer
+    return AsyncMock(side_effect=side_effect_return_input)

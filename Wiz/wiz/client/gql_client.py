@@ -1,24 +1,56 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator, Any
+from typing import Any, AsyncGenerator
 from urllib.parse import urljoin
 
+import orjson
 from aiolimiter import AsyncLimiter
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.exceptions import TransportServerError
+from pydantic import BaseModel
 
 from wiz.client.token_refresher import WizTokenRefresher
+
+
+class GetAlertsResult(BaseModel):
+    end_cursor: str | None
+    has_next_page: bool
+    result: list[dict[str, Any]]
+
+    @classmethod
+    def from_response(cls, response: dict[str, Any]) -> "GetAlertsResult":
+        return cls(
+            end_cursor=response.get("issuesV2", {}).get("pageInfo", {}).get("endCursor"),
+            has_next_page=response.get("issuesV2", {}).get("pageInfo", {}).get("hasNextPage", False),
+            result=response.get("issuesV2", {}).get("nodes", []),
+        )
+
+
+class WizErrors(Exception):
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+
+    @classmethod
+    def from_response(cls, response: dict[str, Any]) -> "WizErrors":
+        return cls(orjson.dumps(response["errors"]).decode("utf-8"))
+
+
+class WizServerError(WizErrors):
+    """WizServerError"""
 
 
 class WizGqlClient(object):
     _rate_limiter: AsyncLimiter | None = None
 
     def __init__(
-            self,
-            client_id: str,
-            client_secret: str,
-            tenant_url: str,
-            token_refresher: WizTokenRefresher,
+        self,
+        client_id: str,
+        client_secret: str,
+        tenant_url: str,
+        token_refresher: WizTokenRefresher,
     ) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
@@ -52,14 +84,20 @@ class WizGqlClient(object):
 
                 yield Client(transport=transport)
 
-    async def request(self, query: str, variable_values: dict[str, str] | None = None) -> dict[str, str]:
+    async def request(self, query: str, variable_values: dict[str, str | None] | None = None) -> dict[str, Any]:
         async with self._session() as session:
-            result: dict[str, str] = await session.execute_async(gql(query), variable_values=variable_values)
+            try:
+                result: dict[str, Any] = await session.execute_async(gql(query), variable_values=variable_values)
+            except TransportServerError as e:
+                if e.code == 401:
+                    raise WizServerError(f"Status code {e.code}. Authentication failed") from e
+
+                if e.code == 403:
+                    raise WizServerError(f"Status code {e.code}. Permission denied") from e
 
             return result
 
-    async def get_alerts(self, start_date: datetime, after: str | None = None ) -> tuple[
-        list[dict[str, Any]], str | None]:
+    async def get_alerts(self, start_date: datetime, after: str | None = None) -> GetAlertsResult:
         query = """
             query ListIssues($after: String, $startDateTime: DateTime, $limit: Int = 100) {
               issuesV2(
@@ -155,11 +193,11 @@ class WizGqlClient(object):
 
         response = await self.request(query, variable_values=variable_values)
 
-        result = response.get('issuesV2', {}).get('nodes', [])
-        end_cursor = response.get('issuesV2', {}).get('pageInfo', {}).get('endCursor')
-        has_next_page = response.get('issuesV2', {}).get('pageInfo', {}).get('hasNextPage')
+        if response.get("errors") is not None:
+            raise WizErrors.from_response(response)
 
-        if has_next_page:
-            return result, end_cursor
+        result: list[dict[str, Any]] = response.get("issuesV2", {}).get("nodes", [])
+        end_cursor: str | None = response.get("issuesV2", {}).get("pageInfo", {}).get("endCursor")
+        has_next_page: bool = response.get("issuesV2", {}).get("pageInfo", {}).get("hasNextPage")
 
-        return result, None
+        return GetAlertsResult(end_cursor=end_cursor, has_next_page=has_next_page, result=result)

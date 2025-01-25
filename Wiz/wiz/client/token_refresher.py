@@ -23,6 +23,7 @@ class WizToken(BaseModel):
          "expires_in":86400
         }
     """
+
     access_token: str
     refresh_token: str
     token_type: str
@@ -48,10 +49,10 @@ class WizTokenRefresher(object):
     _session: ClientSession | None = None
 
     def __init__(
-            self,
-            client_id: str,
-            client_secret: str,
-            oauth_url: str,
+        self,
+        client_id: str,
+        client_secret: str,
+        oauth_url: str,
     ):
         """
         Initialize WizTokenRefresher.
@@ -85,7 +86,6 @@ class WizTokenRefresher(object):
 
         return cls._session
 
-
     async def refresh_token(self) -> None:
         """
         Refresh token based on class configuration.
@@ -115,16 +115,18 @@ class WizTokenRefresher(object):
         }
 
         async with self.session().post(
-                self.oauth_url,
-                headers=headers,
-                data=data,
+            self.oauth_url,
+            headers=headers,
+            data=data,
         ) as response:
             response_data = await response.json()
-            self._token = WizToken(**{
-                **response_data,
-                "expires_in": 4, # for testing purposes only
-                "created_at": time.time(),
-            })
+            self._token = WizToken(
+                **{
+                    **response_data,
+                    # "expires_in": 4, # for testing purposes only
+                    "created_at": time.time(),
+                }
+            )
 
             logger.info(
                 "Got new access token with expiration in {expires_in} at {created_at}",
