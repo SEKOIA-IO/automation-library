@@ -94,7 +94,7 @@ if __name__ == "__main__":
     module.register(MergeAssets, "merge-assets")
     module.register(SynchronizeAssetsWithAD, "synchronize-assets")
     module.register(TriggerActionOnAlertWorkflow, "patch-alerts/{uuid}/workflow")
-    module.register(UpdateAlertStatus, "patch-alerts-v2/{uuid}/workflow")
+    module.register(UpdateAlertStatus, "update-status-by-name")
     module.register(PushEventToIntake, "push-events-to-intake")
     module.register(ListAssets, "get-assets-v2")
     module.register(DeletesAsset, "delete-assets/{uuid}")

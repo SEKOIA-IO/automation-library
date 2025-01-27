@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-27 - 2.67.3
+
+### Fixed
+
+- Fix `docker-parameters` of new action to update statuses by name
+
 ## 2025-01-21 - 2.67.2
 
 ### Changed
