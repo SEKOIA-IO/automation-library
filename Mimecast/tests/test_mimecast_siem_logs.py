@@ -217,7 +217,7 @@ def test_authentication_failed(
 
         assert trigger.push_events_to_intakes.call_count == 0
         assert trigger.log.mock_calls == [
-            call(level="critical", message="Authentication failed: Client credentials are invalid")
+            call(level="error", message="Authentication failed: Client credentials are invalid")
         ]
 
 
@@ -261,5 +261,5 @@ def test_permission_denied(
 
         assert trigger.push_events_to_intakes.call_count == 0
         assert trigger.log.mock_calls == [
-            call(level="critical", message="Permission denied: Forbidden to perform the requested operation")
+            call(level="error", message="Permission denied: Forbidden to perform the requested operation")
         ]
