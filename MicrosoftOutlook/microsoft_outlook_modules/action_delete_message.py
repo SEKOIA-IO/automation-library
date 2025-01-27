@@ -12,4 +12,4 @@ class DeleteMessageAction(MicrosoftGraphActionBase):
             f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/messages/{message_id}",
             timeout=60,
         )
-        response.raise_for_status()
+        self.handle_response(response)
