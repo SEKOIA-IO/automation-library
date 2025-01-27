@@ -165,7 +165,7 @@ class MimecastSIEMWorker(Thread):
                 if error_message is not None and len(error_message) > 0:
                     message = f"{message}: {error_message}"
 
-                self.log(message=message, level="critical")
+                self.log(message=message, level="error")
 
             if http_error_code == 403:
                 message = "Permission denied"
@@ -173,7 +173,7 @@ class MimecastSIEMWorker(Thread):
                 if error_message is not None and len(error_message) > 0:
                     message = f"{message}: {error_message}"
 
-                self.log(message=message, level="critical")
+                self.log(message=message, level="error")
 
             raise error
 
