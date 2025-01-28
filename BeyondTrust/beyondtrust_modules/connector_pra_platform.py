@@ -77,7 +77,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
             f"{self.configuration.base_url}/api/reporting",
             data={"generate_report": "AccessSessionListing", "duration": 0, "end_time": most_recent_date_seen},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=60
+            timeout=60,
         )
         self._handle_response_error(response)
 
@@ -94,7 +94,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
                 f"{self.configuration.base_url}/api/reporting",
                 data={"generate_report": "AccessSession", "lsid": session_id},
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=60
+                timeout=60,
             )
             self._handle_response_error(response)
 
