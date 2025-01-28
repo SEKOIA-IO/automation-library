@@ -1,12 +1,8 @@
-import os
-import time
-from datetime import datetime, timedelta, timezone
-from threading import Thread
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
-from requests import Response
 
 from beyondtrust_modules import BeyondTrustModule
 from beyondtrust_modules.connector_pra_platform import BeyondTrustPRAPlatformConnector
@@ -21,7 +17,6 @@ def fake_time():
 def trigger(data_storage):
     module = BeyondTrustModule()
     trigger = BeyondTrustPRAPlatformConnector(module=module, data_path=data_storage)
-    # mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
@@ -35,7 +30,6 @@ def trigger(data_storage):
 
 
 def test_fetch_events(trigger, sessions_list_xml_with_one, session_xml):
-    messages = []
     with requests_mock.Mocker() as mock_requests:
         mock_requests.register_uri(
             "POST",
@@ -54,6 +48,7 @@ def test_fetch_events(trigger, sessions_list_xml_with_one, session_xml):
         )
 
         # mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=messages)
+        trigger.from_date = 1732810704
         events = trigger.fetch_events()
 
         assert list(events) == [
