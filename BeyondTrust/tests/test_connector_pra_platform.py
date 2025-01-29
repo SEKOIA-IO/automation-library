@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -6,11 +5,6 @@ import requests_mock
 
 from beyondtrust_modules import BeyondTrustModule
 from beyondtrust_modules.connector_pra_platform import BeyondTrustPRAPlatformConnector
-
-
-@pytest.fixture
-def fake_time():
-    yield datetime(2022, 11, 5, 11, 59, 59, tzinfo=timezone.utc)
 
 
 @pytest.fixture
