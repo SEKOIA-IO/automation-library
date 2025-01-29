@@ -7,6 +7,7 @@ from typing import Generator
 
 import orjson
 import requests
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from pyrate_limiter import Duration, Limiter, RequestRate
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -14,7 +15,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import MimecastModule
 from .client import ApiClient, ApiKeyAuthentication
-from .helpers import download_batches, get_upper_second
+from .helpers import download_batches, filter_collected_events, get_upper_second
 from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -36,6 +37,7 @@ class MimecastSIEMWorker(Thread):
 
         self.context = self.connector.context
         self.from_date = self.most_recent_date_seen
+        self.events_cache: Cache = LRUCache(maxsize=10000)
 
         self._stop_event = Event()
 
@@ -115,9 +117,12 @@ class MimecastSIEMWorker(Thread):
             events = download_batches(urls=batch_urls)
             logger.debug("Collected events", nb_url=len(events))
 
-            # The cursor is a date, not a datetime. Thus, we have to download all events from the
-            # day's start and then filter out all events with timestamps before `from_date`
-            events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
+            # If the cache is empty, populate it with events older than the most recent one seen
+            if len(self.events_cache) == 0:
+                self.events_cache.update({event['processingId']: True for event in events if event["timestamp"] <= result_from_date.timestamp() * 1000})
+
+            # Discard events considered as already collected
+            events = filter_collected_events(events, lambda event: event["processingId"], self.events_cache)
             logger.debug("Filtered events", nb_url=len(events))
 
             if len(events) > 0:

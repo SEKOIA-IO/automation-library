@@ -3,9 +3,11 @@ import gzip
 import json
 from datetime import datetime, timedelta
 from io import BytesIO
+from typing import Callable, Sequence
 
 import aiohttp
 import requests
+from cachetools import Cache
 
 
 def get_upper_second(time: datetime) -> datetime:
@@ -81,3 +83,27 @@ def download_batches(urls: list[str], use_async=True) -> list[dict]:
 
     else:
         return sync_download_batch(urls)
+
+
+def filter_collected_events(events: Sequence, getter: Callable, cache: Cache) -> list:
+    """
+    Filter events that have already been filter_collected_events
+
+    Args:
+        events: The list of events to filter
+        getter: The callable to get the criteria to filter the events
+        cache: The cache that hold the list of collected events
+    """
+
+    selected_events = []
+    for event in events:
+        key = getter(event)
+
+        # If the event was already collected, discard it
+        if key is None or key in cache:
+            continue
+
+        cache[key] = True
+        selected_events.append(event)
+
+    return selected_events
