@@ -76,7 +76,7 @@ def http_token(session_faker) -> WizToken:
     )
 
 
-@pytest.fixture
+@pytest.yield_fixture(scope="session")
 def symphony_storage() -> str:
     """
     Fixture for symphony temporary storage.
@@ -93,7 +93,7 @@ def symphony_storage() -> str:
     constants.SYMPHONY_STORAGE = original_storage
 
 
-@pytest.fixture(scope="session")
+@pytest.yield_fixture(scope="session")
 def event_loop():
     """
     Create event loop for pytest.mark.asyncio.
