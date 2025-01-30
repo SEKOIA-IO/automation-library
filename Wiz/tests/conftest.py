@@ -56,7 +56,7 @@ def session_faker(faker_locale: List[str], faker_seed: int) -> Faker:
     return instance
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def http_token(session_faker) -> WizToken:
     """
     Generate WizToken.
@@ -109,17 +109,17 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def auth_url(session_faker) -> str:
     return session_faker.uri()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def tenant_url(session_faker) -> str:
     return session_faker.uri()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def wiz_gql_client(session_faker, auth_url, tenant_url) -> WizGqlClient:
     client_id = session_faker.word()
     client_secret = session_faker.word()
@@ -130,7 +130,7 @@ def wiz_gql_client(session_faker, auth_url, tenant_url) -> WizGqlClient:
     return gql_client
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def module(symphony_storage, tenant_url, session_faker) -> WizModule:
     module = WizModule()
     module.configuration = WizModuleConfig(
@@ -218,7 +218,7 @@ def findings_response_with_next_page(session_faker: Faker) -> dict[str, dict[str
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_push_data_to_intakes() -> AsyncMock:
     """
     Mocked push_data_to_intakes method.
