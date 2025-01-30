@@ -181,6 +181,44 @@ def alerts_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, 
 
 
 @pytest.fixture
+def findings_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "configurationFindings": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "analyzedAt": session_faker.date_time().isoformat(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": False,
+            },
+        }
+    }
+
+
+@pytest.fixture
+def findings_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "configurationFindings": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "analyzedAt": session_faker.date_time().isoformat(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": True,
+            },
+        }
+    }
+
+
+@pytest.fixture
 def mock_push_data_to_intakes() -> AsyncMock:
     """
     Mocked push_data_to_intakes method.

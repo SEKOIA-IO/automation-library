@@ -13,7 +13,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
 
-from wiz.client.gql_client import GetAlertsResult, WizErrors, WizGqlClient
+from wiz.client.gql_client import WizErrors, WizGqlClient, WizResult
 from wiz.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
