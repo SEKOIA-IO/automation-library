@@ -51,13 +51,12 @@ class WizConnector(AsyncConnector, ABC):
 
     module: WizModule
 
-    _wiz_gql_client: WizGqlClient | None = None
-
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init SalesforceConnector."""
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self._wiz_gql_client: WizGqlClient | None = None
 
     @property
     def last_event_date(self) -> datetime:  # pragma: no cover

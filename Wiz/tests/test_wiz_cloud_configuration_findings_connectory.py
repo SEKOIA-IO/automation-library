@@ -45,3 +45,5 @@ async def test_wiz_cloud_configuration_findings_connector(
         assert result == len(findings_response_with_next_page["configurationFindings"]["nodes"]) + len(
             findings_response["configurationFindings"]["nodes"]
         )
+
+        await wiz_findings_connector._wiz_gql_client.close()

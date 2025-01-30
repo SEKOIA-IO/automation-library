@@ -44,3 +44,5 @@ async def test_wiz_issues_connector(
         assert result == len(alerts_response["issuesV2"]["nodes"]) + len(
             alerts_response_with_next_page["issuesV2"]["nodes"]
         )
+
+        await wiz_issues_connector._wiz_gql_client.close()
