@@ -119,7 +119,13 @@ class MimecastSIEMWorker(Thread):
 
             # If the cache is empty, populate it with events older than the most recent one seen
             if len(self.events_cache) == 0:
-                self.events_cache.update({event['processingId']: True for event in events if event["timestamp"] <= result_from_date.timestamp() * 1000})
+                self.events_cache.update(
+                    {
+                        event["processingId"]: True
+                        for event in events
+                        if event["timestamp"] <= result_from_date.timestamp() * 1000
+                    }
+                )
 
             # Discard events considered as already collected
             events = filter_collected_events(events, lambda event: event["processingId"], self.events_cache)
@@ -134,8 +140,12 @@ class MimecastSIEMWorker(Thread):
                 return
 
             next_page_token = result.get("@nextPage")
+            isCaughtUp = result.get("isCaughtUp")
 
             if not next_page_token:
+                return
+
+            if isCaughtUp == "True":
                 return
 
             params["nextPage"] = next_page_token
