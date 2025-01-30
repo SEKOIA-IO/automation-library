@@ -145,7 +145,7 @@ class MimecastSIEMWorker(Thread):
             if not next_page_token:
                 return
 
-            if isCaughtUp == "True":
+            if isCaughtUp == "true":
                 return
 
             params["nextPage"] = next_page_token
