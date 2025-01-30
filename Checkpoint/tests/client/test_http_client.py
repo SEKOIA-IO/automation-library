@@ -1,8 +1,8 @@
 """Tests related to http client."""
 
 from datetime import timezone
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import pytest
 from aioresponses import aioresponses

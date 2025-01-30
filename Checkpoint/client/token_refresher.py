@@ -109,3 +109,7 @@ class CheckpointTokenRefresher(GenericTokenRefresher[RefreshedToken[CheckpointTo
                 created_at=int(time.time()),
                 ttl=int(data.get("expiresIn", 0)),
             )
+
+    async def mark_token_invalid(self) -> None:
+        await self.close()
+        self._token.ttl = 0

@@ -2,8 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import pytest
 from aioresponses import aioresponses
