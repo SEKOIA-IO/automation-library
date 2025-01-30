@@ -5,7 +5,7 @@ WORKDIR /app
 RUN pip install poetry
 
 # Install dependencies
-COPY poetry.lock pyproject.toml sentinel-mgmt-sdk.tar.gz /app/
+COPY poetry.lock pyproject.toml /app/
 RUN poetry config virtualenvs.create false && poetry install --only main
 
 COPY . .
