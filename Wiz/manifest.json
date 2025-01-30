@@ -25,7 +25,7 @@
       "client_secret"
     ]
   },
-  "description": "This module interacts with the Wiz",
+  "description": "Wiz is a cybersecurity company specializing in cloud security solutions that help businesses detect and manage risks across their cloud environments.",
   "name": "Wiz",
   "uuid": "860eaa8b-ecb1-43dc-8a3d-6ec10144e6e9",
   "slug": "wiz",
