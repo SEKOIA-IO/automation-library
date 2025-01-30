@@ -4,9 +4,9 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+import orjson
 from dateutil.parser import isoparse
 from loguru import logger
-from orjson import orjson
 from pydantic import BaseModel, HttpUrl
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
