@@ -1,8 +1,8 @@
 import pytest
 from aioresponses import aioresponses
 
-from wiz import WizModule
-from wiz.wiz_issues_connector import WizIssuesConnector, WizIssuesConnectorConfig
+from wiz import WizConnectorConfig, WizModule
+from wiz.wiz_issues_connector import WizIssuesConnector
 
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def wiz_issues_connector(
     wiz_gql_client,
 ) -> WizIssuesConnector:
     connector = WizIssuesConnector()
-    connector.configuration = WizIssuesConnectorConfig(
+    connector.configuration = WizConnectorConfig(
         intake_key="test_key",
     )
 
