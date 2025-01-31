@@ -2421,18 +2421,18 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.18.0"
+version = "1.18.2"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "sekoia_automation_sdk-1.18.0-py3-none-any.whl", hash = "sha256:ab71ed1cbfd4697d8add59803af077422fc20e3cede89dc3db969a54c2c96b89"},
-    {file = "sekoia_automation_sdk-1.18.0.tar.gz", hash = "sha256:b5b6241dc8d5e80f354a4ec3478fc0caeb116a0d1db6fb7f79a0c3f51b2da585"},
+    {file = "sekoia_automation_sdk-1.18.2-py3-none-any.whl", hash = "sha256:4a54d17948d336b3d3299f1e6bd4988418abe23b82667a7606a3734afc79264c"},
+    {file = "sekoia_automation_sdk-1.18.2.tar.gz", hash = "sha256:12b6e39980ecd8fb2d47566059ac55a782f46357e7d25be1774966b5bc30afe5"},
 ]
 
 [package.dependencies]
 black = "*"
-boto3 = ">=1.28,<2.0"
+boto3 = "<1.36"
 cookiecutter = ">=2.1,<3.0"
 Jinja2 = ">=3.0.3,<4.0.0"
 jsonschema = ">=4.22.0,<5.0.0"
@@ -3004,4 +3004,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "38bae8ca94fdfbaddca84be207b5532fed118410dfbfe4ea06c9fd1cc8614170"
+content-hash = "ad8cffe230dea7dbf170fd3d05c41370797a3a9c7acb032990d8b87ffcb2a109"
