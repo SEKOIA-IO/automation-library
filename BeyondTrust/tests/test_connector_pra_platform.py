@@ -10,14 +10,16 @@ from beyondtrust_modules.connector_pra_platform import BeyondTrustPRAPlatformCon
 @pytest.fixture
 def trigger(data_storage):
     module = BeyondTrustModule()
+    module.configuration = {
+        "base_url": "https://tenant.beyondtrustcloud.com",
+        "client_id": "client_1",
+        "client_secret": "SECRET",
+    }
     trigger = BeyondTrustPRAPlatformConnector(module=module, data_path=data_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
     trigger.configuration = {
-        "base_url": "https://tenant.beyondtrustcloud.com",
-        "client_id": "client_1",
-        "client_secret": "SECRET",
         "intake_key": "intake_key",
     }
     yield trigger
