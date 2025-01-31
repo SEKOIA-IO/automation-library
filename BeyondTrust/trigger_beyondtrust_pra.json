@@ -16,35 +16,14 @@
         "description": "Intake key to use when sending events",
         "type": "string"
       },
-      "base_url": {
-        "description": "Base URL",
-        "type": "string",
-        "format": "uri",
-        "default": "https://<tenant>.beyondtrustcloud.com"
-      },
-      "client_id": {
-        "description": "Client ID",
-        "type": "string"
-      },
-      "client_secret": {
-        "description": "Client secret",
-        "type": "string"
-      },
       "frequency": {
         "description": "Batch frequency in seconds",
         "default": 60,
         "type": "integer"
       }
     },
-    "required": [
-      "intake_key",
-      "base_url",
-      "client_id",
-      "client_secret"
-    ],
-    "secrets": [
-      "client_secret"
-    ]
+    "required": ["intake_key", "base_url", "client_id", "client_secret"],
+    "secrets": ["client_secret"]
   },
   "results": {}
 }

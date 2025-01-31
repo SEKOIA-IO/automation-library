@@ -19,9 +19,6 @@ logger = get_logger()
 
 
 class BeyondTrustPRAPlatformConfiguration(DefaultConnectorConfiguration):
-    base_url: str = Field(..., description="Base URL")
-    client_id: str = Field(..., description="Client ID")
-    client_secret: str = Field(..., description="Client secret", secret=True)
     frequency: int = Field(60, description="Batch frequency in seconds")
 
 
@@ -43,9 +40,9 @@ class BeyondTrustPRAPlatformConnector(Connector):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
-            base_url=self.configuration.base_url,
-            client_id=self.configuration.client_id,
-            client_secret=self.configuration.client_secret,
+            base_url=self.module.configuration.base_url,
+            client_id=self.module.configuration.client_id,
+            client_secret=self.module.configuration.client_secret,
         )
 
     def _handle_response_error(self, response: requests.Response):
@@ -74,7 +71,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
         most_recent_date_seen = self.from_date
 
         response = self.client.post(
-            f"{self.configuration.base_url}/api/reporting",
+            f"{self.module.configuration.base_url}/api/reporting",
             data={"generate_report": "AccessSessionListing", "duration": 0, "end_time": most_recent_date_seen},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=60,
@@ -91,7 +88,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
         for session_id in sessions_ids:
             # request and parse each session - doing this iteratively, because we have 20 requests per second limit
             response = self.client.post(
-                f"{self.configuration.base_url}/api/reporting",
+                f"{self.module.configuration.base_url}/api/reporting",
                 data={"generate_report": "AccessSession", "lsid": session_id},
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=60,
