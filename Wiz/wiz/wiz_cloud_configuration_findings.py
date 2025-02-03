@@ -7,7 +7,7 @@ from wiz import Result, WizConnector
 
 
 class WizCloudConfigurationFindingsConnector(WizConnector):
-    """WizIssuesConnector."""
+    """WizCloudConfigurationFindingsConnector."""
 
     name = "WizCloudConfigurationFindingsConnector"
 
