@@ -1,0 +1,22 @@
+{
+  "name": "Delete a message",
+  "description": "Delete a message from the user's mailbox",
+  "uuid": "e3641fd8-54f9-5282-95fc-6429c9ce697b",
+  "docker_parameters": "action_delete_message",
+  "arguments": {
+    "title": "ApplicationArguments",
+    "type": "object",
+    "required": ["user", "message_id"],
+    "properties": {
+      "user": {
+        "description": "The identifier or the principal name of the user",
+        "type": "string"
+      },
+      "message_id": {
+        "description": "The identifier of the message to delete",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}

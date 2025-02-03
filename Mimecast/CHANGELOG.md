@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-24 - 1.1.5
+
+### Changed
+
+- Downgrade the log level for Authentication errors (temporary reverted)
+
+## 2025-01-24 - 1.1.4
+
+### Fixed
+
+- Verify that start date is after 7 days ago
+
+## 2025-01-15 - 1.1.3
+
+### Fixed
+
+- Increase the period between two fetch of mimecast events (The batches of events are available every 15 minutes)
+
+## 2025-01-15 - 1.1.2
+
+### Fixed
+
+- Fix the initialization of the client
+
 ## 2025-01-15 - 1.1.1
 
 ### Fixed

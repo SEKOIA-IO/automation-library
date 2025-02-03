@@ -1,0 +1,349 @@
+{
+  "name": "Search analysis",
+  "description": "Search an analysis for a given sha256 input file",
+  "uuid": "25b710b9-a849-46dd-ae47-447c1a350c7b",
+  "docker_parameters": "SearchPreviousAnalysis",
+  "arguments": {
+    "title": "SearchAnalysisBySha256Argument",
+    "type": "object",
+    "properties": {
+      "sha256": {
+        "title": "Sha256",
+        "description": "SHA256 of file to search",
+        "type": "string"
+      }
+    },
+    "required": [
+      "sha256"
+    ]
+  },
+  "results": {
+    "title": "AnalysisResponse",
+    "type": "object",
+    "properties": {
+      "analysis": {
+        "title": "Analysis",
+        "description": "Analysis response details",
+        "allOf": [
+          {
+            "$ref": "#/definitions/AnalysisDetails"
+          }
+        ]
+      },
+      "view_url": {
+        "title": "View Url",
+        "description": "Analysis URL",
+        "default": "",
+        "type": "string"
+      }
+    },
+    "required": [
+      "analysis"
+    ],
+    "definitions": {
+      "AvResult": {
+        "title": "AvResult",
+        "type": "object",
+        "properties": {
+          "av": {
+            "title": "Av",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "av",
+          "result",
+          "score"
+        ]
+      },
+      "FileResult": {
+        "title": "FileResult",
+        "type": "object",
+        "properties": {
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "sha1": {
+            "title": "Sha1",
+            "type": "string"
+          },
+          "md5": {
+            "title": "Md5",
+            "type": "string"
+          },
+          "magic": {
+            "title": "Magic",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "is_malware": {
+            "title": "Is Malware",
+            "type": "boolean"
+          },
+          "av_result": {
+            "title": "Av Result",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/AvResult"
+            }
+          }
+        },
+        "required": [
+          "sha256",
+          "sha1",
+          "md5",
+          "magic",
+          "size",
+          "is_malware"
+        ]
+      },
+      "Tag": {
+        "title": "Tag",
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ]
+      },
+      "Threat": {
+        "title": "Threat",
+        "type": "object",
+        "properties": {
+          "filenames": {
+            "title": "Filenames",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "title": "Tags",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Tag"
+            }
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "magic": {
+            "title": "Magic",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "sha1": {
+            "title": "Sha1",
+            "type": "string"
+          },
+          "md5": {
+            "title": "Md5",
+            "type": "string"
+          },
+          "ssdeep": {
+            "title": "Ssdeep",
+            "type": "string"
+          },
+          "file_size": {
+            "title": "File Size",
+            "type": "integer"
+          },
+          "mime": {
+            "title": "Mime",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filenames",
+          "tags",
+          "score",
+          "magic",
+          "sha256",
+          "sha1",
+          "md5",
+          "ssdeep",
+          "file_size",
+          "mime"
+        ]
+      },
+      "AnalysisDetails": {
+        "title": "AnalysisDetails",
+        "type": "object",
+        "properties": {
+          "status": {
+            "title": "Status",
+            "description": "False means an error occured",
+            "type": "boolean"
+          },
+          "special_status_code": {
+            "title": "Special Status Code",
+            "description": "Special error code, 0 means no special case",
+            "type": "integer"
+          },
+          "uuid": {
+            "title": "Uuid",
+            "description": "Unique analysis identifier",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "description": "String hex encoded input file SHA256",
+            "type": "string"
+          },
+          "sha1": {
+            "title": "Sha1",
+            "description": "String hex encoded input file SHA1",
+            "type": "string"
+          },
+          "md5": {
+            "title": "Md5",
+            "description": "String hex encoded input file MD5",
+            "type": "string"
+          },
+          "ssdeep": {
+            "title": "Ssdeep",
+            "description": "File's SSDeep",
+            "type": "string"
+          },
+          "is_malware": {
+            "title": "Is Malware",
+            "description": "Analysis verdict, malware or not",
+            "type": "boolean"
+          },
+          "score": {
+            "title": "Score",
+            "description": "Highest score given by the services, of all the files in the submission",
+            "type": "integer"
+          },
+          "done": {
+            "title": "Done",
+            "description": "Analysis status, true if analysis is done",
+            "type": "boolean"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "description": "Timestamp of the start of analysis in milliseconds",
+            "type": "integer"
+          },
+          "file_count": {
+            "title": "File Count",
+            "description": "Amount of file in the submission (input + extracted)",
+            "type": "integer"
+          },
+          "duration": {
+            "title": "Duration",
+            "description": "Duration of the analysis in milliseconds",
+            "type": "integer"
+          },
+          "filetype": {
+            "title": "Filetype",
+            "description": "Type of the file",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "description": "Input file size (in bytes)",
+            "type": "integer"
+          },
+          "sid": {
+            "title": "Sid",
+            "description": "Analysis ID on GLIMPS Malware Expert\ncould be used to construct expert link like:\nhttps://gmalware.useddomain.glimps.re/expert/en/analysis/results/advanced/${SID}",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "description": "Token that can be used to view analysis result in expert view",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "description": "Error message if Status is false",
+            "type": "string"
+          },
+          "errors": {
+            "title": "Errors",
+            "description": "Error message by services",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "filenames": {
+            "title": "Filenames",
+            "description": "List of analysed filename",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "malwares": {
+            "title": "Malwares",
+            "description": "List of malware names found in analysis",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "files": {
+            "title": "Files",
+            "description": "Array of submission files (input file and extracted sub-files)",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/FileResult"
+            }
+          },
+          "threats": {
+            "title": "Threats",
+            "description": "Summary of threats found in submission. Each submission file reaching threshold score will add an entry. Entry keys are files' SHA256",
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/Threat"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "special_status_code",
+          "uuid",
+          "sha256",
+          "sha1",
+          "md5",
+          "ssdeep",
+          "is_malware",
+          "score",
+          "done",
+          "timestamp",
+          "file_count",
+          "duration",
+          "filetype",
+          "size"
+        ]
+      }
+    }
+  }
+}

@@ -8,11 +8,11 @@
       "api_key"
     ]
   },
-  "description": "Sekoia.io",
+  "description": "Sekoia.io is a European Cybertech, expert in intelligence-based eXtended Detection and Response solutions. Our Sekoia SOC platform provides a unified view and full control of the perimeter to be defended. Our mission is to empower security operations teams with a flexible and easy-to-use platform. We protect large companies, technology scaleups, governments, and Tier One MSSP partners worldwide. ",
   "name": "Sekoia.io",
   "uuid": "92d8bb47-7c51-445d-81de-ae04edbb6f0a",
   "slug": "sekoia.io",
-  "version": "2.67.1",
+  "version": "2.67.3",
   "categories": [
     "Generic"
   ]

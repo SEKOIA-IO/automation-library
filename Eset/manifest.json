@@ -1,10 +1,33 @@
 {
   "configuration": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Eset",
+    "title": "EsetModuleConfiguration",
     "type": "object",
-    "properties": {},
-    "required": []
+    "properties": {
+      "region": {
+        "title": "Region",
+        "description": "Region",
+        "type": "string",
+        "enum": ["eu", "de", "ca", "us", "jpn"]
+      },
+      "username": {
+        "title": "Username",
+        "description": "Username",
+        "type": "string"
+      },
+      "password": {
+        "title": "Password",
+        "description": "Password",
+        "type": "string"
+      }
+    },
+    "required": [
+      "region",
+      "username",
+      "password"
+    ],
+    "secrets": [
+      "password"
+    ]
   },
   "description": "ESET is a global cybersecurity company known for its antivirus and security software solutions for both businesses and consumers, providing advanced threat detection and malware protection.",
   "name": "Eset",
