@@ -10,5 +10,8 @@
   "name": "CEF",
   "uuid": "cf6d31fc-44ee-4ce9-a276-f1542c86aad4",
   "version": "1.0.0",
-  "slug": "cef"
+  "slug": "cef",
+  "categories": [
+    "Generic"
+  ]
 }

@@ -10,5 +10,8 @@
   "name": "Bitdefender",
   "uuid": "26277889-b91b-46d0-8bac-7f6b2f6fb9a3",
   "version": "1.0.0",
-  "slug": "bitdefender"
+  "slug": "bitdefender",
+  "categories": [
+    "Endpoint"
+  ]
 }

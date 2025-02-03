@@ -10,5 +10,8 @@
   "name": "Clavister",
   "uuid": "c8e5ebda-8481-4e8d-bfb8-2e6c32870ff3",
   "version": "1.0.0",
-  "slug": "clavister"
+  "slug": "clavister",
+  "categories": [
+    "Network"
+  ]
 }
