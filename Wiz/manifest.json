@@ -12,7 +12,7 @@
         "type": "string"
       },
       "tenant_url": {
-        "description": "Base url of the Wiz tenant",
+        "description": "Base url of the Wiz tenant (e.g https://api.us17.app.wiz.io)",
         "type": "string"
       }
     },
