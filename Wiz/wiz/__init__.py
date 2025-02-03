@@ -149,15 +149,16 @@ class WizConnector(AsyncConnector, ABC):
                 last_event_date = self.last_event_date
                 processing_end = time.time()
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.product_name).set(
-                    processing_end - last_event_date.timestamp()
-                )
-
+                events_lag = 0
                 log_message = "No records to forward"
                 if result > 0:
                     log_message = "Pushed {0} records".format(result)
+                    events_lag = processing_end - last_event_date.timestamp()
 
                 self.log(message=log_message, level="info")
+
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.product_name).set(events_lag)
+
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result)
 
                 processing_time = processing_end - processing_start
