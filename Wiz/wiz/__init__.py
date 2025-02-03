@@ -54,7 +54,7 @@ class WizConnector(AsyncConnector, ABC):
     _wiz_gql_client: WizGqlClient | None = None
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
-        """Init SalesforceConnector."""
+        """Init WizConnector."""
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
