@@ -1,5 +1,5 @@
 {
-  "description": "Get user activities using google reports",
+  "description": "Get user activities using google workspace and from chromOS devices",
   "docker_parameters": "run-google_reports_trigger",
   "name": "Get user activities",
   "arguments": {
@@ -69,7 +69,7 @@
       "intake_key",
       "application_name"
     ],
-    "title": "Google Reports",
+    "title": "Google Workspace / ChromeOS",
     "type": "object"
   },
   "uuid": "ce5535a3-4d14-4d7b-9b5a-f948e64fe755"
