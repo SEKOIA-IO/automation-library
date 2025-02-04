@@ -47,5 +47,10 @@
       "title": "Microsoft Sentinel Alerts",
       "type": "object"
     },
+    "results": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {},
+      "title": "The alerts"
+    },
     "uuid": "7537aa6a-7411-4feb-a6c8-f02d55077db9"
 }
