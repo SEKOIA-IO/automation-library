@@ -4,7 +4,8 @@ from typing import List
 from ldap3 import ALL_ATTRIBUTES
 from ldap3.core.timezone import OffsetTzInfo
 from datetime import datetime
-
+from uuid import uuid4
+import orjson
 
 class SearchArguments(BaseModel):
     search_filter: str
@@ -50,4 +51,17 @@ class SearchAction(MicrosoftADAction):
         except:
             raise Exception(f"Failed to search in this base {arguments.basedn}")
 
-        return {"search_result": self.transform_ldap_results(self.client.response)}
+        result = self.transform_ldap_results(self.client.response)
+        if not arguments.get("to_file", False):
+            return {"search_result": result}
+
+        filename = f"output-{uuid4()}.json"
+        with self._data_path.joinpath(filename).open("w") as f:
+            if isinstance(result, str):
+                f.write(result)
+            else:
+                try:
+                    f.write(orjson.dumps(result).decode("utf-8"))
+                except (TypeError, ValueError):
+                    f.write(result)
+        return {"output_path": filename}
