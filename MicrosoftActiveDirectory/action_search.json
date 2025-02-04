@@ -1,56 +1,40 @@
 {
-  "name": "Search in AD",
-  "description": "Search in AD",
-  "uuid": "7f9d4c8f-0d03-44ef-ba60-6adf99562680",
-  "docker_parameters": "search-ad",
-  "arguments": {
-    "title": "SearchArguments",
-    "type": "object",
-    "properties": {
-      "search_filter": {
-        "title": "Search Filter",
-        "description": "LDAP filter to run your query on  see https://ldap3.readthedocs.io/en/latest/searches.html#the-ldap-filter)",
-        "type": "string"
-      },
-      "basedn": {
-        "title": "BaseDN",
-        "description": "The starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
-        "type": "string"
-      },
-      "attributes": {
-        "title": "Attributes",
-        "description": "Attributes you want to retrieve (default will be ALL) ",
-        "anyOf": [
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          {"type": "null"}
-        ],
-        "default": null
-      },
-      "to_file": {
-        "type": "boolean",
-        "description": "Whether the event should be saved in a file or sent directly",
-        "default": false
-      }
-    }
-  },
-  "results": {
-    "type": "object",
-    "properties": {
-      "search_result": {
-        "type": "array",
-        "items": {
-          "type": "object"
-        }
-      },
-      "output_path": {
-        "description": "Path to the file with the content",
-        "type": "object"
-      }
-    }
-  }
+    "name": "Search in AD",
+    "description": "Search in AD",
+    "uuid": "7f9d4c8f-0d03-44ef-ba60-6adf99562680",
+    "docker_parameters": "search-ad",
+    "arguments": {
+        "title": "SearchArguments",
+        "type": "object",
+        "properties": {
+            "search_filter": {
+                "title": "Search Filter",
+                "description": "LDAP filter to run your query on  see https://ldap3.readthedocs.io/en/latest/searches.html#the-ldap-filter)",
+                "type": "string",
+            },
+            "basedn": {
+                "title": "BaseDN",
+                "description": "The starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
+                "type": "string",
+            },
+            "attributes": {
+                "title": "Attributes",
+                "description": "Attributes you want to retrieve (default will be ALL) ",
+                "anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}],
+                "default": null,
+            },
+            "to_file": {
+                "type": "boolean",
+                "description": "Whether the event should be saved in a file or sent directly",
+                "default": false,
+            },
+        },
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "search_result": {"type": "array", "items": {"type": "object"}},
+            "output_path": {"description": "Path to the file with the content", "type": "object"},
+        },
+    },
 }
