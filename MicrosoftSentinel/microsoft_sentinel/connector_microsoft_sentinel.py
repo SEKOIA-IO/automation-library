@@ -79,7 +79,7 @@ class MicrosoftSentineldConnector(Connector):
 
     def _to_timestamp(self, date: str) -> float:
         RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-        return datetime.strptime(date, RFC3339_STRICT_FORMAT).timestamp()
+        return datetime.strptime(date, RFC3339_STRICT_FORMAT).replace(tzinfo=timezone.utc).timestamp()
 
     def _to_RFC3339(self, date: Optional[datetime]) -> Optional[str]:
         return date.strftime("%Y-%m-%dT%H:%M:%S.%fZ") if date else None
