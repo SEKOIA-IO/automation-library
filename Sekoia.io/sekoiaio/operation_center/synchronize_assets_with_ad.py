@@ -5,6 +5,7 @@ import json
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
+
 class Arguments(BaseModel):
     user_ad_data: Dict[str, Any]
     asset_synchronization_configuration: Dict[str, Any]
