@@ -32,7 +32,7 @@ def trigger(symphony_storage):
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
     trigger.log = Mock()
-    
+
     return trigger
 
 
@@ -127,7 +127,7 @@ def second_incident_item(incident_labels_object, incident_owner_object, addition
 @pytest.fixture
 def incidents_list(first_incident_item, second_incident_item):
     return [first_incident_item, second_incident_item]
-    
+
 
 def test_to_timestamp(trigger):
     assert trigger._to_timestamp("2021-09-01T00:00:00.000Z") == 1630447200.0
@@ -142,21 +142,25 @@ def test_to_RFC3339(trigger):
 
 
 def test_serialize_incident(trigger, first_incident_item):
-    serialized_incident = trigger._serialize_incident(first_incident_item)    
+    serialized_incident = trigger._serialize_incident(first_incident_item)
     assert type(serialized_incident) == dict
-    assert serialized_incident["id"] == "/subscriptions/f00000000-0000-0000-0000-000000000000/resourceGroups/resource_group/providers/Microsoft.SecurityInsights/Incidents/"
-    assert serialized_incident["owner"]["assigned_to"] == 'Joe Done'
+    assert (
+        serialized_incident["id"]
+        == "/subscriptions/f00000000-0000-0000-0000-000000000000/resourceGroups/resource_group/providers/Microsoft.SecurityInsights/Incidents/"
+    )
+    assert serialized_incident["owner"]["assigned_to"] == "Joe Done"
     assert serialized_incident["additional_data"]["alerts_count"] == 3
     assert serialized_incident["labels"][0]["label_name"] == "label_name"
 
 
 def test_get_incidents_without_batch(trigger, incidents_list):
-    with patch("microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator") as mock_incidents_iterator:
-        
+    with patch(
+        "microsoft_sentinel.connector_microsoft_sentinel.MicrosoftSentineldConnector._incidents_iterator"
+    ) as mock_incidents_iterator:
         mock_incidents_iterator.return_value = incidents_list
         trigger.get_incidents()
         results = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
-        
+
         assert len(results[0]) == 2
         assert orjson.loads(results[0][0])["title"] == "title"
         assert orjson.loads(results[0][1])["title"] == "title 2"
