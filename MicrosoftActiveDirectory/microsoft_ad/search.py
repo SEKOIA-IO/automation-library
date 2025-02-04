@@ -7,6 +7,7 @@ from datetime import datetime
 from uuid import uuid4
 import orjson
 
+
 class SearchArguments(BaseModel):
     search_filter: str
     basedn: str
