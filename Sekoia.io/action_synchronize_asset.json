@@ -15,11 +15,27 @@
         "title": "User data",
         "type": "object"
       },
+      "user_ad_file": {
+        "description": "File name to the User AD file to read.",
+        "type": "object"
+      },
       "asset_synchronization_configuration": {
         "title": "Assets configuration",
         "type": "object"
       }
     },
+    "oneOf": [
+      {
+        "required": [
+          "user_ad_data"
+        ]
+      },
+      {
+        "required": [
+          "user_ad_file"
+        ]
+      }
+    ],
     "required": [
       "community_uuid",
       "user_ad_data",

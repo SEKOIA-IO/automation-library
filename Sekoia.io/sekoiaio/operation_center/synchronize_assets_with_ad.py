@@ -5,7 +5,6 @@ import json
 from pydantic import BaseModel
 from sekoia_automation.action import Action
 
-
 class Arguments(BaseModel):
     user_ad_data: Dict[str, Any]
     asset_synchronization_configuration: Dict[str, Any]
@@ -18,7 +17,10 @@ class SynchronizeAssetsWithAD(Action):
     """
 
     def run(self, arguments: Arguments):
-        user_ad_data = arguments.user_ad_data
+        if arguments.get("user_ad_file") is not None:
+            user_ad_data = self.json_argument("user_ad_file", arguments)
+        else:
+            user_ad_data = arguments.user_ad_data
         asset_conf = arguments.asset_synchronization_configuration
         community_uuid = arguments.community_uuid
 
