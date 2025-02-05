@@ -22,7 +22,6 @@
         "type": "integer"
       }
     },
-    "required": ["intake_key", "base_url", "client_id", "client_secret"],
-    "secrets": ["client_secret"]
+    "required": ["intake_key"]
   }
 }
