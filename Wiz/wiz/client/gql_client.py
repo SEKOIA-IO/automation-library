@@ -7,23 +7,31 @@ import orjson
 from aiolimiter import AsyncLimiter
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
-from gql.transport.exceptions import TransportServerError
+from gql.transport.exceptions import TransportQueryError, TransportServerError
 from pydantic import BaseModel
 
 from wiz.client.token_refresher import WizTokenRefresher
 
 
-class GetAlertsResult(BaseModel):
+class WizResult(BaseModel):
     end_cursor: str | None
     has_next_page: bool
     result: list[dict[str, Any]]
 
     @classmethod
-    def from_response(cls, response: dict[str, Any]) -> "GetAlertsResult":
+    def from_alerts_response(cls, response: dict[str, Any]) -> "WizResult":
         return cls(
             end_cursor=response.get("issuesV2", {}).get("pageInfo", {}).get("endCursor"),
             has_next_page=response.get("issuesV2", {}).get("pageInfo", {}).get("hasNextPage", False),
             result=response.get("issuesV2", {}).get("nodes", []),
+        )
+
+    @classmethod
+    def from_cloud_configuration_findings_response(cls, response: dict[str, Any]) -> "WizResult":
+        return cls(
+            end_cursor=response.get("configurationFindings", {}).get("pageInfo", {}).get("endCursor"),
+            has_next_page=response.get("configurationFindings", {}).get("pageInfo", {}).get("hasNextPage", False),
+            result=response.get("configurationFindings", {}).get("nodes", []),
         )
 
 
@@ -36,6 +44,10 @@ class WizErrors(Exception):
     @classmethod
     def from_response(cls, response: dict[str, Any]) -> "WizErrors":
         return cls(orjson.dumps(response["errors"]).decode("utf-8"))
+
+    @classmethod
+    def from_error(cls, query_error: TransportQueryError) -> "WizErrors":
+        return cls(orjson.dumps(query_error.errors).decode("utf-8"))
 
 
 class WizServerError(WizErrors):
@@ -88,6 +100,11 @@ class WizGqlClient(object):
         async with self._session() as session:
             try:
                 result: dict[str, Any] = await session.execute_async(gql(query), variable_values=variable_values)
+            except TransportQueryError as e:
+                if e.errors:
+                    raise WizErrors.from_error(e) from e
+
+                raise e
             except TransportServerError as e:
                 if e.code == 401:
                     raise WizServerError(f"Status code {e.code}. Authentication failed") from e
@@ -97,7 +114,7 @@ class WizGqlClient(object):
 
             return result
 
-    async def get_alerts(self, start_date: datetime, after: str | None = None) -> GetAlertsResult:
+    async def get_alerts(self, start_date: datetime, after: str | None = None) -> WizResult:
         query = """
             query ListIssues($after: String, $startDateTime: DateTime, $limit: Int = 100) {
               issuesV2(
@@ -196,8 +213,104 @@ class WizGqlClient(object):
         if response.get("errors") is not None:
             raise WizErrors.from_response(response)
 
-        result: list[dict[str, Any]] = response.get("issuesV2", {}).get("nodes", [])
-        end_cursor: str | None = response.get("issuesV2", {}).get("pageInfo", {}).get("endCursor")
-        has_next_page: bool = response.get("issuesV2", {}).get("pageInfo", {}).get("hasNextPage")
+        return WizResult.from_alerts_response(response)
 
-        return GetAlertsResult(end_cursor=end_cursor, has_next_page=has_next_page, result=result)
+    async def get_cloud_configuration_findings(self, start_date: datetime, after: str | None = None) -> WizResult:
+        query = """
+              query ListCloudConfigurationFindings(
+                $after: String,
+                $startDateTime: DateTime
+                $limit: Int = 100
+              ) {
+                configurationFindings(
+                  first: $limit
+                  after: $after
+                  filterBy: {
+                    analyzedAt: {after: $startDateTime}
+                  }
+                  orderBy: {
+                    field: FIRST_SEEN_AT,
+                    direction: ASC
+                  }
+                ) {
+                  nodes {
+                    id
+                    targetExternalId
+                    deleted
+                    targetObjectProviderUniqueId
+                    firstSeenAt
+                    severity
+                    result
+                    status
+                    remediation
+                    resource {
+                      id
+                      providerId
+                      name
+                      nativeType
+                      type
+                      region
+                      subscription {
+                        id
+                        name
+                        externalId
+                        cloudProvider
+                      }
+                      projects {
+                        id
+                        name
+                        riskProfile {
+                          businessImpact
+                        }
+                      }
+                      tags {
+                        key
+                        value
+                      }
+                    }
+                    rule {
+                      id
+                      graphId
+                      name
+                      description
+                      remediationInstructions
+                      functionAsControl
+                    }
+                    securitySubCategories {
+                      id
+                      title
+                      category {
+                        id
+                        name
+                        framework {
+                          id
+                          name
+                        }
+                      }
+                    }
+                    ignoreRules{
+                      id
+                      name
+                      enabled
+                      expiredAt
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                }
+              }
+        """
+
+        variable_values = {
+            "after": after,
+            "startDateTime": start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        }
+
+        response = await self.request(query, variable_values=variable_values)
+
+        if response.get("errors") is not None:
+            raise WizErrors.from_response(response)
+
+        return WizResult.from_cloud_configuration_findings_response(response)

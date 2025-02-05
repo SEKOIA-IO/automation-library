@@ -56,7 +56,7 @@ def session_faker(faker_locale: List[str], faker_seed: int) -> Faker:
     return instance
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def http_token(session_faker) -> WizToken:
     """
     Generate WizToken.
@@ -76,7 +76,7 @@ def http_token(session_faker) -> WizToken:
     )
 
 
-@pytest.fixture
+@pytest.yield_fixture(scope="session")
 def symphony_storage() -> str:
     """
     Fixture for symphony temporary storage.
@@ -93,7 +93,7 @@ def symphony_storage() -> str:
     constants.SYMPHONY_STORAGE = original_storage
 
 
-@pytest.fixture(scope="session")
+@pytest.yield_fixture(scope="session")
 def event_loop():
     """
     Create event loop for pytest.mark.asyncio.
@@ -109,17 +109,17 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def auth_url(session_faker) -> str:
     return session_faker.uri()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def tenant_url(session_faker) -> str:
     return session_faker.uri()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def wiz_gql_client(session_faker, auth_url, tenant_url) -> WizGqlClient:
     client_id = session_faker.word()
     client_secret = session_faker.word()
@@ -130,7 +130,7 @@ def wiz_gql_client(session_faker, auth_url, tenant_url) -> WizGqlClient:
     return gql_client
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def module(symphony_storage, tenant_url, session_faker) -> WizModule:
     module = WizModule()
     module.configuration = WizModuleConfig(
@@ -181,6 +181,44 @@ def alerts_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, 
 
 
 @pytest.fixture
+def findings_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "configurationFindings": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "analyzedAt": session_faker.date_time().isoformat(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": False,
+            },
+        }
+    }
+
+
+@pytest.fixture
+def findings_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "configurationFindings": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "analyzedAt": session_faker.date_time().isoformat(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": True,
+            },
+        }
+    }
+
+
+@pytest.fixture(scope="session")
 def mock_push_data_to_intakes() -> AsyncMock:
     """
     Mocked push_data_to_intakes method.
