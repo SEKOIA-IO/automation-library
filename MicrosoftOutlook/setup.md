@@ -3,7 +3,7 @@
 #### Create an Azure application
 
 1. On the Azure Portal, in the search bar, go to `App registrations`
-2. Click [`+ New registration`](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/quickStartType~/null/isMSAApp~/false)
+2. Click `+ New registration`
 3. Type a name
 4. Select `Accounts in this organizational directory only` option as account type
 5. Click `Register`
@@ -13,7 +13,7 @@
 
 1. Go to `Manage` > `Certificates & secrets`
 2. Click `+ New client secret`
-3. Type a description and select the desirated expiration period
+3. Type a description and select the desired expiration period
 4. Click `Add`
 5. Copy the `Value` of the client secret
 
@@ -25,9 +25,9 @@
 4. Click `Microsoft Graph`
 5. Click `Application permissions`
 6. Select the following permissions
-    1. Mail.ReadWrite
-    2. Mail.Send
-    3. User.Read.All
+    - Mail.ReadWrite
+    - Mail.Send
+    - User.Read.All
 7. Click `Add permissions`
 8. In the `API permissions` page, click `Grant admin consent for TENANT_NAME`
 9. Click `Yes` in the `Grant admin consent confirmation` modal
