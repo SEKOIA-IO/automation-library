@@ -5,7 +5,7 @@
 #### Create an Azure application
 
 1. On the Azure Portal, in the search bar, go to `App registrations`
-2. Click [`+ New registration`](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/quickStartType~/null/isMSAApp~/false)
+2. Click `+ New registration`
 3. Type a name
 4. Select `Accounts in this organizational directory only` option as account type
 5. Click `Register`
