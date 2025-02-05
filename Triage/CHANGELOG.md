@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-05 - 1.39.0
+
+### Changed
+
+- Fix a minor bug related to incorrect domain_port format
+
 ## 2025-01-06 - 1.38.0
 
 ### Changed
