@@ -335,7 +335,7 @@ def test_get_observables_from_url_without_http(action):
 
 def test_exclude_wrong_domain_port_pattern(action):
     """ "
-    Make sure the domain:port pattern includes only one port 
+    Make sure the domain:port pattern includes only one port
     """
     arguments = {
         "triage_raw_results": [
@@ -343,7 +343,7 @@ def test_exclude_wrong_domain_port_pattern(action):
                 "malware": "xworm",
                 "samples": {
                     "250205-ep1g8synhz": {
-                        "sample_c2s": ["dvd-crossword.gl.at.ply.gg:43216:43216","dvd-crossword.gl.at.ply.gg:43216"],
+                        "sample_c2s": ["dvd-crossword.gl.at.ply.gg:43216:43216", "dvd-crossword.gl.at.ply.gg:43216"],
                         "sample_urls": [],
                         "sample_hashes": [
                             "0de45ff4c9d8c08551619009eb07265a",
