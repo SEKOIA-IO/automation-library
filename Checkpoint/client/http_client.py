@@ -149,3 +149,11 @@ class CheckpointHttpClient(HttpClient):
                 logger.warning("Failed to parse date: {0}. It is not either ISO or `%m/%d/%Y %H:%M:%S` format", value)
 
                 return None
+
+    async def close(self) -> None:
+        """Close http client."""
+        token_refresher = await self.get_token_refresher(CheckpointServiceType.HARMONY_MOBILE)
+        await token_refresher.close()
+
+        if self._session:
+            await self._session.close()

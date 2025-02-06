@@ -14,6 +14,7 @@ aiohttp = "^3.8.6"
 loguru = "^0.7.0"
 async-lru = "^2.0.2"
 aiolimiter = "^1.1.0"
+cashews = "^7.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -60,6 +61,7 @@ omit = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = [
     "tests",
 ]

@@ -1,5 +1,5 @@
 """Tests related to token refresher."""
-
+import time
 from typing import Any
 
 import pytest
@@ -72,6 +72,8 @@ async def test_checkpoint_token_refresher_get_token_success(
 
         assert result.token == token_data
 
+    await token_refresher.close()
+
 
 @pytest.mark.asyncio
 async def test_checkpoint_token_refresher_get_token_error_1(
@@ -96,6 +98,8 @@ async def test_checkpoint_token_refresher_get_token_error_1(
         with pytest.raises(ValueError):
             await token_refresher.get_token()
 
+    await token_refresher.close()
+
 
 @pytest.mark.asyncio
 async def test_checkpoint_token_refresher_get_token_error_2(
@@ -119,3 +123,79 @@ async def test_checkpoint_token_refresher_get_token_error_2(
 
         with pytest.raises(ValueError):
             await token_refresher.get_token()
+
+    await token_refresher.close()
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_token_refresher_token_expiration(
+    token_refresher: CheckpointTokenRefresher,
+    session_faker: Faker,
+):
+    """
+    Test `close` method.
+
+    Args:
+        token_refresher: CheckpointTokenRefresher
+    """
+    token_1 = CheckpointToken(
+        token=session_faker.word(),
+        csrf=session_faker.word(),
+        expires=session_faker.word(),
+        expiresIn=1,  # expire in 1 second
+    )
+
+    token_2 = CheckpointToken(
+        token=session_faker.word(),
+        csrf=session_faker.word(),
+        expires=session_faker.word(),
+        expiresIn=2,  # expire in 2 seconds
+    )
+
+    token_3 = CheckpointToken(
+        token=session_faker.word(),
+        csrf=session_faker.word(),
+        expires=session_faker.word(),
+        expiresIn=3,  # expire in 2 seconds
+    )
+
+    def get_result(token: CheckpointToken) -> dict[str, Any]:
+        return {
+            "success": True,
+            "data": {
+                "token": token.token,
+                "csrf": token.csrf,
+                "expires": token.expires,
+                "expiresIn": token.expiresIn,
+            },
+        }
+
+    with aioresponses() as mocked_responses:
+        # We will fetch token 3 times during test
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=get_result(token_1))
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=get_result(token_2))
+        mocked_responses.post(token_refresher.auth_url, status=200, payload=get_result(token_3))
+
+        # We will fetch token 12 times with delay of 0.5 seconds
+        # First token should expire in 1 second, second in 2 seconds and third in 3 seconds
+        time.time()
+        for i in range(6):
+            async with token_refresher.with_access_token() as result:
+                # first token should not be cached because it will expire in 1 second
+                if i == 0:
+                    assert result.token == token_1
+
+                # second token should be cached because it will expire in 1 second
+                # ttl is 2 seconds, but we cache only for 1 second
+                # it should be returned from cache 2 times
+                if i in [1, 2]:
+                    assert result.token == token_2
+
+                # third token should be cached because it will expire in 3 seconds
+                # we cache it for 2 seconds. so it should be returned from cache 4 times
+                if i > 2:
+                    assert result.token == token_3
+
+            time.sleep(0.5)
+
+    await token_refresher.close()
