@@ -156,7 +156,7 @@ class WizConnector(AsyncConnector, ABC):
 
                 self.log(message=log_message, level="info")
 
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.product_name).set(events_lag)
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(result)
 
