@@ -1,4 +1,5 @@
 """Tests related to token refresher."""
+
 import time
 from typing import Any
 
