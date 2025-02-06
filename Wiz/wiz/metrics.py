@@ -3,14 +3,13 @@
 from prometheus_client import Counter, Gauge, Histogram
 
 # Declare common prometheus metrics
-prom_namespace_wiz = "symphony_module_wiz"
-prom_namespace = "symphony_module_common"
+prom_namespace = "symphony_module_wiz"
 
 
 INCOMING_MESSAGES = Counter(
     name="collected_messages",
     documentation="Number of messages consumed from the event_hub",
-    namespace=prom_namespace_wiz,
+    namespace=prom_namespace,
     labelnames=["intake_key"],
 )
 
@@ -32,5 +31,5 @@ EVENTS_LAG = Gauge(
     name="events_lags",
     documentation="The delay, in seconds, from the date of the last event",
     namespace=prom_namespace,
-    labelnames=["intake_key", "type"],
+    labelnames=["intake_key"],
 )

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-06 - 1.1.2
+
+### Fixed
+
+- Prom namespace and labels change
+
 ## 2025-02-06 - 1.1.1
 
 ### Fixed
