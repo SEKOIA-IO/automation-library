@@ -10,5 +10,9 @@
   "name": "Postfix",
   "uuid": "146689d0-a007-425b-aa9e-d1c06edd5ada",
   "version": "1.0.0",
-  "slug": "postfix"
+  "slug": "postfix",
+  "categories": [
+    "Applicative",
+    "Network"
+  ]
 }

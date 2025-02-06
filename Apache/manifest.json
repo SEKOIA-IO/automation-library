@@ -10,5 +10,9 @@
   "name": "Apache",
   "uuid": "fb40a8f6-5b06-4866-80ab-88faf6adb129",
   "version": "1.0.0",
-  "slug": "apache"
+  "slug": "apache",
+  "categories": [
+    "Applicative",
+    "Network"
+  ]
 }

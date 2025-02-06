@@ -10,5 +10,8 @@
   "name": "Wazuh",
   "uuid": "abdbefde-f2e2-4400-914f-b4d2123bbe41",
   "version": "1.0.0",
-  "slug": "wazuh"
+  "slug": "wazuh",
+  "categories": [
+    "Endpoint"
+  ]
 }

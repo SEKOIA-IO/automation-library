@@ -10,5 +10,8 @@
   "name": "EfficientIP",
   "uuid": "4f3e2ee6-75be-4f16-adab-e3dd932e3e69",
   "version": "1.0.0",
-  "slug": "efficientip"
+  "slug": "efficientip",
+  "categories": [
+    "Network"
+  ]
 }

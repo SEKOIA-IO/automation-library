@@ -10,5 +10,8 @@
   "name": "Varonis",
   "uuid": "dc637598-de55-4c8d-8a38-5f613bce2d3c",
   "version": "1.0.0",
-  "slug": "varonis"
+  "slug": "varonis",
+  "categories": [
+    "IAM"
+  ]
 }
