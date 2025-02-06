@@ -25,7 +25,7 @@
   "name": "Triage",
   "uuid": "919705ab-7a64-493e-a92b-4049fafea325",
   "slug": "triage",
-  "version": "1.38.0",
+  "version": "1.39.0",
   "categories": [
     "Threat Intelligence"
   ]
