@@ -1,0 +1,28 @@
+{
+  "name": "Get latest events from BeyondTrust PRA",
+  "description": "Fetch BeyondTrust PRA events",
+  "uuid": "bd4cd092-ce96-5d5c-afa0-6516912a88c9",
+  "docker_parameters": "connector_beyondtrust_pra",
+  "arguments": {
+    "title": "BeyondTrustPRAPlatformConfiguration",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "frequency": {
+        "description": "Batch frequency in seconds",
+        "default": 60,
+        "type": "integer"
+      }
+    },
+    "required": ["intake_key"]
+  },
+  "results": {}
+}
