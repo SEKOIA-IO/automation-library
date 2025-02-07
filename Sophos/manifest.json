@@ -34,7 +34,7 @@
       "client_secret"
     ]
   },
-  "description": "Sophos Module",
+  "description": "Sophos is a cybersecurity company that provides a range of security solutions, including endpoint protection, firewall, and encryption services. It focuses on delivering advanced threat protection to businesses through simplified and integrated security management.",
   "name": "Sophos",
   "uuid": "0de5216e-19b0-4ad3-9b91-a547cfaf52ca",
   "slug": "sophos",

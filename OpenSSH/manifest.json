@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "OpenSSH is a suite of secure networking utilities based on the Secure Shell (SSH) protocol, providing encrypted communication over unsecured networks. It includes tools for secure remote login, file transfers, and network tunneling.",
   "name": "OpenSSH",
   "uuid": "513392a0-8081-4adb-9612-b0093eec745b",
   "version": "1.0.0",

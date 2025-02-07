@@ -2,7 +2,7 @@
   "uuid": "0c97d665-e316-48ff-bcba-bbfbd4eaccc7",
   "name": "Zscaler",
   "slug": "zscaler",
-  "description": "Integrates with Zscaler",
+  "description": "Zscaler is a cloud security company providing secure internet access and zero trust network access to protect enterprise data and applications. Its platform offers scalable, cloud-native solutions for secure browsing, data protection, and threat prevention.",
   "version": "1.0.0",
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
