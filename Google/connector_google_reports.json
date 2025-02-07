@@ -1,5 +1,5 @@
 {
-  "description": "Get user activities using google workspace and from chromOS devices",
+  "description": "Get user activities using google workspace and from chromeOS devices",
   "docker_parameters": "run-google_reports_trigger",
   "name": "Get user activities",
   "arguments": {
