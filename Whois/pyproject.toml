@@ -8,8 +8,8 @@ package-mode = false
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 pysocks = "^1.6"
-python-whois = "^0.8"
-sekoia-automation-sdk = "^1.13.0"
+python-whois = "^0.9.5"
+sekoia-automation-sdk = "^1.18.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
