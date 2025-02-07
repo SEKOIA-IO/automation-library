@@ -21,4 +21,4 @@ class ForwardMessageAction(MicrosoftGraphActionBase):
             json=payload,
             timeout=60,
         )
-        response.raise_for_status()
+        self.handle_response(response)
