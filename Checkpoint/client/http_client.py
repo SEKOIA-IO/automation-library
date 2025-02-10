@@ -93,7 +93,7 @@ class CheckpointHttpClient(HttpClient):
 
                         # Handle situation when get response like this:
                         # {'success': False, 'message': 'Authentication required', 'forceLogout': True}
-                        if not response_json.get("success", True):  # pragma: no cover
+                        if response_json.get("forceLogout", False):  # pragma: no cover
                             await token_refresher.mark_token_invalid()
                             logger.info("Token is invalid. Trying to get new token and retry")
 
