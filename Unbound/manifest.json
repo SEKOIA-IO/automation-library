@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "Unbound is an open-source DNS resolver designed to provide secure and efficient domain name resolution. It focuses on privacy and security features, such as DNSSEC validation and support for various cryptographic protocols.",
   "name": "Unbound",
   "uuid": "ddfada96-2d86-428b-9e3b-3c873921692f",
   "version": "1.0.0",

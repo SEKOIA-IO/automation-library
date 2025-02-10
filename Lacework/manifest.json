@@ -26,7 +26,7 @@
       "secret"
     ]
   },
-  "description": "[Lacework](https://www.lacework.com/) is a cybersecurity company specializing in cloud security and compliance, offering automated threat detection and response solutions for modern cloud environments.",
+  "description": "Lacework is a cybersecurity company specializing in cloud security and compliance, offering automated threat detection and response solutions for modern cloud environments.",
   "name": "Lacework",
   "uuid": "5803f97d-b324-4452-b861-0253b15de650",
   "slug": "lacework",

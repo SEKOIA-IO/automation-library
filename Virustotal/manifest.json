@@ -16,7 +16,7 @@
       "apikey"
     ]
   },
-  "description": "[VirusTotal](https://www.virustotal.com) is a cybersecurity company specialized in malware analysis.",
+  "description": "VirusTotal is a cybersecurity company specialized in malware analysis.",
   "name": "VirusTotal",
   "uuid": "d023af1d-25d8-465b-b85f-2ed48214d6a5",
   "slug": "virustotal",

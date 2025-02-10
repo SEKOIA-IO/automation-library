@@ -239,6 +239,7 @@ class WizGqlClient(object):
                     deleted
                     targetObjectProviderUniqueId
                     firstSeenAt
+                    analyzedAt
                     severity
                     result
                     status

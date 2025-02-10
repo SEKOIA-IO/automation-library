@@ -22,7 +22,7 @@
       "apikey"
     ]
   },
-  "description": "[Okta](https://www.okta.com/) is an entreprise-grade, identity management service compatible with cloud apps as well as many on-premises applications",
+  "description": "Okta is an entreprise-grade, identity management service compatible with cloud apps as well as many on-premises applications",
   "name": "Okta",
   "uuid": "4ef895d1-3f21-4678-8d0a-5c39c37210fe",
   "slug": "okta",

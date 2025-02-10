@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "HAProxy is a high-performance, open-source load balancer and reverse proxy used to distribute network traffic efficiently across multiple servers. It enhances the reliability and scalability of web applications by providing features like SSL termination, health checks, and session persistence.",
   "name": "HAProxy",
   "uuid": "e3997649-c041-44d6-9952-a68aaa96b1a3",
   "version": "1.0.0",

@@ -150,6 +150,7 @@ def alerts_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
                 {
                     **session_faker.pydict(allowed_types=[str, int, float, bool]),
                     "createdAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
                 }
                 for _ in range(10)
             ],
@@ -169,6 +170,7 @@ def alerts_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, 
                 {
                     **session_faker.pydict(allowed_types=[str, int, float, bool]),
                     "createdAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
                 }
                 for _ in range(10)
             ],
@@ -188,6 +190,7 @@ def findings_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
                 {
                     **session_faker.pydict(allowed_types=[str, int, float, bool]),
                     "analyzedAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
                 }
                 for _ in range(10)
             ],
@@ -207,6 +210,7 @@ def findings_response_with_next_page(session_faker: Faker) -> dict[str, dict[str
                 {
                     **session_faker.pydict(allowed_types=[str, int, float, bool]),
                     "analyzedAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
                 }
                 for _ in range(10)
             ],

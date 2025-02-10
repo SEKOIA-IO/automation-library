@@ -40,7 +40,7 @@
       "api_key"
     ]
   },
-  "description": "Imperva Module",
+  "description": "Imperva is a cybersecurity company focused on protecting data and applications, offering solutions like web application firewalls and DDoS protection. It helps safeguard digital assets from cyber threats through comprehensive security and risk management tools.",
   "name": "Imperva",
   "uuid": "ee0e5c81-5410-48d4-b155-135679c5ebb8",
   "slug": "imperva",

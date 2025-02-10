@@ -32,7 +32,7 @@
       "basicauth_secret"
     ]
   },
-  "description": "Digital Shadows Module",
+  "description": "Digital Shadows is a cybersecurity company that offers digital risk protection solutions to help organizations manage their digital footprints and detect threats. It provides monitoring and intelligence to safeguard against data leaks, phishing, and other cyber risks.",
   "name": "Digital Shadows",
   "uuid": "e76687ed-db66-482a-8549-f3ef3b248e06",
   "slug": "digital-shadows",
