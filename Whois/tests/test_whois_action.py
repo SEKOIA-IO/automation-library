@@ -175,9 +175,9 @@ def test_whois_action(whois_results, raw_google_whois):
     with patch("whois.whois", return_value=whois_results):
         results = action.run({"query": "google.com"})
         
-        assert results.get("Domain").get("Whois").get("CreationDate") == "1997-09-15 07:00:00+00:00"
-        assert results.get("Domain").get("Whois").get("UpdatedDate") == "2024-08-02 02:17:33+00:00"
-        assert results.get("Domain").get("Whois").get("ExpirationDate") == '2028-09-13 07:00:00+00:00'
+        assert results.get("Domain").get("Whois").get("CreationDate") == "1997-09-15 07:00:00"
+        assert results.get("Domain").get("Whois").get("UpdatedDate") == "2024-08-02 02:17:33"
+        assert results.get("Domain").get("Whois").get("ExpirationDate") == '2028-09-13 07:00:00'
         assert results == {
             "Domain": {
                 "Name": "GOOGLE.COM",
@@ -204,10 +204,14 @@ def test_whois_action(whois_results, raw_google_whois):
                         "NS2.GOOGLE.COM",
                         "NS3.GOOGLE.COM",
                         "NS4.GOOGLE.COM",
+                        'ns3.google.com',
+                        'ns4.google.com',
+                        'ns2.google.com',
+                        'ns1.google.com',
                     ],
-                    "CreationDate": "1997-09-15 07:00:00+00:00",
-                    "UpdatedDate": "2024-08-02 02:17:33+00:00",
-                    "ExpirationDate": "2028-09-13 07:00:00+00:00",
+                    "CreationDate": "1997-09-15 07:00:00",
+                    "UpdatedDate": "2024-08-02 02:17:33",
+                    "ExpirationDate": "2028-09-13 07:00:00",
                     "Registrar": {
                         "Name": "MarkMonitor, Inc.",
                         "AbuseEmail": "abusecomplaints@markmonitor.com",
