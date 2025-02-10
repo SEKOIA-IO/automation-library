@@ -45,10 +45,10 @@ def is_ip_adress(ip_adresse: str) -> bool:
 
 # Extracts the domain and suffix from a URL
 def extract_domain_from_url(arg: str) -> str:
-    
+
     if is_ip_adress(arg):
         return arg
-    
+
     extract_domain = extract(arg)
     return f"{extract_domain.domain}.{extract_domain.suffix}"
 
@@ -83,6 +83,7 @@ class WhoisAction(Action):
             }
         except PywhoisError as e:
             return {}
+
 
 whois_result = whois.whois("google.com")
 print(f"{whois_result}")

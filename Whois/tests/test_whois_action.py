@@ -148,6 +148,7 @@ Visit MarkMonitor at https://www.markmonitor.com
 Contact us at +1.8007459229
 In Europe, at +44.02032062220"""
 
+
 @pytest.fixture
 def whois_results(raw_google_whois):
     return WhoisEntry(
@@ -155,11 +156,13 @@ def whois_results(raw_google_whois):
         raw_google_whois,
     )
 
+
 def test_is_ip_adress():
     assert is_ip_adress("8.8.8.8")
     assert not is_ip_adress("8.8.8")
     assert not is_ip_adress("google.com")
     assert is_ip_adress("2001:0000:130F:0000:0000:09C0:876A:130B")
+
 
 def test_extract_domain_from_url():
     assert extract_domain_from_url("google.com") == "google.com"
@@ -174,10 +177,10 @@ def test_whois_action(whois_results, raw_google_whois):
 
     with patch("whois.whois", return_value=whois_results):
         results = action.run({"query": "google.com"})
-        
+
         assert results.get("Domain").get("Whois").get("CreationDate") == "1997-09-15 07:00:00"
         assert results.get("Domain").get("Whois").get("UpdatedDate") == "2024-08-02 02:17:33"
-        assert results.get("Domain").get("Whois").get("ExpirationDate") == '2028-09-13 07:00:00'
+        assert results.get("Domain").get("Whois").get("ExpirationDate") == "2028-09-13 07:00:00"
         assert results == {
             "Domain": {
                 "Name": "GOOGLE.COM",
@@ -204,10 +207,10 @@ def test_whois_action(whois_results, raw_google_whois):
                         "NS2.GOOGLE.COM",
                         "NS3.GOOGLE.COM",
                         "NS4.GOOGLE.COM",
-                        'ns3.google.com',
-                        'ns4.google.com',
-                        'ns2.google.com',
-                        'ns1.google.com',
+                        "ns3.google.com",
+                        "ns4.google.com",
+                        "ns2.google.com",
+                        "ns1.google.com",
                     ],
                     "CreationDate": "1997-09-15 07:00:00",
                     "UpdatedDate": "2024-08-02 02:17:33",
