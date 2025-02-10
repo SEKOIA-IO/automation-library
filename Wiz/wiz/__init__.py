@@ -2,13 +2,14 @@ import asyncio
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Sequence
 
 import orjson
-from dateutil.parser import isoparse
+from cachetools import Cache, LRUCache
 from loguru import logger
-from pydantic import BaseModel, HttpUrl
+from pydantic.v1 import BaseModel, HttpUrl
 from sekoia_automation.aio.connector import AsyncConnector
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 from sekoia_automation.storage import PersistentJSON
@@ -57,33 +58,15 @@ class WizConnector(AsyncConnector, ABC):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._wiz_gql_client: WizGqlClient | None = None
+        self.events_cache: Cache = LRUCache(maxsize=10000)
+        self.last_event_date = CheckpointDatetime(
+            path=self.data_path,
+            start_at=timedelta(days=7),
+            ignore_older_than=timedelta(days=7),
+        )
 
-    @property
-    def last_event_date(self) -> datetime:  # pragma: no cover
-        """
-        Get last event date.
-
-        Returns:
-            datetime:
-        """
-        now = datetime.now(timezone.utc)
-        one_hour_ago = (now - timedelta(hours=1)).replace(microsecond=0)
-
-        with self.context as cache:
-            last_event_date_str = cache.get("last_event_date")
-
-            # If undefined, retrieve events from the last 1 hour
-            if last_event_date_str is None:
-                return one_hour_ago
-
-            # Parse the most recent date seen
-            last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
-
-            # We don't retrieve messages older than 1 hour
-            if last_event_date < one_hour_ago:
-                return one_hour_ago
-
-            return last_event_date
+    async def push_data_to_intakes(self, events: list[str]) -> list[str]:
+        return events
 
     @property
     def wiz_gql_client(self) -> WizGqlClient:  # pragma: no cover
@@ -115,7 +98,7 @@ class WizConnector(AsyncConnector, ABC):
         Returns:
             int: total number of events processed
         """
-        _previous_last_event_date = self.last_event_date
+        _previous_last_event_date = self.last_event_date.offset
 
         has_next_page = True
         end_cursor: str | None = None
@@ -127,11 +110,13 @@ class WizConnector(AsyncConnector, ABC):
 
             # Push the collected events
             pushed_events = await self.push_data_to_intakes(
-                [orjson.dumps(event).decode("utf-8") for event in result.data]
+                [
+                    orjson.dumps(event).decode("utf-8")
+                    for event in filter_collected_events(result.data, lambda event: event["id"], self.events_cache)
+                ]
             )
 
-            with self.context as cache:
-                cache["last_event_date"] = result.new_last_event_date.isoformat()
+            self.last_event_date.offset = result.new_last_event_date
 
             total_events += len(pushed_events)
 
@@ -145,7 +130,7 @@ class WizConnector(AsyncConnector, ABC):
             try:
                 processing_start = time.time()
                 result = await self.single_run()
-                last_event_date = self.last_event_date
+                last_event_date = self.last_event_date.offset
                 processing_end = time.time()
 
                 events_lag: float = 0
@@ -191,3 +176,27 @@ class WizConnector(AsyncConnector, ABC):
     def run(self) -> None:  # pragma: no cover
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_run())
+
+
+def filter_collected_events(events: Sequence[Any], getter: Callable, cache: Cache) -> list[Any]:
+    """
+    Filter events that have already been filter_collected_events
+
+    Args:
+        events: The list of events to filter
+        getter: The callable to get the criteria to filter the events
+        cache: The cache that hold the list of collected events
+    """
+
+    selected_events = []
+    for event in events:
+        key = getter(event)
+
+        # If the event was already collected, discard it
+        if key is None or key in cache:
+            continue
+
+        cache[key] = True
+        selected_events.append(event)
+
+    return selected_events
