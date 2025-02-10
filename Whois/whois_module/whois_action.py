@@ -1,5 +1,8 @@
 from datetime import datetime
 
+import ipaddress
+from tldextract import extract
+
 import whois
 from whois.parser import PywhoisError
 from sekoia_automation.action import Action
@@ -31,10 +34,30 @@ def time_list_tool(obj):
         return obj
 
 
+# Checks if the input is an IP address
+def is_ip_adress(ip_adresse: str) -> bool:
+    try:
+        s = ipaddress.ip_address(ip_adresse)
+        return True
+    except ValueError:
+        return False
+
+
+# Extracts the domain and suffix from a URL
+def extract_domain_from_url(arg: str) -> str:
+    
+    if is_ip_adress(arg):
+        return arg
+    
+    extract_domain = extract(arg)
+    return f"{extract_domain.domain}.{extract_domain.suffix}"
+
+
 class WhoisAction(Action):
     def run(self, arguments):
         try:
-            whois_result = whois.whois(arguments["query"])
+            get_domain = extract_domain_from_url(arguments["query"])
+            whois_result = whois.whois(get_domain)
             return {
                 "Domain": {
                     "Name": str(list_tool(whois_result.domain_name, list, 0)),
@@ -60,3 +83,6 @@ class WhoisAction(Action):
             }
         except PywhoisError as e:
             return {}
+
+whois_result = whois.whois("google.com")
+print(f"{whois_result}")
