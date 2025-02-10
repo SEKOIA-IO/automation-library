@@ -1,7 +1,7 @@
 import asyncio
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any, Callable, Optional, Sequence
 
 import orjson
@@ -10,9 +10,8 @@ from loguru import logger
 from pydantic.v1 import BaseModel, HttpUrl
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.checkpoint import CheckpointDatetime
-from sekoia_automation.connector import DefaultConnectorConfiguration
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.module import Module
-from sekoia_automation.storage import PersistentJSON
 
 from wiz.client.gql_client import WizErrors, WizGqlClient, WizResult
 from wiz.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
@@ -56,7 +55,6 @@ class WizConnector(AsyncConnector, ABC):
         """Init WizConnector."""
 
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
         self._wiz_gql_client: WizGqlClient | None = None
         self.events_cache: Cache = LRUCache(maxsize=10000)
         self.last_event_date = CheckpointDatetime(
@@ -64,9 +62,6 @@ class WizConnector(AsyncConnector, ABC):
             start_at=timedelta(days=7),
             ignore_older_than=timedelta(days=7),
         )
-
-    async def push_data_to_intakes(self, events: list[str]) -> list[str]:
-        return events
 
     @property
     def wiz_gql_client(self) -> WizGqlClient:  # pragma: no cover
@@ -172,6 +167,12 @@ class WizConnector(AsyncConnector, ABC):
         await self.wiz_gql_client.close()
         if self._session:
             await self._session.close()
+
+    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
+        """
+        Stop the connector
+        """
+        super(Connector, self).stop(*args, **kwargs)
 
     def run(self) -> None:  # pragma: no cover
         loop = asyncio.get_event_loop()
