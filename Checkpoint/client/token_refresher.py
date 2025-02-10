@@ -43,7 +43,14 @@ class CheckpointTokenRefresher(GenericTokenRefresher[RefreshedToken[CheckpointTo
     _instances: ClassVar[dict[str, "CheckpointTokenRefresher"]] = {}
     _locks: ClassVar[dict[str, Lock]] = {}
 
-    def __init__(self, client_id: str, secret_key: str, auth_url: str, cache_key: str | None = None) -> None:
+    def __init__(
+        self,
+        client_id: str,
+        secret_key: str,
+        auth_url: str,
+        ttl_delta: int = 30,
+        cache_key: str | None = None,
+    ) -> None:
         """
         Initialize CheckpointTokenRefresher.
 
@@ -56,6 +63,7 @@ class CheckpointTokenRefresher(GenericTokenRefresher[RefreshedToken[CheckpointTo
         self.client_id = client_id
         self.secret_key = secret_key
         self.auth_url = auth_url
+        self.ttl_delta = ttl_delta
         self.cache_key: str = cache_key or f"checkpoint_token_{client_id}"
 
     @classmethod
@@ -89,7 +97,7 @@ class CheckpointTokenRefresher(GenericTokenRefresher[RefreshedToken[CheckpointTo
             async with cls._locks[refresher_unique_key]:
                 if not cls._instances.get(refresher_unique_key):
                     cls._instances[refresher_unique_key] = CheckpointTokenRefresher(
-                        client_id, secret_key, auth_url, refresher_unique_key
+                        client_id, secret_key, auth_url, cache_key=refresher_unique_key
                     )
 
         return cls._instances[refresher_unique_key]
@@ -127,7 +135,7 @@ class CheckpointTokenRefresher(GenericTokenRefresher[RefreshedToken[CheckpointTo
         cached_token: RefreshedToken[CheckpointToken] | None = await _cache.get(self.cache_key)
         if cached_token is None:
             cached_token = await self.get_token()
-            ttl = cached_token.ttl - 1  # 1 second less to be sure that token is expired
+            ttl = cached_token.ttl - self.ttl_delta  # 30 seconds by default before token expires
             if ttl >= 1:
                 logger.info("Cache new token with ttl {}", ttl)
                 await _cache.set(self.cache_key, cached_token, expire=ttl)

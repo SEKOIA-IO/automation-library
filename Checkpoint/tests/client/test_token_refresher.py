@@ -25,6 +25,7 @@ def token_refresher(session_faker: Faker) -> CheckpointTokenRefresher:
         client_id=session_faker.pystr(),
         secret_key=session_faker.pystr(),
         auth_url=session_faker.url(),
+        ttl_delta=1,
     )
 
 
