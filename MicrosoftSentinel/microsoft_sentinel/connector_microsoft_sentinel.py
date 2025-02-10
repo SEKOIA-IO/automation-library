@@ -33,7 +33,7 @@ class MicrosoftSentineldConnector(Connector):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        
+
         self.cursor = CheckpointDatetime(
             path=self._data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
         )
