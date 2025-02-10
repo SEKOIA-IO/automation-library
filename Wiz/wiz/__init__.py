@@ -56,7 +56,6 @@ class WizConnector(AsyncConnector, ABC):
         """Init WizConnector."""
 
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
         self._wiz_gql_client: WizGqlClient | None = None
         self.events_cache: Cache = LRUCache(maxsize=10000)
         self.last_event_date = CheckpointDatetime(
@@ -64,9 +63,6 @@ class WizConnector(AsyncConnector, ABC):
             start_at=timedelta(days=7),
             ignore_older_than=timedelta(days=7),
         )
-
-    async def push_data_to_intakes(self, events: list[str]) -> list[str]:
-        return events
 
     @property
     def wiz_gql_client(self) -> WizGqlClient:  # pragma: no cover
