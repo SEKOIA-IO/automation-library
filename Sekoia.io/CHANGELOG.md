@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-10 - 2.67.5
+
+### Changed
+
+- Update `Update Alert Status by name` to add a comment when changing alert status
+
 ## 2025-02-10 - 2.67.4
 
 ### Added
