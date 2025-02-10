@@ -10,7 +10,7 @@ from loguru import logger
 from pydantic.v1 import BaseModel, HttpUrl
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.checkpoint import CheckpointDatetime
-from sekoia_automation.connector import DefaultConnectorConfiguration
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 
 from wiz.client.gql_client import WizErrors, WizGqlClient, WizResult
@@ -167,6 +167,12 @@ class WizConnector(AsyncConnector, ABC):
         await self.wiz_gql_client.close()
         if self._session:
             await self._session.close()
+
+    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
+        """
+        Stop the connector
+        """
+        super(Connector, self).stop(*args, **kwargs)
 
     def run(self) -> None:  # pragma: no cover
         loop = asyncio.get_event_loop()
