@@ -1,7 +1,7 @@
 import asyncio
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any, Callable, Optional, Sequence
 
 import orjson
@@ -12,7 +12,6 @@ from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
-from sekoia_automation.storage import PersistentJSON
 
 from wiz.client.gql_client import WizErrors, WizGqlClient, WizResult
 from wiz.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
