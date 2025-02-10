@@ -129,12 +129,6 @@ def incidents_list(first_incident_item, second_incident_item):
     return [first_incident_item, second_incident_item]
 
 
-def test_to_timestamp(trigger):
-    assert trigger._to_timestamp("2021-09-01T00:00:00.000Z") == 1630454400.0
-    assert trigger._to_timestamp("2021-09-01T00:00:00.001Z") == 1630454400.001
-    assert trigger._to_timestamp("2021-09-02T00:00:00.001000Z") == 1630540800.001
-
-
 def test_to_RFC3339(trigger):
     assert trigger._to_RFC3339(datetime(2021, 9, 1, 0, 0, 0)) == "2021-09-01T00:00:00.000000Z"
     assert trigger._to_RFC3339(datetime(2021, 9, 1, 0, 0, 0, 1)) == "2021-09-01T00:00:00.000001Z"

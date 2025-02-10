@@ -1,7 +1,6 @@
 import time
 import datetime as date_time
-from datetime import datetime, timedelta, timezone
-from dateutil.parser import isoparse
+from datetime import datetime, timedelta
 
 import orjson
 import itertools
@@ -17,7 +16,7 @@ from azure.core.paging import ItemPaged
 from azure.mgmt.securityinsight.models import IncidentAdditionalData, IncidentOwnerInfo, Incident, IncidentLabel
 
 from sekoia_automation.connector import Connector
-from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.checkpoint import CheckpointDatetime
 
 from microsoft_sentinel.utils import additional_data_to_dict, owner_data_to_dict, labels_data_to_dict
 from microsoft_sentinel.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
@@ -34,32 +33,16 @@ class MicrosoftSentineldConnector(Connector):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
-
-    @property
-    def checkpoint(self) -> str:
-        now = datetime.now(timezone.utc)
-
-        with self.context as cache:
-            cached_date = cache.get("cached_date")
-
-            if cached_date is None:
-                one_day_ago = now - timedelta(days=1)
-                return one_day_ago.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-            cached_datetime: datetime = isoparse(cached_date)
-
-            one_month_ago: datetime = now - timedelta(days=30)
-            return max(cached_datetime, one_month_ago).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    @checkpoint.setter
-    def checkpoint(self, last_message_date: datetime) -> None:
-        with self.context as cache:
-            cache["cached_date"] = last_message_date
+        
+        self.cursor = CheckpointDatetime(
+            path=self._data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+        )
+        self.from_date = self.cursor.offset
 
     @property
     def incidents_filter(self) -> str:
-        return f"properties/createdTimeUtc gt {self.checkpoint}"
+        most_recent_date = self._to_RFC3339(self.from_date)
+        return f"properties/createdTimeUtc gt {most_recent_date}"
 
     @cached_property
     def batch_limit(self) -> int:
@@ -76,10 +59,6 @@ class MicrosoftSentineldConnector(Connector):
             credential=credential,
             subscription_id=self.configuration.subscription_id,
         )
-
-    def _to_timestamp(self, date: str) -> float:
-        RFC3339_STRICT_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-        return datetime.strptime(date, RFC3339_STRICT_FORMAT).replace(tzinfo=timezone.utc).timestamp()
 
     def _to_RFC3339(self, date: Optional[datetime]) -> Optional[str]:
         return date.strftime("%Y-%m-%dT%H:%M:%S.%fZ") if date else None
@@ -123,7 +102,7 @@ class MicrosoftSentineldConnector(Connector):
             return
 
         alerts_batch = []
-        final_created_time = None
+        stored_time = None
         incoming_events_sum = 0
         for item in response:
             created_time = item.created_time_utc
@@ -131,11 +110,11 @@ class MicrosoftSentineldConnector(Connector):
             jsonify_item = orjson.dumps(serialezed_incident).decode("utf-8")
             alerts_batch.append(jsonify_item)
 
-            if final_created_time is None:
-                final_created_time = created_time
+            if stored_time is None:
+                stored_time = created_time
             else:
                 if created_time is not None:
-                    final_created_time = max(final_created_time, created_time)
+                    stored_time = max(stored_time, created_time)
 
             if (incoming_events_sum + 1) % self.batch_limit == 0:
                 alerts_len: int = len(alerts_batch)
@@ -154,12 +133,10 @@ class MicrosoftSentineldConnector(Connector):
 
         INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(incoming_events_sum)
 
-        stored_time = self._to_RFC3339(final_created_time)
-
         if stored_time:
-            self.checkpoint = stored_time
+            self.from_date = stored_time
 
-            most_recent_timestamp = self._to_timestamp(stored_time)
+            most_recent_timestamp = stored_time.timestamp()
             events_lag = int(time.time() - most_recent_timestamp)
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(events_lag)
 
