@@ -3,6 +3,7 @@ import json
 from urllib.parse import urljoin
 from pydantic import BaseModel
 from typing import List, Dict, Any
+from unittest.mock import patch
 
 # Adjust the import path according to your project structure
 from sekoiaio.operation_center.synchronize_assets_with_ad import (
@@ -46,6 +47,27 @@ class TestSynchronizeAssetsWithAD:
                 "email": "jdoe@example.com",
                 "department": "engineering",
             },
+            asset_synchronization_configuration={
+                "asset_name_field": "username",
+                "detection_properties": {
+                    "email": ["email"],
+                    "department": ["department"],
+                },
+                "contextual_properties": {
+                    "dept": "department",
+                },
+            },
+            community_uuid="community-1234",
+        )
+
+    @pytest.fixture
+    def arguments_with_file(self):
+        """
+        Fixture to provide the necessary arguments for running the action
+        with a user_ad_file.
+        """
+        return Arguments(
+            user_ad_file="path/to/user_ad_file.json",
             asset_synchronization_configuration={
                 "asset_name_field": "username",
                 "detection_properties": {
@@ -371,3 +393,164 @@ class TestSynchronizeAssetsWithAD:
 
         # Assert 'sources' list contains the same elements, regardless of order
         assert set(post_merge["sources"]) == set(expected_merge_payload["sources"]), "Sources mismatch."
+
+    def test_using_user_ad_file(self, requests_mock, action_instance, arguments_with_file):
+        """
+        Test the SynchronizeAssetsWithAD action using user_ad_file to provide user AD data.
+        """
+        # Define the mock user AD data to be returned when reading the file
+        mock_user_ad_data = [
+            {
+                "username": "asmith",
+                "email": "asmith@example.com",
+                "department": "marketing",
+            },
+            {
+                "username": "bjones",
+                "email": "bjones@example.com",
+                "department": "sales",
+            },
+        ]
+
+        # Patch the `json_argument` method to return the mock_user_ad_data
+        with patch.object(SynchronizeAssetsWithAD, "json_argument", return_value=mock_user_ad_data) as mock_json_arg:
+            # Extract configuration from the mock module
+            base_url = action_instance.module.configuration["base_url"]
+            api_key = action_instance.module.configuration["api_key"]
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            }
+
+            # URLs
+            assets_url = urljoin(base_url + "/", "v2/asset-management/assets")
+            merge_url = urljoin(base_url + "/", "v2/asset-management/assets/merge")
+            create_url = urljoin(base_url + "/", "v2/asset-management/assets")
+
+            # Define how many times each GET request should be expected
+            # For each user in the file, the action will:
+            # 1. GET asset by name
+            # 2. GET assets by detection properties (email and department)
+            # Therefore, total GET requests = 2 * number of users
+            # Additionally, POST requests to create assets and merge if necessary
+
+            # Mock GET requests for asset name searches (all return no assets)
+            def match_asset_name(request):
+                search_query = request.qs.get("search", [None])[0]
+                also_search = "also_search_in_detection_properties" in request.qs
+                return search_query in {"asmith", "bjones"} and not also_search
+
+            requests_mock.get(
+                assets_url,
+                additional_matcher=match_asset_name,
+                json={
+                    "total": 0,
+                    "items": [],
+                },
+                status_code=200,
+            )
+
+            # Mock GET requests for detection properties (all return no assets)
+            def match_detection_properties(request):
+                return request.qs.get("also_search_in_detection_properties", [None])[0] == "true"
+
+            requests_mock.get(
+                assets_url,
+                additional_matcher=match_detection_properties,
+                json={
+                    "total": 0,
+                    "items": [],
+                },
+                status_code=200,
+            )
+
+            # Mock POST requests to create new assets
+            # Assuming two assets will be created
+            create_responses = [
+                {"uuid": "asset-uuid-asmith"},
+                {"uuid": "asset-uuid-bjones"},
+            ]
+
+            # Use a side effect to return different responses for each POST create
+            requests_mock.post(
+                create_url,
+                json=create_responses.pop(0),
+                status_code=200,
+            )
+            requests_mock.post(
+                create_url,
+                json=create_responses.pop(0),
+                status_code=200,
+            )
+
+            # Mock POST requests to merge assets (no sources to merge in this case)
+            # Since no existing assets were found, no merge should occur
+            # Therefore, no POST merge requests are expected
+
+            # Execute the action
+            response = action_instance.run(arguments_with_file)
+
+            # Assertions
+            assert len(response) == 2, "Expected two response items for two users."
+            print(response)
+            # Check first user response
+            response_item_1 = response[0]
+            assert response_item_1["created_asset"] is True, "Asset for asmith should be created."
+            assert response_item_1["destination_asset"] in [
+                "asset-uuid-asmith",
+                "asset-uuid-bjones",
+            ], "Destination asset UUID for asmith mismatch."
+            assert response_item_1["found_assets"] == [], "Found assets for asmith should be empty."
+
+            # Check second user response
+            response_item_2 = response[1]
+            assert response_item_2["created_asset"] is True, "Asset for bjones should be created."
+            assert response_item_2["destination_asset"] in [
+                "asset-uuid-asmith",
+                "asset-uuid-bjones",
+            ], "Destination asset UUID for bjones mismatch."
+            assert response_item_2["found_assets"] == [], "Found assets for bjones should be empty."
+
+            assert (
+                len(requests_mock.request_history) == 8
+            ), f"Expected 6 HTTP requests, got {len(requests_mock.request_history)}."
+
+            # Verify that `json_argument` was called once with the correct parameters
+            mock_json_arg.assert_called_once_with("user_ad_file", arguments_with_file)
+
+            # Verify the payloads of POST create requests
+            post_create_requests = [
+                req for req in requests_mock.request_history if req.method == "POST" and not req.url.endswith("/merge")
+            ]
+            assert len(post_create_requests) == 2, "Expected two POST create requests."
+
+            expected_post_create_payloads = [
+                {
+                    "name": "asmith",
+                    "description": "",
+                    "type": "account",
+                    "category": "user",
+                    "reviewed": True,
+                    "source": "manual",
+                    "props": {"dept": "marketing"},
+                    "atoms": {"email": ["asmith@example.com"], "department": ["marketing"]},
+                    "community_uuid": "community-1234",
+                },
+                {
+                    "name": "bjones",
+                    "description": "",
+                    "type": "account",
+                    "category": "user",
+                    "reviewed": True,
+                    "source": "manual",
+                    "props": {"dept": "sales"},
+                    "atoms": {"email": ["bjones@example.com"], "department": ["sales"]},
+                    "community_uuid": "community-1234",
+                },
+            ]
+
+            for req, expected_payload in zip(post_create_requests, expected_post_create_payloads):
+                assert (
+                    req.json() == expected_payload
+                ), f"POST create request payload mismatch for {expected_payload['name']}."
