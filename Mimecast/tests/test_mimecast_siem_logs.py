@@ -293,3 +293,12 @@ def test_old_cursor(
 
         assert consumer.old_cursor is None
         assert consumer.cursor.offset == "tokenNextPageLast=="
+
+        first_batch_request = next(
+            item for item in mock_requests.request_history if "/siem/v1/batch/events/cg" in item.url
+        )
+        fake_date_ymd = fake_date.strftime("%Y-%m-%d")
+        assert (
+            first_batch_request.url == "https://api.services.mimecast.com/siem/v1/batch/events/cg?"
+            f"pageSize=100&type=process&dateRangeStartsAt={fake_date_ymd}"
+        )
