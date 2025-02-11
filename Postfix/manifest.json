@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "Postfix is an open-source mail transfer agent (MTA) that routes and delivers electronic mail, known for its efficiency and secure handling of email traffic.",
   "name": "Postfix",
   "uuid": "146689d0-a007-425b-aa9e-d1c06edd5ada",
   "version": "1.0.0",

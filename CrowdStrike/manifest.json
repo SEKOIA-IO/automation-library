@@ -25,7 +25,7 @@
       "aws_secret_access_key"
     ]
   },
-  "description": "[CrowdStrike] CrowdStrike provides cloud workload and endpoint security, threat intelligence, and cyberattack response services and products.\n This module provides triggers to collect events from CrowdStrike",
+  "description": "CrowdStrike provides cloud workload and endpoint security, threat intelligence, and cyberattack response services and products.\n This module provides triggers to collect events from CrowdStrike",
   "name": "CrowdStrike",
   "uuid": "4ffe6bd9-6693-414d-ade0-5ec9fb1b8b2c",
   "slug": "crowdstrike",

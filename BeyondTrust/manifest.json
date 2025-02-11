@@ -1,0 +1,31 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "BeyondTrust",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "format": "uri",
+        "default": "https://<tenant>.beyondtrustcloud.com"
+      },
+      "client_id": {
+        "description": "Client ID",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "Client secret",
+        "type": "string"
+      }
+    },
+    "required": ["base_url", "client_id", "client_secret"],
+    "secrets": ["client_secret"]
+  },
+  "description": "BeyondTrust is a cybersecurity firm specializing in identity and access management solutions, focusing on protecting privileged accounts and securing remote access.",
+  "name": "BeyondTrust",
+  "slug": "beyondtrust",
+  "categories": ["Network"],
+  "uuid": "ab96c1e6-20b9-4589-aa9a-43d84043d857",
+  "version": "0.1.1"
+}

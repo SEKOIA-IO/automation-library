@@ -15,14 +15,14 @@
       }
     },
     "required": [
-	"hostname",
-	"api_token"
+      "hostname",
+      "api_token"
     ],
     "secrets": [
       "api_token"
     ]
   },
-  "description": "This module interacts with the SentinelOne",
+  "description": "SentinelOne is a cybersecurity company that provides autonomous endpoint protection through AI-powered threat detection and response. Its platform offers real-time prevention, detection, and remediation of cyber threats across networks.",
   "name": "SentinelOne",
   "uuid": "ff675e74-e5c1-47c8-a571-d207fc297464",
   "slug": "sentinelone",

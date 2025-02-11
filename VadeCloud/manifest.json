@@ -27,7 +27,7 @@
       "password"
     ]
   },
-  "description": "",
+  "description": "Vade is a cybersecurity company specializing in email security solutions, offering predictive threat detection and response to combat phishing, malware, and spam. This module helps to collect information from Vade Cloud",
   "name": "Vade Cloud",
   "slug": "vade-cloud",
   "uuid": "203d043e-a1ea-4b5c-81ef-6fc0f8a6a9d3",

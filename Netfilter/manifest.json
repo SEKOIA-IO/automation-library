@@ -6,7 +6,7 @@
     "properties": {},
     "required": []
   },
-  "description": "",
+  "description": "Netfilter is a framework within the Linux kernel that provides packet filtering, network address translation, and port translation",
   "name": "Netfilter",
   "uuid": "0293e1dd-8cd7-463e-b1ec-1d2d16a8025e",
   "version": "1.0.0",

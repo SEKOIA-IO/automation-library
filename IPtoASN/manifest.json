@@ -4,7 +4,7 @@
     "title": "Arguments",
     "type": "object"
   },
-  "description": "[IPtoASN](https://iptoasn.com/) is a free, downloadable and frequently updated ASN database. It allow associating IP addresses to ASN",
+  "description": "IPtoASN is a free, downloadable and frequently updated ASN database. It allow associating IP addresses to ASN",
   "name": "IPtoASN",
   "uuid": "b1c26bbd-8ec6-464b-a979-bc1f804417b2",
   "slug": "iptoasn",

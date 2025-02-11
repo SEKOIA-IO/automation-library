@@ -27,7 +27,7 @@
       "apikey"
     ]
   },
-  "description": "[TheHive](https://thehive-project.org/) is a scalable, open source and free Security Incident Response Platform",
+  "description": "TheHive is a scalable, open source and free Security Incident Response Platform",
   "name": "The Hive V5",
   "uuid": "d6c96586-707c-451f-b9f6-d31b3291f87d",
   "slug": "thehivev5",

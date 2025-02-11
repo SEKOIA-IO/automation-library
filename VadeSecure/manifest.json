@@ -32,7 +32,7 @@
       "client_secret"
     ]
   },
-  "description": "Vade Secure Module",
+  "description": "Vade is a cybersecurity company specializing in email security solutions, offering predictive threat detection and response to combat phishing, malware, and spam. This module helps to collect insights from Vade for M365",
   "name": "Vade Secure",
   "uuid": "1411df5b-5de1-40bd-a988-725cfe692aff",
   "slug": "vadesecure",

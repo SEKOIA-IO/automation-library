@@ -6,7 +6,7 @@
     "title": "Configuration",
     "type": "object"
   },
-  "description": "The [Public Suffix List](https://publicsuffix.org/) is an initiative of [Mozilla](https://www.mozilla.org/) to list of all known public suffixes",
+  "description": "The Public Suffix List is an initiative of Mozilla to list of all known public suffixes",
   "name": "Public Suffix",
   "uuid": "735b9f36-50eb-4a36-8d08-0996966ee9aa",
   "slug": "public-suffix",

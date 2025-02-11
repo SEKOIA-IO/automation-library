@@ -63,11 +63,11 @@
       "credentials"
     ]
   },
-  "description": "Google module",
-  "name": "Google",
+  "description": "Google Cloud is a suite of cloud computing services that offers infrastructure as a service, platform as a service, and serverless computing. It provides tools for storage, machine learning, data analytics, and app development, leveraging Google's infrastructure.",
+  "name": "Google Cloud",
   "uuid": "4f682a9e-9a25-43a5-8a48-cd9bd7fade7e",
   "slug": "google",
-  "version": "1.21.3",
+  "version": "1.21.4",
   "categories": [
     "Cloud Providers"
   ]

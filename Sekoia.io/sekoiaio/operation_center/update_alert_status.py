@@ -35,12 +35,16 @@ class UpdateAlertStatus(Action):
         wait=wait_exponential(max=300),
         stop=stop_after_attempt(10),
     )
-    def perform_request(self, alert_uuid: str, status: str):
+    def perform_request(self, alert_uuid: str, status: str, comment: str | None = None):
         if status in STATUS_UUIDS.values() or status in ACTION_UUIDS:
-            result = requests.patch(self.url(alert_uuid), headers=self.headers, json={"action_uuid": status})
+            result = requests.patch(
+                self.url(alert_uuid), headers=self.headers, json={"action_uuid": status, "comment": comment}
+            )
         elif status.upper() in STATUS_UUIDS:
             result = requests.patch(
-                self.url(alert_uuid), headers=self.headers, json={"action_uuid": STATUS_UUIDS[status.upper()]}
+                self.url(alert_uuid),
+                headers=self.headers,
+                json={"action_uuid": STATUS_UUIDS[status.upper()], "comment": comment},
             )
         else:
             self.error(f"Invalid status: {status}")
@@ -53,4 +57,5 @@ class UpdateAlertStatus(Action):
     def run(self, arguments: dict):
         status = arguments["status"]
         alert_uuid = arguments["uuid"]
-        return self.perform_request(alert_uuid, status)
+        comment = arguments.get("comment")
+        return self.perform_request(alert_uuid, status, comment)
