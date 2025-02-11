@@ -5,14 +5,28 @@ import pytest
 import json
 import orjson
 import datetime
-import tempfile
 from ldap3.core.timezone import OffsetTzInfo
+from pathlib import Path
+from shutil import rmtree
+from tempfile import mkdtemp
+from sekoia_automation import constants
 from pathlib import Path
 
 
-def configured_action(action: MicrosoftADAction):
+@pytest.fixture
+def data_storage():
+    original_storage = constants.DATA_STORAGE
+    constants.DATA_STORAGE = mkdtemp()
+
+    yield constants.DATA_STORAGE
+
+    rmtree(constants.DATA_STORAGE)
+    constants.DATA_STORAGE = original_storage
+
+
+def configured_action(action: MicrosoftADAction, data_path: Path | None = None):
     module = MicrosoftADModule()
-    a = action(module)
+    a = action(module, data_path=data_path)
 
     a.module.configuration = {
         "servername": "test_servername",
@@ -116,14 +130,15 @@ def test_ldap_action_serialization():
     except (TypeError, ValueError) as e:
         assert False, f"Serialization failed: {str(e)}"
 
+
 def test_search_to_file(data_storage):
     username = "Mick Lennon"
     search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
     basedn = "dc=example,dc=com"
     attributes = ["name"]
 
-     action = configured_action(SearchAction, data_path=data_storage)
-     response = True
+    action = configured_action(SearchAction, data_path=data_storage)
+    response = True
 
     with patch(
         "microsoft_ad.search.SearchAction.run",
@@ -133,10 +148,12 @@ def test_search_to_file(data_storage):
             mock_client.modify.return_value = response
             mock_client.result.get.return_value = "success"
 
-            results = action.run({"search_filter": search, "basedn": basedn, "attributes": attributes, "to_file": True})
+            results = action.run(
+                {"search_filter": search, "basedn": basedn, "attributes": attributes, "to_file": True}
+            )
 
             assert results is not None
-            output_path =  results["output_path"]
+            output_path = results["output_path"]
             with output_path.open() as fp:
                 content = json.load(fp)
                 assert content is not None
