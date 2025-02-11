@@ -12,7 +12,7 @@ class SearchArguments(BaseModel):
     search_filter: str
     basedn: str
     attributes: List[str] | None
-
+    to_file: bool = False
 
 class SearchAction(MicrosoftADAction):
     name = "Search"
@@ -53,16 +53,16 @@ class SearchAction(MicrosoftADAction):
             raise Exception(f"Failed to search in this base {arguments.basedn}")
 
         result = self.transform_ldap_results(self.client.response)
-        if not arguments.get("to_file", False):
-            return {"search_result": result}
-
-        filename = f"output-{uuid4()}.json"
-        with self._data_path.joinpath(filename).open("w") as f:
-            if isinstance(result, str):
-                f.write(result)
-            else:
-                try:
-                    f.write(orjson.dumps(result).decode("utf-8"))
-                except (TypeError, ValueError):
+        if arguments.to_file:
+            filename = f"output-{uuid4()}.json"
+            with self._data_path.joinpath(filename).open("w") as f:
+                if isinstance(result, str):
                     f.write(result)
-        return {"output_path": filename}
+                else:
+                    try:
+                        f.write(orjson.dumps(result).decode("utf-8"))
+                    except (TypeError, ValueError):
+                        f.write(result)
+            return {"output_path": filename}
+        else:
+            return {"search_result": result}

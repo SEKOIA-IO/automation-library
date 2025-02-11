@@ -2,9 +2,12 @@ from microsoft_ad.base import MicrosoftADModule, MicrosoftADAction
 from microsoft_ad.search import SearchAction
 from unittest.mock import patch
 import pytest
+import json
 import orjson
 import datetime
+import tempfile
 from ldap3.core.timezone import OffsetTzInfo
+from pathlib import Path
 
 
 def configured_action(action: MicrosoftADAction):
@@ -112,3 +115,36 @@ def test_ldap_action_serialization():
         orjson.dumps(results)
     except (TypeError, ValueError) as e:
         assert False, f"Serialization failed: {str(e)}"
+
+def test_search_to_file():
+    username = "Mick Lennon"
+    search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
+    basedn = "dc=example,dc=com"
+    attributes = ["name"]
+
+    with tempfile.TemporaryDirectory() as directory:
+        data_path = Path(directory)
+        action = MicrosoftADModule(data_path=data_path)
+        action.module.configuration = {
+            "servername": "test_servername",
+            "admin_username": "test_admin_username",
+            "admin_password": "test_admin_password",
+        }
+        response = True
+
+    with patch(
+        "microsoft_ad.search.SearchAction.run",
+        return_value=one_user_dn,
+    ):
+        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+            mock_client.modify.return_value = response
+            mock_client.result.get.return_value = "success"
+
+            results = action.run({"search_filter": search, "basedn": basedn, "attributes": attributes, "to_file": True})
+
+            assert results is not None
+            print(results)
+            output_path =  results["output_path"]
+            with output_path.open() as fp:
+                content = json.load(fp)
+                assert content is not None
