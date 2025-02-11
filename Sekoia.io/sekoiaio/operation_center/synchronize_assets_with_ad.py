@@ -1,5 +1,5 @@
 from urllib.parse import urljoin
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import requests
 import json
 from pydantic import BaseModel
@@ -10,7 +10,7 @@ class Arguments(BaseModel):
     user_ad_data: Dict[str, Any]
     asset_synchronization_configuration: Dict[str, Any]
     community_uuid: str
-    user_ad_file: str = None
+    user_ad_file: Optional[str] = None 
 
 
 class SynchronizeAssetsWithAD(Action):
@@ -170,8 +170,8 @@ class SynchronizeAssetsWithAD(Action):
                 create_response = post_request(
                     endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset)
                 )
-                destination_asset = create_response.get("uuid")
-                if not destination_asset:
+                destination_asset = create_response.get("uuid", None)
+                if destination_asset is None:
                     self.error("Asset creation response does not contain 'uuid'.")
 
                 # Merge found assets into the new asset
