@@ -15,6 +15,7 @@ class SearchArguments(BaseModel):
     attributes: List[str] | None
     to_file: bool = False
 
+
 class SearchAction(MicrosoftADAction):
     name = "Search"
     description = "Search in your AD"
