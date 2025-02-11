@@ -122,15 +122,8 @@ def test_search_to_file():
     basedn = "dc=example,dc=com"
     attributes = ["name"]
 
-    with tempfile.TemporaryDirectory() as directory:
-        data_path = Path(directory)
-        action = MicrosoftADModule(data_path=data_path)
-        action.module.configuration = {
-            "servername": "test_servername",
-            "admin_username": "test_admin_username",
-            "admin_password": "test_admin_password",
-        }
-        response = True
+     action = configured_action(SearchAction, data_path=data_storage)
+     response = True
 
     with patch(
         "microsoft_ad.search.SearchAction.run",
