@@ -7,7 +7,7 @@ from sekoia_automation.action import Action
 
 
 class Arguments(BaseModel):
-    user_ad_data: Dict[str, Any]
+    user_ad_data: Optional[Dict[str, Any]] = None
     asset_synchronization_configuration: Dict[str, Any]
     community_uuid: str
     user_ad_file: Optional[str] = None
