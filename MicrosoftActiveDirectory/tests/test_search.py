@@ -7,21 +7,6 @@ import orjson
 import datetime
 from ldap3.core.timezone import OffsetTzInfo
 from pathlib import Path
-from shutil import rmtree
-from tempfile import mkdtemp
-from sekoia_automation import constants
-from pathlib import Path
-
-
-@pytest.fixture
-def data_storage():
-    original_storage = constants.DATA_STORAGE
-    constants.DATA_STORAGE = mkdtemp()
-
-    yield constants.DATA_STORAGE
-
-    rmtree(constants.DATA_STORAGE)
-    constants.DATA_STORAGE = original_storage
 
 
 def configured_action(action: MicrosoftADAction, data_path: Path | None = None):
