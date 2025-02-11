@@ -116,7 +116,7 @@ def test_ldap_action_serialization():
     except (TypeError, ValueError) as e:
         assert False, f"Serialization failed: {str(e)}"
 
-def test_search_to_file():
+def test_search_to_file(data_storage):
     username = "Mick Lennon"
     search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
     basedn = "dc=example,dc=com"
