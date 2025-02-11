@@ -136,7 +136,6 @@ def test_search_to_file():
             results = action.run({"search_filter": search, "basedn": basedn, "attributes": attributes, "to_file": True})
 
             assert results is not None
-            print(results)
             output_path =  results["output_path"]
             with output_path.open() as fp:
                 content = json.load(fp)
