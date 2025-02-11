@@ -10,7 +10,7 @@ class Arguments(BaseModel):
     user_ad_data: Dict[str, Any]
     asset_synchronization_configuration: Dict[str, Any]
     community_uuid: str
-    user_ad_file: Optional[str] = None 
+    user_ad_file: Optional[str] = None
 
 
 class SynchronizeAssetsWithAD(Action):
