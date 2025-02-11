@@ -10,6 +10,7 @@ python = ">=3.10,<3.12"
 ldap3 = "^2.9.1"
 sekoia-automation-sdk = "^1.13.0"
 pytest = "^7.4.3"
+mypy = "^1.15.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -17,7 +18,6 @@ pytest-cov = "*"
 requests-mock = "*"
 black = {version = "^22.6.0", allow-prereleases = true}
 flake8 = "^4.0.1"
-mypy = "^0.961"
 pytest-clarity = "^1.0.1"
 
 [build-system]
