@@ -118,7 +118,8 @@ class TestSynchronizeAssetsWithAD:
         )
 
         # Execute the action
-        response = action_instance.run(arguments)
+        resp = action_instance.run(arguments)
+        response = resp[0]
 
         # Assertions
         assert response["created_asset"] is True, "Asset should not be created since it exists."
@@ -212,7 +213,8 @@ class TestSynchronizeAssetsWithAD:
         )
 
         # Execute the action
-        response = action_instance.run(arguments)
+        resp = action_instance.run(arguments)
+        response = resp[0]
 
         # Assertions
         assert response["created_asset"] is False, "Asset should not be created since it exists."
@@ -315,7 +317,8 @@ class TestSynchronizeAssetsWithAD:
         )
 
         # Execute the action
-        response = action_instance.run(arguments)
+        resp = action_instance.run(arguments)
+        response = resp[0]
 
         # Assertions
         assert response["created_asset"] is False, "Asset should not be created since it exists."
@@ -368,24 +371,3 @@ class TestSynchronizeAssetsWithAD:
 
         # Assert 'sources' list contains the same elements, regardless of order
         assert set(post_merge["sources"]) == set(expected_merge_payload["sources"]), "Sources mismatch."
-
-    # def test_one_asset_found_and_merge_testapp(self):
-    #     # Extract configuration from the mock module
-    #     base_url = "https://app.test.sekoia.io"
-    #     api_key = "TO_ADD"
-
-    #     app_test_arg = Arguments( # TO COMPLETE
-    #         user_ad_data={},
-    #         asset_synchronization_configuration={},
-    #         community_uuid="",
-    #     )
-
-    #     configuration = {
-    #         "base_url": base_url,
-    #         "api_key": api_key,
-    #     }
-    #     module = MockModule(configuration=configuration)
-    #     action = SynchronizeAssetsWithAD()
-    #     action.module = module
-    #     # Execute the action
-    #     response = action.run(app_test_arg)

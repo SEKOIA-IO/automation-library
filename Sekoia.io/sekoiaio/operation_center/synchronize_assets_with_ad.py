@@ -10,6 +10,7 @@ class Arguments(BaseModel):
     user_ad_data: Dict[str, Any]
     asset_synchronization_configuration: Dict[str, Any]
     community_uuid: str
+    user_ad_file: str = None
 
 
 class SynchronizeAssetsWithAD(Action):
@@ -19,7 +20,7 @@ class SynchronizeAssetsWithAD(Action):
 
     def run(self, arguments: Arguments) -> List[Dict[str, Any]]:
         # Determine if user_ad_data is a list
-        if arguments.get("user_ad_file") is not None:
+        if arguments.user_ad_file is not None:
             user_ad_data = self.json_argument("user_ad_file", arguments)
         else:
             user_ad_data = arguments.user_ad_data
@@ -166,7 +167,7 @@ class SynchronizeAssetsWithAD(Action):
 
                 # Create the asset
                 payload_asset["community_uuid"] = community_uuid
-                create_response = post_request(endpoint="v2/asset-management/assets", json_data=json_payload_asset)
+                create_response = post_request(endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset))
                 destination_asset = create_response.get("uuid")
                 if not destination_asset:
                     self.error("Asset creation response does not contain 'uuid'.")
