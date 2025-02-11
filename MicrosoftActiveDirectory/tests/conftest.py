@@ -1,3 +1,4 @@
+from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
 
