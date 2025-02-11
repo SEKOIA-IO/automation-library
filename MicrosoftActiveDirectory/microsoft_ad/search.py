@@ -56,7 +56,7 @@ class SearchAction(MicrosoftADAction):
         result = self.transform_ldap_results(self.client.response)
         if arguments.to_file:
             filename = f"output-{uuid4()}.json"
-            with Path(self._data_path).joinpath(filename).open("w") as f:
+            with self._data_path.joinpath(filename).open("w") as f:
                 if isinstance(result, str):
                     f.write(result)
                 else:
