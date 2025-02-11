@@ -167,7 +167,9 @@ class SynchronizeAssetsWithAD(Action):
 
                 # Create the asset
                 payload_asset["community_uuid"] = community_uuid
-                create_response = post_request(endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset))
+                create_response = post_request(
+                    endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset)
+                )
                 destination_asset = create_response.get("uuid")
                 if not destination_asset:
                     self.error("Asset creation response does not contain 'uuid'.")
