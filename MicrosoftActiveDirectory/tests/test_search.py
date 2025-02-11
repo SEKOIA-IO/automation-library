@@ -138,7 +138,7 @@ def test_search_to_file(data_storage):
             )
 
             assert results is not None
-            output_path = results["output_path"]
+            output_path = Path(results["output_path"])
             with output_path.open() as fp:
                 content = json.load(fp)
                 assert content is not None
