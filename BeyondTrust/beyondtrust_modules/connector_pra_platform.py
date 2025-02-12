@@ -5,6 +5,7 @@ from typing import Generator
 
 import orjson
 import requests
+from cachetools import Cache, LRUCache
 from pydantic import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -19,7 +20,7 @@ logger = get_logger()
 
 
 class BeyondTrustPRAPlatformConfiguration(DefaultConnectorConfiguration):
-    frequency: int = Field(60, description="Batch frequency in seconds")
+    frequency: int = Field(5 * 60, description="Batch frequency in seconds")
 
 
 class BeyondTrustPRAPlatformConnector(Connector):
@@ -36,6 +37,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
             ignore_older_than=timedelta(days=7),
         )
         self.from_date = self.cursor.offset
+        self.sessions_cache: Cache = self.load_sessions_cache()
 
     @cached_property
     def client(self) -> ApiClient:
@@ -65,6 +67,21 @@ class BeyondTrustPRAPlatformConnector(Connector):
 
             self.log(message=message, level=level)
 
+    def load_sessions_cache(self) -> Cache:
+        result: LRUCache = LRUCache(maxsize=1000)
+
+        with self.cursor._context as cache:
+            sessions_ids = cache.get("sessions_cache", [])
+
+        for session_id in sessions_ids:
+            result[session_id] = 1
+
+        return result
+
+    def save_sessions_cache(self, sessions: Cache) -> None:
+        with self.cursor._context as cache:
+            cache["sessions_cache"] = list(sessions.keys())
+
     def fetch_events(self) -> Generator[list, None, None]:
         # 1. Get list of sessions
         # 2. Download details for every session
@@ -86,6 +103,9 @@ class BeyondTrustPRAPlatformConnector(Connector):
 
         sessions_ids = parse_session_list(response.content)
         for session_id in sessions_ids:
+            if session_id in self.sessions_cache:
+                continue
+
             # request and parse each session - doing this iteratively, because we have 20 requests per second limit
             response = self.client.post(
                 f"{self.module.configuration.base_url}/api/reporting",
@@ -97,12 +117,16 @@ class BeyondTrustPRAPlatformConnector(Connector):
 
             session_end_time = parse_session_end_time(response.content)
             if session_end_time > most_recent_date_seen:
-                # @todo is 1 second small enough to avoid missing sessions?
-                most_recent_date_seen = session_end_time + 1
+                most_recent_date_seen = session_end_time
 
             parsed_events = parse_session(response.content)
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(parsed_events))
+
+            self.sessions_cache[session_id] = 1
             yield parsed_events
+
+        # save sessions cache to the context
+        self.save_sessions_cache(self.sessions_cache)
 
         if most_recent_date_seen > self.from_date:
             self.from_date = most_recent_date_seen
