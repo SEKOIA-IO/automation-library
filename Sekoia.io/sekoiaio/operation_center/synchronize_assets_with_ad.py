@@ -18,18 +18,14 @@ class SynchronizeAssetsWithAD(Action):
     Action to synchronize asset with Active Directory (AD).
     """
 
-    def run(self, arguments: Arguments) -> List[Dict[str, Any]]:
-        # Determine if user_ad_data is a list
-        if arguments.user_ad_file is not None:
-            user_ad_data = self.json_argument("user_ad_file", arguments)
-        else:
-            user_ad_data = arguments.user_ad_data
+    def run(self, arguments: dict) -> List[Dict[str, Any]]:
+        asset_conf = arguments["asset_synchronization_configuration"]
+        community_uuid = arguments["community_uuid"]
+        user_ad_data = self.json_argument("user_ad_data", arguments)
 
         # Normalize user_ad_data to a list for uniform processing
         if not isinstance(user_ad_data, list):
             user_ad_data = [user_ad_data]
-        asset_conf = arguments.asset_synchronization_configuration
-        community_uuid = arguments.community_uuid
 
         # Extract and validate configuration
         base_url = self.module.configuration.get("base_url", "").rstrip("/")

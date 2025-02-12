@@ -8,7 +8,6 @@ from unittest.mock import patch
 # Adjust the import path according to your project structure
 from sekoiaio.operation_center.synchronize_assets_with_ad import (
     SynchronizeAssetsWithAD,
-    Arguments,
     Action,
 )
 
@@ -41,13 +40,13 @@ class TestSynchronizeAssetsWithAD:
         """
         Fixture to provide the necessary arguments for running the action.
         """
-        return Arguments(
-            user_ad_data={
+        return {
+            "user_ad_data": {
                 "username": "jdoe",
                 "email": "jdoe@example.com",
                 "department": "engineering",
             },
-            asset_synchronization_configuration={
+            "asset_synchronization_configuration": {
                 "asset_name_field": "username",
                 "detection_properties": {
                     "email": ["email"],
@@ -57,8 +56,8 @@ class TestSynchronizeAssetsWithAD:
                     "dept": "department",
                 },
             },
-            community_uuid="community-1234",
-        )
+            "community_uuid": "community-1234",
+        }
 
     @pytest.fixture
     def arguments_with_file(self):
@@ -66,9 +65,9 @@ class TestSynchronizeAssetsWithAD:
         Fixture to provide the necessary arguments for running the action
         with a user_ad_file.
         """
-        return Arguments(
-            user_ad_file="path/to/user_ad_file.json",
-            asset_synchronization_configuration={
+        return {
+            "user_ad_data_path": "path/to/user_ad_file.json",
+            "asset_synchronization_configuration": {
                 "asset_name_field": "username",
                 "detection_properties": {
                     "email": ["email"],
@@ -78,8 +77,8 @@ class TestSynchronizeAssetsWithAD:
                     "dept": "department",
                 },
             },
-            community_uuid="community-1234",
-        )
+            "community_uuid": "community-1234",
+        }
 
     def test_no_asset_found_and_create(self, requests_mock, action_instance, arguments):
         """
@@ -517,7 +516,7 @@ class TestSynchronizeAssetsWithAD:
             ), f"Expected 6 HTTP requests, got {len(requests_mock.request_history)}."
 
             # Verify that `json_argument` was called once with the correct parameters
-            mock_json_arg.assert_called_once_with("user_ad_file", arguments_with_file)
+            mock_json_arg.assert_called_once_with("user_ad_data", arguments_with_file)
 
             # Verify the payloads of POST create requests
             post_create_requests = [
