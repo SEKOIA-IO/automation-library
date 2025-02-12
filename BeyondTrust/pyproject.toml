@@ -11,6 +11,7 @@ sekoia-automation-sdk = "^1.18.1"
 orjson = "^3.10.15"
 lxml = "^5.3.0"
 structlog = "^25.1.0"
+cachetools = "^5.5.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
