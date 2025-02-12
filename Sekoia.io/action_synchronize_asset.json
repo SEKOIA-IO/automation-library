@@ -13,7 +13,7 @@
             "asset_synchronization_configuration": {"title": "Assets configuration", "type": "object"},
         },
         "oneOf": [{"required": ["user_ad_data"]}, {"required": ["user_ad_file"]}],
-        "required": ["community_uuid", "user_ad_data", "asset_synchronization_configuration"],
+        "required": ["community_uuid", "user_ad_data", "asset_synchronization_configuration"]
     },
     "results": {
         "title": "Response",
@@ -23,6 +23,6 @@
             "created_asset": {"title": "Asset created", "type": "boolean"},
             "destination_asset": {"title": "Destination asset", "type": "string"},
         },
-        "required": ["found_assets", "created_asset", "destination_asset"],
-    },
+        "required": ["found_assets", "created_asset", "destination_asset"]
+    }
 }
