@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 from whois.parser import WhoisEntry
 
-from whois_module.whois_action import WhoisAction
+from whois_module.whois_action import WhoisAction, is_ip_adress, extract_domain_from_url
 
 
 @pytest.fixture
@@ -13,13 +13,13 @@ def raw_google_whois():
    Registry Domain ID: 2138514_DOMAIN_COM-VRSN
    Registrar WHOIS Server: whois.markmonitor.com
    Registrar URL: http://www.markmonitor.com
-   Updated Date: 2018-02-21T18:36:40Z
+   Updated Date: 2019-09-09T15:39:04Z
    Creation Date: 1997-09-15T04:00:00Z
-   Registry Expiry Date: 2020-09-14T04:00:00Z
+   Registry Expiry Date: 2028-09-14T04:00:00Z
    Registrar: MarkMonitor Inc.
    Registrar IANA ID: 292
    Registrar Abuse Contact Email: abusecomplaints@markmonitor.com
-   Registrar Abuse Contact Phone: +1.2083895740
+   Registrar Abuse Contact Phone: +1.2086851750
    Domain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited
    Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited
    Domain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited
@@ -32,7 +32,7 @@ def raw_google_whois():
    Name Server: NS4.GOOGLE.COM
    DNSSEC: unsigned
    URL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/
->>> Last update of whois database: 2019-06-20T12:12:40Z <<<
+>>> Last update of whois database: 2025-02-10T09:25:48Z <<<
 
 For more information on Whois status codes, please visit https://icann.org/epp
 
@@ -73,13 +73,13 @@ Domain Name: google.com
 Registry Domain ID: 2138514_DOMAIN_COM-VRSN
 Registrar WHOIS Server: whois.markmonitor.com
 Registrar URL: http://www.markmonitor.com
-Updated Date: 2018-02-21T10:45:07-0800
-Creation Date: 1997-09-15T00:00:00-0700
-Registrar Registration Expiration Date: 2020-09-13T21:00:00-0700
+Updated Date: 2024-08-02T02:17:33+0000
+Creation Date: 1997-09-15T07:00:00+0000
+Registrar Registration Expiration Date: 2028-09-13T07:00:00+0000
 Registrar: MarkMonitor, Inc.
 Registrar IANA ID: 292
 Registrar Abuse Contact Email: abusecomplaints@markmonitor.com
-Registrar Abuse Contact Phone: +1.2083895740
+Registrar Abuse Contact Phone: +1.2086851750
 Domain Status: clientUpdateProhibited (https://www.icann.org/epp#clientUpdateProhibited)
 Domain Status: clientTransferProhibited (https://www.icann.org/epp#clientTransferProhibited)
 Domain Status: clientDeleteProhibited (https://www.icann.org/epp#clientDeleteProhibited)
@@ -89,19 +89,22 @@ Domain Status: serverDeleteProhibited (https://www.icann.org/epp#serverDeletePro
 Registrant Organization: Google LLC
 Registrant State/Province: CA
 Registrant Country: US
+Registrant Email: Select Request Email Form at https://domains.markmonitor.com/whois/google.com
 Admin Organization: Google LLC
 Admin State/Province: CA
 Admin Country: US
+Admin Email: Select Request Email Form at https://domains.markmonitor.com/whois/google.com
 Tech Organization: Google LLC
 Tech State/Province: CA
 Tech Country: US
-Name Server: ns2.google.com
+Tech Email: Select Request Email Form at https://domains.markmonitor.com/whois/google.com
 Name Server: ns3.google.com
 Name Server: ns4.google.com
+Name Server: ns2.google.com
 Name Server: ns1.google.com
 DNSSEC: unsigned
 URL of the ICANN WHOIS Data Problem Reporting System: http://wdprs.internic.net/
->>> Last update of WHOIS database: 2019-06-20T05:08:04-0700 <<<
+>>> Last update of WHOIS database: 2025-02-10T09:21:41+0000 <<<
 
 For more information on WHOIS status codes, please visit:
   https://www.icann.org/resources/pages/epp-status-codes
@@ -134,18 +137,12 @@ or facsimile of mass, unsolicited, commercial advertising, or spam; or
 data, or email to MarkMonitor (or its systems) or the domain name contacts (or
 its systems).
 
-MarkMonitor.com reserves the right to modify these terms at any time.
+MarkMonitor reserves the right to modify these terms at any time.
 
 By submitting this query, you agree to abide by this policy.
 
-MarkMonitor is the Global Leader in Online Brand Protection.
-
 MarkMonitor Domain Management(TM)
-MarkMonitor Brand Protection(TM)
-MarkMonitor AntiCounterfeiting(TM)
-MarkMonitor AntiPiracy(TM)
-MarkMonitor AntiFraud(TM)
-Professional and Managed Services
+Protecting companies and consumers in a digital world.
 
 Visit MarkMonitor at https://www.markmonitor.com
 Contact us at +1.8007459229
@@ -160,12 +157,30 @@ def whois_results(raw_google_whois):
     )
 
 
+def test_is_ip_adress():
+    assert is_ip_adress("8.8.8.8")
+    assert not is_ip_adress("8.8.8")
+    assert not is_ip_adress("google.com")
+    assert is_ip_adress("2001:0000:130F:0000:0000:09C0:876A:130B")
+
+
+def test_extract_domain_from_url():
+    assert extract_domain_from_url("google.com") == "google.com"
+    assert extract_domain_from_url("http://google.com") == "google.com"
+    assert extract_domain_from_url("8.8.8.8") == "8.8.8.8"
+    assert extract_domain_from_url("https://raw.githubusercontent.com/path") == "githubusercontent.com"
+    assert extract_domain_from_url("raw.githubusercontent.com/path") == "githubusercontent.com"
+
+
 def test_whois_action(whois_results, raw_google_whois):
     action = WhoisAction()
 
     with patch("whois.whois", return_value=whois_results):
         results = action.run({"query": "google.com"})
 
+        assert results.get("Domain").get("Whois").get("CreationDate") == "1997-09-15 07:00:00"
+        assert results.get("Domain").get("Whois").get("UpdatedDate") == "2024-08-02 02:17:33"
+        assert results.get("Domain").get("Whois").get("ExpirationDate") == "2028-09-13 07:00:00"
         assert results == {
             "Domain": {
                 "Name": "GOOGLE.COM",
@@ -192,14 +207,14 @@ def test_whois_action(whois_results, raw_google_whois):
                         "NS2.GOOGLE.COM",
                         "NS3.GOOGLE.COM",
                         "NS4.GOOGLE.COM",
-                        "ns2.google.com",
                         "ns3.google.com",
                         "ns4.google.com",
+                        "ns2.google.com",
                         "ns1.google.com",
                     ],
-                    "CreationDate": "1997-09-15 00:00:00",
-                    "UpdatedDate": "2018-02-21 10:45:07",
-                    "ExpirationDate": "2020-09-13 21:00:00",
+                    "CreationDate": "1997-09-15 07:00:00",
+                    "UpdatedDate": "2024-08-02 02:17:33",
+                    "ExpirationDate": "2028-09-13 07:00:00",
                     "Registrar": {
                         "Name": "MarkMonitor, Inc.",
                         "AbuseEmail": "abusecomplaints@markmonitor.com",
