@@ -66,7 +66,8 @@ def test_fetch_events(trigger, sessions_list_xml_with_one, session_xml):
             ]
         ]
 
-        assert trigger.from_date == 1733240467 + 1
+        assert trigger.from_date == 1733240467
+        assert trigger.sessions_cache["e9e99aeb9ad54fb381634498502c5a1b"] == 1
 
 
 def test_next_batch_sleep_until_next_round(trigger, sessions_list_xml_with_one, session_xml):
