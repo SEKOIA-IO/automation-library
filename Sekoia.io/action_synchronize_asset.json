@@ -7,21 +7,50 @@
         "title": "Arguments",
         "type": "object",
         "properties": {
-            "community_uuid": {"title": "Community uuid", "type": "string"},
-            "user_ad_data": {"title": "User data", "type": "object"},
-            "user_ad_data_path": {"description": "File name to the User AD file to read.", "type": "object"},
-            "asset_synchronization_configuration": {"title": "Assets configuration", "type": "object"},
+            "community_uuid": {
+              "title": "Community uuid", 
+              "type": "string"
+            },
+            "user_ad_data": {
+              "title": "User data", 
+              "type": "object"
+            },
+            "user_ad_data_path": {
+              "description": "File name to the User AD file to read.", 
+              "type": "object"
+            },
+            "asset_synchronization_configuration": {
+              "title": "Assets configuration", 
+              "type": "object"
+            }
         },
-        "oneOf": [{"required": ["user_ad_data"]}, {"required": ["user_ad_file"]}],
+        "oneOf": [{
+          "required": ["user_ad_data"]
+          }, 
+          {
+            "required": ["user_ad_file"]
+        }],
         "required": ["community_uuid", "user_ad_data", "asset_synchronization_configuration"]
     },
     "results": {
         "title": "Response",
         "type": "object",
         "properties": {
-            "found_assets": {"title": "Assets found", "type": "array", "items": {"type": "string"}},
-            "created_asset": {"title": "Asset created", "type": "boolean"},
-            "destination_asset": {"title": "Destination asset", "type": "string"},
+            "found_assets": {
+              "title": "Assets found", 
+              "type": "array", 
+              "items": {
+                "type": "string"
+                }
+              },
+            "created_asset": {
+              "title": "Asset created", 
+              "type": "boolean"
+            },
+            "destination_asset": {
+              "title": "Destination asset", 
+              "type": "string"
+            }
         },
         "required": ["found_assets", "created_asset", "destination_asset"]
     }
