@@ -83,7 +83,3 @@ class WhoisAction(Action):
             }
         except PywhoisError as e:
             return {}
-
-
-whois_result = whois.whois("google.com")
-print(f"{whois_result}")
