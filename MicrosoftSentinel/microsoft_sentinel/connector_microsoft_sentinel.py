@@ -57,7 +57,7 @@ class MicrosoftSentineldConnector(Connector):
         )
         return SecurityInsights(
             credential=credential,
-            subscription_id=self.configuration.subscription_id,
+            subscription_id=self.module.subscription_id,
         )
 
     def _to_RFC3339(self, date: Optional[datetime]) -> Optional[str]:
@@ -65,8 +65,8 @@ class MicrosoftSentineldConnector(Connector):
 
     def _incidents_iterator(self) -> ItemPaged[Incident]:
         return self.client.incidents.list(
-            resource_group_name=self.configuration.resource_group,
-            workspace_name=self.configuration.workspace_name,
+            resource_group_name=self.module.resource_group,
+            workspace_name=self.module.workspace_name,
             filter=self.incidents_filter,
         )  # type: ignore
 

@@ -17,6 +17,9 @@ def trigger(symphony_storage):
         "tenant_id": "123456",
         "client_id": "my-id",
         "client_secret": "my-password",
+        "subscription_id": "4feff6df-7454-4036-923d-7b2444462416",
+        "resource_group": "resource_group",
+        "workspace_name": "workspace_name",
     }
 
     trigger.configuration = {
@@ -24,9 +27,6 @@ def trigger(symphony_storage):
         "chunk_size": 2,
         "intake_server": "https://intake.sekoia.io",
         "intake_key": "0123456789",
-        "subscription_id": "4feff6df-7454-4036-923d-7b2444462416",
-        "resource_group": "resource_group",
-        "workspace_name": "workspace_name",
     }
 
     trigger.push_events_to_intakes = Mock()

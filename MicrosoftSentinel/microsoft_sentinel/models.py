@@ -8,14 +8,14 @@ class MicrosoftSentinelConfiguration(BaseModel):
     tenant_id: str = Field(..., description="Tenant ID")
     client_id: str = Field(..., description="Client ID ")
     client_secret: str = Field(secret=True, description="Client Secret")
+    subscription_id: str = Field(..., description="Subscription ID")
+    resource_group: str = Field(..., description="Resource Group")
+    workspace_name: str = Field(..., description="Workspace Name")
 
 
 class MicrosoftSentinelConnectorConfiguration(DefaultConnectorConfiguration):
     chunk_size: int = 1000
     frequency: int = 60
-    subscription_id: str
-    resource_group: str
-    workspace_name: str
 
 
 class OwnerModel(BaseModel):

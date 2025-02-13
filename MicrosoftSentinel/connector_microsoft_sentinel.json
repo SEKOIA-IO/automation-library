@@ -23,26 +23,11 @@
         "intake_key": {
           "description": "Intake key to use when sending events",
           "type": "string"
-        },
-        "subscription_id": {
-          "description": "Subscription ID of the Microsoft Sentinel instance",
-          "type": "string"
-        },
-        "resource_group": {
-          "description": "Resource group of the Microsoft Sentinel instance",
-          "type": "string"
-        },
-        "workspace_name": {
-          "description": "Workspace name of the Microsoft Sentinel instance",
-          "type": "string"
         }
       },
       "required": [
         "frequency",
-        "intake_key",
-        "subscription_id",
-        "resource_group",
-        "workspace_name"
+        "intake_key"
       ],
       "title": "Microsoft Sentinel Alerts",
       "type": "object"
