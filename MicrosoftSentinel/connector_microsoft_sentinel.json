@@ -1,0 +1,36 @@
+{
+    "description": "Forward Microsoft Sentinel Alerts to Sekoia",
+    "docker_parameters": "get_microsoft_sentinel_alerts",
+    "name": "Get Microsoft Sentinel alerts",
+    "arguments": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "default": 60
+        },
+        "chunk_size": {
+          "type": "integer",
+          "description": "The max size of chunks for the batch processing",
+          "default": 1000
+        },
+        "intake_server": {
+          "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+          "default": "https://intake.sekoia.io",
+          "type": "string"
+        },
+        "intake_key": {
+          "description": "Intake key to use when sending events",
+          "type": "string"
+        }
+      },
+      "required": [
+        "frequency",
+        "intake_key"
+      ],
+      "title": "Microsoft Sentinel Alerts",
+      "type": "object"
+    },
+    "uuid": "7537aa6a-7411-4feb-a6c8-f02d55077db9"
+}
