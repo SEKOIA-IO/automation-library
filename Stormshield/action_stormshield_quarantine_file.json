@@ -1,5 +1,5 @@
 {
-    "uuid": "efddd609-924f-4aad-a508-0955a4c8081f",
+    "uuid": "85771163-5659-4a97-93ad-bfff9a7b4779",
     "name": "Quarantine file",
     "description": "Quarantine a file",
     "docker_parameters": "stormshield_quarantine_file",

@@ -1,5 +1,5 @@
 {
-    "uuid": "aca0d08c-eb0e-41b0-94b2-8c763c3958a6",
+    "uuid": "b03cc22b-5b47-4e57-a07c-534abf81a991",
     "name": "Restore quarantine file",
     "description": "Restore stormshield quarantined file",
     "docker_parameters": "stormshield_restore_quarantined_file",
