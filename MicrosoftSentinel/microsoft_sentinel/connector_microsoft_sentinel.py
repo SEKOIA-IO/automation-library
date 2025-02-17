@@ -57,7 +57,7 @@ class MicrosoftSentineldConnector(Connector):
         )
         return SecurityInsights(
             credential=credential,
-            subscription_id=self.module.subscription_id,
+            subscription_id=self.module.configuration.subscription_id,
         )
 
     def _to_RFC3339(self, date: Optional[datetime]) -> Optional[str]:
