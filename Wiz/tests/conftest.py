@@ -229,7 +229,7 @@ def vulnerability_findings_response(session_faker: Faker) -> dict[str, dict[str,
             "nodes": [
                 {
                     **session_faker.pydict(allowed_types=[str, int, float, bool]),
-                    "firstSeenAt": session_faker.date_time().isoformat(),
+                    "firstDetectedAt": session_faker.date_time().isoformat(),
                     "id": session_faker.uuid4(),
                 }
                 for _ in range(10)
@@ -249,7 +249,7 @@ def vulnerability_findings_response_with_next_page(session_faker: Faker) -> dict
             "nodes": [
                 {
                     **session_faker.pydict(allowed_types=[str, int, float, bool]),
-                    "firstSeenAt": session_faker.date_time().isoformat(),
+                    "firstDetectedAt": session_faker.date_time().isoformat(),
                     "id": session_faker.uuid4(),
                 }
                 for _ in range(10)
