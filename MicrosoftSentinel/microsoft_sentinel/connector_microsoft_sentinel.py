@@ -65,8 +65,8 @@ class MicrosoftSentineldConnector(Connector):
 
     def _incidents_iterator(self) -> ItemPaged[Incident]:
         return self.client.incidents.list(
-            resource_group_name=self.module.resource_group,
-            workspace_name=self.module.workspace_name,
+            resource_group_name=self.module.configuration.resource_group,
+            workspace_name=self.module.configuration.workspace_name,
             filter=self.incidents_filter,
         )  # type: ignore
 
