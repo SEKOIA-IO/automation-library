@@ -100,8 +100,13 @@ class StormshieldAction(GenericAPIAction):
                     response: Response = self.get_response(
                         url, body, headers, arguments.get("verify_certificate", True)
                     )
+                    response.raise_for_status()
+                    content = response.json()
 
-                    if response.json()["status"] in ["Pending", "Running"]:
+                    if content.get("errorCode"):
+                        raise Exception(f"Error {content['errorCode']}: {content['errorMessage']}")
+
+                    if content.get("status") in ["Pending", "Running"]:
                         continue
 
         except RetryError:
