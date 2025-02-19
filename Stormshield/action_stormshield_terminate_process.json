@@ -18,6 +18,11 @@
             "terminateProcessTree": {
                 "description": "Boolean to terminate the process tree",
                 "type": "boolean"
+            },
+            "verify_certificate": {
+                "description": "Is the server certificate verified",
+                "type": "boolean",
+		"default": true
             }
         },
         "required": [

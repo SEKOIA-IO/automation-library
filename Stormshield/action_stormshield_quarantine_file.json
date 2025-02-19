@@ -18,6 +18,11 @@
             "bypassExcludedDirectories": {
                 "description": "Boolean to bypass excluded directories",
                 "type": "boolean"
+            },
+            "verify_certificate": {
+                "description": "Is the server certificate verified",
+                "type": "boolean",
+		"default": true
             }
         },
         "required": [
