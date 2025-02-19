@@ -15,7 +15,6 @@ ujson = "*"
 websocket-client = "*"
 gevent = "*"
 orjson = "*"
-mypy = "^1.15.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
