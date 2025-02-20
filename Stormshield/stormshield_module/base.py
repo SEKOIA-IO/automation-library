@@ -111,7 +111,6 @@ class StormshieldAction(GenericAPIAction):
                         level="info",
                         message=f"Response: status_code={response.status_code} content={response.content}",
                     )
-                    response.raise_for_status()
                     content = response.json()
 
                     if content.get("errorCode"):
