@@ -11,11 +11,16 @@ class WaitForTaskCompletionAction(StormshieldAction):
     endpoint = "/agents/tasks/{task_id}"
     query_parameters: list[str] = []
 
-    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any]) -> Response:
-        result = requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
-        execution_state = result.json()["status"]
+    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any], verify: bool) -> Response:
+        result = requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout, verify=verify)
+        content = result.json()
+
+        if content.get("errorCode"):
+            raise Exception(f"Error {content['errorCode']}: {content['errorMessage']}")
+
+        execution_state = content["status"]
 
         if execution_state.lower() == "failed":
-            raise RemoteTaskExecutionFailedError(result.json()["errorMessage"])
+            raise RemoteTaskExecutionFailedError(content["errorMessage"])
 
         return result
