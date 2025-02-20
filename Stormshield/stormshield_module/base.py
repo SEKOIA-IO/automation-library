@@ -109,7 +109,7 @@ class StormshieldAction(GenericAPIAction):
                     )
                     self.log(
                         level="info",
-                        message=f"Response: status_code={reponse.status_code} body={response.body}",
+                        message=f"Response: status_code={response.status_code} body={response.body}",
                     )
                     response.raise_for_status()
                     content = response.json()
