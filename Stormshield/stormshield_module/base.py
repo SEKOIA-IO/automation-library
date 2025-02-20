@@ -82,8 +82,15 @@ class StormshieldAction(GenericAPIAction):
 
         return path
 
-    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any]) -> Response:
-        return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
+    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any], verify: bool) -> Response:
+        session = requests.Session()
+        request = requests.Request(self.verb, url, json=body, headers=headers)
+        prepared_request = request.prepare()
+        self.log(
+            level="info",
+            message=f"Prepared request: url={prepared_request.url} headers={prepared_request.headers} body={prepared_request.body}",
+        )
+        return session.send(prepared_request, timeout=self.timeout, verify=verify)
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
         headers = self.get_headers()
@@ -97,9 +104,19 @@ class StormshieldAction(GenericAPIAction):
                 retry=retry_if_exception_type((RequestException, OSError)),
             ):
                 with attempt:
-                    response: Response = self.get_response(url, body, headers)
+                    response: Response = self.get_response(
+                        url, body, headers, arguments.get("verify_certificate", True)
+                    )
+                    self.log(
+                        level="info",
+                        message=f"Response: status_code={response.status_code} content={response.content}",
+                    )
+                    content = response.json()
 
-                    if response.json()["status"] in ["Pending", "Running"]:
+                    if content.get("errorCode"):
+                        raise Exception(f"Error {content['errorCode']}: {content['errorMessage']}")
+
+                    if content.get("status") in ["Pending", "Running"]:
                         continue
 
         except RetryError:

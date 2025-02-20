@@ -1,5 +1,5 @@
 {
-    "uuid": "a93e9854-09f1-4b52-851c-8d878121b716",
+    "uuid": "7a6a1405-2a7c-4663-897a-05fb76408add",
     "name": "Isolate agent",
     "description": "Isolate an agent",
     "docker_parameters": "stormshield_endpoint_agent_isolation",
@@ -18,6 +18,11 @@
             "comment": {
                 "description": "Comment",
                 "type": "string"
+            },
+            "verify_certificate": {
+                "description": "Is the server certificate verified",
+                "type": "boolean",
+		"default": true
             }
         },
         "required": [

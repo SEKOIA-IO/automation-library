@@ -44,7 +44,7 @@ class CybereasonApiAuthentication(AuthBase):
 
         if self.__api_credentials is None or current_dt + timedelta(seconds=300) >= self.__api_credentials.expires_at:
             try:
-                response = self.__http_session.post(
+                self.response = self.__http_session.post(
                     url=self.__authorization_url,
                     data={
                         "username": self.__username,
@@ -57,9 +57,9 @@ class CybereasonApiAuthentication(AuthBase):
             except requests.Timeout as error:
                 raise TimeoutError(self.__authorization_url) from error
 
-            response.raise_for_status()
+            self.response.raise_for_status()
 
-            if not validate_response_not_login_failure(response):
+            if not validate_response_not_login_failure(self.response):
                 raise LoginFailureError(self.__authorization_url)
 
             credentials = CybereasonApiCredentials()
