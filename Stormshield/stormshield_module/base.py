@@ -14,6 +14,8 @@ from tenacity import (
 from sekoia_automation.action import GenericAPIAction
 from sekoia_automation.exceptions import MissingActionArgumentFileError
 
+from stormshield_module.exceptions import RemoteTaskExecutionFailedError
+
 
 class StormshieldAction(GenericAPIAction):
     endpoint: str
@@ -99,9 +101,16 @@ class StormshieldAction(GenericAPIAction):
             ):
                 with attempt:
                     response: Response = self.get_response(url, body, headers, verify_certificate)
+                    content = response.json()
 
-                    if response.json()["status"] in ["Pending", "Running"]:
-                        continue
+                    if content.get("errorCode"):
+                        raise RemoteTaskExecutionFailedError(
+                            f"Error {content['errorCode']} from the API: {content['errorMessage']}"
+                        )
+
+                    execution_state = content["status"]
+                    if execution_state.lower() == "failed":
+                        raise RemoteTaskExecutionFailedError(content["errorMessage"])
 
         except RetryError:
             self.log_timeout_error(url, arguments)
