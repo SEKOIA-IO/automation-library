@@ -83,7 +83,17 @@ class StormshieldAction(GenericAPIAction):
         return path
 
     def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any], verify: bool) -> Response:
-        return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout, verify=verify)
+        session = requests.Session()
+        request = requests.Request(self.verb, url, json=body, headers=headers)
+        prepared_request = request.prepare()
+        self.log(
+            level="info",
+            message="Prepared request",
+            url=prepared_request.url,
+            body=prepared_request.body,
+            headers=prepared_request.headers,
+        )
+        return session.send(prepared_request, timeout=self.timeout, verify=verify)
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
         headers = self.get_headers()
