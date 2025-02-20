@@ -10,6 +10,11 @@
             "task_id": {
                 "description": "Task ID",
                 "type": "string"
+            },
+	    "verify_certificate": {
+		"description": "Is the server certificate verified",
+		"type": "boolean",
+		"default": true
             }
         },
         "required": [

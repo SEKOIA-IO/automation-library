@@ -82,10 +82,11 @@ class StormshieldAction(GenericAPIAction):
 
         return path
 
-    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any]) -> Response:
-        return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
+    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any], verify: bool) -> Response:
+        return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout, verify=verify)
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
+        verify_certificate = arguments.pop("verify_certificate", True)
         headers = self.get_headers()
         url = self.get_url(arguments)
         body = self.get_body(arguments)
@@ -97,7 +98,7 @@ class StormshieldAction(GenericAPIAction):
                 retry=retry_if_exception_type((RequestException, OSError)),
             ):
                 with attempt:
-                    response: Response = self.get_response(url, body, headers)
+                    response: Response = self.get_response(url, body, headers, verify_certificate)
 
                     if response.json()["status"] in ["Pending", "Running"]:
                         continue
