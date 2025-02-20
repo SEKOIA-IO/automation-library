@@ -20,7 +20,7 @@
   "description": "Stormshield Network Security is a range of network security appliances.",
   "name": "Stormshield",
   "uuid": "d58cfe25-1620-41d8-874f-217649e8bbf8",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "slug": "stormshield",
   "categories": [
     "Endpoint"

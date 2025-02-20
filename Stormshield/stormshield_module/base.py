@@ -88,10 +88,7 @@ class StormshieldAction(GenericAPIAction):
         prepared_request = request.prepare()
         self.log(
             level="info",
-            message="Prepared request",
-            url=prepared_request.url,
-            body=prepared_request.body,
-            headers=prepared_request.headers,
+            message=f"Prepared request: url={prepared_request.url} headers={prepared_request.headers} body={prepared_request.body}",
         )
         return session.send(prepared_request, timeout=self.timeout, verify=verify)
 
@@ -109,6 +106,10 @@ class StormshieldAction(GenericAPIAction):
                 with attempt:
                     response: Response = self.get_response(
                         url, body, headers, arguments.get("verify_certificate", True)
+                    )
+                    self.log(
+                        level="info",
+                        message=f"Response: status_code={reponse.status_code} body={response.body}",
                     )
                     response.raise_for_status()
                     content = response.json()
