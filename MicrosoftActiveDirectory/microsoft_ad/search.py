@@ -1,15 +1,19 @@
 from .base import MicrosoftADAction
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from typing import List
 from ldap3 import ALL_ATTRIBUTES
 from ldap3.core.timezone import OffsetTzInfo
 from datetime import datetime
+from uuid import uuid4
+import orjson
+from pathlib import Path
 
 
 class SearchArguments(BaseModel):
     search_filter: str
     basedn: str
     attributes: List[str] | None
+    to_file: bool = False
 
 
 class SearchAction(MicrosoftADAction):
@@ -50,4 +54,17 @@ class SearchAction(MicrosoftADAction):
         except:
             raise Exception(f"Failed to search in this base {arguments.basedn}")
 
-        return {"search_result": self.transform_ldap_results(self.client.response)}
+        result = self.transform_ldap_results(self.client.response)
+        if arguments.to_file:
+            filename = f"output-{uuid4()}.json"
+            with self._data_path.joinpath(filename).open("w") as f:
+                if isinstance(result, str):
+                    f.write(result)
+                else:
+                    try:
+                        f.write(orjson.dumps(result).decode("utf-8"))
+                    except (TypeError, ValueError):
+                        f.write(result)
+            return {"output_path": filename}
+        else:
+            return {"search_result": result}
