@@ -1,7 +1,7 @@
 from functools import cached_property
 from ldap3 import Server, Connection
 
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 

@@ -1,5 +1,5 @@
 from .base import MicrosoftADAction
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from typing import List
 from ldap3 import ALL_ATTRIBUTES
 from ldap3.core.timezone import OffsetTzInfo
