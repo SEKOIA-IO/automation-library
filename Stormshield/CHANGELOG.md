@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-20 - 1.0.1
+
+### Changed
+
+- Add an option to disable the verification of the TLS server certificate
+- Change the way to handle errors from the API
+
 ## 2024-12-17 - 1.0.0
 
 ### Added

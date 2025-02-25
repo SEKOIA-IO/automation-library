@@ -14,6 +14,8 @@ from tenacity import (
 from sekoia_automation.action import GenericAPIAction
 from sekoia_automation.exceptions import MissingActionArgumentFileError
 
+from stormshield_module.exceptions import RemoteTaskExecutionFailedError
+
 
 class StormshieldAction(GenericAPIAction):
     endpoint: str
@@ -82,10 +84,11 @@ class StormshieldAction(GenericAPIAction):
 
         return path
 
-    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any]) -> Response:
-        return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout)
+    def get_response(self, url: str, body: dict[str, Any] | None, headers: dict[str, Any], verify: bool) -> Response:
+        return requests.request(self.verb, url, json=body, headers=headers, timeout=self.timeout, verify=verify)
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any] | None:
+        verify_certificate = arguments.pop("verify_certificate", True)
         headers = self.get_headers()
         url = self.get_url(arguments)
         body = self.get_body(arguments)
@@ -97,10 +100,17 @@ class StormshieldAction(GenericAPIAction):
                 retry=retry_if_exception_type((RequestException, OSError)),
             ):
                 with attempt:
-                    response: Response = self.get_response(url, body, headers)
+                    response: Response = self.get_response(url, body, headers, verify_certificate)
+                    content = response.json()
 
-                    if response.json()["status"] in ["Pending", "Running"]:
-                        continue
+                    if content.get("errorCode"):
+                        raise RemoteTaskExecutionFailedError(
+                            f"Error {content['errorCode']} from the API: {content['errorMessage']}"
+                        )
+
+                    execution_state = content["status"]
+                    if execution_state.lower() == "failed":
+                        raise RemoteTaskExecutionFailedError(content["errorMessage"])
 
         except RetryError:
             self.log_timeout_error(url, arguments)

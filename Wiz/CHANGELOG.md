@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-02-18 - 1.2.0
+## 2025-02-18 - 1.3.0
 
 ### Added
 
 - Wiz Audit Logs Connector
+
+## 2025-02-13 - 1.2.0
+
+### Changed
+
+- Add Wiz Vulnerability Findings Connector
 
 ## 2025-02-07 - 1.1.4
 
