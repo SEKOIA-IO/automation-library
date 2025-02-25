@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-20 - 1.32.3
+
+### Changed
+
+- Bump version of AWS SDK
+
 ## 2024-11-22 - 1.32.2
 
 ### Fixed

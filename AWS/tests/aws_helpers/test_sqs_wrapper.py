@@ -172,7 +172,7 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
             WaitTimeSeconds=sqs_wrapper_configuration.frequency,
             MaxNumberOfMessages=6,
             MessageAttributeNames=["All"],
-            AttributeNames=["All"],
+            MessageSystemAttributeNames=["All"],
             VisibilityTimeout=60,
         )
 
