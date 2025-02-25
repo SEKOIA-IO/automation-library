@@ -19,6 +19,14 @@ class WizResult(BaseModel):
     result: list[dict[str, Any]]
 
     @classmethod
+    def from_audit_logs_response(cls, response: dict[str, Any]) -> "WizResult":
+        return cls(
+            end_cursor=response.get("auditLogEntries", {}).get("pageInfo", {}).get("endCursor"),
+            has_next_page=response.get("auditLogEntries", {}).get("pageInfo", {}).get("hasNextPage", False),
+            result=response.get("auditLogEntries", {}).get("nodes", []),
+        )
+
+    @classmethod
     def from_alerts_response(cls, response: dict[str, Any]) -> "WizResult":
         return cls(
             end_cursor=response.get("issuesV2", {}).get("pageInfo", {}).get("endCursor"),
@@ -121,6 +129,56 @@ class WizGqlClient(object):
                     raise WizServerError(f"Status code {e.code}. Permission denied") from e
 
             return result
+
+    async def get_audit_logs(self, start_date: datetime, after: str | None = None) -> WizResult:
+        query = """
+            query AuditLogTable($after: String, $startDateTime: DateTime, $limit: Int = 100) {
+                auditLogEntries(
+                    first: $limit,
+                    after: $after,
+                    filterBy: {
+                        timestamp: { 
+                            after: $startDateTime
+                        }
+                    }
+                ) {
+                  nodes {
+                    id
+                    action
+                    requestId
+                    status
+                    timestamp
+                    actionParameters
+                    userAgent
+                    sourceIP
+                    serviceAccount {
+                      id
+                      name
+                    }
+                    user {
+                      id
+                      name
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+               }
+            }
+        """
+
+        variable_values = {
+            "after": after,
+            "startDateTime": start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        }
+
+        response = await self.request(query, variable_values=variable_values)
+
+        if response.get("errors") is not None:
+            raise WizErrors.from_response(response)
+
+        return WizResult.from_audit_logs_response(response)
 
     async def get_alerts(self, start_date: datetime, after: str | None = None) -> WizResult:
         query = """
