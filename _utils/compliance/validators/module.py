@@ -28,18 +28,26 @@ class ModuleValidator:
             options={"path": path},
         )
 
+        # Default validators
         self.validators = [
-            TestsValidator,
             ChangelogValidator,
             ManifestValidator,
-            DependenciesValidator,
             LogoValidator,
-            DockerfileValidator,
-            ActionsJSONValidator,
-            ConnectorsJSONValidator,
-            TriggersJSONValidator,
-            MainPYValidator,
         ]
+
+        # add additional validators for modules with automation code
+        if (path / "pyproject.toml").exists():
+            self.validators.extend(
+                [
+                    TestsValidator,
+                    DependenciesValidator,
+                    DockerfileValidator,
+                    ActionsJSONValidator,
+                    ConnectorsJSONValidator,
+                    TriggersJSONValidator,
+                    MainPYValidator,
+                ]
+            )
 
     def validate(self):
         for validator in self.validators:
