@@ -28,9 +28,9 @@
           "required": ["user_ad_data"]
           }, 
           {
-            "required": ["user_ad_file"]
+            "required": ["user_ad_data_path"]
         }],
-        "required": ["community_uuid", "user_ad_data", "asset_synchronization_configuration"]
+        "required": ["community_uuid", "asset_synchronization_configuration"]
     },
     "results": {
         "title": "Response",
