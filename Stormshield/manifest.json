@@ -1,0 +1,11 @@
+{
+  "configuration": {},
+  "description": "Stormshield Network Security is a range of network security appliances.",
+  "name": "Stormshield",
+  "uuid": "59498b29-5cfb-46e6-aaf1-9c0c3afeb00c",
+  "version": "1.0.0",
+  "slug": "stormshield",
+  "categories": [
+    "Network"
+  ]
+}
