@@ -1,28 +1,11 @@
 {
-  "configuration": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "properties": {
-      "url": {
-        "description": "URL of the Stormshield instance",
-        "type": "string",
-        "format": "uri"
-      },
-      "api_token": {
-        "description": "Authentication token for the API",
-        "type": "string"
-      }
-    },
-    "required": ["url", "api_token"],
-    "title": "Stormshield Arguments",
-    "type": "object",
-    "secrets": ["api_token"]
-  },
+  "configuration": {},
   "description": "Stormshield Network Security is a range of network security appliances.",
   "name": "Stormshield",
-  "uuid": "758103e9-eb62-4b0d-8c71-0ff9c60ca677",
-  "version": "1.0.1",
+  "uuid": "59498b29-5cfb-46e6-aaf1-9c0c3afeb00c",
+  "version": "1.0.0",
   "slug": "stormshield",
   "categories": [
-    "Endpoint"
+    "Network"
   ]
 }
