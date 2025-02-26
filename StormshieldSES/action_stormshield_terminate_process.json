@@ -1,7 +1,7 @@
 {
     "uuid": "6d948fb8-f738-43d8-b3bb-b3aa847ba4f7",
-    "name": "Terminate Stormshield process",
-    "description": "Terminate a Stormshield process",
+    "name": "Terminate process",
+    "description": "Terminate a process",
     "docker_parameters": "stormshield_terminate_process",
     "arguments": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -63,6 +63,6 @@
             "type": "string"
           }
         },
-        "title": "Terminate Stormshield process results"
+        "title": "Terminate process results"
     }
 }
