@@ -19,6 +19,14 @@ class FetchEventException(Exception):
     pass
 
 
+class APIException(Exception):
+
+    def __init__(self, code: int, reason: str, content: str):
+        super().__init__(reason)
+        self.code = code
+        self.content = content
+
+
 class VadeCloudConsumer(Thread):
     def __init__(
         self,
@@ -96,6 +104,8 @@ class VadeCloudConsumer(Thread):
 
             if response.status_code == 403:
                 self.log(message=message, level="critical")
+            elif response.status_code in [401, 500]:
+                raise APIException(response.status_code, response.reason, response.text)
             else:
                 try:
                     error = response.json()
@@ -219,10 +229,28 @@ class VadeCloudConsumer(Thread):
 
             time.sleep(delta_sleep)
 
+    def handle_api_exception(self, error: APIException) -> None:
+        message = f"Unexpected API error {error.code} - {str(error)} - {error.content}"
+        if error.code == 401:
+            message = "The VadeCloud API raised an authentication issue. Please check our credentials"
+        elif error.code == 500:
+            message = (
+                "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persists"
+            )
+
+        self.connector.log(message, level="error")
+        self.connector.log(
+            f"WatchGuard: Wait {self.connector.configuration.frequency}s before next attempt", level="info"
+        )
+        time.sleep(self.connector.configuration.frequency)
+
     def run(self) -> None:  # pragma: no cover
         try:
             while self.running:
-                self.next_batch()
+                try:
+                    self.next_batch()
+                except APIException as error:
+                    self.handle_api_exception(error)
 
         except Exception as error:
             self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")

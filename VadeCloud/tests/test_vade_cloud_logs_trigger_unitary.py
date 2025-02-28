@@ -7,7 +7,12 @@ import requests.exceptions
 import requests_mock
 
 from vadecloud_modules import VadeCloudModule
-from vadecloud_modules.trigger_vade_cloud_logs import FetchEventException, VadeCloudConsumer, VadeCloudLogsConnector
+from vadecloud_modules.trigger_vade_cloud_logs import (
+    APIException,
+    FetchEventException,
+    VadeCloudConsumer,
+    VadeCloudLogsConnector,
+)
 
 
 @pytest.fixture
@@ -339,6 +344,120 @@ def test_request_without_permission_stop_trigger(trigger: VadeCloudLogsConnector
         call(
             level="critical",
             message="Request on Vade Cloud API to fetch `inbound` logs failed with status 403 - Forbidden",
+        ) in trigger.log.mock_calls
+
+
+def test_request_with_authentication_failure_raise_APIException(trigger: VadeCloudLogsConnector, auth_message):
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as _,
+    ):
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
+            status_code=200,
+            json=auth_message,
+        )
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/filteringlog/getReport",
+            status_code=401,
+            json={
+                "result": "NOK",
+                "error": {"code": 401, "message": "authentication failed", "trKey": "AUTH_FAILURE"},
+            },
+        )
+
+        api_client = trigger.create_client()
+        consumer = VadeCloudConsumer(
+            connector=trigger, name="inbound", client=api_client, params={"stream": "Inbound"}
+        )
+
+        with pytest.raises(APIException):
+            consumer.next_batch()
+
+
+def test_request_with_server_error_raise_APIException(trigger: VadeCloudLogsConnector, auth_message):
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as _,
+    ):
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
+            status_code=200,
+            json=auth_message,
+        )
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/filteringlog/getReport",
+            status_code=500,
+            json={
+                "result": "NOK",
+                "error": {"code": 500, "message": "context deadline exceeded", "trKey": "INTERNAL_ERROR"},
+            },
+        )
+
+        api_client = trigger.create_client()
+        consumer = VadeCloudConsumer(
+            connector=trigger, name="inbound", client=api_client, params={"stream": "Inbound"}
+        )
+
+        with pytest.raises(APIException):
+            consumer.next_batch()
+
+
+@pytest.mark.parametrize(
+    "error,expected_message",
+    [
+        (
+            APIException(401, "Unauthorized", "content"),
+            "The VadeCloud API raised an authentication issue. Please check our credentials",
+        ),
+        (
+            APIException(500, "Internal error", "context deadline exceeded"),
+            "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persist",
+        ),
+        (
+            APIException(
+                429,
+                "Too many request",
+                '{"result": "NOK", "error": {"code": 429, "message": "too many request", "trKey": "too_many_request"}}',
+            ),
+            'Unexpected API error 429 - Too many request - {"result": "NOK", "error": {"code": 429, "message": "too many request", "trKey": "too_many_request"}}',
+        ),
+    ],
+)
+def test_handle_api_exception(trigger: VadeCloudLogsConnector, auth_message, error, expected_message):
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as _,
+    ):
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
+            status_code=200,
+            json=auth_message,
+        )
+
+        api_client = trigger.create_client()
+        consumer = VadeCloudConsumer(
+            connector=trigger, name="inbound", client=api_client, params={"stream": "Inbound"}
+        )
+        consumer.handle_api_exception(error)
+        call(
+            level="error",
+            message=expected_message,
         ) in trigger.log.mock_calls
 
 
