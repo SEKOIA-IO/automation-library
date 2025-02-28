@@ -1,6 +1,6 @@
 import time
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch, call
 
 import pytest
 import requests.exceptions
@@ -304,6 +304,42 @@ def test_request_error(trigger: VadeCloudLogsConnector, auth_message):
 
         with pytest.raises(FetchEventException):
             consumer.next_batch()
+
+
+def test_request_without_permission_stop_trigger(trigger: VadeCloudLogsConnector, auth_message):
+    with (
+        requests_mock.Mocker() as mock_requests,
+        patch(
+            "vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.get_last_timestamp",
+            return_value=0,
+        ) as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.VadeCloudConsumer.set_last_timestamp") as _,
+        patch("vadecloud_modules.trigger_vade_cloud_logs.time") as _,
+    ):
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/login/login",
+            status_code=200,
+            json=auth_message,
+        )
+        mock_requests.post(
+            "https://cloud-preview.vadesecure.com/rest/v3.0/filteringlog/getReport",
+            status_code=403,
+            json={
+                "result": "NOK",
+                "error": {"code": 403, "message": "permission denied", "trKey": "PERMISSION_DENIED"},
+            },
+        )
+
+        api_client = trigger.create_client()
+        consumer = VadeCloudConsumer(
+            connector=trigger, name="inbound", client=api_client, params={"stream": "Inbound"}
+        )
+
+        consumer.next_batch()
+        call(
+            level="critical",
+            message="Request on Vade Cloud API to fetch `inbound` logs failed with status 403 - Forbidden",
+        ) in trigger.log.mock_calls
 
 
 def test_fetch_event(trigger: VadeCloudLogsConnector, auth_message, response_message):

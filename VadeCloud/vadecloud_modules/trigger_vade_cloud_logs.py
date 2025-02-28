@@ -94,7 +94,7 @@ class VadeCloudConsumer(Thread):
         if not response.ok:
             message = f"Request on Vade Cloud API to fetch `{self.name}` logs failed with status {response.status_code} - {response.reason}"
 
-            if response.status_code in [401, 403]:
+            if response.status_code == 403:
                 self.log(message=message, level="critical")
             else:
                 try:
