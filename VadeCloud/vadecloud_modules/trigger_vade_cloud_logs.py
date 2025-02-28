@@ -24,6 +24,7 @@ class VadeCloudConsumer(Thread):
         self,
         connector: "VadeCloudLogsConnector",
         name: str,
+        client: ApiClient,
         params: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
@@ -31,6 +32,7 @@ class VadeCloudConsumer(Thread):
         self.connector = connector
         self.params = params or {}
         self.name = name
+        self.client = client
         self._stop_event = Event()
 
     def stop(self) -> None:
@@ -70,35 +72,6 @@ class VadeCloudConsumer(Thread):
             cache["last_ts"] = last_timestamp
 
         self.connector.context_lock.release()
-
-    @cached_property
-    def client(self) -> ApiClient:
-        try:
-            return ApiClient(
-                hostname=self.connector.module.configuration.hostname,
-                login=self.connector.module.configuration.login,
-                password=self.connector.module.configuration.password,
-                ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
-            )
-
-        except requests.exceptions.HTTPError as error:
-            error_response = error.response
-            if error_response is None:
-                raise ValueError("Response does not contain any valid data")
-
-            http_error_code = error_response.status_code
-            if http_error_code in [401, 403, 404]:
-                self.log(message=f"Wrong password or login", level="critical")
-
-            if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
-                self.log(message=f"Invalide account type, it should be User not Admin", level="critical")
-
-            raise error
-
-        except TimeoutError as error:
-            self.log(message="Failed to authorize due to timeout", level="error")
-
-            raise error
 
     def request_logs_page(self, start_date: int, period: str, page: int = 0) -> Response:
         params = {
@@ -276,17 +249,49 @@ class VadeCloudLogsConnector(Connector):
         self.context_lock = Lock()
         self.consumers: dict[str, VadeCloudConsumer] = {}
 
-    def start_consumers(self) -> dict[str, VadeCloudConsumer]:
+    def create_client(self) -> ApiClient:
+        try:
+            return ApiClient(
+                hostname=self.module.configuration.hostname,
+                login=self.module.configuration.login,
+                password=self.module.configuration.password,
+                ratelimit_per_minute=self.configuration.ratelimit_per_minute,
+            )
+
+        except requests.exceptions.HTTPError as error:
+            error_response = error.response
+            if error_response is None:
+                raise ValueError("Response does not contain any valid data")
+
+            http_error_code = error_response.status_code
+            if http_error_code in [401, 403, 404]:
+                self.log(message=f"Wrong login or password. Please check our credentials", level="critical")
+
+            if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
+                self.log(
+                    message=f"Invalid account type. It must be User, not Admin. Please change it", level="critical"
+                )
+
+            raise error
+
+        except TimeoutError as error:
+            self.log(message="Failed to authorize due to timeout", level="error")
+
+            raise error
+
+    def start_consumers(self, client: ApiClient) -> dict[str, VadeCloudConsumer]:
         consumers = {}
 
         for consumer_name, params in self.all_params.items():
             self.log(message=f"Start `{consumer_name}` consumer", level="info")
-            consumers[consumer_name] = VadeCloudConsumer(connector=self, name=consumer_name, params=params)
+            consumers[consumer_name] = VadeCloudConsumer(
+                connector=self, name=consumer_name, client=client, params=params
+            )
             consumers[consumer_name].start()
 
         return consumers
 
-    def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer]) -> None:
+    def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer], client: ApiClient) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
                 self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
@@ -294,6 +299,7 @@ class VadeCloudLogsConnector(Connector):
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
                     name=consumer_name,
+                    client=client,
                     params=self.all_params.get(consumer_name),
                 )
                 consumers[consumer_name].start()
@@ -305,10 +311,11 @@ class VadeCloudLogsConnector(Connector):
                 consumer.stop()
 
     def run(self) -> None:  # pragma: no cover
-        consumers = self.start_consumers()
+        client = self.create_client()
+        consumers = self.start_consumers(client=client)
 
         while self.running:
-            self.supervise_consumers(consumers)
+            self.supervise_consumers(consumers, client=client)
             time.sleep(5)
 
         self.stop_consumers(consumers)
