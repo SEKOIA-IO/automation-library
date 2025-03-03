@@ -16,35 +16,35 @@
         "type": "object",
         "properties": {
           "agent_ids": {
-            "description": "The list of Agent IDs to filter by",
+            "description": "List of Agent IDs to filter by",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "account_ids": {
-            "description": "The list of Account IDs to filter by",
+            "description": "List of Account IDs to filter by",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "group_ids": {
-            "description": "The list of network group to filter by",
+            "description": "List of network group to filter by",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "site_ids": {
-            "description": "The list of Site IDs to filter by",
+            "description": "List of Site IDs to filter by",
             "type": "array",
             "items": {
               "type": "string"
             }
           },
           "ids": {
-            "description": "The list of Agent IDs to filter by",
+            "description": "List of threat IDs",
             "type": "array",
             "items": {
               "type": "string"
