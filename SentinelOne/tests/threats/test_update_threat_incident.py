@@ -1,12 +1,21 @@
 import pytest
 import requests_mock
 
-from sentinelone_module.threats.update_threat_incident import UpdateThreatIncidentAction, UpdateThreatIncidentArguments, UpdateThreatIncidentFilters
+from sentinelone_module.threats.update_threat_incident import (
+    UpdateThreatIncidentAction,
+    UpdateThreatIncidentArguments,
+    UpdateThreatIncidentFilters,
+)
 
 
 def test_arguments():
     filters_test = UpdateThreatIncidentFilters(analyst_verdicts="false_positive")
-    assert UpdateThreatIncidentArguments(status="resolved", filters=filters_test).get_query_filters().filters.get("analystVerdicts") == 'false_positive'
+    assert (
+        UpdateThreatIncidentArguments(status="resolved", filters=filters_test)
+        .get_query_filters()
+        .filters.get("analystVerdicts")
+        == "false_positive"
+    )
 
 
 @pytest.fixture(scope="module")
