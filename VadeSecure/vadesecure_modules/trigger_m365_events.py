@@ -20,15 +20,6 @@ class M365EventsTrigger(M365Mixin):
     - A margin of 300sec is added to the expiration date of oauth2 token.
     """
 
-    def run(self) -> None:  # pragma: no cover
-        """Run the trigger."""
-        while True:
-            try:
-                self._fetch_events()
-            except Exception as ex:
-                self.log_exception(ex, message="An unknown exception occurred")
-                raise
-
     def _chunk_events(self, events: Sequence[Any], chunk_size: int) -> Generator[list[Any], None, None]:
         """
         Group events by chunk

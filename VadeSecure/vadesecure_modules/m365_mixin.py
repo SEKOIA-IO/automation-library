@@ -145,3 +145,12 @@ class M365Mixin(Trigger, ABC):
             )
 
             return result
+
+    def run(self) -> None:  # pragma: no cover
+        """Run the trigger."""
+        while True:
+            try:
+                self._fetch_events()
+            except Exception as ex:
+                self.log_exception(ex, message="An unknown exception occurred")
+                raise
