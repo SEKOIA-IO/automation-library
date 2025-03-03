@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-03 - 2.67.7
+
+### Fixed
+
+Support for file input - action synchronize asset - Fix output type
+
 ## 2025-02-04 - 2.67.6
 
 ### Added
