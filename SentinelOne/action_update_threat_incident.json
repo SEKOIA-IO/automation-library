@@ -54,10 +54,10 @@
             "description": "Verdicts of the analyst",
             "type": "string",
             "enum": [
-              "False_positive",
-              "Suspicious",
-              "True_positive",
-              "Undefined"
+              "false_positive",
+              "suspicious",
+              "true_positive",
+              "undefined"
             ]
           }
         }
