@@ -14,7 +14,7 @@ from . import CyberArkModule
 from .client import ApiClient
 from .client.auth import CyberArkApiAuthentication
 from .logging import get_logger
-from .metrics import INCOMING_MESSAGES, OUTCOMING_EVENTS, FORWARD_EVENTS_DURATION, EVENTS_LAG
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
 
@@ -24,7 +24,6 @@ class CyberArkAuditLogsConnectorConfiguration(DefaultConnectorConfiguration):
     api_key: str = Field(..., description="API key", secret=True)
 
     frequency: int = 60
-    ratelimit_per_minute: int = 20
 
 
 class CyberArkAuditLogsConnector(Connector):
@@ -35,7 +34,7 @@ class CyberArkAuditLogsConnector(Connector):
     module: CyberArkModule
     configuration: CyberArkAuditLogsConnectorConfiguration
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointTimestamp(
@@ -71,11 +70,11 @@ class CyberArkAuditLogsConnector(Connector):
                 application_id=self.module.configuration.application_id,
                 client_id=self.module.configuration.login_name,
                 client_secret=self.module.configuration.password,
-                api_key=self.configuration.api_key
+                api_key=self.configuration.api_key,
             ),
         )
 
-    def _handle_response_error(self, response: requests.Response):
+    def _handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
             level = "critical" if response.status_code in [401, 403] else "error"
 
@@ -100,22 +99,16 @@ class CyberArkAuditLogsConnector(Connector):
         from_date = datetime.fromtimestamp(from_timestamp / 1000.0).astimezone(timezone.utc)
 
         url = f"{self.configuration.api_base_url}/api/audits/stream/createQuery"
-        response = self.client.post(url, json={
-            "query": {
-                "pageSize": 100,
-                "filterModel": {
-                    "date": {
-                        "dateFrom": from_date.isoformat()
-                    }
-                },
-                "sortModel": [
-                    {
-                        "field_name": "date",
-                        "direction": "asc"
-                    }
-                ]
-            }
-        })
+        response = self.client.post(
+            url,
+            json={
+                "query": {
+                    "pageSize": 100,
+                    "filterModel": {"date": {"dateFrom": from_date.isoformat()}},
+                    "sortModel": [{"field_name": "date", "direction": "asc"}],
+                }
+            },
+        )
         self._handle_response_error(response)
 
         # Iterate through pages
@@ -124,9 +117,7 @@ class CyberArkAuditLogsConnector(Connector):
         while self.running:
             # 2. Get results by cursor ref
             url = f"{self.configuration.api_base_url}/api/audits/stream/results"
-            response = self.client.post(url, json={
-                "cursorRef": cursor_ref
-            })
+            response = self.client.post(url, json={"cursorRef": cursor_ref})
             self._handle_response_error(response)
 
             raw = response.json()
@@ -178,7 +169,7 @@ class CyberArkAuditLogsConnector(Connector):
             current_lag = now - most_recent_date_seen // 1000
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
-    def next_batch(self):
+    def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time.time()
 
@@ -212,7 +203,7 @@ class CyberArkAuditLogsConnector(Connector):
             self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="debug")
             time.sleep(delta_sleep)
 
-    def run(self):
+    def run(self) -> None:
         self.log(message="Start fetching CyberArk audit logs", level="info")
 
         while self.running:

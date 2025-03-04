@@ -1,0 +1,37 @@
+{
+  "name": "Fetch CyberArk audit logs",
+  "description": "Get the latest audit events from CyberArk",
+  "uuid": "2f12d7ec-4ba9-532f-95ec-6fe7b31832f1",
+  "docker_parameters": "connector_audit_logs",
+  "arguments": {
+    "title": "CyberArkAuditLogsConnectorConfiguration",
+    "type": "object",
+    "properties": {
+      "api_base_url": {
+        "description": "Api Base Url (e.g. `https://example.cyberark.cloud`)",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "Api Key",
+        "type": "string"
+      },
+      "frequency": {
+        "description": "Batch frequency in seconds",
+        "default": 60,
+        "type": "integer"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": ["intake_key", "api_base_url", "api_key"],
+    "secrets": ["api_key"]
+  },
+  "results": {}
+}

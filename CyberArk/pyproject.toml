@@ -8,6 +8,9 @@ package-mode = false
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.18.3"
+cachetools = "^5.5.2"
+structlog = "^25.1.0"
+orjson = "^3.10.15"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

@@ -6,4 +6,3 @@ class CyberArkModuleConfiguration(BaseModel):
     login_name: str = Field(..., description="Login name")
     password: str = Field(..., description="Password", secret=True)
     application_id: str = Field(..., description="Application identifier")
-
