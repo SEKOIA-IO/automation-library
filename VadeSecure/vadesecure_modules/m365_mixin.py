@@ -1,3 +1,4 @@
+import time
 from abc import ABC
 from datetime import datetime, timedelta
 from enum import Enum
@@ -14,6 +15,14 @@ from sekoia_automation.trigger import Trigger
 from . import VadeSecureModule
 from .client import ApiClient
 from .models import VadeSecureTriggerConfiguration
+
+
+class APIException(Exception):
+
+    def __init__(self, code: int, reason: str, content: str):
+        super().__init__(reason)
+        self.code = code
+        self.content = content
 
 
 class EventType(Enum):
@@ -126,17 +135,20 @@ class M365Mixin(Trigger, ABC):
         response = self.client.post(url=url, json=payload_json, timeout=60)
 
         if not response.ok:
-            # Exit trigger if we can't authenticate against the server
-            level = "critical" if response.status_code in [401, 403] else "error"
-            self.log(
-                message=(
-                    f"Request on M365 API to fetch events of tenant {self.configuration.tenant_id} "
-                    f"failed with status {response.status_code} - {response.reason}"
-                ),
-                level=level,
-            )
+            if response.status_code in [401, 500]:
+                raise APIException(response.status_code, response.reason, response.text)
+            else:
+                # Exit trigger if we can't authenticate against the server
+                level = "critical" if response.status_code in [403] else "error"
+                self.log(
+                    message=(
+                        f"Request on M365 API to fetch events of tenant {self.configuration.tenant_id} "
+                        f"failed with status {response.status_code} - {response.reason}"
+                    ),
+                    level=level,
+                )
 
-            return []
+                return []
         else:
             result: list[dict[str, Any]] = (
                 response.json()["result"]["messages"]
@@ -146,11 +158,24 @@ class M365Mixin(Trigger, ABC):
 
             return result
 
+    def handle_api_exception(self, error: APIException) -> None:
+        message = f"Unexpected API error {error.code} - {str(error)} - {error.content}"
+        if error.code == 401:
+            message = "The VadeCloud API raised an authentication issue. Please check our credentials"
+        elif error.code == 500:
+            message = (
+                "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persists"
+            )
+        self.log(level="error", message=message)
+        time.sleep(self.configuration.frequency)
+
     def run(self) -> None:  # pragma: no cover
         """Run the trigger."""
         while True:
             try:
                 self._fetch_events()
+            except APIException as ex:
+                self.handle_api_exception(ex)
             except Exception as ex:
                 self.log_exception(ex, message="An unknown exception occurred")
                 raise
