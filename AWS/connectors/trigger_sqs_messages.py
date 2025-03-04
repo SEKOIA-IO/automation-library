@@ -50,7 +50,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         return SqsWrapper(config)
 
-    async def next_batch(self) -> tuple[list[str], list[int]]:
+    async def next_batch(self) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -87,4 +87,4 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
             events=[orjson.dumps(record).decode("utf-8") for record in records],
         )
 
-        return result, timestamps_to_log
+        return len(result), timestamps_to_log

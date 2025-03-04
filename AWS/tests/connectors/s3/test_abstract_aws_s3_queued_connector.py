@@ -185,9 +185,9 @@ async def test_abstract_aws_s3_queued_connector_next_batch(
 
     result = await abstract_queued_connector.next_batch()
 
-    assert len(result[0]) == len(expected_result)
+    assert result[0] == len(expected_result)
     assert len(result[1]) == len(expected_timestamps)
-    assert result == (expected_result, expected_timestamps)
+    assert result == (len(expected_result), expected_timestamps)
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message(
@@ -226,9 +226,9 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message(
 
     result = await abstract_queued_connector.next_batch()
 
-    assert len(result[0]) == len(expected_result)
+    assert result[0] == len(expected_result)
     assert len(result[1]) == len(expected_timestamps)
-    assert result == (expected_result, expected_timestamps)
+    assert result == (len(expected_result), expected_timestamps)
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_1(
@@ -252,7 +252,7 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_
 
     result = await abstract_queued_connector.next_batch()
 
-    assert result == ([], [message_timestamp])
+    assert result == (0, [message_timestamp])
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_2(
@@ -276,7 +276,7 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message_
 
     result = await abstract_queued_connector.next_batch()
 
-    assert result == ([], [message_timestamp])
+    assert result == (0, [message_timestamp])
 
 
 async def test_abstract_aws_s3_queued_connector_next_batch_with_empty_data_in_s3(
@@ -306,4 +306,4 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_empty_data_in_s3
 
     result = await abstract_queued_connector.next_batch()
 
-    assert result == ([], [message[1] for message in valid_messages])
+    assert result == (0, [message[1] for message in valid_messages])

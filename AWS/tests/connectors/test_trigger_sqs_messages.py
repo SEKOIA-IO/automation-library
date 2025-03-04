@@ -133,7 +133,7 @@ async def test_trigger_sqs_messages(
         )
         expected_timestamps.append(timestamp)
 
-    expected_result = expected_messages, expected_timestamps
+    expected_result = len(expected_messages), expected_timestamps
 
     connector.sqs_wrapper = MagicMock()
     connector.sqs_wrapper.receive_messages = MagicMock()
@@ -173,7 +173,7 @@ async def test_trigger_sqs_messages_with_one_failed(
 
     expected_timestamps.append(failed_message_timestamp)
 
-    expected_result = expected_messages, expected_timestamps
+    expected_result = len(expected_messages), expected_timestamps
 
     connector.sqs_wrapper = MagicMock()
     connector.sqs_wrapper.receive_messages = MagicMock()

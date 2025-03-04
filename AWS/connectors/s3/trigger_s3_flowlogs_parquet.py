@@ -7,8 +7,8 @@ from typing import Any
 
 import orjson
 import pandas
-from connectors.metrics import DISCARDED_EVENTS
 
+from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector
 
 
