@@ -176,6 +176,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             if not records:
                 continue_receiving = False
 
-        result += len(await self.push_data_to_intakes(events=records))
+        if records:
+            result += len(await self.push_data_to_intakes(events=records))
 
         return result, timestamps_to_log
