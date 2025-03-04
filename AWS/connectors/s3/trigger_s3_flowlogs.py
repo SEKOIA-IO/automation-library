@@ -3,8 +3,8 @@
 import ipaddress
 from itertools import islice
 
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from connectors.metrics import DISCARDED_EVENTS
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
 class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):

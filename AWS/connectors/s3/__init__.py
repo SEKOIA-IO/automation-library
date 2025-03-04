@@ -112,7 +112,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             "object", {}
         ).get("key")
 
-    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[list[str], list[int]]:
+    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -122,9 +122,10 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             previous_processing_end: float | None
 
         Returns:
-            tuple[list[str], int]:
+            tuple[int, list[int]]:
         """
         records = []
+        result = 0
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
@@ -162,15 +163,19 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
                             records.extend(self._parse_content(self.decompress_content(content)))
 
+                        if len(records) >= self.limit_of_events_to_push:
+                            continue_receiving = False
+                            result += await self.push_data_to_intakes(events=records)
+
                     except Exception as e:
                         self.log(
                             message=f"Failed to fetch content of {record}: {str(e)}",
                             level="warning",
                         )
 
-            if len(records) >= self.limit_of_events_to_push or not records:
+            if not records:
                 continue_receiving = False
 
-        result = await self.push_data_to_intakes(events=records)
+        result += len(await self.push_data_to_intakes(events=records))
 
         return result, timestamps_to_log
