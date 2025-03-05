@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-05 - 1.32.5
+
+### Fixed
+
+- Fix typing issue and reset the records list when pushing it
+
 ## 2025-03-04 - 1.32.4
 
 ### Fixed
