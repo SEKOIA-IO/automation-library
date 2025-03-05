@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-04 - 1.52.2
+
+### Fixed
+
+- Change the way to handle the 401 and 500 HTTP errors from the Vade Secure API
+
+### Changed
+
+- Change how to pause the trigger between two fetches
+
 ## 2024-11-15 - 1.52.1
 
 ### Fixed

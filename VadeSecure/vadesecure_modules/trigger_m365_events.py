@@ -20,17 +20,6 @@ class M365EventsTrigger(M365Mixin):
     - A margin of 300sec is added to the expiration date of oauth2 token.
     """
 
-    def run(self) -> None:  # pragma: no cover
-        """Run the trigger."""
-        while True:
-            try:
-                self._fetch_events()
-            except Exception as ex:
-                self.log_exception(ex, message="An unknown exception occurred")
-                raise
-
-            time.sleep(self.configuration.frequency)
-
     def _chunk_events(self, events: Sequence[Any], chunk_size: int) -> Generator[list[Any], None, None]:
         """
         Group events by chunk
@@ -79,6 +68,8 @@ class M365EventsTrigger(M365Mixin):
         Successively queries the m365 events pages while more are available
         and the current batch is not too big.
         """
+        fetch_start_time = time.time()
+
         for event_type in EventType:
             message_batch: Deque[dict[str, Any]] = collections.deque()
             has_more_message = True
@@ -122,3 +113,14 @@ class M365EventsTrigger(M365Mixin):
                     )
 
             self.update_event_type_context(last_message_date, last_message_id, event_type)
+
+        fetch_end_time = time.time()
+        fetch_duration = fetch_end_time - fetch_start_time
+        # compute the remaining sleeping time. If greater than 0, sleep
+        delta_sleep = self.configuration.frequency - fetch_duration
+        if delta_sleep > 0:
+            self.log(
+                message=f"Next batches in the future. Waiting {delta_sleep} seconds",
+                level="debug",
+            )  # pragma: no cover
+            time.sleep(delta_sleep)

@@ -102,12 +102,3 @@ class M365EventsConnector(Connector, M365Mixin):
                 level="debug",
             )  # pragma: no cover
             time.sleep(delta_sleep)
-
-    def run(self) -> None:  # pragma: no cover
-        """Run the trigger."""
-        while self.running:
-            try:
-                self._fetch_events()
-            except Exception as ex:
-                self.log_exception(ex, message="An unknown exception occurred")
-                raise
