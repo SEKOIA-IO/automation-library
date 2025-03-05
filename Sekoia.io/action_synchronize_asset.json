@@ -33,25 +33,20 @@
         "required": ["community_uuid", "asset_synchronization_configuration"]
     },
     "results": {
-        "title": "Response",
+      "type": "array",
+      "items": {
         "type": "object",
         "properties": {
-            "found_assets": {
-              "title": "Assets found", 
-              "type": "array", 
-              "items": {
-                "type": "string"
-                }
-              },
-            "created_asset": {
-              "title": "Asset created", 
-              "type": "boolean"
-            },
-            "destination_asset": {
-              "title": "Destination asset", 
-              "type": "string"
-            }
-        },
-        "required": ["found_assets", "created_asset", "destination_asset"]
+          "found_assets": {
+            "type": "array"
+          },
+          "created_asset": {
+            "type": "string"
+          },
+          "destination_asset": {
+            "type": "string"
+          }
+        }
+      }
     }
 }
