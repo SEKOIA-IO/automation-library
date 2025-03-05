@@ -165,7 +165,8 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
                         if len(records) >= self.limit_of_events_to_push:
                             continue_receiving = False
-                            result += await self.push_data_to_intakes(events=records)
+                            result += len(await self.push_data_to_intakes(events=records))
+                            records = []
 
                     except Exception as e:
                         self.log(
