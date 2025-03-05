@@ -6,7 +6,7 @@ from typing import Generator
 import orjson
 import requests
 from cachetools import Cache, LRUCache
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
@@ -22,8 +22,7 @@ logger = get_logger()
 class CyberArkAuditLogsConnectorConfiguration(DefaultConnectorConfiguration):
     api_base_url: str = Field(..., description="API base url")
     api_key: str = Field(..., description="API key", secret=True)
-
-    frequency: int = 60
+    frequency: int = Field(60, description="Batch frequency in seconds")
 
 
 class CyberArkAuditLogsConnector(Connector):

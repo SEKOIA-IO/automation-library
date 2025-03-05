@@ -17,6 +17,7 @@ pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
+mypy = "*"
 
 [build-system]
 requires = ["poetry-core"]

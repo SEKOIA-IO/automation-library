@@ -1,5 +1,5 @@
 {
-  "name": "Fetch CyberArk audit logs",
+  "name": "Fetch CyberArk audit logs [BETA]",
   "description": "Get the latest audit events from CyberArk",
   "uuid": "2f12d7ec-4ba9-532f-95ec-6fe7b31832f1",
   "docker_parameters": "connector_audit_logs",
