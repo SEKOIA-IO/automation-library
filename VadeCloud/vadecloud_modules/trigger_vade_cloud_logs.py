@@ -19,11 +19,20 @@ class FetchEventException(Exception):
     pass
 
 
+class APIException(Exception):
+
+    def __init__(self, code: int, reason: str, content: str):
+        super().__init__(reason)
+        self.code = code
+        self.content = content
+
+
 class VadeCloudConsumer(Thread):
     def __init__(
         self,
         connector: "VadeCloudLogsConnector",
         name: str,
+        client: ApiClient,
         params: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
@@ -31,6 +40,7 @@ class VadeCloudConsumer(Thread):
         self.connector = connector
         self.params = params or {}
         self.name = name
+        self.client = client
         self._stop_event = Event()
 
     def stop(self) -> None:
@@ -71,35 +81,6 @@ class VadeCloudConsumer(Thread):
 
         self.connector.context_lock.release()
 
-    @cached_property
-    def client(self) -> ApiClient:
-        try:
-            return ApiClient(
-                hostname=self.connector.module.configuration.hostname,
-                login=self.connector.module.configuration.login,
-                password=self.connector.module.configuration.password,
-                ratelimit_per_minute=self.connector.configuration.ratelimit_per_minute,
-            )
-
-        except requests.exceptions.HTTPError as error:
-            error_response = error.response
-            if error_response is None:
-                raise ValueError("Response does not contain any valid data")
-
-            http_error_code = error_response.status_code
-            if http_error_code in [401, 403, 404]:
-                self.log(message=f"Wrong password or login", level="critical")
-
-            if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
-                self.log(message=f"Invalide account type, it should be User not Admin", level="critical")
-
-            raise error
-
-        except TimeoutError as error:
-            self.log(message="Failed to authorize due to timeout", level="error")
-
-            raise error
-
     def request_logs_page(self, start_date: int, period: str, page: int = 0) -> Response:
         params = {
             "userId": self.client.account_id,
@@ -121,8 +102,10 @@ class VadeCloudConsumer(Thread):
         if not response.ok:
             message = f"Request on Vade Cloud API to fetch `{self.name}` logs failed with status {response.status_code} - {response.reason}"
 
-            if response.status_code in [401, 403]:
+            if response.status_code == 403:
                 self.log(message=message, level="critical")
+            elif response.status_code in [401, 500]:
+                raise APIException(response.status_code, response.reason, response.text)
             else:
                 try:
                     error = response.json()
@@ -246,10 +229,28 @@ class VadeCloudConsumer(Thread):
 
             time.sleep(delta_sleep)
 
+    def handle_api_exception(self, error: APIException) -> None:
+        message = f"Unexpected API error {error.code} - {str(error)} - {error.content}"
+        if error.code == 401:
+            message = "The VadeCloud API raised an authentication issue. Please check our credentials"
+        elif error.code == 500:
+            message = (
+                "The VadeCloud API raised an internal error. Please contact the Vade support if the issue persists"
+            )
+
+        self.connector.log(message, level="error")
+        self.connector.log(
+            f"WatchGuard: Wait {self.connector.configuration.frequency}s before next attempt", level="info"
+        )
+        time.sleep(self.connector.configuration.frequency)
+
     def run(self) -> None:  # pragma: no cover
         try:
             while self.running:
-                self.next_batch()
+                try:
+                    self.next_batch()
+                except APIException as error:
+                    self.handle_api_exception(error)
 
         except Exception as error:
             self.connector.log_exception(error, message=f"{self.name}: Failed to forward events")
@@ -276,17 +277,49 @@ class VadeCloudLogsConnector(Connector):
         self.context_lock = Lock()
         self.consumers: dict[str, VadeCloudConsumer] = {}
 
-    def start_consumers(self) -> dict[str, VadeCloudConsumer]:
+    def create_client(self) -> ApiClient:
+        try:
+            return ApiClient(
+                hostname=self.module.configuration.hostname,
+                login=self.module.configuration.login,
+                password=self.module.configuration.password,
+                ratelimit_per_minute=self.configuration.ratelimit_per_minute,
+            )
+
+        except requests.exceptions.HTTPError as error:
+            error_response = error.response
+            if error_response is None:
+                raise ValueError("Response does not contain any valid data")
+
+            http_error_code = error_response.status_code
+            if http_error_code in [401, 403, 404]:
+                self.log(message=f"Wrong login or password. Please check our credentials", level="critical")
+
+            if http_error_code == 400 and error_response.json().get("error", {}).get("trKey", "") == "INVALID_USER":
+                self.log(
+                    message=f"Invalid account type. It must be User, not Admin. Please change it", level="critical"
+                )
+
+            raise error
+
+        except TimeoutError as error:
+            self.log(message="Failed to authorize due to timeout", level="error")
+
+            raise error
+
+    def start_consumers(self, client: ApiClient) -> dict[str, VadeCloudConsumer]:
         consumers = {}
 
         for consumer_name, params in self.all_params.items():
             self.log(message=f"Start `{consumer_name}` consumer", level="info")
-            consumers[consumer_name] = VadeCloudConsumer(connector=self, name=consumer_name, params=params)
+            consumers[consumer_name] = VadeCloudConsumer(
+                connector=self, name=consumer_name, client=client, params=params
+            )
             consumers[consumer_name].start()
 
         return consumers
 
-    def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer]) -> None:
+    def supervise_consumers(self, consumers: dict[str, VadeCloudConsumer], client: ApiClient) -> None:
         for consumer_name, consumer in consumers.items():
             if consumer is None or (not consumer.is_alive() and consumer.running):
                 self.log(message=f"Restart consuming logs of `{consumer_name}` emails", level="info")
@@ -294,6 +327,7 @@ class VadeCloudLogsConnector(Connector):
                 consumers[consumer_name] = VadeCloudConsumer(
                     connector=self,
                     name=consumer_name,
+                    client=client,
                     params=self.all_params.get(consumer_name),
                 )
                 consumers[consumer_name].start()
@@ -305,10 +339,11 @@ class VadeCloudLogsConnector(Connector):
                 consumer.stop()
 
     def run(self) -> None:  # pragma: no cover
-        consumers = self.start_consumers()
+        client = self.create_client()
+        consumers = self.start_consumers(client=client)
 
         while self.running:
-            self.supervise_consumers(consumers)
+            self.supervise_consumers(consumers, client=client)
             time.sleep(5)
 
         self.stop_consumers(consumers)
