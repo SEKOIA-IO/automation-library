@@ -13,7 +13,7 @@ from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 
-from wiz.client.gql_client import WizErrors, WizGqlClient, WizResult
+from wiz.client.gql_client import WizErrors, WizGqlClient, WizResult, WizServerError
 from wiz.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
@@ -150,10 +150,14 @@ class WizConnector(AsyncConnector, ABC):
                 if result == 0:
                     await asyncio.sleep(self.configuration.frequency)
 
-            except WizErrors as error:
+            except WizServerError as error:
                 # In case if we handle the server custom error we should raise critical message and then sleep.
                 # This will help to stop the connector in case if credentials are invalid or permissions denied.
                 self.log(message=error.message, level="critical")
+                await asyncio.sleep(self.configuration.frequency)
+
+            except WizErrors as error:
+                self.log(message=error.message, level="warning")
                 await asyncio.sleep(self.configuration.frequency)
 
             except TimeoutError:

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-18 - 1.3.1
+
+### Added
+
+- Wiz stop connectors only on 401 and 403 errors
+
 ## 2025-02-18 - 1.3.0
 
 ### Added
