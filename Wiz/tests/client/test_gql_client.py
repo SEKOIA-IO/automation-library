@@ -189,6 +189,7 @@ async def test_wiz_gql_client_get_audit_logs_error_3(
 
         await wiz_gql_client.close()
 
+
 @pytest.mark.asyncio
 async def test_wiz_gql_client_get_audit_logs_error_4(
     http_token,
@@ -217,6 +218,7 @@ async def test_wiz_gql_client_get_audit_logs_error_4(
             await wiz_gql_client.get_audit_logs(date)
 
         await wiz_gql_client.close()
+
 
 @pytest.mark.asyncio
 async def test_wiz_gql_client_get_alerts(
