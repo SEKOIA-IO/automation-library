@@ -17,7 +17,6 @@ from connectors import CheckpointModule
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
-
 ONE_SECOND = timedelta(seconds=1)
 
 
@@ -138,7 +137,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
 
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
-                    lag = 0.
+                    lag = 0.0
                     log_message = "No records to forward"
                     if len(message_ids) > 0:
                         lag = processing_end - latest_event_date
