@@ -26,10 +26,6 @@ class CyberArkAuditLogsConnectorConfiguration(DefaultConnectorConfiguration):
 
 
 class CyberArkAuditLogsConnector(Connector):
-    """
-    This connector fetches system logs from Okta API
-    """
-
     module: CyberArkModule
     configuration: CyberArkAuditLogsConnectorConfiguration
 
@@ -79,13 +75,12 @@ class CyberArkAuditLogsConnector(Connector):
 
             message = f"Request to CyberArk API failed with status {response.status_code} - {response.reason}"
 
-            # enrich error logs with detail from the Okta API
             try:
                 error = response.json()
                 logger.error(
                     message,
-                    error_message=error.get("message"),
-                    error_number=error.get("number"),
+                    error=error.get("error") or error.get("message"),
+                    description=error.get("error_description") or error.get("description"),
                 )
 
             except Exception as e:
