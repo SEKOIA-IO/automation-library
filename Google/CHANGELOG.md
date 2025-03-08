@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-28 - 1.21.5
+
+### Changed
+
+- Change timedelta default value
+
 ## 2025-02-04 - 1.21.4
 
 ### Changed
