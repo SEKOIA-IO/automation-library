@@ -85,7 +85,7 @@ def stix_to_indicators(stix_object, supported_types_map):
     return results
 
 
-def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, context: PersistentJSON ) -> list:
+def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, context: PersistentJSON) -> list:
     """
     Filter events that have already been filter_collected_events
 
@@ -94,14 +94,14 @@ def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, co
         getter: The callable to get the criteria to filter the events
         cache: The cache that hold the list of collected events
     """
-    
+
     selected_events = []
     with context as context_cache:
-        
+
         session_cache = context_cache.get("session_cache", [])
         for cached_id in session_cache:
             cache[cached_id] = True
-            
+
         for event in events:
             key = getter(event)
 
@@ -111,7 +111,7 @@ def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, co
 
             cache[key] = True
             selected_events.append(event)
-            
+
         context_cache["session_cache"] = list(cache.keys())
 
     return selected_events

@@ -41,7 +41,7 @@ class SentinelOneLogsConsumer(Thread):
         self.consumer_type = consumer_type
         self.events_cache: Cache = LRUCache(maxsize=1000)
         self._stop_event = Event()
-        
+
         self.cursor = CheckpointDatetime(
             path=self.connector.data_path,
             start_at=timedelta(days=1),
@@ -166,7 +166,9 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(nb_activities)
 
             # discard already collected events
-            selected_events = filter_collected_events(activities.data, lambda activity: activity.id, self.events_cache, self.cursor._context)
+            selected_events = filter_collected_events(
+                activities.data, lambda activity: activity.id, self.events_cache, self.cursor._context
+            )
 
             # Push events
             if len(selected_events) > 0:
@@ -215,7 +217,9 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             logger.debug("Collected nb_threats", nb=nb_threats)
 
             # discard already collected events
-            selected_events = filter_collected_events(threats.data, lambda threat: threat["id"], self.events_cache, self.cursor._context)
+            selected_events = filter_collected_events(
+                threats.data, lambda threat: threat["id"], self.events_cache, self.cursor._context
+            )
 
             # Push events
             if len(selected_events) > 0:
@@ -252,7 +256,7 @@ class SentinelOneLogsConnector(Connector):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context_lock = Lock()
-    
+
     @property
     def data_path(self) -> Path:
         return self._data_path
