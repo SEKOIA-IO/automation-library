@@ -259,7 +259,8 @@ class SentinelOneLogsConnector(Connector):
 
     @property
     def data_path(self) -> Path:
-        return self._data_path
+        path_to_data: Path = self._data_path
+        return path_to_data
 
     def start_consumers(self) -> dict:
         """Starts children threads for each supported type
