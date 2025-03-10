@@ -3,9 +3,9 @@ from datetime import UTC, datetime, timedelta
 from functools import cached_property
 from threading import Event, Lock, Thread
 from time import sleep, time
+from pathlib import Path
 
 from cachetools import Cache, LRUCache
-from dateutil.parser import isoparse
 from management.mgmtsdk_v2.entities.activity import Activity
 from management.mgmtsdk_v2.entities.threat import Threat
 from management.mgmtsdk_v2.exceptions import UnauthorizedException
@@ -13,7 +13,7 @@ from management.mgmtsdk_v2.services.activity import ActivitiesFilter
 from management.mgmtsdk_v2.services.threat import ThreatQueryFilter
 from management.mgmtsdk_v2_1.mgmt import Management
 from sekoia_automation.connector import Connector
-from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.checkpoint import CheckpointDatetime
 
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.helpers import filter_collected_events
@@ -40,8 +40,15 @@ class SentinelOneLogsConsumer(Thread):
         self.module = connector.module
         self.consumer_type = consumer_type
         self.events_cache: Cache = LRUCache(maxsize=1000)
-
         self._stop_event = Event()
+        
+        self.cursor = CheckpointDatetime(
+            path=self.connector.data_path,
+            start_at=timedelta(days=1),
+            ignore_older_than=timedelta(days=1),
+            lock=self.connector.context_lock,
+        )
+        self.from_date = self.cursor.offset
 
     def stop(self):
         """Sets the stop event for the thread"""
@@ -64,41 +71,6 @@ class SentinelOneLogsConsumer(Thread):
             Management: SentinelOne client instance
         """
         return Management(hostname=self.module.configuration.hostname, api_token=self.module.configuration.api_token)
-
-    @property
-    def most_recent_date_seen(self) -> datetime:
-        """
-        Get last event date.
-
-        Returns:
-            datetime:
-        """
-        now = datetime.now(UTC)
-        one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
-
-        with self.connector.context_lock, self.connector.context as cache:
-            last_event_date_str = cache.get(self.consumer_type, {}).get("most_recent_date_seen")
-
-        # If undefined, retrieve events from the last 1 hour
-        if last_event_date_str is None:
-            return one_day_ago
-
-        # Parse the most recent date seen
-        last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
-
-        # We don't retrieve messages older than 1 day
-        if last_event_date < one_day_ago:
-            return one_day_ago
-
-        return last_event_date
-
-    @most_recent_date_seen.setter
-    def most_recent_date_seen(self, dt: datetime) -> None:
-        with self.connector.context_lock, self.connector.context as cache:
-            if self.consumer_type not in cache:
-                cache[self.consumer_type] = {}
-
-            cache[self.consumer_type]["most_recent_date_seen"] = dt.isoformat()
 
     @staticmethod
     def _serialize_events(events: list[Activity] | list[Threat] | list[dict]) -> list:
@@ -128,7 +100,7 @@ class SentinelOneLogsConsumer(Thread):
 
         try:
             # get the batch
-            events_id = self.pull_events(self.most_recent_date_seen)
+            events_id = self.pull_events(self.from_date)
 
             # get the ending time and compute the duration to fetch the events
             batch_end_time = time()
@@ -194,7 +166,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(nb_activities)
 
             # discard already collected events
-            selected_events = filter_collected_events(activities.data, lambda activity: activity.id, self.events_cache)
+            selected_events = filter_collected_events(activities.data, lambda activity: activity.id, self.events_cache, self.cursor._context)
 
             # Push events
             if len(selected_events) > 0:
@@ -207,7 +179,8 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             current_lag: int = 0
             latest_event_timestamp = get_latest_event_timestamp(selected_events)
             if latest_event_timestamp is not None:
-                self.most_recent_date_seen = latest_event_timestamp
+                self.cursor.offset = latest_event_timestamp
+                self.from_date = latest_event_timestamp
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(current_lag)
@@ -242,7 +215,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             logger.debug("Collected nb_threats", nb=nb_threats)
 
             # discard already collected events
-            selected_events = filter_collected_events(threats.data, lambda threat: threat["id"], self.events_cache)
+            selected_events = filter_collected_events(threats.data, lambda threat: threat["id"], self.events_cache, self.cursor._context)
 
             # Push events
             if len(selected_events) > 0:
@@ -255,7 +228,8 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             current_lag: int = 0
             latest_event_timestamp = get_latest_event_timestamp(selected_events)
             if latest_event_timestamp is not None:
-                self.most_recent_date_seen = latest_event_timestamp
+                self.cursor.offset = latest_event_timestamp
+                self.from_date = latest_event_timestamp
                 current_lag = int((datetime.now(UTC) - latest_event_timestamp).total_seconds())
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(current_lag)
@@ -277,8 +251,11 @@ class SentinelOneLogsConnector(Connector):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
+    
+    @property
+    def data_path(self) -> Path:
+        return self._data_path
 
     def start_consumers(self) -> dict:
         """Starts children threads for each supported type

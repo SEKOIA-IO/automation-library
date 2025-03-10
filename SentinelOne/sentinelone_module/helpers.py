@@ -8,6 +8,8 @@ import six
 from cachetools import Cache
 from stix2patterns.pattern import Pattern
 
+from sekoia_automation.storage import PersistentJSON
+
 
 def camelize(string: str) -> str:
     return re.sub(r"_(.)", lambda m: m.group(1).upper(), string)
@@ -83,7 +85,7 @@ def stix_to_indicators(stix_object, supported_types_map):
     return results
 
 
-def filter_collected_events(events: Sequence, getter: Callable, cache: Cache) -> list:
+def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, context: PersistentJSON ) -> list:
     """
     Filter events that have already been filter_collected_events
 
@@ -92,16 +94,24 @@ def filter_collected_events(events: Sequence, getter: Callable, cache: Cache) ->
         getter: The callable to get the criteria to filter the events
         cache: The cache that hold the list of collected events
     """
-
+    
     selected_events = []
-    for event in events:
-        key = getter(event)
+    with context as context_cache:
+        
+        session_cache = context_cache.get("session_cache", [])
+        for cached_id in session_cache:
+            cache[cached_id] = True
+            
+        for event in events:
+            key = getter(event)
 
-        # If the event was already collected, discard it
-        if key is None or key in cache:
-            continue
+            # If the event was already collected, discard it
+            if key is None or key in cache:
+                continue
 
-        cache[key] = True
-        selected_events.append(event)
+            cache[key] = True
+            selected_events.append(event)
+            
+        context_cache["session_cache"] = list(cache.keys())
 
     return selected_events

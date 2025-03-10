@@ -73,7 +73,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
                 after=cursor,
             )
 
-            alerts = filter_collected_events(data.alerts, lambda alert: alert["id"], self.events_cache)
+            alerts = filter_collected_events(data.alerts, lambda alert: alert["id"], self.events_cache, self.last_event_date._context)
 
             detailed_alerts = []
             for alert in alerts:
