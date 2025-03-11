@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import Any
 
-import orjson
-import pandas as pd
 from azure.monitor.query import LogsQueryStatus
 from pydantic.v1 import BaseModel, Field
 
@@ -48,10 +46,13 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
 
         result = []
         for table in data:
-            df = pd.DataFrame(data=table.rows, columns=table.columns)
-
-            # this is a hack to avoid converting datetime columns manually
-            pure_records = orjson.loads(df.to_json(orient="records"))
-            result.append(pure_records)
+            table_records = [
+                {
+                    col: (int(value.timestamp() * 1000) if isinstance(value, datetime) else value)
+                    for col, value in zip(table.columns, row)
+                }
+                for row in table.rows
+            ]
+            result.append(table_records)
 
         return result
