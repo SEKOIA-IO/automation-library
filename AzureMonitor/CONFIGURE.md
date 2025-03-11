@@ -13,7 +13,7 @@
 
 1. Go to `Manage` > `Certificates & secrets`
 2. Click `+ New client secret`
-3. Type a description and select the desirated expiration period
+3. Type a description and select the desired expiration period
 4. Click `Add`
 5. Copy the `Value` of the client secret
 
@@ -22,7 +22,7 @@
 1. In the search bar, go to `Subscriptions`
 2. Click on one of your subscriptions
 3. On the right panel, Click `Access control (IAM)`
-4. Click `+ Add` > `Add role assignement`
+4. Click `+ Add` > `Add role assignment`
 5. In the `job function roles` sub-tab, search for `Log Analytics Reader` and select it
 6. Click `Next`
 7. Select `User, group or service principal` as access
