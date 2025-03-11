@@ -30,8 +30,6 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
             else None
         )
 
-        data = None
-
         try:
             response = self.client.query_workspace(
                 workspace_id=arguments.workspace_id,
