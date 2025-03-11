@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 
+from azure.core.exceptions import HttpResponseError
 from azure.monitor.query import LogsQueryStatus
 from pydantic.v1 import BaseModel, Field
 
@@ -29,20 +30,27 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
             else None
         )
 
-        response = self.client.query_workspace(
-            workspace_id=arguments.workspace_id,
-            query=arguments.query,
-            timespan=timespan,
-            server_timeout=arguments.timeout,
-        )
-        if response.status == LogsQueryStatus.SUCCESS:
-            data = response.tables
+        data = None
 
-        else:
-            # LogsQueryPartialResult - handle error here
-            error = response.partial_error
-            data = response.partial_data
-            self.log(error, level="error")
+        try:
+            response = self.client.query_workspace(
+                workspace_id=arguments.workspace_id,
+                query=arguments.query,
+                timespan=timespan,
+                server_timeout=arguments.timeout,
+            )
+
+            if response.status == LogsQueryStatus.SUCCESS:
+                data = response.tables
+
+            else:
+                # LogsQueryPartialResult - handle error here
+                error = response.partial_error
+                data = response.partial_data
+                self.log(error, level="error")
+
+        except HttpResponseError as err:
+            self.log(message=str(err), level="critical")
 
         result = []
         for table in data:
