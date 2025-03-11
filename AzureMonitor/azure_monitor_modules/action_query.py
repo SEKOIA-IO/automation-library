@@ -1,11 +1,10 @@
-import json
 from datetime import datetime
 from typing import Any
 
 import orjson
 import pandas as pd
 from azure.monitor.query import LogsQueryStatus
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 from . import AzureMonitorModule
 from .action_base import AzureMonitorBaseAction
