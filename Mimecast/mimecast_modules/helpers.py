@@ -1,12 +1,31 @@
 import asyncio
 import gzip
 import json
-from collections.abc import Generator, Iterable
+from collections.abc import AsyncGenerator, Generator, Iterable
 from io import BytesIO
 from itertools import islice
+from typing import Any
 
 import aiohttp
 import requests
+
+
+class AsyncGeneratorConverter:
+    def __init__(self, async_generator: AsyncGenerator, loop: asyncio.AbstractEventLoop):
+        self.async_iterator = aiter(async_generator)
+        self.loop = loop
+
+    def __iter__(self):
+        return self
+
+    async def get_anext(self) -> Any:
+        return await anext(self.async_iterator)
+
+    def __next__(self):
+        try:
+            return self.loop.run_until_complete(self.get_anext())
+        except StopAsyncIteration as e:
+            raise StopIteration from e
 
 
 async def gather_with_concurrency(n: int, *tasks):

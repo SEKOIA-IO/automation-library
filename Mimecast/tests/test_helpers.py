@@ -1,11 +1,13 @@
+import asyncio
 import json
 import gzip
+from collections.abc import Iterable
 
 import pytest
 import requests_mock
 from aioresponses import aioresponses
 
-from mimecast_modules.helpers import download_batches, batched
+from mimecast_modules.helpers import AsyncGeneratorConverter, download_batches, batched
 
 
 @pytest.fixture
@@ -122,3 +124,23 @@ def test_batched(iterable, nb_of_items, expected):
 def test_batched(iterable, nb_of_items):
     with pytest.raises(ValueError):
         list(batched(iterable, nb_of_items))
+
+
+def test_async_generator_converter(event_loop):
+    async def async_generator():
+        for i in range(100):
+            yield i
+
+    sync_generator = AsyncGeneratorConverter(async_generator(), event_loop)
+    assert isinstance(sync_generator, Iterable)
+    assert list(sync_generator) == list(range(100))
+
+
+def test_async_generator_converter_empty_generator(event_loop):
+    async def async_empty_generator():
+        return
+        yield
+
+    sync_generator = AsyncGeneratorConverter(async_empty_generator(), event_loop)
+    assert isinstance(sync_generator, Iterable)
+    assert list(sync_generator) == []
