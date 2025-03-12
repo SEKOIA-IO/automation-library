@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
@@ -14,11 +15,14 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import MimecastModule
 from .client import ApiClient, ApiKeyAuthentication
-from .helpers import download_batches, get_upper_second
+from .helpers import download_batches, batched, get_upper_second
 from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
+
+
+EVENTS_BATCH_SIZE = int(os.environ.get("EVENTS_BATCH_SIZE", 10000))
 
 
 class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
@@ -112,21 +116,21 @@ class MimecastSIEMWorker(Thread):
             result = response.json()
 
             batch_urls = [item["url"] for item in result.get("value", [])]
-            events = download_batches(urls=batch_urls)
-            logger.debug("Collected events", nb_url=len(events))
+            events_gen = download_batches(urls=batch_urls)
 
-            # The cursor is a date, not a datetime. Thus, we have to download all events from the
-            # day's start and then filter out all events with timestamps before `from_date`
-            events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
-            logger.debug("Filtered events", nb_url=len(events))
+            for events in batched(events_gen, EVENTS_BATCH_SIZE):
+                logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
 
-            if len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
-                yield events
+                events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
+                logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
 
-            else:
-                logger.info("The last page of events was empty", log_type=self.log_type)
-                return
+                if len(events) > 0:
+                    INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
+                    yield events
+
+                else:
+                    logger.info("The last page of events was empty", log_type=self.log_type)
+                    return
 
             if result["isCaughtUp"] is True:
                 return
