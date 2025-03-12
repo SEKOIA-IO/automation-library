@@ -56,29 +56,23 @@ async def async_fetch_content(url: str) -> bytes:
             return await response.read()
 
 
-def __fetch_content(batch_url: str) -> list[dict]:
+def __fetch_content(batch_url: str) -> Generator[dict, None, None]:
     response = requests.get(batch_url, timeout=60)
     response.raise_for_status()
 
     file_content = BytesIO(response.content)
 
-    result = []
     with gzip.open(file_content, "rt") as file:
         for line in file:
-            result.append(json.loads(line))
-
-    return result
+            yield json.loads(line)
 
 
-def sync_download_batch(urls: list[str]) -> list[dict]:
-    result = []
+def sync_download_batch(urls: list[str]) -> Generator[dict, None, None]:
     for url in urls:
-        result.extend(__fetch_content(url))
-
-    return result
+        yield from __fetch_content(url)
 
 
-async def async_download_batch(urls: list[str]) -> list[dict]:
+async def async_download_batch(urls: list[str]) -> AsyncGenerator[dict, None]:
     tasks = []
     for url in urls:
         tasks.append(asyncio.ensure_future(async_fetch_content(url)))
@@ -86,22 +80,19 @@ async def async_download_batch(urls: list[str]) -> list[dict]:
     num_concurrency = 8
     items = await gather_with_concurrency(num_concurrency, *tasks)
 
-    result = []
     for item in items:
         file_content = BytesIO(item)
         with gzip.open(file_content, "rt") as file:
             for line in file:
-                result.append(json.loads(line))
-
-    return result
+                yield json.loads(line)
 
 
-def download_batches(urls: list[str], use_async=True) -> list[dict]:
+def download_batches(urls: list[str], use_async=True) -> Generator[dict, None, None]:
     if use_async:
-        return asyncio.run(async_download_batch(urls))
+        yield from AsyncGeneratorConverter(async_download_batch(urls), asyncio.get_event_loop())
 
     else:
-        return sync_download_batch(urls)
+        yield from sync_download_batch(urls)
 
 
 def batched(iterable: Iterable, n: int) -> Generator[list, None, None]:
