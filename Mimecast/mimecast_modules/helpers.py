@@ -1,8 +1,10 @@
 import asyncio
 import gzip
 import json
+from collections.abc import Generator, Iterable
 from datetime import datetime, timedelta
 from io import BytesIO
+from itertools import islice
 
 import aiohttp
 import requests
@@ -81,3 +83,15 @@ def download_batches(urls: list[str], use_async=True) -> list[dict]:
 
     else:
         return sync_download_batch(urls)
+
+
+def batched(iterable: Iterable, n: int) -> Generator[list, None, None]:
+    """
+    Yield batches of n items from iterable
+    """
+    if n < 1:
+        raise ValueError("n must be at least one")
+
+    iterator = iter(iterable)
+    while batch := list(islice(iterator, n)):
+        yield batch

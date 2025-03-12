@@ -6,7 +6,7 @@ import pytest
 import requests_mock
 from aioresponses import aioresponses
 
-from mimecast_modules.helpers import download_batches, get_upper_second
+from mimecast_modules.helpers import download_batches, batched, get_upper_second
 
 
 def test_get_upper_second():
@@ -54,7 +54,7 @@ def test_download_batches_synchronously_empty_response(event_1):
     url = "https://storage.mydomain.com/path/object.gz"
 
     with requests_mock.Mocker() as mocked_requests:
-        mocked_requests.get(url, content=gzip.compress(b''))
+        mocked_requests.get(url, content=gzip.compress(b""))
 
         assert download_batches([url], use_async=False) == []
 
@@ -74,6 +74,59 @@ def test_download_batches_asynchronously_empty_response(event_1):
     url = "https://storage.mydomain.com/path/object.gz"
 
     with aioresponses() as mocked_requests:
-        mocked_requests.get(url, body=gzip.compress(b''), repeat=2)
+        mocked_requests.get(url, body=gzip.compress(b""), repeat=2)
 
         assert download_batches([url] * 2, use_async=True) == []
+
+
+@pytest.mark.parametrize(
+    "iterable,nb_of_items,expected",
+    [
+        (
+            "abcde",
+            3,
+            [
+                ["a", "b", "c"],
+                ["d", "e"],
+            ],
+        ),
+        (
+            "abcde",
+            2,
+            [
+                ["a", "b"],
+                ["c", "d"],
+                ["e"],
+            ],
+        ),
+        (
+            ["aa", "bb", "cc", "dd", "ee"],
+            2,
+            [
+                ["aa", "bb"],
+                ["cc", "dd"],
+                ["ee"],
+            ],
+        ),
+    ],
+)
+def test_batched(iterable, nb_of_items, expected):
+    assert list(batched(iterable, nb_of_items)) == expected
+
+
+@pytest.mark.parametrize(
+    "iterable,nb_of_items",
+    [
+        (
+            ["aa", "bb", "cc", "dd", "ee"],
+            0,
+        ),
+        (
+            ["aa", "bb", "cc", "dd", "ee"],
+            -1,
+        ),
+    ],
+)
+def test_batched_with_invalid_value(iterable, nb_of_items):
+    with pytest.raises(ValueError):
+        list(batched(iterable, nb_of_items))
