@@ -25,7 +25,7 @@
   "name": "Mimecast",
   "slug": "mimecast",
   "uuid": "72af1e06-84db-497d-b4ac-10defb1f265f",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "categories": [
     "Email"
   ]
