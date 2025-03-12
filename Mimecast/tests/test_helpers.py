@@ -41,7 +41,7 @@ def test_download_batches_synchronously(event_1):
     with requests_mock.Mocker() as mocked_requests:
         mocked_requests.get(url, content=gzip.compress(events.encode("utf-8")))
 
-        assert download_batches([url] * 3, use_async=False) == [event_1] * 30
+        assert list(download_batches([url] * 3, use_async=False)) == [event_1] * 30
 
 
 def test_download_batches_synchronously_empty_response(event_1):
@@ -50,7 +50,7 @@ def test_download_batches_synchronously_empty_response(event_1):
     with requests_mock.Mocker() as mocked_requests:
         mocked_requests.get(url, content=gzip.compress(b""))
 
-        assert download_batches([url], use_async=False) == []
+        assert list(download_batches([url], use_async=False)) == []
 
 
 def test_download_batches_asynchronously(event_1):
@@ -61,7 +61,7 @@ def test_download_batches_asynchronously(event_1):
     with aioresponses() as mocked_requests:
         mocked_requests.get(url, body=gzip.compress(events.encode("utf-8")), repeat=4)
 
-        assert download_batches([url] * 4, use_async=True) == [event_1] * 40
+        assert list(download_batches([url] * 4, use_async=True)) == [event_1] * 40
 
 
 def test_download_batches_asynchronously_empty_response(event_1):
@@ -70,7 +70,7 @@ def test_download_batches_asynchronously_empty_response(event_1):
     with aioresponses() as mocked_requests:
         mocked_requests.get(url, body=gzip.compress(b""), repeat=2)
 
-        assert download_batches([url] * 2, use_async=True) == []
+        assert list(download_batches([url] * 2, use_async=True)) == []
 
 
 @pytest.mark.parametrize(

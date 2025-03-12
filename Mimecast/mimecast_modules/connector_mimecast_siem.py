@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from operator import itemgetter
@@ -15,11 +16,14 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import MimecastModule
 from .client import ApiClient, ApiKeyAuthentication
-from .helpers import download_batches
+from .helpers import download_batches, batched
 from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 logger = get_logger()
+
+
+EVENTS_BATCH_SIZE = int(os.environ.get("EVENTS_BATCH_SIZE", 10000))
 
 
 class MimecastSIEMConfiguration(DefaultConnectorConfiguration):
@@ -116,25 +120,27 @@ class MimecastSIEMWorker(Thread):
             self.cursor.offset = next_page_token
 
             batch_urls = [item["url"] for item in result.get("value", [])]
-            events = download_batches(urls=batch_urls)
-            logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
+            events_gen = download_batches(urls=batch_urls)
 
-            if self.old_cursor is not None:
-                # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
-                # events from the day's start and then filter out all events with timestamps before saved datetime
-                events = [event for event in events if event["timestamp"] > self.old_cursor.timestamp() * 1000]
-                logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
+            for events in batched(events_gen, EVENTS_BATCH_SIZE):
+                logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
 
-                # We don't need this anymore - it's for the first page only
-                self.old_cursor = None
+                if self.old_cursor is not None:
+                    # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
+                    # events from the day's start and then filter out all events with timestamps before saved datetime
+                    events = [event for event in events if event["timestamp"] > self.old_cursor.timestamp() * 1000]
+                    logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
 
-            if len(events) > 0:
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
-                yield events
+                    # We don't need this anymore - it's for the first page only
+                    self.old_cursor = None
 
-            else:
-                logger.info("The last page of events was empty", log_type=self.log_type)
-                return
+                if len(events) > 0:
+                    INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
+                    yield events
+
+                else:
+                    logger.info("The last page of events was empty", log_type=self.log_type)
+                    return
 
             if result["isCaughtUp"] is True:
                 return
