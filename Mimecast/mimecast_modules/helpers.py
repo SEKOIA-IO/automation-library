@@ -1,10 +1,22 @@
 import asyncio
 import gzip
 import json
+from datetime import datetime, timedelta
 from io import BytesIO
 
 import aiohttp
 import requests
+
+
+def get_upper_second(time: datetime) -> datetime:
+    """
+    Return the upper second from a datetime
+
+    :param datetime time: The starting datetime
+    :return: The upper second of the starting datetime
+    :rtype: datetime
+    """
+    return (time + timedelta(seconds=1)).replace(microsecond=0)
 
 
 async def gather_with_concurrency(n: int, *tasks):
