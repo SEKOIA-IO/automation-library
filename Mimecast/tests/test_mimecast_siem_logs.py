@@ -68,7 +68,7 @@ def trigger(data_storage, client_id, client_secret):
 
 @pytest.fixture
 def batch_events_response_empty():
-    return {"value": [], "@nextPage": "tokenNextPageLast=="}
+    return {"value": [], "@nextPage": "tokenNextPageLast==", "isCaughtUp": True}
 
 
 @pytest.fixture
@@ -82,6 +82,7 @@ def batch_events_response_1():
             }
         ],
         "@nextPage": "tokenNextPage1=",
+        "isCaughtUp": False,
     }
 
 
