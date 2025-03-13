@@ -4,7 +4,7 @@ import pytest
 from aioresponses import aioresponses
 
 from wiz import WizErrors
-from wiz.client.gql_client import WizResult
+from wiz.client.gql_client import WizResult, WizServerError
 
 
 @pytest.mark.asyncio
@@ -125,6 +125,96 @@ async def test_wiz_gql_client_get_audit_logs_error_1(
         mocked_responses.post(tenant_url + "graphql", status=200, payload={"data": {"errors": ["some_error"]}})
 
         with pytest.raises(WizErrors):
+            await wiz_gql_client.get_audit_logs(date)
+
+        await wiz_gql_client.close()
+
+
+@pytest.mark.asyncio
+async def test_wiz_gql_client_get_audit_logs_error_2(
+    http_token,
+    session_faker,
+    wiz_gql_client,
+    auth_url,
+    tenant_url,
+):
+    """
+    Test WizGqlClient.get_audit_logs method
+
+    Args:
+        http_token: WizHttpToken
+        session_faker: Faker
+        wiz_gql_client: WizGqlClient
+        auth_url: str
+        tenant_url: str
+    """
+    date = datetime.datetime.now()
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(tenant_url + "graphql", status=500)
+
+        with pytest.raises(WizErrors):
+            await wiz_gql_client.get_audit_logs(date)
+
+        await wiz_gql_client.close()
+
+
+@pytest.mark.asyncio
+async def test_wiz_gql_client_get_audit_logs_error_3(
+    http_token,
+    session_faker,
+    wiz_gql_client,
+    auth_url,
+    tenant_url,
+):
+    """
+    Test WizGqlClient.get_audit_logs method
+
+    Args:
+        http_token: WizHttpToken
+        session_faker: Faker
+        wiz_gql_client: WizGqlClient
+        auth_url: str
+        tenant_url: str
+    """
+    date = datetime.datetime.now()
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(tenant_url + "graphql", status=401)
+
+        with pytest.raises(WizServerError):
+            await wiz_gql_client.get_audit_logs(date)
+
+        await wiz_gql_client.close()
+
+
+@pytest.mark.asyncio
+async def test_wiz_gql_client_get_audit_logs_error_4(
+    http_token,
+    session_faker,
+    wiz_gql_client,
+    auth_url,
+    tenant_url,
+):
+    """
+    Test WizGqlClient.get_audit_logs method
+
+    Args:
+        http_token: WizHttpToken
+        session_faker: Faker
+        wiz_gql_client: WizGqlClient
+        auth_url: str
+        tenant_url: str
+    """
+    date = datetime.datetime.now()
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(auth_url, status=200, payload=http_token.dict())
+        mocked_responses.post(tenant_url + "graphql", status=403)
+
+        with pytest.raises(WizServerError):
             await wiz_gql_client.get_audit_logs(date)
 
         await wiz_gql_client.close()
