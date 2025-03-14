@@ -34,13 +34,13 @@ class EventType(Enum):
 class M365Mixin(Trigger, ABC):
     module: VadeSecureModule
     configuration: VadeSecureTriggerConfiguration
+    client: ApiClient
 
     def __init__(self, *args: Any, **kwargs: dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
-    @cached_property
-    def client(self) -> ApiClient:
+    def create_client(self) -> ApiClient:
         try:
             return ApiClient(
                 auth_url=self.module.configuration.oauth2_authorization_url,
@@ -171,7 +171,9 @@ class M365Mixin(Trigger, ABC):
 
     def run(self) -> None:  # pragma: no cover
         """Run the trigger."""
-        while True:
+        self.client = self.create_client()
+
+        while self.running:
             try:
                 self._fetch_events()
             except APIException as ex:
