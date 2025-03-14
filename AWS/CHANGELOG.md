@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-14 - 1.32.7
+
+### Fixed
+
+- Avoid unnecessary memory allocation when parsing events
+
 ## 2025-03-05 - 1.32.6
 
 ### Changed

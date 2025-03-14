@@ -129,7 +129,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         return self.records_to_json(results)
 
-    def _parse_content(self, content: bytes) -> List[str]:
+    async def _process_content(self, content: bytes) -> int:
         """
         Parse content from S3 bucket.
 
@@ -143,9 +143,10 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         # return [] if there's no records
         if not records:
-            return records
+            return 0
 
         # Starting records from second element, skipping version
         kv_records = self.data_to_kv(records[1:])
+        result_records = list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None))
 
-        return list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None))
+        return len(await self.push_data_to_intakes(result_records))

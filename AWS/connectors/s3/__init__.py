@@ -71,7 +71,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return SqsWrapper(config)
 
-    def _parse_content(self, content: bytes) -> list[str]:  # pragma: no cover
+    async def _process_content(self, content: bytes) -> int:  # pragma: no cover
         """
         Parse the content of the object and return a list of records.
 
@@ -125,13 +125,14 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         Returns:
             tuple[int, list[int]]:
         """
-        records = []
         result = 0
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
 
         while continue_receiving:
+            processed_events_count = 0
+
             async with self.sqs_wrapper.receive_messages(max_messages=self.sqs_max_messages) as messages:
                 message_records = []
 
@@ -162,12 +163,12 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         normalized_key = normalize_s3_key(s3_key)
 
                         async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
-                            records.extend(self._parse_content(self.decompress_content(content)))
+                            result_from_s3 = await self._process_content(self.decompress_content(content))
+                            processed_events_count += result_from_s3
+                            result += result_from_s3
 
-                        if len(records) >= self.limit_of_events_to_push:
-                            continue_receiving = False
-                            result += len(await self.push_data_to_intakes(events=records))
-                            records = []
+                            if processed_events_count >= self.limit_of_events_to_push:
+                                continue_receiving = False
 
                     except Exception as e:
                         self.log(
@@ -175,10 +176,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                             level="warning",
                         )
 
-            if not records:
+            if processed_events_count == 0:
                 continue_receiving = False
-
-        if records:
-            result += len(await self.push_data_to_intakes(events=records))
 
         return result, timestamps_to_log

@@ -1,7 +1,5 @@
 """Contains AwsS3LogsTrigger."""
 
-from itertools import islice
-
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
@@ -19,7 +17,7 @@ class AwsS3LogsTrigger(AbstractAwsS3QueuedConnector):
     configuration: AwsS3LogsConfiguration
     name = "AWS S3 Logs"
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _process_content(self, content: bytes) -> int:
         """
         Parse the content of the object and return a list of records.
 
@@ -29,9 +27,29 @@ class AwsS3LogsTrigger(AbstractAwsS3QueuedConnector):
         Returns:
             list[str]:
         """
-        records = [record for record in content.decode("utf-8").split(self.configuration.separator) if len(record) > 0]
+        records = []
+        total_count = 0
+        is_first = True
+        for record in content.decode("utf-8").split(self.configuration.separator):
+            if len(record) == 0:
+                continue
 
-        if self.configuration.ignore_comments:
-            records = [record for record in records if not record.strip().startswith("#")]
+            if self.configuration.skip_first and is_first:
+                is_first = False
+                continue
 
-        return list(islice(records, self.configuration.skip_first, None))
+            is_first = False
+
+            if self.configuration.ignore_comments and record.strip().startswith("#"):
+                continue
+
+            records.append(record)
+
+            if len(records) >= self.limit_of_events_to_push:
+                total_count += len(await self.push_data_to_intakes(events=records))
+                records = []
+
+        if records:
+            total_count += len(await self.push_data_to_intakes(events=records))
+
+        return total_count

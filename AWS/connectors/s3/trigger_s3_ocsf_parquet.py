@@ -28,7 +28,7 @@ class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
             "object", {}
         ).get("key")
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _process_content(self, content: bytes) -> int:
         """
         Parse the content of the object and return a list of records.
 
@@ -39,15 +39,22 @@ class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
             list[str]:
         """
         if len(content) == 0:
-            return []
+            return 0
 
         reader = io.BytesIO(content)
         df = pandas.read_parquet(reader)
         records = orjson.loads(df.to_json(orient="records"))
 
         events = []
+        total_count = 0
         for record in records:
             if len(record) > 0:
                 events.append(orjson.dumps(record).decode("utf-8"))
+                if len(events) >= self.limit_of_events_to_push:
+                    total_count += len(await self.push_data_to_intakes(events=events))
+                    events = []
 
-        return events
+        if events:
+            total_count += len(await self.push_data_to_intakes(events=events))
+
+        return total_count

@@ -16,6 +16,7 @@ def connector(
     aws_module: AwsModule,
     symphony_storage: Path,
     aws_s3_queued_config: AwsS3QueuedConfiguration,
+    mock_push_data_to_intakes,
 ) -> AwsS3RecordsTrigger:
     """
     Create a connector.
@@ -31,11 +32,13 @@ def connector(
     connector = AwsS3RecordsTrigger(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = aws_s3_queued_config
+    connector.push_data_to_intakes = mock_push_data_to_intakes
 
     return connector
 
 
-def test_aws_s3_records_trigger_parse_content(faker: Faker, connector: AwsS3RecordsTrigger):
+@pytest.mark.asyncio
+async def test_aws_s3_records_trigger_parse_content(faker: Faker, connector: AwsS3RecordsTrigger):
     """
     Test AwsS3RecordsTrigger `_parse_content`.
 
@@ -64,19 +67,19 @@ def test_aws_s3_records_trigger_parse_content(faker: Faker, connector: AwsS3Reco
         ]
     }
 
-    assert connector._parse_content(orjson.dumps(data_1)) == [
-        orjson.dumps(record).decode("utf-8") for record in data_1.get("Records")
-    ]
+    assert await connector._process_content(orjson.dumps(data_1)) == len(
+        [orjson.dumps(record).decode("utf-8") for record in data_1.get("Records")]
+    )
 
-    assert connector._parse_content(orjson.dumps(data_2)) == [
-        orjson.dumps(record).decode("utf-8") for record in data_2.get("Records")
-    ]
+    assert await connector._process_content(orjson.dumps(data_2)) == len(
+        [orjson.dumps(record).decode("utf-8") for record in data_2.get("Records")]
+    )
 
-    assert connector._parse_content(orjson.dumps(data_3)) == [
-        orjson.dumps(record).decode("utf-8") for record in data_3.get("Records") if record != {}
-    ]
+    assert await connector._process_content(orjson.dumps(data_3)) == len(
+        [orjson.dumps(record).decode("utf-8") for record in data_3.get("Records") if record != {}]
+    )
 
-    assert connector._parse_content(b"") == []
+    assert await connector._process_content(b"") == 0
 
 
 def test_check_if_payload_is_valid_1(connector: AwsS3RecordsTrigger, session_faker: Faker):

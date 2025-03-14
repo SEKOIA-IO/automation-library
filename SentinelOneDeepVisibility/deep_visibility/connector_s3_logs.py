@@ -17,7 +17,7 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    def _process_content(self, content: bytes) -> list[str]:
         """
         Parse the content of the object and return a list of records.
 

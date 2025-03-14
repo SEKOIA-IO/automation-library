@@ -53,6 +53,7 @@ def connector(
     aws_module: AwsModule,
     symphony_storage: Path,
     aws_s3_flowlogs_trigger_config: AwsS3FlowLogsConfiguration,
+    mock_push_data_to_intakes,
 ) -> AwsS3FlowLogsTrigger:
     """
     Create a connector.
@@ -68,11 +69,13 @@ def connector(
     connector = AwsS3FlowLogsTrigger(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = aws_s3_flowlogs_trigger_config
+    connector.push_data_to_intakes = mock_push_data_to_intakes
 
     return connector
 
 
-def test_aws_s3_logs_trigger_parse_data(connector: AwsS3FlowLogsTrigger, test_data: bytes):
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data(connector: AwsS3FlowLogsTrigger, test_data: bytes):
     """
     Test AwsS3FlowLogsTrigger `_parse_data`.
 
@@ -80,13 +83,19 @@ def test_aws_s3_logs_trigger_parse_data(connector: AwsS3FlowLogsTrigger, test_da
         connector: AwsS3FlowLogsTrigger
         test_data: bytes
     """
-    assert (
-        connector._parse_content(test_data)
-        == [
-            line
-            for line in test_data.decode("utf-8").split("\n")
-            if line != "" and not line.startswith("#") and not connector.check_all_ips_are_private(line)
-        ][connector.configuration.skip_first :]
-    )
+    # TODO: Check with Sebastien this behaviour because seems like it is wrong !!!!!!!
+    # We should not check for first line because header is not part of this statement
+    # [
+    #                    line
+    #                    for line in test_data.decode("utf-8").split("\n")
+    #                    if line != "" and not line.startswith("#") and not connector.check_all_ips_are_private(line)
+    #                ]
+    # And it means that we drop first correct result from the list
+    expected = [
+        line
+        for line in test_data.decode("utf-8").split("\n")
+        if line != "" and not line.startswith("#") and not connector.check_all_ips_are_private(line)
+    ][connector.configuration.skip_first :]
+    assert await connector._process_content(test_data) == len(expected)
 
-    assert connector._parse_content(b"") == []
+    assert await connector._process_content(b"") == 0

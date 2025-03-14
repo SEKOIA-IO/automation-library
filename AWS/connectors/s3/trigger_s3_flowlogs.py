@@ -1,7 +1,6 @@
 """Contains AwsS3FlowLogsTrigger."""
 
 import ipaddress
-from itertools import islice
 
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
@@ -41,7 +40,7 @@ class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
 
         return all([ip.is_private for ip in ips])
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _process_content(self, content: bytes) -> int:
         """
         Parse content from S3 bucket.
 
@@ -52,14 +51,32 @@ class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
             list:
         """
         records = []
+        total_count = 0
+        is_first = True
+
         for record in content.decode("utf-8").split(self.configuration.separator):
-            if len(record) > 0:
-                if not self.check_all_ips_are_private(record):
-                    records.append(record)
-                else:
-                    DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+            if len(record) == 0:
+                continue
 
-        if self.configuration.ignore_comments:  # pragma: no cover
-            records = [record for record in records if not record.strip().startswith("#")]
+            if self.configuration.ignore_comments and record.strip().startswith("#"):
+                continue
 
-        return list(islice(records, self.configuration.skip_first, None))
+            if not self.check_all_ips_are_private(record):
+                # TODO: If test is wrong, we should move this line to the top of the loop or just delete it
+                if self.configuration.skip_first and is_first:
+                    is_first = False
+                    continue
+
+                is_first = False
+
+                records.append(record)
+                if len(records) >= self.limit_of_events_to_push:
+                    total_count += len(await self.push_data_to_intakes(events=records))
+                    records = []
+            else:
+                DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+
+        if records:
+            total_count += len(await self.push_data_to_intakes(events=records))
+
+        return total_count
