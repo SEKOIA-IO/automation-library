@@ -93,5 +93,5 @@ def test_stix_to_indicators():
         ),
     ],
 )
-def test_filter_collected_events(events, getter, cache, expected_list, persistent_storage):
-    assert filter_collected_events(events, getter, cache, persistent_storage) == expected_list
+def test_filter_collected_events(events, getter, cache, expected_list):
+    assert filter_collected_events(events, getter, cache) == expected_list

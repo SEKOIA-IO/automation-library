@@ -85,18 +85,7 @@ def stix_to_indicators(stix_object, supported_types_map):
     return results
 
 
-def load_persistent_cache(context: PersistentJSON, cache: Cache) -> None:
-    with context as ctx:
-        for cached_id in ctx.get("session_cache", []):
-            cache[cached_id] = True
-
-
-def update_persistent_cache(context: PersistentJSON, cache: Cache) -> None:
-    with context as ctx:
-        ctx["session_cache"] = list(cache.keys())
-
-
-def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, context: PersistentJSON) -> list:
+def filter_collected_events(events: Sequence, getter: Callable, cache: Cache) -> list:
     """
     Filter events that have already been filter_collected_events
 
@@ -106,7 +95,6 @@ def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, co
         cache: The cache that hold the list of collected events
     """
 
-    load_persistent_cache(context, cache)
     selected_events = []
     for event in events:
         key = getter(event)
@@ -117,6 +105,5 @@ def filter_collected_events(events: Sequence, getter: Callable, cache: Cache, co
 
         cache[key] = True
         selected_events.append(event)
-    update_persistent_cache(context, cache)
 
     return selected_events

@@ -39,7 +39,6 @@ class SentinelOneLogsConsumer(Thread):
         self.connector = connector
         self.module = connector.module
         self.consumer_type = consumer_type
-        self.events_cache: Cache = LRUCache(maxsize=1000)
         self._stop_event = Event()
 
         self.cursor = CheckpointDatetime(
@@ -49,6 +48,7 @@ class SentinelOneLogsConsumer(Thread):
             lock=self.connector.context_lock,
         )
         self.from_date = self.cursor.offset
+        self.session_events_cache: Cache = self.load_events_cache()
 
     def stop(self):
         """Sets the stop event for the thread"""
@@ -71,6 +71,19 @@ class SentinelOneLogsConsumer(Thread):
             Management: SentinelOne client instance
         """
         return Management(hostname=self.module.configuration.hostname, api_token=self.module.configuration.api_token)
+
+    def load_events_cache(self) -> Cache:
+        events_cache: LRUCache = LRUCache(maxsize=1000)
+
+        with self.cursor._context as ctx:
+            for cached_id in ctx.get("events_cache", []):
+                events_cache[cached_id] = True
+
+        return events_cache
+
+    def save_events_cache(self, sessions: Cache) -> None:
+        with self.cursor._context as cache:
+            cache["events_cache"] = list(sessions.keys())
 
     @staticmethod
     def _serialize_events(events: list[Activity] | list[Threat] | list[dict]) -> list:
@@ -138,6 +151,9 @@ class SentinelOneLogsConsumer(Thread):
         while self.running:
             self.next_batch()
 
+        # save sessions cache to the context
+        self.save_events_cache(self.session_events_cache)
+
         self.connector._executor.shutdown(wait=True)
 
 
@@ -167,7 +183,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
             # discard already collected events
             selected_events = filter_collected_events(
-                activities.data, lambda activity: activity.id, self.events_cache, self.cursor._context
+                activities.data, lambda activity: activity.id, self.session_events_cache
             )
 
             # Push events
@@ -218,7 +234,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
 
             # discard already collected events
             selected_events = filter_collected_events(
-                threats.data, lambda threat: threat["id"], self.events_cache, self.cursor._context
+                threats.data, lambda threat: threat["id"], self.session_events_cache
             )
 
             # Push events

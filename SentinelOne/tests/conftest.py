@@ -9,7 +9,6 @@ import pytest
 from management.mgmtsdk_v2.entities.activity import Activity
 from management.mgmtsdk_v2.entities.threat import Threat
 from sekoia_automation import constants
-from sekoia_automation.storage import PersistentJSON
 
 from sentinelone_module.base import SentinelOneConfiguration, SentinelOneModule
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
@@ -29,11 +28,6 @@ def symphony_storage():
 
     rmtree(constants.DATA_STORAGE)
     constants.DATA_STORAGE = original_storage
-
-
-@pytest.fixture
-def persistent_storage(symphony_storage):
-    return PersistentJSON("context.json", symphony_storage)
 
 
 @pytest.fixture(scope="session")
