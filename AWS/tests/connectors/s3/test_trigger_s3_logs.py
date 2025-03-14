@@ -53,6 +53,7 @@ def connector(
     aws_module: AwsModule,
     symphony_storage: Path,
     aws_s3_logs_trigger_config: AwsS3LogsConfiguration,
+    mock_push_data_to_intakes,
 ) -> AwsS3LogsTrigger:
     """
     Create a connector.
@@ -69,11 +70,13 @@ def connector(
 
     connector.module = aws_module
     connector.configuration = aws_s3_logs_trigger_config
+    connector.push_data_to_intakes = mock_push_data_to_intakes
 
     return connector
 
 
-def test_aws_s3_logs_trigger_parse_data(connector: AwsS3LogsTrigger, test_data: bytes):
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data(connector: AwsS3LogsTrigger, test_data: bytes):
     """
     Test AwsS3LogsTrigger `_parse_data`.
 
@@ -81,11 +84,9 @@ def test_aws_s3_logs_trigger_parse_data(connector: AwsS3LogsTrigger, test_data: 
         connector: AwsS3LogsTrigger
         test_data: bytes
     """
-    assert (
-        connector._parse_content(test_data)
-        == [line for line in test_data.decode("utf-8").split("\n") if line != "" and not line.startswith("#")][
-            connector.configuration.skip_first :
-        ]
-    )
+    expected = [line for line in test_data.decode("utf-8").split("\n") if line != "" and not line.startswith("#")][
+        connector.configuration.skip_first :
+    ]
+    assert await connector._process_content(test_data) == len(expected)
 
-    assert connector._parse_content(b"") == []
+    assert await connector._process_content(b"") == 0
