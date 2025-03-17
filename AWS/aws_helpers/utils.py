@@ -1,6 +1,11 @@
-from gzip import decompress
-from typing import Any
+import asyncio
+import io
+import gzip
+from functools import partial
+from typing import Any, BinaryIO
 from urllib.parse import unquote
+
+from aiofiles.threadpool.binary import AsyncBufferedReader
 
 
 def is_gzip_compressed(content: bytes) -> bool:
@@ -30,7 +35,7 @@ def get_content(obj: dict[str, Any]) -> bytes:
     content: bytes = obj["Body"].read()
 
     if is_gzip_compressed(content):  # pragma: no cover
-        content = decompress(content)
+        content = gzip.decompress(content)
 
     return content
 
@@ -46,3 +51,22 @@ def normalize_s3_key(key: str) -> str:
         str:
     """
     return unquote(key)
+
+
+async def async_gzip_open(
+    file, mode="r", compresslevel=9, encoding=None, errors=None, newline=None, *, loop=None, executor=None
+):
+    if loop is None:
+        loop = asyncio.get_running_loop()
+
+    cb = partial(
+        gzip.open,
+        file,
+        mode=mode,
+        compresslevel=compresslevel,
+        encoding=encoding,
+        errors=errors,
+        newline=newline,
+    )
+    f = await loop.run_in_executor(executor, cb)
+    return AsyncBufferedReader(f, loop=loop, executor=executor)
