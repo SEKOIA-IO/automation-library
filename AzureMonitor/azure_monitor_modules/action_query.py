@@ -15,7 +15,7 @@ class AzureMonitorQueryArguments(BaseModel):
     from_date: datetime | None = Field(None, description="Get data after this timestamp")
     to_date: datetime | None = Field(None, description="Get data before or at this timestamp")
     timeout: int = Field(
-        60,
+        300,
         description="The maximum time, in seconds, the query should be processed in",
     )
 
@@ -29,6 +29,12 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
             if arguments.from_date is not None and arguments.to_date is not None
             else None
         )
+        if (arguments.from_date is None) != (arguments.to_date is None):
+            self.log(
+                message="Date filter won't affect current query. You should either set both start date and end "
+                "date or none of them.",
+                level="warning",
+            )
 
         try:
             response = self.client.query_workspace(
@@ -48,7 +54,7 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
                 self.log(error, level="error")
 
         except HttpResponseError as err:
-            self.log(message=str(err), level="critical")
+            self.log(message=str(err), level="error")
 
         result = []
         for table in data:
