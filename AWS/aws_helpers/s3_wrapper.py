@@ -1,5 +1,6 @@
 """Aws s3 wrapper."""
 
+import gzip
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -47,4 +48,7 @@ class S3Wrapper(AwsClient[S3Configuration]):
             async with response["Body"] as stream:
                 data = await stream.read()
 
-                yield data
+                if response.get("ContentEncoding") == "gzip":
+                    yield gzip.decompress(data)
+                else:
+                    yield data
