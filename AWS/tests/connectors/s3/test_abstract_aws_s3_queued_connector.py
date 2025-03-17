@@ -1,7 +1,6 @@
 """Contains tests for AbstractAwsS3QueuedConnector."""
 
 import os
-from gzip import compress
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -125,29 +124,6 @@ def test_abstract_aws_s3_queued_connector_wrappers(abstract_queued_connector: Ab
     """
     assert isinstance(abstract_queued_connector.s3_wrapper, S3Wrapper)
     assert isinstance(abstract_queued_connector.sqs_wrapper, SqsWrapper)
-
-
-def test_abstract_aws_s3_queued_connector_decompress_content(
-    session_faker: Faker,
-    abstract_queued_connector: AbstractAwsS3QueuedConnector,
-):
-    """
-    Test AbstractAwsS3QueuedConnector s3 wrapper initialization.
-
-    Args:
-        session_faker: Faker
-        abstract_queued_connector: AbstractAwsS3QueuedConnector
-    """
-    input_data = session_faker.word().encode("utf-8")
-
-    compressed_data = compress(input_data)
-
-    result1 = abstract_queued_connector.decompress_content(compressed_data)
-    result2 = abstract_queued_connector.decompress_content(input_data)
-
-    assert result1 == input_data
-    assert result2 == input_data
-    assert isinstance(result1, bytes) and isinstance(result2, bytes)
 
 
 @pytest.mark.asyncio

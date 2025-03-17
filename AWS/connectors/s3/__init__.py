@@ -3,7 +3,6 @@
 import os
 from abc import ABCMeta
 from functools import cached_property
-from gzip import decompress
 from typing import Any, Optional
 
 import orjson
@@ -83,22 +82,6 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def decompress_content(data: bytes) -> bytes:
-        """
-        Decompress content if it is compressed.
-
-        Args:
-            data:
-
-        Returns:
-            bytes:
-        """
-        if data[0:2] == b"\x1f\x8b":
-            return decompress(data)
-
-        return data
-
     def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict[str, Any]]:
         """
         Extract the records from the SQS message
@@ -162,7 +145,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         normalized_key = normalize_s3_key(s3_key)
 
                         async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
-                            records.extend(self._parse_content(self.decompress_content(content)))
+                            records.extend(self._parse_content(content))
 
                         if len(records) >= self.limit_of_events_to_push:
                             continue_receiving = False
