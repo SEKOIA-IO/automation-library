@@ -3,7 +3,6 @@
 import os
 from abc import ABCMeta
 from functools import cached_property
-from gzip import decompress
 from typing import Any, Optional
 
 import orjson
