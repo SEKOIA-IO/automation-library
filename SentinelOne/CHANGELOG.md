@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-01-10 - 1.20.2
+## 2025-01-10 - 1.20.3
 
 ### Fixed
 
 - Fix caching problem
+
+## 2025-03-03 - 1.20.2
+
+### Fixed
+
+- Fix sentinelone action uppercase arguments problem
+
 
 ## 2025-01-10 - 1.20.1
 

@@ -4,14 +4,26 @@ from unittest.mock import MagicMock, Mock, call, patch
 import pytest
 import requests
 import requests_mock
-from dateutil.parser import isoparse
 from pyrate_limiter import Duration, Limiter, RequestRate
-from sekoia_automation.storage import PersistentJSON
 
 from mimecast_modules import MimecastModule
 from mimecast_modules.client import ApiClient
 from mimecast_modules.client.auth import ApiKeyAuthentication
 from mimecast_modules.connector_mimecast_siem import MimecastSIEMConnector, MimecastSIEMWorker
+
+
+@pytest.fixture
+def fake_time():
+    yield datetime(2024, 5, 1, 11, 59, 59, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def patch_datetime_now(fake_time):
+    with patch("mimecast_modules.connector_mimecast_siem.datetime") as mock_datetime:
+        mock_datetime.now.return_value = fake_time
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
+        yield mock_datetime
 
 
 @pytest.fixture
@@ -56,7 +68,7 @@ def trigger(data_storage, client_id, client_secret):
 
 @pytest.fixture
 def batch_events_response_empty():
-    return {"value": [], "@nextPage": "tokenNextPageLast==", "isCaughtUp": True}
+    return {"value": [], "@nextPage": "tokenNextPageLast=="}
 
 
 @pytest.fixture
@@ -69,7 +81,6 @@ def batch_events_response_1():
                 "expiry": "2024-06-05T11:50:06.389Z",
             }
         ],
-        "isCaughtUp": False,
         "@nextPage": "tokenNextPage1=",
     }
 
@@ -97,7 +108,9 @@ def batch_event_1():
     }
 
 
-def test_fetch_batches(trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client):
+def test_fetch_batches(
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
+):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
     ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
@@ -126,9 +139,12 @@ def test_fetch_batches(trigger, batch_events_response_1, batch_events_response_e
         consumer.next_batch()
 
         assert trigger.push_events_to_intakes.call_count == 1
-        assert consumer.cursor.offset == "tokenNextPageLast=="
-
         mock_time.sleep.assert_called_once_with(44)
+
+
+def test_most_recent_datetime_seen(trigger, patch_datetime_now, fake_time, api_client):
+    consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+    assert consumer.most_recent_date_seen == fake_time - timedelta(days=1)
 
 
 def test_start_consumers(trigger, api_client):
@@ -172,7 +188,7 @@ def test_stop_consumers(trigger):
 
 
 def test_authentication_failed(
-    trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
 ):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
@@ -205,7 +221,9 @@ def test_authentication_failed(
         ]
 
 
-def test_permission_denied(trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client):
+def test_permission_denied(
+    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
+):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
     ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
@@ -245,60 +263,3 @@ def test_permission_denied(trigger, batch_events_response_1, batch_events_respon
         assert trigger.log.mock_calls == [
             call(level="error", message="Permission denied: Forbidden to perform the requested operation")
         ]
-
-
-def test_old_cursor(
-    trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client, data_storage
-):
-    context = PersistentJSON("context.json", data_storage)
-
-    # ensure that the cursor is None
-    fake_date = datetime.today().astimezone(timezone.utc) - timedelta(days=1)
-    fake_date_str = fake_date.isoformat()
-    fake_date_timestamp = int(fake_date.timestamp() * 1000.0)
-
-    batch_event_1["timestamp"] = fake_date_timestamp + 1000
-
-    with context as cache:
-        cache["process"] = {"most_recent_date_seen": fake_date_str}
-
-    with requests_mock.Mocker() as mock_requests, patch(
-        "mimecast_modules.connector_mimecast_siem.download_batches"
-    ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
-        mock_download_batches.side_effect = [[batch_event_1], []]
-
-        mock_requests.post(
-            f"https://api.services.mimecast.com/oauth/token",
-            json={
-                "access_token": "foo-token",
-                "token_type": "Bearer",
-                "expires_in": 1799,
-            },
-        )
-
-        mock_requests.get(
-            f"https://api.services.mimecast.com/siem/v1/batch/events/cg",
-            [{"json": batch_events_response_1}, {"json": batch_events_response_empty}],
-        )
-
-        batch_duration = 16  # the batch lasts 16 seconds
-        start_time = fake_date_timestamp / 1000.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time, end_time]
-
-        consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
-        assert consumer.old_cursor == fake_date
-
-        consumer.next_batch()
-
-        assert consumer.old_cursor is None
-        assert consumer.cursor.offset == "tokenNextPageLast=="
-
-        first_batch_request = next(
-            item for item in mock_requests.request_history if "/siem/v1/batch/events/cg" in item.url
-        )
-        fake_date_ymd = fake_date.strftime("%Y-%m-%d")
-        assert (
-            first_batch_request.url == "https://api.services.mimecast.com/siem/v1/batch/events/cg?"
-            f"pageSize=100&type=process&dateRangeStartsAt={fake_date_ymd}"
-        )
