@@ -8,8 +8,6 @@ import six
 from cachetools import Cache
 from stix2patterns.pattern import Pattern
 
-from sekoia_automation.storage import PersistentJSON
-
 
 def camelize(string: str) -> str:
     return re.sub(r"_(.)", lambda m: m.group(1).upper(), string)
