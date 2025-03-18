@@ -1,6 +1,7 @@
 import asyncio
 import io
 import gzip
+from concurrent.futures import Executor
 from functools import partial
 from typing import Any, BinaryIO
 from urllib.parse import unquote
@@ -54,8 +55,16 @@ def normalize_s3_key(key: str) -> str:
 
 
 async def async_gzip_open(
-    file, mode="r", compresslevel=9, encoding=None, errors=None, newline=None, *, loop=None, executor=None
-):
+    file: BinaryIO,
+    mode: str = "r",
+    compresslevel: int = 9,
+    encoding: str | None = None,
+    errors: str | None = None,
+    newline: str | None = None,
+    *,
+    loop: asyncio.AbstractEventLoop | None = None,
+    executor: Executor | None = None,
+) -> Any:
     if loop is None:
         loop = asyncio.get_running_loop()
 
