@@ -132,10 +132,11 @@ class MimecastSIEMWorker(Thread):
                     logger.info("The last page of events was empty", log_type=self.log_type)
                     return
 
-            if result["isCaughtUp"] is True:
+            nextPageToken = result.get("@nextPage")
+            if result["isCaughtUp"] is True or not nextPageToken:
                 return
 
-            params["nextPage"] = result.get("@nextPage")
+            params["nextPage"] = nextPageToken
             response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
     def fetch_events(self) -> Generator[list, None, None]:

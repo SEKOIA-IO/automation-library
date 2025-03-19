@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-19 - 1.1.8
+
+### Fixed
+
+- Fix the pagination
+
 ## 2025-03-12 - 1.1.7
 
 ### Fixed
