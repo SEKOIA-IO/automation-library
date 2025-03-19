@@ -23,6 +23,11 @@ class AzureMonitorQueryArguments(BaseModel):
 class AzureMonitorQueryAction(AzureMonitorBaseAction):
     module: AzureMonitorModule
 
+    @staticmethod
+    def format_date(dt: datetime) -> str:
+        # we don't use `strftime` here to avoid redundant microseconds digits if any
+        return "%sZ" % dt.replace(tzinfo=None).isoformat("T")
+
     def run(self, arguments: AzureMonitorQueryArguments) -> Any:
         timespan = (
             (arguments.from_date, arguments.to_date)
@@ -60,7 +65,7 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
         for table in data:
             table_records = [
                 {
-                    col: (int(value.timestamp() * 1000) if isinstance(value, datetime) else value)
+                    col: self.format_date(value) if isinstance(value, datetime) else value
                     for col, value in zip(table.columns, row)
                 }
                 for row in table.rows
