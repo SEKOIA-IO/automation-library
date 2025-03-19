@@ -19,6 +19,7 @@ class ApiClient(requests.Session):
         self.auth = auth
         self.limiter_batch = limiter_batch
         self.limiter_default = limiter_default
+        self.headers.update({"Accept-Encoding": "gzip,deflate"})
 
         self.mount(
             "https://api.services.mimecast.com/siem/v1/batch/events/cg",
