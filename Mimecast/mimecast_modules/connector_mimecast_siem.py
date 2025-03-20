@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -42,6 +43,12 @@ class MimecastSIEMWorker(Thread):
         self.from_date = self.most_recent_date_seen
 
         self._stop_event = Event()
+        self._use_async = bool(os.environ.get("MIMECAST_ASYNC_DOWNLOAD", 1))
+        self._loop: asyncio.AbstractEventLoop | None = None
+
+        if self._use_async:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
 
     def log(self, *args, **kwargs):
         self.connector.log(*args, **kwargs)
@@ -116,7 +123,7 @@ class MimecastSIEMWorker(Thread):
             result = response.json()
 
             batch_urls = [item["url"] for item in result.get("value", [])]
-            events_gen = download_batches(urls=batch_urls)
+            events_gen = download_batches(urls=batch_urls, loop=self._loop)
 
             for events in batched(events_gen, EVENTS_BATCH_SIZE):
                 logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
