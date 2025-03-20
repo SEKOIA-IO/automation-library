@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-20 - 2.67.6
+
+### Added
+
+- Addition of cases actions and triggers
+
 ## 2025-02-10 - 2.67.5
 
 ### Changed

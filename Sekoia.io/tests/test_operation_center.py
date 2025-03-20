@@ -7,10 +7,15 @@ from sekoiaio.operation_center import (
     GetAlert,
     ListAlerts,
     AddEventsToACase,
+    RemoveEventFromCase,
     CreateCase,
     UpdateCase,
+    DeleteCase,
     GetCase,
     PostCommentOnCase,
+    GetCustomStatus,
+    GetCustomPriority,
+    GetCustomVerdict,
 )
 
 module_base_url = "http://fake.url/"
@@ -194,7 +199,7 @@ def test_add_events_to_case():
 
     ressource = "cases/fake_uuid/events"
     expected_response = {}
-    arguments = {"uuid": "fake_uuid", "event_ids": []}
+    arguments = {"uuid": "fake_uuid", "event_ids": ["fake_event_uuid"]}
 
     with requests_mock.Mocker() as mock:
         mock.post(f"{base_url}{ressource}", json=expected_response)
@@ -203,6 +208,23 @@ def test_add_events_to_case():
         assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "POST"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
+def test_remove_event_from_case():
+    action: RemoveEventFromCase = RemoveEventFromCase()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    ressource = "cases/fake_uuid/events/fake_event_uuid"
+    expected_response = {}
+    arguments = {"uuid": "fake_uuid", "event_id": "fake_event_uuid"}
+
+    with requests_mock.Mocker() as mock:
+        mock.delete(f"{base_url}{ressource}", json=expected_response)
+
+        action.run(arguments)
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "DELETE"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
 
@@ -221,6 +243,23 @@ def test_create_case():
         assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "POST"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
+def test_delete_case():
+    action: DeleteCase = DeleteCase()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    ressource = "cases/fake_uuid"
+
+    arguments = {"uuid": "fake_uuid"}
+
+    with requests_mock.Mocker() as mock:
+        mock.delete(f"{base_url}{ressource}", json=case_expected_response)
+
+        action.run(arguments)
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "DELETE"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
 
@@ -282,4 +321,67 @@ def test_post_comment_on_case():
         assert mock.call_count == 1
         history = mock.request_history
         assert history[0].method == "POST"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
+def test_get_custom_status():
+    action: GetCustomStatus = GetCustomStatus()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    ressource = "custom_statuses/fake_uuid"
+    expected_response = {
+        "name": "string",
+        "description": "string",
+        "stage": "string",
+    }
+    arguments = {"status_uuid": "fake_uuid"}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}{ressource}", json=expected_response)
+
+        action.run(arguments)
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "GET"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
+def test_get_custom_priority():
+    action: GetCustomPriority = GetCustomPriority()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    ressource = "custom_priorities/fake_uuid"
+    expected_response = {
+        "name": "string",
+        "description": "string",
+        "level": 0,
+    }
+    arguments = {"priority_uuid": "fake_uuid"}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}{ressource}", json=expected_response)
+
+        action.run(arguments)
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "GET"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
+def test_get_custom_verdict():
+    action: GetCustomVerdict = GetCustomVerdict()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    ressource = "custom_verdicts/fake_uuid"
+    expected_response = {
+        "name": "string",
+        "description": "string",
+        "stage": "string",
+    }
+    arguments = {"verdict_uuid": "fake_uuid"}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}{ressource}", json=expected_response)
+
+        action.run(arguments)
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "GET"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"

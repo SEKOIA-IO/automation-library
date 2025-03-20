@@ -44,6 +44,11 @@ from sekoiaio.operation_center import (
     UpdateCase,
     GetCase,
     PostCommentOnCase,
+    DeleteCase,
+    RemoveEventFromCase,
+    GetCustomStatus,
+    GetCustomPriority,
+    GetCustomVerdict,
 )
 from sekoiaio.operation_center.get_asset import GetAsset
 from sekoiaio.operation_center.get_aggregation_query import GetAggregationQuery
@@ -59,6 +64,7 @@ from sekoiaio.triggers.alerts import (
     AlertUpdatedTrigger,
     SecurityAlertsTrigger,
 )
+from sekoiaio.triggers.cases import CaseAlertsUpdatedTrigger, CaseCreatedTrigger, CaseUpdatedTrigger
 from sekoiaio.triggers.intelligence import FeedConsumptionTrigger, FeedIOCConsumptionTrigger
 from sekoiaio.workspace import GetCommunity
 
@@ -112,6 +118,11 @@ if __name__ == "__main__":
     module.register(UpdateCase, "update_case")
     module.register(GetCase, "get_case")
     module.register(PostCommentOnCase, "post_comment_to_a_case")
+    module.register(DeleteCase, "delete-case/{uuid}")
+    module.register(RemoveEventFromCase, "remove_event_from_case")
+    module.register(GetCustomStatus, "get-custom-status")
+    module.register(GetCustomPriority, "get-custom-priority")
+    module.register(GetCustomVerdict, "get-custom-verdict")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")
@@ -119,6 +130,9 @@ if __name__ == "__main__":
     module.register(AlertUpdatedTrigger, "alert_updated_trigger")
     module.register(AlertStatusChangedTrigger, "alert_status_changed_trigger")
     module.register(AlertCommentCreatedTrigger, "alert_comment_created_trigger")
+    module.register(CaseCreatedTrigger, "case_created_trigger")
+    module.register(CaseUpdatedTrigger, "case_updated_trigger")
+    module.register(CaseAlertsUpdatedTrigger, "case_alerts_updated_trigger")
 
     # Intelligence Center Triggers
     module.register(FeedConsumptionTrigger, "feed_consumption_trigger")
