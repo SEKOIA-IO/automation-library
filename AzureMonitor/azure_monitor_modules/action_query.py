@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from azure.core.exceptions import HttpResponseError
@@ -25,8 +25,7 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
 
     @staticmethod
     def format_date(dt: datetime) -> str:
-        # we don't use `strftime` here to avoid redundant microseconds digits if any
-        return "%sZ" % dt.replace(tzinfo=None).isoformat("T")
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     def run(self, arguments: AzureMonitorQueryArguments) -> Any:
         timespan = (
