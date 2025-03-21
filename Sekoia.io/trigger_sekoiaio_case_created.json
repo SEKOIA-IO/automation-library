@@ -1,0 +1,109 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "mode_filter": {
+                "type": "string",
+                "description": "Create a run only for cases matching a mode (automatic or manual)",
+                "enum": ["automatic", "manual"]
+            },
+            "priority_uuids_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of priority uuids"
+            },
+            "assignees_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of assignees"
+            }
+        },
+        "type": "object",
+        "title": "Trigger configuration"
+    },
+    "description": "A new Case was created in the Operation Center",
+    "docker_parameters": "case_created_trigger",
+    "name": "Case Created",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "uuid": {
+                "description": "Unique identifier of the Case (UUID string).",
+                "type": "string"
+            },
+            "short_id": {
+                "description": "Unique short identifier of the Case.",
+                "type": "string"
+            },
+            "created_at": {
+                "description": "Creation date of the Case.",
+                "type": "string",
+                "format": "date-time"
+            },
+            "created_by": {
+                "description": "User who created the Case.",
+                "type": "string"
+            },
+            "mode": {
+                "description": "Mode of the Case (automatic or manual).",
+                "type": "string",
+                "enum": ["automatic", "manual"]
+            },
+            "title": {
+                "description": "Title of the Case.",
+                "type": "string"
+            },
+            "description": {
+                "description": "Description of the Case.",
+                "type": "string"
+            },
+            "community_uuid": {
+                "description": "Unique identifier of the Community (UUID string).",
+                "type": "string"
+            },
+            "assignees": {
+                "description": "List of assignees of the Case.",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "priority_uuid": {
+                "description": "Unique identifier of the Priority (UUID string).",
+                "type": "string"
+            },
+            "status_uuid": {
+                "description": "Unique identifier of the Status (UUID string).",
+                "type": "string"
+            },
+            "tags": {
+                "description": "List of tags of the Case.",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "required": [
+            "uuid",
+            "short_id",
+            "created_at",
+            "created_by",
+            "mode",
+            "title",
+            "description",
+            "community_uuid",
+            "assignees",
+            "priority_uuid",
+            "status_uuid",
+            "tags"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "408814cf-993b-43a6-ae9d-f6d9a9cd762f"
+}
