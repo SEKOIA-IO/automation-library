@@ -116,17 +116,21 @@ class WizGqlClient(object):
         async with self._session() as session:
             try:
                 result: dict[str, Any] = await session.execute_async(gql(query), variable_values=variable_values)
-            except TransportQueryError as e:
-                if e.errors:
-                    raise WizErrors.from_error(e) from e
 
-                raise e
             except TransportServerError as e:
                 if e.code == 401:
                     raise WizServerError(f"Status code {e.code}. Authentication failed") from e
 
                 if e.code == 403:
                     raise WizServerError(f"Status code {e.code}. Permission denied") from e
+
+                raise WizErrors from e
+
+            except TransportQueryError as e:
+                if e.errors:
+                    raise WizErrors.from_error(e) from e
+
+                raise e
 
             return result
 
