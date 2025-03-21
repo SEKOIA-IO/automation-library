@@ -44,7 +44,7 @@ def test_query(data_storage, azure_monitor_module, arguments):
 
         assert result == [
             [
-                {"timestamp": "2024-03-10T12:00:00.000000Z", "message": "Test log entry 1"},
-                {"timestamp": "2024-03-10T12:05:00.000000Z", "message": "Test log entry 2"},
+                {"timestamp": "2024-03-10T12:00:00Z", "message": "Test log entry 1"},
+                {"timestamp": "2024-03-10T12:05:00Z", "message": "Test log entry 2"},
             ]
         ]

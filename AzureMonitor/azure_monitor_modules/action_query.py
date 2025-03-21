@@ -25,7 +25,7 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
 
     @staticmethod
     def format_date(dt: datetime) -> str:
-        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def run(self, arguments: AzureMonitorQueryArguments) -> Any:
         timespan = (
