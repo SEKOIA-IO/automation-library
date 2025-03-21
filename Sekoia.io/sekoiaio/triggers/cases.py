@@ -9,42 +9,43 @@ from sekoiaio.utils import user_agent
 
 from .base import _SEKOIANotificationBaseTrigger
 
+
 class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
     # List of cases types we can handle.
     HANDLED_EVENT_SUB_TYPES = [("case", "created"), ("case", "updated"), ("case", "alerts-updated")]
 
     def _filter_notifications(self, message) -> bool:
         case_attrs = message.get("attributes", {})
-        
+
         # Filter by mode
         mode_filter = self.configuration.get("mode_filter")
         if mode_filter and case_attrs.get("manual") != (mode_filter == "manual"):
             return False
-        
+
         # Filter by priority UUIDs
         priority_uuids_filter = self.configuration.get("priority_uuids_filter")
         if priority_uuids_filter and case_attrs.get("custom_priority_uuid") not in priority_uuids_filter:
             return False
-        
+
         # Filter by assignees
         assignees_filter = self.configuration.get("assignees_filter")
         if assignees_filter:
             case_details = self._retrieve_case_from_caseapi(case_attrs.get("uuid"))
             if not any(assignee in assignees_filter for assignee in case_details.get("assignees", [])):
                 return False
-        
+
         # Cannot use the following filters for case created
         if (message.get("type"), message.get("action")) != ("case", "created"):
-            #Filter by case UUIDs
+            # Filter by case UUIDs
             case_uuids_filter = self.configuration.get("case_uuids_filter")
             if case_uuids_filter and case_attrs.get("uuid") not in case_uuids_filter:
                 return False
 
-            #Filter by case short IDs
+            # Filter by case short IDs
             short_ids_filter = self.configuration.get("short_ids_filter")
             if short_ids_filter and case_attrs.get("short_id") not in short_ids_filter:
                 return False
-        
+
         return True
 
     @retry(
@@ -89,7 +90,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         except Exception as exp:
             self.log("Failed to parse JSON response from Case API", level="error", content=response.text)
             raise exp
-        
+
 
 class CaseCreatedTrigger(SecurityCasesTrigger):
     HANDLED_EVENT_SUB_TYPES = [("case", "created")]
@@ -150,6 +151,7 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
             remove_directory=True,
         )
 
+
 class CaseUpdatedTrigger(SecurityCasesTrigger):
     HANDLED_EVENT_SUB_TYPES = [("case", "updated")]
 
@@ -195,7 +197,16 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
             "updated_by": case.get("updated_by"),
         }
 
-        for key in ["title", "description", "community_uuid", "assignees", "tags", "custom_priority_uuid", "status_uuid", "verdict_uuid"]:
+        for key in [
+            "title",
+            "description",
+            "community_uuid",
+            "assignees",
+            "tags",
+            "custom_priority_uuid",
+            "status_uuid",
+            "verdict_uuid",
+        ]:
             if key in case_attrs.get("updated", {}).keys():
                 event[key] = case_attrs.get("updated", {}).get(key)
 
@@ -205,6 +216,7 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
             directory=directory,
             remove_directory=True,
         )
+
 
 class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
     HANDLED_EVENT_SUB_TYPES = [("case", "alerts-updated")]
@@ -246,8 +258,8 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
         event = {
             "uuid": case_uuid,
             "short_id": case_short_id,
-            "added_alerts": case_attrs.get("updated",{}).get("added_alerts_uuid", []),
-            "removed_alerts": case_attrs.get("updated",{}).get("removed_alerts_uuid", []),
+            "added_alerts": case_attrs.get("updated", {}).get("added_alerts_uuid", []),
+            "removed_alerts": case_attrs.get("updated", {}).get("removed_alerts_uuid", []),
         }
 
         self.send_event(

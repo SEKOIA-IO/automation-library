@@ -46,6 +46,7 @@ def test_securitycasestrigger_retrieve_case_from_api(case_trigger, sample_siccas
         case = case_trigger._retrieve_case_from_caseapi(case_uuid)
         assert sorted(case) == sorted(sample_siccaseapi)
 
+
 @pytest.fixture
 def case_created_trigger(module_configuration, symphony_storage):
     trigger = CaseCreatedTrigger()
@@ -88,6 +89,7 @@ def test_casecreatedtrigger_handle_case_invalid_message(case_created_trigger):
 
     for message in invalid_messages:
         case_created_trigger.handler_dispatcher(json.dumps(message))
+
 
 def test_single_event_triggers_updated(
     case_created_trigger,
@@ -149,8 +151,9 @@ def test_case_trigger_filter_by_priorities(
         case_created_trigger.handle_event(samplenotif_case_created)
         assert case_created_trigger.send_event.called
 
+
 def test_case_filter_by_assignees(
-        case_created_trigger, samplenotif_case_created, sample_siccaseapi_mock, sample_siccaseapi
+    case_created_trigger, samplenotif_case_created, sample_siccaseapi_mock, sample_siccaseapi
 ):
     case_created_trigger.send_event = MagicMock()
     with sample_siccaseapi_mock:
@@ -164,8 +167,9 @@ def test_case_filter_by_assignees(
         case_created_trigger.handle_event(samplenotif_case_created)
         assert case_created_trigger.send_event.called
 
+
 def test_case_filter_by_case_uuids(
-        case_updated_trigger, samplenotif_case_updated, sample_siccaseapi_mock, sample_siccaseapi
+    case_updated_trigger, samplenotif_case_updated, sample_siccaseapi_mock, sample_siccaseapi
 ):
     case_updated_trigger.send_event = MagicMock()
     with sample_siccaseapi_mock:
@@ -179,8 +183,9 @@ def test_case_filter_by_case_uuids(
         case_updated_trigger.handle_event(samplenotif_case_updated)
         assert case_updated_trigger.send_event.called
 
+
 def test_case_filter_by_short_ids(
-        case_updated_trigger, samplenotif_case_updated, sample_siccaseapi_mock, sample_siccaseapi
+    case_updated_trigger, samplenotif_case_updated, sample_siccaseapi_mock, sample_siccaseapi
 ):
     case_updated_trigger.send_event = MagicMock()
     with sample_siccaseapi_mock:

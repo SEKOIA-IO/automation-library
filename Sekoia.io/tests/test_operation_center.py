@@ -210,6 +210,7 @@ def test_add_events_to_case():
         assert history[0].method == "POST"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
+
 def test_remove_event_from_case():
     action: RemoveEventFromCase = RemoveEventFromCase()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
@@ -244,6 +245,7 @@ def test_create_case():
         history = mock.request_history
         assert history[0].method == "POST"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
 
 def test_delete_case():
     action: DeleteCase = DeleteCase()
@@ -323,6 +325,7 @@ def test_post_comment_on_case():
         assert history[0].method == "POST"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
+
 def test_get_custom_status():
     action: GetCustomStatus = GetCustomStatus()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
@@ -344,6 +347,7 @@ def test_get_custom_status():
         assert history[0].method == "GET"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
 
+
 def test_get_custom_priority():
     action: GetCustomPriority = GetCustomPriority()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
@@ -364,6 +368,7 @@ def test_get_custom_priority():
         history = mock.request_history
         assert history[0].method == "GET"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+
 
 def test_get_custom_verdict():
     action: GetCustomVerdict = GetCustomVerdict()
