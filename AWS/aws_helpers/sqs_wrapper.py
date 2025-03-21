@@ -106,7 +106,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                     MaxNumberOfMessages=max_messages,
                     WaitTimeSeconds=frequency,
                     MessageAttributeNames=["All"],
-                    AttributeNames=["All"],
+                    MessageSystemAttributeNames=["All"],
                     VisibilityTimeout=60,
                 )
 

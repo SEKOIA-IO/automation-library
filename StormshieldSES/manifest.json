@@ -1,0 +1,28 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "url": {
+        "description": "URL of the Stormshield instance",
+        "type": "string",
+        "format": "uri"
+      },
+      "api_token": {
+        "description": "Authentication token for the API",
+        "type": "string"
+      }
+    },
+    "required": ["url", "api_token"],
+    "title": "Stormshield Arguments",
+    "type": "object",
+    "secrets": ["api_token"]
+  },
+  "description": "Stormshield SES is designed to protect endpoints such as desktops, laptops, and servers against a variety of threats and cyberattacks.",
+  "name": "Stormshield SES",
+  "uuid": "758103e9-eb62-4b0d-8c71-0ff9c60ca677",
+  "version": "1.0.1",
+  "slug": "stormshield-ses",
+  "categories": [
+    "Endpoint"
+  ]
+}

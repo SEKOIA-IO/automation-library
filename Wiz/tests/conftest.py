@@ -143,6 +143,46 @@ def module(symphony_storage, tenant_url, session_faker) -> WizModule:
 
 
 @pytest.fixture
+def audit_logs_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "auditLogEntries": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "timestamp": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": False,
+            },
+        }
+    }
+
+
+@pytest.fixture
+def audit_logs_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "auditLogEntries": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "timestamp": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": True,
+            },
+        }
+    }
+
+
+@pytest.fixture
 def alerts_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
     return {
         "issuesV2": {
@@ -183,7 +223,7 @@ def alerts_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, 
 
 
 @pytest.fixture
-def findings_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+def cloud_configuration_findings_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
     return {
         "configurationFindings": {
             "nodes": [
@@ -203,13 +243,53 @@ def findings_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
 
 
 @pytest.fixture
-def findings_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+def cloud_configuration_findings_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
     return {
         "configurationFindings": {
             "nodes": [
                 {
                     **session_faker.pydict(allowed_types=[str, int, float, bool]),
                     "analyzedAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": True,
+            },
+        }
+    }
+
+
+@pytest.fixture
+def vulnerability_findings_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "vulnerabilityFindings": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "firstDetectedAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": False,
+            },
+        }
+    }
+
+
+@pytest.fixture
+def vulnerability_findings_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "vulnerabilityFindings": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "firstDetectedAt": session_faker.date_time().isoformat(),
                     "id": session_faker.uuid4(),
                 }
                 for _ in range(10)

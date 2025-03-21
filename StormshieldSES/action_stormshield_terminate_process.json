@@ -1,0 +1,68 @@
+{
+    "uuid": "6d948fb8-f738-43d8-b3bb-b3aa847ba4f7",
+    "name": "Terminate process",
+    "description": "Terminate a process",
+    "docker_parameters": "stormshield_terminate_process",
+    "arguments": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "Name or identifier of the agent",
+                "type": "string"
+            },
+            "processPath": {
+                "description": "Executable path of the process to kill on the computer",
+                "type": "string"
+            },
+            "terminateProcessTree": {
+                "description": "Boolean to terminate the process tree",
+                "type": "boolean"
+            },
+	    "verify_certificate": {
+		"description": "Is the server certificate verified",
+		"type": "boolean",
+		"default": true
+            }
+        },
+        "required": [
+            "id",
+            "processPath"
+        ]
+    },
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "description": "Task ID",
+            "type": "string"
+          },
+          "status": {
+            "description": "Task status",
+            "type": "string"
+          },
+          "requestTime": {
+            "description": "Task request time",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Task start time",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "Task end time",
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Error code",
+            "type": "integer"
+          },
+          "errorMessage": {
+            "description": "Error message",
+            "type": "string"
+          }
+        },
+        "title": "Terminate process results"
+    }
+}

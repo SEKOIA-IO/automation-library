@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-03-20 - 2.67.6
+## 2025-03-20 - 2.67.7
 
 ### Added
 
 - Addition of cases actions and triggers
+
+## 2025-02-04 - 2.67.6
+
+### Added
+
+Support for file input - action synchronize asset
 
 ## 2025-02-10 - 2.67.5
 

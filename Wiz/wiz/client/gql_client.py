@@ -19,6 +19,14 @@ class WizResult(BaseModel):
     result: list[dict[str, Any]]
 
     @classmethod
+    def from_audit_logs_response(cls, response: dict[str, Any]) -> "WizResult":
+        return cls(
+            end_cursor=response.get("auditLogEntries", {}).get("pageInfo", {}).get("endCursor"),
+            has_next_page=response.get("auditLogEntries", {}).get("pageInfo", {}).get("hasNextPage", False),
+            result=response.get("auditLogEntries", {}).get("nodes", []),
+        )
+
+    @classmethod
     def from_alerts_response(cls, response: dict[str, Any]) -> "WizResult":
         return cls(
             end_cursor=response.get("issuesV2", {}).get("pageInfo", {}).get("endCursor"),
@@ -32,6 +40,14 @@ class WizResult(BaseModel):
             end_cursor=response.get("configurationFindings", {}).get("pageInfo", {}).get("endCursor"),
             has_next_page=response.get("configurationFindings", {}).get("pageInfo", {}).get("hasNextPage", False),
             result=response.get("configurationFindings", {}).get("nodes", []),
+        )
+
+    @classmethod
+    def from_vulnerability_findings_response(cls, response: dict[str, Any]) -> "WizResult":
+        return cls(
+            end_cursor=response.get("vulnerabilityFindings", {}).get("pageInfo", {}).get("endCursor"),
+            has_next_page=response.get("vulnerabilityFindings", {}).get("pageInfo", {}).get("hasNextPage", False),
+            result=response.get("vulnerabilityFindings", {}).get("nodes", []),
         )
 
 
@@ -113,6 +129,56 @@ class WizGqlClient(object):
                     raise WizServerError(f"Status code {e.code}. Permission denied") from e
 
             return result
+
+    async def get_audit_logs(self, start_date: datetime, after: str | None = None) -> WizResult:
+        query = """
+            query AuditLogTable($after: String, $startDateTime: DateTime, $limit: Int = 100) {
+                auditLogEntries(
+                    first: $limit,
+                    after: $after,
+                    filterBy: {
+                        timestamp: { 
+                            after: $startDateTime
+                        }
+                    }
+                ) {
+                  nodes {
+                    id
+                    action
+                    requestId
+                    status
+                    timestamp
+                    actionParameters
+                    userAgent
+                    sourceIP
+                    serviceAccount {
+                      id
+                      name
+                    }
+                    user {
+                      id
+                      name
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+               }
+            }
+        """
+
+        variable_values = {
+            "after": after,
+            "startDateTime": start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        }
+
+        response = await self.request(query, variable_values=variable_values)
+
+        if response.get("errors") is not None:
+            raise WizErrors.from_response(response)
+
+        return WizResult.from_audit_logs_response(response)
 
     async def get_alerts(self, start_date: datetime, after: str | None = None) -> WizResult:
         query = """
@@ -315,3 +381,191 @@ class WizGqlClient(object):
             raise WizErrors.from_response(response)
 
         return WizResult.from_cloud_configuration_findings_response(response)
+
+    async def get_vulnerability_findings(self, start_date: datetime, after: str | None = None) -> WizResult:
+        query = """
+            query ListVulnerabilityFindings(
+                $after: String,
+                $startDateTime: DateTime
+                $limit: Int = 100
+            ) {
+                vulnerabilityFindings(
+                  first: $limit
+                  after: $after
+                  filterBy: {
+                    firstSeenAt: {after: $startDateTime}
+                  }
+                ) {
+                  nodes {
+                    id
+                    portalUrl
+                    name
+                    CVEDescription
+                    CVSSSeverity
+                    score
+                    exploitabilityScore
+                    severity
+                    nvdSeverity
+                    weightedSeverity
+                    impactScore
+                    dataSourceName
+                    hasExploit
+                    hasCisaKevExploit
+                    status
+                    vendorSeverity
+                    firstDetectedAt
+                    lastDetectedAt
+                    resolvedAt
+                    description
+                    remediation
+                    detailedName
+                    version
+                    fixedVersion
+                    detectionMethod
+                    link
+                    locationPath
+                    resolutionReason
+                    epssSeverity
+                    epssPercentile
+                    epssProbability
+                    validatedInRuntime
+                    layerMetadata {
+                      id
+                      details
+                      isBaseLayer
+                    }
+                    projects {
+                      id
+                      name
+                      slug
+                      businessUnit
+                      riskProfile {
+                        businessImpact
+                      }
+                    }
+                    ignoreRules {
+                      id
+                      name
+                      enabled
+                      expiredAt
+                    }
+                    cvssv2 {
+                      attackVector
+                      attackComplexity
+                      confidentialityImpact
+                      integrityImpact
+                      privilegesRequired
+                      userInteractionRequired
+                    }
+                    cvssv3 {
+                      attackVector
+                      attackComplexity
+                      confidentialityImpact
+                      integrityImpact
+                      privilegesRequired
+                      userInteractionRequired
+                    }
+                    relatedIssueAnalytics {
+                      issueCount
+                      criticalSeverityCount
+                      highSeverityCount
+                      mediumSeverityCount
+                      lowSeverityCount
+                      informationalSeverityCount
+                    }
+                    cnaScore
+                    vulnerableAsset {
+                      ... on VulnerableAssetBase {
+                        id
+                        type
+                        name
+                        region
+                        providerUniqueId
+                        cloudProviderURL
+                        cloudPlatform
+                        status
+                        subscriptionName
+                        subscriptionExternalId
+                        subscriptionId
+                        tags
+                        hasLimitedInternetExposure
+                        hasWideInternetExposure
+                        isAccessibleFromVPN
+                        isAccessibleFromOtherVnets
+                        isAccessibleFromOtherSubscriptions
+                      }
+                      ... on VulnerableAssetVirtualMachine {
+                        operatingSystem
+                        ipAddresses
+                        imageName
+                        nativeType
+                        computeInstanceGroup {
+                          id
+                          externalId
+                          name
+                          replicaCount
+                          tags
+                        }
+                      }
+                      ... on VulnerableAssetServerless {
+                        runtime
+                      }
+                      ... on VulnerableAssetContainerImage {
+                        imageId
+                        scanSource
+                        registry {
+                          name
+                          externalId
+                        }
+                        repository {
+                          name
+                          externalId
+                        }
+                        executionControllers {
+                          id
+                          name
+                          entityType
+                          externalId
+                          providerUniqueId
+                          name
+                          subscriptionExternalId
+                          subscriptionId
+                          subscriptionName
+                          ancestors {
+                            id
+                            name
+                            entityType
+                            externalId
+                            providerUniqueId
+                          }
+                        }
+                      }
+                      ... on VulnerableAssetContainer {
+                        ImageExternalId
+                        VmExternalId
+                        ServerlessContainer
+                        PodNamespace
+                        PodName
+                        NodeName
+                      }
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                }
+              }
+        """
+
+        variable_values = {
+            "after": after,
+            "startDateTime": start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        }
+
+        response = await self.request(query, variable_values=variable_values)
+
+        if response.get("errors") is not None:
+            raise WizErrors.from_response(response)
+
+        return WizResult.from_vulnerability_findings_response(response)

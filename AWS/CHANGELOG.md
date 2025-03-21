@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-05 - 1.32.6
+
+### Changed
+
+- Refactor the way to define the number of max messages fetched from the SQS queue
+
+## 2025-03-05 - 1.32.5
+
+### Fixed
+
+- Fix typing issue and reset the records list when pushing it
+
+## 2025-03-04 - 1.32.4
+
+### Fixed
+
+- Memory leak issue when parse too many events
+
+## 2025-02-20 - 1.32.3
+
+### Changed
+
+- Bump version of AWS SDK
+
 ## 2024-11-22 - 1.32.2
 
 ### Fixed

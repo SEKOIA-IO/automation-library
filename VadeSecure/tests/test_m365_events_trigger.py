@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
@@ -65,15 +65,16 @@ def test_fetch_events(trigger):
     trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
     trigger._fetch_next_events = MagicMock(return_value=[])
 
-    trigger._fetch_events()
-    assert trigger.send_event.call_args_list == []
-    assert len(trigger._fetch_next_events.call_args_list) == len(EventType)
+    with patch("vadesecure_modules.trigger_m365_events.time.sleep"):
+        trigger._fetch_events()
+        assert trigger.send_event.call_args_list == []
+        assert len(trigger._fetch_next_events.call_args_list) == len(EventType)
 
 
 def test_fetch_events_bad_url(trigger):
     trigger.module.configuration.api_host = "https://api-test.vadesecure.com/////"
     trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
-    with requests_mock.Mocker() as mock:
+    with requests_mock.Mocker() as mock, patch("vadesecure_modules.trigger_m365_events.time.sleep"):
         mock.post(
             "https://api-test.vadesecure.com/api/v1/tenants/e49e7162-0df6-48e9-a75e-237d54871e8b/logs/emails/search",
             json={"result": {"total": 2, "messages": [{}, {}]}},
@@ -90,7 +91,7 @@ def test_fetch_next_emails_events(trigger):
         f"{trigger.configuration.tenant_id}/logs/emails/search"
     )
 
-    with requests_mock.Mocker() as mock:
+    with requests_mock.Mocker() as mock, patch("vadesecure_modules.trigger_m365_events.time.sleep"):
         trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
 
         message1 = {
@@ -165,7 +166,7 @@ def test_fetch_next_auto_remediation_events(trigger):
         f"{trigger.configuration.tenant_id}/logs/remediations/auto/search"
     )
 
-    with requests_mock.Mocker() as mock:
+    with requests_mock.Mocker() as mock, patch("vadesecure_modules.trigger_m365_events.time.sleep"):
         trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
 
         campaign1 = {
@@ -246,7 +247,7 @@ def test_fetch_events_should_chunk_events(trigger):
         f"{trigger.configuration.tenant_id}/logs/remediations/manual/search"
     )
 
-    with requests_mock.Mocker() as mock:
+    with requests_mock.Mocker() as mock, patch("vadesecure_modules.trigger_m365_events.time.sleep"):
         trigger.client.auth.get_authorization = MagicMock(return_value="Bearer 123456")
 
         message1 = {

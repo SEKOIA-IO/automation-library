@@ -1,0 +1,67 @@
+{
+    "uuid": "a93e9854-09f1-4b52-851c-8d878121b716",
+    "name": "Isolate agent",
+    "description": "Isolate an agent",
+    "docker_parameters": "stormshield_endpoint_agent_isolation",
+    "arguments": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "Name or identifier of the agent",
+                "type": "string"
+            },
+            "forceServerIsolation": {
+                "description": "Boolean to force the isolation",
+                "type": "boolean"
+            },
+            "comment": {
+                "description": "Comment",
+                "type": "string"
+            },
+	    "verify_certificate": {
+		"description": "Is the server certificate verified",
+		"type": "boolean",
+		"default": true
+            }
+        },
+        "required": [
+            "id"
+        ]
+    },
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "description": "Task ID",
+            "type": "string"
+          },
+          "status": {
+            "description": "Task status",
+            "type": "string"
+          },
+          "requestTime": {
+            "description": "Task request time",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Task start time",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "Task end time",
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Error code",
+            "type": "integer"
+          },
+          "errorMessage": {
+            "description": "Error message",
+            "type": "string"
+          }
+        },
+        "title": "Isolate agent results"
+    }
+}

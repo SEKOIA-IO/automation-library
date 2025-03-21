@@ -1,0 +1,59 @@
+{
+    "uuid": "09d13b35-9f4e-4065-b98c-bf265dcee27b",
+    "name": "Wait for a Stormshield task to complete",
+    "description": "Wait until the status of the task is Succeeded or Failed",
+    "docker_parameters": "stormshield_wait_for_task_completion",
+    "arguments": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "task_id": {
+                "description": "Task ID",
+                "type": "string"
+            },
+	    "verify_certificate": {
+		"description": "Is the server certificate verified",
+		"type": "boolean",
+		"default": true
+            }
+        },
+        "required": [
+            "task_id"
+        ]
+    },
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "description": "Task ID",
+            "type": "string"
+          },
+          "status": {
+            "description": "Task status",
+            "type": "string"
+          },
+          "requestTime": {
+            "description": "Task request time",
+            "type": "string"
+          },
+          "startTime": {
+            "description": "Task start time",
+            "type": "string"
+          },
+          "endTime": {
+            "description": "Task end time",
+            "type": "string"
+          },
+          "errorCode": {
+            "description": "Error code",
+            "type": "integer"
+          },
+          "errorMessage": {
+            "description": "Error message",
+            "type": "string"
+          }
+        },
+        "title": "Wait task completion results"
+    }
+}

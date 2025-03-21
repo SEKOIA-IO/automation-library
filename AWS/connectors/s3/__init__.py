@@ -34,6 +34,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
+        self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
 
     @cached_property
     def s3_wrapper(self) -> S3Wrapper:
@@ -112,7 +113,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             "object", {}
         ).get("key")
 
-    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[list[str], list[int]]:
+    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -122,15 +123,16 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             previous_processing_end: float | None
 
         Returns:
-            tuple[list[str], int]:
+            tuple[int, list[int]]:
         """
         records = []
+        result = 0
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
 
         while continue_receiving:
-            async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
+            async with self.sqs_wrapper.receive_messages(max_messages=self.sqs_max_messages) as messages:
                 message_records = []
 
                 if not messages:
@@ -162,15 +164,21 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                         async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
                             records.extend(self._parse_content(self.decompress_content(content)))
 
+                        if len(records) >= self.limit_of_events_to_push:
+                            continue_receiving = False
+                            result += len(await self.push_data_to_intakes(events=records))
+                            records = []
+
                     except Exception as e:
                         self.log(
                             message=f"Failed to fetch content of {record}: {str(e)}",
                             level="warning",
                         )
 
-            if len(records) >= self.limit_of_events_to_push or not records:
+            if not records:
                 continue_receiving = False
 
-        result = await self.push_data_to_intakes(events=records)
+        if records:
+            result += len(await self.push_data_to_intakes(events=records))
 
         return result, timestamps_to_log

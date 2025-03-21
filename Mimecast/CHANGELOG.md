@@ -7,11 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-19 - 1.1.9
+
+### Fixed
+
+- Set the Accept-Encoding header in requests
+
+## 2025-03-19 - 1.1.8
+
+### Fixed
+
+- Fix the pagination
+
+## 2025-03-12 - 1.1.7
+
+### Fixed
+
+- Fix memory issues: Use generators instead of lists when fetching events
+
 ## 2025-01-31 - 1.1.6
 
 ### Fixed
 
-- Fixed issue with cursor
+- Fixed the pagination
 
 ## 2025-01-24 - 1.1.5
 
