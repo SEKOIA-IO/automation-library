@@ -157,7 +157,7 @@ class WizConnector(AsyncConnector, ABC):
                 await asyncio.sleep(self.configuration.frequency)
 
             except WizErrors as error:
-                self.log(message=error.message, level="warning")
+                self.log(message=error.message, level="error")
                 await asyncio.sleep(self.configuration.frequency)
 
             except TimeoutError:
