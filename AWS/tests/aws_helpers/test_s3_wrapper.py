@@ -42,8 +42,8 @@ async def test_read_key(session_faker: Faker):
 
         mock_s3.get_object.return_value = s3_response
 
-        async with s3.read_key(key) as content:
-            assert content == text.encode("utf-8")
+        async with s3.read_key(key) as stream:
+            assert await stream.read() == text.encode("utf-8")
 
         # Assert that the S3 client methods were called with the correct arguments
         mock_client.assert_called_once_with("s3")
@@ -83,8 +83,8 @@ async def test_read_compressed_key(session_faker: Faker):
 
         mock_s3.get_object.return_value = s3_response
 
-        async with s3.read_key(key) as content:
-            assert content == text.encode("utf-8")
+        async with s3.read_key(key) as stream:
+            assert await stream.read() == text.encode("utf-8")
 
         # Assert that the S3 client methods were called with the correct arguments
         mock_client.assert_called_once_with("s3")

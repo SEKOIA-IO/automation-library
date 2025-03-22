@@ -2,8 +2,9 @@
 
 import datetime
 import time
+from collections.abc import AsyncGenerator
 from itertools import groupby, islice
-from typing import Any
+from typing import Any, BinaryIO
 
 import orjson
 import pandas as pd
@@ -129,23 +130,25 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         return self.records_to_json(results)
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            content: bytes
+            stream: BinaryIO
 
         Returns:
-            list:
+             Generator:
         """
+        content = await stream.read()
         records = [record for record in content.decode("utf-8").split(self.configuration.separator) if len(record) > 0]
 
         # return [] if there's no records
         if not records:
-            return records
+            return
 
         # Starting records from second element, skipping version
         kv_records = self.data_to_kv(records[1:])
 
-        return list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None))
+        for record in list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None)):
+            yield record

@@ -3,12 +3,14 @@
 from os import path
 from pathlib import Path
 
+import aiofiles
 import orjson
 import pytest
 
 from connectors import AwsModule
 from connectors.s3 import AwsS3QueuedConfiguration
 from connectors.s3.trigger_s3_flowlogs_parquet import AwsS3FlowLogsParquetRecordsTrigger
+from tests.helpers import async_list, async_temporary_file
 
 
 @pytest.fixture
@@ -35,7 +37,8 @@ def connector(
     return connector
 
 
-def test_aws_s3_flowlogs_records_trigger_parse_content(connector: AwsS3FlowLogsParquetRecordsTrigger):
+@pytest.mark.asyncio
+async def test_aws_s3_flowlogs_records_trigger_parse_content(connector: AwsS3FlowLogsParquetRecordsTrigger):
     """
     Test AwsS3ParquetRecordsTrigger `_parse_content`.
 
@@ -43,11 +46,14 @@ def test_aws_s3_flowlogs_records_trigger_parse_content(connector: AwsS3FlowLogsP
         connector: AwsS3RecordsTrigger
     """
     current_dir = path.dirname(__file__)
-    with open(current_dir + "/test_parquet.parquet", "rb") as f:
-        parquet_data = f.read()
-
     with open(current_dir + "/test_parquet_result.json", "rb") as f:
         expected_result = orjson.loads(f.read())
 
-    assert connector._parse_content(parquet_data) == expected_result
-    assert connector._parse_content(b"") == []
+    async with aiofiles.open(current_dir + "/test_parquet.parquet", "rb") as f:
+        assert await async_list(connector._parse_content(f)) == expected_result
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_flowlogs_records_trigger_parse_empty_data(connector: AwsS3FlowLogsParquetRecordsTrigger):
+    async with async_temporary_file(b"") as f:
+        assert await async_list(connector._parse_content(f)) == []

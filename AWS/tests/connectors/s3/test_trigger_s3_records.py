@@ -9,6 +9,7 @@ from faker import Faker
 from connectors import AwsModule
 from connectors.s3 import AwsS3QueuedConfiguration
 from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
+from tests.helpers import async_list, async_temporary_file
 
 
 @pytest.fixture
@@ -35,7 +36,8 @@ def connector(
     return connector
 
 
-def test_aws_s3_records_trigger_parse_content(faker: Faker, connector: AwsS3RecordsTrigger):
+@pytest.mark.asyncio
+async def test_aws_s3_records_trigger_parse_content(faker: Faker, connector: AwsS3RecordsTrigger):
     """
     Test AwsS3RecordsTrigger `_parse_content`.
 
@@ -64,19 +66,23 @@ def test_aws_s3_records_trigger_parse_content(faker: Faker, connector: AwsS3Reco
         ]
     }
 
-    assert connector._parse_content(orjson.dumps(data_1)) == [
-        orjson.dumps(record).decode("utf-8") for record in data_1.get("Records")
-    ]
+    async with async_temporary_file(orjson.dumps(data_1)) as f:
+        assert await async_list(connector._parse_content(f)) == [
+            orjson.dumps(record).decode("utf-8") for record in data_1.get("Records")
+        ]
 
-    assert connector._parse_content(orjson.dumps(data_2)) == [
-        orjson.dumps(record).decode("utf-8") for record in data_2.get("Records")
-    ]
+    async with async_temporary_file(orjson.dumps(data_2)) as f:
+        assert await async_list(connector._parse_content(f)) == [
+            orjson.dumps(record).decode("utf-8") for record in data_2.get("Records")
+        ]
 
-    assert connector._parse_content(orjson.dumps(data_3)) == [
-        orjson.dumps(record).decode("utf-8") for record in data_3.get("Records") if record != {}
-    ]
+    async with async_temporary_file(orjson.dumps(data_3)) as f:
+        assert await async_list(connector._parse_content(f)) == [
+            orjson.dumps(record).decode("utf-8") for record in data_3.get("Records") if record != {}
+        ]
 
-    assert connector._parse_content(b"") == []
+    async with async_temporary_file(b"") as f:
+        assert await async_list(connector._parse_content(f)) == []
 
 
 def test_check_if_payload_is_valid_1(connector: AwsS3RecordsTrigger, session_faker: Faker):

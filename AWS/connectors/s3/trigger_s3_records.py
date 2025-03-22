@@ -1,6 +1,7 @@
 """Contains AwsS3RecordsTrigger."""
 
-from typing import Any
+from collections.abc import AsyncGenerator
+from typing import Any, BinaryIO
 
 import orjson
 
@@ -78,25 +79,24 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
 
         return len(supported) == 0 and len(unsupported) != 0
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
         """
-        Parse the content of the object and return a list of records.
+        Parse content from S3 bucket.
 
         Args:
-            content: bytes
+            stream: BinaryIO
 
         Returns:
-            list[str]:
+             Generator:
         """
-        if len(content) == 0:
-            return []
+        content = await stream.read()
 
-        records = []
+        if len(content) == 0:
+            return
+
         for data in orjson.loads(content).get("Records", []):
             # https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-examples.html
             # Go through each element in list and add to result_data if it is a valid payload based on this
             # https://github.com/SEKOIA-IO/automation-library/issues/346
             if len(data) > 0 and self.is_valid_payload(data):
-                records.append(orjson.dumps(data).decode("utf-8"))
-
-        return records
+                yield orjson.dumps(data).decode("utf-8")
