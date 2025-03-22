@@ -16,6 +16,7 @@ def connector(
     aws_module: AwsModule,
     symphony_storage: Path,
     aws_s3_queued_config: AwsS3QueuedConfiguration,
+    mock_push_data_to_intakes,
 ) -> AwsS3OcsfTrigger:
     """
     Create a connector.
@@ -31,11 +32,13 @@ def connector(
     connector = AwsS3OcsfTrigger(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = aws_s3_queued_config
+    connector.push_data_to_intakes = mock_push_data_to_intakes
 
     return connector
 
 
-def test_aws_s3_ocsf_trigger_parse_content(
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_parse_content(
     connector: AwsS3OcsfTrigger,
 ):
     """
@@ -48,8 +51,8 @@ def test_aws_s3_ocsf_trigger_parse_content(
     with open(current_dir + "/test_ocsf.parquet", "rb") as f:
         parquet_data = f.read()
 
-    assert connector._parse_content(parquet_data) != []
-    assert connector._parse_content(b"") == []
+    assert await connector._process_content(parquet_data) != 0
+    assert await connector._process_content(b"") == 0
 
 
 @pytest.fixture
