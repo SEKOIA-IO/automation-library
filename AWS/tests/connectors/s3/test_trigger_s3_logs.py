@@ -7,6 +7,7 @@ from faker import Faker
 
 from connectors import AwsModule
 from connectors.s3.trigger_s3_logs import AwsS3LogsConfiguration, AwsS3LogsTrigger
+from tests.helpers import async_list, async_temporary_file
 
 
 @pytest.fixture
@@ -73,7 +74,8 @@ def connector(
     return connector
 
 
-def test_aws_s3_logs_trigger_parse_data(connector: AwsS3LogsTrigger, test_data: bytes):
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data(connector: AwsS3LogsTrigger, test_data: bytes):
     """
     Test AwsS3LogsTrigger `_parse_data`.
 
@@ -81,11 +83,16 @@ def test_aws_s3_logs_trigger_parse_data(connector: AwsS3LogsTrigger, test_data: 
         connector: AwsS3LogsTrigger
         test_data: bytes
     """
-    assert (
-        connector._parse_content(test_data)
-        == [line for line in test_data.decode("utf-8").split("\n") if line != "" and not line.startswith("#")][
-            connector.configuration.skip_first :
-        ]
-    )
+    async with async_temporary_file(test_data) as f:
+        assert (
+            await async_list(connector._parse_content(f))
+            == [line for line in test_data.decode("utf-8").split("\n") if line != "" and not line.startswith("#")][
+                connector.configuration.skip_first :
+            ]
+        )
 
-    assert connector._parse_content(b"") == []
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_emptydata(connector: AwsS3LogsTrigger, test_data: bytes):
+    async with async_temporary_file(b"") as f:
+        assert await async_list(connector._parse_content(f)) == []

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-22 - 1.33.0
+
+### Changed
+
+- Refactor the way to read the content of S3 Objects and extract the events
+
 ## 2025-03-05 - 1.32.6
 
 ### Changed
