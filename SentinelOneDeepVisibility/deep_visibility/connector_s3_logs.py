@@ -1,4 +1,7 @@
 import json
+from collections.abc import AsyncGenerator
+from typing import BinaryIO
+
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from deep_visibility.metrics import DISCARDED_EVENTS
 
@@ -17,18 +20,18 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
         """
-        Parse the content of the object and return a list of records.
+        Parse content from S3 bucket.
 
         Args:
-            content:
+            stream: BinaryIO
 
         Returns:
-            list[str]:
+             Generator:
         """
+        content = await stream.read()
 
-        records = []
         for record in content.decode("utf-8").split("\n"):
             if len(record) > 0:
                 try:
@@ -41,8 +44,7 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
                     if "event.type" in json_record and json_record["event.type"] in EXCLUDED_EVENT_TYPES:
                         DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
                         continue
-                    records.append(record)
+
+                    yield record
                 except:
                     pass
-
-        return list(records)
