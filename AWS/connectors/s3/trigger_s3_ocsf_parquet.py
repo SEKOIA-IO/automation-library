@@ -1,7 +1,8 @@
 """Contains AwsS3ParquetRecordsTrigger."""
 
 import io
-from typing import Any
+from collections.abc import AsyncGenerator
+from typing import Any, BinaryIO
 
 import orjson
 import pandas
@@ -28,26 +29,25 @@ class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
             "object", {}
         ).get("key")
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
         """
-        Parse the content of the object and return a list of records.
+        Parse content from S3 bucket.
 
         Args:
-            content: bytes
+            stream: BinaryIO
 
         Returns:
-            list[str]:
+             Generator:
         """
+        content = await stream.read()
+
         if len(content) == 0:
-            return []
+            return
 
         reader = io.BytesIO(content)
         df = pandas.read_parquet(reader)
         records = orjson.loads(df.to_json(orient="records"))
 
-        events = []
         for record in records:
             if len(record) > 0:
-                events.append(orjson.dumps(record).decode("utf-8"))
-
-        return events
+                yield orjson.dumps(record).decode("utf-8")

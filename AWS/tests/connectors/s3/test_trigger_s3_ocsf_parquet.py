@@ -3,12 +3,14 @@
 from os import path
 from pathlib import Path
 
+import aiofiles
 import orjson
 import pytest
 
 from connectors import AwsModule
 from connectors.s3 import AwsS3QueuedConfiguration
 from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
+from tests.helpers import async_list, async_temporary_file
 
 
 @pytest.fixture
@@ -35,7 +37,8 @@ def connector(
     return connector
 
 
-def test_aws_s3_ocsf_trigger_parse_content(
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_parse_content(
     connector: AwsS3OcsfTrigger,
 ):
     """
@@ -45,11 +48,16 @@ def test_aws_s3_ocsf_trigger_parse_content(
         connector: AwsS3RecordsTrigger
     """
     current_dir = path.dirname(__file__)
-    with open(current_dir + "/test_ocsf.parquet", "rb") as f:
-        parquet_data = f.read()
+    async with aiofiles.open(current_dir + "/test_ocsf.parquet", "rb") as f:
+        assert await async_list(connector._parse_content(f)) != []
 
-    assert connector._parse_content(parquet_data) != []
-    assert connector._parse_content(b"") == []
+
+@pytest.mark.asyncio
+async def test_aws_s3_ocsf_trigger_parse_empty_content(
+    connector: AwsS3OcsfTrigger,
+):
+    async with async_temporary_file(b"") as f:
+        assert await async_list(connector._parse_content(f)) == []
 
 
 @pytest.fixture

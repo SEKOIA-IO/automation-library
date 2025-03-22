@@ -2,8 +2,8 @@
 
 import io
 import ipaddress
-from collections.abc import Sequence
-from typing import Any
+from collections.abc import AsyncGenerator, Sequence
+from typing import Any, BinaryIO
 
 import orjson
 import pandas
@@ -37,28 +37,26 @@ class AwsS3FlowLogsParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
 
         return all([ip.is_private for ip in ips])
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
         """
-        Parse the content of the object and return a list of records.
+        Parse content from S3 bucket.
 
         Args:
-            content: bytes
+            stream: BinaryIO
 
         Returns:
-            list[str]:
+             Generator:
         """
+        content = await stream.read()
         if len(content) == 0:
-            return []
+            return
 
-        # TODO: Check if we should save file locally with aiofiles and read it with pandas
         reader = io.BytesIO(content)
         df = pandas.read_parquet(reader)
 
-        records = []
         for record in df.to_dict(orient="records"):
             if len(record) > 0:
                 if not self.check_all_ips_are_private(record, ("srcaddr", "dstaddr")):
-                    records.append(orjson.dumps(record).decode("utf-8"))
+                    yield orjson.dumps(record).decode("utf-8")
                 else:
                     DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
-        return records

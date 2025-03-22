@@ -3,11 +3,13 @@
 import json
 from pathlib import Path
 
+
 import pytest
 from faker import Faker
 
 from connectors import AwsModule
 from connectors.s3.trigger_s3_cloudfront import AwsS3CloudFrontConfiguration, AwsS3CloudFrontTrigger
+from tests.helpers import async_list, async_temporary_file
 
 
 @pytest.fixture
@@ -83,53 +85,65 @@ def connector(
     return connector
 
 
-def test_aws_s3_logs_trigger_parse_data(connector: AwsS3CloudFrontTrigger, test_data_3_1: bytes):
-    decoded_records = [json.loads(record) for record in connector._parse_content(test_data_3_1)]
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data(connector: AwsS3CloudFrontTrigger, test_data_3_1: bytes):
+    async with async_temporary_file(test_data_3_1) as stream:
+        decoded_records = [json.loads(record) async for record in connector._parse_content(stream)]
 
-    assert len(decoded_records) == 1
-    assert decoded_records[0]["start_time"]
-    assert decoded_records[0]["end_time"]
-    assert decoded_records[0]["count"] == 3
-
-
-def test_aws_s3_logs_trigger_parse_data_3_2_2(connector: AwsS3CloudFrontTrigger, test_data_3_2_2: bytes):
-    decoded_records = [json.loads(record) for record in connector._parse_content(test_data_3_2_2)]
-
-    assert len(decoded_records) == 2
-    assert decoded_records[0]["start_time"]
-    assert decoded_records[0]["end_time"]
-    assert decoded_records[0]["count"] == 3
-    assert decoded_records[1]["count"] == 2
+        assert len(decoded_records) == 1
+        assert decoded_records[0]["start_time"]
+        assert decoded_records[0]["end_time"]
+        assert decoded_records[0]["count"] == 3
 
 
-def test_aws_s3_logs_trigger_parse_data_2_2(connector: AwsS3CloudFrontTrigger, test_data_2_2: bytes):
-    decoded_records = [json.loads(record) for record in connector._parse_content(test_data_2_2)]
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data_3_2_2(connector: AwsS3CloudFrontTrigger, test_data_3_2_2: bytes):
+    async with async_temporary_file(test_data_3_2_2) as stream:
+        decoded_records = [json.loads(record) async for record in connector._parse_content(stream)]
 
-    assert len(decoded_records) == 2
-    assert decoded_records[0]["start_time"]
-    assert decoded_records[0]["end_time"]
-    assert decoded_records[0]["count"] == 1
-
-
-def test_aws_s3_logs_trigger_parse_data_1_1(connector: AwsS3CloudFrontTrigger, test_data_1_1: bytes):
-    decoded_records = [json.loads(record) for record in connector._parse_content(test_data_1_1)]
-
-    assert len(decoded_records) == 1
-    assert decoded_records[0]["start_time"]
-    assert decoded_records[0]["end_time"]
-    assert decoded_records[0]["count"] == 1
+        assert len(decoded_records) == 2
+        assert decoded_records[0]["start_time"]
+        assert decoded_records[0]["end_time"]
+        assert decoded_records[0]["count"] == 3
+        assert decoded_records[1]["count"] == 2
 
 
-def test_aws_s3_logs_trigger_parse_data_3_2_1_3(connector: AwsS3CloudFrontTrigger, test_data_3_2_1_3: bytes):
-    decoded_records = [json.loads(record) for record in connector._parse_content(test_data_3_2_1_3)]
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data_2_2(connector: AwsS3CloudFrontTrigger, test_data_2_2: bytes):
+    async with async_temporary_file(test_data_2_2) as stream:
+        decoded_records = [json.loads(record) async for record in connector._parse_content(stream)]
 
-    assert len(decoded_records) == 3
-    assert decoded_records[0]["start_time"]
-    assert decoded_records[0]["end_time"]
-    assert decoded_records[0]["count"] == 3
-    assert decoded_records[1]["count"] == 2
-    assert decoded_records[2]["count"] == 1
+        assert len(decoded_records) == 2
+        assert decoded_records[0]["start_time"]
+        assert decoded_records[0]["end_time"]
+        assert decoded_records[0]["count"] == 1
 
 
-def test_aws_s3_logs_trigger_without_records(connector: AwsS3CloudFrontTrigger):
-    assert connector._parse_content(b"") == []
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data_1_1(connector: AwsS3CloudFrontTrigger, test_data_1_1: bytes):
+    async with async_temporary_file(test_data_1_1) as stream:
+        decoded_records = [json.loads(record) async for record in connector._parse_content(stream)]
+
+        assert len(decoded_records) == 1
+        assert decoded_records[0]["start_time"]
+        assert decoded_records[0]["end_time"]
+        assert decoded_records[0]["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data_3_2_1_3(connector: AwsS3CloudFrontTrigger, test_data_3_2_1_3: bytes):
+    async with async_temporary_file(test_data_3_2_1_3) as stream:
+        decoded_records = [json.loads(record) async for record in connector._parse_content(stream)]
+
+        assert len(decoded_records) == 3
+        assert decoded_records[0]["start_time"]
+        assert decoded_records[0]["end_time"]
+        assert decoded_records[0]["count"] == 3
+        assert decoded_records[1]["count"] == 2
+        assert decoded_records[2]["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_without_records(connector: AwsS3CloudFrontTrigger):
+    async with async_temporary_file(b"") as f:
+        assert await async_list(connector._parse_content(f)) == []
