@@ -30,9 +30,9 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
         Returns:
              Generator:
         """
-        content = await stream.read()
+        records = (line[:-1].decode("utf-8") for line in await stream.readlines())
 
-        for record in content.decode("utf-8").split("\n"):
+        for record in records:
             if len(record) > 0:
                 try:
                     json_record = json.loads(record)
