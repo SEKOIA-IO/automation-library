@@ -15,6 +15,7 @@ sekoia-automation-sdk = "^1.13.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
+pytest-asyncio = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
