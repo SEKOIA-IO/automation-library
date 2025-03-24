@@ -113,7 +113,10 @@ def test_single_event_triggers_updated(
 
         # All other notification types should not
         for notification in sample_case_notifications:
-            if not (notification["action"] == "updated" and notification["type"] == "case"):
+            if (
+                notification["action"] != "updated"
+                or notification["type"] != "case"
+            ):
                 trigger.handle_event(notification)
 
         trigger.send_event.assert_called_once()
