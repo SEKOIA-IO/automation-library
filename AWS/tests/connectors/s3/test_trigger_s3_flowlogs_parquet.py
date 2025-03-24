@@ -49,7 +49,7 @@ async def test_aws_s3_flowlogs_records_trigger_parse_content(connector: AwsS3Flo
     with open(current_dir + "/test_parquet_result.json", "rb") as f:
         expected_result = orjson.loads(f.read())
 
-    async with aiofiles.open(current_dir + "/test_parquet.parquet", "rb") as f:
+    async with aiofiles.open(f"{current_dir}/test_parquet.parquet", "rb") as f:
         assert await async_list(connector._parse_content(f)) == expected_result
 
 

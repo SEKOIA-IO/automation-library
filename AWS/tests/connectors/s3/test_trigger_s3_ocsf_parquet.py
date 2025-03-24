@@ -48,7 +48,7 @@ async def test_aws_s3_ocsf_trigger_parse_content(
         connector: AwsS3RecordsTrigger
     """
     current_dir = path.dirname(__file__)
-    async with aiofiles.open(current_dir + "/test_ocsf.parquet", "rb") as f:
+    async with aiofiles.open(f"{current_dir}/test_ocsf.parquet", "rb") as f:
         assert await async_list(connector._parse_content(f)) != []
 
 
