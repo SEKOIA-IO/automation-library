@@ -16,11 +16,9 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
 
     def _filter_notifications(self, message) -> bool:
         case_attrs = message.get("attributes", {})
-        print("case_attrs", case_attrs)
 
         # Filter by mode
         mode_filter = self.configuration.get("mode_filter")
-        print("mode_filter", mode_filter)
         if mode_filter and case_attrs.get("manual") != (mode_filter == "manual"):
             return False
 
