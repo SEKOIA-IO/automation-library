@@ -1,7 +1,7 @@
 import json
 from collections.abc import AsyncGenerator
-from typing import BinaryIO
 
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from deep_visibility.metrics import DISCARDED_EVENTS
 
@@ -20,12 +20,12 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
 
-    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            stream: BinaryIO
+            stream: AsyncReader
 
         Returns:
              Generator:
