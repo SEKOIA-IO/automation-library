@@ -1,10 +1,11 @@
 """Contains AwsS3RecordsTrigger."""
 
 from collections.abc import AsyncGenerator
-from typing import Any, BinaryIO
+from typing import Any
 
 import orjson
 
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector
 
 
@@ -79,12 +80,12 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
 
         return len(supported) == 0 and len(unsupported) != 0
 
-    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            stream: BinaryIO
+            stream: AsyncReader
 
         Returns:
              Generator:

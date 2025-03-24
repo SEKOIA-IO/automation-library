@@ -1,6 +1,7 @@
 import asyncio
 import io
 import gzip
+from abc import ABCMeta, abstractmethod
 from concurrent.futures import Executor
 from functools import partial
 from typing import Any, BinaryIO
@@ -52,6 +53,13 @@ def normalize_s3_key(key: str) -> str:
         str:
     """
     return unquote(key)
+
+
+class AsyncReader(metaclass=ABCMeta):
+
+    @abstractmethod
+    async def read(self, size: int = -1, /) -> Any:
+        return NotImplemented
 
 
 async def async_gzip_open(

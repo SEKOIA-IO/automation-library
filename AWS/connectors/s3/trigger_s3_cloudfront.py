@@ -4,11 +4,12 @@ import datetime
 import time
 from collections.abc import AsyncGenerator
 from itertools import groupby, islice
-from typing import Any, BinaryIO
+from typing import Any
 
 import orjson
 import pandas as pd
 
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
@@ -130,12 +131,12 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         return self.records_to_json(results)
 
-    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            stream: BinaryIO
+            stream: AsyncReader
 
         Returns:
              Generator:
