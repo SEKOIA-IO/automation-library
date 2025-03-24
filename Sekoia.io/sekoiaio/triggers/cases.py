@@ -16,9 +16,11 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
 
     def _filter_notifications(self, message) -> bool:
         case_attrs = message.get("attributes", {})
+        print("case_attrs", case_attrs)
 
         # Filter by mode
         mode_filter = self.configuration.get("mode_filter")
+        print("mode_filter", mode_filter)
         if mode_filter and case_attrs.get("manual") != (mode_filter == "manual"):
             return False
 
@@ -128,18 +130,18 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
 
         directory = str(work_dir.relative_to(self._data_path))
 
-        case_short_id = case.get("short_id")
+        case_short_id = case_attrs.get("short_id")
         event = {
             "uuid": case_uuid,
             "short_id": case_short_id,
-            "created_at": case.get("created_at"),
+            "created_at": case_attrs.get("created_at"),
             "created_by": case.get("created_by"),
-            "mode": "manual" if case.get("manual") else "automatic",
-            "title": case.get("title"),
+            "mode": "manual" if case_attrs.get("manual") else "automatic",
+            "title": case_attrs.get("title"),
             "description": case.get("description"),
             "community_uuid": case.get("community_uuid"),
             "assignees": case.get("assignees", []),
-            "priority_uuid": case.get("custom_priority_uuid"),
+            "priority_uuid": case_attrs.get("custom_priority_uuid"),
             "status_uuid": case.get("status_uuid"),
             "tags": case.get("tags", []),
         }

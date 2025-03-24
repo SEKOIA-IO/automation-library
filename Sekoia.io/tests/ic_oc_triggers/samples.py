@@ -1249,19 +1249,19 @@ def sample_case_notifications(
 @pytest.fixture
 def sample_siccaseapi():
     """Sample SICCaseAPI response for a case with
-    UUID 296ccdd9-2f44-4dbb-aef0-35eafbfe6ae4"""
+    UUID f014aac5-2d38-49f6-a47f-ff602c734d51"""
 
     yield {
-        "uuid": "296ccdd9-2f44-4dbb-aef0-35eafbfe6ae4",
-        "short_id": "CALD4s33Zrk7",
+        "uuid": "f014aac5-2d38-49f6-a47f-ff602c734d51",
+        "short_id": "CAmDUb2Anct1e",
         "created_at": "2024-10-25T18:32:06.464890+00:00",
         "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
         "created_by_type": "application",
         "updated_at": "2025-03-17T15:04:04.858932+00:00",
         "updated_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
         "updated_by_type": "application",
-        "title": "Malware Detection: Cobalt Strike Incident",
-        "description": "Sekoia CTI alert: Potential Cobalt Strike attack detected.",
+        "title": "Test new case",
+        "description": "Test for cases",
         "priority": "medium",
         "status": "opened",
         "status_uuid": "6adc2d64-87ee-4394-b8b4-0102cf80fc1b",
@@ -1271,7 +1271,7 @@ def sample_siccaseapi():
         "number_of_comments": 0,
         "first_seen_at": "2024-10-25T12:29:08.454603Z",
         "last_seen_at": "2025-03-17T15:03:42.417292Z",
-        "manual": False,
+        "manual": True,
         "is_supplied": False,
         "verdict_uuid": None,
         "custom_status_uuid": None,
@@ -1280,7 +1280,7 @@ def sample_siccaseapi():
         "number_of_alerts": 3,
         "alerts": [
             {
-                "uuid": "9dc33958-5842-441f-810b-f286824d2049",
+                "uuid": "a1b8202b-b593-4f1d-9c7e-2203d53fdf48",
                 "title": "SEKOIA Intelligence Feed",
                 "created_at": 1729859653,
                 "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
@@ -1334,7 +1334,7 @@ def sample_siccaseapi():
                 "intake_uuids": ["834a2d7f-3623-4b26-9f9e-c8b6e1efcc16"],
             },
             {
-                "uuid": "d00db9f4-4d9d-4f08-8534-276fb57b5d24",
+                "uuid": "1391c809-4630-45df-91ed-8154435b9f17",
                 "title": "SEKOIA Intelligence Feed",
                 "created_at": 1729881125,
                 "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
