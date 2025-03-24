@@ -46,5 +46,5 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
                         continue
 
                     yield record
-                except:
-                    pass
+                except Exception as e:
+                    self.log(message=f"Failed to parse a record: {str(e)}", level="warning")
