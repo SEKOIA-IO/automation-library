@@ -107,14 +107,10 @@ def test_single_event_triggers_updated(
     trigger.send_event = MagicMock()
 
     with sample_siccaseapi_mock:
-        
+
         # Edge case: notification with empty 'updated' attribute
         trigger.send_event.reset_mock()
-        empty_updated_notification = {
-            "action": "updated",
-            "type": "case",
-            "updated": ""
-        }
+        empty_updated_notification = {"action": "updated", "type": "case", "updated": ""}
         trigger.handle_event(empty_updated_notification)
         trigger.send_event.assert_not_called()
 
@@ -123,7 +119,7 @@ def test_single_event_triggers_updated(
         unexpected_keys_notification = {
             "action": "updated",
             "type": "case",
-            "updated": {"unexpected_key": "unexpected_value"}
+            "updated": {"unexpected_key": "unexpected_value"},
         }
         trigger.handle_event(unexpected_keys_notification)
         trigger.send_event.assert_not_called()
@@ -134,10 +130,7 @@ def test_single_event_triggers_updated(
 
         # All other notification types should not
         for notification in sample_case_notifications:
-            if (
-                notification["action"] != "updated"
-                or notification["type"] != "case"
-            ):
+            if notification["action"] != "updated" or notification["type"] != "case":
                 trigger.handle_event(notification)
 
         trigger.send_event.assert_called_once()
