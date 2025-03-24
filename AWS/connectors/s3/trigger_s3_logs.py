@@ -2,8 +2,8 @@
 
 from collections.abc import AsyncGenerator
 from itertools import islice
-from typing import BinaryIO
 
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
@@ -21,12 +21,12 @@ class AwsS3LogsTrigger(AbstractAwsS3QueuedConnector):
     configuration: AwsS3LogsConfiguration
     name = "AWS S3 Logs"
 
-    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            stream: BinaryIO
+            stream: AsyncReader
 
         Returns:
              Generator:

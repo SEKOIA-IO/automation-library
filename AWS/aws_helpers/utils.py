@@ -1,9 +1,10 @@
 import asyncio
 import io
 import gzip
+from abc import abstractmethod
 from concurrent.futures import Executor
 from functools import partial
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Protocol
 from urllib.parse import unquote
 
 from aiofiles.threadpool.binary import AsyncBufferedReader
@@ -52,6 +53,13 @@ def normalize_s3_key(key: str) -> str:
         str:
     """
     return unquote(key)
+
+
+class AsyncReader(Protocol):
+
+    @abstractmethod
+    async def read(self, size: int = -1, /) -> Any:
+        return NotImplemented
 
 
 async def async_gzip_open(

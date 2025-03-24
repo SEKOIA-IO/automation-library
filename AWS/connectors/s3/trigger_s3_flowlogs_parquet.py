@@ -3,11 +3,12 @@
 import io
 import ipaddress
 from collections.abc import AsyncGenerator, Sequence
-from typing import Any, BinaryIO
+from typing import Any
 
 import orjson
 import pandas
 
+from aws_helpers.utils import AsyncReader
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector
 
@@ -37,12 +38,12 @@ class AwsS3FlowLogsParquetRecordsTrigger(AbstractAwsS3QueuedConnector):
 
         return all([ip.is_private for ip in ips])
 
-    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            stream: BinaryIO
+            stream: AsyncReader
 
         Returns:
              Generator:

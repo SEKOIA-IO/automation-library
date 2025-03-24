@@ -4,13 +4,12 @@ import gzip
 import io
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import BinaryIO
 
 from loguru import logger
 from pydantic import Field
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 
-from aws_helpers.utils import async_gzip_open
+from aws_helpers.utils import async_gzip_open, AsyncReader
 
 
 class S3Configuration(AwsConfiguration):
@@ -32,7 +31,7 @@ class S3Wrapper(AwsClient[S3Configuration]):
         super().__init__(configuration)
 
     @asynccontextmanager
-    async def read_key(self, key: str, bucket: str | None = None) -> AsyncGenerator[BinaryIO, None]:
+    async def read_key(self, key: str, bucket: str | None = None) -> AsyncGenerator[AsyncReader, None]:
         """
         Reads text file from S3 bucket.
 

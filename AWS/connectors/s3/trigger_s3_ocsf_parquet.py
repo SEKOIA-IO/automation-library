@@ -2,11 +2,12 @@
 
 import io
 from collections.abc import AsyncGenerator
-from typing import Any, BinaryIO
+from typing import Any
 
 import orjson
 import pandas
 
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector
 
 
@@ -29,12 +30,12 @@ class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
             "object", {}
         ).get("key")
 
-    async def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            stream: BinaryIO
+            stream: AsyncReader
 
         Returns:
              Generator:

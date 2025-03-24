@@ -10,7 +10,7 @@ import orjson
 
 from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
 from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
-from aws_helpers.utils import normalize_s3_key
+from aws_helpers.utils import normalize_s3_key, AsyncReader
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
 
@@ -71,7 +71,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return SqsWrapper(config)
 
-    def _parse_content(self, stream: BinaryIO) -> AsyncGenerator[str, None]:  # pragma: no cover
+    def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:  # pragma: no cover
         """
         Parse the content of the S3 object and return the records as a generator.
 
