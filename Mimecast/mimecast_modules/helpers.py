@@ -87,9 +87,9 @@ async def async_download_batch(urls: list[str]) -> AsyncGenerator[dict, None]:
                 yield json.loads(line)
 
 
-def download_batches(urls: list[str], use_async=True) -> Generator[dict, None, None]:
-    if use_async:
-        yield from AsyncGeneratorConverter(async_download_batch(urls), asyncio.get_event_loop())
+def download_batches(urls: list[str], loop: asyncio.AbstractEventLoop | None = None) -> Generator[dict, None, None]:
+    if loop:
+        yield from AsyncGeneratorConverter(async_download_batch(urls), loop)
 
     else:
         yield from sync_download_batch(urls)
