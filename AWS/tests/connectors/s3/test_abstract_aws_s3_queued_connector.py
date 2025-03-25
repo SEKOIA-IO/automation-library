@@ -96,7 +96,7 @@ def abstract_queued_connector(
 
     connector.push_data_to_intakes = mock_push_data_to_intakes
 
-    def _parse_content(content: bytes) -> list[str]:
+    def _parse_content(content: bytes) -> int:
         """
         Parse the content of the object and return a list of records.
 
@@ -105,11 +105,11 @@ def abstract_queued_connector(
         """
         result = content.decode("utf-8")
         if result:
-            return [result]
+            return 1
 
-        return []
+        return 0
 
-    connector._parse_content = MagicMock(side_effect=_parse_content)
+    connector._process_content = AsyncMock(side_effect=_parse_content)
     connector.log = MagicMock()
     connector.log_exception = MagicMock()
 

@@ -78,7 +78,7 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
 
         return len(supported) == 0 and len(unsupported) != 0
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _process_content(self, content: bytes) -> int:
         """
         Parse the content of the object and return a list of records.
 
@@ -89,14 +89,21 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
             list[str]:
         """
         if len(content) == 0:
-            return []
+            return 0
 
         records = []
+        total_count = 0
         for data in orjson.loads(content).get("Records", []):
             # https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-examples.html
             # Go through each element in list and add to result_data if it is a valid payload based on this
             # https://github.com/SEKOIA-IO/automation-library/issues/346
             if len(data) > 0 and self.is_valid_payload(data):
                 records.append(orjson.dumps(data).decode("utf-8"))
+                if len(records) >= self.limit_of_events_to_push:
+                    total_count += len(await self.push_data_to_intakes(events=records))
+                    records = []
 
-        return records
+        if records:
+            total_count += len(await self.push_data_to_intakes(events=records))
+
+        return total_count
