@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-20 - 1.1.11
+
+### Fixed
+
+- Fix condition to stop iteration over the list of events
+
 ## 2025-03-20 - 1.1.10
 
 ### Fixed
