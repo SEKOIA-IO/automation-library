@@ -42,9 +42,14 @@ def test_query(data_storage, azure_monitor_module, arguments):
         action = AzureMonitorQueryAction(module=azure_monitor_module, data_path=data_storage)
         result = action.run(arguments)
 
-        assert result == [
-            [
-                {"timestamp": "2024-03-10T12:00:00Z", "message": "Test log entry 1"},
-                {"timestamp": "2024-03-10T12:05:00Z", "message": "Test log entry 2"},
+        assert result == {
+            "data": [
+                {
+                    "name": "MockTable",
+                    "records": [
+                        {"timestamp": "2024-03-10T12:00:00Z", "message": "Test log entry 1"},
+                        {"timestamp": "2024-03-10T12:05:00Z", "message": "Test log entry 2"},
+                    ],
+                }
             ]
-        ]
+        }
