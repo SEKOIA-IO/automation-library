@@ -6,7 +6,7 @@ from abc import ABCMeta
 from functools import cached_property
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
