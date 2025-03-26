@@ -35,7 +35,7 @@
   },
   "description": "Execute an Analytics query",
   "docker_parameters": "action_query_logs",
-  "name": "Query Azure Monitor Logs",
+  "name": "[BETA] Query Azure Monitor Logs",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
