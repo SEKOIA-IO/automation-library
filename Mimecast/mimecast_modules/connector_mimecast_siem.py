@@ -135,10 +135,6 @@ class MimecastSIEMWorker(Thread):
                     INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                     yield events
 
-                else:
-                    logger.info("The last page of events was empty", log_type=self.log_type)
-                    return
-
             nextPageToken = result.get("@nextPage")
             if result["isCaughtUp"] is True or not nextPageToken:
                 return
