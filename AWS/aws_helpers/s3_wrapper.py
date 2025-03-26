@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from loguru import logger
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 
 from aws_helpers.utils import async_gzip_open, AsyncReader
