@@ -10,18 +10,17 @@ from requests.exceptions import JSONDecodeError
 class ZscalerAction(Action):
     def zia_auth(self):
         try:
-            api = ZiaTalker(
+            return ZiaTalker(
                 cloud_name=self.module.configuration["base_url"],
                 api_key=self.module.configuration["api_key"],
                 username=self.module.configuration["username"],
                 password=self.module.configuration["password"],
             )
-            return api
 
         except Exception as e:
             self.log(f"ZIA authentication failed", level="critical")
             self.log_exception(e)
-            return None
+            raise
 
     def get_valid_indicators_from_list(self, arguments) -> list:
         try:
