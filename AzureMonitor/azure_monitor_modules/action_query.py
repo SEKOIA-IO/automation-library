@@ -69,6 +69,6 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
                 }
                 for row in table.rows
             ]
-            result.append(table_records)
+            result.append({"name": table.name, "records": table_records})
 
-        return result
+        return {"data": result}
