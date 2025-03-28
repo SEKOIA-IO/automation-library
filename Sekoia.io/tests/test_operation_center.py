@@ -217,7 +217,7 @@ def test_remove_event_from_case():
 
     ressource = "cases/fake_uuid/events/fake_event_uuid"
     expected_response = {}
-    arguments = {"uuid": "fake_uuid", "event_id": "fake_event_uuid"}
+    arguments = {"case_uuid": "fake_uuid", "event_id": "fake_event_uuid"}
 
     with requests_mock.Mocker() as mock:
         mock.delete(f"{base_url}{ressource}", json=expected_response)
@@ -253,7 +253,7 @@ def test_delete_case():
 
     ressource = "cases/fake_uuid"
 
-    arguments = {"uuid": "fake_uuid"}
+    arguments = {"case_uuid": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
         mock.delete(f"{base_url}{ressource}", json=case_expected_response)
