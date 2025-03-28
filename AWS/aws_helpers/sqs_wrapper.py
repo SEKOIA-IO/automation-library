@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from async_lru import alru_cache
 from loguru import logger
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 
 
