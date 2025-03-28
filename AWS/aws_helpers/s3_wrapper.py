@@ -1,15 +1,17 @@
 """Aws s3 wrapper."""
 
+import asyncio
 import gzip
 import io
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from aiofiles.threadpool.binary import AsyncBufferedReader
 from loguru import logger
 from pydantic.v1 import Field
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 
-from aws_helpers.utils import async_gzip_open, AsyncReader
+from aws_helpers.utils import is_gzip_compressed, async_gzip_open, AsyncReader
 
 
 class S3Configuration(AwsConfiguration):
@@ -31,7 +33,9 @@ class S3Wrapper(AwsClient[S3Configuration]):
         super().__init__(configuration)
 
     @asynccontextmanager
-    async def read_key(self, key: str, bucket: str | None = None) -> AsyncGenerator[AsyncReader, None]:
+    async def read_key(
+        self, key: str, bucket: str | None = None, loop: asyncio.AbstractEventLoop | None = None
+    ) -> AsyncGenerator[AsyncReader, None]:
         """
         Reads text file from S3 bucket.
 
@@ -44,15 +48,16 @@ class S3Wrapper(AwsClient[S3Configuration]):
         """
         bucket = bucket or self._configuration.bucket
 
+        if loop is None:
+            loop = asyncio.get_running_loop()
+
         logger.info(f"Reading object {key} from bucket {bucket}")
 
         async with self.get_client("s3") as s3:
             response = await s3.get_object(Bucket=bucket, Key=key)
             async with response["Body"] as stream:
-                if response.get("ContentEncoding") == "gzip" or response.get("ContentType") in [
-                    "application/gzip",
-                    "application/x-gzip",
-                ]:
-                    yield await async_gzip_open(io.BytesIO(await stream.read()))
+                content = io.BytesIO(await stream.read())
+                if is_gzip_compressed(content.getbuffer()):
+                    yield await async_gzip_open(content, loop=loop)
                 else:
-                    yield stream
+                    yield AsyncBufferedReader(content, loop=loop, executor=None)
