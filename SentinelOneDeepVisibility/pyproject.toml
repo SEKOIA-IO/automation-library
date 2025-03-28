@@ -10,11 +10,12 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
+sekoia-automation-sdk = "^1.18.3"
 "aws-automation" = {path = "../AWS", develop = false}
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
+pytest-asyncio = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
