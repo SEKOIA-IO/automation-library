@@ -57,18 +57,18 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
                 data = response.partial_data
                 self.log(error, level="error")
 
+            result = []
+            for table in data:
+                table_records = [
+                    {
+                        col: self.format_date(value) if isinstance(value, datetime) else value
+                        for col, value in zip(table.columns, row)
+                    }
+                    for row in table.rows
+                ]
+                result.append({"name": table.name, "records": table_records})
+
+            return {"data": result}
+
         except HttpResponseError as err:
             self.log(message=str(err), level="error")
-
-        result = []
-        for table in data:
-            table_records = [
-                {
-                    col: self.format_date(value) if isinstance(value, datetime) else value
-                    for col, value in zip(table.columns, row)
-                }
-                for row in table.rows
-            ]
-            result.append({"name": table.name, "records": table_records})
-
-        return {"data": result}
