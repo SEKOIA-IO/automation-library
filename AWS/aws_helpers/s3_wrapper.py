@@ -49,7 +49,10 @@ class S3Wrapper(AwsClient[S3Configuration]):
         async with self.get_client("s3") as s3:
             response = await s3.get_object(Bucket=bucket, Key=key)
             async with response["Body"] as stream:
-                if response.get("ContentEncoding") == "gzip":
+                if response.get("ContentEncoding") == "gzip" or response.get("ContentType") in [
+                    "application/gzip",
+                    "application/x-gzip",
+                ]:
                     yield await async_gzip_open(io.BytesIO(await stream.read()))
                 else:
                     yield stream
