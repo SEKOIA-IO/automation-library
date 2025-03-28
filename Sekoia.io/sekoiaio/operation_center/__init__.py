@@ -209,6 +209,16 @@ UpdateCase = type(
     },
 )
 
+DeleteCase = type(
+    "DeleteCase",
+    (GenericAPIAction,),
+    {
+        "verb": "delete",
+        "endpoint": base_url + "cases/{case_uuid}",
+        "query_parameters": [],
+    },
+)
+
 AssociateNewAlertsOnCase = type(
     "AssociateNewAlertsOnCase",
     (GenericAPIAction,),
@@ -236,6 +246,16 @@ ListsAlertsAssociatedToCaseUuid = type(
     {
         "verb": "get",
         "endpoint": base_url + "cases/{case_uuid}/alerts",
+        "query_parameters": [],
+    },
+)
+
+RemoveEventFromCase = type(
+    "RemoveEventFromCase",
+    (GenericAPIAction,),
+    {
+        "verb": "delete",
+        "endpoint": base_url + "cases/{case_uuid}/events/{event_id}",
         "query_parameters": [],
     },
 )
@@ -272,7 +292,7 @@ DeleteCommentFromCase = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": base_url + "cases/{case_uuid}/comments/{comment_uuid}",
+        "endpoint": base_url + "cases/{uuid}/comments/{comment_uuid}",
         "query_parameters": [],
     },
 )
@@ -303,6 +323,36 @@ AddEventsToACase = type(
     {
         "verb": "post",
         "endpoint": base_url + "cases/{uuid}/events",
+        "query_parameters": [],
+    },
+)
+
+GetCustomStatus = type(
+    "GetCustomStatus",
+    (GenericAPIAction,),
+    {
+        "verb": "get",
+        "endpoint": base_url + "custom_statuses/{status_uuid}",
+        "query_parameters": [],
+    },
+)
+
+GetCustomPriority = type(
+    "GetCustomPriority",
+    (GenericAPIAction,),
+    {
+        "verb": "get",
+        "endpoint": base_url + "custom_priorities/{priority_uuid}",
+        "query_parameters": [],
+    },
+)
+
+GetCustomVerdict = type(
+    "GetCustomVerdict",
+    (GenericAPIAction,),
+    {
+        "verb": "get",
+        "endpoint": base_url + "custom_verdicts/{verdict_uuid}",
         "query_parameters": [],
     },
 )

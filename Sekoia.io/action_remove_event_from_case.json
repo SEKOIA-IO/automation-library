@@ -1,0 +1,28 @@
+{
+    "uuid": "1104fb84-780a-44b3-8bd8-13aa3f5416c0",
+    "name": "Remove event from case",
+    "docker_parameters": "remove_event_from_case",
+    "description": "Remove an event from a case",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "remove_event_from_case",
+        "properties": {
+            "case_uuid": {
+                "type": "string",
+                "format": "uuid",
+                "in": "path"
+            },
+            "event_id": {
+                "in": "path",
+                "format": "uuid",
+                "type": "string"
+            }
+        },
+        "required": [
+            "case_uuid",
+            "event_id"
+        ]
+    },
+    "results": {}
+}

@@ -118,11 +118,11 @@ def sample_sicalertapi():
                 "uuid": "de66615c-4e28-4da4-bfa4-7b5caf5ee19e",
                 "model_uuid": "7aa941f8-bc0a-4438-a7f7-d70e5c2a0507",
                 "created_by_type": "application",
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "name": "Countermeasure 7aa941f8-bc0a-4438-a7f7-d70e5c2a0507",
                 "action_steps": [
                     {
-                        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                         "description": "Launch a forensics tool to collect information on suspicious system",
                         "name": "1",
                         "activated_at": None,
@@ -186,11 +186,11 @@ def sample_sicalertapi():
                 "uuid": "51d50a83-31da-46b0-aa22-5adcd37aedb2",
                 "model_uuid": "4ba7d84d-0291-498e-b661-3cec45943ac7",
                 "created_by_type": "application",
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "name": "Countermeasure 4ba7d84d-0291-498e-b661-3cec45943ac7",
                 "action_steps": [
                     {
-                        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                         "description": "Record the traffic coming from the suspicious computer for analysis based on the IP address of the traffic source",
                         "name": "1",
                         "activated_at": None,
@@ -254,11 +254,11 @@ def sample_sicalertapi():
                 "uuid": "909fda4e-6823-41bb-8998-afd75424a6b3",
                 "model_uuid": "9c34bb79-5c48-4e0b-89cb-37d0eb1b5ba1",
                 "created_by_type": "application",
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "name": "Countermeasure 9c34bb79-5c48-4e0b-89cb-37d0eb1b5ba1",
                 "action_steps": [
                     {
-                        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                         "description": "Record the traffic coming from the suspicious computer for analysis based on the IP address of the traffic destination",
                         "name": "1",
                         "activated_at": None,
@@ -322,11 +322,11 @@ def sample_sicalertapi():
                 "uuid": "ce4abd6b-1553-413e-b549-9392de801c52",
                 "model_uuid": "2c5f2708-be09-4703-8790-38f600e05328",
                 "created_by_type": "application",
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "name": "Countermeasure 2c5f2708-be09-4703-8790-38f600e05328",
                 "action_steps": [
                     {
-                        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                         "description": "Collect memory to analyze malware later",
                         "name": "1",
                         "activated_at": None,
@@ -390,11 +390,11 @@ def sample_sicalertapi():
                 "uuid": "d6ce6868-207c-4a59-9775-55fdd1c2318c",
                 "model_uuid": "ad6f06cc-7c96-4920-8c4e-d120eaec8a4a",
                 "created_by_type": "application",
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "name": "Countermeasure ad6f06cc-7c96-4920-8c4e-d120eaec8a4a",
                 "action_steps": [
                     {
-                        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                         "description": "Search for additional information on the case",
                         "name": "1",
                         "activated_at": None,
@@ -451,11 +451,11 @@ def sample_sicalertapi():
                 "uuid": "ced96fc1-d6f1-4935-9978-3f367552234c",
                 "model_uuid": "6e351037-2e65-44a5-9891-c9a3f01c0e8f",
                 "created_by_type": "application",
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "name": "Countermeasure 6e351037-2e65-44a5-9891-c9a3f01c0e8f",
                 "action_steps": [
                     {
-                        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                         "description": "Retrieve the list of running processes",
                         "name": "1",
                         "activated_at": None,
@@ -519,11 +519,11 @@ def sample_sicalertapi():
                 "uuid": "cb83cf8b-c31a-4df7-b05b-c78ef3446fc2",
                 "model_uuid": "88ff9b6e-a0ee-4470-92ff-d9f7fe1b6232",
                 "created_by_type": "application",
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "name": "Countermeasure 88ff9b6e-a0ee-4470-92ff-d9f7fe1b6232",
                 "action_steps": [
                     {
-                        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                         "description": "Block the IP address of the destination system",
                         "name": "1",
                         "activated_at": None,
@@ -588,7 +588,7 @@ def sample_sicalertapi():
         "short_id": "ALTqhwoRAyqk",
         "created_by_type": "application",
         "details": "Traffic associated to a Remote Administration Tool",
-        "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
         "stix": {
             "type": "bundle",
             "id": "bundle--0661dffc-6deb-45c0-8a41-36187d932543",
@@ -925,11 +925,11 @@ def sample_sicalertapi():
             "severity": 95,
             "pattern": "[ipv4-addr:value='192.0.0.241']",
         },
-        "updated_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+        "updated_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
         "similar": 0,
         "history": [
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "3060ad65-a55f-4425-8e28-54b22fd67509",
                 "entry_type": "alert",
@@ -938,7 +938,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "5bbaa276-3aa8-46bf-81a3-2ea3fac87867",
                 "entry_type": "alert",
@@ -947,7 +947,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "757a6a83-fa5e-499b-81de-d9fabd971b6c",
                 "countermeasure": {
@@ -960,7 +960,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "a8e7f933-dfc6-4b29-8852-1797bf6067bc",
                 "countermeasure": {
@@ -972,7 +972,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "ab5ad122-2dd4-4a09-916d-d9b19247675b",
                 "countermeasure": {
@@ -985,7 +985,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "ef0314ba-15b6-41e8-9b7c-566f62968b2d",
                 "countermeasure": {
@@ -997,7 +997,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "2e1a4745-ab4b-45bb-8629-50a6838fb073",
                 "countermeasure": {
@@ -1010,7 +1010,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "3322ee5a-2686-4712-9bbb-83a1890409e1",
                 "countermeasure": {
@@ -1022,7 +1022,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "db286da8-8487-4b34-803c-3ad31edbe45b",
                 "countermeasure": {
@@ -1035,7 +1035,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "92733aa5-8bdf-4041-98e1-ba2acb1e2836",
                 "countermeasure": {
@@ -1047,7 +1047,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "4bd9572a-e421-4eb6-92d3-a5c7d7e6d161",
                 "countermeasure": {
@@ -1060,7 +1060,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "d52c5560-51e5-461b-8224-d1332874558c",
                 "countermeasure": {
@@ -1072,7 +1072,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "63407c1d-d3f5-43d2-ba5b-5dc9986f1bd9",
                 "countermeasure": {
@@ -1085,7 +1085,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "06404c71-cc9d-49bf-bbea-994ffbcdb923",
                 "countermeasure": {
@@ -1097,7 +1097,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "16987e43-af8a-4864-ae24-cef2ee118366",
                 "countermeasure": {
@@ -1110,7 +1110,7 @@ def sample_sicalertapi():
                 "created_by_type": "application",
             },
             {
-                "created_by": "59899459-d385-48da-9c0e-1d91ebe42c4a",
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
                 "history_comments": [],
                 "uuid": "144602ea-dc46-477e-b40d-fa0c09dbd8f5",
                 "countermeasure": {
@@ -1130,4 +1130,354 @@ def sample_sicalertapi():
             "description": "Countermeasures will be applied",
         },
         "target": "192.0.0.241",
+    }
+
+
+@pytest.fixture
+def samplenotif_case_created():
+    yield {
+        "metadata": {
+            "version": 2,
+            "uuid": "e5cadc88-ce1f-455c-8792-cb7badbf1dae",
+            "created_at": "2019-09-06T07:32:03.256679+00:00",
+            "community_uuid": "55890e1b-b693-4c5f-b747-118f88afc30a",
+        },
+        "type": "case",
+        "action": "created",
+        "attributes": {
+            "uuid": "f014aac5-2d38-49f6-a47f-ff602c734d51",
+            "short_id": "CAmDUb2Anct1e",
+            "manual": True,
+            "title": "Test new case",
+            "priority": "medium",
+            "created_at": "2025-02-06T15:05:44.016485",
+            "custom_priority_uuid": "d4035e46-3a60-4dc8-a91a-ac7a80d04688",
+        },
+    }
+
+
+@pytest.fixture
+def samplenotif_case_updated():
+    yield {
+        "metadata": {
+            "version": 2,
+            "uuid": "927b628a-7099-4ee4-bccb-8efdb694882d",
+            "created_at": "2019-09-06T07:32:03.256679+00:00",
+            "community_uuid": "55890e1b-b693-4c5f-b747-118f88afc30a",
+        },
+        "type": "case",
+        "action": "updated",
+        "attributes": {
+            "uuid": "f014aac5-2d38-49f6-a47f-ff602c734d51",
+            "short_id": "CAmDUb2Anct1e",
+            "manual": True,
+            "title": "Test new case",
+            "priority": "medium",
+            "created_at": "2025-02-06T15:05:44.016485",
+            "custom_priority_uuid": "d4035e46-3a60-4dc8-a91a-ac7a80d04688",
+            "updated": {"tags": ["tag1", "tag2"], "description": "I've updated my case"},
+        },
+    }
+
+
+@pytest.fixture
+def samplenotif_case_has_new_alert():
+    yield {
+        "metadata": {
+            "version": 2,
+            "uuid": "927b628a-7099-4ee4-bccb-8efdb694882d",
+            "created_at": "2019-09-06T07:32:03.256679+00:00",
+            "community_uuid": "55890e1b-b693-4c5f-b747-118f88afc30a",
+        },
+        "type": "case",
+        "action": "alerts-updated",
+        "attributes": {
+            "uuid": "f014aac5-2d38-49f6-a47f-ff602c734d51",
+            "short_id": "CAmDUb2Anct1e",
+            "manual": True,
+            "title": "Test new case",
+            "priority": "medium",
+            "created_at": "2025-02-06T15:05:44.016485",
+            "custom_priority_uuid": "d4035e46-3a60-4dc8-a91a-ac7a80d04688",
+            "updated": {"added_alerts_uuid": ["adc66869-25e6-4d7f-987b-5e1bcdf8f256"]},
+        },
+    }
+
+
+@pytest.fixture
+def samplenotif_case_has_updated_alerts():
+    yield {
+        "metadata": {
+            "version": 2,
+            "uuid": "927b628a-7099-4ee4-bccb-8efdb694882d",
+            "created_at": "2019-09-06T07:32:03.256679+00:00",
+            "community_uuid": "55890e1b-b693-4c5f-b747-118f88afc30a",
+        },
+        "type": "case",
+        "action": "alerts-updated",
+        "attributes": {
+            "uuid": "f014aac5-2d38-49f6-a47f-ff602c734d51",
+            "short_id": "CAmDUb2Anct1e",
+            "manual": True,
+            "title": "Test new case",
+            "priority": "medium",
+            "created_at": "2025-02-06T15:05:44.016485",
+            "custom_priority_uuid": "d4035e46-3a60-4dc8-a91a-ac7a80d04688",
+            "updated": {
+                "added_alerts_uuid": ["1391c809-4630-45df-91ed-8154435b9f17"],
+                "deleted_alerts_uuid": ["adc66869-25e6-4d7f-987b-5e1bcdf8f256"],
+            },
+        },
+    }
+
+
+@pytest.fixture
+def sample_case_notifications(
+    samplenotif_case_created,
+    samplenotif_case_updated,
+    samplenotif_case_has_new_alert,
+    samplenotif_case_has_updated_alerts,
+):
+    yield [
+        samplenotif_case_created,
+        samplenotif_case_updated,
+        samplenotif_case_has_new_alert,
+        samplenotif_case_has_updated_alerts,
+    ]
+
+
+@pytest.fixture
+def sample_siccaseapi():
+    """Sample SICCaseAPI response for a case with
+    UUID f014aac5-2d38-49f6-a47f-ff602c734d51"""
+
+    yield {
+        "uuid": "f014aac5-2d38-49f6-a47f-ff602c734d51",
+        "short_id": "CAmDUb2Anct1e",
+        "created_at": "2024-10-25T18:32:06.464890+00:00",
+        "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+        "created_by_type": "application",
+        "updated_at": "2025-03-17T15:04:04.858932+00:00",
+        "updated_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+        "updated_by_type": "application",
+        "title": "Test new case",
+        "description": "Test for cases",
+        "priority": "medium",
+        "status": "opened",
+        "status_uuid": "210e3788-1f95-4e04-accf-a48134f97413",
+        "community_uuid": "c766cfab-a604-41c5-b95b-c7cc467f7fc4",
+        "subscribers": [],
+        "tags": [],
+        "number_of_comments": 0,
+        "first_seen_at": "2024-10-25T12:29:08.454603Z",
+        "last_seen_at": "2025-03-17T15:03:42.417292Z",
+        "manual": True,
+        "is_supplied": False,
+        "verdict_uuid": None,
+        "custom_status_uuid": None,
+        "custom_priority_uuid": "d4035e46-3a60-4dc8-a91a-ac7a80d04688",
+        "assignees": ["test_user_uuid"],
+        "number_of_alerts": 3,
+        "alerts": [
+            {
+                "uuid": "adc66869-25e6-4d7f-987b-5e1bcdf8f256",
+                "title": "TEST cases",
+                "created_at": 1729859653,
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "created_by_type": "application",
+                "updated_at": 1729859653,
+                "updated_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "updated_by_type": "application",
+                "community_uuid": "c766cfab-a604-41c5-b95b-c7cc467f7fc4",
+                "short_id": "rANd0MiD",
+                "entity": {
+                    "uuid": "b050c91e-9b5f-4c6d-a879-c1370f714596",
+                    "name": "Entity name test",
+                },
+                "urgency": {"current_value": 60, "value": 60, "severity": 60, "criticity": 0, "display": "Major"},
+                "alert_type": {"value": "malware", "category": "malicious-code"},
+                "status": {
+                    "uuid": "b6f4cc39-6cc8-473a-a8eb-62c3c50275f0",
+                    "name": "Pending",
+                    "description": "The alert is waiting for action",
+                },
+                "rule": {
+                    "uuid": "f374bddf-8d2a-402b-b214-5feaf411d919",
+                    "name": "TEST cases",
+                    "severity": 60,
+                    "type": "cti",
+                    "pattern": "[network-traffic:dst_ref.value = '5.6.7.8']",
+                },
+                "detection_type": "CTI",
+                "source": "1.2.3.4",
+                "target": "5.6.7.8",
+                "similar": 0,
+                "details": "Details of the alerts for test purposes",
+                "ttps": [
+                    {
+                        "id": "malware--05ebc63b-b431-467e-a10c-173be469bd9a",
+                        "type": "malware",
+                        "name": "Test malware",
+                        "description": "Redacted description",
+                    }
+                ],
+                "adversaries": [],
+                "stix": {},
+                "kill_chain_short_id": "k1llch41n",
+                "first_seen_at": "2024-12-15T12:29:08.454603Z",
+                "last_seen_at": "2024-12-15T12:29:08.454603Z",
+                "assets": ["71dd4c6c-8962-46f2-8b87-c44825bccac9"],
+                "time_to_detect": 4,
+                "time_to_acknowledge": None,
+                "time_to_respond": None,
+                "time_to_resolve": None,
+                "intake_uuids": ["95d41dc9-bdde-46f3-9c8f-c362b79ff516"],
+            },
+            {
+                "uuid": "1391c809-4630-45df-91ed-8154435b9f17",
+                "title": "TEST cases",
+                "created_at": 1729881125,
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "created_by_type": "application",
+                "updated_at": 1742223853,
+                "updated_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "updated_by_type": "application",
+                "community_uuid": "c766cfab-a604-41c5-b95b-c7cc467f7fc4",
+                "short_id": "sH0rt1dtE5t",
+                "entity": {
+                    "uuid": "b050c91e-9b5f-4c6d-a879-c1370f714596",
+                    "name": "Entity name test",
+                },
+                "urgency": {"current_value": 60, "value": 60, "severity": 60, "criticity": 0, "display": "Major"},
+                "alert_type": {"value": "malware", "category": "malicious-code"},
+                "status": {
+                    "uuid": "b6f4cc39-6cc8-473a-a8eb-62c3c50275f0",
+                    "name": "Pending",
+                    "description": "The alert is waiting for action",
+                },
+                "rule": {
+                    "uuid": "f374bddf-8d2a-402b-b214-5feaf411d919",
+                    "name": "TEST cases",
+                    "severity": 60,
+                    "type": "cti",
+                    "pattern": "[url:value = 'https://50.60.70.80/test']",
+                },
+                "detection_type": "CTI",
+                "source": "10.20.30.40",
+                "target": "50.60.70.80",
+                "similar": 8,
+                "details": "Details of the alerts for test purposes",
+                "ttps": [
+                    {
+                        "id": "malware--4c71ee57-7a92-4482-a367-a2deab598ff1",
+                        "type": "malware",
+                        "name": "TestMalware",
+                        "description": "This malware is a test",
+                    },
+                    {
+                        "id": "malware--fc07a0f3-7b03-4a86-b73c-3c638b2bd3df",
+                        "type": "malware",
+                        "name": "MalwareTest",
+                        "description": "This malware is also a test",
+                    },
+                    {
+                        "id": "malware--9dc3c129-7155-4f8b-8e04-97ee1d663821",
+                        "type": "malware",
+                        "name": "ThirdTest",
+                        "description": "This one is the third test malware",
+                    },
+                    {
+                        "id": "malware--05ebc63b-b431-467e-a10c-173be469bd9a",
+                        "type": "malware",
+                        "name": "Test Malware",
+                        "description": "Redacted description",
+                    },
+                ],
+                "adversaries": [
+                    {
+                        "id": "campaign--cc0d7627-ccf8-4f86-969e-104574aa3183",
+                        "type": "campaign",
+                        "name": "Test campaign",
+                        "description": "This is a test campaign",
+                    },
+                    {
+                        "id": "infrastructure--84eaff6b-6f61-407e-a07c-22a572ef774a",
+                        "type": "infrastructure",
+                        "name": "Test adversary",
+                        "description": "Still a test",
+                    },
+                ],
+                "stix": {},
+                "kill_chain_short_id": "k1llcH4InID",
+                "first_seen_at": "2024-10-25T18:31:18.063143Z",
+                "last_seen_at": "2025-03-17T15:03:42.417292Z",
+                "assets": ["5f36642d-7cb2-4d2f-a45d-c1be83369472", "5573fc6c-153e-46c7-866c-57632f861308"],
+                "time_to_detect": 5,
+                "time_to_acknowledge": None,
+                "time_to_respond": None,
+                "time_to_resolve": None,
+                "intake_uuids": ["47bcfc84-fb4e-4e71-bc22-3c0f5fdf05d1"],
+            },
+            {
+                "uuid": "c9826eba-6575-495b-bf3c-a24fee080f7cl",
+                "title": "TEST cases",
+                "created_at": 1730304600,
+                "created_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "created_by_type": "application",
+                "updated_at": 1730304600,
+                "updated_by": "a5fe93d8-e910-494b-ab83-8565fa2e5916",
+                "updated_by_type": "application",
+                "community_uuid": "c766cfab-a604-41c5-b95b-c7cc467f7fc4",
+                "short_id": "t35t1d",
+                "entity": {
+                    "uuid": "b050c91e-9b5f-4c6d-a879-c1370f714596",
+                    "name": "Entity name test",
+                },
+                "urgency": {"current_value": 60, "value": 60, "severity": 60, "criticity": 0, "display": "Major"},
+                "alert_type": {"value": "malware", "category": "malicious-code"},
+                "status": {
+                    "uuid": "b6f4cc39-6cc8-473a-a8eb-62c3c50275f0",
+                    "name": "Pending",
+                    "description": "The alert is waiting for action",
+                },
+                "rule": {
+                    "uuid": "f374bddf-8d2a-402b-b214-5feaf411d919",
+                    "name": "TEST cases",
+                    "severity": 60,
+                    "type": "cti",
+                    "pattern": "[network-traffic:dst_ref.value = '55.66.77.88']",
+                },
+                "detection_type": "CTI",
+                "source": "11.22.33.44",
+                "target": "55.66.77.88",
+                "similar": 0,
+                "details": "Those details have been redacted",
+                "ttps": [
+                    {
+                        "id": "malware--05ebc63b-b431-467e-a10c-173be469bd9a",
+                        "type": "malware",
+                        "name": "Test Malware",
+                        "description": "Redacted description",
+                    }
+                ],
+                "adversaries": [
+                    {
+                        "id": "infrastructure--45352fd4-ed4b-463c-8478-cee6f0141447",
+                        "type": "infrastructure",
+                        "name": "Infrastructure test",
+                        "description": "This infrastructure is used for test purposes",
+                    }
+                ],
+                "stix": {},
+                "kill_chain_short_id": "k1llcH4InID",
+                "first_seen_at": "2023-12-30T16:06:24.782694Z",
+                "last_seen_at": "2023-12-30T16:06:24.782694Z",
+                "assets": ["e2399303-f577-4088-bf89-b13eff8287c3"],
+                "time_to_detect": 4,
+                "time_to_acknowledge": None,
+                "time_to_respond": None,
+                "time_to_resolve": None,
+                "intake_uuids": ["95a8bd68-37e3-4e01-9637-0ebf2e05eb07"],
+            },
+        ],
     }
