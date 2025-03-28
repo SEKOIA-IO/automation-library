@@ -164,6 +164,7 @@ def alert_response_3_1():
         }
     }
 
+
 @pytest.fixture
 def alert_response_4():
     return {
@@ -181,11 +182,7 @@ def alert_response_4():
                             "event_sub_type": None,
                             "image_name": None,
                         },
-                        {
-                            "agent_install_type": "STANDARD",
-                            "agent_host_boot_time": None,
-                            "event_sub_type": "process"
-                        },
+                        {"agent_install_type": "STANDARD", "agent_host_boot_time": None, "event_sub_type": "process"},
                     ],
                     "alert_id": "2",
                     "detection_timestamp": 1705912200,
@@ -193,7 +190,6 @@ def alert_response_4():
             ],
         }
     }
-
 
 
 @pytest.fixture
@@ -248,7 +244,6 @@ def test_getting_data_2(trigger, alert_response_2, alert_query_2):
         for data in alerts_list:
             if data.get("severity"):
                 count_alerts += 1
-                #assert data.get("events", []) == []
             if data.get("agent_install_type"):
                 count_events += 1
 
@@ -290,7 +285,6 @@ def test_getting_data_3(trigger, alert_response_3_2, alert_response_3_1, alert_q
         for data in all_alerts:
             if data.get("severity"):
                 count_alerts += 1
-                #assert data.get("events", []) == []
             if data.get("agent_install_type"):
                 count_events += 1
 
@@ -387,6 +381,5 @@ def test_splitting_events(trigger, alert_response_4):
         '{"external_id":"7317728957437371548","severity":"medium","events":[{"agent_install_type":"STANDARD",'
         '"agent_host_boot_time":null,"event_sub_type":null,"image_name":null}],"alert_id":"2",'
         '"detection_timestamp":1705912200}',
-
-        '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}'
+        '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}',
     ]
