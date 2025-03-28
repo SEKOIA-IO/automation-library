@@ -5,11 +5,12 @@ import io
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from aiofiles import open as aio_open
 from loguru import logger
 from pydantic.v1 import Field
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 
-from aws_helpers.utils import async_gzip_open, AsyncReader
+from aws_helpers.utils import is_gzip_compressed, async_gzip_open, AsyncReader
 
 
 class S3Configuration(AwsConfiguration):
@@ -49,10 +50,8 @@ class S3Wrapper(AwsClient[S3Configuration]):
         async with self.get_client("s3") as s3:
             response = await s3.get_object(Bucket=bucket, Key=key)
             async with response["Body"] as stream:
-                if response.get("ContentEncoding") == "gzip" or response.get("ContentType") in [
-                    "application/gzip",
-                    "application/x-gzip",
-                ]:
-                    yield await async_gzip_open(io.BytesIO(await stream.read()))
+                content = io.BytesIO(await stream.read())
+                if is_gzip_compressed(content.getbuffer()):
+                    yield await async_gzip_open(content)
                 else:
                     yield stream
