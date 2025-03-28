@@ -38,12 +38,11 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         if (message.get("type"), message.get("action")) != ("case", "created"):
             # Filter by case UUIDs
             case_uuids_filter = self.configuration.get("case_uuids_filter")
-            if case_uuids_filter and case_attrs.get("uuid") not in case_uuids_filter:
-                return False
-
-            # Filter by case short IDs
-            short_ids_filter = self.configuration.get("short_ids_filter")
-            if short_ids_filter and case_attrs.get("short_id") not in short_ids_filter:
+            if (
+                case_uuids_filter
+                and case_attrs.get("uuid") not in case_uuids_filter
+                and case_attrs.get("short_id") not in case_uuids_filter
+            ):
                 return False
 
         return True

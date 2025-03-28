@@ -1,0 +1,80 @@
+{
+    "uuid": "c37221b2-5bbf-46eb-ba16-fb618f7b5282",
+    "name": "Get custom verdict",
+    "docker_parameters": "get-custom-verdict",
+    "description": "Get a single custom verdict based on its UUID",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "get-custom-verdict",
+        "properties": {
+            "verdict_uuid": {
+                "type": "string",
+                "format": "uuid",
+                "in": "path"
+            }
+        },
+        "required": [
+            "verdict_uuid"
+        ]
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "uuid": {
+                "type": "string",
+                "format": "uuid"
+            },
+            "community_uuid": {
+                "type": "string",
+                "format": "uuid"
+            },
+            "level": {
+                "type": "integer"
+            },
+            "created_at": {
+                "type": "string",
+                "format": "date-time"
+            },
+            "created_by": {
+                "type": "string"
+            },
+            "created_by_type": {
+                "type": "string"
+            },
+            "updated_at": {
+                "type": "string",
+                "format": "date-time"
+            },
+            "updated_by": {
+                "type": "string"
+            },
+            "updated_by_type": {
+                "type": "string"
+            },
+            "stage": {
+                "type": "string"
+            },
+            "label": {
+                "type": "string"
+            },
+            "description": {
+                "type": "string"
+            },
+            "is_used": {
+                "type": "boolean"
+            }
+        },
+        "required": [
+            "uuid",
+            "community_uuid",
+            "level",
+            "created_at",
+            "created_by",
+            "created_by_type",
+            "stage",
+            "label",
+            "description"
+        ]
+    }
+}

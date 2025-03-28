@@ -214,7 +214,7 @@ DeleteCase = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": base_url + "cases/{uuid}",
+        "endpoint": base_url + "cases/{case_uuid}",
         "query_parameters": [],
     },
 )
@@ -224,7 +224,7 @@ AssociateNewAlertsOnCase = type(
     (GenericAPIAction,),
     {
         "verb": "patch",
-        "endpoint": base_url + "cases/{uuid}/alerts",
+        "endpoint": base_url + "cases/{case_uuid}/alerts",
         "query_parameters": [],
     },
 )
@@ -234,7 +234,7 @@ ReplaceAssociatedAlertsToCase = type(
     (GenericAPIAction,),
     {
         "verb": "post",
-        "endpoint": base_url + "cases/{uuid}/alerts",
+        "endpoint": base_url + "cases/{case_uuid}/alerts",
         "query_parameters": [],
     },
 )
@@ -245,7 +245,7 @@ ListsAlertsAssociatedToCaseUuid = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": base_url + "cases/{uuid}/alerts",
+        "endpoint": base_url + "cases/{case_uuid}/alerts",
         "query_parameters": [],
     },
 )
@@ -255,7 +255,7 @@ RemoveEventFromCase = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": base_url + "cases/{uuid}/events/{event_id}",
+        "endpoint": base_url + "cases/{case_uuid}/events/{event_id}",
         "query_parameters": [],
     },
 )
@@ -275,7 +275,7 @@ GetListOfCommentsOfCase = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": base_url + "cases/{uuid}/comments",
+        "endpoint": base_url + "cases/{case_uuid}/comments",
         "query_parameters": [
             "limit",
             "offset",
@@ -302,7 +302,7 @@ GetCommentOfCase = type(
     (GenericAPIAction,),
     {
         "verb": "get",
-        "endpoint": base_url + "cases/{uuid}/comments/{comment_uuid}",
+        "endpoint": base_url + "cases/{case_uuid}/comments/{comment_uuid}",
         "query_parameters": [],
     },
 )
@@ -312,7 +312,7 @@ UpdateCommentOfCase = type(
     (GenericAPIAction,),
     {
         "verb": "patch",
-        "endpoint": base_url + "cases/{uuid}/comments/{comment_uuid}",
+        "endpoint": base_url + "cases/{case_uuid}/comments/{comment_uuid}",
         "query_parameters": [],
     },
 )

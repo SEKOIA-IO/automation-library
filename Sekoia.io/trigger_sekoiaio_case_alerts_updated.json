@@ -26,14 +26,7 @@
                 "items": {
                     "type": "string"
                 },
-                "description": "Create a run only for cases matching a list of case uuids"
-            },
-            "short_ids_filter": {
-                "type": "array",
-                "items": {
-                    "type": "string"
-                },
-                "description": "Create a run only for cases matching a list of short ids"
+                "description": "Create a run only for cases matching a list of case uuids/short ids"
             }
         },
         "type": "object",

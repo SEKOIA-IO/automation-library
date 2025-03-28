@@ -197,21 +197,13 @@ def test_case_filter_by_case_uuids(
 
         # match case_uuid
         case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["uuid"]]}
+        print(case_updated_trigger.configuration)
+        print(samplenotif_case_updated.get("attributes").get("uuid"))
         case_updated_trigger.handle_event(samplenotif_case_updated)
         assert case_updated_trigger.send_event.called
 
-
-def test_case_filter_by_short_ids(
-    case_updated_trigger, samplenotif_case_updated, sample_siccaseapi_mock, sample_siccaseapi
-):
-    case_updated_trigger.send_event = MagicMock()
-    with sample_siccaseapi_mock:
-        # no match
-        case_updated_trigger.configuration = {"short_ids_filter": ["foo"]}
-        case_updated_trigger.handle_event(samplenotif_case_updated)
-        assert not case_updated_trigger.send_event.called
-
         # match short_id
-        case_updated_trigger.configuration = {"short_ids_filter": [sample_siccaseapi["short_id"]]}
+        case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["short_id"]]}
+        print(case_updated_trigger.configuration)
         case_updated_trigger.handle_event(samplenotif_case_updated)
         assert case_updated_trigger.send_event.called
