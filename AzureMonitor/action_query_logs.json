@@ -1,0 +1,64 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "workspace_id": {
+        "description": "Workspace ID to search in",
+        "type": "string"
+      },
+      "query": {
+        "description": "Query",
+        "type": "string"
+      },
+      "from_date": {
+        "description": "Get data after this timestamp",
+        "type": "string",
+        "format": "datetime"
+      },
+      "to_date": {
+        "description": "Get data before or at this timestamp",
+        "type": "string",
+        "format": "datetime"
+      },
+      "timeout": {
+        "description": "The maximum time, in seconds, the query should be processed in (default 300s)",
+        "type": "integer",
+        "default": 300
+      }
+    },
+    "required": [
+      "query",
+      "workspace_id"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Execute an Analytics query",
+  "docker_parameters": "action_query_logs",
+  "name": "[BETA] Query Azure Monitor Logs",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "data": {
+        "description": "Query results",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "Name of the table",
+              "type": "string"
+            },
+            "records": {
+              "description": "Records of the table",
+              "type": "array"
+            }
+          }
+        }
+      }
+    },
+    "title": "The results of the query",
+    "type": "object"
+  },
+  "uuid": "ffc79e47-1f87-4552-8b9c-21355d0f2fd5"
+}

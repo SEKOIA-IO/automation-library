@@ -10,24 +10,26 @@ from requests.exceptions import JSONDecodeError
 class ZscalerAction(Action):
     def zia_auth(self):
         try:
-            api = ZiaTalker(self.module.configuration["base_url"])
-            api.authenticate(
+            return ZiaTalker(
+                cloud_name=self.module.configuration["base_url"],
                 api_key=self.module.configuration["api_key"],
                 username=self.module.configuration["username"],
                 password=self.module.configuration["password"],
             )
-            return api
+
         except Exception as e:
-            print(f"ZIA authentication failed: {str(e)}")
-            return None
+            self.log(f"ZIA authentication failed", level="critical")
+            self.log_exception(e)
+            raise
 
     def get_valid_indicators_from_list(self, arguments) -> list:
         try:
             IOC_list = [arguments["IoC"]]
             self.log(f"IOC_list to block {IOC_list}")
             return IOC_list
+
         except Exception as e:
-            print(f"Build of IOC list failed: {str(e)}")
+            self.log(f"Build of IOC list failed: {str(e)}", level="error")
             return []
 
     def get_valid_indicators_from_stix(self, stix_objects):
@@ -112,13 +114,16 @@ class ZscalerPushIOCBlock(ZscalerAction):
     def run(self, arguments):
         if arguments.get("sekoia_base_url"):
             self.sekoia_base_url = arguments.get("sekoia_base_url")
+
         stix_objects = self.json_argument("stix_objects", arguments)
         if stix_objects is None or len(stix_objects) == 0:
             self.log("Received stix_objects were empty")
+
         indicators = self.get_valid_indicators_from_stix(stix_objects)
         if len(indicators["valid"]) == 0 and len(indicators["revoked"]) == 0:
             self.log("Received indicators were not valid and/or not supported")
             return None
+
         else:
             if len(indicators["valid"]):
                 response = self.post_blacklist_iocs_to_add(indicators["valid"])
