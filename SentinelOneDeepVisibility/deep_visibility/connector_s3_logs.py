@@ -30,7 +30,7 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
         Returns:
              Generator:
         """
-        records = (line[:-1].decode("utf-8") for line in await stream.readlines())
+        records = (line.rstrip(b"\n").decode("utf-8") for line in await stream.readlines())
 
         for record in records:
             if len(record) > 0:
