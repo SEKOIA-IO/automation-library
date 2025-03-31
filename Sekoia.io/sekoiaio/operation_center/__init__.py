@@ -292,7 +292,7 @@ DeleteCommentFromCase = type(
     (GenericAPIAction,),
     {
         "verb": "delete",
-        "endpoint": base_url + "cases/{uuid}/comments/{comment_uuid}",
+        "endpoint": base_url + "cases/{case_uuid}/comments/{comment_uuid}",
         "query_parameters": [],
     },
 )
