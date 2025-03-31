@@ -1,0 +1,40 @@
+{
+  "name": "[BETA] Fetch new events from Akamai WAF",
+  "description": "Get last events from Akamai WAF",
+  "uuid": "c1b6ea0b-8508-5b2c-9508-79519fd2dcd4",
+  "docker_parameters": "akamai_waf_logs",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "config_id": {
+        "description": "The Web Security Configuration ID",
+        "type": "string"
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "minimum": 1,
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "page_size": {
+        "description": "Number of events per request",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 60000,
+        "type": "integer"
+      }
+    },
+    "required": ["intake_key", "config_id"]
+  },
+  "results": {}
+}
