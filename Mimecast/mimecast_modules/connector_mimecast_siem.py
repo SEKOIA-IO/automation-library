@@ -128,16 +128,12 @@ class MimecastSIEMWorker(Thread):
             for events in batched(events_gen, EVENTS_BATCH_SIZE):
                 logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
 
-                events = [event for event in events if event["timestamp"] > from_date.timestamp() * 1000]
+                events = [event for event in events if event["timestamp"] > result_from_date.timestamp() * 1000]
                 logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
 
                 if len(events) > 0:
                     INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                     yield events
-
-                else:
-                    logger.info("The last page of events was empty", log_type=self.log_type)
-                    return
 
             nextPageToken = result.get("@nextPage")
             if result["isCaughtUp"] is True or not nextPageToken:
