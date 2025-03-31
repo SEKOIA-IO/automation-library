@@ -1,4 +1,7 @@
-import json
+from collections.abc import AsyncGenerator
+
+import orjson
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from deep_visibility.metrics import DISCARDED_EVENTS
 
@@ -17,22 +20,22 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
     configuration: AwsS3QueuedConfiguration
     name = "DeepVisibility AWS S3 Logs"
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
-        Parse the content of the object and return a list of records.
+        Parse content from S3 bucket.
 
         Args:
-            content:
+            stream: AsyncReader
 
         Returns:
-            list[str]:
+             Generator:
         """
+        records = (line.rstrip(b"\n") for line in await stream.readlines())
 
-        records = []
-        for record in content.decode("utf-8").split("\n"):
+        for record in records:
             if len(record) > 0:
                 try:
-                    json_record = json.loads(record)
+                    json_record = orjson.loads(record)
                     # Exclude events with no category defined or a group category
                     if "event.category" not in json_record or json_record["event.category"] == "group":
                         DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
@@ -41,8 +44,7 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
                     if "event.type" in json_record and json_record["event.type"] in EXCLUDED_EVENT_TYPES:
                         DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
                         continue
-                    records.append(record)
-                except:
-                    pass
 
-        return list(records)
+                    yield record.decode("utf-8")
+                except Exception as e:
+                    self.log(message=f"Failed to parse a record: {str(e)}", level="warning")
