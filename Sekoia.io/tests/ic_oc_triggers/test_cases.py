@@ -41,9 +41,7 @@ def test_securitycasestrigger_retrieve_case_from_api(case_trigger, sample_siccas
     case_uuid = sample_siccaseapi.get("uuid")
 
     with requests_mock.Mocker() as mock:
-        mock.get(
-            f"http://fake.url/api/v1/sic/cases/{case_uuid}", json=sample_siccaseapi
-        )
+        mock.get(f"http://fake.url/api/v1/sic/cases/{case_uuid}", json=sample_siccaseapi)
 
         case = case_trigger._retrieve_case_from_caseapi(case_uuid)
         assert sorted(case) == sorted(sample_siccaseapi)
@@ -71,9 +69,7 @@ def case_updated_trigger(module_configuration, symphony_storage):
     yield trigger
 
 
-def test_casecreatedtrigger_handler_dispatch_case_message(
-    case_created_trigger, samplenotif_case_updated
-):
+def test_casecreatedtrigger_handler_dispatch_case_message(case_created_trigger, samplenotif_case_updated):
     case_created_trigger.handle_event = Mock()
 
     case_created_trigger.handler_dispatcher(json.dumps(samplenotif_case_updated))
@@ -178,9 +174,7 @@ def test_case_trigger_filter_by_priorities(
         assert not case_created_trigger.send_event.called
 
         # match priority_uuid
-        case_created_trigger.configuration = {
-            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]]
-        }
+        case_created_trigger.configuration = {"priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]]}
         case_created_trigger.handle_event(samplenotif_case_created)
         assert case_created_trigger.send_event.called
 
@@ -199,9 +193,7 @@ def test_case_filter_by_assignees(
         assert not case_created_trigger.send_event.called
 
         # match assignee
-        case_created_trigger.configuration = {
-            "assignees_filter": [sample_siccaseapi["assignees"][0]]
-        }
+        case_created_trigger.configuration = {"assignees_filter": [sample_siccaseapi["assignees"][0]]}
         case_created_trigger.handle_event(samplenotif_case_created)
         assert case_created_trigger.send_event.called
 
@@ -220,15 +212,11 @@ def test_case_filter_by_case_uuids(
         assert not case_updated_trigger.send_event.called
 
         # match case_uuid
-        case_updated_trigger.configuration = {
-            "case_uuids_filter": [sample_siccaseapi["uuid"]]
-        }
+        case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["uuid"]]}
         case_updated_trigger.handle_event(samplenotif_case_updated)
         assert case_updated_trigger.send_event.called
 
         # match short_id
-        case_updated_trigger.configuration = {
-            "case_uuids_filter": [sample_siccaseapi["short_id"]]
-        }
+        case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["short_id"]]}
         case_updated_trigger.handle_event(samplenotif_case_updated)
         assert case_updated_trigger.send_event.called

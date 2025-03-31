@@ -28,20 +28,14 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
 
         # Filter by priority UUIDs
         priority_uuids_filter = self.configuration.get("priority_uuids_filter")
-        if (
-            priority_uuids_filter
-            and case_attrs.get("custom_priority_uuid") not in priority_uuids_filter
-        ):
+        if priority_uuids_filter and case_attrs.get("custom_priority_uuid") not in priority_uuids_filter:
             return False
 
         # Filter by assignees
         assignees_filter = self.configuration.get("assignees_filter")
         if assignees_filter:
             case_details = self._retrieve_case_from_caseapi(case_attrs.get("uuid"))
-            if not any(
-                assignee in assignees_filter
-                for assignee in case_details.get("assignees", [])
-            ):
+            if not any(assignee in assignees_filter for assignee in case_details.get("assignees", [])):
                 return False
 
         # Cannot use the following filters for case created
@@ -63,9 +57,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         stop=stop_after_attempt(10),
     )
     def _retrieve_case_from_caseapi(self, case_uuid):
-        api_url = urljoin(
-            self.module.configuration["base_url"], f"api/v1/sic/cases/{case_uuid}"
-        )
+        api_url = urljoin(self.module.configuration["base_url"], f"api/v1/sic/cases/{case_uuid}")
         api_url = api_url.replace("/api/api", "/api")  # In case base_url ends with /api
 
         api_key = self.module.configuration["api_key"]
@@ -232,9 +224,7 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
 
-        work_dir = self._data_path.joinpath("sekoiaio_securitycases").joinpath(
-            str(uuid.uuid4())
-        )
+        work_dir = self._data_path.joinpath("sekoiaio_securitycases").joinpath(str(uuid.uuid4()))
         case_path = work_dir.joinpath("case.json")
         work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -248,9 +238,7 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
             "uuid": case_uuid,
             "short_id": case_short_id,
             "added_alerts": case_attrs.get("updated", {}).get("added_alerts_uuid", []),
-            "removed_alerts": case_attrs.get("updated", {}).get(
-                "removed_alerts_uuid", []
-            ),
+            "removed_alerts": case_attrs.get("updated", {}).get("removed_alerts_uuid", []),
         }
 
         self.send_event(
