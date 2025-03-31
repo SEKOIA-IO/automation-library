@@ -1,6 +1,6 @@
-import json
 from collections.abc import AsyncGenerator
 
+import orjson
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 from deep_visibility.metrics import DISCARDED_EVENTS
@@ -30,12 +30,12 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
         Returns:
              Generator:
         """
-        records = (line.rstrip(b"\n").decode("utf-8") for line in await stream.readlines())
+        records = (line.rstrip(b"\n") for line in await stream.readlines())
 
         for record in records:
             if len(record) > 0:
                 try:
-                    json_record = json.loads(record)
+                    json_record = orjson.loads(record)
                     # Exclude events with no category defined or a group category
                     if "event.category" not in json_record or json_record["event.category"] == "group":
                         DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
@@ -45,6 +45,6 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
                         DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
                         continue
 
-                    yield record
+                    yield record.decode("utf-8")
                 except Exception as e:
                     self.log(message=f"Failed to parse a record: {str(e)}", level="warning")
