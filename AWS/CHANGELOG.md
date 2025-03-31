@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-22 - 1.33.0
+
+### Changed
+
+- Refactor the way to read the content of S3 Objects and extract the events
+  * Previously: S3 object content was read fully into memory before processing which could lead to performance bottlenecks and increased memory usage.
+  * Now: The system leverages a streaming approach, allowing events to be extracted on-the-fly as data is read, thereby improving performance and reducing resource utilization.
+
 ## 2025-03-05 - 1.32.6
 
 ### Changed

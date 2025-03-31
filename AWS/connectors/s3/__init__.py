@@ -2,15 +2,15 @@
 
 import os
 from abc import ABCMeta
+from collections.abc import AsyncGenerator
 from functools import cached_property
-from gzip import decompress
-from typing import Any, Optional
+from typing import Any, BinaryIO, Optional
 
 import orjson
 
 from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
 from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
-from aws_helpers.utils import normalize_s3_key
+from aws_helpers.utils import normalize_s3_key, AsyncReader
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
 
@@ -71,33 +71,17 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return SqsWrapper(config)
 
-    def _parse_content(self, content: bytes) -> list[str]:  # pragma: no cover
+    def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:  # pragma: no cover
         """
-        Parse the content of the object and return a list of records.
+        Parse the content of the S3 object and return the records as a generator.
 
         Args:
-            content: bytes
+            stream: BinaryIO
 
         Returns:
-             list:
+             Generator:
         """
         raise NotImplementedError()
-
-    @staticmethod
-    def decompress_content(data: bytes) -> bytes:
-        """
-        Decompress content if it is compressed.
-
-        Args:
-            data:
-
-        Returns:
-            bytes:
-        """
-        if data[0:2] == b"\x1f\x8b":
-            return decompress(data)
-
-        return data
 
     def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict[str, Any]]:
         """
@@ -161,13 +145,14 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
                         normalized_key = normalize_s3_key(s3_key)
 
-                        async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
-                            records.extend(self._parse_content(self.decompress_content(content)))
+                        async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream:
+                            async for event in self._parse_content(stream):
+                                records.append(event)
 
-                        if len(records) >= self.limit_of_events_to_push:
-                            continue_receiving = False
-                            result += len(await self.push_data_to_intakes(events=records))
-                            records = []
+                                if len(records) >= self.limit_of_events_to_push:
+                                    continue_receiving = False
+                                    result += len(await self.push_data_to_intakes(events=records))
+                                    records = []
 
                     except Exception as e:
                         self.log(
