@@ -30,6 +30,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
+        self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
 
     @cached_property
     def sqs_wrapper(self) -> SqsWrapper:
@@ -50,7 +51,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         return SqsWrapper(config)
 
-    async def next_batch(self) -> tuple[list[str], list[int]]:
+    async def next_batch(self) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -64,7 +65,7 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         continue_receiving = True
         while continue_receiving:
-            async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
+            async with self.sqs_wrapper.receive_messages(max_messages=self.sqs_max_messages) as messages:
                 if not messages:
                     continue_receiving = False
 
@@ -87,4 +88,4 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
             events=[orjson.dumps(record).decode("utf-8") for record in records],
         )
 
-        return result, timestamps_to_log
+        return len(result), timestamps_to_log

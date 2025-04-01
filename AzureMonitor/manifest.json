@@ -1,0 +1,32 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Azure Monitor",
+    "type": "object",
+    "properties": {
+      "tenant_id": {
+        "title": "Tenant Id",
+        "description": "Tenant ID",
+        "type": "string"
+      },
+      "client_id": {
+        "title": "Client Id",
+        "description": "Client ID. An application needs to be created in the Azure Portal and assigned relevant permissions. Its Client ID should then be used in this configuration.",
+        "type": "string"
+      },
+      "client_secret": {
+        "title": "Client Secret",
+        "description": "Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",
+        "type": "string"
+      }
+    },
+    "required": ["tenant_id", "client_id", "client_secret"],
+    "secrets": ["client_secret"]
+  },
+  "description": "Azure Monitor is a comprehensive solution for collecting, analyzing, and acting on telemetry from cloud and on-premises environments to maximize the performance and availability of applications.",
+  "name": "Azure Monitor",
+  "slug": "azure-monitor",
+  "categories": ["Cloud Providers"],
+  "uuid": "28d53bf5-738a-42a4-8ce4-67e00195590e",
+  "version": "1.0.0"
+}

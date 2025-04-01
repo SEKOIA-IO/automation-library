@@ -1,10 +1,12 @@
 """Contains AwsS3FlowLogsTrigger."""
 
 import ipaddress
+from collections.abc import AsyncGenerator
 from itertools import islice
 
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from aws_helpers.utils import AsyncReader
 from connectors.metrics import DISCARDED_EVENTS
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
 class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):
@@ -41,17 +43,19 @@ class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
 
         return all([ip.is_private for ip in ips])
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            content: bytes
+            stream: AsyncReader
 
         Returns:
-            list:
+             Generator:
         """
-        records = []
+        content = await stream.read()
+
+        records: list[str] = []
         for record in content.decode("utf-8").split(self.configuration.separator):
             if len(record) > 0:
                 if not self.check_all_ips_are_private(record):
@@ -62,4 +66,5 @@ class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
         if self.configuration.ignore_comments:  # pragma: no cover
             records = [record for record in records if not record.strip().startswith("#")]
 
-        return list(islice(records, self.configuration.skip_first, None))
+        for record in list(islice(records, self.configuration.skip_first, None)):
+            yield record

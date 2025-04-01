@@ -2,12 +2,14 @@
 
 import datetime
 import time
+from collections.abc import AsyncGenerator
 from itertools import groupby, islice
-from typing import Any, Dict, List
+from typing import Any
 
 import orjson
 import pandas as pd
 
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
@@ -24,7 +26,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
     configuration: AwsS3CloudFrontConfiguration
     name = "AWS S3 CloudFront Logs"
 
-    def data_to_kv(self, records: List[str]) -> Any:
+    def data_to_kv(self, records: list[str]) -> Any:
         """
         Transform the raw data to key value data.
         """
@@ -33,7 +35,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         df = pd.DataFrame(values, columns=columns_name)
         return df.to_dict(orient="records")
 
-    def update_record(self, existing_entry: Dict[str, Any], entry: Dict[str, Any]) -> None:
+    def update_record(self, existing_entry: dict[str, Any], entry: dict[str, Any]) -> None:
         """
         Update record if there some similarity.
         """
@@ -58,7 +60,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
                 if existing_entry[column] != entry[column]:
                     existing_entry[column] = "_"
 
-    def add_start_end_time(self, result: List[Dict[str, Any]], agg_time: float) -> None:
+    def add_start_end_time(self, result: list[dict[str, Any]], agg_time: float) -> None:
         """
         Add start_time and end_time to each record.
         """
@@ -69,13 +71,13 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
             item.update({"end_time": end_time})
             del item["time"]
 
-    def records_to_json(self, results: List[Dict[str, Any]]) -> List[str]:
+    def records_to_json(self, results: list[dict[str, Any]]) -> list[str]:
         """
         Transform the records to str data.
         """
         return [orjson.dumps(result).decode("utf-8") for result in results]
 
-    def logs_aggregation(self, data: List[Dict[str, Any]]) -> List[str]:
+    def logs_aggregation(self, data: list[dict[str, Any]]) -> list[str]:
         """
         Aggregate logs by date, time, x-edge-location, cs-ip, cs-method, cs(Host)
         cs-uri-stem, sc-status and x-edge-result-type
@@ -129,23 +131,25 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         return self.records_to_json(results)
 
-    def _parse_content(self, content: bytes) -> List[str]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
         Parse content from S3 bucket.
 
         Args:
-            content: bytes
+            stream: AsyncReader
 
         Returns:
-            list:
+             Generator:
         """
+        content = await stream.read()
         records = [record for record in content.decode("utf-8").split(self.configuration.separator) if len(record) > 0]
 
         # return [] if there's no records
         if not records:
-            return records
+            return
 
         # Starting records from second element, skipping version
         kv_records = self.data_to_kv(records[1:])
 
-        return list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None))
+        for record in list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None)):
+            yield record

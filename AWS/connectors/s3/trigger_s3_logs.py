@@ -1,7 +1,9 @@
 """Contains AwsS3LogsTrigger."""
 
+from collections.abc import AsyncGenerator
 from itertools import islice
 
+from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
 
@@ -19,19 +21,22 @@ class AwsS3LogsTrigger(AbstractAwsS3QueuedConnector):
     configuration: AwsS3LogsConfiguration
     name = "AWS S3 Logs"
 
-    def _parse_content(self, content: bytes) -> list[str]:
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
         """
-        Parse the content of the object and return a list of records.
+        Parse content from S3 bucket.
 
         Args:
-            content:
+            stream: AsyncReader
 
         Returns:
-            list[str]:
+             Generator:
         """
+        content = await stream.read()
+
         records = [record for record in content.decode("utf-8").split(self.configuration.separator) if len(record) > 0]
 
         if self.configuration.ignore_comments:
             records = [record for record in records if not record.strip().startswith("#")]
 
-        return list(islice(records, self.configuration.skip_first, None))
+        for record in list(islice(records, self.configuration.skip_first, None)):
+            yield record

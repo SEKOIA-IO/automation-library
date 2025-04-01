@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from botocore.client import BaseClient
 from botocore.paginate import Paginator
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from sekoia_automation.storage import PersistentJSON, get_data_path
 
 from aws_helpers.base import AWSConnector

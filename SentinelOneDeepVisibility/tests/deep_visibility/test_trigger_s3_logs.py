@@ -8,6 +8,8 @@ from faker import Faker
 from deep_visibility.connector_s3_logs import DeepVisibilityConnector
 from deep_visibility import SentinelOneDeepVisibilityModule, SentinelOneDeepVisibilityConfiguration
 
+from tests.helpers import async_list, async_temporary_file
+
 
 @pytest.fixture
 def test_data() -> bytes:
@@ -49,7 +51,8 @@ def connector(
     return connector
 
 
-def test_aws_s3_logs_trigger_parse_data(connector: DeepVisibilityConnector, test_data: bytes):
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_data(connector: DeepVisibilityConnector, test_data: bytes):
     """
     Test DeepVisibilityConnector `_parse_data`.
 
@@ -58,7 +61,13 @@ def test_aws_s3_logs_trigger_parse_data(connector: DeepVisibilityConnector, test
         test_data: bytes
     """
 
-    assert connector._parse_content(test_data) == [
-        [line for line in test_data.decode("utf-8").split("\n") if line != ""][1]
-    ]
-    assert connector._parse_content(b"") == []
+    async with async_temporary_file(test_data) as f:
+        assert await async_list(connector._parse_content(f)) == [
+            [line for line in test_data.decode("utf-8").split("\n") if line != ""][1]
+        ]
+
+
+@pytest.mark.asyncio
+async def test_aws_s3_logs_trigger_parse_empty_data(connector: DeepVisibilityConnector):
+    async with async_temporary_file(b"") as f:
+        assert await async_list(connector._parse_content(f)) == []
