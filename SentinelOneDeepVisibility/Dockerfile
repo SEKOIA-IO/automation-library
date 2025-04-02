@@ -16,6 +16,9 @@ COPY . .
 # Install dependencies
 RUN poetry config virtualenvs.create false && poetry install --only main
 
+# Clean /tmp from poetry installations
+RUN rm -rf /tmp/*
+
 RUN useradd -ms /bin/bash sekoiaio-runtime
 USER sekoiaio-runtime
 

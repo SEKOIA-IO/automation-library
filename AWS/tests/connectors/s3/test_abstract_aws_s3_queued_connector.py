@@ -1,10 +1,12 @@
 """Contains tests for AbstractAwsS3QueuedConnector."""
 
 import os
-from gzip import compress
+from collections.abc import AsyncGenerator
 from pathlib import Path
+from typing import BinaryIO
 from unittest.mock import AsyncMock, MagicMock
 
+import io
 import orjson
 import pytest
 from faker import Faker
@@ -13,6 +15,7 @@ from aws_helpers.s3_wrapper import S3Wrapper
 from aws_helpers.sqs_wrapper import SqsWrapper
 from connectors import AwsModule
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from tests.helpers import async_bytesIO, async_list, async_temporary_file
 
 
 @pytest.fixture
@@ -96,18 +99,18 @@ def abstract_queued_connector(
 
     connector.push_data_to_intakes = mock_push_data_to_intakes
 
-    def _parse_content(content: bytes) -> list[str]:
+    async def _parse_content(stream: BinaryIO) -> AsyncGenerator[str, None]:
         """
-        Parse the content of the object and return a list of records.
+        Parse the content of a S3 object
 
         Args:
-            content: bytes
+            stream: BinaryIO
         """
+        content = await stream.read()
+
         result = content.decode("utf-8")
         if result:
-            return [result]
-
-        return []
+            yield result
 
     connector._parse_content = MagicMock(side_effect=_parse_content)
     connector.log = MagicMock()
@@ -125,29 +128,6 @@ def test_abstract_aws_s3_queued_connector_wrappers(abstract_queued_connector: Ab
     """
     assert isinstance(abstract_queued_connector.s3_wrapper, S3Wrapper)
     assert isinstance(abstract_queued_connector.sqs_wrapper, SqsWrapper)
-
-
-def test_abstract_aws_s3_queued_connector_decompress_content(
-    session_faker: Faker,
-    abstract_queued_connector: AbstractAwsS3QueuedConnector,
-):
-    """
-    Test AbstractAwsS3QueuedConnector s3 wrapper initialization.
-
-    Args:
-        session_faker: Faker
-        abstract_queued_connector: AbstractAwsS3QueuedConnector
-    """
-    input_data = session_faker.word().encode("utf-8")
-
-    compressed_data = compress(input_data)
-
-    result1 = abstract_queued_connector.decompress_content(compressed_data)
-    result2 = abstract_queued_connector.decompress_content(input_data)
-
-    assert result1 == input_data
-    assert result2 == input_data
-    assert isinstance(result1, bytes) and isinstance(result2, bytes)
 
 
 @pytest.mark.asyncio
@@ -175,13 +155,16 @@ async def test_abstract_aws_s3_queued_connector_next_batch(
     data_content = session_faker.word()
     expected_result = [data_content for _ in range(amount_of_messages)]
 
+    async def read_key():
+        return await async_bytesIO(data_content.encode("utf-8"))
+
     abstract_queued_connector.sqs_wrapper = MagicMock()
     abstract_queued_connector.sqs_wrapper.receive_messages = MagicMock()
     abstract_queued_connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = sqs_messages
 
     abstract_queued_connector.s3_wrapper = MagicMock()
     abstract_queued_connector.s3_wrapper.read_key = MagicMock()
-    abstract_queued_connector.s3_wrapper.read_key.return_value.__aenter__.return_value = data_content.encode("utf-8")
+    abstract_queued_connector.s3_wrapper.read_key.return_value.__aenter__.side_effect = read_key
 
     result = await abstract_queued_connector.next_batch()
 
@@ -220,9 +203,12 @@ async def test_abstract_aws_s3_queued_connector_next_batch_with_errored_message(
     abstract_queued_connector.sqs_wrapper.receive_messages = MagicMock()
     abstract_queued_connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
 
+    async def read_key():
+        return await async_bytesIO(data_content.encode("utf-8"))
+
     abstract_queued_connector.s3_wrapper = MagicMock()
     abstract_queued_connector.s3_wrapper.read_key = MagicMock()
-    abstract_queued_connector.s3_wrapper.read_key.return_value.__aenter__.return_value = data_content.encode("utf-8")
+    abstract_queued_connector.s3_wrapper.read_key.return_value.__aenter__.side_effect = read_key
 
     result = await abstract_queued_connector.next_batch()
 
