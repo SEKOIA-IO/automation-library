@@ -147,8 +147,6 @@ def test_failing_authentication():
             },
         )
 
-        current_dt = datetime.utcnow()
-
         with pytest.raises(SophosApiAuthenticationError) as excinfo:
             auth.get_credentials()
 
@@ -181,8 +179,6 @@ def test_failing_whoami():
                 "error": "Unauthorized",
             },
         )
-
-        current_dt = datetime.utcnow()
 
         with pytest.raises(SophosApiAuthenticationError) as excinfo:
             auth.get_credentials()
