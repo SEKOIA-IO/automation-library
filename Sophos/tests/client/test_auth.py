@@ -150,7 +150,8 @@ def test_failing_authentication():
         with pytest.raises(SophosApiAuthenticationError) as excinfo:
             auth.get_credentials()
 
-        assert not whoiam_mock.called
+            assert str(excinfo.value) == "Authentication failed. Check your client_id and client_secret."
+            assert not whoiam_mock.called
 
 
 def test_failing_whoami():
@@ -182,6 +183,8 @@ def test_failing_whoami():
 
         with pytest.raises(SophosApiAuthenticationError) as excinfo:
             auth.get_credentials()
+
+            assert str(excinfo.value) == "The Whoami call failed. Check your client_id and client_secret."
 
 
 @pytest.mark.skipif("{'SOPHOS_CLIENT_ID', 'SOPHOS_CLIENT_SECRET'}.issubset(os.environ.keys()) == False")
