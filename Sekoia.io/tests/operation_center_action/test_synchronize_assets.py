@@ -1,7 +1,7 @@
 import pytest
 import json
 from urllib.parse import urljoin
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from typing import List, Dict, Any
 from unittest.mock import patch
 
