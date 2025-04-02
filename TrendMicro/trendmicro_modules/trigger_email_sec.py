@@ -3,7 +3,7 @@ import traceback
 import urllib.parse
 from functools import cached_property
 from threading import Event, Lock, Thread
-from typing import Generator, Any
+from typing import Any, Generator
 
 import orjson
 from pydantic import Field
@@ -190,7 +190,9 @@ class TrendMicroWorker(Thread):
                     message=f"{self.log_type}: Forwarded {events_len} events to the intake",
                     level="info",
                 )
-                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(events_len)
+                INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
+                    events_len
+                )
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
 
