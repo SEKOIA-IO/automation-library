@@ -13,6 +13,7 @@ from urllib3.exceptions import HTTPError as BaseHTTPError
 from sophos_module.base import SophosConnector
 from sophos_module.client import SophosApiClient
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.exceptions import SophosApiAuthenticationError
 from sophos_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
@@ -81,6 +82,9 @@ class SophosXDRQueryTrigger(SophosConnector):
         self.log(message="Sophos Events Trigger has started", level="info")
 
         try:
+            # Authenticate with the Sophos API
+            self.authentication.get_credentials()
+
             while self.running:
                 start = time.time()
                 try:
@@ -101,6 +105,11 @@ class SophosXDRQueryTrigger(SophosConnector):
                 # if greater than 0, sleep
                 if delta_sleep > 0:
                     time.sleep(delta_sleep)
+
+        except SophosApiAuthenticationError as ex:
+            # Log a critical message, that will stop the connector, when the authentication fails
+            self.log(message=str(ex), level="critical")
+
         finally:
             self.log(message="Sophos Events Trigger has stopped", level="info")
 
