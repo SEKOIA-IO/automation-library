@@ -184,4 +184,4 @@ class SynchronizeAssetsWithAD(Action):
             }
             responses.append(response)
 
-        return responses
+        return {"data": responses}
