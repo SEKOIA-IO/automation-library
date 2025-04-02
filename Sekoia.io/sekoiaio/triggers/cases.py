@@ -224,15 +224,6 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
 
-        work_dir = self._data_path.joinpath("sekoiaio_securitycases").joinpath(str(uuid.uuid4()))
-        case_path = work_dir.joinpath("case.json")
-        work_dir.mkdir(parents=True, exist_ok=True)
-
-        with case_path.open("w") as fp:
-            fp.write(orjson.dumps(case).decode("utf-8"))
-
-        directory = str(work_dir.relative_to(self._data_path))
-
         case_short_id = case.get("short_id")
         event = {
             "uuid": case_uuid,
