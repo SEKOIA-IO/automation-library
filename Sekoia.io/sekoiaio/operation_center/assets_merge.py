@@ -1,6 +1,6 @@
 from typing import List
 from posixpath import join as urljoin
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 import requests
 from sekoia_automation.action import Action
 

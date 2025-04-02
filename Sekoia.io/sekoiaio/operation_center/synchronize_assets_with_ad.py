@@ -2,7 +2,7 @@ from urllib.parse import urljoin
 from typing import List, Dict, Any, Optional
 import requests
 import json
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from sekoia_automation.action import Action
 
 

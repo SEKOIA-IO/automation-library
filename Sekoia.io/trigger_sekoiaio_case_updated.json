@@ -1,0 +1,109 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "mode_filter": {
+                "type": "string",
+                "description": "Create a run only for cases matching a mode (automatic or manual)",
+                "enum": ["automatic", "manual"]
+            },
+            "priority_uuids_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of priority uuids"
+            },
+            "assignees_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of assignees"
+            },
+            "case_uuids_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of case uuids/short ids"
+            }
+        },
+        "type": "object",
+        "title": "Trigger configuration"
+    },
+    "description": "An existing case was updated",
+    "docker_parameters": "case_updated_trigger",
+    "name": "Case Updated",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "uuid": {
+                "description": "Unique identifier of the Case (UUID string).",
+                "type": "string"
+            },
+            "short_id": {
+                "description": "Unique short identifier of the Case.",
+                "type": "string"
+            },
+            "created_at": {
+                "description": "Creation date of the Case.",
+                "type": "string",
+                "format": "date-time"
+            },
+            "updated_at": {
+                "description": "Updated date of the Case.",
+                "type": "string",
+                "format": "date-time"
+            },
+            "updated_by": {
+                "description": "User who updated the Case.",
+                "type": "string"
+            },
+            "title": {
+                "description": "Title of the Case.",
+                "type": "string"
+            },
+            "description": {
+                "description": "Description of the Case.",
+                "type": "string"
+            },
+            "assignees": {
+                "description": "List of assignees of the Case.",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "tags": {
+                "description": "List of tags of the Case.",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "status_uuid": {
+                "description": "Unique identifier of the Status (UUID string).",
+                "type": "string"
+            },
+            "priority_uuid": {
+                "description": "Unique identifier of the Priority (UUID string).",
+                "type": "string"
+            },
+            "verdict_uuid": {
+                "description": "Unique identifier of the Verdict (UUID string).",
+                "type": "string"
+            }
+        },
+        "required": [
+            "uuid",
+            "short_id",
+            "created_at",
+            "updated_at",
+            "updated_by"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "d420e76e-c4e7-42fd-ba15-a6b6df6a2cb3"
+}

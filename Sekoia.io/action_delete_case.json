@@ -1,0 +1,22 @@
+{
+    "uuid": "a5cf38d6-9f36-4027-98e9-5fa1d2b2b9af",
+    "name": "Delete rule",
+    "docker_parameters": "delete-case/{case_uuid}",
+    "description": "Delete a case",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "delete_case",
+        "properties": {
+            "case_uuid": {
+                "type": "string",
+                "format": "uuid",
+                "in": "path"
+            }
+        },
+        "required": [
+            "case_uuid"
+        ]
+    },
+    "results": {}
+}

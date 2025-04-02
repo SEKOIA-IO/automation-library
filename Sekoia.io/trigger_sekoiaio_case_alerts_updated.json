@@ -1,0 +1,72 @@
+{
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "mode_filter": {
+                "type": "string",
+                "description": "Create a run only for cases matching a mode (automatic or manual)",
+                "enum": ["automatic", "manual"]
+            },
+            "priority_uuids_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of priority uuids"
+            },
+            "assignees_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of assignees"
+            },
+            "case_uuids_filter": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "Create a run only for cases matching a list of case uuids/short ids"
+            }
+        },
+        "type": "object",
+        "title": "Trigger configuration"
+    },
+    "description": "Alerts have been added to or removed from a case",
+    "docker_parameters": "case_alerts_updated_trigger",
+    "name": "Case Alerts Updated",
+    "results": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+            "uuid": {
+                "description": "Unique identifier of the Case (UUID string).",
+                "type": "string"
+            },
+            "short_id": {
+                "description": "Unique short identifier of the Case.",
+                "type": "string"
+            },
+            "added_alerts": {
+                "description": "List of Unique identifier of new alerts (UUID string).",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            },
+            "removed_alerts": {
+                "description": "List of Unique identifier of removed alerts (UUID string).",
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "required": [
+            "uuid",
+            "short_id"
+        ],
+        "title": "Results",
+        "type": "object"
+    },
+    "uuid": "93a34848-06f3-4ed9-b2c9-e5fdaf1a8157"
+}
