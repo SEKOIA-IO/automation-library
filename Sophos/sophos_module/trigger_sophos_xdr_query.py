@@ -65,15 +65,17 @@ class SophosXDRQueryTrigger(SophosConnector):
         return max(self.configuration.chunk_size, 1000)
 
     @cached_property
-    def client(self) -> SophosApiClient:
-        auth = SophosApiAuthentication(
+    def authentication(self) -> SophosApiAuthentication:
+        return SophosApiAuthentication(
             api_host=self.module.configuration.api_host,
             authorization_url=self.module.configuration.oauth2_authorization_url,
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
         )
 
-        return SophosApiClient(auth=auth)
+    @cached_property
+    def client(self) -> SophosApiClient:
+        return SophosApiClient(auth=self.authentication)
 
     def run(self) -> None:  # pragma: no cover
         self.log(message="Sophos Events Trigger has started", level="info")
