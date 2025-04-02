@@ -140,7 +140,7 @@ class TestSynchronizeAssetsWithAD:
 
         # Execute the action
         resp = action_instance.run(arguments)
-        response = resp[0]
+        response = resp["data"][0]
 
         # Assertions
         assert response["created_asset"] is True, "Asset should not be created since it exists."
@@ -235,7 +235,7 @@ class TestSynchronizeAssetsWithAD:
 
         # Execute the action
         resp = action_instance.run(arguments)
-        response = resp[0]
+        response = resp["data"][0]
 
         # Assertions
         assert response["created_asset"] is False, "Asset should not be created since it exists."
@@ -339,7 +339,7 @@ class TestSynchronizeAssetsWithAD:
 
         # Execute the action
         resp = action_instance.run(arguments)
-        response = resp[0]
+        response = resp["data"][0]
 
         # Assertions
         assert response["created_asset"] is False, "Asset should not be created since it exists."
@@ -488,7 +488,8 @@ class TestSynchronizeAssetsWithAD:
             # Therefore, no POST merge requests are expected
 
             # Execute the action
-            response = action_instance.run(arguments_with_file)
+            resp = action_instance.run(arguments_with_file)
+            response = resp["data"]
 
             # Assertions
             assert len(response) == 2, "Expected two response items for two users."
