@@ -18,7 +18,7 @@ class SynchronizeAssetsWithAD(Action):
     Action to synchronize asset with Active Directory (AD).
     """
 
-    def run(self, arguments: dict) -> List[Dict[str, Any]]:
+    def run(self, arguments: dict) -> Dict[str, List[Dict[str, Any]]]:
         asset_conf = arguments["asset_synchronization_configuration"]
         community_uuid = arguments["community_uuid"]
         user_ad_data = self.json_argument("user_ad_data", arguments)
@@ -184,4 +184,4 @@ class SynchronizeAssetsWithAD(Action):
             }
             responses.append(response)
 
-        return responses
+        return {"data": responses}
