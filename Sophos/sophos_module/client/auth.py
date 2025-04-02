@@ -6,6 +6,7 @@ from requests.adapters import HTTPAdapter, Retry
 from requests.auth import AuthBase
 
 from sophos_module.logging import get_logger
+from sophos_module.client.exceptions import SophosApiAuthenticationError
 
 logger = get_logger()
 
@@ -68,7 +69,8 @@ class SophosApiAuthentication(AuthBase):
                 reason=response.reason,
             )
 
-            response.raise_for_status()
+            if response.status_code > 399:
+                raise SophosApiAuthenticationError("Authentication failed. Check your client_id and client_secret.")
 
             credentials: SophosApiCredentials = SophosApiCredentials()
 
@@ -87,7 +89,9 @@ class SophosApiAuthentication(AuthBase):
                 status_code=response.status_code,
                 reason=response.reason,
             )
-            response.raise_for_status()
+
+            if response.status_code > 399:
+                raise SophosApiAuthenticationError("The Whoami call failed. Check your client_id and client_secret.")
 
             whoami: dict[str, Any] = response.json()
             credentials.tenancy_type = whoami["idType"]
