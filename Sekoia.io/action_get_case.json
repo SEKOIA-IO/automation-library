@@ -11,6 +11,12 @@
         "description": "(Optional) Identifier of the community",
         "type": "string",
         "in": "query"
+      },
+      "render": {
+        "description": "(Optional) Render boolean",
+        "type": "boolean",
+        "in": "query",
+        "default": true
       }
     },
     "required": [

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-03
+
+### Added
+
+Addition of render filter in get_case
+
 ## 2025-04-02 - 2.67.10
 
 ### Fixed

@@ -195,7 +195,7 @@ GetCase = type(
     {
         "verb": "get",
         "endpoint": base_url + "cases/{uuid}",
-        "query_parameters": ["community_uuid"],
+        "query_parameters": ["community_uuid","render"],
     },
 )
 
