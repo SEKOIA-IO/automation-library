@@ -43,7 +43,7 @@ class AkamaiWAFLogsConnector(Connector):
         self.from_timestamp: int = self.cursor.offset
 
         # This cache should be big enough to cover all events within 1 second.
-        self.cache_size = 1000
+        self.cache_size = 10_000
         self.events_cache: Cache = self.load_events_cache()
 
     def load_events_cache(self) -> Cache:
