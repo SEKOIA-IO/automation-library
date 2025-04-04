@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "Automation module for Akamai"
+version = "0.0"
+description = ""
+authors = []
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+sekoia-automation-sdk = "^1.18.3"
+edgegrid-python = "^2.0.0"
+orjson = "^3.10.16"
+requests-ratelimiter = "^0.7.0"
+requests = "^2.32.3"
+cachetools = "^5.5.2"
+structlog = "^25.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+freezegun = "^1.5.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
