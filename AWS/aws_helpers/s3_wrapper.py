@@ -63,9 +63,13 @@ class S3Wrapper(AwsClient[S3Configuration]):
                 content = io.BytesIO(await stream.read())
                 if is_gzip_compressed(content.getbuffer()):
                     logger.info("Reading compressed S3 object", key=key, size=response["ContentLength"])
-                    yield await async_gzip_open(content, loop=loop)
+                    fd = await async_gzip_open(content, loop=loop)
+                    yield fd
+                    await fd.close()
                 else:
                     logger.info("Reading non-compressed S3 object", key=key, size=response["ContentLength"])
-                    yield AsyncBufferedReader(content, loop=loop, executor=None)
+                    fd = AsyncBufferedReader(content, loop=loop, executor=None)
+                    yield fd
+                    await fd.close()
 
                 logger.info("Freeing S3 object", key=key)
