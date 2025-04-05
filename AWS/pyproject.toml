@@ -20,6 +20,7 @@ pyarrow = "^17.0.0"
 loguru = "^0.7.0"
 async-lru = "^2.0.2"
 aiofiles = "^23.1.0"
+structlog = "^25.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

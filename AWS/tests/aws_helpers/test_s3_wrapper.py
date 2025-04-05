@@ -36,7 +36,7 @@ async def test_read_key(session_faker: Faker):
 
         mock_client.return_value.__aenter__.return_value = mock_s3
 
-        s3_response = {"Body": AsyncMock()}
+        s3_response = {"Body": AsyncMock(), "ContentLength": 26}
         s3_response["Body"].__aenter__.return_value = s3_response["Body"]
         s3_response["Body"].read = AsyncMock(return_value=text.encode("utf-8"))
 
@@ -77,7 +77,7 @@ async def test_read_compressed_encoding_key(session_faker: Faker):
 
         mock_client.return_value.__aenter__.return_value = mock_s3
 
-        s3_response = {"Body": AsyncMock(), "ContentEncoding": "gzip"}
+        s3_response = {"Body": AsyncMock(), "ContentEncoding": "gzip", "ContentLength": 26}
         s3_response["Body"].__aenter__.return_value = s3_response["Body"]
         s3_response["Body"].read = AsyncMock(return_value=gzip.compress(text.encode("utf-8")))
 
@@ -119,7 +119,7 @@ async def test_read_compressed_content_key(session_faker: Faker, content_type: s
 
         mock_client.return_value.__aenter__.return_value = mock_s3
 
-        s3_response = {"Body": AsyncMock(), "ContentType": content_type}
+        s3_response = {"Body": AsyncMock(), "ContentType": content_type, "ContentLength": 26}
         s3_response["Body"].__aenter__.return_value = s3_response["Body"]
         s3_response["Body"].read = AsyncMock(return_value=gzip.compress(text.encode("utf-8")))
 

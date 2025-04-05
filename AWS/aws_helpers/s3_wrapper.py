@@ -11,7 +11,11 @@ from loguru import logger
 from pydantic.v1 import Field
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 
+from aws_helpers.logging import get_logger
 from aws_helpers.utils import is_gzip_compressed, async_gzip_open, AsyncReader
+
+
+logger = get_logger()
 
 
 class S3Configuration(AwsConfiguration):
@@ -58,6 +62,10 @@ class S3Wrapper(AwsClient[S3Configuration]):
             async with response["Body"] as stream:
                 content = io.BytesIO(await stream.read())
                 if is_gzip_compressed(content.getbuffer()):
+                    logger.info("Reading compressed S3 object", key=key, size=response["ContentLength"])
                     yield await async_gzip_open(content, loop=loop)
                 else:
+                    logger.info("Reading non-compressed S3 object", key=key, size=response["ContentLength"])
                     yield AsyncBufferedReader(content, loop=loop, executor=None)
+
+                logger.info("Freeing S3 object", key=key)
