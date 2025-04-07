@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-07 - 1.29.1
+
+### Fixed
+
+- Fix the output of the `Add new Address group to a Fortigate firewall` action
+
 ## 2024-05-28 - 1.29.0
 
 ### Added

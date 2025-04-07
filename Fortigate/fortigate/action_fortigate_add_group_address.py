@@ -8,7 +8,7 @@ class FortigateAddGroupAddress(Action):
     Action to Add a Group Address on a remote fortigate
     """
 
-    def run(self, arguments: dict) -> list:
+    def run(self, arguments: dict) -> dict:
         """
         Modify the members of the address group on the firewall.
         Parameters
@@ -50,7 +50,7 @@ class FortigateAddGroupAddress(Action):
             else:
                 self.add_fw_address_group(name, new_member_list)
 
-        return objects
+        return {"objects": objects}
 
     def add_api(self, url, data=None):
         try:
