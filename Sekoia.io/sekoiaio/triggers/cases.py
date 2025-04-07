@@ -183,7 +183,7 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
 
-        if not all(filter for filter in filter_notifications):
+        if not all(filter_notifications):
             return
 
         case_short_id = case.get("short_id")
