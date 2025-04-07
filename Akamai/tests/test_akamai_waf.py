@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -91,6 +91,19 @@ def raw_event():
     }
 
 
+@pytest.fixture
+def response_1() -> bytes:
+    return b"""{"type": "akamai_siem", "format": "json", "version": 1.0, "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n
+            {"type": "akamai_siem", "format": "json", "version": 1.0, "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n
+            {"type": "akamai_siem", "format": "json", "version": 1.0, "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n
+            {"total": 3, "offset": "OFFSET_TOKEN"}\n"""
+
+
+@pytest.fixture
+def response_2() -> bytes:
+    return b"""{"total": 0, "offset": "EMPTY_TOKEN"}\n"""
+
+
 def test_extract_attack_data(trigger, raw_event):
     attack_data = trigger.extract_attack_data(raw_event)
 
@@ -130,21 +143,18 @@ def test_extract_attack_data(trigger, raw_event):
     }
 
 
-def test_fetch_events(trigger):
+def test_fetch_events(trigger, response_1, response_2):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://example.com/siem/v1/configs/1?from=1743505199&limit=2000",
             status_code=200,
-            content=b"""{"type": "akamai_siem", "format": "json", "version": 1.0, "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n
-            {"type": "akamai_siem", "format": "json", "version": 1.0, "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n
-            {"type": "akamai_siem", "format": "json", "version": 1.0, "attackData": {}, "httpMessage": {"requestId": 1, "start": "1743505200"}}\n
-            {"total": 3, "offset": "OFFSET_TOKEN"}\n""",
+            content=response_1,
         )
 
         mock_requests.get(
             "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=2000",
             status_code=200,
-            content=b"""{"total": 0, "offset": "EMPTY_TOKEN"}\n""",
+            content=response_2,
         )
 
         events = list(trigger.fetch_events())
@@ -195,3 +205,53 @@ def test_request_error(trigger):
 
         with pytest.raises(requests.HTTPError):
             trigger.next_batch()
+
+
+def test_next_batch_sleep_until_next_round(trigger, response_1, response_2):
+    with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=2000",
+            status_code=200,
+            content=response_1,
+        )
+
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=2000",
+            status_code=200,
+            content=response_2,
+        )
+
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 1
+
+
+def test_long_next_batch_should_not_sleep(trigger, response_1, response_2):
+    with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=2000",
+            status_code=200,
+            content=response_1,
+        )
+
+        mock_requests.get(
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=2000",
+            status_code=200,
+            content=response_2,
+        )
+
+        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        trigger.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 0
