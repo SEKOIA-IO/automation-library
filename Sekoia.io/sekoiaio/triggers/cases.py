@@ -23,15 +23,15 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
         mode_filter = self.configuration.get("mode_filter")
         if mode_filter and case_attrs.get("manual") != (mode_filter == "manual"):
             return False
-        
+
         return True
-    
+
     def _filter_by_priority(self, message) -> bool:
         case_attrs = message.get("attributes", {})
         priority_uuids_filter = self.configuration.get("priority_uuids_filter")
         if priority_uuids_filter and case_attrs.get("custom_priority_uuid") not in priority_uuids_filter:
             return False
-        
+
         return True
 
     def _filter_by_assignees(self, message) -> bool:
@@ -41,7 +41,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
             case_details = self._retrieve_case_from_caseapi(case_attrs.get("uuid"))
             if not any(assignee in assignees_filter for assignee in case_details.get("assignees", [])):
                 return False
-            
+
         return True
 
     def _filter_by_uuids(self, message) -> bool:
@@ -53,7 +53,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
             and case_attrs.get("short_id") not in case_uuids_filter
         ):
             return False
-        
+
         return True
 
     @retry(
@@ -106,7 +106,11 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
         case_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
-        filter_notifications = [self._filter_by_mode(message), self._filter_by_priority(message), self._filter_by_assignees(message)]
+        filter_notifications = [
+            self._filter_by_mode(message),
+            self._filter_by_priority(message),
+            self._filter_by_assignees(message),
+        ]
 
         # Ignore cases “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
@@ -116,7 +120,7 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
         case_uuid: str = case_attrs.get("uuid", "")
         if not case_uuid:
             return
-        
+
         try:
             case = self._retrieve_case_from_caseapi(case_uuid)
 
@@ -157,7 +161,12 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         case_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
-        filter_notifications = [self._filter_by_mode(message), self._filter_by_priority(message), self._filter_by_assignees(message), self._filter_by_uuids(message)]
+        filter_notifications = [
+            self._filter_by_mode(message),
+            self._filter_by_priority(message),
+            self._filter_by_assignees(message),
+            self._filter_by_uuids(message),
+        ]
 
         # Ignore cases “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
@@ -173,10 +182,9 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         except Exception as exp:
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
-        
+
         if not any(filter for filter in filter_notifications):
             return
-
 
         case_short_id = case.get("short_id")
         event = {
@@ -214,7 +222,12 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
         case_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
-        filter_notifications = [self._filter_by_mode(message), self._filter_by_priority(message), self._filter_by_assignees(message), self._filter_by_uuids(message)]
+        filter_notifications = [
+            self._filter_by_mode(message),
+            self._filter_by_priority(message),
+            self._filter_by_assignees(message),
+            self._filter_by_uuids(message),
+        ]
 
         # Ignore cases “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
@@ -230,10 +243,9 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
         except Exception as exp:
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
-        
+
         if not any(filter for filter in filter_notifications):
             return
-
 
         case_short_id = case.get("short_id")
         event = {
