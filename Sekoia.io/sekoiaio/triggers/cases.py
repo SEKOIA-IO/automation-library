@@ -128,7 +128,7 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
 
-        if not (filter for filter in filter_notifications):
+        if not any(filter for filter in filter_notifications):
             return
 
         case_short_id = case_attrs.get("short_id")
@@ -183,7 +183,7 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
 
-        if not (filter for filter in filter_notifications):
+        if not any(filter for filter in filter_notifications):
             return
 
         case_short_id = case.get("short_id")
@@ -244,7 +244,7 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
 
-        if not (filter for filter in filter_notifications):
+        if not any(filter for filter in filter_notifications):
             return
 
         case_short_id = case.get("short_id")
