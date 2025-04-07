@@ -121,15 +121,16 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
         if not case_uuid:
             return
 
-        if not any(filter for filter in filter_notifications):
-            return
-
         try:
             case = self._retrieve_case_from_caseapi(case_uuid)
 
         except Exception as exp:
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
+
+        if not (filter for filter in filter_notifications):
+            return
+
         case_short_id = case_attrs.get("short_id")
         event = {
             "uuid": case_uuid,
@@ -176,13 +177,13 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         if not case_uuid:
             return
 
-        if not any(filter for filter in filter_notifications):
-            return
-
         try:
             case = self._retrieve_case_from_caseapi(case_uuid)
         except Exception as exp:
             self.log_exception(exp, message="Failed to fetch case from case API")
+            return
+
+        if not (filter for filter in filter_notifications):
             return
 
         case_short_id = case.get("short_id")
@@ -237,14 +238,15 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
         if not case_uuid:
             return
 
-        if not any(filter for filter in filter_notifications):
-            return
-
         try:
             case = self._retrieve_case_from_caseapi(case_uuid)
         except Exception as exp:
             self.log_exception(exp, message="Failed to fetch case from case API")
             return
+
+        if not (filter for filter in filter_notifications):
+            return
+
         case_short_id = case.get("short_id")
         event = {
             "uuid": case_uuid,
