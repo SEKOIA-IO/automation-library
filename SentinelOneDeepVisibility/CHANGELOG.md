@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-07 - 1.1.5
+
+### Fixed
+
+- Read the S3 object as an async generator to avoid loading and reading the entire object into memory.
+
 ## 2025-03-22 - 1.1.4
 
 ### Changed
