@@ -30,9 +30,10 @@ class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
         Returns:
              Generator:
         """
-        records = (line.rstrip(b"\n") for line in await stream.readlines())
+        # Use the iterator protocol to read the stream line by line. Using readline() would uncompress the entire file in memory
+        records = (line.rstrip(b"\n") async for line in stream)
 
-        for record in records:
+        async for record in records:
             if len(record) > 0:
                 try:
                     json_record = orjson.loads(record)
