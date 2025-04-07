@@ -50,7 +50,7 @@ class FortigateAddGroupAddress(Action):
             else:
                 self.add_fw_address_group(name, new_member_list)
 
-        return objects
+        return {"objects": objects}
 
     def add_api(self, url, data=None):
         try:

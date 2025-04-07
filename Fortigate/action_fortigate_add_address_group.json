@@ -24,6 +24,19 @@
   "description": "Add a new Address Group to a Fortigate Firewall",
   "docker_parameters": "fortigate_add_group_address",
   "name": "Post Fortigate Address Group",
-  "results": {},
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "objects": {
+        "description": "The OBJECT list added to the Address Group.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
   "uuid": "d98acb88-88ca-4afe-95d0-b9996fe37cfc"
 }
