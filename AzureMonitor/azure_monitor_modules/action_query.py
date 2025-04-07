@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from azure.core.exceptions import HttpResponseError
+from azure.core.exceptions import HttpResponseError, ClientAuthenticationError
 from azure.monitor.query import LogsQueryStatus
 from pydantic.v1 import BaseModel, Field
 
@@ -72,3 +72,4 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
 
         except HttpResponseError as err:
             self.log(message=str(err), level="error")
+            raise
