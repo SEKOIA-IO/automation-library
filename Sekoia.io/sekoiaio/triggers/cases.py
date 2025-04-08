@@ -35,7 +35,7 @@ class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
     def _filter_by_assignees(self, case) -> bool:
         assignees_filter = self.configuration.get("assignees_filter")
         if assignees_filter:
-            if not any(assignee["avatar_uuid"] in assignees_filter for assignee in case.get("subscribers", [])):
+            if not any(assignee.get("avatar_uuid") in assignees_filter for assignee in case.get("subscribers", [])):
                 return False
 
         return True
