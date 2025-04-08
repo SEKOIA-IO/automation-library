@@ -69,6 +69,17 @@ def case_updated_trigger(module_configuration, symphony_storage):
     yield trigger
 
 
+@pytest.fixture
+def case_alerts_updated_trigger(module_configuration, symphony_storage):
+    trigger = CaseAlertsUpdatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+
+    yield trigger
+
+
 def test_casecreatedtrigger_handler_dispatch_case_message(case_created_trigger, samplenotif_case_updated):
     case_created_trigger.handle_event = Mock()
 
@@ -180,22 +191,24 @@ def test_case_trigger_filter_by_priorities(
 
 
 def test_case_filter_by_assignees(
-    case_created_trigger,
-    samplenotif_case_created,
+    case_alerts_updated_trigger,
+    samplenotif_case_has_updated_alerts,
     sample_siccaseapi_mock,
     sample_siccaseapi,
 ):
-    case_created_trigger.send_event = MagicMock()
+    case_alerts_updated_trigger.send_event = MagicMock()
     with sample_siccaseapi_mock:
         # no match
-        case_created_trigger.configuration = {"assignees_filter": ["foo"]}
-        case_created_trigger.handle_event(samplenotif_case_created)
-        assert not case_created_trigger.send_event.called
+        case_alerts_updated_trigger.configuration = {"assignees_filter": ["foo"]}
+        case_alerts_updated_trigger.handle_event(samplenotif_case_has_updated_alerts)
+        assert not case_alerts_updated_trigger.send_event.called
 
         # match assignee
-        case_created_trigger.configuration = {"assignees_filter": [sample_siccaseapi["assignees"][0]]}
-        case_created_trigger.handle_event(samplenotif_case_created)
-        assert case_created_trigger.send_event.called
+        case_alerts_updated_trigger.configuration = {
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]]
+        }
+        case_alerts_updated_trigger.handle_event(samplenotif_case_has_updated_alerts)
+        assert case_alerts_updated_trigger.send_event.called
 
 
 def test_case_filter_by_case_uuids(

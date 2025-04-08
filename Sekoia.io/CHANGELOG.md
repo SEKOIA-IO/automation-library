@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-07 - 2.67.12
+
+### Fixed
+
+Fix on automation cases triggers
+
 ## 2025-04-03 - 2.67.11
 
 ### Added
