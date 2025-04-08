@@ -204,7 +204,9 @@ def test_case_filter_by_assignees(
         assert not case_alerts_updated_trigger.send_event.called
 
         # match assignee
-        case_alerts_updated_trigger.configuration = {"assignees_filter": [sample_siccaseapi["assignees"][0]]}
+        case_alerts_updated_trigger.configuration = {
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]]
+        }
         case_alerts_updated_trigger.handle_event(samplenotif_case_has_updated_alerts)
         assert case_alerts_updated_trigger.send_event.called
 

@@ -1276,7 +1276,7 @@ def sample_siccaseapi():
         "verdict_uuid": None,
         "custom_status_uuid": None,
         "custom_priority_uuid": "d4035e46-3a60-4dc8-a91a-ac7a80d04688",
-        "assignees": ["test_user_uuid"],
+        "subscribers": [{"avatar_uuid": "bed24c33-9044-41b5-96c5-024eb9b0c439", "type": "string"}],
         "number_of_alerts": 3,
         "alerts": [
             {
