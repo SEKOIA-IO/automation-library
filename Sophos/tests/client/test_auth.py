@@ -5,6 +5,7 @@ import pytest
 import requests_mock
 
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.exceptions import SophosApiAuthenticationError
 
 
 def test_get_credentials():
@@ -113,6 +114,77 @@ def test_get_credentials_request_new_token_only_when_needed():
         assert p1.called
         assert p2.called
         assert not p3.called
+
+
+def test_failing_authentication():
+    api_host_url = "https://api-eu.central.sophos.com"
+    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
+    client_id = "foo"
+    client_secret = "bar"
+    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            authorization_url,
+            status_code=401,
+            json={
+                "errorCode": "oauth.invalid_client_secret",
+                "message": "Unauthorized",
+            },
+        )
+
+        whoiam_mock = mock.get(
+            f"{api_host_url}/whoami/v1",
+            status_code=200,
+            json={
+                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "idType": "tenant",
+                "apiHosts": {
+                    "global": "https://api.central.sophos.com",
+                    "dataRegion": "https://api-eu02.central.sophos.com",
+                },
+            },
+        )
+
+        with pytest.raises(SophosApiAuthenticationError) as excinfo:
+            auth.get_credentials()
+
+            assert str(excinfo.value) == "Authentication failed. Check your client_id and client_secret."
+            assert not whoiam_mock.called
+
+
+def test_failing_whoami():
+    api_host_url = "https://api-eu.central.sophos.com"
+    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
+    client_id = "foo"
+    client_secret = "bar"
+    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            authorization_url,
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "scope": "our-scope",
+                "expires_in": 1799,
+            },
+        )
+
+        whoiam_mock = mock.get(
+            f"{api_host_url}/whoami/v1",
+            status_code=401,
+            json={
+                "error": "Unauthorized",
+            },
+        )
+
+        with pytest.raises(SophosApiAuthenticationError) as excinfo:
+            auth.get_credentials()
+
+            assert str(excinfo.value) == "The Whoami call failed. Check your client_id and client_secret."
 
 
 @pytest.mark.skipif("{'SOPHOS_CLIENT_ID', 'SOPHOS_CLIENT_SECRET'}.issubset(os.environ.keys()) == False")
