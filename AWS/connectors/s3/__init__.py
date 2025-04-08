@@ -2,6 +2,7 @@
 
 import os
 from abc import ABCMeta
+from asyncio import BoundedSemaphore
 from collections.abc import AsyncGenerator
 from functools import cached_property
 from typing import Any, BinaryIO, Optional
@@ -35,6 +36,8 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
+        self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
+        self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
     @cached_property
     def s3_wrapper(self) -> S3Wrapper:
@@ -132,6 +135,9 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
+                if not message_records:
+                    continue_receiving = False
+
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
                 for record in message_records:
                     try:
@@ -145,7 +151,10 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
                         normalized_key = normalize_s3_key(s3_key)
 
-                        async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream:
+                        async with (
+                            self.s3_fetch_concurrency_sem,
+                            self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                        ):
                             async for event in self._parse_content(stream):
                                 records.append(event)
 

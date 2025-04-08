@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-07 - 1.33.1
+
+### Added
+
+- Add a semaphore to control the number of S3 Objects processed at the same time
+
+### Changed
+
+- Change the criteria to stop the consumption of SQS messages
+
+### Fixed
+
+- Free S3 Objects after processing to prevent high-memory usage
+
 ## 2025-03-22 - 1.33.0
 
 ### Changed
