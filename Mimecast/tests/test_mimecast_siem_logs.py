@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
@@ -10,20 +9,6 @@ from mimecast_modules import MimecastModule
 from mimecast_modules.client import ApiClient
 from mimecast_modules.client.auth import ApiKeyAuthentication
 from mimecast_modules.connector_mimecast_siem import MimecastSIEMConnector, MimecastSIEMWorker
-
-
-@pytest.fixture
-def fake_time():
-    yield datetime(2024, 5, 1, 11, 59, 59, tzinfo=timezone.utc)
-
-
-@pytest.fixture
-def patch_datetime_now(fake_time):
-    with patch("mimecast_modules.connector_mimecast_siem.datetime") as mock_datetime:
-        mock_datetime.now.return_value = fake_time
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
-        mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
-        yield mock_datetime
 
 
 @pytest.fixture
@@ -81,6 +66,7 @@ def batch_events_response_1():
                 "expiry": "2024-06-05T11:50:06.389Z",
             }
         ],
+        "isCaughtUp": False,
         "@nextPage": "tokenNextPage1=",
         "isCaughtUp": False,
     }
@@ -109,9 +95,7 @@ def batch_event_1():
     }
 
 
-def test_fetch_batches(
-    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
-):
+def test_fetch_batches(trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
     ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
@@ -141,11 +125,6 @@ def test_fetch_batches(
 
         assert trigger.push_events_to_intakes.call_count == 1
         mock_time.sleep.assert_called_once_with(44)
-
-
-def test_most_recent_datetime_seen(trigger, patch_datetime_now, fake_time, api_client):
-    consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
-    assert consumer.most_recent_date_seen == fake_time - timedelta(days=1)
 
 
 def test_start_consumers(trigger, api_client):
@@ -189,7 +168,7 @@ def test_stop_consumers(trigger):
 
 
 def test_authentication_failed(
-    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
+    trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
 ):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
@@ -222,9 +201,7 @@ def test_authentication_failed(
         ]
 
 
-def test_permission_denied(
-    trigger, patch_datetime_now, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
-):
+def test_permission_denied(trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client):
     with requests_mock.Mocker() as mock_requests, patch(
         "mimecast_modules.connector_mimecast_siem.download_batches"
     ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
