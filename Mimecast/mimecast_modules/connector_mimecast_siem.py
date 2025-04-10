@@ -77,11 +77,6 @@ class MimecastSIEMWorker(Thread):
         self.connector.context_lock.acquire()
         with self.connector.context as cache:
             most_recent_date_seen_str = cache.get(self.log_type, {}).get("most_recent_date_seen")
-
-            # clean up
-            if self.log_type in cache and "most_recent_date_seen" in cache[self.log_type]:
-                del cache[self.log_type]["most_recent_date_seen"]
-
         self.connector.context_lock.release()
 
         if most_recent_date_seen_str is None:
@@ -107,11 +102,13 @@ class MimecastSIEMWorker(Thread):
             "type": self.log_type,
         }
 
-        if self.old_cursor is not None:
-            logger.info("Starting with old datetime cursor", datetime=self.old_cursor.isoformat())
+        if self.cursor.offset is None and self.old_cursor is not None:
+            logger.info(
+                "Starting with old datetime cursor", log_type=self.log_type, datetime=self.old_cursor.isoformat()
+            )
             params["dateRangeStartsAt"] = self.old_cursor.strftime("%Y-%m-%d")
 
-        elif self.cursor.offset is None:
+        elif self.cursor.offset is None and self.old_cursor is None:
             # provide date range to start
             start_at = datetime.today()
             params["dateRangeStartsAt"] = start_at.strftime("%Y-%m-%d")
@@ -139,7 +136,7 @@ class MimecastSIEMWorker(Thread):
                     # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
                     # events from the day's start and then filter out all events with timestamps before saved datetime
                     events = [event for event in events if event["timestamp"] > self.old_cursor.timestamp() * 1000]
-                    logger.info("Filtered events", nb_url=len(events))
+                    logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
 
                     # We don't need this anymore - it's for the first page only
                     self.old_cursor = None
