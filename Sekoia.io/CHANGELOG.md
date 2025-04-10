@@ -11,20 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-Fix on automation cases triggers
+- Fix on automation cases triggers
 
 ## 2025-04-03 - 2.67.11
 
 ### Added
 
-Addition of render filter in get_case
+- Addition of render filter in get_case
 
 ## 2025-04-02 - 2.67.10
 
 ### Fixed
 
-Support for file input - action synchronize asset - Fix output type
-
+- Support for file input - action synchronize asset - Fix output type
 
 ## 2025-03-20 - 2.67.9
 
