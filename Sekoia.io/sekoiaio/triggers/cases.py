@@ -248,7 +248,7 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
             "uuid": case_uuid,
             "short_id": case_short_id,
             "added_alerts": case_attrs.get("updated", {}).get("added_alerts_uuid", []),
-            "removed_alerts": case_attrs.get("updated", {}).get("removed_alerts_uuid", []),
+            "deleted_alerts": case_attrs.get("updated", {}).get("deleted_alerts_uuid", []),
         }
 
         self.send_event(
