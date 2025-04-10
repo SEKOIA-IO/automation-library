@@ -53,7 +53,7 @@
                     "type": "string"
                 }
             },
-            "removed_alerts": {
+            "deleted_alerts": {
                 "description": "List of Unique identifier of removed alerts (UUID string).",
                 "type": "array",
                 "items": {

@@ -7,24 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-10 - 2.67.13
+
+### Fixed
+
+- Rename the delete case action
+- Rename the list of deleted alerts in the case alerts updated
+
+### Added
+
+- Add more tests about the filters used in the automation cases triggers
+
 ## 2025-04-07 - 2.67.12
 
 ### Fixed
 
-Fix on automation cases triggers
+- Fix on automation cases triggers
 
 ## 2025-04-03 - 2.67.11
 
 ### Added
 
-Addition of render filter in get_case
+- Addition of render filter in get_case
 
 ## 2025-04-02 - 2.67.10
 
 ### Fixed
 
-Support for file input - action synchronize asset - Fix output type
-
+- Support for file input - action synchronize asset - Fix output type
 
 ## 2025-03-20 - 2.67.9
 

@@ -187,7 +187,14 @@ def test_case_trigger_filter_by_priorities(
         # match priority_uuid
         case_created_trigger.configuration = {"priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]]}
         case_created_trigger.handle_event(samplenotif_case_created)
-        assert case_created_trigger.send_event.called
+        assert case_created_trigger.send_event.call_count == 1
+
+        # match priority_uuid
+        case_created_trigger.configuration = {
+            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"], "foo"]
+        }
+        case_created_trigger.handle_event(samplenotif_case_created)
+        assert case_created_trigger.send_event.call_count == 2
 
 
 def test_case_filter_by_assignees(
@@ -208,7 +215,14 @@ def test_case_filter_by_assignees(
             "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]]
         }
         case_alerts_updated_trigger.handle_event(samplenotif_case_has_updated_alerts)
-        assert case_alerts_updated_trigger.send_event.called
+        assert case_alerts_updated_trigger.send_event.call_count == 1
+
+        # match assignee
+        case_alerts_updated_trigger.configuration = {
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"], "foo"]
+        }
+        case_alerts_updated_trigger.handle_event(samplenotif_case_has_updated_alerts)
+        assert case_alerts_updated_trigger.send_event.call_count == 2
 
 
 def test_case_filter_by_case_uuids(
@@ -227,9 +241,112 @@ def test_case_filter_by_case_uuids(
         # match case_uuid
         case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["uuid"]]}
         case_updated_trigger.handle_event(samplenotif_case_updated)
-        assert case_updated_trigger.send_event.called
+        assert case_updated_trigger.send_event.call_count == 1
 
         # match short_id
         case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["short_id"]]}
         case_updated_trigger.handle_event(samplenotif_case_updated)
-        assert case_updated_trigger.send_event.called
+        assert case_updated_trigger.send_event.call_count == 2
+
+        # match case_uuid
+        case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["uuid"], "foo"]}
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert case_updated_trigger.send_event.call_count == 3
+
+        # match short_id
+        case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["short_id"], "foo"]}
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert case_updated_trigger.send_event.call_count == 4
+
+
+def test_case_combined_filters(
+    case_updated_trigger,
+    samplenotif_case_updated,
+    sample_siccaseapi_mock,
+    sample_siccaseapi,
+):
+    case_updated_trigger.send_event = MagicMock()
+    with sample_siccaseapi_mock:
+
+        mode = "manual" if sample_siccaseapi["manual"] else "automatic"
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": ["foo"],
+            "mode_filter": "foo",
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": [sample_siccaseapi["uuid"]],
+            "assignees_filter": ["foo"],
+            "mode_filter": "foo",
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+            "mode_filter": "foo",
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": ["foo"],
+            "mode_filter": mode,
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": ["foo"],
+            "mode_filter": "foo",
+            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert not case_updated_trigger.send_event.called
+
+        # match case all criteria
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": [sample_siccaseapi["uuid"]],
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+            "mode_filter": mode,
+            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert case_updated_trigger.send_event.call_count == 1
+
+        # match
+        case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["uuid"]], "mode_filter": mode}
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert case_updated_trigger.send_event.call_count == 2
+
+        # match
+        case_updated_trigger.configuration = {
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert case_updated_trigger.send_event.call_count == 3
+
+        # match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": [sample_siccaseapi["uuid"]],
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+        }
+        case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert case_updated_trigger.send_event.call_count == 4
