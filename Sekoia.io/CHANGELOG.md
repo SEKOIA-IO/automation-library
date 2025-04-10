@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-10 - 2.67.13
+
+### Fixed
+
+- Rename the delete case action
+- Rename the list of deleted alerts in the case alerts updated
+
+### Added
+
+- Add more tests about the filters used in the automation cases triggers
+
 ## 2025-04-07 - 2.67.12
 
 ### Fixed
