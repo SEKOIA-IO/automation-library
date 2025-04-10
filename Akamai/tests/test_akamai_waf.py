@@ -28,7 +28,7 @@ def trigger(data_storage, fake_time):
     with freeze_time(fake_time):
         trigger = AkamaiWAFLogsConnector(module=module, data_path=data_storage)
 
-    trigger.configuration = {"config_id": 1, "intake_key": "intake_key", "frequency": 60, "page_size": 2000}
+    trigger.configuration = {"config_id": 1, "intake_key": "intake_key", "frequency": 60}
 
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
@@ -146,13 +146,13 @@ def test_extract_attack_data(trigger, raw_event):
 def test_fetch_events(trigger, response_1, response_2):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=2000",
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
             status_code=200,
             content=response_1,
         )
 
         mock_requests.get(
-            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=2000",
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
             status_code=200,
             content=response_2,
         )
@@ -200,7 +200,7 @@ def test_request_error(trigger):
 
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=2000", status_code=500, json=msg
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000", status_code=500, json=msg
         )
 
         with pytest.raises(requests.HTTPError):
@@ -210,13 +210,13 @@ def test_request_error(trigger):
 def test_next_batch_sleep_until_next_round(trigger, response_1, response_2):
     with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=2000",
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
             status_code=200,
             content=response_1,
         )
 
         mock_requests.get(
-            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=2000",
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
             status_code=200,
             content=response_2,
         )
@@ -235,13 +235,13 @@ def test_next_batch_sleep_until_next_round(trigger, response_1, response_2):
 def test_long_next_batch_should_not_sleep(trigger, response_1, response_2):
     with patch("akamai_modules.connector_akamai_waf.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
-            "https://example.com/siem/v1/configs/1?from=1743505199&limit=2000",
+            "https://example.com/siem/v1/configs/1?from=1743505199&limit=60000",
             status_code=200,
             content=response_1,
         )
 
         mock_requests.get(
-            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=2000",
+            "https://example.com/siem/v1/configs/1?offset=OFFSET_TOKEN&limit=60000",
             status_code=200,
             content=response_2,
         )

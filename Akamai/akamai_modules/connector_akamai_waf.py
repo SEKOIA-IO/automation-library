@@ -24,12 +24,13 @@ logger = get_logger()
 class AkamaiWAFLogsConnectorConfiguration(DefaultConnectorConfiguration):
     config_id: str = Field(..., description="The Web Security Configuration ID")
     frequency: int = Field(60, description="Batch frequency in seconds", ge=1)
-    page_size: int = Field(1000, description="Number of events per request", ge=1, le=60_000)
 
 
 class AkamaiWAFLogsConnector(Connector):
     module: AkamaiModule
     configuration: AkamaiWAFLogsConnectorConfiguration
+
+    PAGE_SIZE = 60_000  # default 1000, maximum 60000
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -132,7 +133,7 @@ class AkamaiWAFLogsConnector(Connector):
     def __fetch_next_events(self, from_date: int) -> Generator[list, None, None]:
         url = f"{self.module.configuration.base_url}/siem/v1/configs/{self.configuration.config_id}"
         response = self.client.get(
-            url=url, params={"from": from_date, "limit": self.configuration.page_size}, timeout=60, stream=True
+            url=url, params={"from": from_date, "limit": self.PAGE_SIZE}, timeout=60, stream=True
         )
 
         while self.running:
@@ -163,7 +164,7 @@ class AkamaiWAFLogsConnector(Connector):
                 return
 
             response = self.client.get(
-                url=url, params={"offset": offset, "limit": self.configuration.page_size}, timeout=60, stream=True
+                url=url, params={"offset": offset, "limit": self.PAGE_SIZE}, timeout=60, stream=True
             )
 
     def fetch_events(self) -> Generator[list, None, None]:
