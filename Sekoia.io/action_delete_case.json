@@ -1,6 +1,6 @@
 {
     "uuid": "a5cf38d6-9f36-4027-98e9-5fa1d2b2b9af",
-    "name": "Delete rule",
+    "name": "Delete Case",
     "docker_parameters": "delete-case/{case_uuid}",
     "description": "Delete a case",
     "arguments": {
