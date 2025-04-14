@@ -56,7 +56,7 @@ class ApiKeyAuthentication(AuthBase):
         Returns the access token and uses the OAuth2 to compute it if required
         """
         self.authenticate()
-        return f"{self.__api_credentials['token_type'].title()} {self.__api_credentials['access_token']}"
+        return f"{self.__api_credentials['token_type'].title()} {self.__api_credentials['access_token']}"  # type: ignore
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         request.headers["Authorization"] = self.get_authorization()
