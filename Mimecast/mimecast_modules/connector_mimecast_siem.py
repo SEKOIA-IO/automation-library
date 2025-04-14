@@ -95,8 +95,13 @@ class MimecastSIEMWorker(Thread):
 
         return most_recent_date_seen
 
-    def __fetch_next_events(self) -> Generator[list, None, None]:
-        url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
+    def __build_fetch_params(self) -> dict[str, int | str]:
+        """
+        Build the parameters for the API request. The parameters depend on the cursor type.
+
+        If the cursor is a datetime, we use it to set the date range for the API request. If the cursor is a page token,
+        we use it to set the next page for the API request.
+        """
         params: dict[str, int | str] = {
             "pageSize": self.connector.configuration.chunk_size,
             "type": self.log_type,
@@ -116,6 +121,30 @@ class MimecastSIEMWorker(Thread):
         else:
             params["nextPage"] = self.cursor.offset
 
+        return params
+
+    def __filter_events(self, events: list) -> list:
+        """
+        Filter events based on the cursor.
+
+        If the cursor is a datetime, we filter out events that are older than the
+        cursor.
+        If the cursor is a page token, we don't filter the events.
+        """
+        if self.old_cursor is not None:
+            # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
+            # events from the day's start and then filter out all events with timestamps before saved datetime
+            events = [event for event in events if event["timestamp"] > self.old_cursor.timestamp() * 1000]
+            logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
+
+            # We don't need this anymore - it's for the first page only
+            self.old_cursor = None
+
+        return events
+
+    def __fetch_next_events(self) -> Generator[list, None, None]:
+        url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
+        params = self.__build_fetch_params()
         response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
         while self.running:
@@ -131,15 +160,7 @@ class MimecastSIEMWorker(Thread):
 
             for events in batched(events_gen, EVENTS_BATCH_SIZE):
                 logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
-
-                if self.old_cursor is not None:
-                    # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
-                    # events from the day's start and then filter out all events with timestamps before saved datetime
-                    events = [event for event in events if event["timestamp"] > self.old_cursor.timestamp() * 1000]
-                    logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
-
-                    # We don't need this anymore - it's for the first page only
-                    self.old_cursor = None
+                events = self.__filter_events(events)
 
                 if len(events) > 0:
                     INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
