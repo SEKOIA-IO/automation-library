@@ -71,7 +71,6 @@ def batch_events_response_1():
         ],
         "isCaughtUp": False,
         "@nextPage": "tokenNextPage1=",
-        "isCaughtUp": False,
     }
 
 
@@ -105,7 +104,7 @@ def test_fetch_batches(trigger, batch_events_response_1, batch_events_response_e
         mock_download_batches.side_effect = [[batch_event_1], []]
 
         mock_requests.post(
-            f"https://api.services.mimecast.com/oauth/token",
+            "https://api.services.mimecast.com/oauth/token",
             json={
                 "access_token": "foo-token",
                 "token_type": "Bearer",
@@ -114,7 +113,7 @@ def test_fetch_batches(trigger, batch_events_response_1, batch_events_response_e
         )
 
         mock_requests.get(
-            f"https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            "https://api.services.mimecast.com/siem/v1/batch/events/cg",
             [{"json": batch_events_response_1}, {"json": batch_events_response_empty}],
         )
 
@@ -181,13 +180,13 @@ def test_authentication_failed(
         mock_download_batches.side_effect = [[batch_event_1], []]
 
         mock_requests.post(
-            f"https://api.services.mimecast.com/oauth/token",
+            "https://api.services.mimecast.com/oauth/token",
             status_code=401,
             json={"fail": [{"code": "InvalidClientIdentifier", "message": "Client credentials are invalid"}]},
         )
 
         mock_requests.get(
-            f"https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            "https://api.services.mimecast.com/siem/v1/batch/events/cg",
             [{"json": batch_events_response_1}, {"json": batch_events_response_empty}],
         )
 
@@ -213,7 +212,7 @@ def test_permission_denied(trigger, batch_events_response_1, batch_events_respon
         mock_download_batches.side_effect = [[batch_event_1], []]
 
         mock_requests.post(
-            f"https://api.services.mimecast.com/oauth/token",
+            "https://api.services.mimecast.com/oauth/token",
             json={
                 "access_token": "foo-token",
                 "token_type": "Bearer",
@@ -222,7 +221,7 @@ def test_permission_denied(trigger, batch_events_response_1, batch_events_respon
         )
 
         mock_requests.get(
-            f"https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            "https://api.services.mimecast.com/siem/v1/batch/events/cg",
             [
                 {
                     "status_code": 403,
@@ -269,7 +268,7 @@ def test_old_cursor(
         mock_download_batches.side_effect = [[batch_event_1], []]
 
         mock_requests.post(
-            f"https://api.services.mimecast.com/oauth/token",
+            "https://api.services.mimecast.com/oauth/token",
             json={
                 "access_token": "foo-token",
                 "token_type": "Bearer",
@@ -278,7 +277,7 @@ def test_old_cursor(
         )
 
         mock_requests.get(
-            f"https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            "https://api.services.mimecast.com/siem/v1/batch/events/cg",
             [{"json": batch_events_response_1}, {"json": batch_events_response_empty}],
         )
 
