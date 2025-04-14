@@ -2,8 +2,8 @@ import asyncio
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from functools import cached_property
 from operator import itemgetter
+from pathlib import Path
 from threading import Event, Lock, Thread
 from typing import Generator
 
@@ -11,12 +11,13 @@ import orjson
 import requests
 from dateutil.parser import isoparse
 from pyrate_limiter import Duration, Limiter, RequestRate
+from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import MimecastModule
 from .client import ApiClient, ApiKeyAuthentication
-from .helpers import download_batches, batched, get_upper_second
+from .helpers import download_batches, batched
 from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -39,8 +40,12 @@ class MimecastSIEMWorker(Thread):
         self.log_type: str = log_type
         self.client: ApiClient = client
 
-        self.context = self.connector.context
-        self.from_date = self.most_recent_date_seen
+        # checking on `context.json` before setting up a proper cursor object
+        self.old_cursor = self.get_old_cursor()
+
+        self.cursor = CheckpointCursor(
+            path=self.connector.data_path, subkey=self.log_type, lock=self.connector.context_lock
+        )
 
         self._stop_event = Event()
         self._use_async = bool(os.environ.get("MIMECAST_ASYNC_DOWNLOAD", 1))
@@ -63,58 +68,83 @@ class MimecastSIEMWorker(Thread):
     def running(self):
         return not self._stop_event.is_set()
 
-    @property
-    def most_recent_date_seen(self):
-        now = datetime.now(timezone.utc)
+    def get_old_cursor(self) -> datetime | None:
+        """
+        We previously used datetime as a cursor but later switched to page tokens. To ensure a smooth transition,
+        we still support the old cursor type. On startup, we check if the old cursor is present and, if it is, use it
+        for the first API request instead of defaulting to today's date.
+        """
+        with self.connector.context_lock:
+            with self.connector.context as cache:
+                most_recent_date_seen_str = cache.get(self.log_type, {}).get("most_recent_date_seen")
 
-        self.connector.context_lock.acquire()
-        with self.context as cache:
-            most_recent_date_seen_str = cache.get(self.log_type, {}).get("most_recent_date_seen")
-        self.connector.context_lock.release()
-
-        # if undefined, retrieve events from the last day
         if most_recent_date_seen_str is None:
-            return now - timedelta(days=1)
+            # there is no datetime cursor
+            return None
 
         # parse the most recent date seen
         most_recent_date_seen = isoparse(most_recent_date_seen_str)
 
         # We don't retrieve messages older than 7 days
+        now = datetime.now(timezone.utc)
         seven_days_ago = now - timedelta(days=7)
         if most_recent_date_seen < seven_days_ago:
-            most_recent_date_seen = seven_days_ago
+            # saved datetime is old, so we can use default workflow anyway
+            return None
 
         return most_recent_date_seen
 
-    @most_recent_date_seen.setter
-    def most_recent_date_seen(self, dt: datetime) -> None:
-        self.connector.context_lock.acquire()
-        with self.context as cache:
-            if self.log_type not in cache:
-                cache[self.log_type] = {}
+    def __build_fetch_params(self) -> dict[str, int | str]:
+        """
+        Build the parameters for the API request. The parameters depend on the cursor type.
 
-            cache[self.log_type]["most_recent_date_seen"] = dt.isoformat()
-
-        self.connector.context_lock.release()
-
-    @staticmethod
-    def __format_datetime(dt: datetime) -> str:
-        base = dt.strftime("%Y-%m-%dT%H:%M:%S")
-        ms = dt.strftime("%f")[:3]
-        return f"{base}.{ms}Z"
-
-    def __fetch_next_events(self, from_date: datetime) -> Generator[list, None, None]:
-        result_from_date = from_date.astimezone(timezone.utc)
-        one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-        if result_from_date < one_week_ago:
-            result_from_date = one_week_ago
-
-        url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
+        If the cursor is a datetime, we use it to set the date range for the API request. If the cursor is a page token,
+        we use it to set the next page for the API request.
+        """
         params: dict[str, int | str] = {
             "pageSize": self.connector.configuration.chunk_size,
             "type": self.log_type,
-            "dateRangeStartsAt": result_from_date.strftime("%Y-%m-%d"),
         }
+
+        if self.cursor.offset is None:
+            if self.old_cursor is not None:
+                logger.info(
+                    "Starting with old datetime cursor", log_type=self.log_type, datetime=self.old_cursor.isoformat()
+                )
+                params["dateRangeStartsAt"] = self.old_cursor.strftime("%Y-%m-%d")
+
+            else:
+                # provide date range to start
+                start_at = datetime.now(timezone.utc)
+                params["dateRangeStartsAt"] = start_at.strftime("%Y-%m-%d")
+
+        else:
+            params["nextPage"] = self.cursor.offset
+
+        return params
+
+    def __filter_events(self, events: list) -> list:
+        """
+        Filter events based on the cursor.
+
+        If the cursor is a datetime, we filter out events that are older than the
+        cursor.
+        If the cursor is a page token, we don't filter the events.
+        """
+        if self.old_cursor is not None:
+            # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
+            # events from the day's start and then filter out all events with timestamps before saved datetime
+            events = [event for event in events if event["timestamp"] > self.old_cursor.timestamp() * 1000]
+            logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
+
+            # We don't need this anymore - it's for the first page only
+            self.old_cursor = None
+
+        return events
+
+    def __fetch_next_events(self) -> Generator[list, None, None]:
+        url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
+        params = self.__build_fetch_params()
         response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
         while self.running:
@@ -122,20 +152,20 @@ class MimecastSIEMWorker(Thread):
 
             result = response.json()
 
+            nextPageToken = result.get("@nextPage")
+            self.cursor.offset = nextPageToken
+
             batch_urls = [item["url"] for item in result.get("value", [])]
             events_gen = download_batches(urls=batch_urls, loop=self._loop)
 
             for events in batched(events_gen, EVENTS_BATCH_SIZE):
                 logger.debug("Collected events", nb_url=len(events), log_type=self.log_type)
-
-                events = [event for event in events if event["timestamp"] > result_from_date.timestamp() * 1000]
-                logger.info("Filtered events", nb_url=len(events), log_type=self.log_type)
+                events = self.__filter_events(events)
 
                 if len(events) > 0:
                     INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                     yield events
 
-            nextPageToken = result.get("@nextPage")
             if result["isCaughtUp"] is True or not nextPageToken:
                 return
 
@@ -143,18 +173,18 @@ class MimecastSIEMWorker(Thread):
             response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
 
     def fetch_events(self) -> Generator[list, None, None]:
-        most_recent_date_seen = self.from_date
+        most_recent_date_seen = None  # for measuring lag
         current_lag: int = 0
 
         try:
-            for next_events in self.__fetch_next_events(most_recent_date_seen):
+            for next_events in self.__fetch_next_events():
                 if next_events:
                     # extract latest timestamp
                     last_event = max(next_events, key=lambda x: x.get("timestamp"))
                     last_event_date = datetime.fromtimestamp(last_event["timestamp"] / 1000).astimezone(timezone.utc)
 
-                    if last_event_date > most_recent_date_seen:
-                        most_recent_date_seen = get_upper_second(last_event_date)  # get the upper second
+                    if most_recent_date_seen is None or last_event_date > most_recent_date_seen:
+                        most_recent_date_seen = last_event_date
 
                     yield next_events
 
@@ -185,12 +215,7 @@ class MimecastSIEMWorker(Thread):
 
         finally:
             # save the most recent date
-            if most_recent_date_seen > self.from_date:
-                self.from_date = most_recent_date_seen
-
-                # save in context the most recent date seen
-                self.most_recent_date_seen = most_recent_date_seen
-
+            if most_recent_date_seen is not None:
                 # Update the current lag only if the most_recent_date_seen was updated
                 delta_time = datetime.now(timezone.utc) - most_recent_date_seen
                 current_lag = int(delta_time.total_seconds())
@@ -265,7 +290,6 @@ class MimecastSIEMConnector(Connector):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-
         self.context = PersistentJSON("context.json", self._data_path)
         self.context_lock = Lock()
 
@@ -275,6 +299,10 @@ class MimecastSIEMConnector(Connector):
 
         default_rate = RequestRate(limit=20, interval=Duration.MINUTE)
         self.limiter_default = Limiter(default_rate)
+
+    @property
+    def data_path(self) -> Path:
+        return self._data_path
 
     def start_consumers(self, client: ApiClient) -> dict[str, MimecastSIEMWorker]:
         consumers = {}
