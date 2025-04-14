@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, Mock, patch, call
 
 import pytest
+import requests
 import requests_mock
 
 from vadesecure_modules import VadeSecureModule
@@ -10,7 +11,7 @@ from vadesecure_modules.m365_mixin import EventType, APIException
 
 
 @pytest.fixture
-def trigger(symphony_storage):
+def unauthentified_trigger(symphony_storage):
     module = VadeSecureModule()
     trigger = M365EventsConnector(module=module, data_path=symphony_storage)
 
@@ -30,14 +31,20 @@ def trigger(symphony_storage):
     trigger.log = Mock()
     trigger.log_exception = Mock()
 
+    return trigger
+
+
+@pytest.fixture
+def trigger(unauthentified_trigger):
+
     with requests_mock.Mocker() as mock:
         mock.post(
-            trigger.module.configuration.oauth2_authorization_url,
+            unauthentified_trigger.module.configuration.oauth2_authorization_url,
             json={"token_type": "Bearer", "access_token": "123456", "expires_in": 5},
         )
-        trigger.client = trigger.create_client()
+        unauthentified_trigger.client = unauthentified_trigger.create_client()
 
-    return trigger
+    return unauthentified_trigger
 
 
 def test_fetch_events_with_authentication_error(trigger):
@@ -98,3 +105,41 @@ def test_handle_api_exception(trigger: M365EventsConnector, error, expected_mess
             level="error",
             message=expected_message,
         ) in trigger.log.mock_calls
+
+
+def test_authentication_with_unauthorized_error(unauthentified_trigger):
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            unauthentified_trigger.module.configuration.oauth2_authorization_url,
+            status_code=401,
+            reason="Unauthorized",
+            json={"error": "invalid_client", "error_description": "Client authentication failed"},
+        )
+        with pytest.raises(requests.exceptions.HTTPError):
+            unauthentified_trigger.create_client()
+
+        assert unauthentified_trigger.log.mock_calls == [
+            call(
+                "OAuth2 server responded 401 - Unauthorized",
+                level="critical",
+            )
+        ]
+
+
+def test_authentication_with_permission_denied_error(unauthentified_trigger):
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            unauthentified_trigger.module.configuration.oauth2_authorization_url,
+            status_code=403,
+            reason="Forbidden",
+            json={"error": "invalid_scope", "error_description": "Insufficient permissions"},
+        )
+        with pytest.raises(requests.exceptions.HTTPError):
+            unauthentified_trigger.create_client()
+
+        assert unauthentified_trigger.log.mock_calls == [
+            call(
+                "OAuth2 server responded 403 - Forbidden",
+                level="critical",
+            )
+        ]
