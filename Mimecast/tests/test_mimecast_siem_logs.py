@@ -254,7 +254,7 @@ def test_old_cursor(
     context = PersistentJSON("context.json", data_storage)
 
     # ensure that the cursor is None
-    fake_date = datetime.today().astimezone(timezone.utc) - timedelta(days=1)
+    fake_date = datetime.now(timezone.utc) - timedelta(days=1)
     fake_date_str = fake_date.isoformat()
     fake_date_timestamp = int(fake_date.timestamp() * 1000.0)
 

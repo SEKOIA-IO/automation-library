@@ -115,7 +115,7 @@ class MimecastSIEMWorker(Thread):
 
             else:
                 # provide date range to start
-                start_at = datetime.today()
+                start_at = datetime.now(timezone.utc)
                 params["dateRangeStartsAt"] = start_at.strftime("%Y-%m-%d")
 
         else:
