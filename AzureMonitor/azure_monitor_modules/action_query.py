@@ -72,3 +72,4 @@ class AzureMonitorQueryAction(AzureMonitorBaseAction):
 
         except HttpResponseError as err:
             self.log(message=str(err), level="error")
+            raise
