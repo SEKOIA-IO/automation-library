@@ -74,10 +74,9 @@ class MimecastSIEMWorker(Thread):
         we still support the old cursor type. On startup, we check if the old cursor is present and, if it is, use it
         for the first API request instead of defaulting to today's date.
         """
-        self.connector.context_lock.acquire()
-        with self.connector.context as cache:
-            most_recent_date_seen_str = cache.get(self.log_type, {}).get("most_recent_date_seen")
-        self.connector.context_lock.release()
+        with self.connector.context_lock:
+            with self.connector.context as cache:
+                most_recent_date_seen_str = cache.get(self.log_type, {}).get("most_recent_date_seen")
 
         if most_recent_date_seen_str is None:
             # there is no datetime cursor
@@ -107,16 +106,17 @@ class MimecastSIEMWorker(Thread):
             "type": self.log_type,
         }
 
-        if self.cursor.offset is None and self.old_cursor is not None:
-            logger.info(
-                "Starting with old datetime cursor", log_type=self.log_type, datetime=self.old_cursor.isoformat()
-            )
-            params["dateRangeStartsAt"] = self.old_cursor.strftime("%Y-%m-%d")
+        if self.cursor.offset is None:
+            if self.old_cursor is not None:
+                logger.info(
+                    "Starting with old datetime cursor", log_type=self.log_type, datetime=self.old_cursor.isoformat()
+                )
+                params["dateRangeStartsAt"] = self.old_cursor.strftime("%Y-%m-%d")
 
-        elif self.cursor.offset is None and self.old_cursor is None:
-            # provide date range to start
-            start_at = datetime.today()
-            params["dateRangeStartsAt"] = start_at.strftime("%Y-%m-%d")
+            else:
+                # provide date range to start
+                start_at = datetime.today()
+                params["dateRangeStartsAt"] = start_at.strftime("%Y-%m-%d")
 
         else:
             params["nextPage"] = self.cursor.offset
