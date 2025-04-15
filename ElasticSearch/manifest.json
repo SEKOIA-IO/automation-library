@@ -38,5 +38,7 @@
   "uuid": "9c17d041-4930-4c23-a108-811a25ef6d64",
   "slug": "elasticsearch",
   "version": "1.0.0",
-  "categories": []
+  "categories": [
+    "Applicative"
+  ]
 }
