@@ -19,12 +19,21 @@ class UpdateThreatIncidentFilters(BaseFilters):
 
 class UpdateThreatIncidentArguments(BaseModel):
     filters: UpdateThreatIncidentFilters | None
+    new_analyst_verdict: str | None
     status: str
 
     def get_query_filters(self):
         if self.filters is None:
             return None
+
+        # Unfortunately, we can't make enum field optional. Thus, we add a value we can ignore
+        if self.filters.analyst_verdicts == "-":
+            self.filters.analyst_verdicts = None
+
         return self.filters.to_query_filter()
+
+    def get_new_verdict(self):
+        return self.new_analyst_verdict if self.new_analyst_verdict != "-" else None
 
 
 class UpdateThreatIncidentResults(BaseModel):
@@ -38,6 +47,8 @@ class UpdateThreatIncidentAction(SentinelOneAction):
 
     def run(self, arguments: UpdateThreatIncidentArguments):
         result = self.client.threats.update_threat_incident(
-            arguments.status, query_filter=arguments.get_query_filters()
+            incident_status=arguments.status,
+            analyst_verdict=arguments.get_new_verdict(),
+            query_filter=arguments.get_query_filters(),
         )
         return result.json["data"]
