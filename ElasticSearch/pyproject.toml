@@ -12,6 +12,7 @@ orjson = "^3.10.16"
 elasticsearch = "^8.17.2"
 aiohttp = "^3.11.16"
 tenacity = "^9.1.2"
+faker = "^37.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
