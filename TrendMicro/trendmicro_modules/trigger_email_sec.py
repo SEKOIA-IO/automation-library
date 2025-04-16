@@ -110,10 +110,7 @@ class TrendMicroWorker(Thread):
             if self.log_type not in cache.keys():
                 cache[self.log_type] = {}
 
-            cache[self.log_type]["recent_pushed_events"] = [
-                self.get_event_metadata(event)
-                for event in events
-            ]
+            cache[self.log_type]["recent_pushed_events"] = [self.get_event_metadata(event) for event in events]
 
         self.connector.context_lock.release()
 
