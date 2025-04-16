@@ -166,6 +166,33 @@ def alert_response_3_1():
 
 
 @pytest.fixture
+def alert_response_4():
+    return {
+        "reply": {
+            "total_count": 3,
+            "result_count": 1,
+            "alerts": [
+                {
+                    "external_id": "7317728957437371548",
+                    "severity": "medium",
+                    "events": [
+                        {
+                            "agent_install_type": "STANDARD",
+                            "agent_host_boot_time": None,
+                            "event_sub_type": None,
+                            "image_name": None,
+                        },
+                        {"agent_install_type": "STANDARD", "agent_host_boot_time": None, "event_sub_type": "process"},
+                    ],
+                    "alert_id": "2",
+                    "detection_timestamp": 1705912200,
+                },
+            ],
+        }
+    }
+
+
+@pytest.fixture
 def alert_response_0():
     return {"reply": {"total_count": 0, "result_count": 0, "alerts": []}}
 
@@ -210,19 +237,18 @@ def test_getting_data_2(trigger, alert_response_2, alert_query_2):
         trigger.get_all_alerts(2)
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         alerts_list = [orjson.loads(data) for data in calls[0]]
-        assert len(alerts_list) == 4
+        assert len(alerts_list) == 2
 
         count_alerts = 0
         count_events = 0
         for data in alerts_list:
             if data.get("severity"):
                 count_alerts += 1
-                assert data.get("events", []) == []
             if data.get("agent_install_type"):
                 count_events += 1
 
         assert count_alerts == 2
-        assert count_events == 2
+        assert count_events == 0
 
 
 @freeze_time("2024-01-23 10:00:00")
@@ -249,8 +275,8 @@ def test_getting_data_3(trigger, alert_response_3_2, alert_response_3_1, alert_q
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         first_alerts_batch = [orjson.loads(data) for data in calls[0]]
         second_alerts_batch = [orjson.loads(data) for data in calls[1]]
-        assert len(first_alerts_batch) == 4
-        assert len(second_alerts_batch) == 2
+        assert len(first_alerts_batch) == 2
+        assert len(second_alerts_batch) == 1
 
         count_alerts = 0
         count_events = 0
@@ -259,12 +285,11 @@ def test_getting_data_3(trigger, alert_response_3_2, alert_response_3_1, alert_q
         for data in all_alerts:
             if data.get("severity"):
                 count_alerts += 1
-                assert data.get("events", []) == []
             if data.get("agent_install_type"):
                 count_events += 1
 
         assert count_alerts == 3
-        assert count_events == 3
+        assert count_events == 0
 
 
 @freeze_time("2024-01-23 10:00:00")
@@ -346,3 +371,15 @@ def test_getting_data_with_permission_failure(trigger, alert_query_2):
         assert trigger.log.mock_calls == [
             call(level="critical", message="Permission denied: The operation isn't allowed for these credentials")
         ]
+
+
+def test_splitting_events(trigger, alert_response_4):
+    # first event should stay with alert, others should split into separate events
+    result = trigger.split_alerts_events(alerts=alert_response_4["reply"]["alerts"])
+
+    assert result == [
+        '{"external_id":"7317728957437371548","severity":"medium","events":[{"agent_install_type":"STANDARD",'
+        '"agent_host_boot_time":null,"event_sub_type":null,"image_name":null}],"alert_id":"2",'
+        '"detection_timestamp":1705912200}',
+        '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}',
+    ]

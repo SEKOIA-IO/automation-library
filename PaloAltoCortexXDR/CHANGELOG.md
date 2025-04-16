@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-03-28 - 1.2.0
+
+### Changed
+
+- If there is only one event within alert, we won't separate them anymore
+
 ## 2024-11-22 - 1.1.4
 
 ### Fixed
