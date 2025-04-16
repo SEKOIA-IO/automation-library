@@ -17,6 +17,10 @@ class CyberArkApiCredentials:
         return f"{self.token_type.title()} {self.access_token}"
 
 
+class AuthorizationFailedException(BaseException):
+    pass
+
+
 class CyberArkApiAuthentication(AuthBase):
     def __init__(
         self,
@@ -56,7 +60,15 @@ class CyberArkApiAuthentication(AuthBase):
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=60,
             )
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+
+            except requests.exceptions.HTTPError as error:
+                if error.response.status_code == 400:
+                    # here it means incorrect credentials
+                    raise AuthorizationFailedException("Incorrect credentials")
+
+                raise
 
             api_credentials: dict = response.json()
 

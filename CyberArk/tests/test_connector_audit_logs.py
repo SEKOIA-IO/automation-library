@@ -1,16 +1,12 @@
-import os
-import time
-from datetime import datetime, timedelta, timezone
-from threading import Thread
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 import requests_mock
-from requests import Response
 
 from cyberark_modules import CyberArkModule
+from cyberark_modules.client.auth import AuthorizationFailedException
 from cyberark_modules.connector_audit_logs import CyberArkAuditLogsConnector, CyberArkAuditLogsConnectorConfiguration
-from cyberark_modules.models import CyberArkModuleConfiguration
 
 
 @pytest.fixture
@@ -154,3 +150,25 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 1
+
+
+def test_authorization_error(trigger):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post(
+            "https://example.id.cyberark.cloud/oauth2/token/MyApp1",
+            status_code=400,
+            json={"error": "Auth error", "code": "<CODE>", "description": "Some description"},
+        )
+        with pytest.raises(AuthorizationFailedException):
+            trigger.next_batch()
+
+
+def test_network_error(trigger):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post(
+            "https://example.id.cyberark.cloud/oauth2/token/MyApp1",
+            status_code=500,
+            json={"error": "Auth error", "code": "<CODE>", "description": "Some description"},
+        )
+        with pytest.raises(requests.HTTPError):
+            trigger.next_batch()

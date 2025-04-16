@@ -12,7 +12,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import CyberArkModule
 from .client import ApiClient
-from .client.auth import CyberArkApiAuthentication
+from .client.auth import AuthorizationFailedException, CyberArkApiAuthentication
 from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -79,34 +79,50 @@ class CyberArkAuditLogsConnector(Connector):
                 error = response.json()
                 logger.error(
                     message,
-                    error=error.get("error") or error.get("message"),
-                    description=error.get("error_description") or error.get("description"),
+                    code=error.get("code"),
+                    error=error.get("message"),
+                    description=error.get("description"),
                 )
 
             except Exception as e:
                 pass
 
             self.log(message=message, level=level)
+            response.raise_for_status()
 
     def __fetch_next_events(self, from_timestamp: int) -> Generator[list, None, None]:
         # 1. Create query
         from_date = datetime.fromtimestamp(from_timestamp / 1000.0).astimezone(timezone.utc)
 
         url = f"{self.configuration.api_base_url}/api/audits/stream/createQuery"
-        response = self.client.post(
-            url,
-            json={
-                "query": {
-                    "pageSize": 100,
-                    "filterModel": {"date": {"dateFrom": from_date.isoformat()}},
-                    "sortModel": [{"field_name": "date", "direction": "asc"}],
-                }
-            },
-        )
-        self._handle_response_error(response)
+
+        try:
+            response = self.client.post(
+                url,
+                json={
+                    "query": {
+                        "pageSize": 100,
+                        "filterModel": {"date": {"dateFrom": from_date.isoformat()}},
+                        "sortModel": [{"field_name": "date", "direction": "asc"}],
+                    }
+                },
+            )
+            self._handle_response_error(response)
+
+        except AuthorizationFailedException as error:
+            self.log_exception(error, level="critical")
+            raise
 
         # Iterate through pages
         cursor_ref = response.json().get("cursorRef")
+        if cursor_ref is None:
+            logger.error(
+                "Missing cursorRef from API response",
+                from_timestamp=from_timestamp,
+                response_content=response.text,
+                response_status=response.status_code,
+            )
+            raise ValueError("Missing cursorRef from API response")
 
         while self.running:
             # 2. Get results by cursor ref
