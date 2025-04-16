@@ -95,6 +95,14 @@ class TrendMicroWorker(Thread):
 
         self.connector.context_lock.release()
 
+    @staticmethod
+    def get_event_metadata(event: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "mailID": event.get("mailID"),
+            "messageID": event.get("messageID"),
+            "action": event.get("action"),
+        }
+
     def set_recent_pushed_events(self, events: list[Any]) -> None:
         self.connector.context_lock.acquire()
 
@@ -102,7 +110,10 @@ class TrendMicroWorker(Thread):
             if self.log_type not in cache.keys():
                 cache[self.log_type] = {}
 
-            cache[self.log_type]["recent_pushed_events"] = events
+            cache[self.log_type]["recent_pushed_events"] = [
+                self.get_event_metadata(event)
+                for event in events
+            ]
 
         self.connector.context_lock.release()
 
@@ -171,7 +182,7 @@ class TrendMicroWorker(Thread):
         for events in self.iterate_through_pages(self.get_last_timestamp()):
             if events:
                 recent_events = self.get_recent_pushed_events()
-                next_events = [event for event in events if event not in recent_events]
+                next_events = [event for event in events if self.get_event_metadata(event) not in recent_events]
 
                 yield next_events
 
