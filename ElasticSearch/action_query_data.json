@@ -1,6 +1,6 @@
 {
-  "name": "Query data",
-  "description": "Query data from ElasticSearch based on your configuration",
+  "name": "Execute ES|QL query",
+  "description": "Query data from ElasticSearch with ES|QL",
   "docker_parameters": "elasticsearch_query_data",
   "configuration_part" : "For this action query is required",
   "arguments": {
