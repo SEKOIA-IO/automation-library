@@ -16,7 +16,8 @@
       "disable_certificate_verification": {
         "title": "Disable Certificate Verification",
         "description": "Disable certificate verification for the connection. Optional",
-        "type": "boolean"
+        "type": "boolean",
+        "default": false
       },
       "sha256_tls_fingerprint": {
         "title": "SHA256 TLS fingerprint",

@@ -78,15 +78,23 @@ class ElasticSearchClient(object):
                 return
 
     def _query(self, query: str, drop_null_columns: bool | None = None) -> ObjectApiResponse[Any]:  # pragma: no cover
-        return self._client.esql.async_query(
-            query=query,
-            format="json",
-            drop_null_columns=drop_null_columns,
-            # automatically delete results if response time less then `wait_for_completion_timeout`
-            # this two configurations does not work with lib for some reason. However it works with api
-            # keep_on_completion=False,
-            # wait_for_completion_timeout="0s"
-        )
+        """
+        Perform an ESQL query.
+
+        Important note: there is a possibility to delete automatically results if response time less then
+            `wait_for_completion_timeout`. Next two configurations does not work with lib for some reason.
+            But it works with api:
+            keep_on_completion=False,
+            wait_for_completion_timeout="0s"
+
+        Args:
+            query: str
+            drop_null_columns: bool | None
+
+        Returns:
+            ObjectApiResponse[Any]:
+        """
+        return self._client.esql.async_query(query=query, format="json", drop_null_columns=drop_null_columns)
 
     def _get_query_result(
         self, query_id: str, drop_null_columns: bool | None = None
@@ -99,7 +107,7 @@ class ElasticSearchClient(object):
     def _delete_query_result(self, query_id: str) -> ObjectApiResponse[Any]:
         return self._client.esql.async_query_delete(id=query_id)
 
-    def execute_query(self, query: str, drop_null_columns: bool | None = None) -> list[dict[str, Any]]:
+    def execute_esql_query(self, query: str, drop_null_columns: bool | None = None) -> list[dict[str, Any]]:
         response: dict[str, Any] = self._query(query, drop_null_columns).body
 
         query_id: str | None = response.get("id")

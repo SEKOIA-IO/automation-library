@@ -30,7 +30,7 @@ async def test_execute_query_simple_1(elasticsearch_client):
             "values": [["value1"]],
         }
 
-        result = elasticsearch_client.execute_query("SELECT 123 FROM index")
+        result = elasticsearch_client.execute_esql_query("SELECT 123 FROM index")
 
         assert result == [{"field1": "value1"}]
 
@@ -49,7 +49,7 @@ async def test_execute_query_simple_2(elasticsearch_client):
 
         mock_query.return_value.body = {"is_running": False, "columns": [{"name": "field1"}], "values": [["value1"]]}
 
-        result = elasticsearch_client.execute_query("SELECT 123 FROM index")
+        result = elasticsearch_client.execute_esql_query("SELECT 123 FROM index")
 
         assert result == [{"field1": "value1"}]
 
@@ -71,7 +71,7 @@ async def test_execute_query_no_id(elasticsearch_client):
         }
 
         with pytest.raises(ElasticSearchError):
-            elasticsearch_client.execute_query("SELECT 123 FROM index")
+            elasticsearch_client.execute_esql_query("SELECT 123 FROM index")
 
 
 @pytest.mark.asyncio
@@ -93,7 +93,7 @@ async def test_execute_query_error(elasticsearch_client):
         }
 
         with pytest.raises(ElasticSearchApiError):
-            elasticsearch_client.execute_query("SELECT 123 FROM index")
+            elasticsearch_client.execute_esql_query("SELECT 123 FROM index")
 
 
 @pytest.mark.asyncio
@@ -109,7 +109,7 @@ async def test_execute_query_full(elasticsearch_client):
 
         mock_get.return_value.body = {"columns": [{"name": "field1"}], "values": [["value1"]]}
 
-        result = elasticsearch_client.execute_query("SELECT field1 FROM index")
+        result = elasticsearch_client.execute_esql_query("SELECT field1 FROM index")
 
         assert result == [{"field1": "value1"}]
 
