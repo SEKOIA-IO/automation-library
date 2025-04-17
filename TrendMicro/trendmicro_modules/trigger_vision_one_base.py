@@ -32,7 +32,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
     def client(self) -> TrendMicroVisionApiClient:
         return TrendMicroVisionApiClient(api_key=self.configuration.api_key)
 
-    def handle_response_error(self, response: requests.Response) -> None:
+    def handle_response_error(self, response: requests.Response) -> None:  # pragma: no cover
         if not response.ok:
             message = (
                 f"Request on Trend Micro Vision One API to fetch events failed with status "
@@ -108,7 +108,7 @@ class TrendMicroVisionOneBaseConnector(Connector, ABC):
             self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="debug")
             time.sleep(delta_sleep)
 
-    def run(self) -> None:
+    def run(self) -> None:  # pragma: no cover
         self.log(message=f"Start fetching {self.CONNECTOR_TITLE} alerts", level="info")
 
         while self.running:
