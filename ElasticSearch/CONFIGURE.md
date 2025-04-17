@@ -1,4 +1,4 @@
-## Explanation of credentials creation
+## Configuration
 
 To create credentials for the `ElasticSearch` integration please follow next steps:
 
