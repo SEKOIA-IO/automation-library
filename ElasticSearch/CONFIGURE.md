@@ -2,7 +2,7 @@
 
 To create credentials for the `ElasticSearch` integration please follow next steps:
 
-1. Log in your Kibana console
+1. Log in to your Kibana console
 2. Go to `Management` > `Stack Management`
 3. In the Stack Management interface, go to `Security` > `API Keys`
 4. In the `API Keys` section, click `+ Create API key`
