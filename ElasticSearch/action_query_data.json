@@ -1,0 +1,37 @@
+{
+  "name": "Execute ES|QL query",
+  "description": "Query data from ElasticSearch with ES|QL",
+  "docker_parameters": "elasticsearch_query_data",
+  "configuration_part" : "For this action query is required",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "drop_null_columns": {
+        "description": "Determines if null columns should be dropped from the result",
+        "type": "boolean",
+        "default": false
+      },
+      "query": {
+        "description": "The query to be executed.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "data": {
+        "description": "Query results",
+        "type": "array"
+      }
+    },
+    "title": "The results of the query",
+    "type": "object"
+  },
+  "uuid": "5514dfdf-0379-4229-a899-d8699d2d8df6"
+}

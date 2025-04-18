@@ -1,0 +1,45 @@
+{
+  "configuration": {
+    "title": "ElasticSearch",
+    "type": "object",
+    "properties": {
+      "url": {
+        "title": "Url",
+        "description": "Url of the tenant",
+        "type": "string"
+      },
+      "api_key": {
+        "title": "API Key",
+        "description": "The API Key to authenticate to ElasticSearch",
+        "type": "string"
+      },
+      "disable_certificate_verification": {
+        "title": "Disable Certificate Verification",
+        "description": "Disable certificate verification for the connection. Optional",
+        "type": "boolean",
+        "default": false
+      },
+      "sha256_tls_fingerprint": {
+        "title": "SHA256 TLS fingerprint",
+        "description": "The SHA256 TLS fingerprint of the server certificate. Optional",
+        "type": "string"
+      }
+    },
+    "required": [
+      "url",
+      "api_key"
+    ],
+    "secrets": [
+      "api_key",
+      "sha256_tls_fingerprint"
+    ]
+  },
+  "description": "Elasticsearch is a scalable, real-time search and analytics engine designed for handling large volumes of structured and unstructured data. Built on Apache Lucene, it allows users to perform complex queries quickly and analyze data in near real-time. Its distributed architecture ensures high availability and reliability, making it ideal for applications ranging from website search to log analysis and business intelligence. Elasticsearch also integrates seamlessly with the Elastic Stack, enhancing data visualization and management capabilities.",
+  "name": "ElasticSearch",
+  "uuid": "9c17d041-4930-4c23-a108-811a25ef6d64",
+  "slug": "elasticsearch",
+  "version": "1.0.0",
+  "categories": [
+    "Applicative"
+  ]
+}
