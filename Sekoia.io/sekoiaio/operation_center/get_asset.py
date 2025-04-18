@@ -2,7 +2,7 @@ from posixpath import join as urljoin
 
 from sekoia_automation.action import Action
 import requests
-from datetime import datetime
+from dateutil.parser import isoparse
 
 
 ASSETV2_TYPE_TO_V1_TYPE = {
@@ -61,9 +61,9 @@ class GetAsset(Action):
         if asset is None:
             return None
         if isinstance(asset["created_at"], str):
-            asset["created_at"] = datetime.fromisoformat(asset["created_at"])
+            asset["created_at"] = isoparse(asset["created_at"])
         if isinstance(asset["updated_at"], str):
-            asset["updated_at"] = datetime.fromisoformat(asset["updated_at"])
+            asset["updated_at"] = isoparse(asset["updated_at"])
 
         return {
             "uuid": asset["uuid"],
