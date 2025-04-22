@@ -83,15 +83,19 @@ class CortexQueryEDRTrigger(CortexConnector):
         )
 
     def split_alerts_events(self, alerts: List[Any]) -> List[str]:
-        """Split events from alerts and put them in the same list"""
-
         combined_data = []
         for alert in alerts:
-            shared_id = alert.get("alert_id")
-            events = alert.get("events")
-            del alert["events"]
+            shared_id = alert["alert_id"]
+            events = alert["events"]
+
+            # first event should stay in alert, others should be separated
+            events_to_split = events[1:] if len(events) > 1 else []
+            if len(events) > 1:
+                del alert["events"][1:]
+
             combined_data.append(orjson.dumps(alert).decode("utf-8"))
-            for event in events:
+
+            for event in events_to_split:
                 event["alert_id"] = shared_id
                 combined_data.append(orjson.dumps(event).decode("utf-8"))
 
