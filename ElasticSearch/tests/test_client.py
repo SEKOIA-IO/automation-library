@@ -113,5 +113,5 @@ async def test_execute_query_full(elasticsearch_client):
 
         assert result == [{"field1": "value1"}]
 
-        mock_wait.assert_called_once_with("fake-id")
+        mock_wait.assert_called_once_with("fake-id", timeout=60, drop_null_columns=None)
         mock_delete.assert_called_once_with("fake-id")
