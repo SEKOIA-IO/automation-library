@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Allow to define the action timeout from the arguments
+- Added configurable action timeout
 
 ## 2025-04-17 - 1.0.0
 
