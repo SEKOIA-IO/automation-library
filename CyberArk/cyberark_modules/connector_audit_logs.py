@@ -122,7 +122,7 @@ class CyberArkAuditLogsConnector(Connector):
                 response_content=response.text,
                 response_status=response.status_code,
             )
-            raise ValueError("Missing cursorRef from API response")
+            return
 
         while self.running:
             # 2. Get results by cursor ref
