@@ -9,15 +9,15 @@
         "type": "string"
       },
       "login_name": {
-        "description": "Login name",
+        "description": "The login name of the user service",
         "type": "string"
       },
       "password": {
-        "description": "Password",
+        "description": "The password of the user service",
         "type": "string"
       },
       "application_id": {
-        "description": "Application identifier",
+        "description": "The identifier of the application",
         "type": "string"
       }
     },
