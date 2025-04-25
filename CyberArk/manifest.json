@@ -1,0 +1,33 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "CyberArk",
+    "type": "object",
+    "properties": {
+      "auth_base_url": {
+        "description": "The CyberArk Identity endpoint (e.g. `https://example.id.cyberark.cloud`)",
+        "type": "string"
+      },
+      "login_name": {
+        "description": "The login name of the user service",
+        "type": "string"
+      },
+      "password": {
+        "description": "The password of the user service",
+        "type": "string"
+      },
+      "application_id": {
+        "description": "The identifier of the application",
+        "type": "string"
+      }
+    },
+    "required": ["auth_base_url", "login_name", "password", "application_id"],
+    "secrets": ["password"]
+  },
+  "description": "CyberArk is a cybersecurity company specializing in identity security solutions, focusing on protecting organizations from cyber threats using privileged access management and securing critical assets.",
+  "name": "CyberArk",
+  "slug": "cyberark",
+  "categories": ["IAM"],
+  "uuid": "14e19ab0-0335-4310-9e46-6cab9f870e99",
+  "version": "0.1.1"
+}
