@@ -77,12 +77,13 @@ class CyberArkAuditLogsConnector(Connector):
 
             try:
                 error = response.json()
-                logger.error(
-                    message,
-                    code=error.get("code"),
-                    error=error.get("message"),
-                    description=error.get("description"),
-                )
+
+                if code := error.get("code"):
+                    message += f" error_code={code}"
+                if message := error.get("message"):
+                    message += f" error_message={message}"
+                if description := error.get("description"):
+                    message += f" error_description={description}"
 
             except Exception as e:
                 pass
