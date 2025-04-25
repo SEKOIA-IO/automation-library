@@ -6,6 +6,11 @@ from elastic_transport import ObjectApiResponse
 from elastic_transport._models import DEFAULT
 from tenacity import Retrying, retry_if_not_exception_type, stop_after_delay, wait_exponential
 
+from elasticsearch_module.constants import (
+    CLIENT_WAIT_FOR_RESULT_TIMEOUT_DEFAULT,
+    CLIENT_WAIT_FOR_RESULT_TIMEOUT_MAX,
+)
+
 
 class ElasticSearchError(Exception):
     def __init__(self, message: str | None = None) -> None:
@@ -61,7 +66,12 @@ class ElasticSearchClient(object):
             ssl_show_warn=False,
         )
 
-    def _wait_for_result(self, query_id: str, timeout: int = 60, drop_null_columns: bool | None = None) -> None:
+    def _wait_for_result(
+        self,
+        query_id: str,
+        timeout: int = CLIENT_WAIT_FOR_RESULT_TIMEOUT_DEFAULT,
+        drop_null_columns: bool | None = None,
+    ) -> None:
         for attempt in Retrying(
             stop=stop_after_delay(timeout),
             wait=wait_exponential(multiplier=1, min=1, max=10),
@@ -107,7 +117,9 @@ class ElasticSearchClient(object):
     def _delete_query_result(self, query_id: str) -> ObjectApiResponse[Any]:
         return self._client.esql.async_query_delete(id=query_id)
 
-    def execute_esql_query(self, query: str, drop_null_columns: bool | None = None) -> list[dict[str, Any]]:
+    def execute_esql_query(
+        self, query: str, drop_null_columns: bool | None = None, timeout: int | None = None
+    ) -> list[dict[str, Any]]:
         response: dict[str, Any] = self._query(query, drop_null_columns).body
 
         query_id: str | None = response.get("id")
@@ -121,7 +133,17 @@ class ElasticSearchClient(object):
         if query_id is None:  # pragma: no cover
             raise ElasticSearchError("ElasticSearch response does not contain a query id to fetch result")
 
-        self._wait_for_result(query_id)
+        # Preprare the timeout for the wait_for_result method
+        if timeout is None:
+            timeout = CLIENT_WAIT_FOR_RESULT_TIMEOUT_DEFAULT
+        else:
+            timeout = min(timeout, CLIENT_WAIT_FOR_RESULT_TIMEOUT_MAX)
+
+        self._wait_for_result(
+            query_id,
+            timeout=timeout,
+            drop_null_columns=drop_null_columns,
+        )
 
         final_response: dict[str, Any] = self._get_query_result(query_id).body
 

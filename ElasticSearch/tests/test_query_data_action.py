@@ -31,5 +31,5 @@ async def test_query_data_action(symphony_storage, module, arguments):
 
         assert result == {"data": [{"field1": "value1"}]}
 
-        mock_wait.assert_called_once_with("fake-id")
+        mock_wait.assert_called_once_with("fake-id", timeout=60, drop_null_columns=True)
         mock_delete.assert_called_once_with("fake-id")
