@@ -50,6 +50,29 @@ class CyberArkApiAuthentication(AuthBase):
             ),
         )
 
+    def __handle_response_error(self, response: requests.Response) -> None:
+        """
+        Handle errors from CyberArk API authentication responses.
+        """
+        if response.status_code in [400, 401, 403]:
+            error_code: str | None = None
+            error_description: str | None = None
+
+            try:
+                error = response.json()
+                error_code = error.get("error")
+                error_description = error.get("error_description")
+            finally:
+                message = f"Request to CyberArk API failed with status {response.status_code} - {response.reason}"
+                if error_code:
+                    message += f" error_code={error_code}"
+                if error_description:
+                    message += f" error_description={error_description}"
+
+                raise AuthorizationFailedException(message)
+        else:
+            response.raise_for_status()
+
     def get_credentials(self) -> CyberArkApiCredentials:
         current_dt = datetime.utcnow()
 
@@ -60,15 +83,7 @@ class CyberArkApiAuthentication(AuthBase):
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=60,
             )
-            try:
-                response.raise_for_status()
-
-            except requests.exceptions.HTTPError as error:
-                if error.response.status_code == 400:
-                    # here it means incorrect credentials
-                    raise AuthorizationFailedException("Incorrect credentials")
-
-                raise
+            self.__handle_response_error(response)
 
             api_credentials: dict = response.json()
 

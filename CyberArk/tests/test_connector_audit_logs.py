@@ -163,6 +163,17 @@ def test_authorization_error(trigger):
             trigger.next_batch()
 
 
+def test_authorization_error_without_details(trigger):
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post(
+            "https://example.id.cyberark.cloud/oauth2/token/MyApp1",
+            status_code=400,
+            json={},
+        )
+        with pytest.raises(AuthorizationFailedException):
+            trigger.next_batch()
+
+
 def test_network_error(trigger):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
