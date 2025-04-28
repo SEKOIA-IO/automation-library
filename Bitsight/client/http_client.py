@@ -31,7 +31,6 @@ class BitsightClient(object):
         self._concurrency_limiter = asyncio.Semaphore(3)
         self._session = ClientSession()
 
-
     @classmethod
     def default_limiter(cls) -> AsyncLimiter:
         """
@@ -44,7 +43,6 @@ class BitsightClient(object):
         # 16 requests per second to stay under 5000 requests per 5 minutes
         # 5000 requests per 5 minutes = 16.666 requests per second
         return AsyncLimiter(16, 1)
-
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator[ClientSession, None]:
