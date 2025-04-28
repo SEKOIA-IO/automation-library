@@ -81,13 +81,23 @@ class CheckpointHttpClient(HttpClient):
         token_refresher = await self.get_token_refresher(CheckpointServiceType.HARMONY_MOBILE)
 
         while endpoint is not None:
-            async with token_refresher.with_access_token() as token:
-                async with self.session() as session:
+            # Correct ordering of the context managers is important
+            # Because we might face a problem when expired token is used while rate limit is exceeded
+            async with self.session() as session:
+                async with token_refresher.with_access_token() as token:
                     async with session.get(
                         url=f"{base_url}{endpoint}",
                         headers={"Authorization": f"Bearer {token.token.token}"},
                     ) as response:
                         response_json = await response.json()
+
+                        # Handle situation when get response like this:
+                        # {'success': False, 'message': 'Authentication required', 'forceLogout': True}
+                        if response_json.get("forceLogout", False):  # pragma: no cover
+                            await token_refresher.mark_token_invalid()
+                            logger.info("Token is invalid. Trying to get new token and retry")
+
+                            continue
 
             if response_json.get("objects") is None:
                 logger.error("Failed to get events from server. Invalid response : {0}", response_json)
@@ -139,3 +149,11 @@ class CheckpointHttpClient(HttpClient):
                 logger.warning("Failed to parse date: {0}. It is not either ISO or `%m/%d/%Y %H:%M:%S` format", value)
 
                 return None
+
+    async def close(self) -> None:
+        """Close http client."""
+        token_refresher = await self.get_token_refresher(CheckpointServiceType.HARMONY_MOBILE)
+        await token_refresher.close()
+
+        if self._session:
+            await self._session.close()

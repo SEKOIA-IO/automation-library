@@ -1,8 +1,8 @@
 """Tests related to http client."""
 
 from datetime import timezone
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import pytest
 from aioresponses import aioresponses
@@ -50,6 +50,8 @@ async def test_checkpoint_http_client_parse_date(
     assert http_client.parse_date(expected.strftime("%m/%d/%Y %H:%M:%S")) == expected
     assert http_client.parse_date(expected.isoformat()) == expected
 
+    await http_client.close()
+
 
 @pytest.mark.asyncio
 async def test_checkpoint_http_client_get_harmony_mobile_alerts_empty(
@@ -91,6 +93,8 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_empty(
         result = [event async for events in list_of_events for event in events]
 
         assert result == events_data["objects"]
+
+    await http_client.close()
 
 
 @pytest.mark.asyncio
@@ -159,6 +163,8 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
             {**event, "event_timestamp": None, "backend_last_updated": None} for event in events
         ]
 
+    await http_client.close()
+
 
 @pytest.mark.asyncio
 async def test_checkpoint_http_client_get_harmony_mobile_alerts_success_1(
@@ -199,6 +205,8 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success_1(
         result = [event async for events in list_of_events for event in events]
 
         assert result == []
+
+    await http_client.close()
 
 
 @pytest.mark.asyncio
@@ -271,3 +279,5 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_with_pagination_
         assert [event.dict() for event in result] == [
             {**event, "event_timestamp": None, "backend_last_updated": None} for event in events
         ]
+
+    await http_client.close()
