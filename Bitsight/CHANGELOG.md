@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-10-30 - 1.1.1
+
+### Added
+
+- Add concurrency to the rate limiter
+
 ## 2024-10-30 - 1.1.0
 
 ### Changed

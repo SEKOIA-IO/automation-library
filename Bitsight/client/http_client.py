@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator, AsyncIterator
 from aiohttp import BasicAuth, ClientSession
 from aiolimiter import AsyncLimiter
 from yarl import URL
+import asyncio
 
 
 class BitsightClient(object):
@@ -25,7 +26,11 @@ class BitsightClient(object):
         """
         self.api_key = api_key
         self._rate_limiter: AsyncLimiter = rate_limiter or self.default_limiter()
+        # We can't have more than 3 concurrent requests
+        # https://help.bitsighttech.com/hc/en-us/articles/360036941374-Errors-and-Status-Codes#429
+        self._concurrency_limiter = asyncio.Semaphore(3)
         self._session = ClientSession()
+
 
     @classmethod
     def default_limiter(cls) -> AsyncLimiter:
@@ -35,7 +40,11 @@ class BitsightClient(object):
         Returns:
             aiolimiter.AsyncLimiter:
         """
-        return AsyncLimiter(5000, 60 * 5)
+        # https://help.bitsighttech.com/hc/en-us/articles/360036941374-Errors-and-Status-Codes
+        # 16 requests per second to stay under 5000 requests per 5 minutes
+        # 5000 requests per 5 minutes = 16.666 requests per second
+        return AsyncLimiter(16, 1)
+
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator[ClientSession, None]:
@@ -45,8 +54,10 @@ class BitsightClient(object):
         Yields:
             AsyncGenerator[ClientSession, None]:
         """
-        async with self._rate_limiter:
-            yield self._session
+        # Add concurrency to the session
+        async with self._concurrency_limiter:
+            async with self._rate_limiter:
+                yield self._session
 
     def get_auth(self) -> BasicAuth:
         """
