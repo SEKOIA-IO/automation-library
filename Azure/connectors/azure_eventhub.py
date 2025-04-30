@@ -32,7 +32,7 @@ class Client(object):
 
     @cached_property
     def checkpoint_store(self) -> BlobCheckpointStore:
-        return BlobCheckpointStore.from_connection_string(  # type: ignore[misc]
+        return BlobCheckpointStore.from_connection_string(
             self.configuration.storage_connection_string, container_name=self.configuration.storage_container_name
         )
 
