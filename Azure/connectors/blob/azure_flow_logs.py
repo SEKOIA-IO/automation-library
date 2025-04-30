@@ -48,11 +48,8 @@ class AzureFlowLogsConnector(AbstractAzureBlobConnector):
             for flow in record.get("flowRecords", {}).get("flows", []):
                 for group in flow.get("flowGroups", []):
                     for entry in group.get("flowTuples", []):
-                        modified_result.append({
-                            **result,
-                            "aclID": flow["aclID"],
-                            "rule": group["rule"],
-                            "flow.0": entry
-                        })
+                        modified_result.append(
+                            {**result, "aclID": flow["aclID"], "rule": group["rule"], "flow.0": entry}
+                        )
 
         return [orjson.dumps(value).decode("utf-8") for value in modified_result]
