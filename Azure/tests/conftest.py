@@ -108,6 +108,72 @@ def account_key(session_faker) -> str:
 
 
 @pytest.fixture
+def current_datetime() -> datetime:
+    """
+    Generate current datetime.
+
+    Returns:
+        datetime:
+    """
+    return datetime.now()
+
+
+@pytest.fixture
+def flow_logs_content(current_datetime) -> bytes:
+    result = {
+        "records": [
+            {
+                "time": current_datetime.isoformat(),  # important to use now, because we will filter results
+                "flowLogVersion": 4,
+                "flowLogGUID": "flowLogGUID1",
+                "macAddress": "112233445566",
+                "category": "FlowLogFlowEvent",
+                "flowLogResourceID": "/SUBSCRIPTIONS/aaaa0a0a-bb1b-cc2c-dd3d-eeeeee4e4e4e/RESOURCEGROUPS/NETWORKWATCHERRG/PROVIDERS/MICROSOFT.NETWORK/NETWORKWATCHERS/NETWORKWATCHER_EASTUS2EUAP/FLOWLOGS/VNETFLOWLOG",
+                "targetResourceID": "/subscriptions/aaaa0a0a-bb1b-cc2c-dd3d-eeeeee4e4e4e/resourceGroups/myResourceGroup/providers/Microsoft.Network/virtualNetworks/myVNet",
+                "operationName": "FlowLogFlowEvent",
+                "flowRecords": {
+                    "flows": [
+                        {
+                            "aclID": "aclID1",
+                            "flowGroups": [
+                                {
+                                    "rule": "DefaultRule_AllowInternetOutBound",
+                                    "flowTuples": [
+                                        "1663146003599,1.2.3.4,192.0.2.180,23956,443,6,O,B,NX,0,0,0,0",
+                                        "1663146003606,1.2.3.4,192.0.2.180,23956,443,6,O,E,NX,3,767,2,1580",
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "aclID": "aclID2",
+                            "flowGroups": [
+                                {
+                                    "rule": "BlockHighRiskTCPPortsFromInternet",
+                                    "flowTuples": [
+                                        "1663145998065,8.7.6.5,1.2.3.4,55188,22,6,I,D,NX,0,0,0,0",
+                                        "1663146005503,2.3.4.5,1.2.3.4,35276,119,6,I,D,NX,0,0,0,0"
+                                    ]
+                                },
+                                {
+                                    "rule": "Internet",
+                                    "flowTuples": [
+                                        "1663145989563,3.4.5.6,1.2.3.4,50557,44357,6,I,D,NX,0,0,0,0",
+                                        "1663145989679,1.2.3.81,1.2.3.4,62797,35945,6,I,D,NX,0,0,0,0",
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+    return orjson.dumps(result)
+
+
+@pytest.fixture
 def blob_content(session_faker) -> bytes:
     result = {
         "records": [
