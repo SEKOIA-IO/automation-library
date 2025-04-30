@@ -5,10 +5,18 @@
       "status": {
         "description": "Status applied to the incident",
         "type": "string",
+        "enum": ["unresolved", "in_progress", "resolved"]
+      },
+      "new_analyst_verdict": {
+        "description": "New verdict of the analyst to set",
+        "type": "string",
+        "default": "-",
         "enum": [
-          "unresolved",
-          "in_progress",
-          "resolved"
+          "-",
+          "false_positive",
+          "suspicious",
+          "true_positive",
+          "undefined"
         ]
       },
       "filters": {
@@ -51,9 +59,11 @@
             }
           },
           "analyst_verdicts": {
-            "description": "Verdicts of the analyst",
+            "description": "Verdicts of the analyst to filter by",
             "type": "string",
+            "default": "-",
             "enum": [
+              "-",
               "false_positive",
               "suspicious",
               "true_positive",
@@ -63,9 +73,7 @@
         }
       }
     },
-    "required": [
-      "status"
-    ],
+    "required": ["status", "new_analyst_verdicts"],
     "title": "Arguments",
     "type": "object"
   },
@@ -80,9 +88,7 @@
         "type": "integer"
       }
     },
-    "required": [
-      "affected"
-    ],
+    "required": ["affected"],
     "title": "Results",
     "type": "object"
   },
