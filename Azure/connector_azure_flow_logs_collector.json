@@ -46,7 +46,7 @@
       "account_key"
     ]
   },
-  "description": "connector playbook to get Azure Flow Logs events information",
+  "description": "Connector playbook to get Azure Flow Logs events information",
   "docker_parameters": "azure_flow_logs",
   "name": "Collect Azure Network Watcher VirtualNet Flow Logs",
   "uuid": "d79440e4-57e9-4534-88af-62f3aca0959b"
