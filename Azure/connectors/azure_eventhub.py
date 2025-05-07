@@ -3,14 +3,14 @@ import os
 import time
 from datetime import datetime, timezone
 from functools import cached_property
-from typing import Any, Optional, cast, Union
+from typing import Any, Optional, Union, cast
 
 import orjson
 from azure.eventhub import EventData
 from azure.eventhub.aio import EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblobaio import BlobCheckpointStore
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.connector import DefaultConnectorConfiguration, Connector
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
 
@@ -32,7 +32,7 @@ class Client(object):
 
     @cached_property
     def checkpoint_store(self) -> BlobCheckpointStore:
-        return BlobCheckpointStore.from_connection_string(  # type: ignore[misc]
+        return BlobCheckpointStore.from_connection_string(
             self.configuration.storage_connection_string, container_name=self.configuration.storage_container_name
         )
 

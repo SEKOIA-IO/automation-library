@@ -5,7 +5,7 @@ from multiprocessing import Process
 from shutil import rmtree
 from tempfile import mkdtemp
 from threading import Thread
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from azure.eventhub import EventData
