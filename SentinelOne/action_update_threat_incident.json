@@ -72,7 +72,7 @@
         }
       }
     },
-    "required": ["status", "new_analyst_verdicts"],
+    "required": ["status", "new_analyst_verdict"],
     "title": "Arguments",
     "type": "object"
   },
