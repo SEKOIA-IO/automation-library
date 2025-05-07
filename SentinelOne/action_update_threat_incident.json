@@ -10,7 +10,6 @@
       "new_analyst_verdict": {
         "description": "New verdict of the analyst to set",
         "type": "string",
-        "default": "-",
         "enum": [
           "-",
           "false_positive",
