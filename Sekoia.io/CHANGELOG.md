@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-10 - 2.67.14
+
+### Fixed
+
+- Rename get asset in the main script
+
 ## 2025-04-10 - 2.67.13
 
 ### Fixed

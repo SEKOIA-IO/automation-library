@@ -1,7 +1,7 @@
 {
   "uuid": "25ebfce7-f980-46e3-a2b8-0b59f1905acb",
   "name": "Get Asset (V2)",
-  "docker_parameters": "get-asset-v2/{uuid}",
+  "docker_parameters": "get-asset-v2",
   "description": "Return an asset according to its identifier",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
