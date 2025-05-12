@@ -105,7 +105,7 @@ if __name__ == "__main__":
     module.register(ListAssets, "get-assets-v2")
     module.register(DeletesAsset, "delete-assets/{uuid}")
     module.register(DeletesAssetV2, "delete-assets-v2/{uuid}")
-    module.register(GetAsset, "get-asset-v2/{uuid}")
+    module.register(GetAsset, "get-asset-v2")
     module.register(ReturnsAsset, "get-assets/{uuid}")
     module.register(UpdateRule, "put-rules/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
