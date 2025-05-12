@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-07 - 2.6.5
+
+### Added
+
+- Add new connector to collect Azure Network Watcher Virtual network flow logs
+
 ## 2024-12-04 - 2.6.4
 
 ### Fixed
