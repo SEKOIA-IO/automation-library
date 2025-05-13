@@ -8,6 +8,7 @@ from typing import Any
 
 import aiohttp
 import requests
+import xxhash
 
 
 class AsyncGeneratorConverter:
@@ -93,3 +94,19 @@ def batched(iterable: Iterable, n: int) -> Generator[list, None, None]:
     iterator = iter(iterable)
     while batch := list(islice(iterator, n)):
         yield batch
+
+
+def compute_hash_event(event: dict) -> str:
+    """
+    Compute a hash id for the event
+    """
+    parts = [
+        event["aggregateId"],
+        event["processingId"],
+        event.get("type") or event.get("eventType") or "",
+        event.get("senderEnvelope") or "",
+        event.get("recipients") or "",
+        event.get("messageId") or event.get("sha1") or "",
+    ]
+
+    return xxhash.xxh64("-".join(parts)).hexdigest()
