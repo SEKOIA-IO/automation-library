@@ -14,6 +14,8 @@ python-dateutil = "^2.9.0.post0"
 orjson = "^3.10.3"
 aiohttp = "^3.9.5"
 structlog = "^24.4.0"
+cachetools = "^5.5.2"
+xxhash = "^3.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
