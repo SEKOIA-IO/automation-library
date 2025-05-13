@@ -1,0 +1,26 @@
+{
+  "name": "Get latest events from Lookout MES",
+  "description": "Fetch Lookout MES events",
+  "uuid": "71b7b92d-d8a0-4f19-88eb-c69f4af84508",
+  "docker_parameters": "lookout_mes",
+  "arguments": {
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": ["intake_key"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "The events"
+  }
+}
