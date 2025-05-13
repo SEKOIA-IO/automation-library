@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-13 - 1.1.13
+
+### Fixed
+
+- Handle temporary errors when fetching events
+
 ## 2025-04-10 - 1.1.12
 
 ### Fixed
