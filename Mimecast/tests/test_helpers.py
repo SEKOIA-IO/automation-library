@@ -7,8 +7,15 @@ from datetime import datetime
 import pytest
 import requests_mock
 from aioresponses import aioresponses
+from cachetools import LRUCache
 
-from mimecast_modules.helpers import AsyncGeneratorConverter, download_batches, batched, compute_hash_event
+from mimecast_modules.helpers import (
+    AsyncGeneratorConverter,
+    download_batches,
+    batched,
+    compute_hash_event,
+    filter_processed_events,
+)
 
 
 @pytest.fixture
@@ -306,3 +313,60 @@ def test_compute_hash_event_12():
     }
     expected_hash = "20245787bb2fc8f7"
     assert compute_hash_event(event) == expected_hash
+
+
+def test_filter_processed_events():
+    events = [
+        {
+            "processingId": "req-aa8ae4a3334b30fbb07bbb9c2fb69048_1715766931",
+            "aggregateId": "Y12X0yjKNr6A6yhIH48Wkw_1715766931",
+            "senderEnvelope": "jeanne@gmail.com",
+            "recipients": "john@example.org",
+            "messageId": "<555555555555555555555555555555555555555555555555555@mail.gmail.com>",
+            "type": "url protect",
+        },
+        {
+            "aggregateId": "YvXi4vUANvSwDaBxkq6SYA",
+            "processingId": "RMkDQFp7L5gGaZ5jnsGVW4zLmvTVvWVb0lQeO9EBDRo_1736242544",
+            "senderEnvelope": "john.doe@gmail.com",
+            "messageId": "<111111111111111111111111111111111111111111111111111@mail.gmail.com>",
+            "recipients": "admin@example.org",
+            "type": "receipt",
+        },
+        {
+            "processingId": "processingId",
+            "aggregateId": "aggregateId",
+            "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+            "senderEnvelope": "john.doe@example.org",
+            "recipients": "jane.doe@example.com",
+            "type": "delivery",
+        },
+        {
+            "processingId": "req-aa8ae4a3334b30fbb07bbb9c2fb69048_1715766931",
+            "aggregateId": "Y12X0yjKNr6A6yhIH48Wkw_1715766931",
+            "senderEnvelope": "jeanne@gmail.com",
+            "recipients": "john@example.org",
+            "messageId": "<555555555555555555555555555555555555555555555555555@mail.gmail.com>",
+            "type": "url protect",
+        },
+        {
+            "processingId": "processingId",
+            "aggregateId": "aggregateId",
+            "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+            "senderEnvelope": "john.doe@example.org",
+            "recipients": "jane.doe@example.com",
+            "type": "delivery",
+        },
+        {
+            "processingId": "processingId",
+            "aggregateId": "aggregateId",
+            "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+            "senderEnvelope": "admin@example.org",
+            "recipients": "jane.doe@example.com",
+            "type": "delivery",
+        },
+    ]
+
+    cache = LRUCache(maxsize=100)
+    assert len(filter_processed_events(events, cache)) == 4
+    assert len(cache) == 4
