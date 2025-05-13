@@ -142,10 +142,16 @@ class MimecastSIEMWorker(Thread):
 
         return events
 
+    def __get_next_batch_of_events(self, url: str, params: dict[str, int | str]) -> requests.Response:
+        """
+        Get the next batch of events from the API.
+        """
+        return self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
+
     def __fetch_next_events(self) -> Generator[list, None, None]:
         url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
         params = self.__build_fetch_params()
-        response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
+        response = self.__get_next_batch_of_events(url, params)
 
         while self.running:
             response.raise_for_status()
@@ -170,7 +176,7 @@ class MimecastSIEMWorker(Thread):
                 return
 
             params["nextPage"] = nextPageToken
-            response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
+            response = self.__get_next_batch_of_events(url, params)
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = None  # for measuring lag
