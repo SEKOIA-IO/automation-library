@@ -142,12 +142,36 @@ class MimecastSIEMWorker(Thread):
 
         return events
 
+    def __get_next_batch_of_events(self, url: str, params: dict[str, int | str]) -> requests.Response:
+        """
+        Get the next batch of events from the API.
+        """
+        response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
+
+        # Check if the response is unauthorized error
+        if response.status_code == 401:
+            # Log the unauthorized error
+            logger.error(
+                "Unauthorized error when fetching batch of events",
+                log_type=self.log_type,
+                status_code=response.status_code,
+                reason=response.reason,
+                error=response.text,
+            )
+
+            # Re-authenticate and retry the request
+            self.client.auth.get_credentials()
+            response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
+
+        return response
+
     def __fetch_next_events(self) -> Generator[list, None, None]:
         url = "https://api.services.mimecast.com/siem/v1/batch/events/cg"
         params = self.__build_fetch_params()
-        response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
+        response = self.__get_next_batch_of_events(url, params)
 
         while self.running:
+            # raise an exception if the response is not ok
             response.raise_for_status()
 
             result = response.json()
@@ -170,7 +194,7 @@ class MimecastSIEMWorker(Thread):
                 return
 
             params["nextPage"] = nextPageToken
-            response = self.client.get(url, params=params, timeout=60, headers={"Accept": "application/json"})
+            response = self.__get_next_batch_of_events(url, params)
 
     def fetch_events(self) -> Generator[list, None, None]:
         most_recent_date_seen = None  # for measuring lag

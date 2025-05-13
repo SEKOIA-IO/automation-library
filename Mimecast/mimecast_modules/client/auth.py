@@ -47,7 +47,11 @@ class ApiKeyAuthentication(AuthBase):
         if self.__credentials is None or current_dt + timedelta(seconds=300) >= self.__credentials.expires_at:
             response = self.__http_session.post(
                 url=self.AUTH_URL,
-                data=f"client_id={self.__client_id}&client_secret={self.__client_secret}&grant_type=client_credentials",
+                data={
+                    "client_id": self.__client_id,
+                    "client_secret": self.__client_secret,
+                    "grant_type": "client_credentials",
+                },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=60,
             )

@@ -247,6 +247,57 @@ def test_permission_denied(trigger, batch_events_response_1, batch_events_respon
         ]
 
 
+def test_temporary_unauthoried_for_url(
+    trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
+):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "mimecast_modules.connector_mimecast_siem.download_batches"
+    ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
+        mock_download_batches.side_effect = [[batch_event_1], []]
+
+        mock_requests.post(
+            "https://api.services.mimecast.com/oauth/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "Bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock_requests.get(
+            "https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            [
+                {
+                    "status_code": 401,
+                    "json": {
+                        "fail": [{"code": "InvalidClientIdentifier", "message": "Client credentials are invalid"}]
+                    },
+                },
+                {
+                    "status_code": 200,
+                    "json": batch_events_response_1,
+                },
+                {
+                    "status_code": 200,
+                    "json": batch_events_response_empty,
+                },
+            ],
+        )
+
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time, end_time]
+
+        consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert consumer.cursor.offset == "tokenNextPageLast=="
+
+        mock_time.sleep.assert_called_once_with(44)
+
+
 def test_old_cursor(
     trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client, data_storage
 ):
