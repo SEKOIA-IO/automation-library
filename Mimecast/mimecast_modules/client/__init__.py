@@ -8,9 +8,11 @@ from .retry import Retry
 
 
 class ApiClient(requests.Session):
+    auth: ApiKeyAuthentication
+
     def __init__(
         self,
-        auth: AuthBase,
+        auth: ApiKeyAuthentication,
         limiter_batch: Limiter,
         limiter_default: Limiter,
         nb_retries: int = 5,
