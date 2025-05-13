@@ -176,9 +176,6 @@ class MimecastSIEMWorker(Thread):
 
             result = response.json()
 
-            nextPageToken = result.get("@nextPage")
-            self.cursor.offset = nextPageToken
-
             batch_urls = [item["url"] for item in result.get("value", [])]
             events_gen = download_batches(urls=batch_urls, loop=self._loop)
 
@@ -189,6 +186,9 @@ class MimecastSIEMWorker(Thread):
                 if len(events) > 0:
                     INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                     yield events
+
+            nextPageToken = result.get("@nextPage")
+            self.cursor.offset = nextPageToken
 
             if result["isCaughtUp"] is True or not nextPageToken:
                 return
