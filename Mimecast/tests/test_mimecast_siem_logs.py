@@ -131,6 +131,47 @@ def test_fetch_batches(trigger, batch_events_response_1, batch_events_response_e
         mock_time.sleep.assert_called_once_with(44)
 
 
+def test_events_deduplication(
+    trigger, batch_events_response_1, batch_events_response_empty, batch_event_1, api_client
+):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "mimecast_modules.connector_mimecast_siem.download_batches"
+    ) as mock_download_batches, patch("mimecast_modules.connector_mimecast_siem.time") as mock_time:
+        mock_download_batches.side_effect = [[batch_event_1], [batch_event_1], [batch_event_1], []]
+
+        mock_requests.post(
+            "https://api.services.mimecast.com/oauth/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "Bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock_requests.get(
+            "https://api.services.mimecast.com/siem/v1/batch/events/cg",
+            [
+                {"json": batch_events_response_1},
+                {"json": batch_events_response_1},
+                {"json": batch_events_response_1},
+                {"json": batch_events_response_empty},
+            ],
+        )
+
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time, end_time]
+
+        consumer = MimecastSIEMWorker(connector=trigger, log_type="process", client=api_client)
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert consumer.cursor.offset == "tokenNextPageLast=="
+
+        mock_time.sleep.assert_called_once_with(44)
+
+
 def test_start_consumers(trigger, api_client):
     with patch("mimecast_modules.connector_mimecast_siem.MimecastSIEMWorker.start") as mock_start:
         consumers = trigger.start_consumers(api_client)
