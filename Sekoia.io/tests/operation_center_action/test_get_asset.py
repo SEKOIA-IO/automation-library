@@ -1,6 +1,5 @@
-from datetime import datetime
-
 import uuid
+
 from sekoiaio.operation_center.get_asset import GetAsset
 
 module_base_url = "https://app.sekoia.fake/"
@@ -52,8 +51,8 @@ def test_get_asset_by_uuid(requests_mock):
         "owners": [],
         "keys": [{"uuid": "e2440ef6-02af-4da0-ac7a-511821033d74", "name": "cidr-v4", "value": "10.100.100.0/24"}],
         "attributes": [{"uuid": "7a39c0cf-e470-4a06-afba-da2009fdc7d1", "name": "as", "value": "13336"}],
-        "created_at": datetime.fromisoformat("2024-10-09T17:30:11Z"),
-        "updated_at": datetime.fromisoformat("2024-10-11T17:30:11Z"),
+        "created_at": "2024-10-09T17:30:11Z",
+        "updated_at": "2024-10-11T17:30:11Z",
     }
     results: dict = action.run(arguments)
     assert results == expected_result
@@ -125,8 +124,8 @@ def test_get_asset_transforms_criticity_levels(requests_mock):
         "owners": [],
         "keys": [{"uuid": "e2440ef6-02af-4da0-ac7a-511821033d74", "name": "cidr-v4", "value": "10.100.100.0/24"}],
         "attributes": [{"uuid": "7a39c0cf-e470-4a06-afba-da2009fdc7d1", "name": "as", "value": "13336"}],
-        "created_at": datetime.fromisoformat("2024-10-09T17:30:11Z"),
-        "updated_at": datetime.fromisoformat("2024-10-11T17:30:11Z"),
+        "created_at": "2024-10-09T17:30:11Z",
+        "updated_at": "2024-10-11T17:30:11Z",
     }
     results: dict = action.run(arguments)
     assert results == expected_result
