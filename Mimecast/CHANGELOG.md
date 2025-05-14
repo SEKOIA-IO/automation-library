@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-13 - 1.1.14
+
+### Fixed
+
+- Filter already collected events
+
 ## 2025-05-13 - 1.1.13
 
 ### Fixed

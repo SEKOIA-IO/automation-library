@@ -7,8 +7,15 @@ from datetime import datetime
 import pytest
 import requests_mock
 from aioresponses import aioresponses
+from cachetools import LRUCache
 
-from mimecast_modules.helpers import AsyncGeneratorConverter, download_batches, batched
+from mimecast_modules.helpers import (
+    AsyncGeneratorConverter,
+    download_batches,
+    batched,
+    compute_hash_event,
+    filter_processed_events,
+)
 
 
 @pytest.fixture
@@ -145,3 +152,268 @@ def test_async_generator_converter_empty_generator(event_loop):
     sync_generator = AsyncGeneratorConverter(async_empty_generator(), event_loop)
     assert isinstance(sync_generator, Iterable)
     assert list(sync_generator) == []
+
+
+def test_compute_hash_event_0():
+    event = {
+        "processingId": "processingId",
+        "aggregateId": "aggregateId",
+        "sha1": "816b013c8be6e5708690645964b5d442c085041e",
+        "eventType": "attachment protect",
+    }
+    expected_hash = "02eddf2a8696fee8"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_1():
+    event = {
+        "processingId": "processingId",
+        "aggregateId": "aggregateId",
+        "eventType": "av",
+        "sha1": "816b013c8be6e5708690645964b5d442c085041e",
+    }
+    expected_hash = "574e5293b45f309c"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_2():
+    event = {
+        "processingId": "processingId",
+        "aggregateId": "aggregateId",
+        "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+        "senderEnvelope": "john.doe@example.org",
+        "recipients": "jane.doe@example.com",
+        "type": "delivery",
+    }
+    expected_hash = "a35ffb02f9760e7b"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_3():
+    event = {
+        "processingId": "processingId",
+        "aggregateId": "aggregateId",
+        "senderEnvelope": "auser@mimecast.com",
+        "messageId": "",
+        "eventType": "impersonation protect",
+        "recipients": "auser@mimecast.com",
+    }
+    expected_hash = "d11ab383ea2333e3"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_4():
+    event = {
+        "processingId": "processingId",
+        "aggregateId": "aggregateId",
+        "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+        "senderEnvelope": "john.doe@example.org",
+        "recipients": "jane.doe@example.com",
+        "type": "internal email protect",
+    }
+    expected_hash = "0d63710a4d0f504c"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_5():
+    event = {
+        "aggregateId": "vC80NNxvOWKkBPnzSs04FA_1715699686",
+        "processingId": "PGZfGuxEAu_kE-nGy1sjThBr5EYbm1ZcDKg-vXbRHLA_1715699686",
+        "senderEnvelope": "newsletter@stub.com",
+        "recipients": "neo@gmail.fr",
+        "type": "journal",
+    }
+    expected_hash = "3746a53dd8723b0e"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_6():
+    event = {
+        "aggregateId": "J5JwSy0HNvG7AvCg1sgDvQ_1715708284",
+        "processingId": "hP5f7mBanAVkWJWfh4vYvca3zOi9I3jROBmH3Z_Kysk_1715708284",
+        "senderEnvelope": "john.doe015@gmail.com",
+        "messageId": "<777777777777777777777777777777777777777777777777777@mail.gmail.com>",
+        "type": "process",
+    }
+    expected_hash = "a6551d97df29ce95"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_7():
+    event = {
+        "processingId": "processingId",
+        "aggregateId": "aggregateId",
+        "senderEnvelope": "auser@mimecast.com",
+        "messageId": "messageId",
+        "eventType": "process",
+    }
+    expected_hash = "fe9d2e277f8a02e5"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_8():
+    event = {
+        "aggregateId": "aggId1",
+        "processingId": "AAA_123",
+        "senderEnvelope": "johndoe@gmail.com",
+        "messageId": "1@mail.gmail.com>",
+        "type": "process",
+    }
+    expected_hash = "3255b48e58585be1"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_9():
+    event = {
+        "aggregateId": "J5JwSy0HNvG7AvCg1sgDvQ_1715708284",
+        "processingId": "hP5f7mBanAVkWJWfh4vYvca3zOi9I3jROBmH3Z_Kysk_1715708284",
+        "senderEnvelope": "john.doe@gmail.com",
+        "messageId": "<444444444444444444444444444444444444444444444444444@mail.gmail.com>",
+        "recipients": "admin@example.org",
+        "type": "receipt",
+    }
+    expected_hash = "beeba37b97f065c0"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_10():
+    event = {
+        "aggregateId": "YvXi4vUANvSwDaBxkq6SYA",
+        "processingId": "RMkDQFp7L5gGaZ5jnsGVW4zLmvTVvWVb0lQeO9EBDRo_1736242544",
+        "senderEnvelope": "john.doe@gmail.com",
+        "messageId": "<111111111111111111111111111111111111111111111111111@mail.gmail.com>",
+        "recipients": "admin@example.org",
+        "type": "receipt",
+    }
+    expected_hash = "5e3912e39fc44867"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_11():
+    event = {
+        "processingId": "processingId",
+        "aggregateId": "aggregateId",
+        "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+        "senderEnvelope": "john.doe@example.org",
+        "recipients": "jane.doe@example.com",
+        "type": "spam",
+    }
+    expected_hash = "d3121312806537c0"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_compute_hash_event_12():
+    event = {
+        "processingId": "req-aa8ae4a3334b30fbb07bbb9c2fb69048_1715766931",
+        "aggregateId": "Y12X0yjKNr6A6yhIH48Wkw_1715766931",
+        "senderEnvelope": "jeanne@gmail.com",
+        "recipients": "john@example.org",
+        "messageId": "<555555555555555555555555555555555555555555555555555@mail.gmail.com>",
+        "type": "url protect",
+    }
+    expected_hash = "20245787bb2fc8f7"
+    assert compute_hash_event(event) == expected_hash
+
+
+def test_filter_processed_events():
+    events = [
+        {
+            "processingId": "req-aa8ae4a3334b30fbb07bbb9c2fb69048_1715766931",
+            "aggregateId": "Y12X0yjKNr6A6yhIH48Wkw_1715766931",
+            "senderEnvelope": "jeanne@gmail.com",
+            "recipients": "john@example.org",
+            "messageId": "<555555555555555555555555555555555555555555555555555@mail.gmail.com>",
+            "type": "url protect",
+        },
+        {
+            "aggregateId": "YvXi4vUANvSwDaBxkq6SYA",
+            "processingId": "RMkDQFp7L5gGaZ5jnsGVW4zLmvTVvWVb0lQeO9EBDRo_1736242544",
+            "senderEnvelope": "john.doe@gmail.com",
+            "messageId": "<111111111111111111111111111111111111111111111111111@mail.gmail.com>",
+            "recipients": "admin@example.org",
+            "type": "receipt",
+        },
+        {
+            "processingId": "processingId",
+            "aggregateId": "aggregateId",
+            "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+            "senderEnvelope": "john.doe@example.org",
+            "recipients": "jane.doe@example.com",
+            "type": "delivery",
+        },
+        {
+            "processingId": "req-aa8ae4a3334b30fbb07bbb9c2fb69048_1715766931",
+            "aggregateId": "Y12X0yjKNr6A6yhIH48Wkw_1715766931",
+            "senderEnvelope": "jeanne@gmail.com",
+            "recipients": "john@example.org",
+            "messageId": "<555555555555555555555555555555555555555555555555555@mail.gmail.com>",
+            "type": "url protect",
+        },
+        {
+            "processingId": "processingId",
+            "aggregateId": "aggregateId",
+            "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+            "senderEnvelope": "john.doe@example.org",
+            "recipients": "jane.doe@example.com",
+            "type": "delivery",
+        },
+        {
+            "processingId": "processingId",
+            "aggregateId": "aggregateId",
+            "messageId": "<11111111111111111111111111111111111111@mail.gmail.com>",
+            "senderEnvelope": "admin@example.org",
+            "recipients": "jane.doe@example.com",
+            "type": "delivery",
+        },
+    ]
+
+    cache = LRUCache(maxsize=100)
+    assert len(filter_processed_events(events, cache)) == 4
+    assert len(cache) == 4
+
+
+def test_filter_processed_events_empty_list():
+    cache = LRUCache(maxsize=100)
+
+    # Should handle empty input without errors
+    result = filter_processed_events([], cache)
+    assert result == []
+
+
+def test_filter_processed_events_with_prepopulated_cache():
+    cache = LRUCache(maxsize=100)
+
+    # Pre-populate the cache by processing initial events
+    base_events = [
+        {
+            "processingId": "id1",
+            "aggregateId": "agg1",
+            "senderEnvelope": "a@example.com",
+            "recipients": "b@example.com",
+            "messageId": "<msg1>",
+            "type": "test",
+        },
+        {
+            "processingId": "id2",
+            "aggregateId": "agg2",
+            "senderEnvelope": "c@example.com",
+            "recipients": "d@example.com",
+            "messageId": "<msg2>",
+            "type": "test",
+        },
+    ]
+    first_run = filter_processed_events(base_events, cache)
+    assert first_run == base_events
+
+    # Only a new event should be returned on subsequent calls
+    new_event = {
+        "processingId": "id3",
+        "aggregateId": "agg3",
+        "senderEnvelope": "e@example.com",
+        "recipients": "f@example.com",
+        "messageId": "<msg3>",
+        "type": "test",
+    }
+    mixed = base_events + [new_event]
+    second_run = filter_processed_events(mixed, cache)
+    assert second_run == [new_event]

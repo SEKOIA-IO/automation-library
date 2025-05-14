@@ -9,6 +9,7 @@ from typing import Generator
 
 import orjson
 import requests
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from pyrate_limiter import Duration, Limiter, RequestRate
 from sekoia_automation.checkpoint import CheckpointCursor
@@ -17,7 +18,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import MimecastModule
 from .client import ApiClient, ApiKeyAuthentication
-from .helpers import download_batches, batched
+from .helpers import download_batches, batched, filter_processed_events
 from .logging import get_logger
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -55,6 +56,10 @@ class MimecastSIEMWorker(Thread):
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
 
+        self.cache_context = PersistentJSON("cache.json", self.connector.data_path)
+        self.cache_size = 1000
+        self.events_cache: Cache = self.load_events_cache()
+
     def log(self, *args, **kwargs):
         self.connector.log(*args, **kwargs)
 
@@ -67,6 +72,37 @@ class MimecastSIEMWorker(Thread):
     @property
     def running(self):
         return not self._stop_event.is_set()
+
+    def load_events_cache(self) -> Cache:
+        """
+        Load the events cache.
+        """
+        cache: Cache = LRUCache(maxsize=self.cache_size)
+
+        events_cache = []
+        with self.connector.context_lock:
+            with self.cache_context as context:
+                # load the cache from the context
+                events_cache = context.get(self.log_type, {}).get("events_cache", [])
+
+        for event_hash in events_cache:
+            cache[event_hash] = True
+
+        return cache
+
+    def save_events_cache(self) -> None:
+        """
+        Save the events cache.
+        """
+
+        with self.connector.context_lock:
+            with self.cache_context as context:
+                # check if the context exists or create it
+                if self.log_type not in context:
+                    context[self.log_type] = {}
+
+                # save the events cache to the context
+                context[self.log_type]["events_cache"] = list(self.events_cache.keys())
 
     def get_old_cursor(self) -> datetime | None:
         """
@@ -125,11 +161,11 @@ class MimecastSIEMWorker(Thread):
 
     def __filter_events(self, events: list) -> list:
         """
-        Filter events based on the cursor.
+        Filter events based on the cursor and the cache
 
         If the cursor is a datetime, we filter out events that are older than the
-        cursor.
-        If the cursor is a page token, we don't filter the events.
+        cursor then we filter out events that are already in the cache.
+        If the cursor is a page token, we only filter the events that are already in the cache.
         """
         if self.old_cursor is not None:
             # The datetime cursor was actually a date, not a full datetime. Thus, we have to download all
@@ -139,6 +175,9 @@ class MimecastSIEMWorker(Thread):
 
             # We don't need this anymore - it's for the first page only
             self.old_cursor = None
+
+        # Filter out events that are already in the cache
+        events = filter_processed_events(events, self.events_cache)
 
         return events
 
@@ -176,9 +215,6 @@ class MimecastSIEMWorker(Thread):
 
             result = response.json()
 
-            nextPageToken = result.get("@nextPage")
-            self.cursor.offset = nextPageToken
-
             batch_urls = [item["url"] for item in result.get("value", [])]
             events_gen = download_batches(urls=batch_urls, loop=self._loop)
 
@@ -189,6 +225,9 @@ class MimecastSIEMWorker(Thread):
                 if len(events) > 0:
                     INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key).inc(len(events))
                     yield events
+
+            nextPageToken = result.get("@nextPage")
+            self.cursor.offset = nextPageToken
 
             if result["isCaughtUp"] is True or not nextPageToken:
                 return
@@ -293,6 +332,8 @@ class MimecastSIEMWorker(Thread):
 
                 # In case of exception, pause the thread before the next attempt
                 time.sleep(self.connector.configuration.frequency)
+
+        self.save_events_cache()
 
 
 class MimecastSIEMConnector(Connector):
