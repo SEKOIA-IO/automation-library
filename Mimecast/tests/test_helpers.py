@@ -370,3 +370,50 @@ def test_filter_processed_events():
     cache = LRUCache(maxsize=100)
     assert len(filter_processed_events(events, cache)) == 4
     assert len(cache) == 4
+
+
+def test_filter_processed_events_empty_list():
+    cache = LRUCache(maxsize=100)
+
+    # Should handle empty input without errors
+    result = filter_processed_events([], cache)
+    assert result == []
+
+
+def test_filter_processed_events_with_prepopulated_cache():
+    cache = LRUCache(maxsize=100)
+
+    # Pre-populate the cache by processing initial events
+    base_events = [
+        {
+            "processingId": "id1",
+            "aggregateId": "agg1",
+            "senderEnvelope": "a@example.com",
+            "recipients": "b@example.com",
+            "messageId": "<msg1>",
+            "type": "test",
+        },
+        {
+            "processingId": "id2",
+            "aggregateId": "agg2",
+            "senderEnvelope": "c@example.com",
+            "recipients": "d@example.com",
+            "messageId": "<msg2>",
+            "type": "test",
+        },
+    ]
+    first_run = filter_processed_events(base_events, cache)
+    assert first_run == base_events
+
+    # Only a new event should be returned on subsequent calls
+    new_event = {
+        "processingId": "id3",
+        "aggregateId": "agg3",
+        "senderEnvelope": "e@example.com",
+        "recipients": "f@example.com",
+        "messageId": "<msg3>",
+        "type": "test",
+    }
+    mixed = base_events + [new_event]
+    second_run = filter_processed_events(mixed, cache)
+    assert second_run == [new_event]
