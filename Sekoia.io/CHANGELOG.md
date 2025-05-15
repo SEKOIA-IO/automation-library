@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-14 - 2.67.15
+
+### Fixed
+
+- Fix datetime serialization problem
+
 ## 2025-04-10 - 2.67.14
 
 ### Fixed
