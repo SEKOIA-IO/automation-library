@@ -1,9 +1,7 @@
 from posixpath import join as urljoin
 
-from sekoia_automation.action import Action
 import requests
-from dateutil.parser import isoparse
-
+from sekoia_automation.action import Action
 
 ASSETV2_TYPE_TO_V1_TYPE = {
     "host": {"uuid": "65f8ebba-e400-4ef7-844d-2881e2cf175c", "name": "computer"},
@@ -60,10 +58,6 @@ class GetAsset(Action):
     def transform_asset(self, asset):
         if asset is None:
             return None
-        if isinstance(asset["created_at"], str):
-            asset["created_at"] = isoparse(asset["created_at"])
-        if isinstance(asset["updated_at"], str):
-            asset["updated_at"] = isoparse(asset["updated_at"])
 
         return {
             "uuid": asset["uuid"],
@@ -92,6 +86,5 @@ class GetAsset(Action):
         }
 
     def run(self, arguments: dict):
-
         asset_uuid = arguments.get("uuid")
         return self.transform_asset(self.perform_request(asset_uuid))
