@@ -6,11 +6,11 @@ For the action `Update Threat Incident`, there are two arguments `status` and `f
 
 **Arguments**
 
-| Name      |  Type   |  Description  |
-| --------- | ------- | --------------------------- |
-| `agent_ids` | `string` | List of Agent IDs to filter by |
-| `account_ids` | `array` | List of Account IDs to filter by |
-| `group_ids` | `array` | List of network group to filter by |
-| `site_ids` | `array` | List of Site IDs to filter by |
-| `ids` | `array` | List of threat IDs |
-| `analyst_verdicts` | `string` | Verdicts of the analyst |
+| Name               | Type     | Description                        |
+|--------------------|----------|------------------------------------|
+| `agent_ids`        | `string` | List of Agent IDs to filter by     |
+| `account_ids`      | `array`  | List of Account IDs to filter by   |
+| `group_ids`        | `array`  | List of network group to filter by |
+| `site_ids`         | `array`  | List of Site IDs to filter by      |
+| `ids`              | `array`  | List of threat IDs                 |
+| `analyst_verdicts` | `string` | Verdicts of the analyst            |

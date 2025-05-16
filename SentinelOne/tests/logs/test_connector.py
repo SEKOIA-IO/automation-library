@@ -3,12 +3,14 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import UTC
+from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from freezegun import freeze_time
 from management.mgmtsdk_v2.exceptions import UnauthorizedException
 
+from sentinelone_module.exceptions import SentinelOneManagementResponseError
 from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
@@ -16,6 +18,7 @@ from sentinelone_module.logs.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION,
 class MockResponse:
     data: list
     pagination: dict
+    errors: Any | None = None
 
 
 @freeze_time("1970-01-01 00:00:00")
@@ -117,6 +120,20 @@ def test_pull_threats_donot_collect_threats_twice(threat_consumer, threat_1, thr
     assert threat_consumer.connector.push_events_to_intakes.call_args_list == [
         call(threat_consumer._serialize_events([threat_1])),
     ]
+
+
+@freeze_time("1970-01-01 00:00:00")
+def test_pull_threats_have_errors(threat_consumer, threat_1, threat_2):
+    OUTCOMING_EVENTS.labels = MagicMock()
+    EVENTS_LAG.labels = MagicMock()
+    most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
+
+    threat_consumer.management_client.client.get.return_value = MockResponse(
+        pagination={"nextCursor": None}, data=[threat_1], errors="Specific error"
+    )
+
+    with pytest.raises(SentinelOneManagementResponseError):
+        threat_consumer.pull_events(most_recent_datetime_seen)
 
 
 def test_run_consumer(activity_consumer):

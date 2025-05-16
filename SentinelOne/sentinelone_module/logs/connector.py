@@ -1,21 +1,27 @@
 import json
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
+from pathlib import Path
 from threading import Event, Lock, Thread
 from time import sleep, time
-from pathlib import Path
 
 from cachetools import Cache, LRUCache
+from management.mgmtsdk_v2.client import ManagementResponse
 from management.mgmtsdk_v2.entities.activity import Activity
 from management.mgmtsdk_v2.entities.threat import Threat
-from management.mgmtsdk_v2.exceptions import UnauthorizedException
+from management.mgmtsdk_v2.exceptions import SentinelBaseException, UnauthorizedException
 from management.mgmtsdk_v2.services.activity import ActivitiesFilter
 from management.mgmtsdk_v2.services.threat import ThreatQueryFilter
 from management.mgmtsdk_v2_1.mgmt import Management
-from sekoia_automation.connector import Connector
 from sekoia_automation.checkpoint import CheckpointDatetime
+from sekoia_automation.connector import Connector
 
 from sentinelone_module.base import SentinelOneModule
+from sentinelone_module.exceptions import (
+    SENTINEL_ONE_EMPTY_RESPONSE,
+    SentinelOneError,
+    SentinelOneManagementResponseError,
+)
 from sentinelone_module.helpers import filter_collected_events
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
@@ -127,6 +133,14 @@ class SentinelOneLogsConsumer(Thread):
                 log_message = f"Fetched and forwarded {len(events_id)} events"
 
             self.log(message=log_message, level="info")
+
+        # Handling specific HTTP status
+        except SentinelBaseException as e:
+            self.log_exception(e, message=f"Error occurred while fetching events from SentinelOne API: {e}")
+
+        except SentinelOneManagementResponseError as e:
+            self.log_exception(e, message=e.message)
+
         except Exception as ex:
             self.log_exception(ex, message="Failed to forward events")
 
@@ -172,10 +186,15 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
         if last_timestamp:
             query_filter.apply(key="createdAt", val=last_timestamp.isoformat(), op="gt")
 
-        events_id = []
+        events_ids = []
         while self.running:
             # Fetch activities
-            activities = self.management_client.activities.get(query_filter)
+            activities: ManagementResponse | None = self.management_client.activities.get(query_filter)
+            if activities is None:
+                raise SENTINEL_ONE_EMPTY_RESPONSE
+
+            SentinelOneManagementResponseError.create_and_raise(activities)
+
             nb_activities = len(activities.data)
             logger.debug("Collected activities", nb=nb_activities)
 
@@ -188,7 +207,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
             # Push events
             if len(selected_events) > 0:
-                events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
+                events_ids.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
@@ -208,7 +227,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
             query_filter.apply(key="cursor", val=activities.pagination["nextCursor"])
 
-        return events_id
+        return events_ids
 
 
 class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
@@ -218,6 +237,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
     def pull_events(self, last_timestamp: datetime | None):
         """Fetches threats from SentinelOne"""
         query_filter = ThreatQueryFilter()
+
         query_filter.apply(key="limit", val=1000)
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
@@ -225,10 +245,18 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         if last_timestamp:
             query_filter.apply(key="createdAt", val=last_timestamp.isoformat(), op="gt")
 
-        events_id = []
+        events_ids = []
         while self.running:
             # Fetch threats
-            threats = self.management_client.client.get(endpoint="threats", params=query_filter.filters)
+            threats: ManagementResponse | None = self.management_client.client.get(
+                endpoint="threats", params=query_filter.filters
+            )
+
+            if threats is None:
+                raise SENTINEL_ONE_EMPTY_RESPONSE
+
+            SentinelOneManagementResponseError.create_and_raise(threats)
+
             nb_threats = len(threats.data)
             logger.debug("Collected nb_threats", nb=nb_threats)
 
@@ -239,7 +267,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
 
             # Push events
             if len(selected_events) > 0:
-                events_id.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
+                events_ids.extend(self.connector.push_events_to_intakes(self._serialize_events(selected_events)))
 
             # Send Prometheus metrics
             OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(selected_events))
@@ -259,7 +287,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
 
             query_filter.apply(key="cursor", val=threats.pagination["nextCursor"])
 
-        return events_id
+        return events_ids
 
 
 CONSUMER_TYPES = {"activity": SentinelOneActivityLogsConsumer, "threat": SentinelOneThreatLogsConsumer}
