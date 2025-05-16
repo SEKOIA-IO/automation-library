@@ -116,7 +116,7 @@ async def test_checkpoint_harmony_connector_last_event_date(
         cache["last_event_date"] = None
 
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
-    one_hour_ago = current_date - timedelta(hours=1)
+    one_hour_ago = current_date - timedelta(hours=6)
 
     assert checkpoint_harmony_connector.last_event_date == one_hour_ago
 
