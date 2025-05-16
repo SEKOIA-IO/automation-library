@@ -26,6 +26,7 @@ class CheckpointHarmonyMobileConfiguration(DefaultConnectorConfiguration):
     ratelimit_per_minute: int = 60
     chunk_size: int = 1000
     frequency: int = 60
+    hours_ago: int = 6
 
 
 class CheckpointHarmonyMobileConnector(AsyncConnector):
@@ -52,21 +53,23 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
             datetime:
         """
         now = datetime.now(timezone.utc)
-        one_hour_ago = (now - timedelta(hours=1)).replace(microsecond=0)
+
+        # We don't retrieve messages older than 6 hours
+        hours_window = (now - timedelta(hours=self.configuration.hours_ago)).replace(microsecond=0)
 
         with self.context as cache:
             last_event_date_str = cache.get("last_event_date")
 
         # If undefined, retrieve events from the last 1 hour
         if last_event_date_str is None:
-            return one_hour_ago
+            return hours_window
 
         # Parse the most recent date seen
         last_event_date: datetime = isoparse(last_event_date_str).replace(microsecond=0)
 
         # We don't retrieve messages older than 1 hour
-        if last_event_date < one_hour_ago:
-            return one_hour_ago
+        if last_event_date < hours_window:
+            return hours_window
 
         return last_event_date
 
