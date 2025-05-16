@@ -27,6 +27,11 @@
         "description": "Batch frequency in seconds",
         "default": 60,
         "type": "integer"
+      },
+      "hours_ago": {
+        "description": "Number of hours to go back in time to collect events. Will be used during the first run",
+        "default": 6,
+        "type": "integer"
       }
     },
     "required": [
