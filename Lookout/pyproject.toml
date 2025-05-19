@@ -2,6 +2,7 @@
 name = "Automation module for Lookout"
 version = "0.0"
 description = ""
+package-mode = false
 authors = []
 
 [tool.poetry.dependencies]
