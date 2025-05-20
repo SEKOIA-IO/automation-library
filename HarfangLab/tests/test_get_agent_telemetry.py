@@ -72,9 +72,7 @@ def test_integration_get_agent_telemetry_next():
             "count": 3,
             "next": None,
             "previous": None,
-            "results": [
-                {"host": "host3"}
-            ],
+            "results": [{"host": "host3"}],
         }
 
         mock.get(
