@@ -8,14 +8,14 @@ class HarmonyMobileSchema(BaseModel):
     Model that represent Harmony Mobile Result schema.
 
     More information is here:
-    https://app.swaggerhub.com/apis-docs/Check-Point/harmony-mobile/1.0.0-oas3#/Events/GetAlerts
+    https://app.swaggerhub.com/apis-docs/Check-Point/harmony-mobile/ then search for "Get /external_api/v3/alerts"
     """
 
     id: int
     device_rooted: bool
     attack_vector: str
     details: str
-    device_id: str
+    device_id: str | int  # A string according to the openapi spec, but an integer according to the API response
     email: str
     event: str
     mdm_uuid: str
