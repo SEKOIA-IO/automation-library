@@ -8,7 +8,7 @@ class SSEvent:
 
     VALID_FIELDS = ["id", "event", "data", "retry"]
 
-    def __init__(self, id: int = None, event: str = "", data: str = "", retry: int = None):
+    def __init__(self, id: int | None = None, event: str = "", data: str = "", retry: int | None = None):
         self.id = id
         self.event = event
         self.data = data

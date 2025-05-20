@@ -3,7 +3,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from threading import Event, Thread
-from typing import Generator
+from typing import Generator, cast
 
 import orjson
 from dateutil.parser import isoparse
@@ -40,7 +40,7 @@ class MobileEndpointSecurityThread(Thread):
         super().__init__()
 
         self.connector = connector
-        self.retry_ms = None
+        self.retry_ms = cast(int, None)
 
         self.cursor = CheckpointCursor(path=self.connector.data_path)
         self.last_event_id = self.cursor.offset

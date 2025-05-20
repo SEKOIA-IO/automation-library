@@ -51,8 +51,8 @@ class SSEClient:
         """
         for raw_event in self.__read():
             event = SSEvent()
-            for line in raw_event.splitlines():
-                line = line.decode(self.event_enc)
+            for encoded_line in raw_event.splitlines():
+                line = encoded_line.decode(self.event_enc)
                 # NOTE: Spec states:
                 #   If the line is empty (a blank line), Dispatch the event, as defined below.
                 #   If the line starts with a U+003A COLON character (:), Ignore the line.
