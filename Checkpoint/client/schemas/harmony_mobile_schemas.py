@@ -15,7 +15,7 @@ class HarmonyMobileSchema(BaseModel):
     device_rooted: bool
     attack_vector: str
     details: str
-    device_id: str | int # A string according to the openapi spec, but an integer according to the API response
+    device_id: str | int  # A string according to the openapi spec, but an integer according to the API response
     email: str
     event: str
     mdm_uuid: str
