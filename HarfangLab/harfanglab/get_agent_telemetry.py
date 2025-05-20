@@ -23,7 +23,7 @@ class GetAgentTelemetry(Action):
         resp.raise_for_status()
         return resp
 
-    def run(self, arguments) -> dict:
+    def run(self, arguments) -> list[dict]:
 
         telemetry_urls = {
             "processes": "/api/data/telemetry/Processes/",
