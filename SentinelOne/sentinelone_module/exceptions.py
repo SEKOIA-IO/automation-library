@@ -1,3 +1,6 @@
+from management.mgmtsdk_v2.client import ManagementResponse
+
+
 class SentinelOneError(Exception):
     pass
 
@@ -79,3 +82,23 @@ class GetMalwaresTimeoutError(GetMalwaresError):
 
     def __init__(self, timeout: int):
         super().__init__(f"The malware retrieval reached the timeout: {timeout}s")
+
+
+class SentinelOneManagementResponseError(SentinelOneError):
+    """Exception raised when response contains errors inside the body"""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+    @classmethod
+    def create_and_raise(cls, response: ManagementResponse):
+        if response.errors:
+            raise SentinelOneManagementResponseError(
+                message=f"SentinelOne API response contains errors: {response.errors}"
+            )
+
+
+SENTINEL_ONE_EMPTY_RESPONSE = SentinelOneManagementResponseError(
+    message="Empty response from SentinelOne API",
+)
