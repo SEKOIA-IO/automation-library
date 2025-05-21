@@ -3,12 +3,12 @@
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from posixpath import join as urljoin
+from typing import Any
 
 from aiolimiter import AsyncLimiter
 from loguru import logger
 from sekoia_automation.aio.helpers.http.http_client import HttpClient
 
-from .schemas.harmony_mobile_schemas import HarmonyMobileSchema
 from .token_refresher import CheckpointServiceType, CheckpointTokenRefresher
 
 
@@ -62,7 +62,7 @@ class CheckpointHttpClient(HttpClient):
 
     async def get_harmony_mobile_alerts(
         self, start_from: datetime = datetime.now(), limit: int = 100
-    ) -> AsyncGenerator[list[HarmonyMobileSchema], None]:
+    ) -> AsyncGenerator[list[dict[str, Any]], None]:
         """
         Get Harmony Mobile alerts.
 
@@ -71,7 +71,7 @@ class CheckpointHttpClient(HttpClient):
             limit: int
 
         Returns:
-            AsyncGenerator[list[HarmonyMobileSchema]]:
+            AsyncGenerator[list[dict]]:
         """
         base_url = urljoin(self.base_url, "app/SBM")
         formatted_start_date = start_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -105,13 +105,11 @@ class CheckpointHttpClient(HttpClient):
                 return
 
             yield [
-                HarmonyMobileSchema(
-                    **{
-                        **data,
-                        "event_timestamp": self.parse_date(data.get("event_timestamp")),
-                        "backend_last_updated": self.parse_date(data.get("backend_last_updated")),
-                    }
-                )
+                {
+                    **data,
+                    "event_timestamp": self.parse_date(data.get("event_timestamp")),
+                    "backend_last_updated": self.parse_date(data.get("backend_last_updated")),
+                }
                 for data in response_json["objects"]
             ]
 
@@ -135,7 +133,7 @@ class CheckpointHttpClient(HttpClient):
         Returns:
             datetime | None:
         """
-        if value is None:
+        if value is None or value == "No data":
             return None
 
         try:

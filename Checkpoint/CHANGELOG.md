@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-21 - 1.4.4
+
+### Fixed
+
+- Withdraw the Alert model
+- Handle when datetime are 'No data'
+
 ## 2025-05-20 - 1.4.3
 
 ### Fixed

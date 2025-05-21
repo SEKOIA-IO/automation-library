@@ -100,7 +100,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
 
         _new_latest_event_date = _last_event_date
         for event in events:
-            event_date = event.event_timestamp or event.backend_last_updated or _last_event_date
+            event_date = event.get("event_timestamp") or event.get("backend_last_updated") or _last_event_date
 
             if event_date > _new_latest_event_date:
                 _new_latest_event_date = event_date
@@ -109,10 +109,12 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
             [
                 orjson.dumps(
                     {
-                        **event.dict(),
-                        "event_timestamp": (event.event_timestamp.isoformat() if event.event_timestamp else None),
+                        **event,
+                        "event_timestamp": (
+                            event["event_timestamp"].isoformat() if event.get("event_timestamp") else None
+                        ),
                         "backend_last_updated": (
-                            event.backend_last_updated.isoformat() if event.backend_last_updated else None
+                            event["backend_last_updated"].isoformat() if event.get("backend_last_updated") else None
                         ),
                     }
                 ).decode("utf-8")
