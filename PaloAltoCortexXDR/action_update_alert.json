@@ -1,0 +1,34 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "alert_id_list": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of alert IDs to update."
+      },
+      "status": {
+          "type": "string",
+          "description": "New status for the alert."
+      },
+      "severity": {
+          "type": "string",
+          "description": "New severity for the alert."
+      }
+    },
+    "required": [
+      "alert_id_list",
+      "status",
+      "severity"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "",
+  "docker_parameters": "update_alert_status_severity",
+  "name": "Update alert status and severity",
+  "results": {},
+  "uuid": "219eda53-59d1-41d0-92b9-dbb5d026ddea"
+}

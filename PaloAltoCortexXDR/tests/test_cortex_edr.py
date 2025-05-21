@@ -1,29 +1,21 @@
 from datetime import datetime, timedelta, timezone
-from freezegun import freeze_time
-
-import pytest
-import requests_mock
-from requests.exceptions import HTTPError
-from unittest.mock import Mock, patch, call
-
-from cortex_module.helper import handle_fqdn
-from cortex_module.base import CortexModule
-from cortex_module.cortex_edr_connector import CortexQueryEDRTrigger
+from unittest.mock import Mock, call, patch
 
 import orjson
+import pytest
+import requests_mock
+from freezegun import freeze_time
+from requests.exceptions import HTTPError
 from sekoia_automation.storage import PersistentJSON
+
+from cortex_module.base import CortexModule
+from cortex_module.cortex_edr_connector import CortexQueryEDRTrigger
+from cortex_module.helper import handle_fqdn
 
 
 @pytest.fixture
-def trigger(symphony_storage):
-    module = CortexModule()
+def trigger(module, symphony_storage):
     trigger = CortexQueryEDRTrigger(module=module, data_path=symphony_storage)
-    trigger.module.configuration = {
-        "api_key": "72b9f5b1-5e9f-47aa-9912-2503bfc319e6",
-        "api_key_id": "99",
-        "fqdn": "XXXX.test.paloaltonetworks.com",
-    }
-
     trigger.configuration = {
         "frequency": 604800,
         "tenant_id": "4feff6df-7454-4036-923d-7b2444462416",

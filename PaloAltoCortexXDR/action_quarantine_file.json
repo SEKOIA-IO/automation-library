@@ -1,0 +1,32 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "description": "Path to the file to be quarantined."
+      },
+      "file_hash": {
+        "type": "string",
+        "description": "Hash of the file to be quarantined."
+      },
+      "endpoint_ids": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of endpoint IDs to filter by."
+      }
+    },
+    "required": [
+      "file_path"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "",
+  "docker_parameters": "quarantine_file",
+  "name": "Quarantine the file",
+  "results": {},
+  "uuid": "dddd7942-baf5-40d7-8b24-7db22fb33c0a"
+}
