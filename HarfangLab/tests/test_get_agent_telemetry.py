@@ -1,5 +1,6 @@
 import requests_mock
 from harfanglab.get_agent_telemetry import GetAgentTelemetry
+import pytest
 
 
 def test_integration_get_agent_telemetry():
@@ -89,3 +90,23 @@ def test_integration_get_agent_telemetry_next():
         response = action.run(arguments)
         assert response is not None
         assert len(response) == 3
+
+
+def test_integration_get_agent_telemetry_wrong_event_type():
+    instance_url = "https://test.hurukau.io"
+    api_token = "sss"
+
+    module_configuration = {
+        "api_token": api_token,
+        "url": instance_url,
+    }
+    action = GetAgentTelemetry()
+    action.module.configuration = module_configuration
+
+    arguments = {
+        "agent_id": "7e19e65f-7c91-4cd6-b365-b0e603576f0d",
+        "alert_created": "2025-04-29T17:54:49.326Z",
+        "event_types": ["test"],
+    }
+    with pytest.raises(ValueError):
+        action.run(arguments)
