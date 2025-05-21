@@ -48,7 +48,7 @@ class LookoutApiAuthentication(AuthBase):
                 data="grant_type=client_credentials",
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "Authorization": "Bearer %s" % self.__token,
+                    "Authorization": f"Bearer {self.__token}",
                 },
                 timeout=60,
             )

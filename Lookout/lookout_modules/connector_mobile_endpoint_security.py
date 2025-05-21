@@ -97,7 +97,7 @@ class MobileEndpointSecurityThread(Thread):
                 self.log(f"{ss_event.event} event received, shutting down...", level="info")
                 if self.retry_ms:
                     wait_time_seconds = round(self.retry_ms / 1000.0, 2)
-                    self.log(f"Waiting %d seconds before reconnect" % wait_time_seconds)
+                    self.log("Waiting %d seconds before reconnect" % wait_time_seconds)
 
                     time.sleep(wait_time_seconds)
 
@@ -115,7 +115,7 @@ class MobileEndpointSecurityThread(Thread):
                         mra_events = json.loads(event.data).get("events", [])
 
                     except ValueError as e:
-                        logger.error(f"failed to parse mra events from sse client: {e}")
+                        self.log_exception(exception=e, message="failed to parse mra events from sse client")
 
                     if len(mra_events) > 0:
                         most_recent_date_seen = max(isoparse(item["created_time"]) for item in mra_events)
@@ -167,6 +167,7 @@ class MobileEndpointSecurityConnector(Connector):
                 time.sleep(5)
 
             worker.stop()
+            worker.join()
 
         except KeyboardInterrupt:
             worker.stop()
