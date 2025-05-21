@@ -20,6 +20,6 @@ class ApiClient(requests.Session):
             ),
         )
 
-    def get_sse_stream(self, url: str, params: dict | None = None) -> requests.Response:
+    def get_sse_stream(self, url: str, params: dict | None = None, timeout: float = 60) -> requests.Response:
         headers = {"Accept": "text/event-stream", "Cache-Control": "no-cache"}
-        return self.get(url, stream=True, headers=headers, params=params)
+        return self.get(url, stream=True, headers=headers, params=params, timeout=timeout)

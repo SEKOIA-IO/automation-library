@@ -42,6 +42,10 @@ class SSEClient:
                     yield raw_event
                     raw_event = b""
 
+        # Yield any trailing bytes if the stream ended without a delimiter
+        if raw_event:
+            yield raw_event
+
     def iter_stream_events(self) -> Generator[SSEvent, None, None]:
         """
         Stream events from a SSE endpoint

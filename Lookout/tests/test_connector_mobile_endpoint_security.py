@@ -103,7 +103,7 @@ def test_fetch_events(worker, sse_stream):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.register_uri(
             "POST",
-            f"https://api.lookout.com/oauth2/token",
+            "https://api.lookout.com/oauth2/token",
             json={
                 "access_token": "foo-token",
                 "token_type": "bearer",
@@ -127,7 +127,7 @@ def test_reconnect(worker):
     ) as mock_time:
         mock_requests.register_uri(
             "POST",
-            f"https://api.lookout.com/oauth2/token",
+            "https://api.lookout.com/oauth2/token",
             json={
                 "access_token": "foo-token",
                 "token_type": "bearer",
