@@ -161,10 +161,12 @@ class MobileEndpointSecurityConnector(Connector):
 
             while self.running:
                 if worker.running and not worker.is_alive():
+                    self.log("Restarting thread", level="info")
                     worker = MobileEndpointSecurityThread(connector=self)
                     worker.start()
 
-                time.sleep(5)
+                self.log("Waiting for events", level="info")
+                time.sleep(60)
 
             worker.stop()
             worker.join()
