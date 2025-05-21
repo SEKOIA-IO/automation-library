@@ -159,7 +159,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
         result = [event async for events in list_of_events for event in events]
 
         assert len(result) == len(events)
-        assert [event.dict() for event in result] == [
+        assert [event for event in result] == [
             {**event, "event_timestamp": None, "backend_last_updated": None} for event in events
         ]
 
@@ -276,7 +276,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_with_pagination_
         result = [event async for events in list_of_events for event in events]
 
         assert len(result) == len(events)
-        assert [event.dict() for event in result] == [
+        assert [event for event in result] == [
             {**event, "event_timestamp": None, "backend_last_updated": None} for event in events
         ]
 
