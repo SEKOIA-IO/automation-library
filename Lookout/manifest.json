@@ -1,0 +1,28 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Lookout",
+    "type": "object",
+    "properties": {
+      "host": {
+        "description": "Base URL",
+        "type": "string",
+        "default": "https://api.lookout.com"
+      },
+      "api_token": {
+        "description": "API token",
+        "type": "string"
+      }
+    },
+    "required": ["api_token"],
+    "secrets": ["api_token"]
+  },
+  "description": "Lookout is a leading cybersecurity company focused on mobile security and data protection. They provide advanced solutions that safeguard users and enterprises from threats across devices and networks, empowering individuals to securely access information anytime, anywhere.",
+  "name": "Lookout",
+  "slug": "lookout",
+  "uuid": "d6711572-ada8-485f-9e98-4768a823a266",
+  "version": "0.1.0",
+  "categories": [
+    "Endpoint"
+  ]
+}
