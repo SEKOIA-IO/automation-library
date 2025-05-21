@@ -17,11 +17,7 @@ from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector
 
 from sentinelone_module.base import SentinelOneModule
-from sentinelone_module.exceptions import (
-    SENTINEL_ONE_EMPTY_RESPONSE,
-    SentinelOneError,
-    SentinelOneManagementResponseError,
-)
+from sentinelone_module.exceptions import SENTINEL_ONE_EMPTY_RESPONSE, SentinelOneManagementResponseError
 from sentinelone_module.helpers import filter_collected_events
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
@@ -189,20 +185,24 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
         events_ids = []
         while self.running:
             # Fetch activities
-            activities: ManagementResponse | None = self.management_client.activities.get(query_filter)
-            if activities is None:
+            activities_response: ManagementResponse | None = self.management_client.activities.get(query_filter)
+            if activities_response is None:
                 raise SENTINEL_ONE_EMPTY_RESPONSE
 
-            SentinelOneManagementResponseError.create_and_raise(activities)
+            SentinelOneManagementResponseError.create_and_raise(activities_response)
 
-            nb_activities = len(activities.data)
+            # data can be None
+            activities = activities_response.data or []
+            nb_activities = len(activities)
             logger.debug("Collected activities", nb=nb_activities)
+            if nb_activities == 0:
+                break
 
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(nb_activities)
 
             # discard already collected events
             selected_events = filter_collected_events(
-                activities.data, lambda activity: activity.id, self.session_events_cache
+                activities, lambda activity: activity.id, self.session_events_cache
             )
 
             # Push events
@@ -222,10 +222,10 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="activities").set(current_lag)
 
-            if activities.pagination["nextCursor"] is None:
+            if activities_response.pagination["nextCursor"] is None:
                 break
 
-            query_filter.apply(key="cursor", val=activities.pagination["nextCursor"])
+            query_filter.apply(key="cursor", val=activities_response.pagination["nextCursor"])
 
         return events_ids
 
@@ -248,22 +248,24 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
         events_ids = []
         while self.running:
             # Fetch threats
-            threats: ManagementResponse | None = self.management_client.client.get(
+            threat_response: ManagementResponse | None = self.management_client.client.get(
                 endpoint="threats", params=query_filter.filters
             )
 
-            if threats is None:
+            if threat_response is None:
                 raise SENTINEL_ONE_EMPTY_RESPONSE
 
-            SentinelOneManagementResponseError.create_and_raise(threats)
+            SentinelOneManagementResponseError.create_and_raise(threat_response)
 
-            nb_threats = len(threats.data)
+            # data can be None
+            threats = threat_response.data or []
+            nb_threats = len(threats)
             logger.debug("Collected nb_threats", nb=nb_threats)
+            if nb_threats == 0:
+                break
 
             # discard already collected events
-            selected_events = filter_collected_events(
-                threats.data, lambda threat: threat["id"], self.session_events_cache
-            )
+            selected_events = filter_collected_events(threats, lambda threat: threat["id"], self.session_events_cache)
 
             # Push events
             if len(selected_events) > 0:
@@ -282,10 +284,10 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
 
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type="threats").set(current_lag)
 
-            if threats.pagination["nextCursor"] is None:
+            if threat_response.pagination["nextCursor"] is None:
                 break
 
-            query_filter.apply(key="cursor", val=threats.pagination["nextCursor"])
+            query_filter.apply(key="cursor", val=threat_response.pagination["nextCursor"])
 
         return events_ids
 
