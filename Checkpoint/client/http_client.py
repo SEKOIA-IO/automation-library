@@ -133,7 +133,7 @@ class CheckpointHttpClient(HttpClient):
         Returns:
             datetime | None:
         """
-        if value is None:
+        if value is None or value == "No data":
             return None
 
         try:
