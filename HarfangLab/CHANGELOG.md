@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-20 - 1.26.0
+
+### Added
+
+- Added action to retrieve agent telemetry
+
 ## 2024-10-24 - 1.25.0
 
 ### Added
