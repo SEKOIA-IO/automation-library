@@ -37,8 +37,8 @@ def test_integration_get_agent_telemetry():
             "event_types": ["processes"],
         }
         response = action.run(arguments)
-        assert response is not None
-        assert len(response) == 2
+        assert response["data"] is not None
+        assert len(response["data"]) == 2
 
 
 def test_integration_get_agent_telemetry_next():
@@ -88,8 +88,8 @@ def test_integration_get_agent_telemetry_next():
             "event_types": ["processes"],
         }
         response = action.run(arguments)
-        assert response is not None
-        assert len(response) == 3
+        assert response["data"] is not None
+        assert len(response["data"]) == 3
 
 
 def test_integration_get_agent_telemetry_wrong_event_type():
