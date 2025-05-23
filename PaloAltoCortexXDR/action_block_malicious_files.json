@@ -1,0 +1,29 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+       "stix_objects_path": {
+        "description": "Filepath of the STIX objects fetched from the collection",
+        "type": "string"
+      },
+      "comment": {
+          "type": "string",
+          "description": "Comment to add to entity."
+      },
+      "incident_id": {
+        "type": "integer",
+        "description": "Incident ID."
+      }
+    },
+    "required": [
+      "stix_objects_path"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "",
+  "docker_parameters": "block_malicious_files",
+  "name": "Block malicious files",
+  "results": {},
+  "uuid": "44c79a13-c97a-4d78-a8ef-06d373615fef"
+}
