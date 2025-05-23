@@ -6,6 +6,7 @@ from threading import Event, Thread
 from typing import Generator, cast
 
 import orjson
+import requests
 from dateutil.parser import isoparse
 from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -67,6 +68,33 @@ class MobileEndpointSecurityThread(Thread):
             api_token=self.connector.module.configuration.api_token,
         )
 
+    def get_sse_stream(self, params: dict | None = None, timeout: float = 60) -> requests.Response:
+        headers = {"Accept": "text/event-stream", "Cache-Control": "no-cache"}
+        base_url = self.connector.module.configuration.base_url
+
+        try:
+            response = self.client.get(
+                f"{base_url}/mra/stream/v2/events", stream=True, headers=headers, params=params, timeout=timeout
+            )
+            response.raise_for_status()
+
+            return response
+
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 401:
+                self.log("Unauthorized error", level="critical")
+
+                try:
+                    raw = err.response.json()
+                    error = raw["error"]
+                    error_description = raw["error_description"]
+                    logger.error("Unauthorized error", error=error, error_description=error_description)
+
+                except Exception:
+                    pass
+
+            raise
+
     def fetch_events(self) -> Generator[SSEvent, None, None]:
         if self.last_event_id:
             params = {"last_id": self.last_event_id}
@@ -76,8 +104,7 @@ class MobileEndpointSecurityThread(Thread):
             start_time = datetime.now(timezone.utc) - timedelta(hours=1)
             params = {"start_time": start_time.isoformat()}
 
-        base_url = self.connector.module.configuration.base_url
-        stream = self.client.get_sse_stream(f"{base_url}/mra/stream/v2/events", params=params)
+        stream = self.get_sse_stream(params=params, timeout=60)
         sse_client = SSEClient(stream)
 
         for ss_event in sse_client.iter_stream_events():
