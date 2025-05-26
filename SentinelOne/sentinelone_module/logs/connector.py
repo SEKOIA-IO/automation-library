@@ -170,12 +170,13 @@ class SentinelOneLogsConsumer(Thread):
 class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
     def __init__(self, connector: "SentinelOneLogsConnector"):
         super().__init__(connector, "activity")
+        self.batch_size = 1000  # Number of activities to fetch per request
 
     def pull_events(self, last_timestamp: datetime | None) -> list:
         """Fetches activities from SentinelOne"""
         # Set  filters
         query_filter = ActivitiesFilter()
-        query_filter.apply(key="limit", val=1000)
+        query_filter.apply(key="limit", val=self.batch_size)
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
 
@@ -233,12 +234,13 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
     def __init__(self, connector: "SentinelOneLogsConnector"):
         super().__init__(connector, "threat")
+        self.batch_size = 1000  # Number of threat to fetch per request
 
     def pull_events(self, last_timestamp: datetime | None):
         """Fetches threats from SentinelOne"""
         query_filter = ThreatQueryFilter()
 
-        query_filter.apply(key="limit", val=1000)
+        query_filter.apply(key="limit", val=self.batch_size)
         query_filter.apply(key="sortBy", val="createdAt")
         query_filter.apply(key="sortOrder", val="asc")
 
