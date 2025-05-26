@@ -1,7 +1,7 @@
 {
   "description": "Get latest events from Thinkst Canary",
   "docker_parameters": "thinkst_canary_alerts",
-  "name": "[BETA] Fetch Thinkst Canary Events",
+  "name": "Fetch Thinkst Canary Events",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
