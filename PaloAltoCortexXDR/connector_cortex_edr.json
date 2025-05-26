@@ -1,7 +1,7 @@
 {
   "description": "Fetch last Alerts from Cortex API",
   "docker_parameters": "cortex_query_alerts",
-  "name": "Fetch Alerts from Cortex [BETA]",
+  "name": "Fetch Alerts from Cortex",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
