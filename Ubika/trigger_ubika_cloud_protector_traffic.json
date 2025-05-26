@@ -1,7 +1,7 @@
 {
   "description": "Ubika Cloud Protector - Traffic",
   "docker_parameters": "ubika_cloud_protector_traffic",
-  "name": "[BETA] Fetch new traffic events from Ubika Cloud Protector",
+  "name": "Fetch new traffic events from Ubika Cloud Protector",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
