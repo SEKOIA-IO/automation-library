@@ -170,7 +170,9 @@ class SentinelOneLogsConsumer(Thread):
 class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
     def __init__(self, connector: "SentinelOneLogsConnector"):
         super().__init__(connector, "activity")
-        self.batch_size = 1000  # Number of activities to fetch per request
+        self.batch_size = (
+            self.connector.configuration.activities_batch_size
+        )  # Number of activities to fetch per request
 
     def pull_events(self, last_timestamp: datetime | None) -> list:
         """Fetches activities from SentinelOne"""
@@ -234,7 +236,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
 class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
     def __init__(self, connector: "SentinelOneLogsConnector"):
         super().__init__(connector, "threat")
-        self.batch_size = 1000  # Number of threat to fetch per request
+        self.batch_size = self.connector.configuration.threats_batch_size  # Number of threat to fetch per request
 
     def pull_events(self, last_timestamp: datetime | None):
         """Fetches threats from SentinelOne"""
