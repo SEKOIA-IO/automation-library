@@ -36,6 +36,10 @@ class FeedConsumptionTrigger(Trigger):
         return self.configuration.get("modified_after")
 
     @property
+    def with_resolve_sources(self) -> bool:
+        return self.configuration.get("resolve_sources", False)
+
+    @property
     def url(self):
         url = (
             urljoin(
@@ -74,7 +78,7 @@ class FeedConsumptionTrigger(Trigger):
                 self._stop_event.wait(self._STOP_EVENT_WAIT)
                 response.raise_for_status()
 
-    def fetch_objects(self):
+    def fetch_feed_objects(self):
         # Request the next batch of objects from the API
         api_key = self.module.configuration["api_key"]
         response = requests.get(self.url, headers={"Authorization": f"Bearer {api_key}"})
@@ -89,13 +93,67 @@ class FeedConsumptionTrigger(Trigger):
         self.next_cursor = data.get("next_cursor", None)
 
         return data.get("items", [])
+    
+    def fetch_objects(self, objects_id: list[str]) -> list[dict]:
+        """
+        Fetch objects from the Sekoia.io feed API.
+        This method can be overridden in subclasses to apply specific filters.
+        """
+        api_key = self.module.configuration["api_key"]
+        url = urljoin(
+            self.module.configuration["base_url"],
+            f"api/v2/inthreat/objects?match[id]={','.join(objects_id)}",
+        )
+        response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
+
+        # manage the response
+        self._handle_response_error(response)
+
+        # get data from the response
+        data = response.json()
+
+        return data.get("items", [])
+
+    def resolve_sources(self, objects: list[dict]) -> list[dict]:
+        """
+        Resolve source references in the objects by fetching them from the Sekoia.io API.
+        This method will fetch the source objects only if they are not already in the cache.
+        """
+        sources_to_fetch: list[str] = []
+
+        with self.context as cache:
+            sources_cache = cache.get("x_inthreat_sources_refs", {})
+
+            # Iterate over objects to collect source references
+            for object in objects:
+                refs = object.get("x_inthreat_sources_refs", [])
+                # Check if already in cache
+                for ref in refs:
+                    if ref not in sources_cache:
+                        sources_to_fetch.append(ref)
+
+            # Remove duplicates
+            sources_to_fetch = sorted(list(set(sources_to_fetch)))
+            
+            # Adding sources to the cache
+            sources = self.fetch_objects(sources_to_fetch)
+            for source in sources:
+                    sources_cache[source["id"]] = source
+
+            # Getting sources from the cache
+            for object in objects:
+                object["x_inthreat_sources_refs"] = [sources_cache.get(ref, ref) for ref in object["x_inthreat_sources_refs"]]
+
+        return objects
 
     def next_batch(self):
         # save the starting time
         batch_start_time = time.time()
 
         # Fetch next batch
-        objects = self.fetch_objects()
+        objects = self.fetch_feed_objects()
+        if self.with_resolve_sources:
+            self.resolve_sources(objects)
 
         # Next runs will be continued in case of errors, as at least one run was ok
         self.resume_on_errors = True
