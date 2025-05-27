@@ -108,10 +108,9 @@ class AssetConnector(Trigger):
             str: Frequency
         """
         if frenquency := os.getenv("ASSET_CONNECTOR_FREQUENCY"):
-            return frenquency 
+            return frenquency
         return self.configuration.frequency
-        
-        
+
     def _retry(self):
         return Retrying(
             stop=stop_after_delay(3600),
@@ -231,7 +230,6 @@ class AssetConnector(Trigger):
             AssetObject: Asset object.
         """
         raise NotImplementedError("This method should be implemented in a subclass")
-
 
     def asset_fetch_cycle(self) -> None:
         """

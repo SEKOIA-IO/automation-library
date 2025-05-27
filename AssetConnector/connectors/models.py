@@ -9,6 +9,7 @@ class DefaultAssetConnectorConfiguration(BaseModel):
     api_key: str
     frequency: int = 60
 
+
 class AssetObject(BaseModel):
     name: str
     type: Literal["account", "host"]

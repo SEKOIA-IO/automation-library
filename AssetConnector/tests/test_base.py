@@ -63,7 +63,7 @@ def test_base_url_env_var_exist(test_asset_connector):
 def test_base_url_env_var_not_exist(test_asset_connector):
     connector_base_url = test_asset_connector.production_base_url
     assert connector_base_url == "https://api.sekoia.io"
-    
+
 
 @pytest.mark.skipif("{'ASSET_CONNECTOR_FREQUENCY'}" ".issubset(os.environ.keys()) == False")
 def test_frequency_env_var_exist(test_asset_connector):
