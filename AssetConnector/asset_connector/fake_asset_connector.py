@@ -10,7 +10,7 @@ from .models import AssetObject
 from .base import AssetConnector
 
 
-class FakeAssetConnectorModuleConfiguration(Module):
+class FakeAssetConnectorModuleConfiguration(BaseModel):
     len_data_to_send: int = Field(..., description="Number of assets to send in each batch", ge=1)
     time_sleep: int = Field(..., description="Time to sleep between asset fetches in seconds", ge=0)
 
@@ -52,8 +52,8 @@ class FakeAssetConnector(AssetConnector):
 
         while self.running:
             api_response = self._generate_fake_api_call()
-            for asset in api_response["data"]:
-                yield asset
+
+            yield from api_response["data"]
 
             # Simulate a delay to mimic real-world asset fetching
             time.sleep(self.module.configuration.time_sleep)

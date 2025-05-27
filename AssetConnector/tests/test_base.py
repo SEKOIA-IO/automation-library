@@ -10,8 +10,8 @@ class FakeAssetConnector(AssetConnector):
 
     assets: list[dict[str, str]] | None = None
 
-    def set_events(self, events: list[list[str]]) -> None:
-        self.events = events
+    def set_assets(self, assets: list[dict[str, str]]) -> None:
+        self.assets = assets
 
     def get_assets(self) -> Generator[dict[str, str], None, None]:
         """
@@ -23,8 +23,7 @@ class FakeAssetConnector(AssetConnector):
         if self.assets is None:
             raise ValueError("Assets not set")
 
-        for asset in self.assets:
-            yield asset
+        yield from self.assets
 
 
 @pytest.fixture
@@ -68,7 +67,7 @@ def test_base_url_env_var_not_exist(test_asset_connector):
 @pytest.mark.skipif("{'ASSET_CONNECTOR_FREQUENCY'}" ".issubset(os.environ.keys()) == False")
 def test_frequency_env_var_exist(test_asset_connector):
     connector_frequency = test_asset_connector.frequency
-    assert connector_frequency == os.environ.get("ASSET_CONNECTOR_FREQUENCY")
+    assert connector_frequency == int(os.environ.get("ASSET_CONNECTOR_FREQUENCY"))
 
 
 def test_frequency_env_var_not_exist(test_asset_connector):

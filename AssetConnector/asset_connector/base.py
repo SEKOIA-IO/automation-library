@@ -87,7 +87,7 @@ class AssetConnector(Trigger):
         Returns:
             int: Batch size
         """
-        return os.getenv("ASSET_CONNECTOR_BATCH_SIZE", self.ASSET_BATCH_SIZE)
+        return int(os.getenv("ASSET_CONNECTOR_BATCH_SIZE", self.ASSET_BATCH_SIZE))
 
     @property
     def production_base_url(self) -> str:
@@ -100,15 +100,15 @@ class AssetConnector(Trigger):
         return os.getenv("ASSET_CONNECTOR_PRODUCTION_BASE_URL", self.PRODUCTION_BASE_URL)
 
     @property
-    def frequency(self) -> str:
+    def frequency(self) -> int:
         """
         Get the frequency for the connector.
 
         Returns:
             str: Frequency
         """
-        if frenquency := os.getenv("ASSET_CONNECTOR_FREQUENCY"):
-            return frenquency
+        if frequency := os.getenv("ASSET_CONNECTOR_FREQUENCY"):
+            return int(frequency)
         return self.configuration.frequency
 
     def _retry(self):
@@ -216,9 +216,9 @@ class AssetConnector(Trigger):
         )
 
         if response is None:
-            self.log_exception(
-                None,
-                message=f"Error while pushing assets to Sekoia.io: {response.text}",
+            self.log(
+                message=f"Failed to push assets to Sekoia.io asset connector API at {url}",
+                level="error",
             )
             return []
 
@@ -250,14 +250,13 @@ class AssetConnector(Trigger):
         for asset in self.get_assets():
             try:
                 AssetObject(**asset)
-            except:
+            except Exception as e:
                 self.log_exception(
                     None,
                     message=f"Asset {asset} is not an instance of AssetObject",
                 )
                 continue
 
-            print(f"Fetched asset: {asset.get('name')} of type {asset.get('type')}")
             assets.append(asset)
             total_number_of_assets += 1
 

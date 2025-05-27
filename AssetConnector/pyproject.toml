@@ -10,6 +10,8 @@ package-mode = false
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.18.3"
 faker = "^37.3.0"
+requests = "^2.32.3"
+types-requests = "^2.32.0.20250515"
 
 
 [build-system]
