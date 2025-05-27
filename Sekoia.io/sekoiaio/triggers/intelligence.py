@@ -22,6 +22,7 @@ class FeedConsumptionTrigger(Trigger):
         self.next_cursor = None
         self.resume_on_errors = False
         self.first_run = True
+        self.sources_caches = {}
 
     @property
     def feed_id(self) -> str:
@@ -93,7 +94,7 @@ class FeedConsumptionTrigger(Trigger):
         self.next_cursor = data.get("next_cursor", None)
 
         return data.get("items", [])
-    
+
     def fetch_objects(self, objects_id: list[str]) -> list[dict]:
         """
         Fetch objects from the Sekoia.io feed API.
@@ -121,28 +122,27 @@ class FeedConsumptionTrigger(Trigger):
         """
         sources_to_fetch: list[str] = []
 
-        with self.context as cache:
-            sources_cache = cache.get("x_inthreat_sources_refs", {})
+        # Iterate over objects to collect source references
+        for object in objects:
+            refs = object.get("x_inthreat_sources_refs", [])
+            # Check if already in cache
+            for ref in refs:
+                if ref not in self.sources_caches:
+                    sources_to_fetch.append(ref)
 
-            # Iterate over objects to collect source references
-            for object in objects:
-                refs = object.get("x_inthreat_sources_refs", [])
-                # Check if already in cache
-                for ref in refs:
-                    if ref not in sources_cache:
-                        sources_to_fetch.append(ref)
+        # Remove duplicates
+        sources_to_fetch = sorted(list(set(sources_to_fetch)))
 
-            # Remove duplicates
-            sources_to_fetch = sorted(list(set(sources_to_fetch)))
-            
-            # Adding sources to the cache
-            sources = self.fetch_objects(sources_to_fetch)
-            for source in sources:
-                    sources_cache[source["id"]] = source
+        # Adding sources to the cache
+        sources = self.fetch_objects(sources_to_fetch)
+        for source in sources:
+            self.sources_caches[source["id"]] = source["name"]
 
-            # Getting sources from the cache
-            for object in objects:
-                object["x_inthreat_sources_refs"] = [sources_cache.get(ref, ref) for ref in object["x_inthreat_sources_refs"]]
+        # Getting sources from the cache
+        for object in objects:
+            object["x_inthreat_sources"] = [
+                self.sources_caches.get(ref, ref) for ref in object["x_inthreat_sources_refs"]
+            ]
 
         return objects
 

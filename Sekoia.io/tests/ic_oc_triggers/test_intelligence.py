@@ -14,18 +14,20 @@ from sekoiaio.triggers.intelligence import (
 # Test data, using fake STIX payload data as the trigger does not parse these objects
 feed_objects = {"items": [f"STIX item {i}" for i in range(200)], "next_cursor": "abcd"}
 
+
 def object_factory(index: int, sources: list[str] = []):
     """
     Fixture to create a STIX object for testing.
     """
     return {
         "id": f"object-{index}",
+        "name": f"Object {index}",
         "type": "indicator",
         "created_by_ref": "identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
         "created": "2022-02-17T09:40:40.579507Z",
         "modified": "2025-05-26T12:17:29.594654Z",
         "revoked": False,
-        "x_inthreat_sources_refs": sources
+        "x_inthreat_sources_refs": sources,
     }
 
 
@@ -77,7 +79,8 @@ def test_fetch_feed_objects(trigger):
         )
 
         objects = trigger.fetch_feed_objects()
-        assert objects.sort() == feed_objects["items"].sort()
+        assert sorted(objects) == sorted(feed_objects["items"])
+
 
 def test_fetch_objects(trigger):
     object1 = object_factory(1)
@@ -96,11 +99,11 @@ def test_fetch_objects(trigger):
         assert len(objects) == len(json["items"])
         assert objects == json["items"]
 
+
 def test_resolve_sources(trigger):
     source_object1 = object_factory(1)
     source_object2 = object_factory(2)
     source_object3 = object_factory(3)
-    sources = [source_object1["id"], source_object2["id"], source_object3["id"]]
     json = {"items": [source_object1, source_object2, source_object3]}
 
     object1 = object_factory(1, sources=[source_object1["id"], source_object2["id"]])
@@ -108,15 +111,24 @@ def test_resolve_sources(trigger):
     objects = [object1, object2]
 
     with requests_mock.Mocker() as mock_requests:
+        sources_id = [source_object1["id"], source_object2["id"], source_object3["id"]]
         mock_requests.get(
-            f"https://api.sekoia.io/api/v2/inthreat/objects?match[id]={','.join(sources)}",
+            f"https://api.sekoia.io/api/v2/inthreat/objects?match[id]={','.join(sources_id)}",
             status_code=200,
             json=json,
         )
 
         objects = trigger.resolve_sources(objects)
-        assert objects[0]["x_inthreat_sources_refs"] == [source_object1, source_object2]
-        assert objects[1]["x_inthreat_sources_refs"] == [source_object2, source_object3]
+        assert objects[0]["x_inthreat_sources"] == [source_object1["name"], source_object2["name"]]
+        assert objects[0]["x_inthreat_sources_refs"] == [source_object1["id"], source_object2["id"]]
+        assert objects[1]["x_inthreat_sources"] == [source_object2["name"], source_object3["name"]]
+        assert objects[1]["x_inthreat_sources_refs"] == [source_object2["id"], source_object3["id"]]
+        assert trigger.sources_caches == {
+            source_object1["id"]: source_object1["name"],
+            source_object2["id"]: source_object2["name"],
+            source_object3["id"]: source_object3["name"],
+        }
+
 
 def test_next_batch_with_data(trigger):
     with requests_mock.Mocker() as mock_requests:
