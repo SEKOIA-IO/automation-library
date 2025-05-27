@@ -49,7 +49,7 @@ class AssetConnector(Trigger):
         """
         return self.__class__.__name__
 
-    @property
+    @property  # type: ignore[override, no-redef]
     def configuration(self) -> DefaultAssetConnectorConfiguration:
         """
         Get the module configuration.
@@ -60,8 +60,8 @@ class AssetConnector(Trigger):
             try:
                 self.configuration = self.module.load_config(self.CONNECTOR_CONFIGURATION_FILE_NAME, "json")
             except FileNotFoundError:
-                return super().configuration
-        return self._configuration
+                return super().configuration  # type: ignore[return-value]
+        return self._configuration  # type: ignore[return-value]
 
     @configuration.setter
     def configuration(self, configuration: dict) -> None:
@@ -143,7 +143,7 @@ class AssetConnector(Trigger):
         }
         return error.get(error_code, "An unknown error occurred")
 
-    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
+    def post_assets_to_api(self, assets: list[dict[str, str]], asset_connector_api_url: str) -> dict[str, str] | None:
         """
         Post assets to the Sekoia.io asset connector API.
         Args:
@@ -153,11 +153,11 @@ class AssetConnector(Trigger):
             dict[str, str] | None: Response from the API or None if an error occurred.
         """
 
-        try:
-            request_body = {
+        request_body = {
                 "assets": assets,
             }
 
+        try:
             for attempt in self._retry():
                 with attempt:
                     res: Response = self._http_session.post(
@@ -165,27 +165,30 @@ class AssetConnector(Trigger):
                         json=request_body,
                         timeout=30,
                     )
-
-            if res.status_code != 200:
-                error_message = self.handle_api_error(res.status_code)
-                self.log(
-                    message=f"Error while pushing assets to Sekoia.io: {error_message}",
-                    level="error",
-                )
-                return None
-
-            self.log(
-                message=f"Successfully posted {len(assets)} assets to Sekoia.io asset connector API",
-                level="info",
+        except requests.Timeout as ex:
+            self.log_exception(
+                ex,
+                message=f"Timeout while pushing assets to Sekoia.io asset connector API",
             )
-            return res.json()
+            return None
+            
+        if res.status_code != 200:
+            error_message = self.handle_api_error(res.status_code)
+            self.log(
+                message=f"Error while pushing assets to Sekoia.io: {error_message}",
+                level="error",
+            )
+            return None
 
-        except Exception as ex:
-            message = f"Failed to forward {len(assets)} assets to aseet connector api"
-            self.log(message=message, level="error")
-            self.log_exception(ex, message=message)
+        self.log(
+            message=f"Successfully posted {len(assets)} assets to Sekoia.io asset connector API",
+            level="info",
+        )
+        return res.json()
 
-    def push_assets_to_sekoia(self, assets: AssetList) -> None:
+
+
+    def push_assets_to_sekoia(self, assets: list[dict[str, str]]) -> None:
         """
         Push assets to the Sekoia.io asset connector API.
         Args:
