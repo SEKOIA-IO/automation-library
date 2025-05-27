@@ -232,6 +232,7 @@ class AssetConnector(Trigger):
         """
         raise NotImplementedError("This method should be implemented in a subclass")
 
+
     def asset_fetch_cycle(self) -> None:
         """
         Fetch assets from the connector and push them to Sekoia.io.

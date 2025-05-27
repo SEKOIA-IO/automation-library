@@ -9,12 +9,6 @@ class DefaultAssetConnectorConfiguration(BaseModel):
     api_key: str
     frequency: int = 60
 
-
-# class AssetType(Enum):
-#     HOST_TYPE = "host"
-#     ACCOUNT_TYPE = "account"
-
-
 class AssetObject(BaseModel):
     name: str
     type: Literal["account", "host"]
