@@ -3,7 +3,6 @@ name = "asset-connector"
 version = "1.0.0"
 description = ""
 authors = []
-readme = "README.md"
 package-mode = false
 
 
