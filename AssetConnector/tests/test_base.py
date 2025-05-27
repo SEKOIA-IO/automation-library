@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import Mock
 from collections.abc import Generator
 
-from connectors.base import AssetConnector
+from asset_connector.base import AssetConnector
 
 
 class FakeAssetConnector(AssetConnector):

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
-from connectors.fake_asset_connector import FakeAssetConnector
+from asset_connector.fake_asset_connector import FakeAssetConnector
 
 
 @pytest.fixture

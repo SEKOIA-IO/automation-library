@@ -1,5 +1,5 @@
 [project]
-name = "Asset Connector for Sekoia"
+name = "asset_connector"
 version = "1.0.0"
 description = ""
 authors = []
