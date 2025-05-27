@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-14 - 2.68.0
+
+### Added
+
+- Resolve source references in the objects by fetching them from the Sekoia.io API for Feed consumption.
+
+
 ## 2025-04-14 - 2.67.15
 
 ### Fixed
