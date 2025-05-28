@@ -133,8 +133,14 @@ class AssetConnector(Trigger):
         return {
             "Authorization": f"Bearer {self.configuration.api_key}",
             "Content-Type": "application/json",
+            "User-Agent": f"sekoiaio-asset-connnector-{self.connector_configuration_uuid}",
         }
 
+    @cached_property
+    def asset_connector_endpoint(self) -> str:
+        base = (self.configuration.sekoia_base_url or self.production_base_url).rstrip("/")
+        return f"{base}/api/v1/asset-connectors/{self.connector_configuration_uuid}"
+        
     def handle_api_error(self, error_code: int) -> str:
         error = {
             400: "Invalid request format",
@@ -198,13 +204,7 @@ class AssetConnector(Trigger):
         if not assets:
             return
 
-        asset_connector_uuid = self.connector_configuration_uuid
-        if sekoia_base_url := self.configuration.sekoia_base_url:
-            batch_api = urljoin(sekoia_base_url, "api/v1/asset-connectors")
-        else:
-            batch_api = urljoin(self.production_base_url, "api/v1/asset-connectors")
-
-        url = urljoin(batch_api, asset_connector_uuid)
+        url = self.asset_connector_endpoint
 
         self.log(
             message=f"Pushing {len(assets)} assets to Sekoia.io asset connector API at {url}",
