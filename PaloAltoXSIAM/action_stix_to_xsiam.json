@@ -1,0 +1,106 @@
+{
+  "name": "STIX to XSIAM",
+  "description": "Convert STIX objects to XSIAM objects",
+  "uuid": "68a6bdfa-e0bc-46c6-9580-76a2b44163b0",
+  "docker_parameters": "stix_to_xsiam_action",
+  "arguments": {
+    "title": "Arguments",
+    "type": "object",
+    "properties": {
+      "stix_objects": {
+        "title": "STIX Objects list",
+        "description": "STIX objects",
+        "type": "array"
+      },
+      "stix_objects_path": {
+        "title": "STIX Objects path",
+        "description": "STIX objects file path",
+        "type": "string"
+      }
+    },
+    "oneOf": [
+      {
+        "required": [
+          "stix_objects"
+        ]
+      },
+      {
+        "required": [
+          "stix_objects_path"
+        ]
+      }
+    ]
+  },
+  "results": {
+    "title": "XSIAM objects list",
+    "type": "array",
+    "items": {
+      "$ref": "#/definitions/XSIAM"
+    },
+    "required": [
+      "results"
+    ],
+    "definitions": {
+      "XSIAM": {
+        "title": "XSIAM Object",
+        "type": "object",
+        "properties": {
+          "indicator": {
+            "title": "Indicator",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "expiration_date": {
+            "title": "Expiration Date",
+            "type": "string"
+          },
+          "comment": {
+            "title": "Comment",
+            "type": "string"
+          },
+          "reputation": {
+            "title": "Reputation",
+            "type": "string"
+          },
+          "reliability": {
+            "title": "Reliability",
+            "type": "string"
+          },
+          "vendors": {
+            "title": "Vendors",
+            "type": "array",
+            "items": {
+                "vendor_name": {
+                    "title": "Vendor name",
+                    "type": "string"
+                },
+                "reliability": {
+                    "title": "Vendor reliability",
+                    "type": "string"
+                },
+                "reputation": {
+                    "title": "Vendor reputation",
+                    "type": "string"
+                }
+            }
+          },
+          "class": {
+            "title": "Class",
+            "type": "string"
+          },
+          "validate": {
+            "title": "Validate",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
