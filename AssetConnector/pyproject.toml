@@ -4,6 +4,9 @@ version = "1.0.0"
 description = ""
 authors = []
 package-mode = false
+packages = [
+  { include = "asset_connector" }
+]
 
 
 [tool.poetry.dependencies]
