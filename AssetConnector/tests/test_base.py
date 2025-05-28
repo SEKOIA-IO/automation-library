@@ -7,7 +7,6 @@ from asset_connector.base import AssetConnector
 
 
 class FakeAssetConnector(AssetConnector):
-
     assets: list[dict[str, str]] | None = None
 
     def set_assets(self, assets: list[dict[str, str]]) -> None:

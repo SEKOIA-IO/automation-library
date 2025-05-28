@@ -154,8 +154,8 @@ class AssetConnector(Trigger):
         """
 
         request_body = {
-                "assets": assets,
-            }
+            "assets": assets,
+        }
 
         try:
             for attempt in self._retry():
@@ -171,7 +171,7 @@ class AssetConnector(Trigger):
                 message=f"Timeout while pushing assets to Sekoia.io asset connector API",
             )
             return None
-            
+
         if res.status_code != 200:
             error_message = self.handle_api_error(res.status_code)
             self.log(
@@ -185,8 +185,6 @@ class AssetConnector(Trigger):
             level="info",
         )
         return res.json()
-
-
 
     def push_assets_to_sekoia(self, assets: list[dict[str, str]]) -> None:
         """
@@ -224,7 +222,6 @@ class AssetConnector(Trigger):
                 level="error",
             )
             return
- 
 
     @abstractmethod
     def get_assets(self) -> Generator[dict[str, str], None, None]:

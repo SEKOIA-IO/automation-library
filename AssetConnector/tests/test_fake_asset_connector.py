@@ -6,7 +6,6 @@ from asset_connector.fake_asset_connector import FakeAssetConnector, FakeAssetCo
 
 @pytest.fixture
 def test_asset_connector(data_storage):
-
     module = FakeAssetConnectorModule()
     module.configuration = {"len_data_to_send": 10, "time_sleep": 1}
 

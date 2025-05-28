@@ -20,7 +20,6 @@ class FakeAssetConnectorModule(Module):
 
 
 class FakeAssetConnector(AssetConnector):
-
     module: FakeAssetConnectorModule
 
     def _generate_fake_api_call(self) -> dict[str, Any]:
