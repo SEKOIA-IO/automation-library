@@ -250,7 +250,7 @@ class AssetConnector(Trigger):
         total_number_of_assets = 0
         for asset in self.get_assets():
             try:
-                AssetObject(**asset)
+                AssetObject(**asset)  # type: ignore[arg-type]
             except Exception as e:
                 self.log_exception(
                     None,
