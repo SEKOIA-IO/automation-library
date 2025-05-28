@@ -136,7 +136,10 @@ class FeedConsumptionTrigger(Trigger):
         # Adding sources to the cache
         sources = self.fetch_objects(sources_to_fetch)
         for source in sources:
-            self.sources_caches[source["id"]] = source["name"]
+            self.sources_caches[source["id"]] = {
+                "name": source["name"],
+                "confidence": source.get("confidence", 0),
+            }
 
         # Getting sources from the cache
         for object in objects:
