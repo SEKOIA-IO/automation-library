@@ -140,7 +140,7 @@ class AssetConnector(Trigger):
     def asset_connector_endpoint(self) -> str:
         base = (self.configuration.sekoia_base_url or self.production_base_url).rstrip("/")
         return f"{base}/api/v1/asset-connectors/{self.connector_configuration_uuid}"
-        
+
     def handle_api_error(self, error_code: int) -> str:
         error = {
             400: "Invalid request format",
