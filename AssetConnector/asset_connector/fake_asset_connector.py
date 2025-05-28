@@ -32,7 +32,7 @@ class FakeAssetConnector(AssetConnector):
         """
 
         fake = faker.Faker()
-        api_response = {}
+        api_response: dict[str, Any] = {}
         data = []
         for _ in range(self.module.configuration.len_data_to_send):
             asset = {
@@ -44,7 +44,7 @@ class FakeAssetConnector(AssetConnector):
         api_response["total"] = len(data)
         return api_response
 
-    def get_assets(self) -> Generator[AssetObject, None, None]:
+    def get_assets(self) -> Generator[dict[str, str], None, None]:
         """
         Fake implementation of get_assets that returns a static list of assets.
         This is for testing purposes only.

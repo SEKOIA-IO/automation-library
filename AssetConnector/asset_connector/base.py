@@ -198,7 +198,7 @@ class AssetConnector(Trigger):
         """
 
         if not assets:
-            return []
+            return
 
         asset_connector_uuid = self.connector_configuration_uuid
         if sekoia_base_url := self.configuration.sekoia_base_url:
@@ -223,10 +223,11 @@ class AssetConnector(Trigger):
                 message=f"Failed to push assets to Sekoia.io asset connector API at {url}",
                 level="error",
             )
-            return []
+            return
+ 
 
     @abstractmethod
-    def get_assets(self) -> Generator[AssetObject, None, None]:
+    def get_assets(self) -> Generator[dict[str, str], None, None]:
         """
         Get assets from the connector.
         Yields:
@@ -248,7 +249,7 @@ class AssetConnector(Trigger):
         # save the starting time processing
         processing_start = time.time()
 
-        assets: AssetList = []
+        assets = []
         total_number_of_assets = 0
         for asset in self.get_assets():
             try:
