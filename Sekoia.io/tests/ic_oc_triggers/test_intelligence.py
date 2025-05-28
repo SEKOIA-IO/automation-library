@@ -27,6 +27,7 @@ def object_factory(index: int, sources: list[str] = []):
         "created": "2022-02-17T09:40:40.579507Z",
         "modified": "2025-05-26T12:17:29.594654Z",
         "revoked": False,
+        "confidence": 50,
         "x_inthreat_sources_refs": sources,
     }
 
@@ -119,14 +120,25 @@ def test_resolve_sources(trigger):
         )
 
         objects = trigger.resolve_sources(objects)
-        assert objects[0]["x_inthreat_sources"] == [source_object1["name"], source_object2["name"]]
+
+        assert objects[0]["x_inthreat_sources"] == [
+            {"name": source_object1["name"], "confidence": source_object1["confidence"]},
+            {"name": source_object2["name"], "confidence": source_object2["confidence"]},
+        ]
         assert objects[0]["x_inthreat_sources_refs"] == [source_object1["id"], source_object2["id"]]
-        assert objects[1]["x_inthreat_sources"] == [source_object2["name"], source_object3["name"]]
+        assert objects[0]["x_inthreat_sources"] == [
+            {"name": source_object1["name"], "confidence": source_object1["confidence"]},
+            {"name": source_object2["name"], "confidence": source_object2["confidence"]},
+        ]
         assert objects[1]["x_inthreat_sources_refs"] == [source_object2["id"], source_object3["id"]]
+        assert objects[1]["x_inthreat_sources"] == [
+            {"name": source_object2["name"], "confidence": source_object2["confidence"]},
+            {"name": source_object3["name"], "confidence": source_object3["confidence"]},
+        ]
         assert trigger.sources_caches == {
-            source_object1["id"]: source_object1["name"],
-            source_object2["id"]: source_object2["name"],
-            source_object3["id"]: source_object3["name"],
+            source_object1["id"]: {"name": source_object1["name"], "confidence": source_object1["confidence"]},
+            source_object2["id"]: {"name": source_object2["name"], "confidence": source_object2["confidence"]},
+            source_object3["id"]: {"name": source_object3["name"], "confidence": source_object3["confidence"]},
         }
 
 

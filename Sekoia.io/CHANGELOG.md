@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-04-14 - 2.68.0
+## 2025-05-28 - 2.68.1
+
+### Fixed
+
+- Returning confidence when resolving source references from Feed consumption.
+
+## 2025-05-27 - 2.68.0
 
 ### Added
 
