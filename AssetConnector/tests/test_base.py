@@ -75,9 +75,11 @@ def test_frequency_env_var_not_exist(test_asset_connector):
 
 
 def test_http_header(test_asset_connector):
+    test_asset_connector.connector_configuration_uuid = "04716e25-c97f-4a22-925e-8b636ad9c8a4"
     headers = test_asset_connector.http_header
     assert headers["Authorization"] == "Bearer fake_api_key"
     assert headers["Content-Type"] == "application/json"
+    assert headers["User-Agent"] == "sekoiaio-asset-connnector-04716e25-c97f-4a22-925e-8b636ad9c8a4"
 
 
 def test_handle_api_error(test_asset_connector):
