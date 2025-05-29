@@ -37,3 +37,23 @@ omit = [
     "main.py",
     "dev.py"
 ]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore:.*unclosed.*:ResourceWarning",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=ubika_modules
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=5
+'''

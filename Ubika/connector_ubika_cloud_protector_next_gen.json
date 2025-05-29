@@ -1,0 +1,52 @@
+{
+  "description": "Ubika Cloud Protector Next Generation",
+  "docker_parameters": "ubika_cloud_protector_next_gen",
+  "name": "[BETA] Fetch new events from Ubika Cloud Protector Next Generation",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "minimum": 10,
+        "maximum": 60,
+        "default": 60
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The size of chunks for the batch processing",
+        "default": 1000,
+        "minimum": 1,
+        "maximum": 1000
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "namespace": {
+        "description": "Namespace",
+        "type": "string"
+      },
+      "refresh_token": {
+        "description": "Refresh API token",
+        "type": "string"
+      }
+    },
+    "required": [
+      "namespace",
+      "refresh_token",
+      "intake_key"
+    ],
+    "secrets": [
+      "refresh_token"
+    ],
+    "title": "The configuration to fetch new events",
+    "type": "object"
+  },
+  "uuid": "eca1ea3b-fd50-4145-8eb5-60d22b2fa584"
+}
