@@ -111,7 +111,7 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction[BlockMaliciousFilesArgum
         hashes = []
         for value in stix_objects:
             # Extract value and type from pattern
-            self.log(message=f"object in stix_objects {str(object)}", level="debug")
+            self.log(message=f"object in stix_objects {str(value)}", level="debug")
             stix_result = transform_stix(stix_object=value, supported_types_map=self.supported_stix_types)
 
             for ioc in stix_result:
