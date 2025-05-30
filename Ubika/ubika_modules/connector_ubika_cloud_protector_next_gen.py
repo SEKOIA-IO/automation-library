@@ -6,7 +6,7 @@ from functools import cached_property
 import orjson
 import requests
 from cachetools import Cache, LRUCache
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON

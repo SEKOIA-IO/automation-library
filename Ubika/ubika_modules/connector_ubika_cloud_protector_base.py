@@ -9,7 +9,7 @@ from threading import Event
 import orjson
 import requests
 from dateutil.parser import isoparse
-from pydantic import Field
+from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
