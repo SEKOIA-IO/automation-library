@@ -1,18 +1,17 @@
 import time
 from datetime import datetime, timedelta, timezone
-
 from functools import cached_property
-import orjson
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Any, Dict, List, Optional, Tuple
 
+import orjson
 from requests.exceptions import HTTPError
-from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
+from urllib3.exceptions import HTTPError as BaseHTTPError
 
-from cortex_module.helper import handle_fqdn
 from cortex_module.base import CortexConnector
 from cortex_module.client import ApiClient
+from cortex_module.helper import handle_fqdn
 from cortex_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 

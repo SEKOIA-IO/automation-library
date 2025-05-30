@@ -10,3 +10,22 @@ def handle_fqdn(fqdn: str) -> str:
         return f"https://{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
 
     return f"https://api-{base_fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+
+def format_fqdn(fqdn: str) -> str:
+    """
+    Format the FQDN to a valid URL.
+
+    Args:
+        fqdn: str
+
+    Returns:
+        str:
+    """
+    if fqdn.startswith("https://"):
+        return fqdn
+
+    if fqdn.startswith("api-"):
+        return f"https://{fqdn}"
+
+    return f"https://api-{fqdn}"

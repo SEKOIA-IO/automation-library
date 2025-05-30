@@ -1,0 +1,25 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "endpoint_id": {
+        "type": "string",
+        "description": "Endpoint ID."
+      },
+      "incident_id": {
+        "type": "string",
+        "description": "Incident ID."
+      }
+    },
+    "required": [
+      "endpoint_id"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "",
+  "docker_parameters": "isolate_endpoint",
+  "name": "Isolate endpoint",
+  "results": {},
+  "uuid": "ff36ce84-de4e-431e-a68c-4a587722e898"
+}
