@@ -120,7 +120,7 @@ class UbikaCloudProtectorNextGenConnector(Connector):
             response = self.client.get(url, params=params, headers=headers, timeout=60)
 
         except AuthorizationError as err:
-            self.log(f"Authorization error: {err.args[0]['error_description']}", level="critical")
+            self.log(f"Authorization error: {err.args[1]}", level="critical")
             raise
 
         while self.running:
@@ -161,7 +161,7 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                 )
 
             except AuthorizationError as err:
-                self.log(f"Authorization error: {err.args[0]['error_description']}", level="critical")
+                self.log(f"Authorization error: {err.args[1]}", level="critical")
                 raise
 
     def fetch_events(self) -> Generator[list, None, None]:

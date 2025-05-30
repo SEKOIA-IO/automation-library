@@ -6,7 +6,7 @@ from requests_ratelimiter import LimiterAdapter
 from urllib3.util.retry import Retry
 
 
-class AuthorizationError(BaseException):
+class AuthorizationError(Exception):
     pass
 
 
@@ -66,8 +66,9 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
             try:
                 response.raise_for_status()
 
-            except requests.exceptions.RequestException:
-                raise AuthorizationError(response.json())
+            except requests.exceptions.RequestException as e:
+                raw = response.json()
+                raise AuthorizationError(raw["error"], raw["error_description"]) from e
 
             api_credentials: dict = response.json()
 

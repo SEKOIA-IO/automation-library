@@ -34,7 +34,9 @@ class UbikaCloudProtectorNextGenApiClient(requests.Session):
         ratelimit_per_minute: int = 20,
     ) -> None:
         super().__init__()
-        self.auth = UbikaCloudProtectorNextGenAuthentication(refresh_token=refresh_token)
+        self.auth = UbikaCloudProtectorNextGenAuthentication(
+            refresh_token=refresh_token, ratelimit_per_minute=ratelimit_per_minute
+        )
         self.mount(
             "https://",
             LimiterAdapter(
