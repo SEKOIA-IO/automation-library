@@ -10,12 +10,29 @@
         "description": "List of alert IDs to update."
       },
       "status": {
-          "type": "string",
-          "description": "New status for the alert."
+        "type": "string",
+        "description": "New status for the alert.",
+        "enum": [
+          "new",
+          "under_investigation",
+          "resolved_security_testing",
+          "resolved_known_issue",
+          "resolved_duplicate",
+          "resolved_other",
+          "resolved_false_positive",
+          "resolved_true_positive"
+        ]
       },
       "severity": {
-          "type": "string",
-          "description": "New severity for the alert."
+        "type": "string",
+        "description": "New severity for the alert.",
+        "enum": [
+          "critical",
+          "high",
+          "medium",
+          "low",
+          "informational"
+        ]
       }
     },
     "required": [
