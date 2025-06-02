@@ -208,7 +208,7 @@ class AssetConnector(Trigger):
         url = self.asset_connector_endpoint
 
         self.log(
-            message=f"Pushing {len(assets)} assets to Sekoia.io asset connector API at {url}",
+            message=f"Pushing assets to Sekoia.io asset connector API at {url}",
             level="info",
         )
 
@@ -250,7 +250,6 @@ class AssetConnector(Trigger):
         assets = []
         total_number_of_assets = 0
         for asset in self.get_assets():
-
             assets.append(asset)
             total_number_of_assets += 1
 
