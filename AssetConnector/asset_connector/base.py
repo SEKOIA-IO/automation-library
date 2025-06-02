@@ -149,7 +149,7 @@ class AssetConnector(Trigger):
         }
         return error.get(error_code, "An unknown error occurred")
 
-    def post_assets_to_api(self, assets: list[dict[str, str]], asset_connector_api_url: str) -> dict[str, str] | None:
+    def post_assets_to_api(self, assets: AssetObject, asset_connector_api_url: str) -> dict[str, str] | None:
         """
         Post assets to the Sekoia.io asset connector API.
         Args:
@@ -159,8 +159,9 @@ class AssetConnector(Trigger):
             dict[str, str] | None: Response from the API or None if an error occurred.
         """
 
+        assets_object_to_dict = assets.model_dump()
         request_body = {
-            "assets": assets,
+            "assets": assets.model_dump(),
         }
 
         try:
@@ -187,12 +188,12 @@ class AssetConnector(Trigger):
             return None
 
         self.log(
-            message=f"Successfully posted {len(assets)} assets to Sekoia.io asset connector API",
+            message=f"Successfully posted {len(assets_object_to_dict)} assets to Sekoia.io asset connector API",
             level="info",
         )
         return res.json()
 
-    def push_assets_to_sekoia(self, assets: list[dict[str, str]]) -> None:
+    def push_assets_to_sekoia(self, assets: AssetObject) -> None:
         """
         Push assets to the Sekoia.io asset connector API.
         Args:

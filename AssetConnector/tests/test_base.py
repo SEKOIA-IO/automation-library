@@ -4,6 +4,7 @@ from unittest.mock import Mock
 from collections.abc import Generator
 
 from asset_connector.base import AssetConnector
+from asset_connector.models import AssetList, AssetObject
 
 
 class FakeAssetConnector(AssetConnector):
@@ -39,6 +40,11 @@ def test_asset_connector():
     test_connector.log_exception = Mock()
 
     yield test_connector
+
+
+@pytest.fixture
+def asset_list():
+    return AssetList(assets=[AssetObject(name="Asset1", type="account"), AssetObject(name="Asset2", type="host")])
 
 
 @pytest.mark.skipif("{'ASSET_CONNECTOR_BATCH_SIZE'}" ".issubset(os.environ.keys()) == False")
@@ -100,19 +106,17 @@ def test_handle_api_error(test_asset_connector):
     assert error_message == "An unknown error occurred"
 
 
-def test_post_assets_to_api_success(test_asset_connector):
+def test_post_assets_to_api_success(test_asset_connector, asset_list):
     test_asset_connector._http_session.post = Mock(
         return_value=Mock(status_code=200, json=lambda: {"result": "success"})
     )
-    assets = [{"type": "account", "name": "Asset1"}]
-    response = test_asset_connector.post_assets_to_api(assets, "http://example.com/api")
+    response = test_asset_connector.post_assets_to_api(asset_list, "http://example.com/api")
     assert response == {"result": "success"}
 
 
-def test_post_assets_to_api_failure(test_asset_connector):
+def test_post_assets_to_api_failure(test_asset_connector, asset_list):
     test_asset_connector._http_session.post = Mock(return_value=Mock(status_code=400))
-    assets = [{"type": "account", "name": "Asset1"}]
-    response = test_asset_connector.post_assets_to_api(assets, "http://example.com/api")
+    response = test_asset_connector.post_assets_to_api(asset_list, "http://example.com/api")
     assert response is None
 
 
