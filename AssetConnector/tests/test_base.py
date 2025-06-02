@@ -46,6 +46,14 @@ def test_asset_connector():
 def asset_list():
     return AssetList(assets=[AssetObject(name="Asset1", type="account"), AssetObject(name="Asset2", type="host")])
 
+@pytest.fixture
+def asset_object_1():
+    return AssetObject(name="Asset1", type="account")
+
+@pytest.fixture
+def asset_object_2():
+    return AssetObject(name="Asset2", type="host")
+
 
 @pytest.mark.skipif("{'ASSET_CONNECTOR_BATCH_SIZE'}" ".issubset(os.environ.keys()) == False")
 def test_batch_size_env_var_exist(test_asset_connector):
@@ -135,16 +143,12 @@ def test_push_assets_to_sekoia(test_asset_connector):
     )
 
 
-def test_asset_fetch_cycle(test_asset_connector):
-    test_asset_connector.get_assets = Mock(
-        return_value=iter([{"type": "account", "name": "Asset1"}, {"type": "host", "name": "Asset2"}])
-    )
+def test_asset_fetch_cycle(test_asset_connector, asset_object_1, asset_object_2, asset_list):
+    test_asset_connector.set_assets(AssetList(assets=[asset_object_1, asset_object_2]))
+    
     test_asset_connector.push_assets_to_sekoia = Mock()
     test_asset_connector.asset_fetch_cycle()
     test_asset_connector.push_assets_to_sekoia.assert_called_once()
 
     assert test_asset_connector.push_assets_to_sekoia.call_count == 1
-    assert test_asset_connector.push_assets_to_sekoia.call_args[0][0] == [
-        {"type": "account", "name": "Asset1"},
-        {"type": "host", "name": "Asset2"},
-    ]
+    assert test_asset_connector.push_assets_to_sekoia.call_args[0][0] == asset_list
