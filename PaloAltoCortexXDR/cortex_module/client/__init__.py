@@ -1,6 +1,6 @@
 import requests
-from requests_ratelimiter import LimiterAdapter
 from requests.adapters import Retry
+from requests_ratelimiter import LimiterAdapter
 
 from cortex_module.client.auth import CortexAuthentication
 

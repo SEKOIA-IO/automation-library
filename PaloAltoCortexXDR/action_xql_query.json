@@ -1,0 +1,41 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+       "query": {
+        "description": "XQL query to run.",
+        "type": "string"
+      },
+      "tenants": {
+        "description": "List of tenant IDs.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "timeframe_from": {
+        "description": "Start time as UNIX timestamp.",
+        "type": "integer"
+      },
+      "timeframe_to": {
+        "description": "End time as UNIX timestamp.",
+        "type": "integer"
+      },
+      "max_wait_time": {
+        "description": "Maximum wait time in seconds to finish the query. If limit is reached, the action will fail.",
+        "type": "integer",
+        "default": 60
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "",
+  "docker_parameters": "xql_query",
+  "name": "XQL query",
+  "results": {},
+  "uuid": "f58d2f9f-2006-469b-a389-48d775085365"
+}
