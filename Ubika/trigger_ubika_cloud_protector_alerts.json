@@ -1,7 +1,7 @@
 {
   "description": "Ubika Cloud Protector - Alerts",
   "docker_parameters": "ubika_cloud_protector_alerts",
-  "name": "[BETA] Fetch new alerts from Ubika Cloud Protector",
+  "name": "Fetch new alerts from Ubika Cloud Protector",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
