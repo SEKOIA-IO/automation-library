@@ -149,7 +149,7 @@ class AssetConnector(Trigger):
         }
         return error.get(error_code, "An unknown error occurred")
 
-    def post_assets_to_api(self, assets: AssetObject, asset_connector_api_url: str) -> dict[str, str] | None:
+    def post_assets_to_api(self, assets: AssetList, asset_connector_api_url: str) -> dict[str, str] | None:
         """
         Post assets to the Sekoia.io asset connector API.
         Args:
@@ -193,7 +193,7 @@ class AssetConnector(Trigger):
         )
         return res.json()
 
-    def push_assets_to_sekoia(self, assets: AssetObject) -> None:
+    def push_assets_to_sekoia(self, assets: AssetList) -> None:
         """
         Push assets to the Sekoia.io asset connector API.
         Args:
@@ -255,11 +255,13 @@ class AssetConnector(Trigger):
             total_number_of_assets += 1
 
             if len(assets) >= self.batch_size:
-                self.push_assets_to_sekoia(assets)
+                batch = AssetList(assets=assets)
+                self.push_assets_to_sekoia(batch)
                 assets = []
 
         if assets:
-            self.push_assets_to_sekoia(assets)
+            final_batch = AssetList(assets=assets)
+            self.push_assets_to_sekoia(final_batch)
 
         # save the end time processing
         processing_end = time.time()

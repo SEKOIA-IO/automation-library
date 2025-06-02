@@ -8,12 +8,12 @@ from asset_connector.models import AssetList, AssetObject
 
 
 class FakeAssetConnector(AssetConnector):
-    assets: list[dict[str, str]] | None = None
+    assets: AssetList | None = None
 
-    def set_assets(self, assets: list[dict[str, str]]) -> None:
+    def set_assets(self, assets: AssetObject) -> None:
         self.assets = assets
 
-    def get_assets(self) -> Generator[dict[str, str], None, None]:
+    def get_assets(self) -> Generator[AssetList, None, None]:
         """
         Fake method to simulate asset retrieval.
         Yields:
