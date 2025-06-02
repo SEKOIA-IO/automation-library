@@ -1,22 +1,5 @@
-import pytest
-
 from freezegun import freeze_time
-from xsiam import XsiamModule
 from xsiam.stix_to_xsiam import ActionArguments, STIXToXSIAMAction
-
-
-@pytest.fixture
-def action(data_storage):
-    def fake_log_cb(message: str, level: str):
-        print(message)
-        return None
-
-    module = XsiamModule()
-    action = STIXToXSIAMAction(module=module, data_path=data_storage)
-    # mock the log function of trigger that requires network access to the api for reporting
-    action.log = fake_log_cb
-    action.module.configuration = {}
-    return action
 
 
 @freeze_time("2025-05-28")
@@ -74,11 +57,25 @@ def test_run():
                 ],
                 "confidence": 10,
             },
+            {
+                "id": "indicator--4",
+                "type": "indicator",
+                "pattern": "[network-traffic:dst_ref.value = '87.251.71.195' AND network-traffic:dst_port = 82]",
+                "x_ic_observable_types": ["network-traffic"],
+                "kill_chain_phases": [
+                    {"kill_chain_name": "lockheed-martin-cyber-kill-chain", "phase_name": "delivery"},
+                    {"kill_chain_name": "mitre-attack", "phase_name": "initial-access"},
+                ],
+                "valid_from": "2025-05-06T00:00:00Z",
+                "valid_until": "2025-11-24T00:00:00Z",
+                "x_inthreat_sources_refs": [],
+                "confidence": 30,
+            },
         ]
     )
 
     result = action.run(arguments=arguments)
-    expected_result = [
+    expected_data = [
         {
             "class": "indicator--1",
             "comment": "Valid from 2025-05-06T00:00:00Z AND STIX Pattern: " "[file:hashes.'SHA-256' = 'abc123']",
@@ -88,18 +85,6 @@ def test_run():
             "reputation": "BAD",
             "severity": "MEDIUM",
             "type": "HASH",
-            "validate": True,
-            "vendors": [],
-        },
-        {
-            "class": "indicator--2",
-            "comment": "Valid from 2025-05-06T00:00:00Z AND STIX Pattern: [url:value = " "'https://43.165.65.241/']",
-            "expiration_date": "1763942400",
-            "indicator": "https://43.165.65.241/",
-            "reliability": "A",
-            "reputation": "BAD",
-            "severity": "HIGH",
-            "type": "DOMAIN_NAME",
             "validate": True,
             "vendors": [],
         },
@@ -147,5 +132,7 @@ def test_run():
         },
     ]
 
-    assert len(result) == 4
-    assert result == expected_result
+    data = result["data"]
+    assert len(arguments.stix_objects) == 4
+    assert len(data) == 3
+    assert data == expected_data

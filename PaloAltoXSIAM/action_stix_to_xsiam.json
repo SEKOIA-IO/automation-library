@@ -32,72 +32,73 @@
     ]
   },
   "results": {
-    "title": "XSIAM objects list",
-    "type": "array",
-    "items": {
-      "$ref": "#/definitions/XSIAM"
-    },
-    "required": [
-      "results"
-    ],
-    "definitions": {
-      "XSIAM": {
-        "title": "XSIAM Object",
-        "type": "object",
-        "properties": {
-          "indicator": {
-            "title": "Indicator",
-            "type": "string"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          },
-          "severity": {
-            "title": "Severity",
-            "type": "string"
-          },
-          "expiration_date": {
-            "title": "Expiration Date",
-            "type": "string"
-          },
-          "comment": {
-            "title": "Comment",
-            "type": "string"
-          },
-          "reputation": {
-            "title": "Reputation",
-            "type": "string"
-          },
-          "reliability": {
-            "title": "Reliability",
-            "type": "string"
-          },
-          "vendors": {
-            "title": "Vendors",
-            "type": "array",
-            "items": {
-                "vendor_name": {
-                    "title": "Vendor name",
-                    "type": "string"
-                },
-                "reliability": {
-                    "title": "Vendor reliability",
-                    "type": "string"
-                },
-                "reputation": {
-                    "title": "Vendor reputation",
-                    "type": "string"
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "The results with XSIAM objects list",
+    "type": "object",
+    "properties": {
+      "data": {
+        "description": "XSIAM objects list",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "indicator": {
+              "description": "Indicator",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type",
+              "type": "string"
+            },
+            "severity": {
+              "description": "Severity",
+              "type": "string"
+            },
+            "expiration_date": {
+              "description": "Expiration Date",
+              "type": "string"
+            },
+            "comment": {
+              "description": "Comment",
+              "type": "string"
+            },
+            "reputation": {
+              "description": "Reputation",
+              "type": "string"
+            },
+            "reliability": {
+              "description": "Reliability",
+              "type": "string"
+            },
+            "class": {
+              "description": "Class",
+              "type": "string"
+            },
+            "validate": {
+              "description": "Validate",
+              "type": "string"
+            },
+            "vendors": {
+              "description": "Vendors",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "vendor_name": {
+                      "description": "Vendor name",
+                      "type": "string"
+                  },
+                  "reliability": {
+                      "description": "Vendor reliability",
+                      "type": "string"
+                  },
+                  "reputation": {
+                      "description": "Vendor reputation",
+                      "type": "string"
+                  }
                 }
+              }
             }
-          },
-          "class": {
-            "title": "Class",
-            "type": "string"
-          },
-          "validate": {
-            "title": "Validate",
-            "type": "string"
           }
         }
       }

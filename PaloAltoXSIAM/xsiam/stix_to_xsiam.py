@@ -1,3 +1,4 @@
+from typing import Any
 from pydantic.v1 import BaseModel
 from sekoia_automation.action import Action
 import re
@@ -9,10 +10,8 @@ TYPE_MAPPING = {
     "filename": "FILENAME",
     "directory": "PATH",
     "domain-name": "DOMAIN_NAME",
-    "url": "DOMAIN_NAME",
     "ipv4-addr": "IP",
     "ipv6-addr": "IP",
-    "network-traffic": "IP",
 }
 
 HIGH_KILL_CHAIN_PHASES = ["exploitation", "installation", "command-and-control", "actions-on-objectives"]
@@ -24,25 +23,29 @@ class ActionArguments(BaseModel):
 
 
 class STIXToXSIAMAction(Action):
-    def run(self, arguments: ActionArguments) -> list[dict]:
+    def run(self, arguments: ActionArguments) -> Any:
         """
         Convert STIX objects to XSIAM format.
         """
         xsiam_objects = []
 
         for stix_obj in self.json_argument("stix_objects", arguments.dict()):
+            stix_type = self._get_type(stix_obj)
+            if stix_type == "UNKNOWN":
+                continue
+
             patterns = self._get_patterns(stix_obj)
 
             for pattern in patterns:
-                xsiam_obj = self._create_xsiam_object(pattern, stix_obj)
+                xsiam_obj = self._create_xsiam_object(pattern, stix_type, stix_obj)
                 xsiam_objects.append(xsiam_obj)
 
-        return xsiam_objects
+        return {"data": xsiam_objects}
 
-    def _create_xsiam_object(self, pattern: str, stix_obj: dict) -> dict:
+    def _create_xsiam_object(self, pattern: str, stix_type: str, stix_obj: dict) -> dict:
         return {
             "indicator": pattern,
-            "type": self._get_type(stix_obj),
+            "type": stix_type,
             "severity": self._get_severity(stix_obj),
             "expiration_date": iso8601_to_timestamp(stix_obj.get("valid_until", "1970-01-01T00:00:00Z")),
             "comment": self._get_comment(stix_obj),
@@ -73,10 +76,10 @@ class STIXToXSIAMAction(Action):
         Convert the x_ic_observable_types from STIX to XSIAM type format.
         """
         observable_type = stix_obj.get("x_ic_observable_types", [])
-        if len(observable_type) == 0:
-            return "UNKNOWN"
+        if len(observable_type) == 1:
+            return TYPE_MAPPING.get(observable_type[0], "UNKNOWN")
 
-        return TYPE_MAPPING.get(observable_type[0], "UNKNOWN")
+        return "UNKNOWN"
 
     def _get_severity(self, stix_obj: dict) -> str:
         """
