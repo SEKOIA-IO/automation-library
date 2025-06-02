@@ -1,0 +1,34 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "hornetsecurity",
+    "type": "object",
+    "properties": {
+      "hostname": {
+        "description": "Hornetsecurity API hostname",
+        "type": "string",
+        "default": "https://cp.hornetsecurity.com/api/v0",
+        "format": "uri"
+      },
+      "api_token": {
+        "description": "API Token for Hornetsecurity Control Panel",
+        "type": "string"
+      }
+    },
+    "required": [
+      "hostname",
+      "api_token"
+    ],
+    "secrets": [
+      "cp_token"
+    ]
+  },
+  "description": "Hornetsecurity offers fully managed cloud security solutions including Cyber Security, Backup, Compliance & Risk Governance. This module helps to collect Emails information from the Control Panel.",
+  "name": "Hornetsecurity",
+  "slug": "hornetsecurity",
+  "uuid": "96e758d5-bb16-47e9-863d-a0e63fa2e50d",
+  "version": "1.0.0",
+  "categories": [
+    "Email"
+  ]
+}
