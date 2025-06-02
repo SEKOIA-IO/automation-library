@@ -23,7 +23,7 @@ class FakeAssetConnector(AssetConnector):
         if self.assets is None:
             raise ValueError("Assets not set")
 
-        yield from self.assets
+        yield from self.assets.assets
 
 
 @pytest.fixture
