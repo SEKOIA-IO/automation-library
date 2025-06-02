@@ -1,0 +1,30 @@
+from dataclasses import dataclass
+
+import requests
+
+
+@dataclass
+class ApiError:
+    status_code: int
+    reason: str
+    id: str = "N/A"
+    data: str = "N/A"
+    message: str = "Unknown error"
+
+    def __str__(self):
+        return f"Request failed with status code {self.status_code} - {self.reason} - error id: {self.id} - error message: {self.message} - error data: {self.data}"
+
+    @classmethod
+    def from_response_error(cls, response: requests.Response):
+        try:
+            error_data = response.json()
+        except ValueError:
+            error_data = {}
+
+        return cls(
+            status_code=response.status_code,
+            reason=response.reason,
+            id=error_data.get("error_id", "N/A"),
+            data=error_data.get("error_data", "N/A"),
+            message=error_data.get("error_message", "Unknown error"),
+        )
