@@ -249,14 +249,6 @@ class AssetConnector(Trigger):
         assets = []
         total_number_of_assets = 0
         for asset in self.get_assets():
-            try:
-                AssetObject(**asset)  # type: ignore[arg-type]
-            except Exception as e:
-                self.log_exception(
-                    None,
-                    message=f"Asset {asset} is not an instance of AssetObject",
-                )
-                continue
 
             assets.append(asset)
             total_number_of_assets += 1
