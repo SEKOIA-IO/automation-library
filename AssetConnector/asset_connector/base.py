@@ -224,7 +224,7 @@ class AssetConnector(Trigger):
             return
 
     @abstractmethod
-    def get_assets(self) -> Generator[dict[str, str], None, None]:
+    def get_assets(self) -> Generator[AssetObject, None, None]:
         """
         Get assets from the connector.
         Yields:
