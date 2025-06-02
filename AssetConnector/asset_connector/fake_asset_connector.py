@@ -52,8 +52,7 @@ class FakeAssetConnector(AssetConnector):
         while self.running:
             api_response = self._generate_fake_api_call()
 
-            yield from map(AssetObject.model_validate,
-                        api_response["data"])
+            yield from map(AssetObject.model_validate, api_response["data"])
 
             # Simulate a delay to mimic real-world asset fetching
             time.sleep(self.module.configuration.time_sleep)
