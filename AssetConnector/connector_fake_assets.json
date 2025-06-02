@@ -1,0 +1,28 @@
+{
+    "name": "Fetch fake assets",
+    "description": "Fake Asset Connector for testing purposes",
+    "uuid": "8e8afb65-235a-4144-8cab-b44f94784587",
+    "docker_parameters": "fake_asset_connector",
+    "arguments": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "sekoia_base_url": {
+          "description": "Sekoia base URL",
+          "type": "string"
+        },
+        "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "minimum": 1,
+          "default": 60
+        },
+        "api_key": {
+          "description": "API key to use from sekoia.io",
+          "type": "string"
+        }
+      },
+      "required": ["api_key"],
+      "secrets": ["api_key"]
+    }
+  }
