@@ -9,9 +9,9 @@ import pytest
 from aioresponses import aioresponses
 from faker import Faker
 
-from client.token_refresher import CheckpointToken
 from connectors import CheckpointModule
 from connectors.checkpoint_harmony_mobile import CheckpointHarmonyMobileConfiguration, CheckpointHarmonyMobileConnector
+from connectors.client.token_refresher import CheckpointToken
 
 
 @pytest.fixture
@@ -60,12 +60,12 @@ def create_event(session_faker: Faker, date: datetime) -> dict[str, Any]:
         "id": session_faker.pyint(min_value=1, max_value=1000),
         "device_rooted": session_faker.pybool(),
         "attack_vector": session_faker.word(),
-        "backend_last_updated": session_faker.word(),
+        "backend_last_updated": date.strftime("%m/%d/%Y %H:%M:%S"),
         "details": session_faker.word(),
         "device_id": session_faker.word(),
         "email": session_faker.word(),
         "event": session_faker.word(),
-        "event_timestamp": date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "event_timestamp": date.strftime("%m/%d/%Y %H:%M:%S"),
         "mdm_uuid": session_faker.word(),
         "name": session_faker.word(),
         "number": session_faker.word(),
@@ -74,61 +74,6 @@ def create_event(session_faker: Faker, date: datetime) -> dict[str, Any]:
         "device_model": session_faker.word(),
         "client_version": session_faker.word(),
     }
-
-
-@pytest.mark.asyncio
-async def test_checkpoint_harmony_connector_init_with_empty_client(
-    session_faker: Faker,
-    checkpoint_module: CheckpointModule,
-):
-    """
-    Test CheckpointHarmonyConnector.
-
-    Args:
-        session_faker: Faker
-        checkpoint_module: CheckpointModule
-    """
-    configuration = CheckpointHarmonyMobileConfiguration(
-        intake_server=session_faker.url(),
-        intake_key=session_faker.word(),
-        ratelimit_per_minute=session_faker.random.randint(10, 100),
-        chunk_size=session_faker.random.randint(100, 10000),
-    )
-
-    connector = CheckpointHarmonyMobileConnector()
-    connector.module = checkpoint_module
-    connector.configuration = configuration
-
-    assert connector._checkpoint_client is None
-
-
-@pytest.mark.asyncio
-async def test_checkpoint_harmony_connector_last_event_date(
-    checkpoint_harmony_connector: CheckpointHarmonyMobileConnector,
-):
-    """
-    Test CheckpointHarmonyConnector last_event_date.
-
-    Args:
-        checkpoint_harmony_connector: CheckpointHarmonyConnector
-    """
-    with checkpoint_harmony_connector.context as cache:
-        cache["last_event_date"] = None
-
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
-    one_hour_ago = current_date - timedelta(hours=6)
-
-    assert checkpoint_harmony_connector.last_event_date == one_hour_ago
-
-    with checkpoint_harmony_connector.context as cache:
-        cache["last_event_date"] = current_date.isoformat()
-
-    assert checkpoint_harmony_connector.last_event_date == current_date
-
-    with checkpoint_harmony_connector.context as cache:
-        cache["last_event_date"] = (one_hour_ago - timedelta(minutes=20)).isoformat()
-
-    assert checkpoint_harmony_connector.last_event_date == one_hour_ago
 
 
 @pytest.mark.asyncio
@@ -160,11 +105,14 @@ async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
         auth_url = checkpoint_harmony_connector.module.configuration.authentication_url
         intake_post_url = urljoin(checkpoint_harmony_connector.configuration.intake_server, "batch")
 
-        half_hour_ago_str = (half_hour_ago + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        time_events_from = half_hour_ago + timedelta(seconds=1)
+        time_events_to = time_events_from + timedelta(minutes=1)
+        time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        time_events_to_str = time_events_to.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         endpoints = [
-            f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}",
-            f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}&offset={limit}",
-            f"/external_api/v3/alert/?backend_last_updated__gte={half_hour_ago_str}&limit={limit}&offset={limit*2}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&backend_last_updated__lte={time_events_to_str}&limit={limit}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&backend_last_updated__lte={time_events_to_str}&limit={limit}&offset={limit}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&backend_last_updated__lte={time_events_to_str}&limit={limit}&offset={limit*2}",
         ]
 
         events = []
@@ -199,10 +147,9 @@ async def test_checkpoint_harmony_connector_get_checkpoint_harmony_events(
             payload={"received": True, "event_ids": [session_faker.word() for _ in range(len(events))]},
         )
 
-        result, resulted_event_date = await checkpoint_harmony_connector.get_checkpoint_harmony_events()
+        result = await checkpoint_harmony_connector.fetch_checkpoint_harmony_events(
+            time_events_from, time_events_to, limit
+        )
 
         assert len(result) == len(events)
-        assert checkpoint_harmony_connector.last_event_date == current_date
-        assert resulted_event_date == current_date.timestamp()
-
-        await checkpoint_harmony_connector.get_checkpoint_client().close()
+        await checkpoint_harmony_connector.checkpoint_client.close()

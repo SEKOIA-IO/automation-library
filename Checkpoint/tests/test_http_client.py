@@ -1,6 +1,6 @@
 """Tests related to http client."""
 
-from datetime import timezone
+from datetime import timedelta, timezone
 from posixpath import join as urljoin
 from typing import Any
 
@@ -8,8 +8,8 @@ import pytest
 from aioresponses import aioresponses
 from faker import Faker
 
-from client.http_client import CheckpointHttpClient
-from client.token_refresher import CheckpointToken
+from connectors.client.http_client import CheckpointHttpClient
+from connectors.client.token_refresher import CheckpointToken
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ async def test_checkpoint_http_client_parse_date(
     assert http_client.parse_date(None) is None
     assert http_client.parse_date(session_faker.word()) is None
 
-    expected = session_faker.date_time(tzinfo=timezone.utc)
+    expected = session_faker.date_time(tzinfo=timezone.utc).replace(microsecond=0)
     assert http_client.parse_date(expected.strftime("%m/%d/%Y %H:%M:%S")) == expected
     assert http_client.parse_date(expected.isoformat()) == expected
 
@@ -68,11 +68,16 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_empty(
     _, token_data = http_token
     with aioresponses() as mocked:
         time_events_from = session_faker.date_time()
+        time_events_to = time_events_from + timedelta(minutes=1)
         time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        time_events_to_str = time_events_to.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)
         get_events_url = urljoin(
             http_client.base_url,
-            f"app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
+            f"app/SBM/external_api/v3/alert/?"
+            f"backend_last_updated__gte={time_events_from_str}&"
+            f"backend_last_updated__lte={time_events_to_str}&"
+            f"limit={limit}",
         )
 
         events_data = {
@@ -89,7 +94,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_empty(
         mocked.post(http_client.auth_url, status=200, payload=token_data)
         mocked.get(get_events_url, status=200, payload=events_data)
 
-        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, limit)
+        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, time_events_to, limit)
         result = [event async for events in list_of_events for event in events]
 
         assert result == events_data["objects"]
@@ -112,11 +117,16 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
     _, token_data = http_token
     with aioresponses() as mocked:
         time_events_from = session_faker.date_time()
+        time_events_to = time_events_from + timedelta(minutes=1)
         time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        time_events_to_str = time_events_to.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)
         get_events_url = urljoin(
             http_client.base_url,
-            f"app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
+            f"app/SBM/external_api/v3/alert/?"
+            f"backend_last_updated__gte={time_events_from_str}&"
+            f"backend_last_updated__lte={time_events_to_str}&"
+            f"limit={limit}",
         )
 
         events = [
@@ -155,7 +165,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success(
         mocked.post(http_client.auth_url, status=200, payload=token_data)
         mocked.get(get_events_url, status=200, payload=events_data)
 
-        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, limit)
+        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, time_events_to, limit)
         result = [event async for events in list_of_events for event in events]
 
         assert len(result) == len(events)
@@ -181,11 +191,16 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success_1(
     _, token_data = http_token
     with aioresponses() as mocked:
         time_events_from = session_faker.date_time()
+        time_events_to = time_events_from + timedelta(minutes=1)
         time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        time_events_to_str = time_events_to.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)
         get_events_url = urljoin(
             http_client.base_url,
-            f"app/SBM/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
+            f"app/SBM/external_api/v3/alert/?"
+            f"backend_last_updated__gte={time_events_from_str}&"
+            f"backend_last_updated__lte={time_events_to_str}&"
+            f"limit={limit}",
         )
 
         events_data = {
@@ -201,7 +216,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_success_1(
         mocked.post(http_client.auth_url, status=200, payload=token_data)
         mocked.get(get_events_url, status=200, payload=events_data)
 
-        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, limit)
+        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, time_events_to, limit)
         result = [event async for events in list_of_events for event in events]
 
         assert result == []
@@ -227,12 +242,14 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_with_pagination_
 
         base_url = urljoin(http_client.base_url, "app/SBM")
         time_events_from = session_faker.date_time()
+        time_events_to = time_events_from + timedelta(minutes=1)
         time_events_from_str = time_events_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        time_events_to_str = time_events_to.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         limit = session_faker.pyint(min_value=100, max_value=1000)
         endpoints = [
-            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}",
-            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}&offset={limit}",
-            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&limit={limit}&offset={limit*2}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&backend_last_updated__lte={time_events_to_str}&limit={limit}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&backend_last_updated__lte={time_events_to_str}&limit={limit}&offset={limit}",
+            f"/external_api/v3/alert/?backend_last_updated__gte={time_events_from_str}&backend_last_updated__lte={time_events_to_str}&limit={limit}&offset={limit*2}",
         ]
 
         events = []
@@ -272,7 +289,7 @@ async def test_checkpoint_http_client_get_harmony_mobile_alerts_with_pagination_
             }
             mocked.get(f"{base_url}{endpoint}", status=200, payload=events_data)
 
-        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, limit)
+        list_of_events = http_client.get_harmony_mobile_alerts(time_events_from, time_events_to, limit)
         result = [event async for events in list_of_events for event in events]
 
         assert len(result) == len(events)
