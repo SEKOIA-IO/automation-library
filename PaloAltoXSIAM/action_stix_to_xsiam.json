@@ -26,13 +26,21 @@
           "properties": {
             "confidence": {
               "title": "STIX Confidence",
-              "description": "STIX confidence value",
+              "description": "STIX confidence value. Example: 80",
               "type": "string"
             },
             "reliability": {
               "title": "XSIAM Reliability",
               "description": "XSIAM reliability value",
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "F"
+              ]
             }
           },
           "required": [
@@ -72,7 +80,7 @@
           "properties": {
             "confidence": {
               "title": "STIX Confidence",
-              "description": "STIX confidence value",
+              "description": "STIX confidence value. Example: 80",
               "type": "string"
             },
             "kill_chain_phases": {
@@ -80,13 +88,29 @@
               "description": "List of STIX kill chain phases",
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                "reconnaissance",
+                "weaponization",
+                "delivery",
+                "exploitation",
+                "installation",
+                "command-and-control",
+                "actions-on-objectives"
+              ]
               }
             },
             "severity": {
               "title": "XSIAM Severity",
               "description": "XSIAM Severity value",
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL",
+                "INFO"
+              ]
             }
           },
           "required": [
@@ -97,23 +121,18 @@
         "default": [
             {
               "confidence": "80",
-              "reliability": "A"
+              "kill_chain_phases": ["exploitation", "installation", "command-and-control", "actions-on-objectives"],
+              "severity": "HIGH"
             },
             {
-                "confidence": "60",
-                "reliability": "B"
-            },
-            {
-                "confidence": "40",
-                "reliability": "C"
-            },
-            {
-                "confidence": "20",
-                "reliability": "D"
+              "confidence": "40",
+              "kill_chain_phases": [],
+              "severity": "MEDIUM"
             },
             {
                 "confidence": "0",
-                "reliability": "E"
+                "kill_chain_phases": [],
+                "severity": "LOW"
             }
         ]
       },
