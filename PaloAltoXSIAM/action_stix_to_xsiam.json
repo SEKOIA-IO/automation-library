@@ -16,6 +16,118 @@
         "title": "STIX Objects path",
         "description": "STIX objects file path",
         "type": "string"
+      },
+      "reliability_mapping": {
+        "title": "Reliability mapping",
+        "description": "Overriding reliability mapping for XSIAM objects",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "confidence": {
+              "title": "STIX Confidence",
+              "description": "STIX confidence value",
+              "type": "string"
+            },
+            "reliability": {
+              "title": "XSIAM Reliability",
+              "description": "XSIAM reliability value",
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "reliability"
+          ]
+        },
+        "default": [
+            {
+              "confidence": "80",
+              "reliability": "A"
+            },
+            {
+                "confidence": "60",
+                "reliability": "B"
+            },
+            {
+                "confidence": "40",
+                "reliability": "C"
+            },
+            {
+                "confidence": "20",
+                "reliability": "D"
+            },
+            {
+                "confidence": "0",
+                "reliability": "E"
+            }
+        ]
+      },
+      "severity_mapping": {
+        "title": "Severity mapping",
+        "description": "Overriding severity mapping for XSIAM objects",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "confidence": {
+              "title": "STIX Confidence",
+              "description": "STIX confidence value",
+              "type": "string"
+            },
+            "kill_chain_phases": {
+              "title": "STIX Kill Chain Phases",
+              "description": "List of STIX kill chain phases",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "severity": {
+              "title": "XSIAM Severity",
+              "description": "XSIAM Severity value",
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "severity"
+          ]
+        },
+        "default": [
+            {
+              "confidence": "80",
+              "reliability": "A"
+            },
+            {
+                "confidence": "60",
+                "reliability": "B"
+            },
+            {
+                "confidence": "40",
+                "reliability": "C"
+            },
+            {
+                "confidence": "20",
+                "reliability": "D"
+            },
+            {
+                "confidence": "0",
+                "reliability": "E"
+            }
+        ]
+      },
+      "comment": {
+        "title": "Comment",
+        "description": "Comment to add to the XSIAM objects",
+        "type": "string",
+        "default": "Valid from {valid_from} AND STIX Pattern: {pattern}"
+      },
+      "class_override": {
+        "title": "Class Override",
+        "description": "Override the class of the XSIAM objects",
+        "type": "string",
+        "default": "{id}"
       }
     },
     "oneOf": [

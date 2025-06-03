@@ -79,13 +79,12 @@ def test_run():
         {
             "class": "indicator--1",
             "comment": "Valid from 2025-05-06T00:00:00Z AND STIX Pattern: " "[file:hashes.'SHA-256' = 'abc123']",
-            "expiration_date": "1763942400",
+            "expiration_date": "1763942400000",
             "indicator": "abc123",
             "reliability": "B",
             "reputation": "BAD",
             "severity": "MEDIUM",
             "type": "HASH",
-            "validate": True,
             "vendors": [],
         },
         {
@@ -94,13 +93,12 @@ def test_run():
             "'22e933c9c5532d13fbcae3d9f2080c35' OR file:hashes.'SHA-1' = "
             "'6311eb48932a5544cbe3c2c2fe2b036231432bd4' OR file:hashes.'SHA-256' = "
             "'52a81e514d1113019f39273179f691379fbb78cd70a370aea22a00397cef5b99']",
-            "expiration_date": "1763942400",
+            "expiration_date": "1763942400000",
             "indicator": "22e933c9c5532d13fbcae3d9f2080c35",
             "reliability": "E",
             "reputation": "BAD",
             "severity": "LOW",
             "type": "HASH",
-            "validate": True,
             "vendors": [
                 {
                     "reliability": "C",
@@ -115,13 +113,12 @@ def test_run():
             "'22e933c9c5532d13fbcae3d9f2080c35' OR file:hashes.'SHA-1' = "
             "'6311eb48932a5544cbe3c2c2fe2b036231432bd4' OR file:hashes.'SHA-256' = "
             "'52a81e514d1113019f39273179f691379fbb78cd70a370aea22a00397cef5b99']",
-            "expiration_date": "1763942400",
+            "expiration_date": "1763942400000",
             "indicator": "52a81e514d1113019f39273179f691379fbb78cd70a370aea22a00397cef5b99",
             "reliability": "E",
             "reputation": "BAD",
             "severity": "LOW",
             "type": "HASH",
-            "validate": True,
             "vendors": [
                 {
                     "reliability": "C",
