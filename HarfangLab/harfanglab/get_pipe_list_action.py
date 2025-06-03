@@ -18,10 +18,10 @@ class GetPipeListAction(JobExecutor):
 
         job_trigger_result: JobTriggerResult = self.trigger_job(
             target=JobTarget(
-                agents=[agent.strip() for agent in target_agents.split(",") if agent.strip()],
-                groups=[group.strip() for group in target_groups.split(",") if group.strip()],
+                agent_ids=[agent.strip() for agent in target_agents.split(",") if agent.strip()] or None,
+                group_ids=[group.strip() for group in target_groups.split(",") if group.strip()] or None,
             ),
-            actions=[JobAction(label="Pipelist", value="getPipeList")],
+            job=JobAction(value="getPipeList"),
         )
 
         return job_trigger_result.dict()

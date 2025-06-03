@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 # internals
 from harfanglab.get_pipe_list_action import GetPipeListAction
-from harfanglab.models import JobTarget, JobTriggerResult
+from harfanglab.models import JobAction, JobTarget, JobTriggerResult
 
 
 def test_trigger_job():
@@ -33,6 +33,5 @@ def test_trigger_job():
         }
     )
     call_kwargs = trigger_job_mock.call_args.kwargs
-    assert call_kwargs["target"] == JobTarget(agents=[], groups=["default_policy_group_id"])
-    assert call_kwargs["actions"][0].label == "Pipelist"
-    assert call_kwargs["actions"][0].value == "getPipeList"
+    assert call_kwargs["target"] == JobTarget(group_ids=["default_policy_group_id"])
+    assert call_kwargs["job"] == JobAction(value="getPipeList", params=None)

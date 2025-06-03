@@ -1,4 +1,5 @@
 import time
+from typing import Any
 
 import requests
 from sekoia_automation.action import Action
@@ -25,7 +26,8 @@ class JobExecutor(Action):
 
     @property
     def job_endpoint(self) -> str:
-        return f"{self.instance_url.rstrip('/')}/api/data/Job/"
+        # After deprecation of the old endpoint, we use the new one.
+        return f"{self.instance_url.rstrip('/')}/api/data/job/batch/"
 
     @property
     def job_id(self) -> str:
@@ -38,17 +40,17 @@ class JobExecutor(Action):
             raise RuntimeError("JobExecutor.trigger_job() not called")  # pragma: no cover
         return self._job_is_running
 
-    def trigger_job(self, target: JobTarget, actions: list[JobAction]) -> JobTriggerResult:
+    def trigger_job(self, target: JobTarget, job: JobAction) -> JobTriggerResult:
 
-        params: dict = {
-            "targets": target.dict(),
-            "actions": [action.dict() for action in actions],
+        params: dict[str, Any] = {
+            "targets": target.dict(exclude_none=True),
+            "jobs": [job.as_params()],
         }
 
         response: requests.Response = requests.post(url=self.job_endpoint, json=params, headers=self.auth_headers)
         response.raise_for_status()
 
-        job_result = JobTriggerResult(**response.json()[0])
+        job_result = JobTriggerResult(**response.json(), action=job.value, parameters=job.params)
 
         self._job_id = job_result.id
         self._job_is_running = True
