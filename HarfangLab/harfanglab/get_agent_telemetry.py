@@ -1,8 +1,8 @@
 # coding: utf-8
 
 # natives
-from typing import Any
 from datetime import datetime, timedelta
+from typing import Any
 
 import requests
 from sekoia_automation.action import Action

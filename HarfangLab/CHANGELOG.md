@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-30 - 1.27.0
+
+### Fixed
+
+- Use new endpoint in actions instead of the deprecated one
+
 ## 2025-05-20 - 1.26.1
 
 ### Added

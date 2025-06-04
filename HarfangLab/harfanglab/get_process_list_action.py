@@ -21,20 +21,17 @@ class GetProcessListAction(JobExecutor):
 
         job_trigger_result: JobTriggerResult = self.trigger_job(
             target=JobTarget(
-                agents=[agent.strip() for agent in target_agents.split(",") if agent.strip()],
-                groups=[group.strip() for group in target_groups.split(",") if group.strip()],
+                agent_ids=[agent.strip() for agent in target_agents.split(",") if agent.strip()] or None,
+                group_ids=[group.strip() for group in target_groups.split(",") if group.strip()] or None,
             ),
-            actions=[
-                JobAction(
-                    label="Processes",
-                    value="getProcessList",
-                    params={
-                        "getHandlesList": get_handles_list,
-                        "getConnectionsList": get_connections_list,
-                        "getSignaturesInfo": get_signatures_list,
-                    },
-                )
-            ],
+            job=JobAction(
+                value="getProcessList",
+                params={
+                    "getHandlesList": get_handles_list,
+                    "getConnectionsList": get_connections_list,
+                    "getSignaturesInfo": get_signatures_list,
+                },
+            ),
         )
 
         return job_trigger_result.dict()

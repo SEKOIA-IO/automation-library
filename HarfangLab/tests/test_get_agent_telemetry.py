@@ -1,6 +1,7 @@
-import requests_mock
-from harfanglab.get_agent_telemetry import GetAgentTelemetry
 import pytest
+import requests_mock
+
+from harfanglab.get_agent_telemetry import GetAgentTelemetry
 
 
 def test_integration_get_agent_telemetry():
