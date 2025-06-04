@@ -17,7 +17,7 @@ class JobTarget(BaseModel):
 
 class JobAction(BaseModel):
     value: str  # job action identifier (eg: getPipeList, downloadFile, etc.)
-    params: dict[str, Any] | None = None
+    params: Any
 
     def as_params(self) -> dict[str, Any]:
         return {
