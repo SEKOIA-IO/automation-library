@@ -43,7 +43,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
         self.context = PersistentJSON("context.json", self.data_path)
 
     @property
-    def stepper(self):
+    def stepper(self) -> TimeStepper:
         with self.context as cache:
             most_recent_date_requested_str = cache.get("last_event_timestamp")
 
@@ -71,7 +71,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
         )
 
     @stepper.setter
-    def stepper(self, recent_date):
+    def stepper(self, recent_date: str) -> None:
         with self.context as cache:
             app_key_name_in_cache = "last_event_timestamp"
             cache[app_key_name_in_cache] = recent_date

@@ -61,7 +61,7 @@ omit = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-#asyncio_default_fixture_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = [
     "tests",
 ]
@@ -79,6 +79,7 @@ addopts = '''
   --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=90
+  --numprocesses=auto
   --asyncio-mode=auto
 '''
 
