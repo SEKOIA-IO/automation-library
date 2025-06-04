@@ -45,7 +45,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
     @property
     def stepper(self) -> TimeStepper:
         with self.context as cache:
-            most_recent_date_requested_str = cache.get("last_event_timestamp")
+            most_recent_date_requested_str = cache.get("last_event_date")
 
         if most_recent_date_requested_str is None:
             return TimeStepper.create(
@@ -70,10 +70,9 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
             self.configuration.timedelta,
         )
 
-    @stepper.setter
-    def stepper(self, recent_date: str) -> None:
+    def update_stepper(self, recent_date: str) -> None:
         with self.context as cache:
-            app_key_name_in_cache = "last_event_timestamp"
+            app_key_name_in_cache = "last_event_date"
             cache[app_key_name_in_cache] = recent_date
 
     @cached_property
@@ -123,7 +122,7 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
                         OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(results))
 
                         # Save the most recent date seen
-                        self.stepper = end.isoformat()
+                        self.update_stepper(end.isoformat())
 
                         # compute the duration of the last events fetching
                         duration = int(time.time() - duration_start)
