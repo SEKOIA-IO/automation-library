@@ -1,9 +1,11 @@
 # coding: utf-8
 
 # natives
+from unittest.mock import MagicMock
+import os
 
 # third parties
-from unittest.mock import MagicMock
+import pytest
 
 # internals
 from harfanglab.get_pipe_list_action import GetPipeListAction
@@ -34,4 +36,21 @@ def test_trigger_job():
     )
     call_kwargs = trigger_job_mock.call_args.kwargs
     assert call_kwargs["target"] == JobTarget(group_ids=["default_policy_group_id"])
-    assert call_kwargs["job"] == JobAction(value="getPipeList", params=None)
+    assert call_kwargs["job"] == JobAction(value="getPipeList", params={})
+
+
+@pytest.mark.skipif(
+    """not all(map(os.environ.get, ("HARFANGLAB_URL", "HARFANGLAB_API_TOKEN", "HARFANGLAB_AGENT_ID")))""",
+)
+def test_integration_get_pipe_list_from_endpoint(symphony_storage) -> None:
+    """Live test - Run only if some envvars are present."""
+
+    action = GetPipeListAction(data_path=symphony_storage)
+    action.module.configuration = {
+        "url": os.environ["HARFANGLAB_URL"],
+        "api_token": os.environ["HARFANGLAB_API_TOKEN"],
+    }
+
+    result = action.run({"target_agents": os.environ["HARFANGLAB_AGENT_ID"], "target_groups": ""})
+    assert result is not None
+    assert result.get("id") is not None

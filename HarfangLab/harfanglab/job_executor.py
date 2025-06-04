@@ -4,7 +4,7 @@ from typing import Any
 import requests
 from sekoia_automation.action import Action
 
-from harfanglab.models import JobAction, JobStatus, JobTarget, JobTriggerResult
+from harfanglab.models import JobAction, JobBatchInformation, JobTarget, JobTriggerResult
 
 
 class JobExecutor(Action):
@@ -60,7 +60,7 @@ class JobExecutor(Action):
     def wait_for_job_completion(self) -> None:  # pragma: no cover
         """Wait until all job actions are done. Caution, can wait forever."""
 
-        job_status: JobStatus | None = None
+        job_info: JobBatchInformation | None = None
 
         while self.job_is_running():
 
@@ -69,22 +69,22 @@ class JobExecutor(Action):
             )
             response.raise_for_status()
 
-            job_status = JobStatus(**response.json())
-            self._job_is_running = job_status.is_running()
+            job_info = JobBatchInformation(**response.json())
+            self._job_is_running = job_info.status.is_running()
 
             if self.job_is_running():
                 time.sleep(1)
 
-        if job_status is None:
+        if job_info is None:
             raise RuntimeError("JobExecutor.wait_for_job_completion() can only be called once")  # pragma: no cover
 
-        if job_status.error > 0:
+        if job_info.status.error > 0:
             self.log(
                 message=f"One or more tasks failed for job id {self.job_id}",  # pragma: no cover
                 level="error",
             )
 
-        if job_status.canceled > 0:
+        if job_info.status.canceled > 0:
             self.log(
                 message=f"One or more tasks have been canceled for job id {self.job_id}",  # pragma: no cover
                 level="warning",

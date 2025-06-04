@@ -17,7 +17,7 @@ class JobTarget(BaseModel):
 
 class JobAction(BaseModel):
     value: str  # job action identifier (eg: getPipeList, downloadFile, etc.)
-    params: dict[str, Any] | None = None
+    params: Any
 
     def as_params(self) -> dict[str, Any]:
         return {
@@ -29,12 +29,12 @@ class JobTriggerResult(BaseModel):
     id: str  # job's id
     action: str  # job action identifier (eg: getPipeList, downloadFile, etc.)
     creationtime: str
-    parameters: dict[str, Any] | None = None
+    parameters: Any
 
 
 class JobStatus(BaseModel):
 
-    instance: int  # number of job actions to be executed
+    total: int  # number of job actions to be executed
 
     # status when running (in exec-time order)
     waiting: int
@@ -48,6 +48,10 @@ class JobStatus(BaseModel):
 
     def is_running(self) -> bool:
         return (self.waiting + self.running + self.injecting) > 0
+
+
+class JobBatchInformation(BaseModel):
+    status: JobStatus
 
 
 class HostnameEntry(BaseModel):

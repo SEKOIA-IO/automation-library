@@ -21,7 +21,7 @@ class GetPipeListAction(JobExecutor):
                 agent_ids=[agent.strip() for agent in target_agents.split(",") if agent.strip()] or None,
                 group_ids=[group.strip() for group in target_groups.split(",") if group.strip()] or None,
             ),
-            job=JobAction(value="getPipeList"),
+            job=JobAction(value="getPipeList", params={}),
         )
 
         return job_trigger_result.dict()
