@@ -29,7 +29,7 @@ class JobTriggerResult(BaseModel):
     id: str  # job's id
     action: str  # job action identifier (eg: getPipeList, downloadFile, etc.)
     creationtime: str
-    parameters: dict[str, Any] | None = None
+    parameters: Any
 
 
 class JobStatus(BaseModel):
