@@ -34,7 +34,7 @@ class JobTriggerResult(BaseModel):
 
 class JobStatus(BaseModel):
 
-    instance: int  # number of job actions to be executed
+    total: int  # number of job actions to be executed
 
     # status when running (in exec-time order)
     waiting: int
@@ -48,6 +48,10 @@ class JobStatus(BaseModel):
 
     def is_running(self) -> bool:
         return (self.waiting + self.running + self.injecting) > 0
+
+
+class JobBatchInformation(BaseModel):
+    status: JobStatus
 
 
 class HostnameEntry(BaseModel):
