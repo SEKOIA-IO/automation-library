@@ -137,9 +137,11 @@ class DownloadFileFromEndpointAction(JobExecutor):
         job_target = JobTarget(agent_ids=[agent_id])
         job_action = JobAction(
             value="downloadFile",
-            params={
-                "filename": path_to_download,
-            },
+            params=[
+                {
+                    "filename": path_to_download,
+                }
+            ],
         )
 
         self.trigger_job(target=job_target, job=job_action)
