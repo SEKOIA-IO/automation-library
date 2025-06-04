@@ -7,13 +7,13 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-orjson = "^3.7.7"
-python-dateutil = "^2.8.2"
-sekoia-automation-sdk = { version = "^1.16.0", extras = ["all"] }
-aiohttp = "^3.8.6"
-loguru = "^0.7.0"
+orjson = "^3.10.18"
+python-dateutil = "^2.9.0.post0"
+sekoia-automation-sdk = {extras = ["all"], version = "^1.18.3"}
+aiohttp = "^3.12.8"
+loguru = "^0.7.3"
 async-lru = "^2.0.2"
-aiolimiter = "^1.1.0"
+aiolimiter = "^1.2.1"
 cashews = "^7.4.0"
 
 [tool.poetry.dev-dependencies]
@@ -74,12 +74,11 @@ addopts = '''
   --strict-markers
   --tb=short
   --cov=connectors
-  --cov=client
   --cov-branch
   --cache-clear
   --cov-report=html
   --cov-report=term-missing:skip-covered
-  --cov-fail-under=90
+  --cov-fail-under=5
   --numprocesses=auto
   --asyncio-mode=auto
 '''

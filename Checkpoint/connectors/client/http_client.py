@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from posixpath import join as urljoin
 from typing import Any
 
+import aiohttp
+from aiohttp import ClientResponse
 from aiolimiter import AsyncLimiter
 from loguru import logger
 from sekoia_automation.aio.helpers.http.http_client import HttpClient
@@ -61,13 +63,14 @@ class CheckpointHttpClient(HttpClient):
         )
 
     async def get_harmony_mobile_alerts(
-        self, start_from: datetime = datetime.now(), limit: int = 100
+        self, start_from: datetime, end_at: datetime, limit: int = 100
     ) -> AsyncGenerator[list[dict[str, Any]], None]:
         """
         Get Harmony Mobile alerts.
 
         Args:
             start_from: datetime
+            end_at: datetime
             limit: int
 
         Returns:
@@ -75,8 +78,16 @@ class CheckpointHttpClient(HttpClient):
         """
         base_url = urljoin(self.base_url, "app/SBM")
         formatted_start_date = start_from.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        endpoint = f"/external_api/v3/alert/?backend_last_updated__gte={formatted_start_date}&limit={limit}"
-        logger.info("Fetch events with limit {0} starting from: {1}", limit, formatted_start_date)
+        formatted_end_date = end_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        endpoint = (
+            f"/external_api/v3/alert/?"
+            f"backend_last_updated__gte={formatted_start_date}&"
+            f"backend_last_updated__lte={formatted_end_date}&"
+            f"limit={limit}"
+        )
+        logger.info(
+            "Fetch events with limit {0} starting from {1} to {2}", limit, formatted_start_date, formatted_end_date
+        )
 
         token_refresher = await self.get_token_refresher(CheckpointServiceType.HARMONY_MOBILE)
 
@@ -85,11 +96,17 @@ class CheckpointHttpClient(HttpClient):
             # Because we might face a problem when expired token is used while rate limit is exceeded
             async with self.session() as session:
                 async with token_refresher.with_access_token() as token:
+                    response: ClientResponse
                     async with session.get(
                         url=f"{base_url}{endpoint}",
                         headers={"Authorization": f"Bearer {token.token.token}"},
                     ) as response:
-                        response_json = await response.json()
+                        try:
+                            response_json = await response.json()
+
+                        except aiohttp.client_exceptions.ContentTypeError:
+                            logger.error("Received non-JSON content", content=await response.text())
+                            response.raise_for_status()
 
                         # Handle situation when get response like this:
                         # {'success': False, 'message': 'Authentication required', 'forceLogout': True}

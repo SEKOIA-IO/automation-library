@@ -7,7 +7,7 @@ import pytest
 from aioresponses import aioresponses
 from faker import Faker
 
-from client.token_refresher import CheckpointServiceType, CheckpointToken, CheckpointTokenRefresher
+from connectors.client.token_refresher import CheckpointServiceType, CheckpointToken, CheckpointTokenRefresher
 
 
 @pytest.fixture
