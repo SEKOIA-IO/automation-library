@@ -1,10 +1,11 @@
 # coding: utf-8
 
 # natives
+from unittest.mock import MagicMock
+import os
 
 # third parties
-from unittest.mock import MagicMock
-
+import pytest
 import requests_mock
 
 # internals
@@ -143,3 +144,28 @@ def test_with_one_target_agent():
             "getSignaturesInfo": False,
         },
     )
+
+
+@pytest.mark.skipif(
+    """not all(map(os.environ.get, ("HARFANGLAB_URL", "HARFANGLAB_API_TOKEN", "HARFANGLAB_AGENT_ID")))""",
+)
+def test_integration_get_process_from_endpoint(symphony_storage) -> None:
+    """Live test - Run only if some envvars are present."""
+
+    action = GetProcessListAction(data_path=symphony_storage)
+    action.module.configuration = {
+        "url": os.environ["HARFANGLAB_URL"],
+        "api_token": os.environ["HARFANGLAB_API_TOKEN"],
+    }
+
+    result = action.run(
+        {
+            "target_agents": os.environ["HARFANGLAB_AGENT_ID"],
+            "target_groups": "",
+            "get_connections_list": True,
+            "get_handles_list": False,
+            "get_signatures_list": False,
+        }
+    )
+    assert result is not None
+    assert result.get("id") is not None
