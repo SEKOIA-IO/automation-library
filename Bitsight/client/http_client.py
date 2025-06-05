@@ -1,12 +1,12 @@
 """Bitsight Http Client and other helpers."""
 
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, AsyncIterator
 
 from aiohttp import BasicAuth, ClientSession
 from aiolimiter import AsyncLimiter
 from yarl import URL
-import asyncio
 
 
 class BitsightClient(object):
