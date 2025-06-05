@@ -1,0 +1,238 @@
+{
+  "name": "STIX to XSIAM",
+  "description": "Convert STIX objects to XSIAM objects",
+  "uuid": "68a6bdfa-e0bc-46c6-9580-76a2b44163b0",
+  "docker_parameters": "stix_to_xsiam_action",
+  "arguments": {
+    "title": "Arguments",
+    "type": "object",
+    "properties": {
+      "stix_objects": {
+        "title": "STIX Objects list",
+        "description": "STIX objects",
+        "type": "array"
+      },
+      "stix_objects_path": {
+        "title": "STIX Objects path",
+        "description": "STIX objects file path",
+        "type": "string"
+      },
+      "reliability_mapping": {
+        "title": "Reliability mapping",
+        "description": "Overriding reliability mapping for XSIAM objects",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "confidence": {
+              "title": "STIX Confidence",
+              "description": "STIX confidence value. Example: 80",
+              "type": "string"
+            },
+            "reliability": {
+              "title": "XSIAM Reliability",
+              "description": "XSIAM reliability value",
+              "type": "string",
+              "enum": [
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "F"
+              ]
+            }
+          },
+          "required": [
+            "confidence",
+            "reliability"
+          ]
+        },
+        "default": [
+            {
+              "confidence": "80",
+              "reliability": "A"
+            },
+            {
+                "confidence": "60",
+                "reliability": "B"
+            },
+            {
+                "confidence": "40",
+                "reliability": "C"
+            },
+            {
+                "confidence": "20",
+                "reliability": "D"
+            },
+            {
+                "confidence": "0",
+                "reliability": "E"
+            }
+        ]
+      },
+      "severity_mapping": {
+        "title": "Severity mapping",
+        "description": "Overriding severity mapping for XSIAM objects",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "confidence": {
+              "title": "STIX Confidence",
+              "description": "STIX confidence value. Example: 80",
+              "type": "string"
+            },
+            "kill_chain_phases": {
+              "title": "STIX Kill Chain Phases",
+              "description": "List of STIX kill chain phases",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "reconnaissance",
+                  "weaponization",
+                  "delivery",
+                  "exploitation",
+                  "installation",
+                  "command-and-control",
+                  "actions-on-objectives"
+                ]
+              }
+            },
+            "severity": {
+              "title": "XSIAM Severity",
+              "description": "XSIAM Severity value",
+              "type": "string",
+              "enum": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL",
+                "INFO"
+              ]
+            }
+          },
+          "required": [
+            "confidence",
+            "severity"
+          ]
+        },
+        "default": [
+            {
+              "confidence": "80",
+              "kill_chain_phases": ["exploitation", "installation", "command-and-control", "actions-on-objectives"],
+              "severity": "HIGH"
+            },
+            {
+              "confidence": "40",
+              "kill_chain_phases": [],
+              "severity": "MEDIUM"
+            },
+            {
+                "confidence": "0",
+                "kill_chain_phases": [],
+                "severity": "LOW"
+            }
+        ]
+      },
+      "comment": {
+        "title": "Comment",
+        "description": "Comment to add to the XSIAM objects",
+        "type": "string",
+        "default": "Valid from {valid_from} AND STIX Pattern: {pattern}"
+      },
+      "class_override": {
+        "title": "Class Override",
+        "description": "Override the class of the XSIAM objects",
+        "type": "string",
+        "default": "{id}"
+      }
+    },
+    "oneOf": [
+      {
+        "required": [
+          "stix_objects"
+        ]
+      },
+      {
+        "required": [
+          "stix_objects_path"
+        ]
+      }
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "The results with XSIAM objects list",
+    "type": "object",
+    "properties": {
+      "data": {
+        "description": "XSIAM objects list",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "indicator": {
+              "description": "Indicator",
+              "type": "string"
+            },
+            "type": {
+              "description": "Type",
+              "type": "string"
+            },
+            "severity": {
+              "description": "Severity",
+              "type": "string"
+            },
+            "expiration_date": {
+              "description": "Expiration Date",
+              "type": "string"
+            },
+            "comment": {
+              "description": "Comment",
+              "type": "string"
+            },
+            "reputation": {
+              "description": "Reputation",
+              "type": "string"
+            },
+            "reliability": {
+              "description": "Reliability",
+              "type": "string"
+            },
+            "class": {
+              "description": "Class",
+              "type": "string"
+            },
+            "validate": {
+              "description": "Validate",
+              "type": "string"
+            },
+            "vendors": {
+              "description": "Vendors",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "vendor_name": {
+                      "description": "Vendor name",
+                      "type": "string"
+                  },
+                  "reliability": {
+                      "description": "Vendor reliability",
+                      "type": "string"
+                  },
+                  "reputation": {
+                      "description": "Vendor reputation",
+                      "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
