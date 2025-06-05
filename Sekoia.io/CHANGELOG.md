@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-28 - 2.68.2
+
+### Fixed
+
+- Returning empty list when fetching source references failed.
+
 ## 2025-05-28 - 2.68.1
 
 ### Fixed
