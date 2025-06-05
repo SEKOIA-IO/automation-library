@@ -18,7 +18,7 @@
       },
       "resolve_sources": {
         "type": "boolean",
-        "description": "Adding x_inthreat_sources field in all objects with the resolved names of the sources",
+        "description": "Adding x_inthreat_sources field in all objects with the resolved names and confidences of the sources",
         "default": false
       }
     },

@@ -106,9 +106,14 @@ class FeedConsumptionTrigger(Trigger):
             f"api/v2/inthreat/objects?match[id]={','.join(objects_id)}",
         )
         response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
-
-        # manage the response
-        self._handle_response_error(response)
+        if not response.ok:
+            message = (
+                "Request on Sekoia.io API to fetch objects failed with status"
+                f" {response.status_code} - {response.reason},"
+                f"URL: {self.url}"
+            )
+            self.log(message=message, level="info")
+            return []
 
         # get data from the response
         data = response.json()

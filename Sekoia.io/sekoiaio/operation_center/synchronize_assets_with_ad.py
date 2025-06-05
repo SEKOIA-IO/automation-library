@@ -166,8 +166,8 @@ class SynchronizeAssetsWithAD(Action):
                 create_response = post_request(
                     endpoint="v2/asset-management/assets", json_data=json.dumps(payload_asset)
                 )
-                destination_asset = create_response.get("uuid", None)
-                if destination_asset is None:
+                destination_asset = create_response.get("uuid", "")
+                if destination_asset == "":
                     self.error("Asset creation response does not contain 'uuid'.")
 
                 # Merge found assets into the new asset
