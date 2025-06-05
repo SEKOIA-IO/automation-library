@@ -90,14 +90,14 @@
               "items": {
                 "type": "string",
                 "enum": [
-                "reconnaissance",
-                "weaponization",
-                "delivery",
-                "exploitation",
-                "installation",
-                "command-and-control",
-                "actions-on-objectives"
-              ]
+                  "reconnaissance",
+                  "weaponization",
+                  "delivery",
+                  "exploitation",
+                  "installation",
+                  "command-and-control",
+                  "actions-on-objectives"
+                ]
               }
             },
             "severity": {

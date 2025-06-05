@@ -144,6 +144,9 @@ class STIXToXSIAMAction(Action):
         kill_chain_phases_name = [phase["phase_name"] for phase in stix_obj.get("kill_chain_phases", [])]
 
         for mapping in self.severity_mapping:
+            if "kill_chain_phases" not in mapping:
+                if confidence >= int(mapping["confidence"]):
+                    return mapping["severity"]
             if (
                 confidence >= int(mapping["confidence"])
                 and not mapping["kill_chain_phases"]
