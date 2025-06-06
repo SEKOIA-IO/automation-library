@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import requests
 
@@ -28,3 +29,8 @@ class ApiError:
             data=error_data.get("error_data", "N/A"),
             message=error_data.get("error_message", "Unknown error"),
         )
+
+
+def utc_zulu_format(dt: datetime) -> str:
+    """Convert a datetime object to a UTC Zulu format string."""
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
