@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-06 - 1.3.1
+
+### Fixed
+
+- Fix cast class error when running actions
+
 ## 2025-05-20 - 1.3.0
 
 ### Changed

@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic.main import BaseModel
 
-from cortex_module.actions import ArgumentsT, PaloAltoCortexXDRAction
+from cortex_module.actions import PaloAltoCortexXDRAction
 from cortex_module.helper import format_fqdn
 
 
@@ -19,7 +19,7 @@ class XQLQueryArguments(BaseModel):
     max_wait_time: int = 60  # in seconds
 
 
-class XQLQueryAction(PaloAltoCortexXDRAction[XQLQueryArguments]):
+class XQLQueryAction(PaloAltoCortexXDRAction):
     """
     This action is used to quarantine files on endpoints.
     """
@@ -27,24 +27,26 @@ class XQLQueryAction(PaloAltoCortexXDRAction[XQLQueryArguments]):
     start_query_uri = "public_api/v1/xql/start_xql_query"
     result_query_uri = "public_api/v1/xql/get_query_result"
 
-    def run(self, arguments: XQLQueryArguments) -> dict[str, Any]:
+    def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """
         Run the XQL query action.
         """
+        model = XQLQueryArguments(**arguments)
+
         # Start the XQL query
         start_query_payload: dict[str, dict[str, Any]] = {
             "request_data": {
-                "query": arguments.query,
+                "query": model.query,
             }
         }
 
-        if arguments.tenants:
-            start_query_payload["request_data"]["tenants"] = arguments.tenants
+        if model.tenants:
+            start_query_payload["request_data"]["tenants"] = model.tenants
 
-        if arguments.timeframe_from and arguments.timeframe_to:
+        if model.timeframe_from and model.timeframe_to:
             start_query_payload["request_data"]["timeframe"] = {
-                "from": arguments.timeframe_from,
-                "to": arguments.timeframe_to,
+                "from": model.timeframe_from,
+                "to": model.timeframe_to,
             }
 
         start_query_uri = f"{format_fqdn(self.module.configuration.fqdn)}/{self.start_query_uri}"
@@ -81,7 +83,7 @@ class XQLQueryAction(PaloAltoCortexXDRAction[XQLQueryArguments]):
 
             if data_result.get("reply", {}).get("status") == "pending":
                 # Check if the maximum wait time has been reached
-                if time.time() - start_wait_time > arguments.max_wait_time:
+                if time.time() - start_wait_time > model.max_wait_time:
                     raise ValueError("Query execution timed out.")
 
                 time.sleep(10)  # Wait for 10 seconds before checking again

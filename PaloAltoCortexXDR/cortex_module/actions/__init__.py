@@ -1,18 +1,15 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Generic, TypeVar
+from typing import Any
 
-from pydantic.main import BaseModel
 from sekoia_automation.action import Action
 
 from cortex_module.base import CortexModule
 from cortex_module.client import ApiClient
 from cortex_module.helper import format_fqdn
 
-ArgumentsT = TypeVar("ArgumentsT", bound=BaseModel)
 
-
-class PaloAltoCortexXDRAction(Generic[ArgumentsT], Action):
+class PaloAltoCortexXDRAction(Action, ABC):
     """
     This is the wrapper over actions for Cortex XDR.
     """
@@ -21,7 +18,7 @@ class PaloAltoCortexXDRAction(Generic[ArgumentsT], Action):
 
     request_uri: str
 
-    def request_payload(self, arguments: ArgumentsT) -> dict[str, Any]:
+    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """
         This method is used to build the request payload.
 
@@ -55,7 +52,7 @@ class PaloAltoCortexXDRAction(Generic[ArgumentsT], Action):
 
             raise ValueError(f"Error in response: {code} - {error_message} {detailed_message}")
 
-    def run(self, arguments: ArgumentsT) -> dict[str, Any]:
+    def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
         payload = self.request_payload(arguments)
         response = self.client.post(url=self.request_url, json=payload)
 

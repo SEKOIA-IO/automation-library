@@ -1,10 +1,9 @@
-from abc import ABC
 from enum import Enum
 from typing import Any
 
 from pydantic.main import BaseModel
 
-from cortex_module.actions import ArgumentsT, PaloAltoCortexXDRAction
+from cortex_module.actions import PaloAltoCortexXDRAction
 
 
 class Status(Enum):
@@ -36,14 +35,14 @@ class UpdateAlertArguments(BaseModel):
     status: Status
 
 
-class UpdateAlertAction(PaloAltoCortexXDRAction[UpdateAlertArguments]):
+class UpdateAlertAction(PaloAltoCortexXDRAction):
     """
     This action is used to update alert.
     """
 
     request_uri = "public_api/v1/alerts/update_alerts"
 
-    def request_payload(self, arguments: UpdateAlertArguments) -> dict[str, Any]:
+    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """
         Build the request payload for the action.
 
@@ -66,9 +65,11 @@ class UpdateAlertAction(PaloAltoCortexXDRAction[UpdateAlertArguments]):
         Returns:
             dict[str, Any]: The request payload.
         """
+        model = UpdateAlertArguments(**arguments)
+
         return {
             "request_data": {
-                "alert_id_list": arguments.alert_id_list,
-                "update_data": {"severity": arguments.severity.value, "status": arguments.status.value},
+                "alert_id_list": model.alert_id_list,
+                "update_data": {"severity": model.severity.value, "status": model.status.value},
             }
         }

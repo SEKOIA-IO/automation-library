@@ -1,7 +1,7 @@
 from typing import Any
 
 import six
-from pydantic.main import BaseModel, Field
+from pydantic.main import BaseModel
 from stix2patterns.pattern import Pattern
 
 from cortex_module.actions import PaloAltoCortexXDRAction
@@ -70,7 +70,7 @@ class BlockMaliciousFilesArguments(BaseModel):
     incident_id: int
 
 
-class BlockMaliciousFilesAction(PaloAltoCortexXDRAction[BlockMaliciousFilesArguments]):
+class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
     """
     This action is used to block malicious files.
     """
@@ -81,7 +81,7 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction[BlockMaliciousFilesArgum
         "file": {"hashes.MD5": "md5", "hashes.SHA-256": "sha256"},
     }
 
-    def request_payload(self, arguments: BlockMaliciousFilesArguments) -> dict[str, Any]:
+    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """
         Build the request payload for the action.
 
@@ -102,8 +102,10 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction[BlockMaliciousFilesArgum
         Returns:
             dict[str, Any]: The request payload.
         """
+        model = BlockMaliciousFilesArguments(**arguments)
+
         # If `name`_path is inside arguments, returns the content of the file
-        stix_objects: list[dict[str, Any]] = self.json_argument("stix_objects", arguments.dict())
+        stix_objects: list[dict[str, Any]] = self.json_argument("stix_objects", model.dict())
 
         if stix_objects is None or len(stix_objects) == 0:
             self.log("Received stix_objects were empty")
@@ -124,7 +126,7 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction[BlockMaliciousFilesArgum
         return {
             "request_data": {
                 "hash_list": hashes,
-                "comment": arguments.comment,
-                "incident_id": arguments.incident_id,
+                "comment": model.comment,
+                "incident_id": model.incident_id,
             }
         }

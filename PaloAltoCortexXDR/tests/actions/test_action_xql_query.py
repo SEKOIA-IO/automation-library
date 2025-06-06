@@ -94,7 +94,7 @@ def test_run_action_success(action, arguments_without_time):
             },
         )
 
-        assert action.run(arguments_without_time) == {
+        assert action.run(arguments_without_time.dict()) == {
             "results": {
                 "data": [
                     {"key1": "value1", "key2": "value2"},
@@ -145,7 +145,7 @@ def test_run_action_success_1(action, arguments_with_time):
             ],
         )
 
-        assert action.run(arguments_with_time) == {
+        assert action.run(arguments_with_time.dict()) == {
             "results": {
                 "data": [
                     {"key1": "value1", "key2": "value2"},
@@ -195,4 +195,4 @@ def test_run_action_fail_1(action, arguments_without_time):
         )
 
         with pytest.raises(ValueError):
-            action.run(arguments_without_time)
+            action.run(arguments_without_time.dict())

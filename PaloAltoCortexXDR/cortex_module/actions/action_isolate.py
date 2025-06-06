@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic.main import BaseModel
 
-from cortex_module.actions import ArgumentsT, PaloAltoCortexXDRAction
+from cortex_module.actions import PaloAltoCortexXDRAction
 
 
 class IsolateArguments(BaseModel):
@@ -15,12 +15,12 @@ class IsolateArguments(BaseModel):
     incident_id: str | None = None
 
 
-class BaseIsolateAction(PaloAltoCortexXDRAction[IsolateArguments], ABC):
+class BaseIsolateAction(PaloAltoCortexXDRAction, ABC):
     """
     This action is used to isolate.
     """
 
-    def request_payload(self, arguments: IsolateArguments) -> dict[str, Any]:
+    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """
         Build the request payload for the action.
 
@@ -38,14 +38,16 @@ class BaseIsolateAction(PaloAltoCortexXDRAction[IsolateArguments], ABC):
         Returns:
             dict[str, Any]: The request payload.
         """
+        model = IsolateArguments(**arguments)
+
         result = {
             "request_data": {
-                "endpoint_id": arguments.endpoint_id,
+                "endpoint_id": model.endpoint_id,
             }
         }
 
-        if arguments.incident_id:
-            result["request_data"]["incident_id"] = arguments.incident_id
+        if model.incident_id:
+            result["request_data"]["incident_id"] = model.incident_id
 
         return result
 
