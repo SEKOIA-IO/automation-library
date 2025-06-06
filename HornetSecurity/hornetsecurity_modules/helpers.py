@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -34,3 +35,15 @@ class ApiError:
 def utc_zulu_format(dt: datetime) -> str:
     """Convert a datetime object to a UTC Zulu format string."""
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def create_enum(base: type, name: str, values: set[str], methods: dict[str, Callable]) -> type:
+    """
+    Create an enum class with the specified base class and names.
+    """
+    klass = base(name, list((key.upper(), key) for key in values))
+
+    for method_name, method in methods.items():
+        setattr(klass, method_name, method)
+
+    return klass
