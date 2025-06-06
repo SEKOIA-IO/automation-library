@@ -79,7 +79,7 @@ def test_run_action(action, arguments_0, arguments_1, arguments_2, arguments_3):
             },
         )
 
-        assert action.run(arguments_0) == {"result": "123"}
+        assert action.run(arguments_0.dict()) == {"result": "123"}
 
         mock.post(
             url,
@@ -99,7 +99,7 @@ def test_run_action(action, arguments_0, arguments_1, arguments_2, arguments_3):
             },
         )
 
-        assert action.run(arguments_1) == {"result": "123"}
+        assert action.run(arguments_1.dict()) == {"result": "123"}
 
         mock.post(
             url,
@@ -113,7 +113,7 @@ def test_run_action(action, arguments_0, arguments_1, arguments_2, arguments_3):
                 }
             },
         )
-        assert action.run(arguments_2) == {"result": "123"}
+        assert action.run(arguments_2.dict()) == {"result": "123"}
 
         mock.post(
             url,
@@ -131,4 +131,4 @@ def test_run_action(action, arguments_0, arguments_1, arguments_2, arguments_3):
                 }
             },
         )
-        assert action.run(arguments_3) == {"result": "123"}
+        assert action.run(arguments_3.dict()) == {"result": "123"}

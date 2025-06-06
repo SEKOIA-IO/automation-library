@@ -80,7 +80,7 @@ def test_run_isolate_action(isolate_action, arguments_0, arguments_1):
             },
         )
 
-        assert isolate_action.run(arguments_1) == {"result": "345"}
+        assert isolate_action.run(arguments_1.dict()) == {"result": "345"}
 
 
 def test_run_unisolate_action(unisolate_action, arguments_0, arguments_1):
@@ -115,4 +115,4 @@ def test_run_unisolate_action(unisolate_action, arguments_0, arguments_1):
             },
         )
 
-        assert unisolate_action.run(arguments_1) == {"result": "345"}
+        assert unisolate_action.run(arguments_1.dict()) == {"result": "345"}

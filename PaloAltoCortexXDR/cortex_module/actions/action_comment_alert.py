@@ -14,14 +14,14 @@ class CommentAlertArguments(BaseModel):
     comment: str
 
 
-class CommentAlertAction(PaloAltoCortexXDRAction[CommentAlertArguments]):
+class CommentAlertAction(PaloAltoCortexXDRAction):
     """
     This action is used to comment alert.
     """
 
     request_uri = "public_api/v1/alerts/update_alerts"
 
-    def request_payload(self, arguments: CommentAlertArguments) -> dict[str, Any]:
+    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """
         Build the request payload for the action.
 
@@ -43,6 +43,6 @@ class CommentAlertAction(PaloAltoCortexXDRAction[CommentAlertArguments]):
         Returns:
             dict[str, Any]: The request payload.
         """
-        return {
-            "request_data": {"alert_id_list": arguments.alert_id_list, "update_data": {"comment": arguments.comment}}
-        }
+        model = CommentAlertArguments(**arguments)
+
+        return {"request_data": {"alert_id_list": model.alert_id_list, "update_data": {"comment": model.comment}}}
