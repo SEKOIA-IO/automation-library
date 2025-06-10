@@ -101,6 +101,17 @@ def test_fetch_objects(trigger):
         assert objects == json["items"]
 
 
+def test_fetch_objects_error(trigger):
+    sources = ["source1", "source2"]
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            f"https://api.sekoia.io/api/v2/inthreat/objects?match[id]={','.join(sources)}", status_code=500, json={}
+        )
+
+        objects = trigger.fetch_objects(sources)
+        assert objects == []
+
+
 def test_resolve_sources(trigger):
     source_object1 = object_factory(1)
     source_object2 = object_factory(2)
