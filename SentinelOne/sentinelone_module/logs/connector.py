@@ -65,6 +65,7 @@ class SentinelOneLogsConsumer(Thread):
         result_path = self.connector.data_path / consumer_type
         new_context = result_path / "context.json"
         if not result_path.exists():
+            logger.info("Migrating context file for consumer type", consumer_type=consumer_type)
             result_path.mkdir(parents=True, exist_ok=True)
             old_context = self.connector.data_path / "context.json"
             if old_context.exists():
@@ -72,6 +73,7 @@ class SentinelOneLogsConsumer(Thread):
                     with new_context.open("w") as new_file:
                         new_file.write(old_file.read())
 
+        logger.info("Checkpoint path for consumer", consumer_type=consumer_type, path=result_path)
         return result_path
 
     def stop(self):
