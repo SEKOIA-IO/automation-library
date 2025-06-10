@@ -44,13 +44,37 @@ class SentinelOneLogsConsumer(Thread):
         self._stop_event = Event()
 
         self.cursor = CheckpointDatetime(
-            path=self.connector.data_path,
+            path=self.get_data_path(consumer_type),
             start_at=timedelta(days=1),
             ignore_older_than=timedelta(days=1),
             lock=self.connector.context_lock,
         )
         self.from_date = self.cursor.offset
         self.session_events_cache: Cache = self.load_events_cache()
+
+    def get_data_path(self, consumer_type: str) -> Path:
+        # TEMPORARY SOLUTION ONLY!
+        #
+        # Checkpoint uses data path under the hood like below:
+        # PersistentJSON("context.json", path)
+        #
+        # Where `path` is the data path of the connector
+        # As we want to split checkpoints by consumer type we should perform transitional migration
+        #
+        # So if result_path does not exists, we should copy the context.json file into it
+        result_path = self.connector.data_path / consumer_type
+        new_context = result_path / "context.json"
+        if not result_path.exists():
+            logger.info("Migrating context file for consumer type", consumer_type=consumer_type)
+            result_path.mkdir(parents=True, exist_ok=True)
+            old_context = self.connector.data_path / "context.json"
+            if old_context.exists():
+                with old_context.open("r") as old_file:
+                    with new_context.open("w") as new_file:
+                        new_file.write(old_file.read())
+
+        logger.info("Checkpoint path for consumer", consumer_type=consumer_type, path=result_path)
+        return result_path
 
     def stop(self):
         """Sets the stop event for the thread"""
@@ -313,6 +337,7 @@ class SentinelOneLogsConnector(Connector):
     @property
     def data_path(self) -> Path:
         path_to_data: Path = self._data_path
+
         return path_to_data
 
     def start_consumers(self) -> dict:
