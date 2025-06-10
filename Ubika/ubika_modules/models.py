@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field
-from sekoia_automation.module import Module
+from pydantic.v1 import BaseModel
 
 
 class UbikaModuleConfiguration(BaseModel):
