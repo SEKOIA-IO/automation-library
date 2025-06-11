@@ -20,13 +20,21 @@
         "type": "string"
       }
     },
-    "required": ["tenant_id", "client_id", "client_secret"],
-    "secrets": ["client_secret"]
+    "required": [
+      "tenant_id",
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
   },
   "description": "Azure Monitor is a comprehensive solution for collecting, analyzing, and acting on telemetry from cloud and on-premises environments to maximize the performance and availability of applications.",
   "name": "Azure Monitor",
   "slug": "azure-monitor",
-  "categories": ["Cloud Providers"],
+  "categories": [
+    "Cloud Providers"
+  ],
   "uuid": "28d53bf5-738a-42a4-8ce4-67e00195590e",
   "version": "1.0.1"
 }

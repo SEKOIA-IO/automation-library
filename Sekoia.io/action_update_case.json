@@ -18,7 +18,7 @@
         "in": "body"
       },
       "status_uuid": {
-        "description": "identifier of case’s status",
+        "description": "identifier of case\u2019s status",
         "type": "string",
         "in": "body"
       },

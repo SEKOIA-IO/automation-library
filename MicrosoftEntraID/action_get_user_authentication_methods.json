@@ -96,14 +96,14 @@
             }
           },
           "required": [
-          "id",
-          "userPrincipalName",
-          "isSsprRegistered",
-          "isSsprEnabled",
-          "isSsprCapable",
-          "isMfaRegistered",
-          "isMfaCapable",
-          "isPasswordlessCapable"
+            "id",
+            "userPrincipalName",
+            "isSsprRegistered",
+            "isSsprEnabled",
+            "isSsprCapable",
+            "isMfaRegistered",
+            "isMfaCapable",
+            "isPasswordlessCapable"
           ]
         }
       }

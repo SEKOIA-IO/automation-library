@@ -19,11 +19,11 @@
           }
         ],
         "default": null,
-         "in": "body"
+        "in": "body"
       },
       "community_uuid": {
         "format": "uuid",
-         "in": "body",
+        "in": "body",
         "type": "string"
       },
       "entity_uuid": {
@@ -59,7 +59,10 @@
         "type": "string"
       },
       "category": {
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "default": null,
         "in": "body"
       },
@@ -71,13 +74,19 @@
         "type": "integer"
       },
       "props": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "default": null,
         "description": "Attach contextual properties",
         "in": "body"
       },
       "atoms": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "default": null,
         "description": "Attach detection properties",
         "in": "body"
@@ -147,12 +156,19 @@
         "type": "string"
       },
       "category": {
-        "type": ["object", "string", "null"],
+        "type": [
+          "object",
+          "string",
+          "null"
+        ],
         "default": null,
         "description": "The category of the asset"
       },
       "criticality": {
-        "type": ["integer", "null"],
+        "type": [
+          "integer",
+          "null"
+        ],
         "default": null,
         "title": "Criticality"
       },
@@ -183,7 +199,10 @@
         "title": "Created By"
       },
       "created_by_type": {
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "default": null,
         "title": "type of the asset creator"
       },
@@ -227,12 +246,18 @@
         "title": "Last Seen"
       },
       "nb_events": {
-        "type": ["integer", "null"],
+        "type": [
+          "integer",
+          "null"
+        ],
         "default": null,
         "title": "Nb Events"
       },
       "nb_alerts": {
-        "type": ["integer", "null"],
+        "type": [
+          "integer",
+          "null"
+        ],
         "default": null,
         "title": "Nb Alerts"
       },
@@ -242,12 +267,18 @@
         "type": "integer"
       },
       "atoms": {
-        "type": ["object", "null"],   
+        "type": [
+          "object",
+          "null"
+        ],
         "default": null,
         "title": "Atoms"
       },
       "props": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "default": null,
         "title": "Props"
       },
@@ -345,17 +376,26 @@
         "title": "Rule Uuid"
       },
       "rule_version": {
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "default": null,
         "title": "Rule Version"
       },
       "criticity": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "default": null,
         "description": "The criticality of the asset"
       },
       "asset_type": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "default": null,
         "description": "The type of the asset"
       }

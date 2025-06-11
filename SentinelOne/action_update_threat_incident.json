@@ -5,7 +5,11 @@
       "status": {
         "description": "Status applied to the incident",
         "type": "string",
-        "enum": ["unresolved", "in_progress", "resolved"]
+        "enum": [
+          "unresolved",
+          "in_progress",
+          "resolved"
+        ]
       },
       "new_analyst_verdict": {
         "description": "New verdict of the analyst to set",
@@ -72,7 +76,10 @@
         }
       }
     },
-    "required": ["status", "new_analyst_verdict"],
+    "required": [
+      "status",
+      "new_analyst_verdict"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -87,7 +94,9 @@
         "type": "integer"
       }
     },
-    "required": ["affected"],
+    "required": [
+      "affected"
+    ],
     "title": "Results",
     "type": "object"
   },

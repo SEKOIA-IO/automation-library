@@ -11,7 +11,9 @@
         "type": "string"
       }
     },
-    "required": ["action_id"]
+    "required": [
+      "action_id"
+    ]
   },
   "results": {
     "type": "object",

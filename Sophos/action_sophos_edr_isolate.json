@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["endpoint_id"],
+    "required": [
+      "endpoint_id"
+    ],
     "title": "Arguments",
     "type": "object"
   },

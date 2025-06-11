@@ -1,25 +1,27 @@
 {
-    "configuration": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Fake Asset Connector",
-      "type": "object",
-      "properties": {
-        "len_data_to_send": {
-          "sekoia_base_url": "sekoia base url",
-          "type": "integer",
-          "default": 1000
-        },
-        "time_sleep": {
-          "description": "Client token",
-          "type": "integer",
-          "default": 3600
-        }
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Fake Asset Connector",
+    "type": "object",
+    "properties": {
+      "len_data_to_send": {
+        "sekoia_base_url": "sekoia base url",
+        "type": "integer",
+        "default": 1000
+      },
+      "time_sleep": {
+        "description": "Client token",
+        "type": "integer",
+        "default": 3600
       }
-    },
-    "description": "Fake Asset Connector for testing purposes",
-    "categories": ["Network"],
-    "slug": "fakeassetconnector",
-    "name": "FakeAssetConnector",
-    "uuid": "61cc14ee-8dd4-4ebd-9cdb-179f1e888d4c",
-    "version": "1.0.0"
-  }
+    }
+  },
+  "description": "Fake Asset Connector for testing purposes",
+  "categories": [
+    "Network"
+  ],
+  "slug": "fakeassetconnector",
+  "name": "FakeAssetConnector",
+  "uuid": "61cc14ee-8dd4-4ebd-9cdb-179f1e888d4c",
+  "version": "1.0.0"
+}

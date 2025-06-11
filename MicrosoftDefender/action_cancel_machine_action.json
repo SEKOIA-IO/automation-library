@@ -15,7 +15,10 @@
         "type": "string"
       }
     },
-    "required": ["action_id", "comment"]
+    "required": [
+      "action_id",
+      "comment"
+    ]
   },
   "results": {
     "type": "object",

@@ -9,10 +9,10 @@
         },
         "description": "List of alert IDs to update."
       },
-        "comment": {
-            "type": "string",
-            "description": "Comment to add to the alert."
-        }
+      "comment": {
+        "type": "string",
+        "description": "Comment to add to the alert."
+      }
     },
     "required": [
       "alert_id_list",

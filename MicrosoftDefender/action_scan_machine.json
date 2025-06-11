@@ -17,10 +17,17 @@
       "scan_type": {
         "description": "Scan Type",
         "type": "string",
-        "enum": ["Quick", "Full"]
+        "enum": [
+          "Quick",
+          "Full"
+        ]
       }
     },
-    "required": ["machine_id", "comment", "scan_type"]
+    "required": [
+      "machine_id",
+      "comment",
+      "scan_type"
+    ]
   },
   "results": {
     "type": "object",

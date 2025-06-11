@@ -21,13 +21,22 @@
         "type": "string"
       }
     },
-    "required": ["auth_base_url", "login_name", "password", "application_id"],
-    "secrets": ["password"]
+    "required": [
+      "auth_base_url",
+      "login_name",
+      "password",
+      "application_id"
+    ],
+    "secrets": [
+      "password"
+    ]
   },
   "description": "CyberArk is a cybersecurity company specializing in identity security solutions, focusing on protecting organizations from cyber threats using privileged access management and securing critical assets.",
   "name": "CyberArk",
   "slug": "cyberark",
-  "categories": ["IAM"],
+  "categories": [
+    "IAM"
+  ],
   "uuid": "14e19ab0-0335-4310-9e46-6cab9f870e99",
   "version": "0.1.1"
 }

@@ -20,7 +20,8 @@
       }
     },
     "required": [
-      "group_key", "input"
+      "group_key",
+      "input"
     ],
     "title": "Arguments",
     "type": "object"

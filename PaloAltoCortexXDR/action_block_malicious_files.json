@@ -2,13 +2,13 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-       "stix_objects_path": {
+      "stix_objects_path": {
         "description": "Filepath of the STIX objects fetched from the collection",
         "type": "string"
       },
       "comment": {
-          "type": "string",
-          "description": "Comment to add to entity."
+        "type": "string",
+        "description": "Comment to add to entity."
       },
       "incident_id": {
         "type": "integer",
