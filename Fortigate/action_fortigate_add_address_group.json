@@ -38,5 +38,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "d98acb88-88ca-4afe-95d0-b9996fe37cfc"
+  "uuid": "d98acb88-88ca-4afe-95d0-b9996fe37cfc",
+  "slug": "post_address_group"
 }

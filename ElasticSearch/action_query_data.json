@@ -38,5 +38,6 @@
     "title": "The results of the query",
     "type": "object"
   },
-  "uuid": "5514dfdf-0379-4229-a899-d8699d2d8df6"
+  "uuid": "5514dfdf-0379-4229-a899-d8699d2d8df6",
+  "slug": "execute_es|ql_query"
 }

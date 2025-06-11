@@ -20,6 +20,7 @@
       "id",
       "comment"
     ]
-  },
-  "results": {}
+},
+  "results": {},
+  "slug": "add_comment_to_threat"
 }

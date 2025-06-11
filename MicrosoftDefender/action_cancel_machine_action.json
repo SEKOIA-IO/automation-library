@@ -48,5 +48,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "cancel_machine_action"
 }

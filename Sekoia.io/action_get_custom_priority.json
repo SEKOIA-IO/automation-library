@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "8cd62b13-fc72-48b1-99df-74ccd2dc8cd9",
   "name": "Get custom priority",
   "docker_parameters": "get-custom-priority",
@@ -76,5 +76,6 @@
       "label",
       "description"
     ]
-  }
+  },
+  "slug": "get_custom_priority"
 }

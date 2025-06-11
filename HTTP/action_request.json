@@ -99,5 +99,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "40bcf3c0-aa8b-4111-9b4e-f3caffccb4e5"
+  "uuid": "40bcf3c0-aa8b-4111-9b4e-f3caffccb4e5",
+  "slug": "request_url"
 }

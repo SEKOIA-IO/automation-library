@@ -262,5 +262,6 @@
         "format": "int32"
       }
     }
-  }
+  },
+  "slug": "list_assets"
 }

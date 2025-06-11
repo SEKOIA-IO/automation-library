@@ -49,5 +49,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "56326172-afcf-4be5-b9d9-326bfce3427d"
+  "uuid": "56326172-afcf-4be5-b9d9-326bfce3427d",
+  "slug": "get_report"
 }

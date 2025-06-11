@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "4ffb485e-cf15-46e9-a95d-66f941308002",
   "name": "Get custom status",
   "docker_parameters": "get-custom-status",
@@ -76,5 +76,6 @@
       "label",
       "description"
     ]
-  }
+  },
+  "slug": "get_custom_status"
 }

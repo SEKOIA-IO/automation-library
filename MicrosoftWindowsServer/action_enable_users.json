@@ -36,5 +36,6 @@
     "title": "Result",
     "type": "object"
   },
-  "uuid": "e72cadea-d1e2-4b05-ab4c-333cba2fb724"
+  "uuid": "e72cadea-d1e2-4b05-ab4c-333cba2fb724",
+  "slug": "enable_users"
 }

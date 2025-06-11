@@ -51,5 +51,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "cfa3f6eb-1117-4174-ad92-e06a88cf7371"
+  "uuid": "cfa3f6eb-1117-4174-ad92-e06a88cf7371",
+  "slug": "scan"
 }

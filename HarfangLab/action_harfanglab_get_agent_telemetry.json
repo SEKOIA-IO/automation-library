@@ -47,5 +47,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "c95cf5c0-8d5c-425d-907f-09c9c2bb7edb"
+  "uuid": "c95cf5c0-8d5c-425d-907f-09c9c2bb7edb",
+  "slug": "get_endpoint_telemetry"
 }

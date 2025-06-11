@@ -278,5 +278,6 @@
         "description": "Date the countermeasure was created"
       }
     }
-  }
+  },
+  "slug": "activate_countermeasure"
 }

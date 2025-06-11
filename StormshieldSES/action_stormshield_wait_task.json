@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "09d13b35-9f4e-4065-b98c-bf265dcee27b",
   "name": "Wait for a Stormshield task to complete",
   "description": "Wait until the status of the task is Succeeded or Failed",
@@ -55,5 +55,6 @@
       }
     },
     "title": "Wait task completion results"
-  }
+  },
+  "slug": "wait_for_a_stormshield_task_to_complete"
 }

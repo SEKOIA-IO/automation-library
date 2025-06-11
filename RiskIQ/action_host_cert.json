@@ -56,5 +56,6 @@
         "format": "int32"
       }
     }
-  }
+  },
+  "slug": "ssl_hosts"
 }

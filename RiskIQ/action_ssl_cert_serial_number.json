@@ -55,5 +55,6 @@
         "format": "int32"
       }
     }
-  }
+  },
+  "slug": "ssl_certificates_by_serial_number"
 }

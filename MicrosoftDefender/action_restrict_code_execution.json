@@ -48,5 +48,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "restrict_code_execution"
 }

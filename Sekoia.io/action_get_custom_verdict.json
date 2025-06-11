@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "c37221b2-5bbf-46eb-ba16-fb618f7b5282",
   "name": "Get custom verdict",
   "docker_parameters": "get-custom-verdict",
@@ -76,5 +76,6 @@
       "label",
       "description"
     ]
-  }
+  },
+  "slug": "get_custom_verdict"
 }

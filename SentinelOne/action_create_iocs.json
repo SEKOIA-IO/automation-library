@@ -157,5 +157,6 @@
       }
     }
   },
-  "uuid": "3483ff12-8b2e-4614-b9b0-5f6019cb2678"
+  "uuid": "3483ff12-8b2e-4614-b9b0-5f6019cb2678",
+  "slug": "create_iocs_from_stix_bundle"
 }

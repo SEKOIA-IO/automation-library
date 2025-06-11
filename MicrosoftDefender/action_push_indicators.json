@@ -52,5 +52,6 @@
     "title": "Arguments",
     "type": "object"
   },
-  "results": {}
+  "results": {},
+  "slug": "create_iocs_from_stix_bundle"
 }

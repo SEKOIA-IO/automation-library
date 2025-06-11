@@ -17,5 +17,6 @@
   "docker_parameters": "sophos_edr_deisolate_endpoint",
   "name": "[BETA] Deisolate endpoint",
   "results": {},
-  "uuid": "258030ab-8275-4056-877e-105cb74de49d"
+  "uuid": "258030ab-8275-4056-877e-105cb74de49d",
+  "slug": "deisolate_endpoint"
 }

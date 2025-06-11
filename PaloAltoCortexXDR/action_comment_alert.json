@@ -25,5 +25,6 @@
   "docker_parameters": "comment_alert",
   "name": "Comment alerts",
   "results": {},
-  "uuid": "b1bf4542-9f3f-4760-a1fc-a5b2349407cb"
+  "uuid": "b1bf4542-9f3f-4760-a1fc-a5b2349407cb",
+  "slug": "comment_alerts"
 }

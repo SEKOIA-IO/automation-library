@@ -58,5 +58,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "update_alert_status_by_name"
 }

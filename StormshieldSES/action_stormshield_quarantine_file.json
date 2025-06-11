@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "efddd609-924f-4aad-a508-0955a4c8081f",
   "name": "Quarantine file",
   "description": "Quarantine a file",
@@ -64,5 +64,6 @@
       }
     },
     "title": "Quarantine file results"
-  }
+  },
+  "slug": "quarantine_file"
 }

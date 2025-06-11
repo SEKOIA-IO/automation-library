@@ -68,5 +68,6 @@
     ],
     "title": "Results",
     "type": "object"
-  }
+  },
+  "slug": "scan"
 }

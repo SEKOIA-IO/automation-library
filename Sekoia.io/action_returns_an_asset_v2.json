@@ -302,5 +302,6 @@
       "name",
       "type"
     ]
-  }
+  },
+  "slug": "get_assetv2"
 }

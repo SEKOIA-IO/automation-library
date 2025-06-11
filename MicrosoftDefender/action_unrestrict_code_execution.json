@@ -48,5 +48,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "unrestrict_code_execution"
 }

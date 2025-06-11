@@ -17,6 +17,7 @@
     "required": [
       "case_uuid"
     ]
-  },
-  "results": {}
+},
+  "results": {},
+  "slug": "delete_case"
 }

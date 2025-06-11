@@ -51,5 +51,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "8fcb7d3f-2cb7-474f-8727-dc5ba13eebea"
+  "uuid": "8fcb7d3f-2cb7-474f-8727-dc5ba13eebea",
+  "slug": "run_bq_query"
 }

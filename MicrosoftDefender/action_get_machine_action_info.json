@@ -43,5 +43,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "get_action_info"
 }

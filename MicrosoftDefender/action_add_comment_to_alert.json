@@ -28,5 +28,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "comment_alert"
 }

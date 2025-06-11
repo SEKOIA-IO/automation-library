@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "a93e9854-09f1-4b52-851c-8d878121b716",
   "name": "Isolate agent",
   "description": "Isolate an agent",
@@ -63,5 +63,6 @@
       }
     },
     "title": "Isolate agent results"
-  }
+  },
+  "slug": "isolate_endpoint"
 }

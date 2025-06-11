@@ -35,6 +35,7 @@
       "new_status",
       "update_by_query"
     ]
-  },
-  "results": {}
+},
+  "results": {},
+  "slug": "update_threat_status"
 }

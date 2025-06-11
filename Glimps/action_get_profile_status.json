@@ -35,5 +35,6 @@
       "cache",
       "estimated_analysis_duration"
     ]
-  }
+  },
+  "slug": "get_profile_status"
 }

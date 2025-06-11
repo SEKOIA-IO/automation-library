@@ -21,5 +21,6 @@
   "docker_parameters": "unisolate_endpoint",
   "name": "Unisolate endpoint",
   "results": {},
-  "uuid": "92e371f6-8dc4-4698-ab44-523ff05475a9"
+  "uuid": "92e371f6-8dc4-4698-ab44-523ff05475a9",
+  "slug": "unisolate_endpoint"
 }

@@ -60,5 +60,6 @@
     "title": "The results of the query",
     "type": "object"
   },
-  "uuid": "ffc79e47-1f87-4552-8b9c-21355d0f2fd5"
+  "uuid": "ffc79e47-1f87-4552-8b9c-21355d0f2fd5",
+  "slug": "query_logs"
 }

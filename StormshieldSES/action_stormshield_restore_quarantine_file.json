@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "aca0d08c-eb0e-41b0-94b2-8c763c3958a6",
   "name": "Restore quarantine file",
   "description": "Restore stormshield quarantined file",
@@ -64,5 +64,6 @@
       }
     },
     "title": "Restore quarantine file results"
-  }
+  },
+  "slug": "restore_quarantine_file"
 }

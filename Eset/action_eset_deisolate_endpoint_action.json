@@ -46,5 +46,6 @@
     ],
     "title": "Results",
     "type": "object"
-  }
+  },
+  "slug": "deisolate_endpoints"
 }

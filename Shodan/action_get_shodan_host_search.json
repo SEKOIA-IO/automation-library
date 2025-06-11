@@ -137,5 +137,6 @@
         "type": "integer"
       }
     }
-  }
+  },
+  "slug": "search_host"
 }

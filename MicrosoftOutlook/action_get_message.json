@@ -21,5 +21,6 @@
       }
     }
   },
-  "results": {}
+  "results": {},
+  "slug": "get_message"
 }

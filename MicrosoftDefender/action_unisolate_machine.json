@@ -48,5 +48,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "deisolate_endpoint"
 }

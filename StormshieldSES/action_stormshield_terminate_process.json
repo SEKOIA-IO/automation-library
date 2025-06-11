@@ -1,4 +1,4 @@
-{
+ {
   "uuid": "6d948fb8-f738-43d8-b3bb-b3aa847ba4f7",
   "name": "Terminate process",
   "description": "Terminate a process",
@@ -64,5 +64,6 @@
       }
     },
     "title": "Terminate process results"
-  }
+  },
+  "slug": "kill_process"
 }

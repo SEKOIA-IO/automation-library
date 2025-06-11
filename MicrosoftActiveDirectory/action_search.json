@@ -54,5 +54,6 @@
         "type": "object"
       }
     }
-  }
+  },
+  "slug": "search_in_ad"
 }

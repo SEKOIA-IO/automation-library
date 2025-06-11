@@ -239,5 +239,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "stix_to_xsiam"
 }
