@@ -94,3 +94,18 @@ def remove_duplicates(events: list[dict[str, Any]], events_cache: Cache, fieldna
             events_cache[event[fieldname]] = True
 
     return result
+
+
+def normalize_uri(uri: str) -> str:
+    """
+    Normalize a URI by ensuring it starts with "https://".
+    """
+    uri = uri.rstrip("/")  # Remove trailing slashes
+
+    if uri.startswith("http://"):
+        uri = uri.replace("http://", "https://", 1)
+
+    if not uri.startswith("https://"):
+        uri = f"https://{uri}"
+
+    return uri

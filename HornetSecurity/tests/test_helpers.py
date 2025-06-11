@@ -12,6 +12,7 @@ from hornetsecurity_modules.helpers import (
     load_events_cache,
     save_events_cache,
     remove_duplicates,
+    normalize_uri,
 )
 
 
@@ -136,3 +137,16 @@ def test_remove_duplicates():
     assert len(unique_events) == 2
     assert unique_events[0]["id"] == "event2"
     assert unique_events[1]["id"] == "event3"
+
+
+@pytest.mark.parametrize(
+    "uri, expected",
+    [
+        ("http://example.com/", "https://example.com"),
+        ("https://example.com/path", "https://example.com/path"),
+        ("example.com:8080", "https://example.com:8080"),
+    ],
+)
+def test_normalize_uri(uri, expected):
+    normalized_uri = normalize_uri(uri)
+    assert normalized_uri == expected
