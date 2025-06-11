@@ -56,8 +56,6 @@ class PaloAltoCortexXDRAction(Action, ABC):
         payload = self.request_payload(arguments)
         response = self.client.post(url=self.request_url, json=payload)
 
-        response.raise_for_status()
-
         result: dict[str, Any] = response.json()
         self.handle_error_result(result)
 
