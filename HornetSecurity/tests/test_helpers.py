@@ -1,10 +1,18 @@
 from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, patch
 
+from sekoia_automation.storage import PersistentJSON
 import pytest
 import requests
 
-from hornetsecurity_modules.helpers import ApiError, utc_zulu_format, create_enum
+from hornetsecurity_modules.helpers import (
+    ApiError,
+    utc_zulu_format,
+    create_enum,
+    load_events_cache,
+    save_events_cache,
+    remove_duplicates,
+)
 
 
 def test_api_error_from_response():
@@ -60,7 +68,10 @@ def test_api_error_from_response_with_invalid_details():
     "dt, expected",
     [
         (datetime(2023, 10, 1, 12, 0, 0, tzinfo=timezone.utc), "2023-10-01T12:00:00Z"),
-        (datetime(2023, 10, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=-5))), "2023-10-01T17:00:00Z"),
+        (
+            datetime(2023, 10, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=-5))),
+            "2023-10-01T17:00:00Z",
+        ),
     ],
 )
 def test_utc_zulu_format(dt, expected):
@@ -83,3 +94,45 @@ def test_create_enum():
     assert TestEnum.KEY2 == "key2"
     assert int(TestEnum.KEY1) == 1
     assert issubclass(TestEnum, StrEnum)
+
+
+def test_save_events_cache(data_storage):
+    context = PersistentJSON("cache.json", data_storage)
+    events_cache = {"event1": True, "event2": True}
+
+    save_events_cache(events_cache, context)
+
+    with context as cache:
+        saved_cache = cache.get("events_cache", [])
+
+    assert saved_cache == list(events_cache.keys())
+
+
+def test_load_events_cache(data_storage):
+    context = PersistentJSON("cache.json", data_storage)
+    events_cache = {"event1": True, "event2": True}
+
+    with context as cache:
+        cache["events_cache"] = list(events_cache.keys())
+
+    loaded_cache = load_events_cache(context)
+
+    assert len(loaded_cache) == len(events_cache)
+    assert "event1" in loaded_cache
+    assert "event2" in loaded_cache
+
+
+def test_remove_duplicates():
+    events = [
+        {"id": "event1", "data": "data1"},  # already in cache
+        {"id": "event2", "data": "data2"},
+        {"id": "event3", "data": "data1"},
+        {"id": "event2", "data": "data1"},  # duplicate
+    ]
+    events_cache = {"event1": True}
+
+    unique_events = remove_duplicates(events, events_cache, "id")
+
+    assert len(unique_events) == 2
+    assert unique_events[0]["id"] == "event2"
+    assert unique_events[1]["id"] == "event3"

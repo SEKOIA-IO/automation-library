@@ -1,7 +1,10 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any
 
+from cachetools import Cache, LRUCache
+from sekoia_automation.storage import PersistentJSON
 import requests
 
 
@@ -47,3 +50,47 @@ def create_enum(base: type, name: str, values: set[str], methods: dict[str, Call
         setattr(klass, method_name, method)
 
     return klass
+
+
+def load_events_cache(context: PersistentJSON, maxsize: int = 1000) -> Cache:
+    """
+    Load the cache from the context
+    """
+    result: LRUCache = LRUCache(maxsize=maxsize)
+
+    with context as cache:
+        events_ids = cache.get("events_cache", [])
+
+    for event_id in events_ids:
+        result[event_id] = 1
+
+    return result
+
+
+def save_events_cache(events_cache: Cache, context: PersistentJSON) -> None:
+    """
+    Save the cache to the context
+    """
+    with context as cache:
+        cache["events_cache"] = list(events_cache.keys())
+
+
+def remove_duplicates(events: list[dict[str, Any]], events_cache: Cache, fieldname: str) -> list[dict[str, Any]]:
+    """
+    Remove duplicates events from the fetched events and update the cache with new ids.
+
+    Args:
+        events: list[dict[str, Any]]
+
+    Returns:
+        list[dict[str, Any]]:
+    """
+    result = []
+
+    # Iterate through the events and check if the event ID is already in the cache.
+    for event in events:
+        if event[fieldname] not in events_cache:
+            result.append(event)
+            events_cache[event[fieldname]] = True
+
+    return result
