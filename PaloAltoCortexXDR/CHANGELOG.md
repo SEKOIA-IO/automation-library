@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-06-06 - 1.3.2
+## 2025-06-11 - 1.3.3
+
+### Fixed
+
+- Fix duplicate hashes in payload
+- Delete useless line
+
+## 2025-06-11 - 1.3.2
 
 ### Fixed
 

@@ -117,6 +117,11 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
             stix_result = transform_stix(stix_object=value, supported_types_map=self.supported_stix_types)
 
             for ioc in stix_result:
+                hash_value = ioc["value"]
+
+                if hash_value in hashes:
+                    continue
+
                 # Add the hash to the list
                 hashes.append(ioc["value"])
 
