@@ -5,11 +5,11 @@
     "type": "object",
     "properties": {}
   },
-  "description": "Palo Alto XSIAM Module",
-  "name": "XSIAM",
+  "description": "Palo Alto Cortex XSIAM is Palo Alto Networks’ security analytics platform that unifies SIEM, XDR, threat intelligence and SOAR for real-time detection and response.",
+  "name": "Palo Alto Cortex XSIAM",
   "uuid": "537e1880-5b6c-4b46-ae6c-f228cfc6c6e4",
   "slug": "paloalto_xsiam",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "categories": [
     "Endpoint"
   ]
