@@ -74,7 +74,7 @@ class Checkpoint(BaseModel):
 
         next_day = last_seen + timedelta(days=1)
         now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0)
-        if now >= next_day > last_seen:
+        if next_day <= now:
             company_checkpoint.last_seen = next_day.strftime("%Y-%m-%d")
             company_checkpoint.offset = 1
 
