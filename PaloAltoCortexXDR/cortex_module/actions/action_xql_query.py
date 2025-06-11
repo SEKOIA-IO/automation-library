@@ -25,7 +25,7 @@ class XQLQueryAction(PaloAltoCortexXDRAction):
     """
 
     start_query_uri = "public_api/v1/xql/start_xql_query"
-    result_query_uri = "public_api/v1/xql/get_query_result"
+    result_query_uri = "public_api/v1/xql/get_query_results"
 
     def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """

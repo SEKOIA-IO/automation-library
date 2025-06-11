@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-06 - 1.3.2
+
+### Fixed
+
+- Fix small typo on query action endpoint
+
 ## 2025-06-06 - 1.3.1
 
 ### Fixed

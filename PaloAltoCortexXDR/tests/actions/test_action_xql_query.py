@@ -48,7 +48,7 @@ def arguments_with_time() -> XQLQueryArguments:
 def test_run_action_success(action, arguments_without_time):
     fqdn = action.module.configuration.fqdn
     url_start_query = f"https://api-{fqdn}/public_api/v1/xql/start_xql_query"
-    url_result_query = f"https://api-{fqdn}/public_api/v1/xql/get_query_result"
+    url_result_query = f"https://api-{fqdn}/public_api/v1/xql/get_query_results"
 
     with requests_mock.Mocker() as mock:
         mock.post(
@@ -108,7 +108,7 @@ def test_run_action_success(action, arguments_without_time):
 def test_run_action_success_1(action, arguments_with_time):
     fqdn = action.module.configuration.fqdn
     url_start_query = f"https://api-{fqdn}/public_api/v1/xql/start_xql_query"
-    url_result_query = f"https://api-{fqdn}/public_api/v1/xql/get_query_result"
+    url_result_query = f"https://api-{fqdn}/public_api/v1/xql/get_query_results"
 
     with requests_mock.Mocker() as mock:
         mock.post(
@@ -159,7 +159,7 @@ def test_run_action_success_1(action, arguments_with_time):
 def test_run_action_fail_1(action, arguments_without_time):
     fqdn = action.module.configuration.fqdn
     url_start_query = f"https://api-{fqdn}/public_api/v1/xql/start_xql_query"
-    url_result_query = f"https://api-{fqdn}/public_api/v1/xql/get_query_result"
+    url_result_query = f"https://api-{fqdn}/public_api/v1/xql/get_query_results"
 
     with requests_mock.Mocker() as mock:
         mock.post(
