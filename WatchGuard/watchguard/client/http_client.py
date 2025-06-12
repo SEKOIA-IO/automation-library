@@ -80,7 +80,9 @@ class WatchGuardClient(object):
 
             result: str | None = data.get("access_token")
             if not result:
-                raise ValueError("WatchGuard auth response does not contain a access token. Response: {}".format(data))
+                raise ValueError(
+                    f"WatchGuard auth response does not contain a access token. Response: {data}"
+                )
 
         return result
 
