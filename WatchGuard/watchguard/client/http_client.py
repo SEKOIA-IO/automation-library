@@ -39,50 +39,26 @@ class WatchGuardClient(object):
             config: WatchGuardClientConfig
         """
         self.config = config
-        if not self._rate_limiter_second:
-            self.set_rate_limiter_second(AsyncLimiter(max_rate=500, time_period=1))  # 500 requests per second
+        self._rate_limiter_second = AsyncLimiter(max_rate=500, time_period=1)  # 500 requests per second
+        self._rate_limiter_daily = AsyncLimiter(max_rate=200_000, time_period=86400)  # 200,000 requests per day
 
-        if not self._rate_limiter_daily:
-            self.set_rate_limiter_daily(AsyncLimiter(max_rate=200_000, time_period=86400))  # 200,000 requests per day
-
-    @classmethod
-    def set_rate_limiter_daily(cls, rate_limiter: AsyncLimiter) -> None:
-        """
-        Set rate limiter.
-
-        Args:
-            rate_limiter:
-        """
-        cls._rate_limiter_daily = rate_limiter
-
-    @classmethod
-    def set_rate_limiter_second(cls, rate_limiter: AsyncLimiter) -> None:
-        """
-        Set rate limiter.
-
-        Args:
-            rate_limiter:
-        """
-        cls._rate_limiter_second = rate_limiter
-
-    @classmethod
     @asynccontextmanager
-    async def session(cls) -> AsyncGenerator[ClientSession, None]:
+    async def session(self) -> AsyncGenerator[ClientSession, None]:
         """
         Get configured session with rate limiter.
 
         Returns:
             AsyncGenerator[ClientSession, None]:
         """
-        if cls._session is None:
-            cls._session = ClientSession()
+        if self._session is None:
+            self._session = ClientSession()
 
-        if cls._rate_limiter_daily and cls._rate_limiter_second:
-            async with cls._rate_limiter_daily:
-                async with cls._rate_limiter_second:
-                    yield cls._session
+        if self._rate_limiter_daily and self._rate_limiter_second:
+            async with self._rate_limiter_daily:
+                async with self._rate_limiter_second:
+                    yield self._session
         else:
-            yield cls._session
+            yield self._session
 
     async def fetch_auth_token(self) -> str:
         """
