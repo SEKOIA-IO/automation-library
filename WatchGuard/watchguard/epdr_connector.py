@@ -90,10 +90,7 @@ class WatchGuardEpdrConnector(AsyncConnector):
             last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
 
             # We don't retrieve messages older than 1 hour
-            if last_event_date < one_hour_ago:
-                return one_hour_ago
-
-            return last_event_date
+            return max(last_event_date, one_hour_ago)
 
     async def get_watchguard_events(self) -> int:
         total_records = 0
