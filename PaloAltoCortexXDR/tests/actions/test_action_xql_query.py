@@ -78,8 +78,7 @@ def test_run_action_success(action, arguments_without_time):
                         "data": [
                             {"key1": "value1", "key2": "value2"},
                             {"key1": "value3", "key2": "value4"},
-                        ],
-                        "total_count": 2,
+                        ]
                     },
                 }
             },
@@ -95,13 +94,10 @@ def test_run_action_success(action, arguments_without_time):
         )
 
         assert action.run(arguments_without_time.dict()) == {
-            "results": {
-                "data": [
-                    {"key1": "value1", "key2": "value2"},
-                    {"key1": "value3", "key2": "value4"},
-                ],
-                "total_count": 2,
-            }
+            "results": [
+                {"key1": "value1", "key2": "value2"},
+                {"key1": "value3", "key2": "value4"},
+            ]
         }
 
 
@@ -137,7 +133,6 @@ def test_run_action_success_1(action, arguments_with_time):
                                     {"key1": "value1", "key2": "value2"},
                                     {"key1": "value3", "key2": "value4"},
                                 ],
-                                "total_count": 2,
                             },
                         }
                     },
@@ -146,13 +141,10 @@ def test_run_action_success_1(action, arguments_with_time):
         )
 
         assert action.run(arguments_with_time.dict()) == {
-            "results": {
-                "data": [
-                    {"key1": "value1", "key2": "value2"},
-                    {"key1": "value3", "key2": "value4"},
-                ],
-                "total_count": 2,
-            }
+            "results": [
+                {"key1": "value1", "key2": "value2"},
+                {"key1": "value3", "key2": "value4"},
+            ]
         }
 
 

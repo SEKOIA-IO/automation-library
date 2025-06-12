@@ -279,7 +279,6 @@ def test_run_action(action, arguments):
                 "request_data": {
                     "hash_list": [
                         "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
-                        "ab03a48a29967e738583140e6eb84f0b",
                     ],
                     "comment": arguments.comment,
                     "incident_id": arguments.incident_id,

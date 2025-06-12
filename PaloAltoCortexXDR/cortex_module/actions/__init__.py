@@ -48,7 +48,7 @@ class PaloAltoCortexXDRAction(Action, ABC):
         if reply.get("err_code"):
             code = result["reply"]["err_code"]
             error_message = result["reply"].get("err_msg", "Unknown error")
-            detailed_message = result["reply"].get("err_extra", {}).get("err_msg", "")
+            detailed_message = result["reply"].get("err_extra", "")
 
             raise ValueError(f"Error in response: {code} - {error_message} {detailed_message}")
 
