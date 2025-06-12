@@ -132,7 +132,7 @@ class WatchGuardEpdrConnector(AsyncConnector):
         return total_records
 
     def run(self) -> None:  # pragma: no cover
-        """Runs Salesforce."""
+        """Runs WatchGuard EPDR."""
         while self.running:
             try:
                 loop = asyncio.get_event_loop()
