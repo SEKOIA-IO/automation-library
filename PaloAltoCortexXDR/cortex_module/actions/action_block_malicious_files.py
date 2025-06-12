@@ -78,7 +78,7 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
     request_uri = "public_api/v1/hash_exceptions/blocklist"
 
     supported_stix_types = {
-        "file": {"hashes.MD5": "md5", "hashes.SHA-256": "sha256"},
+        "file": {"hashes.SHA-256": "sha256"},
     }
 
     def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
