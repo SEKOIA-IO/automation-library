@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from sekoia_automation.storage import PersistentJSON
 import pytest
@@ -13,6 +13,8 @@ from hornetsecurity_modules.helpers import (
     save_events_cache,
     remove_duplicates,
     normalize_uri,
+    range_offset_limit,
+    has_more_emails,
 )
 
 
@@ -150,3 +152,27 @@ def test_remove_duplicates():
 def test_normalize_uri(uri, expected):
     normalized_uri = normalize_uri(uri)
     assert normalized_uri == expected
+
+
+def test_range_offset_limit():
+    offset = 10
+    limit = 5
+    ranges = range_offset_limit(offset, limit)
+
+    assert next(ranges) == (10, 5)
+    assert next(ranges) == (15, 5)
+    assert next(ranges) == (20, 5)
+
+
+@pytest.mark.parametrize(
+    "total_emails, offset, limit, expected",
+    [
+        (100, 0, 90, True),  # Has more elements
+        (90, 0, 100, False),  # Reached the limit
+        (130, 0, 130, False),  # Reached the limit
+        (130, 130, 130, False),  # Reached the limit
+    ],
+)
+def test_has_more_emails(total_emails: int, offset: int, limit: int, expected: bool):
+    result = has_more_emails(total_emails, offset, limit)
+    assert result == expected

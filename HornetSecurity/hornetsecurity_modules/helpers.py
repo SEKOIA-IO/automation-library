@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -109,3 +109,34 @@ def normalize_uri(uri: str) -> str:
         uri = f"https://{uri}"
 
     return uri
+
+
+def range_offset_limit(offset: int, limit: int) -> Generator[tuple[int, int], None, None]:
+    """
+    Generate ranges of (offset, limit) pairs for pagination.
+
+    Args:
+        offset: The starting point for the range.
+        limit: The number of items per page.
+
+    Yields:
+        tuple[int, int]: A tuple containing the offset and limit.
+    """
+    while True:
+        yield offset, limit
+        offset += limit
+
+
+def has_more_emails(total_emails: int, offset: int, limit: int) -> bool:
+    """
+    Determine if there are more emails to fetch based on the total emails, the current offset and the limit.
+
+    Args:
+        total_emails: The total number of emails available.
+        offset: The current offset in the email list.
+        limit: The maximum number of emails to fetch in one request.
+
+    Returns:
+        bool: True if there are more emails to fetch, False otherwise.
+    """
+    return offset + limit < total_emails
