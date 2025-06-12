@@ -30,7 +30,7 @@ def _get_event_date(record: dict[str, Any]) -> datetime:
     if not date:
         raise ValueError(f"Record does not contain a valid date field: {record}")
 
-    return isoparse(date).replace(tzinfo=timezone.utc)
+    return isoparse(date).astimezone(timezone.utc)
 
 
 class WatchGuardEdrConnectorConfig(DefaultConnectorConfiguration):
