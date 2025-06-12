@@ -50,5 +50,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "update_alert_status"
 }

@@ -46,5 +46,6 @@
     "required": [],
     "title": "Results",
     "type": "object"
-  }
+  },
+  "slug": "config_to_observables"
 }

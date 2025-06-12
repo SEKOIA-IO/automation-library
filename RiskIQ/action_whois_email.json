@@ -39,5 +39,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "reverse_email"
 }

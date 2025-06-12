@@ -92,5 +92,6 @@
     },
     "title": "Results",
     "type": "object"
-  }
+  },
+  "slug": "create_an_alert_in_the_hive_v5"
 }

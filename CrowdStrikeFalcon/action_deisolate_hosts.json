@@ -20,5 +20,6 @@
   "docker_parameters": "deisolate_hosts",
   "name": "Deisolate hosts",
   "results": {},
-  "uuid": "e4b13855-15fa-48d9-9017-89aed01fd065"
+  "uuid": "e4b13855-15fa-48d9-9017-89aed01fd065",
+  "slug": "deisolate_endpoints"
 }

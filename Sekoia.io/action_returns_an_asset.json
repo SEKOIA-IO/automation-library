@@ -181,5 +181,6 @@
       "updated_at",
       "uuid"
     ]
-  }
+  },
+  "slug": "get_asset"
 }

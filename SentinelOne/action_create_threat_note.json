@@ -72,5 +72,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "ec11369d-142e-4cdf-a5d8-0cd6b9f3198b"
+  "uuid": "ec11369d-142e-4cdf-a5d8-0cd6b9f3198b",
+  "slug": "create_threat_note"
 }

@@ -30,5 +30,6 @@
   "docker_parameters": "fortigate_add_fqdn",
   "name": "Post Fortigate FQDN Address",
   "results": {},
-  "uuid": "288a52f2-6994-419f-884c-d15f81a31cfc"
+  "uuid": "288a52f2-6994-419f-884c-d15f81a31cfc",
+  "slug": "post_fqdn_address"
 }

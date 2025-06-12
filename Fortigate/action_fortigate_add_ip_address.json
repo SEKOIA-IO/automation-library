@@ -30,5 +30,6 @@
   "docker_parameters": "fortigate_add_ip_address",
   "name": "Post Fortigate IP Address",
   "results": {},
-  "uuid": "377a9c54-6bb6-40e3-8753-80cbc5b59c60"
+  "uuid": "377a9c54-6bb6-40e3-8753-80cbc5b59c60",
+  "slug": "post_ip_address"
 }

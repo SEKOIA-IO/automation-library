@@ -12,10 +12,15 @@
         "type": "string"
       }
     },
-    "required": ["url", "api_token"],
+    "required": [
+      "url",
+      "api_token"
+    ],
     "title": "Stormshield Arguments",
     "type": "object",
-    "secrets": ["api_token"]
+    "secrets": [
+      "api_token"
+    ]
   },
   "description": "Stormshield SES is designed to protect endpoints such as desktops, laptops, and servers against a variety of threats and cyberattacks.",
   "name": "Stormshield SES",

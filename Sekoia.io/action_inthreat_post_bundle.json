@@ -61,5 +61,6 @@
       "content_proposal_id"
     ]
   },
-  "uuid": "640586e4-9111-4ca8-b824-ca65b1d3f2ef"
+  "uuid": "640586e4-9111-4ca8-b824-ca65b1d3f2ef",
+  "slug": "create_content_proposal"
 }

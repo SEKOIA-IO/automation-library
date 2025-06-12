@@ -21,5 +21,6 @@
   "docker_parameters": "isolate_endpoint",
   "name": "Isolate endpoint",
   "results": {},
-  "uuid": "ff36ce84-de4e-431e-a68c-4a587722e898"
+  "uuid": "ff36ce84-de4e-431e-a68c-4a587722e898",
+  "slug": "isolate_endpoint"
 }

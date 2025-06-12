@@ -33,5 +33,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "search_dataleaks_by_email"
 }

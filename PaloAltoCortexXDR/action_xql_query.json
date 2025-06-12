@@ -2,7 +2,7 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-       "query": {
+      "query": {
         "description": "XQL query to run.",
         "type": "string"
       },
@@ -37,5 +37,6 @@
   "docker_parameters": "xql_query",
   "name": "XQL query",
   "results": {},
-  "uuid": "f58d2f9f-2006-469b-a389-48d775085365"
+  "uuid": "f58d2f9f-2006-469b-a389-48d775085365",
+  "slug": "xql_query"
 }

@@ -47,5 +47,6 @@
     "required": [
       "response"
     ]
-  }
+  },
+  "slug": "ask_gpt"
 }

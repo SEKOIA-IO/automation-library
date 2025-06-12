@@ -250,5 +250,6 @@
       "updated_at",
       "uuid"
     ]
-  }
+  },
+  "slug": "create_asset"
 }

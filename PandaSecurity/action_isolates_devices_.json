@@ -50,5 +50,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "isolate_endpoints"
 }

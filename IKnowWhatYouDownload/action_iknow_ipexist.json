@@ -43,5 +43,6 @@
     "known": "the IP address is known to IKnowWhatYouDownload",
     "unknown": "the IP address is unknown to IKnowWhatYouDownload"
   },
-  "uuid": "f5d6d623-8e3d-4d8e-8843-19058812b8f9"
+  "uuid": "f5d6d623-8e3d-4d8e-8843-19058812b8f9",
+  "slug": "check_ip_existence"
 }

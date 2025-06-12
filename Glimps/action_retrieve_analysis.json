@@ -345,5 +345,6 @@
         ]
       }
     }
-  }
+  },
+  "slug": "retrieve_analysis"
 }

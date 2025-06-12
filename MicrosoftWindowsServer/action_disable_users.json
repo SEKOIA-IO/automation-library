@@ -36,5 +36,6 @@
     "title": "Result",
     "type": "object"
   },
-  "uuid": "ebbc2c31-81de-4fea-bba2-bce8d83a2058"
+  "uuid": "ebbc2c31-81de-4fea-bba2-bce8d83a2058",
+  "slug": "disable_users"
 }

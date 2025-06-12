@@ -6,7 +6,10 @@
   "arguments": {
     "title": "ApplicationArguments",
     "type": "object",
-    "required": ["user", "message_id"],
+    "required": [
+      "user",
+      "message_id"
+    ],
     "properties": {
       "user": {
         "description": "The identifier or the principal name of the user",
@@ -18,5 +21,6 @@
       }
     }
   },
-  "results": {}
+  "results": {},
+  "slug": "delete_a_message"
 }

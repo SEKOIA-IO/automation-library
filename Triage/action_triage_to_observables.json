@@ -45,5 +45,6 @@
     "title": "Results (observables)",
     "type": "object"
   },
-  "uuid": "2ab0c09a-5f11-4730-8ee1-183a480ff323"
+  "uuid": "2ab0c09a-5f11-4730-8ee1-183a480ff323",
+  "slug": "triage_to_observables"
 }

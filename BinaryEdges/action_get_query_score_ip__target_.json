@@ -578,5 +578,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "get_score"
 }

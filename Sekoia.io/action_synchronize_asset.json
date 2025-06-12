@@ -1,57 +1,67 @@
 {
-    "name": "Synchronize Assets with AD",
-    "description": "Create, merge and edit asset to synchronize asset with ad",
-    "uuid": "b18366f8-cab0-4bf6-b9e2-6bf19627a1e1",
-    "docker_parameters": "synchronize-assets",
-    "arguments": {
-        "title": "Arguments",
-        "type": "object",
-        "properties": {
-            "community_uuid": {
-              "title": "Community uuid", 
+  "name": "Synchronize Assets with AD",
+  "description": "Create, merge and edit asset to synchronize asset with ad",
+  "uuid": "b18366f8-cab0-4bf6-b9e2-6bf19627a1e1",
+  "docker_parameters": "synchronize-assets",
+  "arguments": {
+    "title": "Arguments",
+    "type": "object",
+    "properties": {
+      "community_uuid": {
+        "title": "Community uuid",
+        "type": "string"
+      },
+      "user_ad_data": {
+        "title": "User data",
+        "type": "object"
+      },
+      "user_ad_data_path": {
+        "description": "File name to the User AD file to read.",
+        "type": "object"
+      },
+      "asset_synchronization_configuration": {
+        "title": "Assets configuration",
+        "type": "object"
+      }
+    },
+    "oneOf": [
+      {
+        "required": [
+          "user_ad_data"
+        ]
+      },
+      {
+        "required": [
+          "user_ad_data_path"
+        ]
+      }
+    ],
+    "required": [
+      "community_uuid",
+      "asset_synchronization_configuration"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "found_assets": {
+              "type": "array"
+            },
+            "created_asset": {
               "type": "string"
             },
-            "user_ad_data": {
-              "title": "User data", 
-              "type": "object"
-            },
-            "user_ad_data_path": {
-              "description": "File name to the User AD file to read.", 
-              "type": "object"
-            },
-            "asset_synchronization_configuration": {
-              "title": "Assets configuration", 
-              "type": "object"
+            "destination_asset": {
+              "type": "string"
             }
-        },
-        "oneOf": [{
-          "required": ["user_ad_data"]
-          }, 
-          {
-            "required": ["user_ad_data_path"]
-        }],
-        "required": ["community_uuid", "asset_synchronization_configuration"]
-    },
-    "results": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "found_assets": {
-                "type": "array"
-              },
-              "created_asset": {
-                "type": "string"
-              },
-              "destination_asset": {
-                "type": "string"
-              }
           }
-          }
+        }
       }
     }
-    }
+  },
+  "slug": "synchronize_assets_with_ad"
 }

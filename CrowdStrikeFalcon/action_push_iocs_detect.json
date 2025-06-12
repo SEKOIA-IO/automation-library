@@ -27,5 +27,6 @@
   "docker_parameters": "push_iocs_detect",
   "name": "Push IOCs for detection",
   "results": {},
-  "uuid": "eb921379-3c53-4f64-a622-73e0b7ac99ed"
+  "uuid": "eb921379-3c53-4f64-a622-73e0b7ac99ed",
+  "slug": "push_iocs_for_detection"
 }

@@ -80,5 +80,6 @@
     "not detected": "The file is not detected by antivirus vendors",
     "unknown": "The file is unknown"
   },
-  "uuid": "856ec762-609c-472a-8cf9-c170b2015a5d"
+  "uuid": "856ec762-609c-472a-8cf9-c170b2015a5d",
+  "slug": "scan_file"
 }

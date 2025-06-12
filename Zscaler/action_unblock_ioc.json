@@ -17,5 +17,6 @@
   "docker_parameters": "zscaler_unblock_ioc",
   "name": "Zscaler UnBlock IoC",
   "results": {},
-  "uuid": "ad4f9ea3-3b1f-4666-83a4-69cb5db222f1"
+  "uuid": "ad4f9ea3-3b1f-4666-83a4-69cb5db222f1",
+  "slug": "unblock_ioc"
 }

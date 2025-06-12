@@ -289,5 +289,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "edit_alert"
 }

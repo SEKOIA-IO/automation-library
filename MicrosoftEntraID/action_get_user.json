@@ -97,5 +97,6 @@
     "required": [
       "accountEnabled"
     ]
-  }
+  },
+  "slug": "get_user"
 }

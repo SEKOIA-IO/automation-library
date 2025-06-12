@@ -68,5 +68,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "get_event_field_common_values"
 }

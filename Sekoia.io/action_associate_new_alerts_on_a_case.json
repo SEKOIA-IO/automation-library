@@ -32,5 +32,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "attach_alerts_to_case"
 }

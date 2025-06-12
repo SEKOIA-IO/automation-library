@@ -22,5 +22,6 @@
   "docker_parameters": "monitor_ioc",
   "name": "Monitor IOC",
   "results": {},
-  "uuid": "5948a752-5c16-4bbd-9b12-3bc907ee05cf"
+  "uuid": "5948a752-5c16-4bbd-9b12-3bc907ee05cf",
+  "slug": "monitor_ioc"
 }

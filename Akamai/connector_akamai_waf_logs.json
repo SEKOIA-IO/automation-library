@@ -27,6 +27,9 @@
         "type": "string"
       }
     },
-    "required": ["intake_key", "config_id"]
+    "required": [
+      "intake_key",
+      "config_id"
+    ]
   }
 }

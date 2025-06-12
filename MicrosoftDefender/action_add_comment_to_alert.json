@@ -5,7 +5,10 @@
   "docker_parameters": "AddCommentToAlert",
   "arguments": {
     "type": "object",
-    "required": ["alert_id", "comment"],
+    "required": [
+      "alert_id",
+      "comment"
+    ],
     "properties": {
       "alert_id": {
         "description": "Alert ID",
@@ -25,5 +28,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "comment_alert"
 }

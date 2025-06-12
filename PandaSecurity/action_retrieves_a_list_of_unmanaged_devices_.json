@@ -191,5 +191,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "retrieve_unmanaged_devices"
 }

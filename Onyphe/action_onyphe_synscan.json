@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "7fab8ebb-97a8-4111-81e6-9355529198a0"
+  "uuid": "7fab8ebb-97a8-4111-81e6-9355529198a0",
+  "slug": "get_ip_syn_scan"
 }

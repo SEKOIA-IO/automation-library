@@ -119,5 +119,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "e11aeeb9-f1c8-42b7-bd86-b0f3bc34e910"
+  "uuid": "e11aeeb9-f1c8-42b7-bd86-b0f3bc34e910",
+  "slug": "geolocalize_ip"
 }

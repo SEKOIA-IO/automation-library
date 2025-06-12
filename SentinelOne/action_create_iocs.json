@@ -50,7 +50,7 @@
   "description": "Push IOCs in the Threat Intelligence API of SentinelOne",
   "docker_parameters": "sentinelone_iocs_create_iocs",
   "name": "[BETA] Create IOCs",
-  "configuration_part" : "For this action, account IDs are required. These can be obtained using either an account-level or global-level user",
+  "configuration_part": "For this action, account IDs are required. These can be obtained using either an account-level or global-level user",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Indicators pushed",
@@ -157,5 +157,6 @@
       }
     }
   },
-  "uuid": "3483ff12-8b2e-4614-b9b0-5f6019cb2678"
+  "uuid": "3483ff12-8b2e-4614-b9b0-5f6019cb2678",
+  "slug": "create_iocs_from_stix_bundle"
 }

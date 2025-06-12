@@ -76,5 +76,6 @@
     "not detected": "The hash is not detected by antivirus vendors",
     "unknown": "The hash is unknown"
   },
-  "uuid": "beb9ba43-2eca-43b5-b9ea-c092a1a19ed1"
+  "uuid": "beb9ba43-2eca-43b5-b9ea-c092a1a19ed1",
+  "slug": "scan_hash"
 }

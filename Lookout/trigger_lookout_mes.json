@@ -16,7 +16,9 @@
         "type": "string"
       }
     },
-    "required": ["intake_key"]
+    "required": [
+      "intake_key"
+    ]
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",

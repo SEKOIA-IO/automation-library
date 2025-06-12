@@ -26,5 +26,6 @@
     "items": {
       "type": "string"
     }
-  }
+  },
+  "slug": "list_ips_from_tag"
 }

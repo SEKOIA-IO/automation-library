@@ -218,5 +218,6 @@
     "required": [
       "data"
     ]
-  }
+  },
+  "slug": "create_tracker_notification"
 }

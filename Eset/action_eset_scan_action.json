@@ -7,7 +7,12 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Arguments",
     "type": "object",
-    "required": ["device_uuids", "scan_profile", "cleaning_enabled", "shutdown_enabled"],
+    "required": [
+      "device_uuids",
+      "scan_profile",
+      "cleaning_enabled",
+      "shutdown_enabled"
+    ],
     "properties": {
       "device_uuids": {
         "description": "The identifiers of the endpoints to scan",
@@ -20,7 +25,11 @@
         "description": "The profile of the scan",
         "type": "string",
         "enum": [
-          "InDepth", "Smart", "ContextMenu", "MyProfile", "Custom"
+          "InDepth",
+          "Smart",
+          "ContextMenu",
+          "MyProfile",
+          "Custom"
         ]
       },
       "display_name": {
@@ -53,8 +62,12 @@
         "type": "object"
       }
     },
-    "required": ["status_code", "body"],
+    "required": [
+      "status_code",
+      "body"
+    ],
     "title": "Results",
     "type": "object"
-  }
+  },
+  "slug": "scan"
 }

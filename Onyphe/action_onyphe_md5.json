@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "89b58713-0837-435c-a27f-8d45e0f41893"
+  "uuid": "89b58713-0837-435c-a27f-8d45e0f41893",
+  "slug": "lookup_md5"
 }

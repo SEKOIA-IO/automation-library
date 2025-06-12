@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "556d3b7f-0a8a-4dce-b44a-e996f73108c4"
+  "uuid": "556d3b7f-0a8a-4dce-b44a-e996f73108c4",
+  "slug": "lookup_ip"
 }
