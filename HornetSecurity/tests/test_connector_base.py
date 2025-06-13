@@ -24,8 +24,7 @@ class DummyConnector(BaseConnector):
         """
         Fetch events from the dummy connector.
         """
-        for event in self.events:
-            yield event
+        yield from self.events
         yield []
 
 
