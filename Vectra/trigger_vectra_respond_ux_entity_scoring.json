@@ -1,0 +1,46 @@
+{
+  "description": "Get entity scoring events from Vectra Respond UX",
+  "docker_parameters": "vectra_entity_scoring",
+  "name": "Fetch Vectra Respond UX entity scoring events",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 0 minutes ago)",
+        "default": 15
+      },
+      "start_time": {
+        "type": "integer",
+        "description": "The number of hours from which events should be queried",
+        "default": 1
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 500
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "title": "Vectra Respond UX Entity Scoring",
+    "type": "object"
+  },
+  "results": {},
+  "uuid": "a1ca3586-8e85-4381-8cf5-ad944e189c6a"
+}
