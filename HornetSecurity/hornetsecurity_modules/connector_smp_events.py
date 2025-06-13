@@ -45,7 +45,7 @@ class Direction(StrEnum):
         """
         Convert the direction to its corresponding ID.
         """
-        return DIRECTIONS.get(self.value, None)
+        return DIRECTIONS.get(self.value)
 
 
 class SMPEventsConnectorConfiguration(BaseConnectorConfiguration):
@@ -63,7 +63,7 @@ class SMPEventsConnector(BaseConnector):
         Handle the response from the API call.
         """
         if not response.ok:
-            level = "critical" if response.status_code in [401, 403] else "error"
+            level = "critical" if response.status_code in {401, 403} else "error"
             error = ApiError.from_response_error(response)
 
             logger.error(
@@ -96,9 +96,11 @@ class SMPEventsConnector(BaseConnector):
 
         # Parse the response to get the object ID
         response_data = response.json()
-        object_id = response_data.get("object_id", 0)
+        object_id = response_data.get("object_id")
 
-        if isinstance(object_id, int):
+        if object_id is None:
+            raise UnknownObjectIdError(scope)
+        elif isinstance(object_id, int):
             return int(object_id)
         else:
             raise InvalidObjectIdError(object_id)
@@ -165,12 +167,10 @@ class SMPEventsConnector(BaseConnector):
         # iter over the events in chunks
         for offset, limit in range_offset_limit(0, self.configuration.chunk_size):
             # Update the payload with the current offset and limit
-            payload.update(
-                {
-                    "limit": limit,
-                    "offset": offset,
-                }
-            )
+            payload |= {
+                "limit": limit,
+                "offset": offset,
+            }
 
             # If a direction is specified, add it to the payload
             if direction := self.configuration.direction.to_id():
@@ -217,7 +217,7 @@ class SMPEventsConnector(BaseConnector):
                 yield [self.enrich_event_with_header(email, self.configuration.include_header) for email in emails]
 
                 # Check if there are more emails to fetch
-                total_found = content.get("num_found_items")
+                total_found = content.get("num_found_items", 0)
                 if not has_more_emails(total_found, offset, limit):
                     logger.info("No more events to fetch.")
                     return

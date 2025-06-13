@@ -242,6 +242,7 @@ def test_connector_handle_response_unauthorized(smp_events_connector):
             UnknownObjectIdError,
         ),
         ("example.com", 200, {"object_id": "string"}, InvalidObjectIdError),
+        ("example.com", 200, {}, UnknownObjectIdError),
     ],
 )
 def test_get_object_id_from_scope(smp_events_connector, scope, response_status_code, response_json, expected_result):
@@ -359,7 +360,7 @@ def test_fetch_events_unauthorized(smp_events_connector):
     """
     with requests_mock.Mocker() as m:
         m.get(
-            f"https://cp.hornetsecurity.com/api/v0/object/",
+            "https://cp.hornetsecurity.com/api/v0/object/",
             json={"object_id": 12345},
             status_code=200,
         )
@@ -386,7 +387,7 @@ def test_fetch_no_connect(smp_events_connector):
     """
     with requests_mock.Mocker() as m:
         m.get(
-            f"https://cp.hornetsecurity.com/api/v0/object/",
+            "https://cp.hornetsecurity.com/api/v0/object/",
             json={"object_id": 12345},
             status_code=200,
         )
@@ -412,7 +413,7 @@ def test_fetch_no_events(smp_events_connector):
     """
     with requests_mock.Mocker() as m:
         m.get(
-            f"https://cp.hornetsecurity.com/api/v0/object/",
+            "https://cp.hornetsecurity.com/api/v0/object/",
             json={"object_id": 12345},
             status_code=200,
         )
@@ -439,7 +440,7 @@ def test_fetch_events(smp_events_connector, event1, event2):
     """
     with requests_mock.Mocker() as m:
         m.get(
-            f"https://cp.hornetsecurity.com/api/v0/object/",
+            "https://cp.hornetsecurity.com/api/v0/object/",
             json={"object_id": 12345},
             status_code=200,
         )
@@ -494,7 +495,7 @@ def test_fetch_events_with_direction(module, data_storage, event1, event2):
     )
     with requests_mock.Mocker() as m:
         m.get(
-            f"https://cp.hornetsecurity.com/api/v0/object/",
+            "https://cp.hornetsecurity.com/api/v0/object/",
             json={"object_id": 12345},
             status_code=200,
         )
