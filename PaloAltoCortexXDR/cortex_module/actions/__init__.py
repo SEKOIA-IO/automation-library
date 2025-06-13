@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any
+from typing import Any, Generator
 
 from sekoia_automation.action import Action
 
@@ -18,7 +18,7 @@ class PaloAltoCortexXDRAction(Action, ABC):
 
     request_uri: str
 
-    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any] | Generator[dict[str, Any], None, None]:
         """
         This method is used to build the request payload.
 
