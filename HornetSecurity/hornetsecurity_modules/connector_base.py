@@ -118,10 +118,7 @@ class BaseConnector(Connector):
                 # fetch events from the current context
                 INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(fetched_events))
 
-                # remove duplicates events from previous fetch
-                next_events = remove_duplicates(fetched_events, self.events_cache, self.ID_FIELD)
-
-                if next_events:
+                if next_events := remove_duplicates(fetched_events, self.events_cache, self.ID_FIELD):
                     # forward current events
                     yield next_events
 
