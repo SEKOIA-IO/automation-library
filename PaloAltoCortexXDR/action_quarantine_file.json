@@ -19,7 +19,8 @@
       }
     },
     "required": [
-      "file_path"
+      "file_path",
+      "file_hash"
     ],
     "title": "Arguments",
     "type": "object"
