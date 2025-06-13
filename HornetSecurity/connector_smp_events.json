@@ -1,0 +1,65 @@
+{
+  "description": "Get last events from HornetSecurity Emails",
+  "docker_parameters": "collect_smp_events",
+  "name": "Fetch new events from HornetSecurity Emails",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 300
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "rate_limit_per_seconds": {
+        "type": "integer",
+        "description": "Rate limit per second for API requests (default: 20 requests per second)",
+        "default": 20
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "Time delta in minutes to fetch events (default: 5 minutes)",
+        "default": 5
+      },
+      "scope": {
+        "type": "string",
+        "description": "Domain name, email address or object ID to monitor"
+      },
+      "direction": {
+        "type": "string",
+        "description": "Direction of the emails to fetch (Both, Incoming or Outgoing; default: Both)",
+        "default": "Both",
+        "enum": [
+          "Both",
+          "Incoming",
+          "Outgoing"
+        ]
+      },
+      "include_headers": {
+        "type": "boolean",
+        "description": "Include email headers in the events (default: false)",
+        "default": false
+      }
+    },
+    "required": [
+      "intake_key",
+      "scope"
+    ],
+    "title": "HornetSecurity Emails Configuration",
+    "type": "object"
+  },
+  "uuid": "24a18e6f-5607-4bc1-a7b2-a9e18ee29de1"
+}
