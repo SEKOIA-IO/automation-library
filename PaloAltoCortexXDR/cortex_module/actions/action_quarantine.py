@@ -53,7 +53,7 @@ class QuarantineAction(PaloAltoCortexXDRAction):
 
         endpoint_ids: list[str] = model.endpoint_ids or []
 
-        filters = {"filters": []}
+        filters: dict[str, Any] = {"filters": []}
         if endpoint_ids:
             filters["filters"].append(
                 {
