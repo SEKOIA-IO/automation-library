@@ -8,7 +8,6 @@ import requests
 from hornetsecurity_modules.helpers import (
     ApiError,
     utc_zulu_format,
-    create_enum,
     load_events_cache,
     save_events_cache,
     remove_duplicates,
@@ -80,23 +79,6 @@ def test_api_error_from_response_with_invalid_details():
 def test_utc_zulu_format(dt, expected):
     formatted_date = utc_zulu_format(dt)
     assert formatted_date == expected
-
-
-def test_create_enum():
-    from enum import StrEnum
-
-    name = "TestEnum"
-    values = {"key1": 1, "key2": 2}
-    methods = {
-        "__int__": lambda self: values[self.value],
-    }
-
-    TestEnum = create_enum(StrEnum, name, set(values.keys()), methods)
-
-    assert TestEnum.KEY1 == "key1"
-    assert TestEnum.KEY2 == "key2"
-    assert int(TestEnum.KEY1) == 1
-    assert issubclass(TestEnum, StrEnum)
 
 
 def test_save_events_cache(data_storage):
