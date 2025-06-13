@@ -11,7 +11,7 @@ class QuarantineArguments(BaseModel):
     """
 
     file_path: str
-    file_hash: str | None = None
+    file_hash: str
     endpoint_ids: list[str] | None = None
 
 
@@ -51,13 +51,19 @@ class QuarantineAction(PaloAltoCortexXDRAction):
         """
         model = QuarantineArguments(**arguments)
 
-        endpoint_ids = model.endpoint_ids or []
+        endpoint_ids: list[str] = model.endpoint_ids or []
 
-        filters = {}
+        filters: dict[str, Any] = {"filters": []}
         if endpoint_ids:
-            filters = {"filters": {"field": "endpoint_id_list", "operator": "in", "value": endpoint_ids}}
+            filters["filters"].append(
+                {
+                    "field": "endpoint_id_list",
+                    "operator": "in",
+                    "value": endpoint_ids,
+                }
+            )
 
-        file_hash = {"file_hash": model.file_hash} if model.file_hash else {}
+        file_hash = {"file_hash": model.file_hash}
 
         return {
             "request_data": {
