@@ -110,7 +110,7 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
         if stix_objects is None or len(stix_objects) == 0:
             self.log("Received stix_objects were empty")
 
-        hashes : list[str] = []
+        hashes: list[str] = []
         for value in stix_objects:
             # Extract value and type from pattern
             stix_result = transform_stix(stix_object=value, supported_types_map=self.supported_stix_types)
@@ -129,7 +129,7 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
                             "incident_id": model.incident_id,
                         }
                     }
-                    
+
                     # Reset the hashes list if it has reached the limit
                     hashes = []
 
