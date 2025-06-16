@@ -145,7 +145,7 @@ class VectraEntityScoringConsumer(Thread):
 
             try:
                 raw = err.response.json()
-                message = raw["error"]
+                message = f"{message} - details: {raw['error']}"
 
             except Exception:
                 pass
