@@ -1,6 +1,6 @@
 """Package for the Vectra module and connectors."""
 
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 from sekoia_automation.module import Module
 
 
