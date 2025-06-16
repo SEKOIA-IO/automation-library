@@ -90,3 +90,37 @@ def test_fetch_events(trigger, api_client, response_1):
         events = list(consumer.fetch_events(start_datetime, end_datetime))
 
         assert len(events) == 1
+
+
+def test_start_consumers(trigger, api_client):
+    with patch("vectra_modules.connector_vectra_entity_scoring.VectraEntityScoringConsumer.start") as mock_start:
+        consumers = trigger.start_consumers(api_client)
+        assert consumers is not None
+        assert "host" in consumers
+        assert "account" in consumers
+
+        assert mock_start.called
+
+
+def test_supervise_consumers(trigger):
+    with patch("vectra_modules.connector_vectra_entity_scoring.VectraEntityScoringConsumer.start") as mock_start:
+        consumers = {
+            "host": Mock(**{"is_alive.return_value": False, "running": True}),
+            "something_else": None,
+            "account": Mock(**{"is_alive.return_value": False, "running": False}),
+        }
+        trigger.supervise_consumers(consumers, api_client)
+        assert mock_start.call_count == 2
+
+
+def test_stop_consumers(trigger):
+    consumers = {
+        "host": Mock(**{"is_alive.return_value": False}),
+        "account": Mock(**{"is_alive.return_value": False}),
+        "something_new": Mock(**{"is_alive.return_value": True}),
+    }
+
+    trigger.stop_consumers(consumers)
+
+    assert consumers["something_new"] is not None
+    assert consumers["something_new"].stop.called
