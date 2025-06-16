@@ -8,7 +8,7 @@ import orjson
 import requests
 from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
-from pydantic import Field
+from pydantic.v1 import Field
 from requests import Response
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
