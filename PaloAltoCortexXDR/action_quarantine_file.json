@@ -29,5 +29,6 @@
   "docker_parameters": "quarantine_file",
   "name": "Quarantine the file",
   "results": {},
-  "uuid": "dddd7942-baf5-40d7-8b24-7db22fb33c0a"
+  "uuid": "dddd7942-baf5-40d7-8b24-7db22fb33c0a",
+  "slug": "quarantine_the_file"
 }

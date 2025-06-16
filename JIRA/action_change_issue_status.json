@@ -30,5 +30,6 @@
     "required": [],
     "title": "Results",
     "type": "object"
-  }
+  },
+  "slug": "change_issue_status"
 }

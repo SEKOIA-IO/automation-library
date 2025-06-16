@@ -55,5 +55,6 @@
       }
     },
     "type": "object"
-  }
+  },
+  "slug": "retrieve_security_overview"
 }

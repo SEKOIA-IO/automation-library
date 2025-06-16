@@ -80,5 +80,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "get_torrent_history"
 }

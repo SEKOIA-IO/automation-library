@@ -39,5 +39,6 @@
       "multistatus",
       "transactionId"
     ]
-  }
+  },
+  "slug": "isolate_endpoint"
 }

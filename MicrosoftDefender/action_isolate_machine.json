@@ -60,5 +60,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "isolate_endpoint"
 }

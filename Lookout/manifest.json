@@ -14,8 +14,12 @@
         "type": "string"
       }
     },
-    "required": ["api_token"],
-    "secrets": ["api_token"]
+    "required": [
+      "api_token"
+    ],
+    "secrets": [
+      "api_token"
+    ]
   },
   "description": "Lookout is a leading cybersecurity company focused on mobile security and data protection. They provide advanced solutions that safeguard users and enterprises from threats across devices and networks, empowering individuals to securely access information anytime, anywhere.",
   "name": "Lookout",

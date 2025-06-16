@@ -56,5 +56,6 @@
     "required": [
       "multistatus"
     ]
-  }
+  },
+  "slug": "update_incident_status"
 }

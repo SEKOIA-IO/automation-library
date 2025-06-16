@@ -49,26 +49,26 @@
           ]
         },
         "default": [
-            {
-              "confidence": "80",
-              "reliability": "A"
-            },
-            {
-                "confidence": "60",
-                "reliability": "B"
-            },
-            {
-                "confidence": "40",
-                "reliability": "C"
-            },
-            {
-                "confidence": "20",
-                "reliability": "D"
-            },
-            {
-                "confidence": "0",
-                "reliability": "E"
-            }
+          {
+            "confidence": "80",
+            "reliability": "A"
+          },
+          {
+            "confidence": "60",
+            "reliability": "B"
+          },
+          {
+            "confidence": "40",
+            "reliability": "C"
+          },
+          {
+            "confidence": "20",
+            "reliability": "D"
+          },
+          {
+            "confidence": "0",
+            "reliability": "E"
+          }
         ]
       },
       "severity_mapping": {
@@ -119,21 +119,26 @@
           ]
         },
         "default": [
-            {
-              "confidence": "80",
-              "kill_chain_phases": ["exploitation", "installation", "command-and-control", "actions-on-objectives"],
-              "severity": "HIGH"
-            },
-            {
-              "confidence": "40",
-              "kill_chain_phases": [],
-              "severity": "MEDIUM"
-            },
-            {
-                "confidence": "0",
-                "kill_chain_phases": [],
-                "severity": "LOW"
-            }
+          {
+            "confidence": "80",
+            "kill_chain_phases": [
+              "exploitation",
+              "installation",
+              "command-and-control",
+              "actions-on-objectives"
+            ],
+            "severity": "HIGH"
+          },
+          {
+            "confidence": "40",
+            "kill_chain_phases": [],
+            "severity": "MEDIUM"
+          },
+          {
+            "confidence": "0",
+            "kill_chain_phases": [],
+            "severity": "LOW"
+          }
         ]
       },
       "comment": {
@@ -216,16 +221,16 @@
                 "type": "object",
                 "properties": {
                   "vendor_name": {
-                      "description": "Vendor name",
-                      "type": "string"
+                    "description": "Vendor name",
+                    "type": "string"
                   },
                   "reliability": {
-                      "description": "Vendor reliability",
-                      "type": "string"
+                    "description": "Vendor reliability",
+                    "type": "string"
                   },
                   "reputation": {
-                      "description": "Vendor reputation",
-                      "type": "string"
+                    "description": "Vendor reputation",
+                    "type": "string"
                   }
                 }
               }
@@ -234,5 +239,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "stix_to_xsiam"
 }

@@ -49,5 +49,6 @@
       }
     },
     "type": "object"
-  }
+  },
+  "slug": "retrieve_full_encryption_module_status"
 }

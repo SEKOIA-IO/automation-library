@@ -18,7 +18,7 @@
         "in": "body"
       },
       "status_uuid": {
-        "description": "identifier of case’s status",
+        "description": "identifier of case\u2019s status",
         "type": "string",
         "in": "body"
       },
@@ -552,5 +552,6 @@
       "uuid"
     ]
   },
-  "uuid": "0dcabc04-43b4-4564-b9b2-08b80e0e1ecf"
+  "uuid": "0dcabc04-43b4-4564-b9b2-08b80e0e1ecf",
+  "slug": "edit_case"
 }

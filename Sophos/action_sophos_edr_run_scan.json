@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["endpoint_id"],
+    "required": [
+      "endpoint_id"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -15,5 +17,6 @@
   "docker_parameters": "sophos_edr_run_scan",
   "name": "[BETA] Run scan",
   "results": {},
-  "uuid": "bc98176f-10d5-46e8-9a43-8694e8ea4e68"
+  "uuid": "bc98176f-10d5-46e8-9a43-8694e8ea4e68",
+  "slug": "scan"
 }

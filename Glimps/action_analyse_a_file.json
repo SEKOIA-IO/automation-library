@@ -62,5 +62,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "analyse_a_file"
 }

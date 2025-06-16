@@ -27,7 +27,9 @@
               "type": "string"
             }
           },
-          {"type": "null"}
+          {
+            "type": "null"
+          }
         ],
         "default": null
       },
@@ -48,9 +50,10 @@
         }
       },
       "output_path": {
-        "description": "Path to the file with the content", 
+        "description": "Path to the file with the content",
         "type": "object"
       }
     }
-  }
+  },
+  "slug": "search_in_ad"
 }

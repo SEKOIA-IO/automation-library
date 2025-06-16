@@ -30,5 +30,6 @@
   "docker_parameters": "upload_observables_inthreat",
   "name": "Upload Observables",
   "results": {},
-  "uuid": "ab660ed7-9160-4f91-bb1c-3d49dc8c0972"
+  "uuid": "ab660ed7-9160-4f91-bb1c-3d49dc8c0972",
+  "slug": "upload_observables"
 }

@@ -69,5 +69,6 @@
       "date",
       "uuid"
     ]
-  }
+  },
+  "slug": "comment_alert"
 }

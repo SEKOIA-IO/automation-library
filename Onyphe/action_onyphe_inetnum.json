@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "26de2915-4bb4-4c9e-be5d-464c292e0663"
+  "uuid": "26de2915-4bb4-4c9e-be5d-464c292e0663",
+  "slug": "get_ip_inetnum"
 }

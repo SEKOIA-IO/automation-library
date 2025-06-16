@@ -120,5 +120,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "update_alert"
 }

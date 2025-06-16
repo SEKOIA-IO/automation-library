@@ -49,5 +49,6 @@
       "status",
       "details"
     ]
-  }
+  },
+  "slug": "create_alert"
 }

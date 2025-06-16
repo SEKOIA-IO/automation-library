@@ -590,5 +590,6 @@
       }
     },
     "type": "object"
-  }
+  },
+  "slug": "get_security_events"
 }

@@ -23,5 +23,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "9d990989-2faf-4e25-9607-baf7a4b2cc2c"
+  "uuid": "9d990989-2faf-4e25-9607-baf7a4b2cc2c",
+  "slug": "get_private_domains"
 }
