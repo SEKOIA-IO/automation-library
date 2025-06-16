@@ -140,12 +140,17 @@ class VectraEntityScoringConsumer(Thread):
             return response
 
         except requests.exceptions.HTTPError as err:
-            self.log_exception(err)
+            level = "critical" if err.response.status_code in [401, 403] else "error"
+            message = f"Request to Vectra API failed with status {err.response.status_code} - {err.response.reason}"
 
-            if err.response.status_code == 401:
-                # unauthorized
-                self.log("Authentication failed: Credentials are invalid", level="critical")
+            try:
+                raw = err.response.json()
+                message = raw["error"]
 
+            except Exception:
+                pass
+
+            self.log(message, level=level)
             raise
 
     def fetch_events(self, start_datetime: datetime, end_datetime: datetime):
