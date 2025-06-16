@@ -3,6 +3,7 @@
   "description": "Fake Asset Connector for testing purposes",
   "uuid": "8e8afb65-235a-4144-8cab-b44f94784587",
   "docker_parameters": "fake_asset_connector",
+  "type": "asset", 
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
