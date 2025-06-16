@@ -211,6 +211,7 @@ class VectraEntityScoringConsumer(Thread):
 
             # Update last datetime
             self.update_stepper(end)
+            self.update_cache()
 
             duration = int(time.time() - duration_start)
             FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type=self.entity_type).observe(
