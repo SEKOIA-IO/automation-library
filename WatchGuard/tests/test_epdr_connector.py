@@ -65,8 +65,10 @@ async def test_epdr_connector(epdr_connector: WatchGuardEpdrConnector, session_f
 
             response_data[security_event] = data
 
-            data_url = "{0}/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
-                module_config.base_url, module_config.account_id, security_event.value, 1
+            data_url = (
+                "{0}/rest/endpoint-security/management/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
+                    module_config.base_url, module_config.account_id, security_event.value, 1
+                )
             )
 
             mocked_responses.get(
@@ -83,3 +85,5 @@ async def test_epdr_connector(epdr_connector: WatchGuardEpdrConnector, session_f
 
         result = await epdr_connector.get_watchguard_events()
     assert result == sum([len(value) for _, value in response_data.items()])
+
+    await epdr_connector.watchguard_client.close()

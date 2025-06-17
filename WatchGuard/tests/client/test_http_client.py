@@ -1,3 +1,5 @@
+from typing import AsyncGenerator
+
 import aiohttp
 import pytest
 from aioresponses import aioresponses
@@ -30,7 +32,7 @@ def client_config(session_faker: Faker) -> WatchGuardClientConfig:
 
 
 @pytest.fixture
-def http_client(client_config: WatchGuardClientConfig) -> "WatchGuardClient":
+async def http_client(client_config: WatchGuardClientConfig) -> AsyncGenerator["WatchGuardClient", None]:
     """
     Create an instance of the WatchGuardClient with the provided credentials.
 
@@ -40,7 +42,11 @@ def http_client(client_config: WatchGuardClientConfig) -> "WatchGuardClient":
     Returns:
         WatchGuardClient:
     """
-    return WatchGuardClient(client_config)
+    client = WatchGuardClient(client_config)
+
+    yield client
+
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -149,7 +155,7 @@ async def test_fetch_data_1(
             ),
         )
 
-        data_url = "{0}/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
+        data_url = "{0}/rest/endpoint-security/management/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
             client_config.base_url, client_config.account_id, event.value, 1
         )
 
@@ -198,7 +204,7 @@ async def test_fetch_data_2(
     http_client._auth_token = invalid_token
 
     with aioresponses() as mocked_responses:
-        data_url = "{0}/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
+        data_url = "{0}/rest/endpoint-security/management/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
             client_config.base_url, client_config.account_id, event.value, 1
         )
         # First request with invalid token, should return 401

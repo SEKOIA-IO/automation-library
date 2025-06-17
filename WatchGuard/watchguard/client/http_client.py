@@ -71,6 +71,7 @@ class WatchGuardClient(object):
             response = await session.post(
                 f"{self.config.base_url}/oauth/token",
                 auth=aiohttp.BasicAuth(self.config.username, self.config.password),
+                data={"grant_type": "client_credentials", "scope": "api-access"},
             )
 
             if response.status != 200:
@@ -126,7 +127,7 @@ class WatchGuardClient(object):
                 headers = {"WatchGuard-API-Key": self.config.application_key, "Authorization": f"Bearer {auth_token}"}
 
                 response = await session.get(
-                    "{0}/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
+                    "{0}/rest/endpoint-security/management/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
                         self.config.base_url, self.config.account_id, security_event.value, period
                     ),
                     headers=headers,
@@ -143,3 +144,15 @@ class WatchGuardClient(object):
 
             for item in data.get("data", []):
                 yield item
+
+    async def close(self) -> None:
+        """
+        Close the WatchGuard client session.
+
+        This method should be called when the client is no longer needed to release resources.
+        """
+        if self._session:
+            await self._session.close()
+            self._session = None
+            self._rate_limiter_daily = None
+            self._rate_limiter_second = None

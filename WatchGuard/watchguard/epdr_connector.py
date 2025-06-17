@@ -131,9 +131,9 @@ class WatchGuardEpdrConnector(AsyncConnector):
     def run(self) -> None:  # pragma: no cover
         """Runs WatchGuard EPDR."""
         while self.running:
-            try:
-                loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
 
+            try:
                 previous_processing_end = None
 
                 while self.running:
@@ -173,3 +173,5 @@ class WatchGuardEpdrConnector(AsyncConnector):
             except Exception as error:
                 logger.error("Error while running Watchguard EPDR: {error}", error=error)
                 self.log_exception(error, message="Failed to forward events")
+
+            loop.run_until_complete(self.watchguard_client.close())
