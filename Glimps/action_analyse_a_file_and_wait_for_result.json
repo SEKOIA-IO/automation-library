@@ -1,5 +1,5 @@
 {
-  "name": "[TEST] Analyse a file and wait for result",
+  "name": "Analyse a file and wait for result",
   "description": "Submit file to Glimps Detect to be analysed and wait for its results",
   "uuid": "6836a5fb-5ded-55ee-aca1-c6a3d080c49b",
   "docker_parameters": "WaitForFile",

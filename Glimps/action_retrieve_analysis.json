@@ -1,5 +1,5 @@
 {
-  "name": "[TEST] Retrieve analysis",
+  "name": "Retrieve analysis",
   "description": "Retrieve the analysis matching the given uuid",
   "uuid": "b8c8a939-fa7e-5e4f-a73e-a5ed97ab8613",
   "docker_parameters": "RetrieveAnalysis",
