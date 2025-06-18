@@ -1,5 +1,5 @@
 {
-  "name": "[TEST] Analyse a file",
+  "name": "Analyse a file",
   "description": "Submit file to Glimps Detect to be analysed",
   "uuid": "04c3192f-532c-506d-ae0d-452b64d8718d",
   "docker_parameters": "SubmitFile",
