@@ -26,7 +26,7 @@
   "description": "Hornetsecurity offers fully managed cloud security solutions including Cyber Security, Backup, Compliance & Risk Governance. This module helps to collect Emails information from the Control Panel.",
   "name": "Hornetsecurity",
   "slug": "hornetsecurity",
-  "uuid": "96e758d5-bb16-47e9-863d-a0e63fa2e50d",
+  "uuid": "c43c0044-8789-410c-b658-a9ffed358c07",
   "version": "1.0.0",
   "categories": [
     "Email"
