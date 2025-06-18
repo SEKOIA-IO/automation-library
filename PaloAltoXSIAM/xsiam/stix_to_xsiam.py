@@ -124,7 +124,7 @@ class STIXToXSIAMAction(Action):
         ):
             return hashes
         else:
-            return re.findall(r":value\s?=\s?'(?P<value>.+?)'", pattern, flags=re.DOTALL | re.MULTILINE)
+            return re.findall(r"value\s?=\s?'(?P<value>.+?)'", pattern, flags=re.DOTALL | re.MULTILINE)
 
     def _get_type(self, stix_obj: dict) -> str:
         """
@@ -161,18 +161,6 @@ class STIXToXSIAMAction(Action):
 
     def _get_class(self, stix_obj: dict) -> str:
         return self._format_string_from_stix(stix_obj, self.class_override)
-
-    def _format_string_from_stix(self, stix_obj: dict, string: str) -> str:
-        """
-        Format the comment string with properties from the STIX object.
-        """
-        properties = re.findall(r"{(.*?)}", string, flags=re.DOTALL)
-        properties_dict = {}
-
-        for property in properties:
-            properties_dict[property] = stix_obj.get(property, "N/A")
-
-        return string.format(**properties_dict)
 
     def _get_reputation(self) -> str:
         return "BAD"
@@ -211,3 +199,15 @@ class STIXToXSIAMAction(Action):
             )
 
         return vendors
+
+    def _format_string_from_stix(self, stix_obj: dict, string: str) -> str:
+        """
+        Format the comment string with properties from the STIX object.
+        """
+        properties = re.findall(r"{(.*?)}", string, flags=re.DOTALL)
+        properties_dict = {}
+
+        for property in properties:
+            properties_dict[property] = stix_obj.get(property, "N/A")
+
+        return string.format(**properties_dict)
