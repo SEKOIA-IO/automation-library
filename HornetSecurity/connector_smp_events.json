@@ -1,7 +1,7 @@
 {
-  "description": "Get last events from HornetSecurity Emails",
+  "description": "Get last emails from HornetSecurity 365 Total Protection",
   "docker_parameters": "collect_smp_events",
-  "name": "Fetch new events from HornetSecurity Emails",
+  "name": "Fetch new emails from HornetSecurity 365 Total Protection",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -58,7 +58,7 @@
       "intake_key",
       "scope"
     ],
-    "title": "HornetSecurity Emails Configuration",
+    "title": "HornetSecurity 365 Total Protection Configuration",
     "type": "object"
   },
   "uuid": "24a18e6f-5607-4bc1-a7b2-a9e18ee29de1"
