@@ -1,0 +1,36 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 600
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 100
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key",
+      "frequency"
+    ],
+    "title": "Trigger Arguments",
+    "type": "object"
+  },
+  "description": "Get EPDR Events from WatchGuard",
+  "docker_parameters": "watchguard_epdr",
+  "name": "WatchGuard EPDR",
+  "uuid": "1e5eeb82-9561-452c-ada0-da9b3a56d2c5"
+}
