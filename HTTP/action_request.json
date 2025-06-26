@@ -29,7 +29,13 @@
       },
       "json": {
         "description": "The JSON to attach as body of the request",
-        "type": "object"
+        "oneOf": [
+          {"type": "object"},
+          {
+            "type": "array",
+            "items": {"type": "object"}
+          }
+        ]
       },
       "params": {
         "description": "Query string parameters to append to the URL",

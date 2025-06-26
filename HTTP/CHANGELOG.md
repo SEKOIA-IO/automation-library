@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-26 - 1.119.2
+
+### Fixed
+
+- Fix URL Request schema to accept an array of JSON for the JSON field
+
 ## 2023-11-01 - 1.119.1
 
 ### Changed
