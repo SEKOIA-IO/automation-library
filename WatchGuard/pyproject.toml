@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Automation Module for Virustotal"
+name = "Automation Module for WatchGuard"
 description = ""
 version = "0.0"
 authors = []
