@@ -156,5 +156,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "fee286fa-415b-4f04-bf26-536e40b64859"
+  "uuid": "fee286fa-415b-4f04-bf26-536e40b64859",
+  "slug": "scan_ip"
 }

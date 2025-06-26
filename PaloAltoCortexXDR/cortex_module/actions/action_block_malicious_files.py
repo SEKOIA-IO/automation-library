@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Generator
 
 import six
 from pydantic.main import BaseModel
@@ -78,10 +78,10 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
     request_uri = "public_api/v1/hash_exceptions/blocklist"
 
     supported_stix_types = {
-        "file": {"hashes.MD5": "md5", "hashes.SHA-256": "sha256"},
+        "file": {"hashes.SHA-256": "sha256"},
     }
 
-    def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    def request_payload(self, arguments: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
         """
         Build the request payload for the action.
 
@@ -110,10 +110,9 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
         if stix_objects is None or len(stix_objects) == 0:
             self.log("Received stix_objects were empty")
 
-        hashes = []
+        hashes: list[str] = []
         for value in stix_objects:
             # Extract value and type from pattern
-            self.log(message=f"object in stix_objects {str(value)}", level="debug")
             stix_result = transform_stix(stix_object=value, supported_types_map=self.supported_stix_types)
 
             for ioc in stix_result:
@@ -122,16 +121,40 @@ class BlockMaliciousFilesAction(PaloAltoCortexXDRAction):
                 if hash_value in hashes:
                     continue
 
+                if len(hashes) >= 100:
+                    yield {
+                        "request_data": {
+                            "hash_list": hashes,
+                            "comment": model.comment,
+                            "incident_id": model.incident_id,
+                        }
+                    }
+
+                    # Reset the hashes list if it has reached the limit
+                    hashes = []
+
                 # Add the hash to the list
                 hashes.append(ioc["value"])
 
         if not hashes:
             raise ValueError("No hashes found in the STIX objects")
 
-        return {
+        yield {
             "request_data": {
                 "hash_list": hashes,
                 "comment": model.comment,
                 "incident_id": model.incident_id,
             }
         }
+
+    def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
+
+        count_blocked_fiels = 0
+        for payload in self.request_payload(arguments):
+            count_blocked_fiels += len(payload["request_data"]["hash_list"])
+            response = self.client.post(url=self.request_url, json=payload)
+
+            result: dict[str, Any] = response.json()
+            self.handle_error_result(result)
+
+        return {"blocked_files_count": count_blocked_fiels}

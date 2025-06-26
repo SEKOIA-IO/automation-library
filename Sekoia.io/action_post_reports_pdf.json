@@ -46,5 +46,6 @@
     "required": [
       "data"
     ]
-  }
+  },
+  "slug": "create_content_proposal_from_pdf"
 }

@@ -1,62 +1,63 @@
 {
-    "uuid": "0d7c41fe-7991-42f7-9a04-702754b9700a",
-    "name": "Update Alert Status by name",
-    "docker_parameters": "update-status-by-name",
-    "description": "Triggers an action on an alert to update its status by name",
-    "arguments": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "type": "object",
-      "title": "trigger_status_update_action_on_the_alert_workflow",
-      "properties": {
-        "uuid": {
-          "type": "string",
-          "in": "path",
-          "description": "The UUID of the alert to update"
-        },
-        "status": {
-          "type": "string",
-          "description": "Name of the status to update the alert to",
-          "in": "body",
-          "enum": [
+  "uuid": "0d7c41fe-7991-42f7-9a04-702754b9700a",
+  "name": "Update Alert Status by name",
+  "docker_parameters": "update-status-by-name",
+  "description": "Triggers an action on an alert to update its status by name",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "trigger_status_update_action_on_the_alert_workflow",
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "in": "path",
+        "description": "The UUID of the alert to update"
+      },
+      "status": {
+        "type": "string",
+        "description": "Name of the status to update the alert to",
+        "in": "body",
+        "enum": [
           "Pending",
           "Acknowledged",
           "Ongoing",
           "Rejected",
           "Closed"
         ]
-        },
-        "comment": {
-          "type": "string",
-          "x-nullable": true,
-          "description": "A comment to describe why the alert status has changed",
-          "in": "body"
-        }
       },
-      "required": [
-        "uuid",
-        "status"
-      ]
+      "comment": {
+        "type": "string",
+        "x-nullable": true,
+        "description": "A comment to describe why the alert status has changed",
+        "in": "body"
+      }
     },
-    "results": {
-      "type": "object",
-      "properties": {
-        "actions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "description": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "id": {
-                "type": "string"
-              }
+    "required": [
+      "uuid",
+      "status"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
             }
           }
         }
       }
     }
-  }
+  },
+  "slug": "update_alert_status_by_name"
+}

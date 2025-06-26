@@ -64,5 +64,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "1205442a-690e-4520-bc69-cfa153cc2095"
+  "uuid": "1205442a-690e-4520-bc69-cfa153cc2095",
+  "slug": "read_xml_file"
 }

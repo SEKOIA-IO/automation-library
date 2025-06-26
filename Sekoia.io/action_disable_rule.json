@@ -395,5 +395,6 @@
       "updated_at",
       "instance_uuid"
     ]
-  }
+  },
+  "slug": "disable_rule"
 }

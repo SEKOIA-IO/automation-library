@@ -21,11 +21,21 @@
         "type": "string"
       }
     },
-    "required": ["host", "client_token", "client_secret", "access_token"],
-    "secrets": ["client_secret", "access_token"]
+    "required": [
+      "host",
+      "client_token",
+      "client_secret",
+      "access_token"
+    ],
+    "secrets": [
+      "client_secret",
+      "access_token"
+    ]
   },
   "description": "Akamai Web Application Firewall (WAF) is a cloud-based security solution designed to protect web applications from a wide range of online threats, including SQL injection, cross-site scripting (XSS), and DDoS attacks. Leveraging Akamai's global content delivery network (CDN), the WAF provides real-time protection by filtering and monitoring HTTP traffic between the web application and the internet.",
-  "categories": ["Network"],
+  "categories": [
+    "Network"
+  ],
   "slug": "akamai",
   "name": "Akamai",
   "uuid": "6f4e254f-9f1b-4760-8af5-f6639779e25a",

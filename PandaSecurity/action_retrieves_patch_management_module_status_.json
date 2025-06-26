@@ -45,5 +45,6 @@
       }
     },
     "type": "object"
-  }
+  },
+  "slug": "retrieve_patch_management_module_status"
 }

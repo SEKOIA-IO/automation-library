@@ -43,5 +43,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "get_sensors_statistics"
 }

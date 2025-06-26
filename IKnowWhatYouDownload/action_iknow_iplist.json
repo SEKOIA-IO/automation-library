@@ -49,5 +49,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "a06ec7e6-b678-4b90-ab72-d6b7b8e60c72"
+  "uuid": "a06ec7e6-b678-4b90-ab72-d6b7b8e60c72",
+  "slug": "list_ips_from_cidr"
 }

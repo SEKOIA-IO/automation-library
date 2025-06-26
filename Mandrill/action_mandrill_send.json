@@ -267,5 +267,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "cb61842a-e09f-417d-acdf-34c818c61c87"
+  "uuid": "cb61842a-e09f-417d-acdf-34c818c61c87",
+  "slug": "send_message"
 }

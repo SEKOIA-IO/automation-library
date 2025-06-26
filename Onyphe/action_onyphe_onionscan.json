@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "7244b813-0803-4335-8c5a-3e9a1b71747e"
+  "uuid": "7244b813-0803-4335-8c5a-3e9a1b71747e",
+  "slug": "get_onion_scan"
 }

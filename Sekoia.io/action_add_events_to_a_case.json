@@ -24,5 +24,6 @@
   "docker_parameters": "add_events_to_a_case",
   "name": "Add events to a case",
   "results": {},
-  "uuid": "0bcabc04-43b4-4564-b9b2-08b80e0e1ecf"
+  "uuid": "0bcabc04-43b4-4564-b9b2-08b80e0e1ecf",
+  "slug": "add_events_to_case"
 }

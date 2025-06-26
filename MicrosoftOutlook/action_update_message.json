@@ -8,28 +8,60 @@
     "type": "object",
     "anyOf": [
       {
-        "required": ["user", "message_id", "content"]
+        "required": [
+          "user",
+          "message_id",
+          "content"
+        ]
       },
       {
-        "required": ["user", "message_id", "recipients"]
+        "required": [
+          "user",
+          "message_id",
+          "recipients"
+        ]
       },
       {
-        "required": ["user", "message_id", "bcc"]
+        "required": [
+          "user",
+          "message_id",
+          "bcc"
+        ]
       },
       {
-        "required": ["user", "message_id", "cc"]
+        "required": [
+          "user",
+          "message_id",
+          "cc"
+        ]
       },
       {
-        "required": ["user", "message_id", "sender"]
+        "required": [
+          "user",
+          "message_id",
+          "sender"
+        ]
       },
       {
-        "required": ["user", "message_id", "from"]
+        "required": [
+          "user",
+          "message_id",
+          "from"
+        ]
       },
       {
-        "required": ["user", "message_id", "subject"]
+        "required": [
+          "user",
+          "message_id",
+          "subject"
+        ]
       },
       {
-        "required": ["user", "message_id", "importance"]
+        "required": [
+          "user",
+          "message_id",
+          "importance"
+        ]
       }
     ],
     "properties": {
@@ -81,9 +113,14 @@
       "importance": {
         "description": "The importance of the message",
         "type": "string",
-        "enum": ["Low", "Normal", "High"]
+        "enum": [
+          "Low",
+          "Normal",
+          "High"
+        ]
       }
     }
   },
-  "results": {}
+  "results": {},
+  "slug": "update_message"
 }

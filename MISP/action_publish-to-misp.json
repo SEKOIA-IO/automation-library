@@ -34,5 +34,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "14a89812-1d7b-46bb-a300-4a98cdff8e69"
+  "uuid": "14a89812-1d7b-46bb-a300-4a98cdff8e69",
+  "slug": "publish_event"
 }

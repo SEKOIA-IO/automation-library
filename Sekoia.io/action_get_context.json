@@ -41,5 +41,6 @@
   "required": [
     "items",
     "has_more"
-  ]
+  ],
+  "slug": "get_context"
 }

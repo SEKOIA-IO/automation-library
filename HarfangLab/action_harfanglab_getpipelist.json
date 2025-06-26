@@ -47,5 +47,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "a1151541-ab34-4d7c-80a1-b2e05f8e91ec"
+  "uuid": "a1151541-ab34-4d7c-80a1-b2e05f8e91ec",
+  "slug": "list_named_pipes"
 }

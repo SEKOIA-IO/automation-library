@@ -1,18 +1,14 @@
-from datetime import datetime, timedelta, timezone
+import hashlib
+import os
+
 from unittest.mock import Mock, call, patch
 
-import orjson
 import pytest
 import requests_mock
-from freezegun import freeze_time
-from requests.exceptions import HTTPError
-from sekoia_automation.storage import PersistentJSON
+
 
 from cortex_module.actions.action_block_malicious_files import BlockMaliciousFilesAction, BlockMaliciousFilesArguments
-from cortex_module.actions.action_comment_alert import CommentAlertAction, CommentAlertArguments
-from cortex_module.base import CortexModule
-from cortex_module.cortex_edr_connector import CortexQueryEDRTrigger
-from cortex_module.helper import handle_fqdn
+
 
 STIX_OBJECT_FILE_HASH = {
     "lang": "en",
@@ -245,6 +241,52 @@ STIX_OBJECT_FILE_HASH = {
 }
 
 
+STIX_OBJECT_FILE_HASH_2 = {
+    "lang": "en",
+    "indicator_types": ["malicious-activity"],
+    "kill_chain_phases": [
+        {"phase_name": "installation", "kill_chain_name": "lockheed-martin-cyber-kill-chain"},
+        {"phase_name": "persistence", "kill_chain_name": "mitre-attack"},
+    ],
+    "x_ic_observable_types": ["file"],
+    "pattern": (
+        "[file:hashes.'SHA-256' = '0451b9c358b1404717f5060aea5711327cf199cd445644f5ac22f1a1fb777716' "
+        "OR file:hashes.MD5 = 'ab03a48a29967e738583140e6eb84f0b' "
+        "OR file:hashes.'SHA-1' = 'f4db6264e2f9aa0aa1f889dd8cfaa886857c3bd0']"
+    ),
+    "object_marking_refs": ["marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"],
+    "modified": "2023-04-19T15:00:57.176446Z",
+    "valid_from": "2023-04-19T00:00:00Z",
+    "created_by_ref": "identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
+    "pattern_type": "stix",
+    "revoked": False,
+    "x_ic_impacted_sectors": [
+        "identity--f910fbcc-9f6a-43db-a6da-980c224ab2dd",
+        "identity--f56e1adb-86d2-46a8-89f9-544ed0d8f6e2",
+    ],
+    "valid_until": "2024-04-15T00:00:00Z",
+    "x_ic_impacted_locations": [
+        "location--fcdc64b6-5791-4bb2-855d-15a414ce072f",
+        "location--fb80e71b-2394-4344-a406-2ac98f0879f5",
+        "location--fa9995b1-2f58-4ed1-83d0-89ae5e491a63",
+    ],
+    "type": "indicator",
+    "name": (
+        "[file:hashes.'SHA-256' = '0451b9c358b1404717f5060aea5711327cf199cd445644f5ac22f1a1fb777716' "
+        "OR file:hashes.MD5 = 'ab03a48a29967e738583140e6eb84f0b' "
+        "OR file:hashes.'SHA-1' = 'f4db6264e2f9aa0aa1f889dd8cfaa886857c3bd0']"
+    ),
+    "confidence": 70,
+    "x_ic_is_in_flint": False,
+    "x_inthreat_sources_refs": ["identity--d0644ccd-4ce2-4fb2-9165-dc7860e42984"],
+    "x_ic_deprecated": False,
+    "spec_version": "2.1",
+    "created": "2023-04-19T15:00:57.17643Z",
+    "id": "indicator--8c28aed8-8370-46d5-b7bf-877e6a4840d3",
+    "x_ic_external_refs": ["indicator--99048ce7-4cb0-4ac9-a28b-c2738fcd39be"],
+}
+
+
 @pytest.fixture
 def action(module, symphony_storage):
     action = BlockMaliciousFilesAction(module=module, data_path=symphony_storage)
@@ -265,7 +307,39 @@ def arguments() -> BlockMaliciousFilesArguments:
     )
 
 
+@pytest.fixture
+def arguments_2() -> BlockMaliciousFilesArguments:
+    return BlockMaliciousFilesArguments(
+        stix_objects=[STIX_OBJECT_FILE_HASH, STIX_OBJECT_FILE_HASH_2],
+        stix_objects_path="random_path",  # it will not be used here, but is required
+        comment="Test comment",
+        incident_id=123,
+    )
+
+
 def test_run_action(action, arguments):
+    fqdn = action.module.configuration.fqdn
+    url = f"https://api-{fqdn}/public_api/v1/hash_exceptions/blocklist"
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            url,
+            status_code=200,
+            json={"result": "123"},
+            additional_matcher=lambda request: request.json()
+            == {
+                "request_data": {
+                    "hash_list": ["0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716"],
+                    "comment": arguments.comment,
+                    "incident_id": arguments.incident_id,
+                }
+            },
+        )
+
+        assert action.run(arguments) == {"blocked_files_count": 1}
+
+
+def test_run_action_2_hashes(action, arguments_2):
     fqdn = action.module.configuration.fqdn
     url = f"https://api-{fqdn}/public_api/v1/hash_exceptions/blocklist"
 
@@ -279,12 +353,12 @@ def test_run_action(action, arguments):
                 "request_data": {
                     "hash_list": [
                         "0451b9c358b1404717f5060aea5711327cf169cd4c5648f5ac23f1a1fb740716",
-                        "ab03a48a29967e738583140e6eb84f0b",
+                        "0451b9c358b1404717f5060aea5711327cf199cd445644f5ac22f1a1fb777716",
                     ],
-                    "comment": arguments.comment,
-                    "incident_id": arguments.incident_id,
+                    "comment": arguments_2.comment,
+                    "incident_id": arguments_2.incident_id,
                 }
             },
         )
 
-        assert action.run(arguments) == {"result": "123"}
+        assert action.run(arguments_2) == {"blocked_files_count": 2}

@@ -40,5 +40,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "bf4f264f-8df2-44c8-88fb-459b455e51bc"
+  "uuid": "bf4f264f-8df2-44c8-88fb-459b455e51bc",
+  "slug": "view_item"
 }

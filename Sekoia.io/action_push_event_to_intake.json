@@ -53,5 +53,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "push_events_to_intake"
 }

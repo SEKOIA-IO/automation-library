@@ -95,5 +95,6 @@
     "title": "whois Results",
     "type": "object"
   },
-  "uuid": "d9ec2c57-1421-89a8-1cae-8b04eb6a84eb"
+  "uuid": "d9ec2c57-1421-89a8-1cae-8b04eb6a84eb",
+  "slug": "whois"
 }

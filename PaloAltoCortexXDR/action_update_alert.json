@@ -47,5 +47,6 @@
   "docker_parameters": "update_alert_status_severity",
   "name": "Update alert status and severity",
   "results": {},
-  "uuid": "219eda53-59d1-41d0-92b9-dbb5d026ddea"
+  "uuid": "219eda53-59d1-41d0-92b9-dbb5d026ddea",
+  "slug": "update_alert_status_and_severity"
 }

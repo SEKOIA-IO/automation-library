@@ -88,7 +88,7 @@ class XQLQueryAction(PaloAltoCortexXDRAction):
 
                 time.sleep(10)  # Wait for 10 seconds before checking again
             else:
-                results: list[dict[str, Any]] = data_result["reply"].get("results", {})
+                results: list[dict[str, Any]] = data_result["reply"].get("results", {}).get("data", [])
 
                 return {
                     "results": results,

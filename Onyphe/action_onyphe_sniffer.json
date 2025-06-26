@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "6f5bf02a-a721-4623-b06a-917da1aa7d37"
+  "uuid": "6f5bf02a-a721-4623-b06a-917da1aa7d37",
+  "slug": "get_ip_sniffer"
 }

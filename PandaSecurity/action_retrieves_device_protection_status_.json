@@ -204,5 +204,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "retrieve_device_protection_status"
 }

@@ -19,13 +19,21 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "client_id", "client_secret"],
-    "secrets": ["client_secret"]
+    "required": [
+      "base_url",
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
   },
   "description": "BeyondTrust is a cybersecurity firm specializing in identity and access management solutions, focusing on protecting privileged accounts and securing remote access.",
   "name": "BeyondTrust",
   "slug": "beyondtrust",
-  "categories": ["Network"],
+  "categories": [
+    "Network"
+  ],
   "uuid": "ab96c1e6-20b9-4589-aa9a-43d84043d857",
   "version": "0.2.0"
 }

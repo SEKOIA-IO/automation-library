@@ -114,5 +114,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "18329483-e6e0-4e7d-bcad-bf20d5aa8271"
+  "uuid": "18329483-e6e0-4e7d-bcad-bf20d5aa8271",
+  "slug": "get_ip_history"
 }

@@ -9,19 +9,27 @@
       "event_types": {
         "description": "A list of telemetry event types to collect. Available event types: processes, windows_authentications, linux_authentications, macos_authentications, binary, network, dns, eventlog",
         "type": "array",
-        "default": ["processes", "windows_authentications", "linux_authentications", "macos_authentications"]
+        "default": [
+          "processes",
+          "windows_authentications",
+          "linux_authentications",
+          "macos_authentications"
+        ]
       },
       "alert_created": {
         "description": "Reference timestamp used to retrieve telemetry data",
         "type": "string"
-      }, 
+      },
       "timerange": {
         "description": "Number of minutes before and after the reference timestamp used to define the data-collection time window",
         "type": "integer",
         "default": 15
       }
     },
-    "required": [ "agent_id", "alert_created" ],
+    "required": [
+      "agent_id",
+      "alert_created"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -39,5 +47,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "c95cf5c0-8d5c-425d-907f-09c9c2bb7edb"
+  "uuid": "c95cf5c0-8d5c-425d-907f-09c9c2bb7edb",
+  "slug": "get_endpoint_telemetry"
 }

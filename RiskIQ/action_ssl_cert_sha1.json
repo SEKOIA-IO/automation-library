@@ -88,5 +88,6 @@
         "format": "int32"
       }
     }
-  }
+  },
+  "slug": "ssl_certificats_by_sha1"
 }

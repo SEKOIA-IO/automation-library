@@ -23,5 +23,6 @@
   "results": {
     "type": "object",
     "properties": {}
-  }
+  },
+  "slug": "lookup_dns"
 }

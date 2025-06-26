@@ -60,5 +60,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "ecedfa52-7033-4ea8-9c3b-93ad34295f87"
+  "uuid": "ecedfa52-7033-4ea8-9c3b-93ad34295f87",
+  "slug": "read_json_file"
 }
