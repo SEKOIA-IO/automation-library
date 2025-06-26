@@ -66,6 +66,7 @@ def test_post_request(symphony_storage):
         assert result["status_code"] == 202
         assert mock.request_history[0].text == "att1=val1"
 
+
 def test_post_request_json(symphony_storage):
     """Test POST request with JSON data."""
     action = RequestAction(data_path=symphony_storage)
@@ -104,7 +105,9 @@ def test_post_request_json(symphony_storage):
             headers={"h1": "foo", "h2": "bar", "Content-Type": "application/json"},
         )
 
-        result = action.run({"method": "post", "url": "https://api.sekoia.io", "json": [{"foo": "bar"}, {"baz": "qux"}]})
+        result = action.run(
+            {"method": "post", "url": "https://api.sekoia.io", "json": [{"foo": "bar"}, {"baz": "qux"}]}
+        )
         del result["elapsed"]
         json.dumps(result)
         assert result == {
@@ -116,7 +119,6 @@ def test_post_request_json(symphony_storage):
             "text": '[{"foo": "bar"}, {"baz": "qux"}]',
             "url": "https://api.sekoia.io/",
         }
-
 
 
 def test_post_request_no_verify(symphony_storage):
