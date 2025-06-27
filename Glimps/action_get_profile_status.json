@@ -1,5 +1,5 @@
 {
-  "name": "[TEST] Get profile status",
+  "name": "Get profile status",
   "description": "Get Glimps detect profile status, it includes quotas, eastimated analysis duration and cache",
   "uuid": "59f36722-583b-5e49-8e1b-d6756f0c2fe5",
   "docker_parameters": "GetStatus",
