@@ -69,6 +69,7 @@ def test_timestepper_get_time_ranges_with_no_timedelta(mock_time):
 
     with patch("hornetsecurity_modules.timestepper.datetime.datetime") as mock_datetime:
         mock_datetime.now.side_effect = [
+            datetime(2023, 3, 22, 11, 56, 28),  # First call in TimeStepper.create!
             datetime(2023, 3, 22, 11, 56, 28),  # returned in TimeStepper.create
             datetime(2023, 3, 22, 11, 57, 50),  # compared in then 2nd iteration
             datetime(2023, 3, 22, 11, 58, 38),  # compared in the 3rd iteration
@@ -95,6 +96,7 @@ def test_timestepper_get_time_ranges_with_no_timedelta(mock_time):
         )
         # Ensure the stepper never waited before
         assert mock_time.sleep.called is False
+
         # Assert the 4th time range (end is 12 seconds in the future)
         assert next(gen) == (
             datetime(2023, 3, 22, 11, 58, 28),
@@ -113,14 +115,15 @@ def test_timestepper_get_time_ranges_with_timedelta(mock_time):
 
     with patch("hornetsecurity_modules.timestepper.datetime.datetime") as mock_datetime:
         mock_datetime.now.side_effect = [
-            datetime(2023, 3, 22, 11, 56, 28),  # returned in TimeStepper.create
+            datetime(2023, 3, 22, 11, 56, 28),  # first call in TimeStepper.create!
+            datetime(2023, 3, 22, 11, 56, 28),  # compared in 1st iteration
             datetime(2023, 3, 22, 11, 57, 44),  # compared in 2nd iteration
             datetime(2023, 3, 22, 11, 58, 43),  # compared in 3rd iteration
             datetime(2023, 3, 22, 11, 59, 41),  # compared in 4th iteration
             datetime(2023, 3, 22, 12, 0, 37),  # compared in the 5th iteration
             datetime(2023, 3, 22, 12, 1, 33),  # compared in the 6th iteration
             datetime(2023, 3, 22, 12, 2, 29),  # compared in the 7th iteration
-            datetime(2023, 3, 22, 12, 3, 22),  # compared in the 8th iteration
+            datetime(2023, 3, 22, 11, 58, 22),  # compared in the 8th iteration
         ]
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -182,7 +185,8 @@ def test_timestepper_get_time_ranges_reach_max_wait_time(mock_time):
     with patch("hornetsecurity_modules.timestepper.datetime.datetime") as mock_datetime:
         mock_datetime.now.side_effect = [
             datetime(2023, 3, 22, 11, 50, 28),  # returned in TimeStepper.create
-            datetime(2023, 3, 22, 12, 7, 50),  # compared in then 2nd iteration
+            datetime(2023, 3, 22, 11, 50, 28),  # compared in then 1st iteration
+            datetime(2023, 3, 22, 12, 7, 50),   # compared in then 2nd iteration
             datetime(2023, 3, 22, 12, 13, 38),  # compared in the 3rd iteration
             datetime(2023, 3, 22, 12, 20, 29),  # compared in the 4th iteration
             datetime(2023, 3, 22, 12, 20, 27),  # compared in the 5th iteration
@@ -216,7 +220,8 @@ def test_timestepper_get_time_ranges_reach_max_wait_time(mock_time):
         # Assert the 5th time range (end is 10 minutes in the future)
         assert next(gen) == (
             datetime(2023, 3, 22, 12, 20, 28),
-            datetime(2023, 3, 22, 12, 30, 27),
+            datetime(2023, 3, 22, 12, 30, 28),
         )
         # Ensure the stepper waited
-        mock_time.sleep.assert_called_with(frequency)
+        # Because we cannot perform request with data that is in the future,
+        mock_time.sleep.assert_called_with(frequency + 1)

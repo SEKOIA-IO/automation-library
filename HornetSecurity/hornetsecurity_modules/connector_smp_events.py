@@ -1,30 +1,17 @@
 from collections.abc import Generator
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
 from functools import cached_property
 from posixpath import join as urljoin
+from typing import Any
 
-from pydantic.v1 import Field
 import requests
+from pydantic.v1 import Field
 
-from hornetsecurity_modules.connector_base import (
-    BaseConnector,
-    BaseConnectorConfiguration,
-)
-from hornetsecurity_modules.errors import (
-    FailedEmailHeaderFetchError,
-    InvalidObjectIdError,
-    UnknownObjectIdError,
-)
-from hornetsecurity_modules.helpers import (
-    ApiError,
-    utc_zulu_format,
-    range_offset_limit,
-    has_more_emails,
-)
+from hornetsecurity_modules.connector_base import BaseConnector, BaseConnectorConfiguration
+from hornetsecurity_modules.errors import FailedEmailHeaderFetchError, InvalidObjectIdError, UnknownObjectIdError
+from hornetsecurity_modules.helpers import ApiError, has_more_emails, range_offset_limit, utc_zulu_format
 from hornetsecurity_modules.logging import get_logger
-
 
 logger = get_logger()
 
@@ -130,7 +117,11 @@ class SMPEventsConnector(BaseConnector):
 
         # Parse the response to get the raw header
         response_data = response.json()
-        return response_data.get("raw_header")
+        result: str = response_data.get("raw_header")
+        if not result:
+            raise ValueError("No raw header found in the response")
+
+        return result
 
     def enrich_event_with_header(self, event: dict[str, Any], enrich_with_header: bool) -> dict[str, Any]:
         try:

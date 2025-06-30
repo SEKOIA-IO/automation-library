@@ -1,19 +1,19 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
-from sekoia_automation.storage import PersistentJSON
 import pytest
 import requests
+from sekoia_automation.storage import PersistentJSON
 
 from hornetsecurity_modules.helpers import (
     ApiError,
-    utc_zulu_format,
+    has_more_emails,
     load_events_cache,
-    save_events_cache,
-    remove_duplicates,
     normalize_uri,
     range_offset_limit,
-    has_more_emails,
+    remove_duplicates,
+    save_events_cache,
+    utc_zulu_format,
 )
 
 

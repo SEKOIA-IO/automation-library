@@ -26,35 +26,35 @@ class TimeStepper:
         self,
     ) -> Generator[tuple[datetime.datetime, datetime.datetime], None, None]:
         while True:
-            # return the current time range
-            yield self.start, self.end
-
             # compute the next time range
             next_end = self.end + self.frequency
-            now = datetime.datetime.now(datetime.timezone.utc) - self.timedelta
+            now = datetime.datetime.now(datetime.timezone.utc)
 
             # Compute current lag
             current_lag = now - next_end
+
+            # If the next end is in the future
+            if self.end > now:
+                current_lag = self.end - now
+
+                # compute the max date allowed in the future and set the next_end according
+                current_difference = int(current_lag.total_seconds())
+                self.trigger.log(
+                    message=f"Timerange in the future. Waiting {current_difference} seconds for next batch.",
+                    level="info",
+                )
+                time.sleep(current_difference)
+
             self.trigger.log(
                 message=f"Current lag {int(current_lag.total_seconds())} seconds.",
                 level="info",
             )
-            EVENTS_LAG.labels(intake_key=self.trigger.configuration.intake_key).set(int(current_lag.total_seconds()))
 
-            # If the next end is in the future
-            if next_end > now:
-                # compute the max date allowed in the future and set the next_end according
-                current_difference = int((next_end - now).total_seconds())
-                max_difference = min(
-                    current_difference, self.frequency.total_seconds()
-                )  # limit the end date in the future
-                next_end = now + datetime.timedelta(seconds=max_difference)
+            EVENTS_LAG.labels(intake_key=self.trigger.configuration.intake_key).set(
+                int(current_lag.total_seconds()))
 
-                self.trigger.log(
-                    message=f"Timerange in the future. Waiting {max_difference} seconds for next batch.",
-                    level="info",
-                )
-                time.sleep(max_difference)
+            # return the current time range
+            yield self.start, self.end
 
             self.start = self.end
             self.end = next_end
