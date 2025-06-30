@@ -34,9 +34,17 @@ from sentinelone_module.logs.helpers import get_latest_event_timestamp
             ],
             datetime(2024, 7, 25, 2, 30, 11, tzinfo=timezone.utc),
         ),
-        ([{}, {}, {}], None),
-        ([], None),
     ],
 )
 def test_get_lastest_event_timestamp(events, expected_datetime):
     assert get_latest_event_timestamp(events) == expected_datetime
+
+def test_get_latest_event_timestamp_no_valid_timestamps():
+    """Test that a ValueError is raised when no valid timestamps are found."""
+    with pytest.raises(ValueError, match="No valid event timestamps found in the provided list."):
+        get_latest_event_timestamp([{}, {}, {}])
+
+def test_get_latest_event_timestamp_empty_list():
+    """Test that a ValueError is raised when the list is empty."""
+    with pytest.raises(ValueError, match="No valid event timestamps found in the provided list."):
+        get_latest_event_timestamp([])
