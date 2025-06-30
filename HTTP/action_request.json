@@ -28,6 +28,7 @@
         "type": "string"
       },
       "json": {
+        "type": "object",
         "description": "The JSON to attach as body of the request"
       },
       "params": {
