@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-30 - 1.20.9
+
+### Fixed
+
+- nextCursor and event date processing
+
 ## 2025-05-30 - 1.20.8
 
 ### Changed
