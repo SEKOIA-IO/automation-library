@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field
 
 from sekoia_automation.module import Module
 
-from .models import AssetObject
-from .base import AssetConnector
+from ..models import AssetObject
+from ..base import AssetConnector
 
 
 class FakeAssetConnectorModuleConfiguration(BaseModel):

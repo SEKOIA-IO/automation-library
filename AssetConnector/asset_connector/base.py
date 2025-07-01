@@ -14,7 +14,10 @@ from os.path import join as urljoin
 
 from .models import (
     DefaultAssetConnectorConfiguration,
-    AssetObject,
+    VulnerabilityOCSFModel,
+    DeviceOCSFModel,
+    UserOCSFModel,
+    SoftwareOCSFModel,
     AssetList,
 )
 
@@ -33,6 +36,7 @@ class AssetConnector(Trigger):
     CONNECTOR_CONFIGURATION_FILE_NAME = "connector_configuration"
     PRODUCTION_BASE_URL = "https://api.sekoia.io"
     ASSET_BATCH_SIZE = 1000
+    OCSF_SCHEMA_VERSION = 1
 
     configuration: DefaultAssetConnectorConfiguration
 
@@ -225,7 +229,9 @@ class AssetConnector(Trigger):
             return
 
     @abstractmethod
-    def get_assets(self) -> Generator[AssetObject, None, None]:
+    def get_assets(
+        self,
+    ) -> Generator[VulnerabilityOCSFModel | DeviceOCSFModel | UserOCSFModel | SoftwareOCSFModel, None, None]:
         """
         Get assets from the connector.
         Yields:
@@ -254,12 +260,12 @@ class AssetConnector(Trigger):
             total_number_of_assets += 1
 
             if len(assets) >= self.batch_size:
-                batch = AssetList(assets=assets)
+                batch = AssetList(version=self.OCSF_SCHEMA_VERSION, items=assets)
                 self.push_assets_to_sekoia(batch)
                 assets = []
 
         if assets:
-            final_batch = AssetList(assets=assets)
+            final_batch = AssetList(version=self.OCSF_SCHEMA_VERSION, items=assets)
             self.push_assets_to_sekoia(final_batch)
 
         # save the end time processing
