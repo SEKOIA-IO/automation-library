@@ -3,7 +3,7 @@
   "name": "CrowdStrike Falcon",
   "slug": "crowdstrike-falcon",
   "description": "CrowdStrike Falcon is a cloud-native cybersecurity platform known for its advanced threat detection, endpoint protection, and real-time response capabilities. It leverages AI and machine learning to protect against malware and sophisticated cyberattacks.",
-  "version": "1.22.0",
+  "version": "1.22.1",
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
