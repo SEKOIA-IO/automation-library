@@ -28,8 +28,8 @@
         "type": "string"
       },
       "json": {
-        "description": "The JSON to attach as body of the request",
-        "type": "object"
+        "type": "object",
+        "description": "The JSON to attach as body of the request"
       },
       "params": {
         "description": "Query string parameters to append to the URL",

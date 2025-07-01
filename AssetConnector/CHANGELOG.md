@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
 ## 2025-07-01 - 1.1.0
 
 ### Added
 
 - Add for the first time the harfanglab asset connector
+
+## 2025-06-16 - 1.0.1
+
+### Added
+
+- Add type to Fake asset connector
+
