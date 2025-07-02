@@ -1,5 +1,5 @@
 {
-  "name": "[TEST] Export analysis result",
+  "name": "Export analysis result",
   "description": "Export analysis result with the requested layout and format",
   "uuid": "8691dbce-10fb-5e7c-b0e4-a783f86612f6",
   "docker_parameters": "ExportSubmission",

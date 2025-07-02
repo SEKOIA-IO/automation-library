@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-18 - 1.14.3
+
+### Changed
+
+- Rename [TEST] actions now in GA
+
 ## 2024-11-14 - 1.14.0
 
 ### Added
