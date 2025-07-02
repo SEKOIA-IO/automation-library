@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-02 - 1.1.1
+
+### Fixed
+
+- Support empty response from WatchGuard EPDR API
+
 ## 2025-06-10 - 1.1.0
 
 ### Added

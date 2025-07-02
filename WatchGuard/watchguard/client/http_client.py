@@ -4,6 +4,7 @@ from typing import Any, AsyncGenerator, Awaitable, Callable
 import aiohttp
 from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
+from loguru import logger
 from pydantic.v1 import BaseModel
 
 from watchguard.client.errors import WatchGuardAuthError, WatchGuardError
@@ -141,6 +142,15 @@ class WatchGuardClient(object):
                 return result
 
             data = await self._call_with_auth(fetch_func)
+
+            if data is None:
+                logger.warning(
+                    "No data returned from WatchGuard API for security event {security_event.value} with period {period}.",
+                    security_event=security_event,
+                    period=period,
+                )
+
+                return
 
             for item in data.get("data", []):
                 yield item
