@@ -1,0 +1,37 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Nozomi",
+    "type": "object",
+    "properties": {
+      "key_name": {
+        "description": "Nozomi Networks Vantage API key name",
+        "type": "string"
+      },
+      "key_token": {
+        "description": "Nozomi Networks Vantage API key token",
+        "type": "string"
+      },
+      "base_url": {
+        "description": "Base URL for the Nozomi Networks Vantage API",
+        "type": "string",
+        "default": "https://vantagetechalliancesinstance.customers.us1.vantage.nozominetworks.io"
+      }
+    },
+    "required": [
+      "key_name",
+      "key_token"
+    ],
+    "secrets": [
+      "key_token"
+    ]
+  },
+  "description": "Nozomi Networks is a leader in industrial cybersecurity and operational visibility, specializing in protecting critical infrastructure and IoT environments. Their innovative solutions offer real-time threat detection, monitoring, and response, ensuring the security and resilience of operational technology (OT) systems. With a focus on enhancing safety and operational efficiency, Nozomi empowers organizations to safeguard their assets in an increasingly connected world.",
+  "name": "Nozomi Networks",
+  "uuid": "fca9d3d3-a252-467b-8735-0fd0ff17e07f",
+  "version": "1.0.0",
+  "slug": "nozomi",
+  "categories": [
+    "Network"
+  ]
+}
