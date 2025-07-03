@@ -186,7 +186,7 @@ def test_timestepper_get_time_ranges_reach_max_wait_time(mock_time):
         mock_datetime.now.side_effect = [
             datetime(2023, 3, 22, 11, 50, 28),  # returned in TimeStepper.create
             datetime(2023, 3, 22, 11, 50, 28),  # compared in then 1st iteration
-            datetime(2023, 3, 22, 12, 7, 50),   # compared in then 2nd iteration
+            datetime(2023, 3, 22, 12, 7, 50),  # compared in then 2nd iteration
             datetime(2023, 3, 22, 12, 13, 38),  # compared in the 3rd iteration
             datetime(2023, 3, 22, 12, 20, 29),  # compared in the 4th iteration
             datetime(2023, 3, 22, 12, 20, 27),  # compared in the 5th iteration

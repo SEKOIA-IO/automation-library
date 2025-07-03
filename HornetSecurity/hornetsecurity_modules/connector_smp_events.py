@@ -99,7 +99,7 @@ class SMPEventsConnector(BaseConnector):
         """
         return self.get_object_id_from_scope(self.configuration.scope)
 
-    def get_email_header(self, object_id: int, es_mail_id: str) -> str:
+    def get_email_header(self, object_id: int, es_mail_id: str) -> str | None:
         """
         Get the email header for a specific email ID.
         """
@@ -117,9 +117,12 @@ class SMPEventsConnector(BaseConnector):
 
         # Parse the response to get the raw header
         response_data = response.json()
-        result: str = response_data.get("raw_header")
+        result: str | None = response_data.get("raw_header")
         if not result:
-            raise ValueError("No raw header found in the response")
+            self.log(
+                level="warning",
+                message=f"No raw header found for object ID {object_id} and email ID {es_mail_id}",
+            )
 
         return result
 
