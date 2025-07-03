@@ -77,7 +77,7 @@ class WatchGuardEpdrConnector(AsyncConnector):
             datetime:
         """
         now = datetime.now(timezone.utc)
-        one_day_ago = (now - timedelta(days=7)).replace(microsecond=0)
+        one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
 
         with self.context as cache:
             last_event_date_str = cache.get(security_event.name)
