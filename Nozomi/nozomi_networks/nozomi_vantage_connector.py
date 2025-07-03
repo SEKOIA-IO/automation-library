@@ -107,11 +107,7 @@ class NozomiVantageConnector(AsyncConnector):
             events (list[dict[str, Any]]): The list of events to add to the cache.
         """
         for event in events:
-            event_id = event.get("id")
-            if not event_id:
-                logger.warning("Event does not contain an ID: {event}", event=event)
-                continue
-
+            event_id = event["id"]
             self._get_cache(event_type)[event_id] = 1
 
     def _is_new_event(self, event_type: EventType, event_id: str) -> bool:

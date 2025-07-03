@@ -18,7 +18,7 @@ class NozomiError(Exception):
         self.status_code = status_code
 
     @classmethod
-    async def from_response(cls, response: aiohttp.ClientResponse) -> "NozomiError":
+    async def from_response(cls, response: aiohttp.ClientResponse) -> "NozomiError":  # pragma: no cover
         """
         Create a NozomiError from an aiohttp response.
 

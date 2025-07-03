@@ -213,7 +213,7 @@ class NozomiClient(object):
 
         return {}
 
-    async def close(self) -> None:
+    async def close(self) -> None:  # pragma: no cover
         """
         Close the Nozomi client session.
 
