@@ -7,7 +7,7 @@ from aiolimiter import AsyncLimiter
 from loguru import logger
 from pydantic.v1 import BaseModel
 
-from watchguard.client.errors import WatchGuardAuthError, WatchGuardError
+from watchguard.client.errors import WatchGuardError
 from watchguard.client.security_event import SecurityEvent
 
 
@@ -101,7 +101,7 @@ class WatchGuardClient(object):
 
         try:
             return await func(self._auth_token)
-        except WatchGuardAuthError:
+        except WatchGuardError:
             # If authentication fails, fetch a new token and retry
             self._auth_token = await self.fetch_auth_token()
 
@@ -122,11 +122,9 @@ class WatchGuardClient(object):
         if period not in [1, 7]:
             raise ValueError("Period must be either 1 or 7 days.")
 
-        async with self.session() as session:
-
-            async def fetch_func(auth_token: str) -> dict[str, Any]:
-                headers = {"WatchGuard-API-Key": self.config.application_key, "Authorization": f"Bearer {auth_token}"}
-
+        async def fetch_func(auth_token: str) -> dict[str, Any]:
+            headers = {"WatchGuard-API-Key": self.config.application_key, "Authorization": f"Bearer {auth_token}"}
+            async with self.session() as session:
                 response = await session.get(
                     "{0}/rest/endpoint-security/management/api/v1/accounts/{1}/securityevents/{2}/export/{3}".format(
                         self.config.base_url, self.config.account_id, security_event.value, period
@@ -139,21 +137,21 @@ class WatchGuardClient(object):
 
                 result: dict[str, Any] = await response.json()
 
-                return result
+            return result
 
-            data = await self._call_with_auth(fetch_func)
+        data = await self._call_with_auth(fetch_func)
 
-            if data is None:
-                logger.warning(
-                    "No data returned from WatchGuard API for security event {security_event.value} with period {period}.",
-                    security_event=security_event,
-                    period=period,
-                )
+        if data is None:
+            logger.warning(
+                "No data returned from WatchGuard API for security event {security_event.value} with period {period}.",
+                security_event=security_event,
+                period=period,
+            )
 
-                return
+            return
 
-            for item in data.get("data", []):
-                yield item
+        for item in data.get("data", []):
+            yield item
 
     async def close(self) -> None:
         """
