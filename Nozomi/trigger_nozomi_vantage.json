@@ -29,6 +29,7 @@
     "title": "Trigger Arguments",
     "type": "object"
   },
+  "results": {},
   "description": "Get Events From Nozomi Vantage",
   "docker_parameters": "nozomi_vantage",
   "name": "Nozomi Vantage",
