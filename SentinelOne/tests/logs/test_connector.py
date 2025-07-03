@@ -27,9 +27,6 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
     EVENTS_LAG.labels = MagicMock()
     most_recent_datetime_seen = datetime.datetime(2024, 1, 23, 11, 6, 34)
 
-    # Test timestamp caching
-    activity_1.createdAt = None
-
     response_1 = MockResponse(pagination={"nextCursor": "foo"}, data=[activity_1])
     response_2 = MockResponse(pagination={"nextCursor": None}, data=[activity_2])
     activity_consumer.management_client.activities.get.side_effect = [response_1, response_2]
@@ -48,7 +45,9 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
     assert EVENTS_LAG.labels(
         intake_key=activity_consumer.configuration.intake_key, type="activities"
     ).set.call_args_list == [
-        call(0),
+        call(
+            int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(activity_1.createdAt)).total_seconds())
+        ),
         call(
             int((datetime.datetime.now(UTC) - datetime.datetime.fromisoformat(activity_2.createdAt)).total_seconds())
         ),
