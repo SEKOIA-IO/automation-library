@@ -1,0 +1,36 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 600
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 100
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key",
+      "frequency"
+    ],
+    "title": "Trigger Arguments",
+    "type": "object"
+  },
+  "description": "Get Events From Nozomi Vantage",
+  "docker_parameters": "nozomi_vantage",
+  "name": "Nozomi Vantage",
+  "uuid": "ec2c3f4d-26c1-4730-bc46-372461486187"
+}
