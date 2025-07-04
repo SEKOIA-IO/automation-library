@@ -99,7 +99,7 @@ class SentinelOneLogsConsumer(Thread):
         return Management(hostname=self.module.configuration.hostname, api_token=self.module.configuration.api_token)
 
     def load_events_cache(self) -> Cache:
-        events_cache: LRUCache = LRUCache(maxsize=10000) # Update cache size to 10_000
+        events_cache: LRUCache = LRUCache(maxsize=10000)
 
         with self.cursor._context as ctx:
             for cached_id in ctx.get("events_cache", []):
