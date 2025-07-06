@@ -20,6 +20,7 @@ class NozomiClient(object):
         key_name: str,
         key_token: str,
         base_url: str = "https://vantagetechalliancesinstance.customers.us1.vantage.nozominetworks.io",
+        page_size: int = 25,
     ) -> None:
         """
         Initialize the NozomiClient with the provided credentials and base URL.
@@ -32,6 +33,7 @@ class NozomiClient(object):
         self.key_name = key_name
         self.key_token = key_token
         self.base_url = base_url
+        self.page_size = page_size
         self._authorization: str | None = None
 
         self._rate_limiter = AsyncLimiter(max_rate=60, time_period=60)  # 60 requests per minute
@@ -119,7 +121,7 @@ class NozomiClient(object):
 
                 params = {
                     "page": page,
-                    "size": 100,  # Adjust size as needed
+                    "size": self.page_size,
                     **self._get_filters(event_type, start_date),
                 }
 
@@ -181,8 +183,8 @@ class NozomiClient(object):
         """
         match event_type:
             case EventType.Assets:
-                # Filter by `created_time` field and it should be in ISO 8601 format. But it does not work
-                # So convert to unix timestamp in milliseconds
+                # We should filter by `created_time` field and it should be in ISO 8601 format. But it does not work
+                # So convert to unix timestamp in milliseconds and use `record_created_at` field instead.
                 return {
                     "filter[record_created_at][gt]": int(start_date.timestamp() * 1000),
                     "sort[record_created_at]": "asc",
@@ -190,7 +192,7 @@ class NozomiClient(object):
 
             case EventType.Alerts:
                 # Filter by `record_created_at` field and it should be in ISO 8601 format regarding specification.
-                # But it does not work with `created_time` field.
+                # It does not work with `created_time` field.
                 return {
                     "filter[record_created_at][gt]": int(start_date.timestamp() * 1000),
                     "sort[record_created_at]": "asc",
@@ -204,11 +206,10 @@ class NozomiClient(object):
                 }
 
             case EventType.WirelessNetworks:
-                # Filter by `created_at` field and it should be in time format.
-                # When try to deal with `record_created_at` it returns 400 Bad Request.
+                # Filter by `time` field and it should be in unix timestamp format.
                 return {
-                    "filter[created_at][gt]": int(start_date.timestamp() * 1000),
-                    "sort[created_at]": "desc",
+                    "filter[time][gt]": int(start_date.timestamp() * 1000),
+                    "sort[time]": "desc",
                 }
 
         return {}

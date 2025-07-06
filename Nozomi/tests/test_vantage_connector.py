@@ -76,7 +76,7 @@ async def test_vantage_connector(vantage_connector: NozomiVantageConnector, sess
 
             base_params = NozomiClient._get_filters(event_type, start_date)
 
-            encoded_params_1 = urlencode({"page": 1, "size": 100, **base_params})
+            encoded_params_1 = urlencode({"page": 1, "size": 25, **base_params})
             data_url_1 = f"{module_config.base_url}/api/v1/{event_type.value}?{encoded_params_1}"
             logger.info(f"Data URL: {data_url_1}")
             mocked_responses.get(
@@ -84,7 +84,7 @@ async def test_vantage_connector(vantage_connector: NozomiVantageConnector, sess
                 payload={"data": response_data[event_type]},
             )
 
-            encoded_params_2 = urlencode({"page": 2, "size": 100, **base_params})
+            encoded_params_2 = urlencode({"page": 2, "size": 25, **base_params})
             data_url_2 = f"{module_config.base_url}/api/v1/{event_type.value}?{encoded_params_2}"
             mocked_responses.get(
                 data_url_2,

@@ -140,7 +140,7 @@ async def test_fetch_data_1(http_client: NozomiClient, nozomi_config: dict[str, 
         encoded_params_1 = urlencode(
             {
                 "page": 1,
-                "size": 100,
+                "size": 25,
                 "filter[record_created_at][gt]": int(start_date.timestamp() * 1000),
                 "sort[record_created_at]": "asc",
             }
@@ -162,7 +162,7 @@ async def test_fetch_data_1(http_client: NozomiClient, nozomi_config: dict[str, 
         encoded_params_2 = urlencode(
             {
                 "page": 2,
-                "size": 100,
+                "size": 25,
                 "filter[record_created_at][gt]": int(start_date.timestamp() * 1000),
                 "sort[record_created_at]": "asc",
             }
@@ -235,7 +235,7 @@ async def test_fetch_data_2(http_client: NozomiClient, nozomi_config: dict[str, 
         encoded_params_1 = urlencode(
             {
                 "page": 1,
-                "size": 100,
+                "size": 25,
                 "filter[time][gt]": int(start_date.timestamp() * 1000),
                 "sort[time]": "asc",
             }
@@ -257,7 +257,7 @@ async def test_fetch_data_2(http_client: NozomiClient, nozomi_config: dict[str, 
         encoded_params_2 = urlencode(
             {
                 "page": 2,
-                "size": 100,
+                "size": 25,
                 "filter[time][gt]": int(start_date.timestamp() * 1000),
                 "sort[time]": "asc",
             }

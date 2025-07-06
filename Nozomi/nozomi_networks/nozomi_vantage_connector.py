@@ -56,6 +56,7 @@ class NozomiVantageConfiguration(DefaultConnectorConfiguration):
 
     frequency: int = 600
     batch_size: int = 1000
+    page_size: int = 25
 
 
 class NozomiVantageConnector(AsyncConnector):
@@ -134,7 +135,9 @@ class NozomiVantageConnector(AsyncConnector):
             NozomiClient: The Nozomi client instance.
         """
         if self._nozomi_client is None:
-            self._nozomi_client = NozomiClient(**self.module.configuration.dict())
+            self._nozomi_client = NozomiClient(
+                **self.module.configuration.dict(), page_size=self.configuration.page_size
+            )
 
         return self._nozomi_client
 
@@ -151,14 +154,14 @@ class NozomiVantageConnector(AsyncConnector):
         with self.context as cache:  # pragma: no cover
             last_event_date_str = cache.get(event_type.name)
 
-            # If undefined, retrieve events from the last 1 hour
+            # If undefined, retrieve events from the last 1 day
             if last_event_date_str is None:
                 return one_day_ago
 
             # Parse the most recent date seen
             last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
 
-            # We don't retrieve messages older than 1 hour
+            # We don't retrieve messages older than 1 day
             return max(last_event_date, one_day_ago)
 
     async def get_events(self) -> int:
