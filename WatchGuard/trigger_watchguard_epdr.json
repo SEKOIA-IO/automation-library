@@ -31,7 +31,7 @@
   },
   "description": "Get EPDR Events from WatchGuard",
   "docker_parameters": "watchguard_epdr",
-  "name": "WatchGuard EPDR",
+  "name": "Collect WatchGuard EPDR security events",
   "results": {},
   "uuid": "1e5eeb82-9561-452c-ada0-da9b3a56d2c5"
 }
