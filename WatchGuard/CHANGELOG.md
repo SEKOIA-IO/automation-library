@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-08 - 1.1.3
+
+### Changed
+
+- Improve the name of the trigger and the connector
+- Update the categorization of the module
+
 ## 2025-07-02 - 1.1.2
 
 ### Fixed
