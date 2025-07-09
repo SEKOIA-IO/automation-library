@@ -12,11 +12,7 @@ from collections.abc import Generator
 from functools import cached_property
 from os.path import join as urljoin
 
-from .models import (
-    DefaultAssetConnectorConfiguration,
-    AssetList,
-    AssetItem
-)
+from .models import DefaultAssetConnectorConfiguration, AssetList, AssetItem
 
 from sekoia_automation.trigger import Trigger
 from sekoia_automation.exceptions import TriggerConfigurationError

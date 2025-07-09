@@ -18,7 +18,7 @@ from asset_connector.models import (
     OSTypeId,
     DeviceTypeId,
     DeviceTypeStr,
-    AssetItem
+    AssetItem,
 )
 
 

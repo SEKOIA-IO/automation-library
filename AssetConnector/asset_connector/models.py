@@ -319,6 +319,7 @@ class AssetObject(BaseModel):
     name: str
     type: Literal["host", "account"]
 
+
 # Union type for AssetItem, which can be one of the OCSF models or AssetObject
 AssetItem = Union[
     VulnerabilityOCSFModel,
@@ -327,6 +328,7 @@ AssetItem = Union[
     SoftwareOCSFModel,
     AssetObject,
 ]
+
 
 class AssetList(BaseModel):
     """

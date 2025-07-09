@@ -18,7 +18,7 @@ from ..models import (
     OSTypeStr,
     DeviceTypeId,
     DeviceTypeStr,
-    OSTypeId
+    OSTypeId,
 )
 from ..base import AssetConnector
 from .client import HarfanglabApiClient
