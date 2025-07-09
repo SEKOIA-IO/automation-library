@@ -12,7 +12,7 @@ from asset_connector.models import (
     SoftwareOCSFModel,
     Metadata,
     OperatingSystem,
-    Device,
+    Device, Product, OSTypeStr, OSTypeId, DeviceTypeId, DeviceTypeStr,
 )
 
 
@@ -55,13 +55,13 @@ def test_asset_connector():
 
 @pytest.fixture
 def asset_object_1():
-    metadata_object = Metadata(product="Harfanglab EDR", version="1.5.0")
-
-    os_object = OperatingSystem(name="Windows 10", type="Windows", type_id=100)
+    product = Product(name="Harfanglab EDR", version="24.12")
+    metadata_object = Metadata(product=product, version="1.5.0")
+    os_object = OperatingSystem(name="Windows 10", type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS)
 
     device_object = Device(
-        type_id=2,
-        type="Desktop",
+        type_id=DeviceTypeId.DESKTOP,
+        type=DeviceTypeStr.DESKTOP,
         uid="12345",
         os=os_object,
         hostname="example-host",
@@ -84,13 +84,13 @@ def asset_object_1():
 
 @pytest.fixture
 def asset_object_2():
-    metadata_object = Metadata(product="Harfanglab EDR", version="1.5.0")
-
-    os_object = OperatingSystem(name="Linux test", type="Linux", type_id=200)
+    product = Product(name="Harfanglab EDR", version="24.12")
+    metadata_object = Metadata(product=product, version="1.5.0")
+    os_object = OperatingSystem(name="Linux test", type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX)
 
     device_object = Device(
-        type_id=2,
-        type="Desktop",
+        type_id=DeviceTypeId.DESKTOP,
+        type=DeviceTypeStr.DESKTOP,
         uid="54321",
         os=os_object,
         hostname="example-host_1",

@@ -358,9 +358,28 @@ def test_extract_timestamp(test_harfanglab_asset_connector):
     assert isinstance(timestamp, datetime.datetime)
 
 
+def test_extract_os_type(test_harfanglab_asset_connector):
+    asset = {"ostype": "windows"}
+    os_type = test_harfanglab_asset_connector.extract_os_type(asset["ostype"])
+    assert os_type == "WINDOWS"
+
+    asset = {"ostype": "linux"}
+    os_type = test_harfanglab_asset_connector.extract_os_type(asset["ostype"])
+    assert os_type == "LINUX"
+
+    asset = {"ostype": "macos"}
+    os_type = test_harfanglab_asset_connector.extract_os_type(asset["ostype"])
+    assert os_type == "MACOS"
+
+    asset = {"ostype": "unknown"}
+    os_type = test_harfanglab_asset_connector.extract_os_type(asset["ostype"])
+    assert os_type == "UNKNOWN"
+
+
 def test_map_fields(test_harfanglab_asset_connector, asset_first_object):
     mapped_device = test_harfanglab_asset_connector.map_fields(asset_first_object)
 
+    # Test static fields
     assert isinstance(mapped_device, DeviceOCSFModel)
     assert mapped_device.activity_id == 2
     assert mapped_device.activity_name == "Collect"
@@ -372,14 +391,18 @@ def test_map_fields(test_harfanglab_asset_connector, asset_first_object):
     assert mapped_device.type_uid == 500102
     assert isinstance(mapped_device.time, float)
 
-    assert mapped_device.metadata.product == "Harfanglab EDR"
+    # Test metadata fields
+    assert mapped_device.metadata.product.name == "Harfanglab EDR"
+    assert mapped_device.metadata.product.version == "24.12"
     assert mapped_device.metadata.version == "1.5.0"
 
-    assert mapped_device.device.type_id == 2
-    assert mapped_device.device.type == "Desktop"
+    # Test device fields
+    assert mapped_device.device.type_id.value == 2
+    assert mapped_device.device.type.value == "Desktop"
     assert mapped_device.device.uid == asset_first_object["id"]
     assert mapped_device.device.os.name == asset_first_object["osproducttype"]
-    assert mapped_device.device.os.type == asset_first_object["ostype"]
+    assert mapped_device.device.os.type.value == asset_first_object["ostype"]
+    assert mapped_device.device.os.type_id.value == 100
     assert mapped_device.device.hostname == asset_first_object["hostname"]
 
 

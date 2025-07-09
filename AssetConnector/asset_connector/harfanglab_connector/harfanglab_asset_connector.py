@@ -1,15 +1,16 @@
 from functools import cached_property
 from collections.abc import Generator
-
-from datetime import timedelta, datetime
 from typing import Any
 from urllib.parse import urljoin
+
 from dateutil.parser import isoparse
+from datetime import timedelta, datetime
 
 from sekoia_automation.checkpoint import CheckpointDatetime
 
-from .helper import handle_uri, map_os_type
-from ..models import DeviceOCSFModel, Metadata, OperatingSystem, Device
+from .helper import handle_uri
+from ..models import DeviceOCSFModel, Metadata, OperatingSystem, Device, Product, OSTypeStr, DeviceTypeId, \
+    DeviceTypeStr, OSTypeId
 from ..base import AssetConnector
 from .client import HarfanglabApiClient
 from .models import HarfanglabAssetConnectorModuleConfiguration
@@ -20,6 +21,7 @@ class HarfanglabAssetConnector(AssetConnector):
 
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
     DEVICE_ORDERING_FIELD: str = "firstseen"
+    PRODUCT_NAME: str = "Harfanglab EDR"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -31,6 +33,10 @@ class HarfanglabAssetConnector(AssetConnector):
 
     @cached_property
     def client(self) -> HarfanglabApiClient:
+        """
+        Get the API client for the Harfanglab asset connector.
+        This client is used to interact with the Harfanglab API.
+        """
         return HarfanglabApiClient(
             api_token=self.module.configuration.api_key,
         )
@@ -56,24 +62,55 @@ class HarfanglabAssetConnector(AssetConnector):
         return 1000
 
     def extract_timestamp(self, asset: dict[str, Any]) -> datetime:
+        """
+        Extract the timestamp from the asset data and transform it to datetime.
+
+        Returns:
+            datetime: The extracted timestamp as a datetime object.
+        """
         return isoparse(asset["firstseen"])
 
+    @staticmethod
+    def extract_os_type(os_type: str) -> str:
+        """
+        Extract the OS type from the asset data and map it.
+
+        returns:
+            str: The OS type of asset.
+        """
+        os_type_list = [member.name for member in OSTypeStr]
+        os_type = os_type.strip().upper() if os_type else None
+
+        if not os_type:
+            return "UNKNOWN"
+
+        if os_type and os_type not in os_type_list:
+            return "OTHER"
+
+        return os_type
+
     def map_fields(self, asset: dict[str, Any]) -> DeviceOCSFModel:
+        """
+        Map the fields from the asset data to the OCSF Device model.
 
-        metadata_object = Metadata(product="Harfanglab EDR", version="1.5.0")
-
-        os_object = OperatingSystem(
-            name=asset.get("osproducttype"), type=asset.get("ostype"), type_id=map_os_type(asset.get("ostype"))
+        return:
+            DeviceOCSFModel: The mapped OCSF Device model.
+        """
+        product = Product(name=self.PRODUCT_NAME, version="24.12")
+        metadata = Metadata(product=product, version="1.5.0")
+        os_type = self.extract_os_type(asset.get("ostype"))
+        os_obj = OperatingSystem(
+            name=asset.get("osproducttype"),
+            type=OSTypeStr[os_type],
+            type_id=OSTypeId[os_type]
         )
-
-        device_object = Device(
-            type_id=2,
-            type="Desktop",
+        device = Device(
+            type_id=DeviceTypeId.DESKTOP,
+            type=DeviceTypeStr.DESKTOP,
             uid=asset["id"],
-            os=os_object,
+            os=os_obj,
             hostname=asset["hostname"],
         )
-
         return DeviceOCSFModel(
             activity_id=2,
             activity_name="Collect",
@@ -84,8 +121,8 @@ class HarfanglabAssetConnector(AssetConnector):
             type_name="Software Inventory Info: Collect",
             type_uid=500102,
             time=self.extract_timestamp(asset).timestamp(),
-            metadata=metadata_object,
-            device=device_object,
+            metadata=metadata,
+            device=device,
         )
 
     def __fetch_devices(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
