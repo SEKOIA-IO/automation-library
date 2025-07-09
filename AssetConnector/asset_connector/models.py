@@ -13,6 +13,7 @@ class DefaultAssetConnectorConfiguration(BaseModel):
         api_key (str): The API key for authentication with the Sekoia.io API.
         frequency (int): The frequency in seconds at which the connector should run.
     """
+
     sekoia_base_url: str | None
     api_key: str
     frequency: int = 60
@@ -28,6 +29,7 @@ class Product(BaseModel):
         vendor_name (str | None): The name of the vendor. Defaults to None.
         version (str | None): The version of the product.
     """
+
     name: str
     vendor_name: str | None = None
     version: str | None = None
@@ -37,6 +39,7 @@ class Metadata(BaseModel):
     """
     Metadata model for OCSF.
     """
+
     product: Product
     version: str
 
@@ -46,6 +49,7 @@ class OCSFBaseModel(BaseModel):
     Base model for OCSF activities.
     This model includes common fields that are used in OCSF activities.
     """
+
     activity_id: int
     activity_name: str
     category_name: str
@@ -66,6 +70,7 @@ class Group(BaseModel):
     Group model represents a user group.
     https://schema.ocsf.io/1.5.0/objects/group
     """
+
     name: str
     desc: str | None = None
     privileges: list[str] | None = None
@@ -86,6 +91,7 @@ class UserOCSFModel(OCSFBaseModel):
     UserOCSFModel represents a user in the OCSF format.
     https://schema.ocsf.io/1.5.0/classes/user_inventory
     """
+
     user: User
 
 
@@ -95,6 +101,7 @@ class GeoLocation(BaseModel):
     GeoLocation model represents the geographical location of a device.
     https://schema.ocsf.io/1.5.0/objects/location
     """
+
     city: str | None = None
     country: str | None = None
 
@@ -128,11 +135,13 @@ class OSTypeStr(Enum):
     AIX = "aix"
     HPUX = "hp-ux"
 
+
 class OperatingSystem(BaseModel):
     """
     OperatingSystem model represents the operating system of a device.
     https://schema.ocsf.io/1.5.0/objects/os
     """
+
     name: str | None = None
     type: OSTypeStr | None = None
     type_id: OSTypeId | None = None
@@ -183,6 +192,7 @@ class Device(BaseModel):
     Device model represents a device object in the OCSF format.
     https://schema.ocsf.io/1.5.0/objects/device
     """
+
     type_id: DeviceTypeId
     type: DeviceTypeStr
     uid: str
@@ -199,6 +209,7 @@ class DataObject(BaseModel):
     """
     DataObject represents some data related to a device. ( Firewall and Storage encryption )
     """
+
     Firewall_status: Literal["Disabled", "Enabled"] | None = None
     Storage_encryption: EncryptionObject | None = None
 
@@ -207,6 +218,7 @@ class EnrichementObject(BaseModel):
     """
     Enrichement Object represents additional information about a device.
     """
+
     name: str
     value: str
     data: DataObject
@@ -216,6 +228,7 @@ class Enrichement(BaseModel):
     """
     List of enrichments for a device.
     """
+
     Enrichements: list[EnrichementObject] | None = None
 
 
@@ -224,6 +237,7 @@ class DeviceOCSFModel(OCSFBaseModel):
     DeviceOCSFModel represents a device in the OCSF format.
     https://schema.ocsf.io/1.5.0/classes/inventory_info
     """
+
     device: Device
     enrichments: Enrichement | None = None
 
@@ -269,6 +283,7 @@ class FindingInformation(BaseModel):
     FindingInformation model represents the information about a vulnerability finding.
     https://schema.ocsf.io/1.5.0/objects/finding_information
     """
+
     uid: str
     data_sources: list[str] | None = None
     title: str | None = None
@@ -297,6 +312,7 @@ class VulnerabilityOCSFModel(BaseModel):
 
 ## Assets Object Models
 
+
 # TODO: Delete this model after complete migration to OCSF
 # Compatible only with the fake asset connector
 class AssetObject(BaseModel):
@@ -313,5 +329,6 @@ class AssetList(BaseModel):
         items (list): A list of asset objects, which can be of various types including
                       VulnerabilityOCSFModel, DeviceOCSFModel, UserOCSFModel, SoftwareOCSFModel, or AssetObject.
     """
+
     version: int
     items: list[VulnerabilityOCSFModel | DeviceOCSFModel | UserOCSFModel | SoftwareOCSFModel | AssetObject] = []

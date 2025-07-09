@@ -9,8 +9,17 @@ from datetime import timedelta, datetime
 from sekoia_automation.checkpoint import CheckpointDatetime
 
 from .helper import handle_uri
-from ..models import DeviceOCSFModel, Metadata, OperatingSystem, Device, Product, OSTypeStr, DeviceTypeId, \
-    DeviceTypeStr, OSTypeId
+from ..models import (
+    DeviceOCSFModel,
+    Metadata,
+    OperatingSystem,
+    Device,
+    Product,
+    OSTypeStr,
+    DeviceTypeId,
+    DeviceTypeStr,
+    OSTypeId,
+)
 from ..base import AssetConnector
 from .client import HarfanglabApiClient
 from .models import HarfanglabAssetConnectorModuleConfiguration
@@ -99,11 +108,7 @@ class HarfanglabAssetConnector(AssetConnector):
         product = Product(name=self.PRODUCT_NAME, version="24.12")
         metadata = Metadata(product=product, version="1.5.0")
         os_type = self.extract_os_type(asset.get("ostype"))
-        os_obj = OperatingSystem(
-            name=asset.get("osproducttype"),
-            type=OSTypeStr[os_type],
-            type_id=OSTypeId[os_type]
-        )
+        os_obj = OperatingSystem(name=asset.get("osproducttype"), type=OSTypeStr[os_type], type_id=OSTypeId[os_type])
         device = Device(
             type_id=DeviceTypeId.DESKTOP,
             type=DeviceTypeStr.DESKTOP,

@@ -12,7 +12,12 @@ from asset_connector.models import (
     SoftwareOCSFModel,
     Metadata,
     OperatingSystem,
-    Device, Product, OSTypeStr, OSTypeId, DeviceTypeId, DeviceTypeStr,
+    Device,
+    Product,
+    OSTypeStr,
+    OSTypeId,
+    DeviceTypeId,
+    DeviceTypeStr,
 )
 
 
