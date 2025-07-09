@@ -18,6 +18,7 @@ from asset_connector.models import (
     OSTypeId,
     DeviceTypeId,
     DeviceTypeStr,
+    AssetItem
 )
 
 
@@ -29,7 +30,7 @@ class FakeAssetConnector(AssetConnector):
 
     def get_assets(
         self,
-    ) -> Generator[VulnerabilityOCSFModel | DeviceOCSFModel | UserOCSFModel | SoftwareOCSFModel, None, None]:
+    ) -> Generator[AssetItem, None, None]:
         """
         Fake method to simulate asset retrieval.
         Yields:

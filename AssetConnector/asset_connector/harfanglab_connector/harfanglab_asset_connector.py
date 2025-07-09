@@ -18,15 +18,15 @@ from ..models import (
     OSTypeStr,
     DeviceTypeId,
     DeviceTypeStr,
-    OSTypeId,
+    OSTypeId
 )
 from ..base import AssetConnector
 from .client import HarfanglabApiClient
-from .models import HarfanglabAssetConnectorModuleConfiguration
+from .models import HarfanglabAssetConnectorModule
 
 
 class HarfanglabAssetConnector(AssetConnector):
-    module: HarfanglabAssetConnectorModuleConfiguration
+    module: HarfanglabAssetConnectorModule
 
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
     DEVICE_ORDERING_FIELD: str = "firstseen"
@@ -88,7 +88,7 @@ class HarfanglabAssetConnector(AssetConnector):
             str: The OS type of asset.
         """
         os_type_list = [member.name for member in OSTypeStr]
-        os_type = os_type.strip().upper() if os_type else None
+        os_type = os_type.strip().upper() if os_type else ""
 
         if not os_type:
             return "UNKNOWN"

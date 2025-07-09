@@ -14,11 +14,8 @@ from os.path import join as urljoin
 
 from .models import (
     DefaultAssetConnectorConfiguration,
-    VulnerabilityOCSFModel,
-    DeviceOCSFModel,
-    UserOCSFModel,
-    SoftwareOCSFModel,
     AssetList,
+    AssetItem
 )
 
 from sekoia_automation.trigger import Trigger
@@ -231,7 +228,7 @@ class AssetConnector(Trigger):
     @abstractmethod
     def get_assets(
         self,
-    ) -> Generator[VulnerabilityOCSFModel | DeviceOCSFModel | UserOCSFModel | SoftwareOCSFModel, None, None]:
+    ) -> Generator[AssetItem, None, None]:
         """
         Get assets from the connector.
         Yields:

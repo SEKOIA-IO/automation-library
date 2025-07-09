@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from enum import Enum, IntEnum
-from typing import Literal
+from typing import Literal, Sequence, Union
 
 
 class DefaultAssetConnectorConfiguration(BaseModel):
@@ -319,6 +319,14 @@ class AssetObject(BaseModel):
     name: str
     type: Literal["host", "account"]
 
+# Union type for AssetItem, which can be one of the OCSF models or AssetObject
+AssetItem = Union[
+    VulnerabilityOCSFModel,
+    DeviceOCSFModel,
+    UserOCSFModel,
+    SoftwareOCSFModel,
+    AssetObject,
+]
 
 class AssetList(BaseModel):
     """
@@ -331,4 +339,4 @@ class AssetList(BaseModel):
     """
 
     version: int
-    items: list[VulnerabilityOCSFModel | DeviceOCSFModel | UserOCSFModel | SoftwareOCSFModel | AssetObject] = []
+    items: Sequence[AssetItem] = []
