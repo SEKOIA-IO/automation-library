@@ -1,13 +1,10 @@
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from hornetsecurity_modules.connector_base import (
-    BaseConnector,
-    BaseConnectorConfiguration,
-)
+from hornetsecurity_modules.connector_base import BaseConnector, BaseConnectorConfiguration
 
 
 class DummyConnector(BaseConnector):

@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+import requests
 from cachetools import Cache, LRUCache
 from sekoia_automation.storage import PersistentJSON
-import requests
 
 
 @dataclass
@@ -16,11 +16,11 @@ class ApiError:
     data: str = "N/A"
     message: str = "Unknown error"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Request failed with status code {self.status_code} - {self.reason} - error id: {self.id} - error message: {self.message} - error data: {self.data}"
 
     @classmethod
-    def from_response_error(cls, response: requests.Response):
+    def from_response_error(cls, response: requests.Response) -> "ApiError":
         try:
             error_data = response.json()
         except ValueError:
@@ -40,11 +40,11 @@ def utc_zulu_format(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def load_events_cache(context: PersistentJSON, maxsize: int = 1000) -> Cache:
+def load_events_cache(context: PersistentJSON, maxsize: int = 1000) -> Cache[str, Any]:
     """
     Load the cache from the context
     """
-    result: LRUCache = LRUCache(maxsize=maxsize)
+    result: LRUCache[str, Any] = LRUCache(maxsize=maxsize)
 
     with context as cache:
         events_ids = cache.get("events_cache", [])
@@ -55,7 +55,7 @@ def load_events_cache(context: PersistentJSON, maxsize: int = 1000) -> Cache:
     return result
 
 
-def save_events_cache(events_cache: Cache, context: PersistentJSON) -> None:
+def save_events_cache(events_cache: Cache[str, Any], context: PersistentJSON) -> None:
     """
     Save the cache to the context
     """
@@ -63,7 +63,9 @@ def save_events_cache(events_cache: Cache, context: PersistentJSON) -> None:
         cache["events_cache"] = list(events_cache.keys())
 
 
-def remove_duplicates(events: list[dict[str, Any]], events_cache: Cache, fieldname: str) -> list[dict[str, Any]]:
+def remove_duplicates(
+    events: list[dict[str, Any]], events_cache: Cache[str, Any], fieldname: str
+) -> list[dict[str, Any]]:
     """
     Remove duplicates events from the fetched events and update the cache with new ids.
 
