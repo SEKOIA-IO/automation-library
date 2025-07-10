@@ -1,19 +1,22 @@
 import pytest
 from unittest.mock import Mock
 
-from asset_connector.fake_asset_connector import FakeAssetConnector, FakeAssetConnectorModule
+from asset_connector.models import AssetConnectorModule
+from asset_connector.fake_connector.fake_asset_connector import FakeAssetConnector
 
 
 @pytest.fixture
 def test_asset_connector(data_storage):
-    module = FakeAssetConnectorModule()
-    module.configuration = {"len_data_to_send": 10, "time_sleep": 1}
+    module = AssetConnectorModule()
+    module.configuration = {}
 
     test_connector = FakeAssetConnector(module=module, data_path=data_storage)
     test_connector.configuration = {
         "sekoia_base_url": "http://example.com",
-        "api_key": "fake_api_key",
+        "sekoia_api_key": "fake_api_key",
         "frequency": 60,
+        "len_data_to_send": 10,
+        "time_sleep": 1,
     }
 
     test_connector.log = Mock()
