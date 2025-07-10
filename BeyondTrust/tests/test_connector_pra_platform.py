@@ -43,7 +43,6 @@ def test_fetch_events(trigger, sessions_list_xml_with_one, session_xml):
             [{"content": sessions_list_xml_with_one}, {"content": session_xml}],
         )
 
-        # mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=messages)
         trigger.from_date = 1732810704
         events = trigger.fetch_events()
 
