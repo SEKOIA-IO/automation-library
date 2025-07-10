@@ -12,6 +12,7 @@ class AssetConnectorModule(Module):
     """
     Base class for asset connector modules.
     """
+
     pass
 
 

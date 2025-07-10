@@ -16,7 +16,7 @@ def test_asset_connector(data_storage):
         "sekoia_api_key": "fake_api_key",
         "frequency": 60,
         "len_data_to_send": 10,
-        "time_sleep": 1
+        "time_sleep": 1,
     }
 
     test_connector.log = Mock()

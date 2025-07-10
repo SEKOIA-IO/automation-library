@@ -8,11 +8,9 @@ from ..models import AssetObject, DefaultAssetConnectorConfiguration
 from ..base import AssetConnector
 
 
-
 class FakeAssetConnectorConfiguration(DefaultAssetConnectorConfiguration):
     len_data_to_send: int = Field(..., description="Number of assets to send in each batch", ge=1)
     time_sleep: int = Field(..., description="Time to sleep between asset fetches in seconds", ge=0)
-
 
 
 class FakeAssetConnector(AssetConnector):
