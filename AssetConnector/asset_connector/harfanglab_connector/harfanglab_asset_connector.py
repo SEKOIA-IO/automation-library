@@ -1,6 +1,6 @@
 from functools import cached_property
 from collections.abc import Generator
-from typing import Any
+from typing import Any, Union
 from urllib.parse import urljoin
 
 from dateutil.parser import isoparse
@@ -135,7 +135,7 @@ class HarfanglabAssetConnector(AssetConnector):
         offset = 0
         firstseen_param: str = from_date.isoformat()
 
-        params = {
+        params: dict[str, Union[str,int]] = {
             "ordering": self.DEVICE_ORDERING_FIELD,
             "firstseen": firstseen_param,
             "limit": self.limit,
