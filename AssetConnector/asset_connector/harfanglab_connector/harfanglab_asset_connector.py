@@ -135,7 +135,7 @@ class HarfanglabAssetConnector(AssetConnector):
         offset = 0
         firstseen_param: str = from_date.isoformat()
 
-        params: dict[str, Union[str,int]] = {
+        params: dict[str, Union[str, int]] = {
             "ordering": self.DEVICE_ORDERING_FIELD,
             "firstseen": firstseen_param,
             "limit": self.limit,
