@@ -1,4 +1,10 @@
 {
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Asset Connector Configuration",
+    "type": "object",
+    "properties": {}
+  },
   "description": "Asset Connectors are used to fetch assets from external sources.",
   "categories": [
     "Network"
