@@ -80,7 +80,7 @@ class HarfanglabAssetConnector(AssetConnector):
         return isoparse(asset["firstseen"])
 
     @staticmethod
-    def extract_os_type(os_type: str) -> str:
+    def extract_os_type(os_type: str | None) -> str:
         """
         Extract the OS type from the asset data and map it.
 
@@ -133,10 +133,11 @@ class HarfanglabAssetConnector(AssetConnector):
     def __fetch_devices(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         devices_url = urljoin(self.base_url, self.AGENT_ENDPOINT)
         offset = 0
+        firstseen_param: str = from_date.isoformat()
 
         params = {
             "ordering": self.DEVICE_ORDERING_FIELD,
-            "firstseen": from_date.isoformat(),
+            "firstseen": firstseen_param,
             "limit": self.limit,
             "offset": offset,
         }
