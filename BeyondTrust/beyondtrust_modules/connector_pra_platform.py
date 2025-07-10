@@ -47,7 +47,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
             client_secret=self.module.configuration.client_secret,
         )
 
-    def _handle_response_error(self, response: requests.Response):
+    def _handle_response_error(self, response: requests.Response) -> bool:
         if not response.ok:
             level = "critical" if response.status_code in [401, 403] else "error"
 
@@ -66,6 +66,8 @@ class BeyondTrustPRAPlatformConnector(Connector):
                 pass
 
             self.log(message=message, level=level)
+
+        return not response.ok
 
     def load_sessions_cache(self) -> Cache:
         result: LRUCache = LRUCache(maxsize=1000)
@@ -93,7 +95,10 @@ class BeyondTrustPRAPlatformConnector(Connector):
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=60,
         )
-        self._handle_response_error(response)
+        in_error = self._handle_response_error(response)
+
+        if in_error:
+            return
 
         if "<error>" in response.text and response.status_code == 200:
             # no sessions
@@ -113,7 +118,10 @@ class BeyondTrustPRAPlatformConnector(Connector):
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=60,
             )
-            self._handle_response_error(response)
+            in_error = self._handle_response_error(response)
+
+            if in_error:
+                return
 
             session_end_time = parse_session_end_time(response.content)
             if session_end_time > most_recent_date_seen:
