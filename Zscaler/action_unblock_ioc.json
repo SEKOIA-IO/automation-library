@@ -3,8 +3,11 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "IoC": {
-        "description": "The value of the IoC to unblock",
-        "type": "string"
+        "description": "The values of the IoC to unblock",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [

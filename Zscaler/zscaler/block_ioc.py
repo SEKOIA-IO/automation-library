@@ -1,13 +1,15 @@
+from abc import ABC
 from collections import defaultdict
 from typing import Dict
-from zscaler.helpers import stix_to_indicators
 
+from requests.exceptions import JSONDecodeError
 from sekoia_automation.action import Action
 from zscaler_api_talkers import ZiaTalker
-from requests.exceptions import JSONDecodeError
+
+from zscaler.helpers import stix_to_indicators
 
 
-class ZscalerAction(Action):
+class ZscalerAction(Action, ABC):
     def zia_auth(self):
         try:
             return ZiaTalker(
@@ -24,7 +26,7 @@ class ZscalerAction(Action):
 
     def get_valid_indicators_from_list(self, arguments) -> list:
         try:
-            IOC_list = [arguments["IoC"]]
+            IOC_list = arguments["IoC"]
             self.log(f"IOC_list to block {IOC_list}")
             return IOC_list
 
@@ -91,7 +93,7 @@ class ZscalerAction(Action):
 
 
 class ZscalerListBLockIOC(ZscalerAction):
-    def run(self):
+    def run(self, arguments):
         response = self.list_security_blacklisted_urls()
         return response
 
