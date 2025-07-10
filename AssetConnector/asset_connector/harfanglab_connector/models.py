@@ -1,11 +1,9 @@
-from pydantic import BaseModel, Field
-from sekoia_automation.module import Module
+from pydantic import Field
+
+from asset_connector.models import DefaultAssetConnectorConfiguration
 
 
-class HarfanglabAssetConnectorModuleConfiguration(BaseModel):
-    api_key: str = Field(..., description="API key for Harfanglab Asset Connector")
-    base_url: str = Field(..., description="Base URL for the Harfanglab Asset Connector API")
 
-
-class HarfanglabAssetConnectorModule(Module):
-    configuration: HarfanglabAssetConnectorModuleConfiguration
+class HarfanglabAssetConnectorConfiguration(DefaultAssetConnectorConfiguration):
+    harfanglab_api_key: str = Field(..., description="API key for Harfanglab Asset Connector")
+    harfanglab_base_url: str = Field(..., description="Base URL for the Harfanglab Asset Connector API")

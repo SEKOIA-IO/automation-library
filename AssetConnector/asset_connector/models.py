@@ -3,6 +3,17 @@ from pydantic import BaseModel
 from enum import Enum, IntEnum
 from typing import Literal, Sequence, Union
 
+from sekoia_automation.module import Module
+
+
+# This class will be empty for the moment
+# Because there is no defined module
+class AssetConnectorModule(Module):
+    """
+    Base class for asset connector modules.
+    """
+    pass
+
 
 class DefaultAssetConnectorConfiguration(BaseModel):
     """
@@ -15,7 +26,7 @@ class DefaultAssetConnectorConfiguration(BaseModel):
     """
 
     sekoia_base_url: str | None
-    api_key: str
+    sekoia_api_key: str
     frequency: int = 60
 
 

@@ -128,7 +128,7 @@ class AssetConnector(Trigger):
             dict: Headers
         """
         return {
-            "Authorization": f"Bearer {self.configuration.api_key}",
+            "Authorization": f"Bearer {self.configuration.sekoia_api_key}",
             "Content-Type": "application/json",
             "User-Agent": f"sekoiaio-asset-connnector-{self.connector_configuration_uuid}",
         }

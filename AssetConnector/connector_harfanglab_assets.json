@@ -3,20 +3,18 @@
   "description": "Fake Asset Connector for testing purposes",
   "uuid": "8e8afb65-235a-4144-8cab-b44f94784587",
   "docker_parameters": "fake_asset_connector",
-  "type": "asset", 
+  "type": "asset",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-      "len_data_to_send": {
-        "description": "Length of the data to send",
-        "type": "integer",
-        "default": 1000
+      "harfanglab_api_key": {
+        "description": "harfanglab API key",
+        "type": "string"
       },
-      "time_sleep": {
-        "description": "Time to sleep between each batch in seconds",
-        "type": "integer",
-        "default": 3600
+      "harfanglab_base_url": {
+        "description": "HarfangLab base URL",
+        "type": "string"
       },
       "sekoia_base_url": {
         "description": "Sekoia base URL",
@@ -33,7 +31,7 @@
           "type": "string"
       }
     },
-    "required": ["api_key"],
-    "secrets": ["api_key"]
+    "required": ["sekoia_api_key", "harfanglab_api_key", "harfanglab_base_url"],
+    "secrets": ["sekoia_api_key", "harfanglab_api_key"]
   }
 }

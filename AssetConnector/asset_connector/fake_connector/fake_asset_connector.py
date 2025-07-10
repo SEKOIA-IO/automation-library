@@ -2,25 +2,21 @@ import time
 import faker
 from typing import Any
 from collections.abc import Generator
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from sekoia_automation.module import Module
-
-from ..models import AssetObject
+from ..models import AssetObject, DefaultAssetConnectorConfiguration
 from ..base import AssetConnector
 
 
-class FakeAssetConnectorModuleConfiguration(BaseModel):
+
+class FakeAssetConnectorConfiguration(DefaultAssetConnectorConfiguration):
     len_data_to_send: int = Field(..., description="Number of assets to send in each batch", ge=1)
     time_sleep: int = Field(..., description="Time to sleep between asset fetches in seconds", ge=0)
 
 
-class FakeAssetConnectorModule(Module):
-    configuration: FakeAssetConnectorModuleConfiguration
-
 
 class FakeAssetConnector(AssetConnector):
-    module: FakeAssetConnectorModule
+    configuration: FakeAssetConnectorConfiguration
 
     def _generate_fake_api_call(self) -> dict[str, Any]:
         """
@@ -33,7 +29,7 @@ class FakeAssetConnector(AssetConnector):
         fake = faker.Faker()
         api_response: dict[str, Any] = {}
         data = []
-        for _ in range(self.module.configuration.len_data_to_send):
+        for _ in range(self.configuration.len_data_to_send):
             asset = {
                 "name": fake.company(),
                 "type": fake.random_element(elements=("host", "account")),
@@ -55,4 +51,4 @@ class FakeAssetConnector(AssetConnector):
             yield from map(AssetObject.model_validate, api_response["data"])
 
             # Simulate a delay to mimic real-world asset fetching
-            time.sleep(self.module.configuration.time_sleep)
+            time.sleep(self.configuration.time_sleep)

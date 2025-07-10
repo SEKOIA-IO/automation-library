@@ -49,7 +49,7 @@ def test_asset_connector():
 
     test_connector.configuration = {
         "sekoia_base_url": "http://example.com",
-        "api_key": "fake_api_key",
+        "sekoia_api_key": "fake_api_key",
         "frenquency": 60,
     }
 

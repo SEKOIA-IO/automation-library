@@ -4,9 +4,7 @@ import datetime
 
 import requests_mock
 
-from asset_connector.harfanglab_connector.models import (
-    HarfanglabAssetConnectorModule,
-)
+from asset_connector.models import AssetConnectorModule
 from asset_connector.harfanglab_connector.harfanglab_asset_connector import (
     HarfanglabAssetConnector,
 )
@@ -15,17 +13,16 @@ from asset_connector.models import DeviceOCSFModel
 
 @pytest.fixture
 def test_harfanglab_asset_connector(data_storage):
-    module = HarfanglabAssetConnectorModule()
-    module.configuration = {
-        "base_url": "https://example.com",
-        "api_key": "fake_api_key",
-    }
+    module = AssetConnectorModule()
+    module.configuration = {}
 
     test_harfanglab_asset_connector = HarfanglabAssetConnector(module=module, data_path=data_storage)
     test_harfanglab_asset_connector.configuration = {
         "sekoia_base_url": "https://sekoia.io",
-        "api_key": "fake_api_key",
+        "sekoia_api_key": "fake_api_key",
         "frequency": 60,
+        "harfanglab_base_url": "https://example.com",
+        "harfanglab_api_key": "fake_harfanglab_api_key",
     }
 
     test_harfanglab_asset_connector.log = Mock()

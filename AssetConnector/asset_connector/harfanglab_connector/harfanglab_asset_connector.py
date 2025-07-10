@@ -22,11 +22,11 @@ from ..models import (
 )
 from ..base import AssetConnector
 from .client import HarfanglabApiClient
-from .models import HarfanglabAssetConnectorModule
+from .models import HarfanglabAssetConnectorConfiguration
 
 
 class HarfanglabAssetConnector(AssetConnector):
-    module: HarfanglabAssetConnectorModule
+    configuration: HarfanglabAssetConnectorConfiguration
 
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
     DEVICE_ORDERING_FIELD: str = "firstseen"
@@ -47,7 +47,7 @@ class HarfanglabAssetConnector(AssetConnector):
         This client is used to interact with the Harfanglab API.
         """
         return HarfanglabApiClient(
-            api_token=self.module.configuration.api_key,
+            api_token=self.configuration.harfanglab_api_key,
         )
 
     @cached_property
@@ -58,7 +58,7 @@ class HarfanglabAssetConnector(AssetConnector):
         Returns:
             str: The base URL.
         """
-        return handle_uri(self.module.configuration.base_url)
+        return handle_uri(self.configuration.harfanglab_base_url)
 
     @cached_property
     def limit(self) -> int:
