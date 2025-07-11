@@ -3,15 +3,28 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "IoC": {
-        "description": "The values of the IoC to unblock",
+        "description": "The single value of the IoC to block",
+        "type": "string"
+      },
+      "IoCs": {
+        "description": "The multiple values of IoCs to block",
         "type": "array",
         "items": {
           "type": "string"
         }
       }
     },
-    "required": [
-      "IoC"
+    "oneOf": [
+      {
+        "required": [
+          "IoC"
+        ]
+      },
+      {
+        "required": [
+          "IoCs"
+        ]
+      }
     ],
     "title": "Arguments",
     "type": "object"

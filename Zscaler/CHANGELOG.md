@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2025-07-10 - 1.0.2
 
-### Fixed
+### Added
 
-- Fixed field type for IoCs
+- Added field to block/unblock multiple IoCs
 
 ## 2025-03-27 - 1.0.1
 

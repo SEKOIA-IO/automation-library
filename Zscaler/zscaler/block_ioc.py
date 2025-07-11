@@ -26,7 +26,16 @@ class ZscalerAction(Action, ABC):
 
     def get_valid_indicators_from_list(self, arguments) -> list:
         try:
-            IOC_list = arguments["IoC"]
+            single_ioc = arguments.get("IoC")
+            multiple_iocs = arguments.get("IoCs")
+
+            IOC_list = []
+            if single_ioc:
+                IOC_list.append(single_ioc)
+
+            if multiple_iocs:
+                IOC_list.extend(multiple_iocs)
+
             self.log(f"IOC_list to block {IOC_list}")
             return IOC_list
 
