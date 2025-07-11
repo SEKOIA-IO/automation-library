@@ -3,11 +3,11 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "IoC": {
-        "description": "The single value of the IoC to block",
+        "description": "The single value of the IoC to unblock",
         "type": "string"
       },
       "IoCs": {
-        "description": "The multiple values of IoCs to block",
+        "description": "The multiple values of IoCs to unblock",
         "type": "array",
         "items": {
           "type": "string"
