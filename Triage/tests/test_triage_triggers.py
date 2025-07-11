@@ -26,6 +26,7 @@ from tests.data import (
     query_241118_wj1z9asdqn,
     query_241113_rawlystckq,
     query_250106_fypb1azkcr,
+    query_250710_marksa1mt2,
 )
 from triage_modules.trigger_triage import TriageConfigsTrigger
 
@@ -152,6 +153,10 @@ def triage_mock():
             json=query_240908_tpps3axgmd_static,
         )
         m.get(
+            "https://api.tria.ge/v0/samples/250710_marksa1mt2/reports/static",
+            json=query_250710_marksa1mt2,
+        )
+        m.get(
             "https://api.tria.ge/v0/samples/241118-wj1z9asdqn/overview.json",
             json=query_241118_wj1z9asdqn,
         )
@@ -267,14 +272,20 @@ def test_check_sample_without_signature(trigger2, triage_mock):
 
 
 def test_check_sample_with_signature(trigger2, triage_mock):
-    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
     sample_signature = trigger2.check_sample_signature("240828-btyyeszang")
     assert sample_signature is True
 
 
 def test_check_report_with_multiple_signatures(trigger2, triage_mock):
-    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    # ASSERT THAT AT LEAST ONE SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
     sample_signature = trigger2.check_sample_signature("240908-tpps3axgmd")
+    assert sample_signature is True
+
+
+def test_check_report_with_one_signature(trigger2, triage_mock):
+    # ASSERT THAT SIGNATURE ONE TRUSTED SIGNATURE IS PRESENT
+    sample_signature = trigger2.check_sample_signature("250710_marksa1mt2")
     assert sample_signature is True
 
 
