@@ -1,0 +1,14 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Activate changes",
+  "docker_parameters": "zscaler_activate_changes",
+  "name": "Zscaler Activate changes",
+  "results": {},
+  "uuid": "0aaa5aba-dff3-432e-9344-d702ce9712e0",
+  "slug": "activate_changes"
+}

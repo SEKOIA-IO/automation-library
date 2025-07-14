@@ -95,6 +95,15 @@ class ZscalerAction(Action, ABC):
             return None
         return response
 
+    def post_activate_configuration_changes(self):
+        api = self.zia_auth()
+        raw_response = api.activate_status()
+        try:
+            response = raw_response.json()
+        except JSONDecodeError as e:
+            return None
+        return response
+
     def list_security_blacklisted_urls(self):
         api = self.zia_auth()
         response = api.list_security_blacklisted_urls()
@@ -118,6 +127,12 @@ class ZscalerUnBlockIOC(ZscalerAction):
     def run(self, arguments):
         IOC_list = self.get_valid_indicators_from_list(arguments)
         response = self.post_blacklist_iocs_to_remove(IOC_list)
+        return response
+
+
+class ZscalerActivateChanges(ZscalerAction):
+    def run(self, arguments):
+        response = self. post_activate_configuration_changes()
         return response
 
 
