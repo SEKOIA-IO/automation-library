@@ -132,7 +132,7 @@ class ZscalerUnBlockIOC(ZscalerAction):
 
 class ZscalerActivateChanges(ZscalerAction):
     def run(self, arguments):
-        response = self. post_activate_configuration_changes()
+        response = self.post_activate_configuration_changes()
         return response
 
 
