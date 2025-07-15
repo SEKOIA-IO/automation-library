@@ -127,7 +127,7 @@ class TriageConfigsTrigger(TriageTrigger):
             # Get static report for PE metadata
             signatures = [False]
             static_report = self.client.static_report(sample_id=sample_id)
-            for f in static_report.get("files"):
+            for f in static_report.get("files", []):
                 if f.get("metadata"):
                     signers = f["metadata"]["pe"]["code_sign"]["signers"]
                     for value in signers:
