@@ -14,12 +14,13 @@ class TheHiveCreateAlertV5(Action):
             organisation=self.module.configuration["organisation"],
         )
 
+        arg_sekoia_server = arguments["sekoia_base_url"]
         arg_alert = arguments["alert"]
 
         alert_type = f"{arg_alert['alert_type']['category']}/{arg_alert['alert_type']['value']}"
         if len(alert_type) > 32:
             alert_type = arg_alert["alert_type"]["category"][:32]  # limit to 32 char, max of thehive api
-        link = f"https://app.sekoia.io/operations/alerts/{arg_alert['short_id']}"
+        link = f"{arg_sekoia_server}/operations/alerts/{arg_alert['short_id']}"
         alert: InputAlert = InputAlert(
             severity=arg_alert["urgency"]["severity"] // 25 + 1,  # from 0-100 to 1-4
             date=arg_alert["created_at"] * 1000,  # date in ms for TheHive instead of sec in Sekoia
