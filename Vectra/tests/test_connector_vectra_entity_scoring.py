@@ -97,8 +97,7 @@ def test_fetch_events(trigger, api_client, response_1):
 
         mock_requests.register_uri(
             "GET",
-            "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&"
-            "limit=500&event_timestamp_gte=2022-01-09T11%3A59%3A59.000000Z",
+            "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&limit=500&event_timestamp_gte=2022-10-11T11%3A59%3A59.000000Z",
             json=response_1,
         )
 
