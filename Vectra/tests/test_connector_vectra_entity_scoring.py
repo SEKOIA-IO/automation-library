@@ -107,6 +107,72 @@ def test_fetch_events(trigger, api_client, response_1):
         assert len(events) == 1
 
 
+def test_next_batch_sleep_until_next_round(trigger, api_client, response_1):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "vectra_modules.connector_vectra_entity_scoring.time"
+    ) as mock_time:
+
+        mock_requests.register_uri(
+            "POST",
+            "https://example.portal.vectra.ai:443/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock_requests.register_uri(
+            "GET",
+            "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&limit=500&event_timestamp_gte=2022-10-11T11%3A59%3A59.000000Z",
+            json=response_1,
+        )
+
+        batch_duration = 16  # the batch lasts 16 seconds
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        consumer = VectraEntityScoringConsumer(connector=trigger, entity_type="account", client=api_client)
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 1
+
+
+def test_long_next_batch_should_not_sleep(trigger, api_client, response_1):
+    with requests_mock.Mocker() as mock_requests, patch(
+        "vectra_modules.connector_vectra_entity_scoring.time"
+    ) as mock_time:
+
+        mock_requests.register_uri(
+            "POST",
+            "https://example.portal.vectra.ai:443/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock_requests.register_uri(
+            "GET",
+            "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&limit=500&event_timestamp_gte=2022-10-11T11%3A59%3A59.000000Z",
+            json=response_1,
+        )
+
+        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
+        start_time = 1666711174.0
+        end_time = start_time + batch_duration
+        mock_time.time.side_effect = [start_time, end_time]
+
+        consumer = VectraEntityScoringConsumer(connector=trigger, entity_type="account", client=api_client)
+        consumer.next_batch()
+
+        assert trigger.push_events_to_intakes.call_count == 1
+        assert mock_time.sleep.call_count == 0
+
+
 def test_start_consumers(trigger, api_client):
     with patch("vectra_modules.connector_vectra_entity_scoring.VectraEntityScoringConsumer.start") as mock_start:
         consumers = trigger.start_consumers(api_client)
