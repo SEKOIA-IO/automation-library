@@ -4,7 +4,22 @@ from unittest.mock import Mock
 from collections.abc import Generator
 
 from asset_connector.base import AssetConnector
-from asset_connector.models import AssetList, AssetObject
+from asset_connector.models import (
+    AssetList,
+    VulnerabilityOCSFModel,
+    DeviceOCSFModel,
+    UserOCSFModel,
+    SoftwareOCSFModel,
+    Metadata,
+    OperatingSystem,
+    Device,
+    Product,
+    OSTypeStr,
+    OSTypeId,
+    DeviceTypeId,
+    DeviceTypeStr,
+    AssetItem,
+)
 
 
 class FakeAssetConnector(AssetConnector):
@@ -13,7 +28,9 @@ class FakeAssetConnector(AssetConnector):
     def set_assets(self, assets: AssetList) -> None:
         self.assets = assets
 
-    def get_assets(self) -> Generator[AssetObject, None, None]:
+    def get_assets(
+        self,
+    ) -> Generator[AssetItem, None, None]:
         """
         Fake method to simulate asset retrieval.
         Yields:
@@ -23,7 +40,7 @@ class FakeAssetConnector(AssetConnector):
         if self.assets is None:
             raise ValueError("Assets not set")
 
-        yield from self.assets.assets
+        yield from self.assets.items
 
 
 @pytest.fixture
@@ -32,7 +49,7 @@ def test_asset_connector():
 
     test_connector.configuration = {
         "sekoia_base_url": "http://example.com",
-        "api_key": "fake_api_key",
+        "sekoia_api_key": "fake_api_key",
         "frenquency": 60,
     }
 
@@ -43,18 +60,66 @@ def test_asset_connector():
 
 
 @pytest.fixture
-def asset_list():
-    return AssetList(assets=[AssetObject(name="Asset1", type="account"), AssetObject(name="Asset2", type="host")])
-
-
-@pytest.fixture
 def asset_object_1():
-    return AssetObject(name="Asset1", type="account")
+    product = Product(name="Harfanglab EDR", version="24.12")
+    metadata_object = Metadata(product=product, version="1.5.0")
+    os_object = OperatingSystem(name="Windows 10", type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS)
+
+    device_object = Device(
+        type_id=DeviceTypeId.DESKTOP,
+        type=DeviceTypeStr.DESKTOP,
+        uid="12345",
+        os=os_object,
+        hostname="example-host",
+    )
+
+    return DeviceOCSFModel(
+        activity_id=2,
+        activity_name="Collect",
+        category_name="Discovery",
+        category_uid=5,
+        class_name="Asset",
+        class_uid=5001,
+        type_name="Software Inventory Info: Collect",
+        type_uid=500102,
+        time=1633036800,
+        metadata=metadata_object,
+        device=device_object,
+    )
 
 
 @pytest.fixture
 def asset_object_2():
-    return AssetObject(name="Asset2", type="host")
+    product = Product(name="Harfanglab EDR", version="24.12")
+    metadata_object = Metadata(product=product, version="1.5.0")
+    os_object = OperatingSystem(name="Linux test", type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX)
+
+    device_object = Device(
+        type_id=DeviceTypeId.DESKTOP,
+        type=DeviceTypeStr.DESKTOP,
+        uid="54321",
+        os=os_object,
+        hostname="example-host_1",
+    )
+
+    return DeviceOCSFModel(
+        activity_id=2,
+        activity_name="Collect",
+        category_name="Discovery",
+        category_uid=5,
+        class_name="Asset",
+        class_uid=5001,
+        type_name="Software Inventory Info: Collect",
+        type_uid=500102,
+        time=1633036800,
+        metadata=metadata_object,
+        device=device_object,
+    )
+
+
+@pytest.fixture
+def asset_list(asset_object_1, asset_object_2):
+    return AssetList(version=1, items=[asset_object_1, asset_object_2])
 
 
 @pytest.mark.skipif("{'ASSET_CONNECTOR_BATCH_SIZE'}" ".issubset(os.environ.keys()) == False")
@@ -146,7 +211,7 @@ def test_push_assets_to_sekoia(test_asset_connector):
 
 
 def test_asset_fetch_cycle(test_asset_connector, asset_object_1, asset_object_2, asset_list):
-    test_asset_connector.set_assets(AssetList(assets=[asset_object_1, asset_object_2]))
+    test_asset_connector.set_assets(AssetList(version=1, items=[asset_object_1, asset_object_2]))
 
     test_asset_connector.push_assets_to_sekoia = Mock()
     test_asset_connector.asset_fetch_cycle()
