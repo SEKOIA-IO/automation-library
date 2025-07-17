@@ -69,21 +69,53 @@ def response_1():
                 "attack_rating": 1,
                 "active_detection_types": ["M365 Unusual eDiscovery Search"],
                 "category": "ACCOUNT SCORING",
-                "url": "https://test.uw2.portal.vectra.ai/accounts/333",
+                "url": "https://example.portal.vectra.ai/accounts/333",
                 "event_timestamp": "2024-08-13T20:43:59Z",
                 "last_detection": {
                     "id": 444,
                     "type": "M365 Unusual eDiscovery Search",
-                    "url": "https://test.uw2.portal.vectra.ai/detections/444",
+                    "url": "https://example.portal.vectra.ai/detections/444",
                 },
             },
+        ],
+        "next_checkpoint": 1234,
+        "remaining_count": 1,
+    }
+
+
+@pytest.fixture
+def response_2():
+    return {
+        "events": [
+            {
+                "id": 1112,
+                "entity_id": 444,
+                "name": "janedoe",
+                "breadth_contrib": 1,
+                "importance": 1,
+                "type": "host",
+                "is_prioritized": True,
+                "severity": "Low",
+                "urgency_score": 97,
+                "velocity_contrib": 2,
+                "attack_rating": 10,
+                "active_detection_types": ["spa_http_cnc", "spa_http_cnc"],
+                "category": "HOST_SCORING",
+                "url": "https://example.portal.vectra.ai/hosts/444",
+                "event_timestamp": "2025-06-13T08:43:21Z",
+                "last_detection": {
+                    "id": 1980,
+                    "type": "spa_http_cnc",
+                    "url": "https://example.portal.vectra.ai/detections/67567",
+                },
+            }
         ],
         "next_checkpoint": 1234,
         "remaining_count": 0,
     }
 
 
-def test_fetch_events(trigger, api_client, response_1):
+def test_fetch_events(trigger, api_client, response_1, response_2):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.register_uri(
             "POST",
@@ -101,13 +133,19 @@ def test_fetch_events(trigger, api_client, response_1):
             json=response_1,
         )
 
+        mock_requests.register_uri(
+            "GET",
+            "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&from=1234&limit=500",
+            json=response_2,
+        )
+
         consumer = VectraEntityScoringConsumer(connector=trigger, entity_type="account", client=api_client)
         events = list(consumer.fetch_events())
 
-        assert len(events) == 1
+        assert len(events) == 2
 
 
-def test_next_batch_sleep_until_next_round(trigger, api_client, response_1):
+def test_next_batch_sleep_until_next_round(trigger, api_client, response_2):
     with requests_mock.Mocker() as mock_requests, patch(
         "vectra_modules.connector_vectra_entity_scoring.time"
     ) as mock_time:
@@ -125,7 +163,7 @@ def test_next_batch_sleep_until_next_round(trigger, api_client, response_1):
         mock_requests.register_uri(
             "GET",
             "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&limit=500&event_timestamp_gte=2022-10-11T11%3A59%3A59.000000Z",
-            json=response_1,
+            json=response_2,
         )
 
         batch_duration = 16  # the batch lasts 16 seconds
@@ -140,7 +178,7 @@ def test_next_batch_sleep_until_next_round(trigger, api_client, response_1):
         assert mock_time.sleep.call_count == 1
 
 
-def test_long_next_batch_should_not_sleep(trigger, api_client, response_1):
+def test_long_next_batch_should_not_sleep(trigger, api_client, response_2):
     with requests_mock.Mocker() as mock_requests, patch(
         "vectra_modules.connector_vectra_entity_scoring.time"
     ) as mock_time:
@@ -158,7 +196,7 @@ def test_long_next_batch_should_not_sleep(trigger, api_client, response_1):
         mock_requests.register_uri(
             "GET",
             "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&limit=500&event_timestamp_gte=2022-10-11T11%3A59%3A59.000000Z",
-            json=response_1,
+            json=response_2,
         )
 
         batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
