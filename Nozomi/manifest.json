@@ -14,13 +14,13 @@
       },
       "base_url": {
         "description": "Base URL for the Nozomi Networks Vantage API",
-        "type": "string",
-        "default": "https://vantagetechalliancesinstance.customers.us1.vantage.nozominetworks.io"
+        "type": "string"
       }
     },
     "required": [
       "key_name",
-      "key_token"
+      "key_token",
+      "base_url"
     ],
     "secrets": [
       "key_token"
