@@ -10,20 +10,17 @@ from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from pydantic.v1 import Field
 from requests import Response
+from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import VectraModule
 from .client import ApiClient
-from .metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-from .timestepper import TimeStepper
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
 class VectraEntityScoringConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = Field(60, description="Batch frequency in seconds")
-    timedelta: int = Field(
-        0, description="The temporal shift, in the past, in minutes, the connector applies when fetching the events"
-    )
     start_time: int = Field(1, description="The number of hours from which events should be queried")
     chunk_size: int = Field(500, description="The max size of chunks for the batch processing")
 
@@ -42,6 +39,9 @@ class VectraEntityScoringConsumer(Thread):
 
         self.cache_size = 1000
         self.events_cache: Cache = self.load_events_cache()
+        self.cursor = CheckpointCursor(
+            path=self.connector.data_path, lock=self.connector.context_lock, subkey=self.entity_type
+        )
 
     @cached_property
     def base_url(self):
@@ -68,20 +68,16 @@ class VectraEntityScoringConsumer(Thread):
     def stop(self) -> None:
         self._stop_event.set()
 
-    @property
-    def stepper(self) -> TimeStepper:
+    # Used for backward compatibility with a previous connector version.
+    # Cached because it's called just once for a check
+    @cached_property
+    def last_event_date(self) -> datetime | None:
         with self.connector.context as cache, self.connector.context_lock:
             most_recent_date_requested_str = cache.get(self.entity_type, {}).get("last_event_date")
 
         if most_recent_date_requested_str is None:
-            return TimeStepper.create(
-                self,
-                self.configuration.frequency,
-                self.configuration.timedelta,
-                self.configuration.start_time,
-            )
+            return None
 
-        # parse the most recent requested date
         most_recent_date_requested = isoparse(most_recent_date_requested_str)
 
         now = datetime.now(timezone.utc)
@@ -89,19 +85,7 @@ class VectraEntityScoringConsumer(Thread):
         if most_recent_date_requested < one_month_ago:
             most_recent_date_requested = one_month_ago
 
-        return TimeStepper.create_from_time(
-            self,
-            most_recent_date_requested,
-            self.configuration.frequency,
-            self.configuration.timedelta,
-        )
-
-    def update_stepper(self, new_datetime: datetime) -> None:
-        with self.connector.context as cache, self.connector.context_lock:
-            if self.entity_type not in cache:
-                cache[self.entity_type] = {}
-
-            cache[self.entity_type]["last_event_date"] = new_datetime.isoformat()
+        return most_recent_date_requested
 
     def load_events_cache(self) -> Cache:
         cache: Cache = LRUCache(maxsize=self.cache_size)
@@ -153,75 +137,120 @@ class VectraEntityScoringConsumer(Thread):
             self.log(message, level=level)
             raise
 
-    def fetch_events(self, start_datetime: datetime, end_datetime: datetime):
-        formatted_start_date = start_datetime.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        formatted_end_date = end_datetime.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    def __fetch_next_events(self) -> Generator[list, None, None]:
+        cursor_offset = self.cursor.offset
+        last_event_datetime = self.last_event_date
+
+        params = {"type": self.entity_type, "limit": self.connector.configuration.chunk_size}
+
+        if cursor_offset is not None:
+            # we have a new cursor
+            params["from"] = cursor_offset
+
+        elif cursor_offset is None and last_event_datetime is not None:
+            # we have an old cursor
+            params["event_timestamp_gte"] = last_event_datetime.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        else:
+            # we have no cursor
+            start_datetime = datetime.now() - timedelta(hours=self.configuration.start_time)
+            params["event_timestamp_gte"] = start_datetime.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         url = f"{self.base_url}/api/v3.4/events/entity_scoring"
-        response = self.__get_request(
-            url,
-            params={
-                "type": self.entity_type,
-                "event_timestamp_gte": formatted_start_date,
-                "event_timestamp_lte": formatted_end_date,
-                "limit": self.connector.configuration.chunk_size,
-            },
-        )
+        response = self.__get_request(url, params=params)
 
         while self.running:
             raw = response.json()
 
             events = raw.get("events", [])
+            next_checkpoint = raw["next_checkpoint"]
+
             if len(events) > 0:
                 yield events
+                self.cursor.offset = next_checkpoint
 
             else:
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.entity_type).set(0)
                 return
 
             if raw["remaining_count"] == 0:
                 return
 
-            next_checkpoint = raw["next_checkpoint"]
             response = self.__get_request(
                 url,
                 params={
                     "type": self.entity_type,
                     "from": next_checkpoint,
-                    "event_timestamp_gte": formatted_start_date,
-                    "event_timestamp_lte": formatted_end_date,
                     "limit": self.connector.configuration.chunk_size,
                 },
             )
 
-    def run(self) -> None:
-        for start, end in self.stepper.ranges():
-            if not self.running:
-                break
+    def fetch_events(self) -> Generator[list, None, None]:
+        most_recent_date_seen: datetime | None = None
 
-            duration_start = time.time()
+        for next_events in self.__fetch_next_events():
+            if next_events:
+                most_recent_date_seen = max(isoparse(item["event_timestamp"]) for item in next_events)
 
-            list_of_events = self.fetch_events(start_datetime=start, end_datetime=end)
-            events = [event for batch in list_of_events for event in batch]
+                # forward current events
+                yield next_events
+
+        if most_recent_date_seen:
+            delta_time = (datetime.now(timezone.utc) - most_recent_date_seen).total_seconds()
+            current_lag = int(delta_time)
+            EVENTS_LAG.labels(intake_key=self.configuration.intake_key, type=self.entity_type).set(current_lag)
+
+    def next_batch(self):
+        # save the starting time
+        batch_start_time = time.time()
+
+        # Fetch next batch
+        for events in self.fetch_events():
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.filter_processed_events(events)]
 
+            # if the batch is full, push it
             if len(batch_of_events) > 0:
-                self.log("Forwarded %d events" % len(batch_of_events), level="info")
+                self.log(
+                    message=f"Forwarded {len(batch_of_events)} events to the intake",
+                    level="info",
+                )
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key, type=self.entity_type).inc(
                     len(batch_of_events)
                 )
-                self.connector.push_events_to_intakes(batch_of_events)
+                self.connector.push_events_to_intakes(events=batch_of_events)
 
             else:
-                self.log("No events forwarded", level="info")
+                self.log(
+                    message="No events to forward",
+                    level="info",
+                )
 
-            # Update last datetime
-            self.update_stepper(end)
+            # Update cache of processed events
             self.update_cache()
 
-            duration = int(time.time() - duration_start)
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type=self.entity_type).observe(
-                duration
-            )
+        # get the ending time and compute the duration to fetch the events
+        batch_end_time = time.time()
+        batch_duration = int(batch_end_time - batch_start_time)
+        self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
+        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key, type=self.entity_type).observe(
+            batch_duration
+        )
+
+        # compute the remaining sleeping time. If greater than 0, sleep
+        delta_sleep = self.configuration.frequency - batch_duration
+        if delta_sleep > 0:
+            self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+            time.sleep(delta_sleep)
+
+    def run(self) -> None:
+        self.log(message="Start fetching Vectra Respond UX logs", level="info")
+
+        while self.running:
+            try:
+                self.next_batch()
+
+            except Exception as error:
+                self.log_exception(error, message="Failed to forward events")
 
 
 class VectraEntityScoringConnector(Connector):

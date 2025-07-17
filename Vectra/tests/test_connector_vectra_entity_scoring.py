@@ -1,14 +1,26 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
 import requests_mock
-from pyrate_limiter import Duration, Limiter, RequestRate
 
 from vectra_modules import VectraModule
 from vectra_modules.client import ApiClient
 from vectra_modules.connector_vectra_entity_scoring import VectraEntityScoringConnector, VectraEntityScoringConsumer
-from vectra_modules.timestepper import TimeStepper
+
+
+@pytest.fixture
+def fake_time():
+    yield datetime(2022, 11, 5, 11, 59, 59, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def patch_datetime_now(fake_time):
+    with patch("vectra_modules.connector_vectra_entity_scoring.datetime") as mock_datetime:
+        mock_datetime.now.return_value = fake_time
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
+        yield mock_datetime
 
 
 @pytest.fixture
@@ -17,7 +29,7 @@ def api_client():
 
 
 @pytest.fixture
-def trigger(data_storage):
+def trigger(data_storage, patch_datetime_now):
     module = VectraModule()
     module.configuration = {
         "base_url": "https://example.portal.vectra.ai:443",
@@ -26,7 +38,13 @@ def trigger(data_storage):
     }
 
     trigger = VectraEntityScoringConnector(module=module, data_path=data_storage)
-    trigger.configuration = {"intake_key": "INTAKE", "frequency": 60, "timedelta": 60, "start_time": 600}
+    trigger.configuration = {
+        "intake_key": "INTAKE",
+        "frequency": 60,
+        "timedelta": 60,
+        "start_time": 600,
+        "chunk_size": 500,
+    }
     trigger.log = Mock()
     trigger.log_exception = Mock()
     trigger.push_events_to_intakes = Mock()
@@ -67,9 +85,6 @@ def response_1():
 
 def test_fetch_events(trigger, api_client, response_1):
     with requests_mock.Mocker() as mock_requests:
-        start_datetime = datetime(year=2025, month=6, day=16, hour=11, minute=24, second=25)
-        end_datetime = start_datetime + timedelta(seconds=60)
-
         mock_requests.register_uri(
             "POST",
             "https://example.portal.vectra.ai:443/oauth2/token",
@@ -82,12 +97,13 @@ def test_fetch_events(trigger, api_client, response_1):
 
         mock_requests.register_uri(
             "GET",
-            "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&event_timestamp_gte=2025-06-16T11%3A24%3A25.000000Z&event_timestamp_lte=2025-06-16T11%3A25%3A25.000000Z&limit=500",
+            "https://example.portal.vectra.ai:443/api/v3.4/events/entity_scoring?type=account&"
+            "limit=500&event_timestamp_gte=2022-01-09T11%3A59%3A59.000000Z",
             json=response_1,
         )
 
         consumer = VectraEntityScoringConsumer(connector=trigger, entity_type="account", client=api_client)
-        events = list(consumer.fetch_events(start_datetime, end_datetime))
+        events = list(consumer.fetch_events())
 
         assert len(events) == 1
 
