@@ -14,13 +14,13 @@ class TimeStepper:
         start: datetime.datetime,
         end: datetime.datetime,
         frequency: datetime.timedelta,
-        timedelta: datetime.timedelta,
+        time_lag: datetime.timedelta,
     ):
         self.trigger = trigger
         self.start = start
         self.end = end
         self.frequency = frequency
-        self.timedelta = timedelta
+        self.time_lag = time_lag
 
     def ranges(
         self,
@@ -28,7 +28,7 @@ class TimeStepper:
         while True:
             # compute the next time range
             next_end = self.end + self.frequency
-            now = datetime.datetime.now(datetime.timezone.utc)
+            now = datetime.datetime.now(datetime.timezone.utc) - self.time_lag
 
             # Compute current lag
             current_lag = now - next_end
@@ -63,20 +63,20 @@ class TimeStepper:
         cls,
         trigger: Trigger,
         frequency: int = 60,
-        timedelta: int = 1,
+        time_lag: int = 1,
         start_time: int = 1,
     ) -> "TimeStepper":
         t_frequency = datetime.timedelta(seconds=frequency)
-        t_timedelta = datetime.timedelta(minutes=timedelta)
+        t_time_lag = datetime.timedelta(minutes=time_lag)
 
         if start_time == 0:
-            end = datetime.datetime.now(datetime.timezone.utc) - t_timedelta
+            end = datetime.datetime.now(datetime.timezone.utc) - t_time_lag
         else:
             end = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=start_time)
 
         start = end - t_frequency
 
-        return cls(trigger, start, end, t_frequency, t_timedelta)
+        return cls(trigger, start, end, t_frequency, t_time_lag)
 
     @classmethod
     def create_from_time(

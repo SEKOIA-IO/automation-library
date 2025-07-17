@@ -110,7 +110,7 @@ def test_timestepper_get_time_ranges_with_no_timedelta(mock_time):
 def test_timestepper_get_time_ranges_with_timedelta(mock_time):
     trigger = Mock()
     frequency = 60
-    timedelta = 5
+    time_lag = 5
     start_time = 0
 
     with patch("hornetsecurity_modules.timestepper.datetime.datetime") as mock_datetime:
@@ -127,7 +127,7 @@ def test_timestepper_get_time_ranges_with_timedelta(mock_time):
         ]
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
-        stepper = TimeStepper.create(trigger, frequency, timedelta, start_time)
+        stepper = TimeStepper.create(trigger, frequency, time_lag, start_time)
         gen = stepper.ranges()
         # assert the 1st time range
         assert next(gen) == (
@@ -171,8 +171,10 @@ def test_timestepper_get_time_ranges_with_timedelta(mock_time):
             datetime(2023, 3, 22, 11, 57, 28),
             datetime(2023, 3, 22, 11, 58, 28),
         )
-        # Ensure the stepper waited 6 seconds
-        mock_time.sleep.assert_called_with(6)
+        # Ensure the stepper waited 306 seconds.
+        # Because original time lag is 5 minutes, but sleep accept seconds
+        # So at the end it will wait 5 minutes + 6 seconds =306
+        mock_time.sleep.assert_called_with(306)
 
 
 @patch("hornetsecurity_modules.timestepper.time")
