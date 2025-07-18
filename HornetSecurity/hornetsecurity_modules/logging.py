@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import structlog
 
@@ -17,5 +18,5 @@ structlog.configure(
 )
 
 
-def get_logger(*args):
+def get_logger(*args: Any) -> Any:
     return structlog.get_logger(*args)

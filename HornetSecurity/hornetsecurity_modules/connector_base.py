@@ -1,9 +1,9 @@
+import time
 from abc import abstractmethod
 from collections.abc import Generator
 from datetime import datetime, timedelta
 from functools import cached_property
 from typing import Any
-import time
 
 import orjson
 from cachetools import Cache
@@ -13,20 +13,10 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from hornetsecurity_modules import HornetsecurityModule
 from hornetsecurity_modules.client import ApiClient
-from hornetsecurity_modules.helpers import (
-    load_events_cache,
-    save_events_cache,
-    remove_duplicates,
-    normalize_uri,
-)
+from hornetsecurity_modules.helpers import load_events_cache, normalize_uri, remove_duplicates, save_events_cache
 from hornetsecurity_modules.logging import get_logger
-from hornetsecurity_modules.metrics import (
-    INCOMING_MESSAGES,
-    OUTCOMING_EVENTS,
-    FORWARD_EVENTS_DURATION,
-)
+from hornetsecurity_modules.metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from hornetsecurity_modules.timestepper import TimeStepper
-
 
 logger = get_logger()
 
@@ -53,7 +43,7 @@ class BaseConnector(Connector):
     configuration: BaseConnectorConfiguration
     ID_FIELD: str
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
         self.cursor = CheckpointDatetime(
@@ -61,7 +51,7 @@ class BaseConnector(Connector):
             start_at=timedelta(hours=24),
             ignore_older_than=timedelta(days=7),
         )
-        self.events_cache: Cache = load_events_cache(self.cursor._context, maxsize=1000)
+        self.events_cache: Cache[str, Any] = load_events_cache(self.cursor._context, maxsize=1000)
 
     @cached_property
     def time_stepper(self) -> TimeStepper:
@@ -92,7 +82,7 @@ class BaseConnector(Connector):
         )
 
     @cached_property
-    def url(self):
+    def url(self) -> str:
         """
         Construct the base URL for the API.
         """
@@ -112,7 +102,7 @@ class BaseConnector(Connector):
         """
         raise NotImplementedError("This method should be implemented in a subclass")
 
-    def fetch_events(self) -> Generator[list, None, None]:
+    def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         for start_date, end_date in self.time_stepper.ranges():
             for fetched_events in self._fetch_events(start_date, end_date):
                 # fetch events from the current context
@@ -125,7 +115,7 @@ class BaseConnector(Connector):
             # save in context the end date of the last batch period
             self.cursor.offset = end_date
 
-    def next_batch(self):
+    def next_batch(self) -> None:
         # save the starting time
         batch_start_time = time.time()
 
@@ -165,7 +155,7 @@ class BaseConnector(Connector):
         )
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
-    def run(self):  # pragma: no cover
+    def run(self) -> None:  # pragma: no cover
         # Start the connector and run the event fetching loop.
         self.log(
             message="Starting connector",

@@ -1,24 +1,15 @@
+import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, Mock
-import os
 
 import pytest
 import requests
 import requests_mock
 
-
 from hornetsecurity_modules import HornetsecurityModule
+from hornetsecurity_modules.connector_smp_events import Direction, SMPEventsConnector, SMPEventsConnectorConfiguration
+from hornetsecurity_modules.errors import FailedEmailHeaderFetchError, InvalidObjectIdError, UnknownObjectIdError
 from hornetsecurity_modules.models import HornetsecurityModuleConfiguration
-from hornetsecurity_modules.connector_smp_events import (
-    SMPEventsConnector,
-    SMPEventsConnectorConfiguration,
-    Direction,
-)
-from hornetsecurity_modules.errors import (
-    InvalidObjectIdError,
-    UnknownObjectIdError,
-    FailedEmailHeaderFetchError,
-)
 
 
 @pytest.fixture
