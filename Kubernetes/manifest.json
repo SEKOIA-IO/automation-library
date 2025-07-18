@@ -1,0 +1,8 @@
+{
+  "configuration": {},
+  "description": "Kubernetes is an open-source container orchestration system for automating software deployment, scaling and managment.",
+  "name": "Kubernetes",
+  "uuid": "67a17446-2a21-413e-b543-1fdbe70cde43",
+  "docker": "sekoia-automation-module-kubernetes",
+  "version": "1.0"
+}
