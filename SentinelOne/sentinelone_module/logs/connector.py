@@ -224,6 +224,7 @@ class SentinelOneActivityLogsConsumer(SentinelOneLogsConsumer):
             nb_activities = len(activities)
             logger.debug("Collected activities", nb=nb_activities)
             if nb_activities == 0:
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                 break
 
             INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(nb_activities)
@@ -293,6 +294,7 @@ class SentinelOneThreatLogsConsumer(SentinelOneLogsConsumer):
             nb_threats = len(threats)
             logger.debug("Collected nb_threats", nb=nb_threats)
             if nb_threats == 0:
+                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
                 break
 
             # discard already collected events
