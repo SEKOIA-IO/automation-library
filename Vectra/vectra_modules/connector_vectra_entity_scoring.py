@@ -16,6 +16,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import VectraModule
 from .client import ApiClient
+from .helpers import format_boolean
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
@@ -23,6 +24,10 @@ class VectraEntityScoringConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = Field(60, description="Batch frequency in seconds")
     start_time: int = Field(1, description="The number of hours from which events should be queried")
     chunk_size: int = Field(500, description="The max size of chunks for the batch processing")
+    include_score_decreases: bool = Field(
+        False,
+        description="Whether to include events with score decreases",
+    )
 
 
 class VectraEntityScoringConsumer(Thread):
@@ -141,7 +146,11 @@ class VectraEntityScoringConsumer(Thread):
         cursor_offset = self.cursor.offset
         last_event_datetime = self.last_event_date
 
-        params = {"type": self.entity_type, "limit": self.connector.configuration.chunk_size}
+        params = {
+            "type": self.entity_type,
+            "limit": self.connector.configuration.chunk_size,
+            "include_score_decreases": format_boolean(self.configuration.include_score_decreases),
+        }
 
         if cursor_offset is not None:
             # we have a new cursor
@@ -182,6 +191,7 @@ class VectraEntityScoringConsumer(Thread):
                     "type": self.entity_type,
                     "from": next_checkpoint,
                     "limit": self.connector.configuration.chunk_size,
+                    "include_score_decreases": format_boolean(self.configuration.include_score_decreases),
                 },
             )
 

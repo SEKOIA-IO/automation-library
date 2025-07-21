@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-17 - 1.2.1
+
+### Added
+
+- Add a parameter to include decreasing scores
+
 ## 2025-07-17 - 1.2.0
 
 ### Changed
