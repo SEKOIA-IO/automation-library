@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-21 - 1.40.0
+
+### Changed
+
+- Fix a bug in the option `excluded_signed`: to handle multiple signatures available
+
 ## 2025-02-05 - 1.39.0
 
 ### Changed
