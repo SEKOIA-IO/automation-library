@@ -123,12 +123,12 @@ class TriageConfigsTrigger(TriageTrigger):
             return []
 
     def check_sample_signature(self, sample_id: str) -> bool:
-        try:
-            # Get static report for PE metadata
-            signatures = [False]
-            static_report = self.client.static_report(sample_id=sample_id)
-            for f in static_report.get("files", []):
-                if f.get("metadata"):
+        # Get static report for PE metadata
+        signatures = [False]
+        static_report = self.client.static_report(sample_id=sample_id)
+        for f in static_report.get("files", []):
+            if f.get("metadata"):
+                try:
                     signers = f["metadata"]["pe"]["code_sign"]["signers"]
                     for value in signers:
                         if isinstance(value["validity"]["trusted"], list):
@@ -136,10 +136,11 @@ class TriageConfigsTrigger(TriageTrigger):
                                 if entry:
                                     signatures.append(entry)
                         else:
-                            signatures.append(value["validity"]["trusted"])
-            return any(signatures)
-        except (KeyError, TypeError):
-            return any(signatures)
+                            if value["validity"]["trusted"]:
+                                signatures.append(value["validity"]["trusted"])
+                except (KeyError, TypeError):
+                    signatures.append(False)
+        return any(signatures)
 
     def check_suspicious_analysis(self, sample_id: str, data: dict) -> bool:
         try:

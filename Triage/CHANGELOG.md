@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-23 - 1.41.0
+
+### Changed
+
+- Improve handling of key error exception to improve signature check routing
+
 ## 2025-07-21 - 1.40.0
 
 ### Changed
