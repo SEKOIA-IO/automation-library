@@ -1,5 +1,5221 @@
 from datetime import datetime
 
+query_250722_kqcqfshn4z = {
+    "version": "0.2",
+    "sample": {
+        "sample": "250722-kqcqfshn4z",
+        "kind": "file",
+        "size": 15303187,
+        "target": "𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 ⩸ 𝙋𝙍𝙊_𝙑𝙀𝙍𝙎𝙄𝙊𝙉 𝐆𝐄𝐓 ~ 𝗔𝗖𝗧𝗜𝗩𝗘 𝗦𝗘𝗧𝗨𝗣.zip",
+    },
+    "task": {"task": "250722-kqcqfshn4z-static1", "target": "𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 ⩸ 𝙋𝙍𝙊_𝙑𝙀𝙍𝙎𝙄𝙊𝙉 𝐆𝐄𝐓 ~ 𝗔𝗖𝗧𝗜𝗩𝗘 𝗦𝗘𝗧𝗨𝗣.zip"},
+    "analysis": {"reported": "2025-07-22T08:48:21Z", "score": 10, "tags": ["family:hijackloader"]},
+    "signatures": [
+        {
+            "name": "Detects HijackLoader (aka IDAT Loader)",
+            "score": 10,
+            "indicators": [{"resource": "static1/unpack002/Dodpiem.dwei", "yara_rule": "family_hijackloader"}],
+        },
+        {"name": "Hijackloader family", "score": 10, "tags": ["family:hijackloader"]},
+        {
+            "label": "unsigned_pe",
+            "name": "Unsigned PE",
+            "score": 3,
+            "indicators": [
+                {"resource": "unpack006/$PLUGINSDIR/nsExec.dll"},
+                {"resource": "unpack002/iconv.DLL"},
+                {"resource": "unpack002/libgcc.dll"},
+                {"resource": "unpack002/libstdc++.dll"},
+            ],
+            "desc": "Checks for missing Authenticode signature.",
+        },
+    ],
+    "files": [
+        {
+            "filename": "𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 ⩸ 𝙋𝙍𝙊_𝙑𝙀𝙍𝙎𝙄𝙊𝙉 𝐆𝐄𝐓 ~ 𝗔𝗖𝗧𝗜𝗩𝗘 𝗦𝗘𝗧𝗨𝗣.zip",
+            "filesize": 15303187,
+            "md5": "fbc29b26cce12a13330e6903d6645eac",
+            "sha1": "488968789af5a8882fc889531f8b2c33ee9cc628",
+            "sha256": "0a8d8e909082b96009a9cf5522eb0aa66d7e78b76b328696bdc2b4af1344a30d",
+            "sha512": "d6201aadff4ab09357788d09553a3c13a4f6eba2e260ae5759395b16261d3234a0d6d1890fdf4b2da7fdb75782078a29efdd3de025ba4a1dd059a027f95b8b8b",
+            "ssdeep": "393216:9hsdvvird99OevOHRrwPhXRigV1z6PB78LhJ:gvvirZvGRkJwgVx6V0",
+            "exts": [".zip"],
+            "tags": [],
+            "depth": 0,
+            "kind": "archive",
+            "selected": "false",
+            "runas": "𝘿𝙊𝙒𝙉𝙇𝙊𝘼𝘿 ⩸ 𝙋𝙍𝙊_𝙑𝙀𝙍𝙎𝙄𝙊𝙉 𝐆𝐄𝐓 ~ 𝗔��.zip",
+            "metadata": {"password": "2025"},
+        },
+        {
+            "filename": "PASS - Code == 2025.rtf",
+            "relpath": "unpack001/PASS - Code == 2025.rtf",
+            "filesize": 39111846,
+            "md5": "821394174a958bf2ea2e1279b7e621b4",
+            "sha1": "368fc16715458da08bb861145f4be6a62fa5a9d1",
+            "sha256": "b4136559503630481c39f8a067b6412a91432e8decb92a421bd0ee5f029c9826",
+            "sha512": "9e9d45af43d425593cef986a223cd30bd83438e8c9698fbebe76d4440be27e4ba851522631535f42292534ce3d02253bb23e37b0731d88ed4baffadbddf21084",
+            "ssdeep": "24576:auwuwuAuwuwuwuwuwuwuwuojuwuwuwuwuwuwuwuE:W",
+            "exts": [".rtf"],
+            "tags": [],
+            "depth": 1,
+            "kind": "file",
+            "selected": "true",
+            "runas": "PASS - Code == 2025.rtf",
+            "metadata": {},
+        },
+        {
+            "filename": "𝙄𝙉𝙎𝙏𝘼𝙇𝙇 𝗣𝗥𝗘𝗠𝗜𝗨𝗠 ~ 𝐏𝐂_𝐒𝐄𝐓𝐔𝐏.7z",
+            "relpath": "unpack001/𝙄𝙉𝙎𝙏𝘼𝙇𝙇 𝗣𝗥𝗘𝗠𝗜𝗨𝗠 ~ 𝐏𝐂_𝐒𝐄𝐓𝐔𝐏.7z",
+            "filesize": 11486713,
+            "md5": "0878e7fbcc3479c45bba7eb60e7e5dd8",
+            "sha1": "17bd298ff6bb9bb318a774ed1f341e48e04a62c0",
+            "sha256": "e1684fa978127f3e6fd0f1fee149a72206cc5d3a7ce38772fd3db4a6fa861395",
+            "sha512": "13f5e1c91fd7f4815666697d8c131054a6eb372f412e37c717afb86f275616a07f492350a358cdf931c449938358ad7d9694e416ba2391d362a22bc50d866cd4",
+            "ssdeep": "196608:oyUvGQi5Oq+RNt15wJgqxhIm3UERigik51z66OPB78L02n5O:8evOHRrwPhXRigV1z6PB78Lhw",
+            "exts": [".7z"],
+            "tags": [],
+            "depth": 1,
+            "kind": "archive",
+            "selected": "false",
+            "runas": "𝙄𝙉𝙎𝙏𝘼𝙇𝙇 𝗣𝗥𝗘𝗠𝗜𝗨𝗠 ~ 𝐏𝐂_𝐒𝐄𝐓𝐔𝐏.7z",
+            "metadata": {"password": "2025"},
+        },
+        {
+            "filename": "Data/NAudio.xml",
+            "relpath": "unpack002/Data/NAudio.xml",
+            "filesize": 1054613,
+            "md5": "224d05879c6f2b9708edbb7cf244e76e",
+            "sha1": "5db1157ddfeffc4c30650b21f014530470efe729",
+            "sha256": "8e58ffd1ba32ab7eae118f2861ed1449f49a3cd0c459df2ac26a1ff1bf4d7245",
+            "sha512": "d3cf29a37d3b5e1faa7b8153fb2c21db9a65868530c51d8e589cdd2e010674cd93610ddc10309d15df07b6e9e6d6d892c8db0e16e67638bf72bead9fc83e4ab9",
+            "ssdeep": "6144:HCH/qJhYLq2SudOFFEpSQjV2SFq3Pxl2ZRN6hhQvb/0nPubFnkFrAt:8FLZGFEnJt6hhQ0PykFY",
+            "exts": [".xml"],
+            "tags": [],
+            "depth": 2,
+            "kind": "file",
+            "selected": "false",
+            "runas": "Data/NAudio.xml",
+            "metadata": {},
+        },
+        {
+            "filename": "Data/Updater.ex",
+            "relpath": "unpack002/Data/Updater.ex",
+            "filesize": 424552,
+            "md5": "a341d9bfaae6a784cb9e2ea49c183fb4",
+            "sha1": "d061c12dffa6a725f649dae49c99f157e93bb175",
+            "sha256": "52416bb8275988aa5145be6359b6c6a92e3c20817544682c2c1978b50ff2052c",
+            "sha512": "9dff4ba2abf889c9f9e71da1f91abdde1742a542b53e8c289e011113e1bcb86d4b1aaf5e7aadf97aa5ed36ab50227295e27ce700d30524f7198fd8f3928c36a2",
+            "ssdeep": "3072:bebeJQsqiaJnFdHfQoB9bls1YxRz5QZ1y+ymaQfA30KQBhYJXv4M4Mz07ROZH1pH:jh+nf4+tG/vyohq4M4M4gl7T",
+            "exts": [".exe"],
+            "tags": ["windows:6", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "Data/Updater.exe",
+            "metadata": {
+                "password": "2025",
+                "pe": {
+                    "timestamp": 1711103119,
+                    "imports": [
+                        {
+                            "dll_name": "libcef",
+                            "imports": [
+                                "cef_string_utf8_to_utf16",
+                                "cef_string_utf16_cmp",
+                                "cef_string_multimap_free",
+                            ],
+                        },
+                        {"dll_name": "msvcp140", "imports": ["?_Xlength_error@std@@YAXPEBD@Z"]},
+                        {
+                            "dll_name": "kernel32",
+                            "imports": [
+                                "RtlLookupFunctionEntry",
+                                "GetModuleHandleA",
+                            ],
+                        },
+                        {
+                            "dll_name": "vcruntime140",
+                            "imports": [
+                                "__current_exception_context",
+                                "__current_exception",
+                                "__C_specific_handler",
+                                "_purecall",
+                                "memset",
+                                "memcpy",
+                                "__std_exception_copy",
+                                "__std_exception_destroy",
+                                "_CxxThrowException",
+                                "memmove",
+                            ],
+                        },
+                        {"dll_name": "vcruntime140_1", "imports": ["__CxxFrameHandler4"]},
+                        {
+                            "dll_name": "api-ms-win-crt-heap-l1-1-0",
+                            "imports": ["free", "_set_new_mode", "malloc", "_callnewh"],
+                        },
+                        {
+                            "dll_name": "api-ms-win-crt-runtime-l1-1-0",
+                            "imports": [
+                                "_set_app_type",
+                                "_seh_filter_exe",
+                                "_configure_narrow_argv",
+                                "_initialize_narrow_environment",
+                                "_get_narrow_winmain_command_line",
+                                "_initterm",
+                                "_initterm_e",
+                                "exit",
+                                "_exit",
+                                "_cexit",
+                                "_c_exit",
+                                "_register_thread_local_exe_atexit_callback",
+                                "_crt_atexit",
+                                "_invalid_parameter_noinfo_noreturn",
+                                "_register_onexit_function",
+                                "_initialize_onexit_table",
+                                "terminate",
+                            ],
+                        },
+                        {"dll_name": "api-ms-win-crt-string-l1-1-0", "imports": ["strcmp"]},
+                        {"dll_name": "api-ms-win-crt-math-l1-1-0", "imports": ["__setusermatherr"]},
+                        {"dll_name": "api-ms-win-crt-stdio-l1-1-0", "imports": ["_set_fmode", "__p__commode"]},
+                        {"dll_name": "api-ms-win-crt-locale-l1-1-0", "imports": ["_configthreadlocale"]},
+                    ],
+                    "sections": [
+                        {
+                            "name": ".text",
+                            "offset": 1024,
+                            "virtual_size": 244671,
+                            "size": 244736,
+                            "characteristics": ["IMAGE_SCN_CNT_CODE", "IMAGE_SCN_MEM_EXECUTE", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rdata",
+                            "offset": 245760,
+                            "virtual_size": 115174,
+                            "size": 115200,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".data",
+                            "offset": 360960,
+                            "virtual_size": 25064,
+                            "size": 23552,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".pdata",
+                            "offset": 384512,
+                            "virtual_size": 18096,
+                            "size": 18432,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 402944,
+                            "virtual_size": 2024,
+                            "size": 2048,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".reloc",
+                            "offset": 404992,
+                            "virtual_size": 8760,
+                            "size": 9216,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_DISCARDABLE",
+                                "IMAGE_SCN_MEM_READ",
+                            ],
+                        },
+                    ],
+                    "header": {
+                        "entry_point": 235828,
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                            "IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE",
+                        ],
+                        "major_operating_system_version": 6,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_GUI",
+                        "file_characteristics": ["IMAGE_FILE_EXECUTABLE_IMAGE", "IMAGE_FILE_LARGE_ADDRESS_AWARE"],
+                        "pdb_paths": [
+                            "C:\\jenkins\\workspace\\dev\\juno-win_live\\build\\cefSubProcess\\pc64-vc-tool-opt\\bin\\EACefSubProcess.pdb"
+                        ],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha512",
+                                "actual_pe_digest": "a8:11:f8:27:d6:a0:b5:14:53:eb:a3:70:67:92:99:66:ff:8a:f3:b7:40:ab:f8:07:f2:8e:21:ae:1e:3e:32:ca:39:87:91:c0:81:64:f2:ba:d4:f3:84:46:e1:25:9d:4e:7d:70:c8:12:34:18:fe:1b:63:fa:e6:ab:a9:6c:ed:81",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Electronic Arts\\, Inc.,OU=EAC,O=Electronic Arts\\, Inc.,L=Redwood City,ST=CALIFORNIA,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2024-03-22T10:29:00Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Electronic Arts\\, Inc.,OU=EAC,O=Electronic Arts\\, Inc.,L=Redwood City,ST=CALIFORNIA,C=US",
+                                                            "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                                            "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ],
+                                                        [
+                                                            "CN=Electronic Arts\\, Inc.,OU=EAC,O=Electronic Arts\\, Inc.,L=Redwood City,ST=CALIFORNIA,C=US",
+                                                            "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                                            "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ],
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2022-08-01T00:00:00Z",
+                                "not_after": "2031-11-09T23:59:59Z",
+                                "serial_number": "0e:9b:18:8e:f9:d0:2d:e7:ef:db:50:e2:08:40:18:5a",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": "null",
+                                "cdps": ["http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2022-03-23T00:00:00Z",
+                                "not_after": "2037-03-22T23:59:59Z",
+                                "serial_number": "07:36:37:b7:24:54:7c:d8:47:ac:fd:28:66:2a:5e:5b",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2021-04-29T00:00:00Z",
+                                "not_after": "2036-04-28T23:59:59Z",
+                                "serial_number": "08:ad:40:b2:60:d2:9c:4c:9f:5e:cd:a9:bd:93:ae:d9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "subject": "CN=DigiCert Timestamp 2023,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2023-07-14T00:00:00Z",
+                                "not_after": "2034-10-13T23:59:59Z",
+                                "serial_number": "05:44:af:f3:94:9d:08:39:a6:bf:db:3f:5f:e5:61:16",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedG4RSA4096SHA256TimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "subject": "CN=Electronic Arts\\, Inc.,OU=EAC,O=Electronic Arts\\, Inc.,L=Redwood City,ST=CALIFORNIA,C=US",
+                                "not_before": "2023-05-04T00:00:00Z",
+                                "not_after": "2026-05-06T23:59:59Z",
+                                "serial_number": "06:71:35:2d:c4:c1:03:b7:0a:e7:25:e9:54:48:63:74",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                    "http://crl4.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                ],
+                            },
+                        ],
+                    },
+                    "imphash": "894cc25256a891de00b12211d82b7c92",
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 12, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 147},
+                                {"count": 2, "version": 26213, "id": 257},
+                                {"count": 28, "version": 32533, "id": 261},
+                                {"count": 10, "version": 32533, "id": 260},
+                                {"count": 3, "version": 32533, "id": 259},
+                                {"count": 6, "version": 32533, "id": 257},
+                                {"count": 3, "productName": "Unmarked objects (old)"},
+                                {"count": 206, "productName": "Unmarked objects", "id": 1},
+                                {"count": 125, "version": 32822, "id": 261},
+                                {"count": 1, "version": 32822, "id": 255},
+                                {"count": 1, "id": 151},
+                                {"count": 1, "version": 32822, "id": 258},
+                            ]
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "filename": "Data/Updater.exe.config",
+            "relpath": "unpack002/Data/Updater.exe.config",
+            "filesize": 1106,
+            "md5": "75e66ab540561a0c7d4160271f518243",
+            "sha1": "ad6501e407d216744b6c3de76d7664d9581ebad2",
+            "sha256": "091afff3bb63024b5a7b14ea30306b6753858fd1a33fc8c98e3b5e65fe92fbe7",
+            "sha512": "fcb55c0fdbb984b06aff2fafcaea2596c175aa5a07d2f1a401305d3441338aa266a53d2de7a7577684884a2e12ce3ee430b2e1d0210684a7eefaf9eaa0de115f",
+            "exts": [".xml"],
+            "tags": [],
+            "depth": 2,
+            "kind": "file",
+            "selected": "false",
+            "runas": "Data/Updater.exe.xml",
+            "metadata": {},
+        },
+        {
+            "filename": "Data/d3dcompiler_47.dll",
+            "relpath": "unpack002/Data/d3dcompiler_47.dll",
+            "filesize": 4917656,
+            "md5": "b37cc24fcfdcca9dead17a498e66db9c",
+            "sha1": "c959ab27ce476dcb0c7312c30c613fe3307bb877",
+            "sha256": "9f5b1ad41183ba50896eb09be917b1382980224e212a97080d33c0bf3dee40dd",
+            "sha512": "e62e1b985939688aa2eb920f5cfa50377934a8256d7aaa8a1def705de1d47e5cd15515d043622553bbe512469f5c2ed05a7bdedd4f5d17e99109274f9bffe95c",
+            "ssdeep": "49152:+CZnRO4XyM53Rkq4ypQqdoRpmruVNYvkaRwvdiD0N+YEzI4og/RfzHLeHTRhFRNZ:tG2QCwmHjnog/pzHAo/Ay",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "Data/d3dcompiler_47.dll",
+            "metadata": {
+                "password": "2025",
+                "pe": {
+                    "timestamp": 1699674094,
+                    "imports": [
+                        {
+                            "dll_name": "kernel32",
+                            "imports": [
+                                "WriteFile",
+                                "FreeLibrary",
+                                "DisableThreadLibraryCalls",
+                            ],
+                        },
+                        {
+                            "dll_name": "advapi32",
+                            "imports": [
+                                "CryptReleaseContext",
+                            ],
+                        },
+                        {"dll_name": "rpcrt4", "imports": ["UuidCreate"]},
+                    ],
+                    "exports": [
+                        "D3DWriteBlobToFile",
+                        "DebugSetMute",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".text",
+                            "offset": 4096,
+                            "virtual_size": 3726222,
+                            "size": 3727360,
+                            "characteristics": ["IMAGE_SCN_CNT_CODE", "IMAGE_SCN_MEM_EXECUTE", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rdata",
+                            "offset": 3731456,
+                            "virtual_size": 935636,
+                            "size": 937984,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".data",
+                            "offset": 4669440,
+                            "virtual_size": 103008,
+                            "size": 65536,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".pdata",
+                            "offset": 4734976,
+                            "virtual_size": 130980,
+                            "size": 131072,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 4866048,
+                            "virtual_size": 1088,
+                            "size": 4096,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".reloc",
+                            "offset": 4870144,
+                            "virtual_size": 35244,
+                            "size": 36864,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_DISCARDABLE",
+                                "IMAGE_SCN_MEM_READ",
+                            ],
+                        },
+                    ],
+                    "header": {
+                        "entry_point": 2702512,
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                            "IMAGE_DLLCHARACTERISTICS_GUARD_CF",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["D3DCompiler_47.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "ae:e6:a2:15:01:4a:bd:fd:0d:fa:fe:50:6c:e8:44:3e:5a:2f:7f:55:01:ad:c5:64:f5:65:c6:24:f1:77:44:56",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "SERIALNUMBER=1067879,CN=Logitech Inc,O=Logitech Inc,L=Newark,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130a43616c69666f726e6961,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=Certum Trusted Network CA,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "subject": "CN=Certum Trusted Network CA 2,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "not_before": "2021-05-31T06:43:06Z",
+                                "not_after": "2029-09-17T06:43:06Z",
+                                "serial_number": "1b:b5:8f:25:2a:df:23:00:49:28:c9:ae:3d:7e:ed:27",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": "null",
+                                "cdps": ["http://crl.certum.pl/ctnca.crl"],
+                            },
+                            {
+                                "issuer": "CN=Certum Timestamping 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "subject": "CN=Certum Timestamp 2023,O=Asseco Data Systems S.A.,C=PL",
+                                "not_before": "2023-11-02T08:32:23Z",
+                                "not_after": "2034-10-30T08:32:23Z",
+                                "serial_number": "09:c5:cc:f8:bb:66:7d:71:37:aa:c1:59:80:06:cb:31",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.certum.pl/ctsca2021.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2021-04-29T00:00:00Z",
+                                "not_after": "2036-04-28T23:59:59Z",
+                                "serial_number": "08:ad:40:b2:60:d2:9c:4c:9f:5e:cd:a9:bd:93:ae:d9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=Certum Trusted Network CA 2,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "subject": "CN=Certum Timestamping 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "not_before": "2021-05-19T05:32:07Z",
+                                "not_after": "2036-05-18T05:32:07Z",
+                                "serial_number": "e7:ff:69:c7:3b:35:ce:4b:91:26:d8:74:7c:68:a5:87",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.certum.pl/ctnca2.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "subject": "SERIALNUMBER=1067879,CN=Logitech Inc,O=Logitech Inc,L=Newark,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130a43616c69666f726e6961,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                "not_before": "2022-06-14T00:00:00Z",
+                                "not_after": "2025-06-13T23:59:59Z",
+                                "serial_number": "01:1b:a1:29:71:e5:10:ea:76:cd:ce:11:65:6b:fe:7e",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                    "http://crl4.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                ],
+                            },
+                        ],
+                    },
+                    "imphash": "8235041cfd6fffb926142c2c78013446",
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 2, "version": 30795, "id": 257},
+                                {"count": 146, "productName": "Unmarked objects", "id": 1},
+                                {"count": 5, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 147},
+                                {"count": 60, "version": 27316, "id": 261},
+                                {"count": 1, "version": 27316, "id": 260},
+                                {"count": 30, "version": 30795, "id": 259},
+                                {"count": 222, "version": 30795, "id": 261},
+                                {"count": 55, "version": 30795, "id": 260},
+                                {"count": 1, "version": 30795, "id": 256},
+                                {"count": 136, "version": 30795, "id": 264},
+                                {"count": 1, "version": 30795, "id": 255},
+                                {"count": 1, "version": 30795, "id": 258},
+                            ]
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "filename": "Data/ffmpeg.dll",
+            "relpath": "unpack002/Data/ffmpeg.dll",
+            "filesize": 2704792,
+            "md5": "449bf7a46490fa07881d969b6d52c0f1",
+            "sha1": "e520a8318e867c7840e6deadef36abcdf2894417",
+            "sha256": "5883d041c5f5020ac4b66314d5f89cb6331db3c4ec1c912f72b3ebb9aa8c41e2",
+            "sha512": "eabaa33b037ba9f1ee874c534d85ad281985e85e1dd2c115a2693f56381a9a596f22b16938916fd34804a3d490cd0ac53a2969c5f73a923b163c5474fea91b91",
+            "ssdeep": "49152:ImBYJtMTl/GuTvOCnCaYXWRTDF8fLen6yfZ0rO43PSGgt2:9OC9YXeTDFWD5PZ",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "Data/ffmpeg.dll",
+            "metadata": {
+                "password": "2025",
+                "pe": {
+                    "timestamp": 1712946081,
+                    "imports": [
+                        {
+                            "dll_name": "kernel32",
+                            "imports": [
+                                "AcquireSRWLockExclusive",
+                                "WriteConsoleW",
+                                "WriteFile",
+                            ],
+                        }
+                    ],
+                    "exports": [
+                        "av_buffer_create",
+                        "avio_close",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".text",
+                            "offset": 1024,
+                            "virtual_size": 2129013,
+                            "size": 2129408,
+                            "characteristics": ["IMAGE_SCN_CNT_CODE", "IMAGE_SCN_MEM_EXECUTE", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rdata",
+                            "offset": 2130432,
+                            "virtual_size": 484604,
+                            "size": 484864,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".data",
+                            "offset": 2615296,
+                            "virtual_size": 4840592,
+                            "size": 8704,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".pdata",
+                            "offset": 2624000,
+                            "virtual_size": 43020,
+                            "size": 43520,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".gxfg",
+                            "offset": 2667520,
+                            "virtual_size": 11392,
+                            "size": 11776,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {"name": ".retplne", "offset": 2679296, "virtual_size": 140, "size": 512},
+                        {
+                            "name": ".tls",
+                            "offset": 2679808,
+                            "virtual_size": 9,
+                            "size": 512,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": "_RDATA",
+                            "offset": 2680320,
+                            "virtual_size": 500,
+                            "size": 512,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".reloc",
+                            "offset": 2680832,
+                            "virtual_size": 13288,
+                            "size": 13312,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_DISCARDABLE",
+                                "IMAGE_SCN_MEM_READ",
+                            ],
+                        },
+                    ],
+                    "header": {
+                        "entry_point": 719456,
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                            "IMAGE_DLLCHARACTERISTICS_GUARD_CF",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["C:\\projects\\src\\out\\Default\\ffmpeg.dll.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "f4:54:d2:17:90:a6:60:07:a5:dc:20:e3:5b:50:e4:32:1c:50:e6:28:09:1f:19:a8:5c:32:d1:ec:3f:e7:5f:54",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "SERIALNUMBER=1067879,CN=Logitech Inc,O=Logitech Inc,L=Newark,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130a43616c69666f726e6961,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=Certum Trusted Network CA,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "subject": "CN=Certum Trusted Network CA 2,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "not_before": "2021-05-31T06:43:06Z",
+                                "not_after": "2029-09-17T06:43:06Z",
+                                "serial_number": "1b:b5:8f:25:2a:df:23:00:49:28:c9:ae:3d:7e:ed:27",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": "null",
+                                "cdps": ["http://crl.certum.pl/ctnca.crl"],
+                            },
+                            {
+                                "issuer": "CN=Certum Timestamping 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "subject": "CN=Certum Timestamp 2023,O=Asseco Data Systems S.A.,C=PL",
+                                "not_before": "2023-11-02T08:32:23Z",
+                                "not_after": "2034-10-30T08:32:23Z",
+                                "serial_number": "09:c5:cc:f8:bb:66:7d:71:37:aa:c1:59:80:06:cb:31",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.certum.pl/ctsca2021.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2021-04-29T00:00:00Z",
+                                "not_after": "2036-04-28T23:59:59Z",
+                                "serial_number": "08:ad:40:b2:60:d2:9c:4c:9f:5e:cd:a9:bd:93:ae:d9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=Certum Trusted Network CA 2,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "subject": "CN=Certum Timestamping 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "not_before": "2021-05-19T05:32:07Z",
+                                "not_after": "2036-05-18T05:32:07Z",
+                                "serial_number": "e7:ff:69:c7:3b:35:ce:4b:91:26:d8:74:7c:68:a5:87",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.certum.pl/ctnca2.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "subject": "SERIALNUMBER=1067879,CN=Logitech Inc,O=Logitech Inc,L=Newark,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130a43616c69666f726e6961,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                "not_before": "2022-06-14T00:00:00Z",
+                                "not_after": "2025-06-13T23:59:59Z",
+                                "serial_number": "01:1b:a1:29:71:e5:10:ea:76:cd:ce:11:65:6b:fe:7e",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                    "http://crl4.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                ],
+                            },
+                        ],
+                    },
+                    "imphash": "91b8685f04cd4eceae98e68aec559609",
+                    "subtype": {"type": "generic"},
+                },
+            },
+        },
+        {
+            "filename": "Data/icudtl.dat",
+            "relpath": "unpack002/Data/icudtl.dat",
+            "filesize": 10717680,
+            "md5": "74bded81ce10a426df54da39cfa132ff",
+            "sha1": "eb26bcc7d24be42bd8cfbded53bd62d605989bbf",
+            "sha256": "7bf96c193befbf23514401f8f6568076450ade52dd1595b85e4dfcf3de5f6fb9",
+            "sha512": "bd7b7b52d31803b2d4b1fd8cb76481931ed8abb98d779b893d3965231177bdd33386461e1a820b384712013904da094e3cd15ee24a679ddc766132677a8be54a",
+            "ssdeep": "196608:WgPBhORiuQwCliXUxbblHa93Whli6Z26wO+:W8wkDliXUxbblHa93Whli6ZUF",
+            "exts": [],
+            "tags": [],
+            "depth": 2,
+            "kind": "file",
+            "selected": "false",
+            "runas": "Data/icudtl.dat",
+            "metadata": {},
+        },
+        {
+            "filename": "Data/v8_context_snapshot.bin",
+            "relpath": "unpack002/Data/v8_context_snapshot.bin",
+            "filesize": 613840,
+            "md5": "753be41d649d31812067ec2b85c10f0e",
+            "sha1": "769531cc83b6d5dd9abfecfa4c2d0c4128bf42f2",
+            "sha256": "169fc7f80834acf1d59b62c2adbe6d1ad477cf2564ee84150dfffd36caa1ca33",
+            "sha512": "86d76228fd82b09529d15d35b9bd45f7e0ea7328ea984ff9e0414a05746b7853ddb2ac8537a1d46b59f4a13f471120c3a428df28fb51fc9facc51c5f9ef6d497",
+            "ssdeep": "6144:ti2Cr/XgXBS/YKiMpN5zzivVsTRlWxYZbAIf+jL/k5nnPo7p1KFqUg/J6:tZCr/BzOvrYs1KgJ6",
+            "exts": [],
+            "tags": [],
+            "depth": 2,
+            "kind": "file",
+            "selected": "false",
+            "runas": "Data/v8_context_snapshot.bin",
+            "metadata": {},
+        },
+        {
+            "filename": "Dodpiem.dwei",
+            "relpath": "unpack002/Dodpiem.dwei",
+            "filesize": 1246106,
+            "md5": "d8bfae40c7ed02938b95c39a36e1aa04",
+            "sha1": "36dbc9653cd80d6a6a3c5f1619d4a9b40ec46c2b",
+            "sha256": "c58517b10035981a9807d013ae27827368128afcf9894773fd9337fe693d4e25",
+            "sha512": "18a04c82ced64694604525b03124402043c6468c8252944954b7f92937ad3c935e2bbb8214e059f3fbbdf5d93ff4e61889f2d4ca5329d7ef729f6b2823cb822d",
+            "ssdeep": "24576:iY8lZqeUPjYxvgmEXI0C1bEgkfCYUchhkYckkEq2Hhw6aZ/mH0:i7lZqVrEvgm0I0C1bEzfCYLCLkJAHmU",
+            "exts": [],
+            "tags": [],
+            "depth": 2,
+            "kind": "file",
+            "selected": "false",
+            "runas": "Dodpiem.dwei",
+            "metadata": {},
+        },
+        {
+            "filename": "Draem.rpw",
+            "relpath": "unpack002/Draem.rpw",
+            "filesize": 28563,
+            "md5": "4ec7f868ad2c8c591e251da906f3f0de",
+            "sha1": "04b840b782903a66426caea6cf526a4dc4ba4a8a",
+            "sha256": "1870bac6463b72f1053cfa67b298714d14abf6edf0bd4461eed9cda4591fc84c",
+            "sha512": "af0e3934e38a6de1f8f5313db67559177d4fba8537435f0ce12bf30cf733346c72c1e5e6075fa40140ad2333cca9bd0605265f0fc88fe6d4a42e2712b94da37b",
+            "ssdeep": "768:CZ9ZKJUbZJe6mKteQDte8/7P8wmNukQOTBsSQG+nuuXBvV9kfn+G:IZKJUVJe6jtdDnjPaNVfGSQP5Vafn+G",
+            "exts": [],
+            "tags": [],
+            "depth": 2,
+            "kind": "file",
+            "selected": "false",
+            "runas": "Draem.rpw",
+            "metadata": {},
+        },
+        {
+            "filename": "Final Setup/Setup.exe",
+            "relpath": "unpack002/Final Setup/Setup.exe",
+            "filesize": 96479595,
+            "md5": "0d6faaec48680e4326df752d5bd19ec9",
+            "sha1": "85f32de5ddacec7edd779ab9be5683117b8add7a",
+            "sha256": "e3341a89161a689d546649bf5da3bca09d90694aebbc0c56e0dda420e485c4e0",
+            "sha512": "6272890eabb6e417464b7d5fc87198921081b4b7334788e1a3fce4e8e19af2ee7fa8a9acff18b95539656a8a185403bb294c8a2c9587ec81a9e18dc4922c62a5",
+            "ssdeep": "24576:BzZldHJFEIRLUYf2upa5FnSHWkc1G0oyPoQ:BVLEIWMkeDcIjDQ",
+            "exts": [".exe"],
+            "tags": ["windows:5", "windows", "x86", "arch:x86"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "Final Setup/Setup.exe",
+            "metadata": {
+                "password": "2025",
+                "pe": {
+                    "timestamp": 1309962680,
+                    "imports": [
+                        {
+                            "dll_name": "kernel32",
+                            "imports": [
+                                "SetFileTime",
+                                "CompareFileTime",
+                                "lstrlenW",
+                            ],
+                        },
+                        {
+                            "dll_name": "user32",
+                            "imports": [
+                                "ScreenToClient",
+                                "IsWindow",
+                            ],
+                        },
+                        {
+                            "dll_name": "gdi32",
+                            "imports": [
+                                "SetBkColor",
+                                "GetDeviceCaps",
+                                "DeleteObject",
+                                "CreateBrushIndirect",
+                                "CreateFontIndirectW",
+                                "SetBkMode",
+                                "SetTextColor",
+                                "SelectObject",
+                            ],
+                        },
+                        {
+                            "dll_name": "shell32",
+                            "imports": [
+                                "SHBrowseForFolderW",
+                                "SHGetPathFromIDListW",
+                                "SHGetFileInfoW",
+                                "ShellExecuteW",
+                                "SHFileOperationW",
+                                "SHGetSpecialFolderLocation",
+                            ],
+                        },
+                        {
+                            "dll_name": "advapi32",
+                            "imports": [
+                                "RegEnumKeyW",
+                                "RegOpenKeyExW",
+                                "RegCloseKey",
+                                "RegDeleteKeyW",
+                                "RegDeleteValueW",
+                                "RegCreateKeyExW",
+                                "RegSetValueExW",
+                                "RegQueryValueExW",
+                                "RegEnumValueW",
+                            ],
+                        },
+                        {
+                            "dll_name": "comctl32",
+                            "imports": ["ImageList_AddMasked", "ImageList_Destroy", "ord17", "ImageList_Create"],
+                        },
+                        {
+                            "dll_name": "ole32",
+                            "imports": ["CoTaskMemFree", "OleInitialize", "OleUninitialize", "CoCreateInstance"],
+                        },
+                        {
+                            "dll_name": "version",
+                            "imports": ["GetFileVersionInfoSizeW", "GetFileVersionInfoW", "VerQueryValueW"],
+                        },
+                    ],
+                    "sections": [
+                        {
+                            "name": ".text",
+                            "offset": 1024,
+                            "virtual_size": 26396,
+                            "size": 26624,
+                            "characteristics": ["IMAGE_SCN_CNT_CODE", "IMAGE_SCN_MEM_EXECUTE", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rdata",
+                            "offset": 27648,
+                            "virtual_size": 6614,
+                            "size": 6656,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".data",
+                            "offset": 34304,
+                            "virtual_size": 463772,
+                            "size": 512,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".ndata",
+                            "virtual_size": 593920,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_UNINITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 34816,
+                            "virtual_size": 18320,
+                            "size": 18432,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "entry_point": 13333,
+                        "magic_number": 267,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_NO_SEH",
+                            "IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE",
+                        ],
+                        "major_operating_system_version": 5,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_GUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_RELOCS_STRIPPED",
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_32BIT_MACHINE",
+                        ],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "33:21:05:1f:8b:20:15:1e:e5:08:71:2c:77:96:7c:7a:74:76:b1:45:68:55:cc:12:4d:5b:5d:64:34:53:15:a8",
+                                "target_pe_digest": "c7:96:a3:fd:43:fd:c4:bb:74:47:8b:9f:92:e9:1a:5e:b7:8f:dd:f0:51:a0:de:20:55:ba:cd:65:a5:cf:40:22",
+                                "pe_digests_matches": "false",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2025-06-10T18:05:36Z",
+                                                    "chains": [
+                                                        [
+                                                            "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                                            "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                                            "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ],
+                                                        [
+                                                            "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                                            "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                                            "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ],
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2021-04-29T00:00:00Z",
+                                "not_after": "2036-04-28T23:59:59Z",
+                                "serial_number": "08:ad:40:b2:60:d2:9c:4c:9f:5e:cd:a9:bd:93:ae:d9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "subject": "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                "not_before": "2025-03-18T00:00:00Z",
+                                "not_after": "2027-03-17T23:59:59Z",
+                                "serial_number": "0d:f2:24:41:e7:a2:4c:bc:b5:fe:9e:70:58:24:2e:b9",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                    "http://crl4.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "subject": "CN=DigiCert Timestamp 2024,O=DigiCert,C=US",
+                                "not_before": "2024-09-26T00:00:00Z",
+                                "not_after": "2035-11-25T23:59:59Z",
+                                "serial_number": "0b:ae:66:bc:5a:ba:7f:95:87:c6:f9:e9:04:e3:33:04",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedG4RSA4096SHA256TimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2022-03-23T00:00:00Z",
+                                "not_after": "2037-03-22T23:59:59Z",
+                                "serial_number": "07:36:37:b7:24:54:7c:d8:47:ac:fd:28:66:2a:5e:5b",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2022-08-01T00:00:00Z",
+                                "not_after": "2031-11-09T23:59:59Z",
+                                "serial_number": "0e:9b:18:8e:f9:d0:2d:e7:ef:db:50:e2:08:40:18:5a",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": "null",
+                                "cdps": ["http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl"],
+                            },
+                        ],
+                    },
+                    "imphash": "bf95d1fc1d10de18b32654b123ad5e1f",
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 3, "productName": "VS2005 build 50727", "version": 50727, "id": 109},
+                                {"count": 17, "productName": "VS2005 build 50727", "version": 50727, "id": 123},
+                                {"count": 168, "productName": "Unmarked objects", "id": 1},
+                                {"count": 11, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 131},
+                                {"count": 1, "productName": "VS2008 build 21022", "version": 21022, "id": 148},
+                                {"count": 1, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 145},
+                            ]
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "filename": "$PLUGINSDIR/nsExec.dll",
+            "relpath": "unpack006/$PLUGINSDIR/nsExec.dll",
+            "filesize": 6144,
+            "md5": "08e9796ca20c5fc5076e3ac05fb5709a",
+            "sha1": "07971d52dcbaa1054060073571ced046347177f7",
+            "sha256": "8165c7aef7de3d3e0549776535bedc380ad9be7bb85e60ad6436f71528d092af",
+            "sha512": "02618317d6ab0302324aae4d3c5fca56b21e68c899e211cfa9412cf73820a1f931e56753c904fd7e510c638b4463aedbfe9536790279e096ea0387b67013e0c4",
+            "ssdeep": "96:/Uspq2y5jOEEQrhySvUgfj74/vvrTBzfYZA4YF3Telac1nIq/2:/erjOELhySv5f2vvBjiAflaB1nIq",
+            "exts": [".dll"],
+            "tags": ["windows:5", "windows", "x86", "arch:x86"],
+            "depth": 3,
+            "kind": "file",
+            "selected": "true",
+            "runas": "$PLUGINSDIR/nsExec.dll",
+            "metadata": {
+                "password": "2025",
+                "pe": {
+                    "timestamp": 1270901927,
+                    "imports": [
+                        {
+                            "dll_name": "kernel32",
+                            "imports": [
+                                "lstrcpyW",
+                                "GetCurrentProcess",
+                            ],
+                        },
+                        {
+                            "dll_name": "user32",
+                            "imports": ["CharPrevW", "CharNextW", "SendMessageW", "FindWindowExW", "wsprintfW"],
+                        },
+                        {
+                            "dll_name": "advapi32",
+                            "imports": ["InitializeSecurityDescriptor", "SetSecurityDescriptorDacl"],
+                        },
+                    ],
+                    "exports": ["Exec", "ExecToLog", "ExecToStack"],
+                    "sections": [
+                        {
+                            "name": ".text",
+                            "offset": 1024,
+                            "virtual_size": 2876,
+                            "size": 3072,
+                            "characteristics": ["IMAGE_SCN_CNT_CODE", "IMAGE_SCN_MEM_EXECUTE", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rdata",
+                            "offset": 4096,
+                            "virtual_size": 1532,
+                            "size": 1536,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".data",
+                            "virtual_size": 3096,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".reloc",
+                            "offset": 5632,
+                            "virtual_size": 454,
+                            "size": 512,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_DISCARDABLE",
+                                "IMAGE_SCN_MEM_READ",
+                            ],
+                        },
+                    ],
+                    "header": {
+                        "entry_point": 4096,
+                        "magic_number": 267,
+                        "dll_characteristics": ["IMAGE_DLLCHARACTERISTICS_NO_SEH"],
+                        "major_operating_system_version": 5,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_GUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_32BIT_MACHINE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                    },
+                    "imphash": "8700d0ebbb41c81ea52718af1ab70a93",
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 7, "productName": "VS2005 build 50727", "version": 50727, "id": 123},
+                                {"count": 46, "productName": "Unmarked objects", "id": 1},
+                                {"count": 3, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 131},
+                                {"count": 1, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 146},
+                                {"count": 1, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 145},
+                            ]
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "filename": "$TEMP/Cache.xlm",
+            "relpath": "unpack006/$TEMP/Cache.xlm",
+            "filesize": 9458,
+            "md5": "00d12e8fa0cdf4190c31a93b6f155d94",
+            "sha1": "add779af7b482c7cf272ec05bf6333be2d16fb33",
+            "sha256": "1acaf7564a5c09762098b5ab7c54cfae844df36b1cc34f5f221b2955db9b7efa",
+            "sha512": "db5c69619733b33706eb8c81d599d90acda571e959a6690e4bf96f75387c58ad70acdbf74706be55d6165b4d24a4864c8b34c34d464edd2fb60c00ccc5094c7c",
+            "ssdeep": "192:BoYgBxiG7votwtLqiNcqQQG0bHpHzbCHrpXM0BRVd7gUa4IY9J:BMot8uacqk0jpHHqrpzdcUaqJ",
+            "exts": [],
+            "tags": [],
+            "depth": 3,
+            "kind": "file",
+            "selected": "true",
+            "runas": "$TEMP/Cache.xlm",
+            "metadata": {},
+        },
+        {
+            "filename": "Scanner_At.dll",
+            "relpath": "unpack002/Scanner_At.dll",
+            "filesize": 761648,
+            "md5": "7463755ab64e76b7cc25678bcc441571",
+            "sha1": "3f21323c4f15ac5f2d57462a9383b65f6daa8d89",
+            "sha256": "c6bb5d4f853e5d6ef86deb2656346324c7253297720b9b3fcc22790783532590",
+            "sha512": "312d7e37c078e068c25d257d41cea30e133b9bbddb7a053dd370daa4257631ae05f7d1f876cf175b98c874531ab80181bc1c3d518836796115170cf8ae01c5ed",
+            "ssdeep": "12288:0FR2Klt9tLuHjqnSLizIEJnjj00jIb18q1UYbUyAzl1ari7Wn9s7EbyvTHr/jX7K:w2Klt9tLuHjqnSmzIEJnjj0kIb18q1Uk",
+            "exts": [".dll"],
+            "tags": ["windows:4", "windows", "x86", "arch:x86"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "Scanner_At.dll",
+            "metadata": {
+                "password": "2025",
+                "pe": {
+                    "timestamp": 1678036847,
+                    "imports": [
+                        {
+                            "dll_name": "boca.1.0",
+                            "imports": [
+                                "_ZN4BoCA11Application3GetEv",
+                                "_ZNK4BoCA7PictureneERKS0_",
+                            ],
+                        },
+                        {
+                            "dll_name": "smooth",
+                            "imports": [
+                                "_ZN6smooth10IndexArray11InsertAtPosEii",
+                                "_ZTVN6smooth6Errors7SuccessE",
+                            ],
+                        },
+                        {
+                            "dll_name": "kernel32",
+                            "imports": [
+                                "CloseHandle",
+                                "VirtualQuery",
+                            ],
+                        },
+                        {
+                            "dll_name": "msvcrt",
+                            "imports": [
+                                "_amsg_exit",
+                                "_initterm",
+                                "_iob",
+                                "_lock",
+                                "_unlock",
+                                "abort",
+                                "calloc",
+                                "free",
+                                "fwrite",
+                                "memcmp",
+                                "memmove",
+                                "realloc",
+                                "strlen",
+                                "strncmp",
+                                "vfprintf",
+                            ],
+                        },
+                        {"dll_name": "shell32", "imports": ["ShellExecuteA"]},
+                        {"dll_name": "ws2_32", "imports": ["gethostname"]},
+                        {
+                            "dll_name": "libstdc++",
+                            "imports": [
+                                "_ZdlPvj",
+                                "_Znwj",
+                                "__cxa_guard_acquire",
+                                "__cxa_guard_release",
+                                "__cxa_pure_virtual",
+                            ],
+                        },
+                    ],
+                    "exports": ["StartConsole", "StartGUI"],
+                    "sections": [
+                        {
+                            "name": ".text",
+                            "offset": 1024,
+                            "virtual_size": 605136,
+                            "size": 605184,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_CODE",
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_EXECUTE",
+                                "IMAGE_SCN_MEM_READ",
+                            ],
+                        },
+                        {
+                            "name": ".data",
+                            "offset": 606208,
+                            "virtual_size": 2056,
+                            "size": 2560,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".rdata",
+                            "offset": 608768,
+                            "virtual_size": 52132,
+                            "size": 52224,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".bss",
+                            "virtual_size": 7468,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_UNINITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".edata",
+                            "offset": 660992,
+                            "virtual_size": 92,
+                            "size": 512,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".idata",
+                            "offset": 661504,
+                            "virtual_size": 32488,
+                            "size": 32768,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".CRT",
+                            "offset": 694272,
+                            "virtual_size": 44,
+                            "size": 512,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".tls",
+                            "offset": 694784,
+                            "virtual_size": 8,
+                            "size": 512,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".reloc",
+                            "offset": 695296,
+                            "virtual_size": 45536,
+                            "size": 45568,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_DISCARDABLE",
+                                "IMAGE_SCN_MEM_READ",
+                            ],
+                        },
+                    ],
+                    "header": {
+                        "entry_point": 5040,
+                        "magic_number": 267,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 4,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LINE_NUMS_STRIPPED",
+                            "IMAGE_FILE_LOCAL_SYMS_STRIPPED",
+                            "IMAGE_FILE_32BIT_MACHINE",
+                            "IMAGE_FILE_DEBUG_STRIPPED",
+                            "IMAGE_FILE_DLL",
+                        ],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "fa:41:94:7e:57:95:8b:e6:f7:a8:bf:71:28:79:85:62:14:bc:9d:45:a1:a6:1f:73:57:e2:7b:e5:ad:f6:21:48",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Open Source Developer\\, Robert Kausch,O=Open Source Developer,L=Hamburg,C=DE,1.2.840.113549.1.9.1=#0c17726f626572742e6b61757363684066726561632e6f7267",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2023-03-05T17:21:22Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "5f:d7:cf:9a:36:00:bb:5f:6c:f2:96:9c:78:6b:b6:7c:65:6e:ca:a1",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Open Source Developer\\, Robert Kausch,O=Open Source Developer,L=Hamburg,C=DE,1.2.840.113549.1.9.1=#0c17726f626572742e6b61757363684066726561632e6f7267",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2023-03-05T17:21:02Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=Certum Trusted Network CA 2,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "subject": "CN=Certum Code Signing 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "not_before": "2021-05-19T05:32:18Z",
+                                "not_after": "2036-05-18T05:32:18Z",
+                                "serial_number": "99:a3:80:0a:26:55:3b:65:ab:dc:6e:84:a6:b3:ea:39",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://crl.certum.pl/ctnca2.crl"],
+                            },
+                            {
+                                "issuer": "CN=Certum Code Signing 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "subject": "CN=Open Source Developer\\, Robert Kausch,O=Open Source Developer,L=Hamburg,C=DE,1.2.840.113549.1.9.1=#0c17726f626572742e6b61757363684066726561632e6f7267",
+                                "not_before": "2023-03-01T13:57:17Z",
+                                "not_after": "2024-02-29T13:57:16Z",
+                                "serial_number": "17:0b:79:ac:82:1f:10:ff:b0:db:9e:b7:8a:57:17:cf",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://ccsca2021.crl.certum.pl/ccsca2021.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "subject": "CN=DigiCert Timestamp 2022 - 2,O=DigiCert,C=US",
+                                "not_before": "2022-09-21T00:00:00Z",
+                                "not_after": "2033-11-21T23:59:59Z",
+                                "serial_number": "0c:4d:69:72:4b:94:fa:3c:2a:4a:3d:29:07:80:3d:5a",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedG4RSA4096SHA256TimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2022-03-23T00:00:00Z",
+                                "not_after": "2037-03-22T23:59:59Z",
+                                "serial_number": "07:36:37:b7:24:54:7c:d8:47:ac:fd:28:66:2a:5e:5b",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2022-08-01T00:00:00Z",
+                                "not_after": "2031-11-09T23:59:59Z",
+                                "serial_number": "0e:9b:18:8e:f9:d0:2d:e7:ef:db:50:e2:08:40:18:5a",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": "null",
+                                "cdps": ["http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=Certum Trusted Network CA 2,OU=Certum Certification Authority,O=Unizeto Technologies S.A.,C=PL",
+                                "subject": "CN=Certum Code Signing 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "not_before": "2021-05-19T05:32:18Z",
+                                "not_after": "2036-05-18T05:32:18Z",
+                                "serial_number": "99:a3:80:0a:26:55:3b:65:ab:dc:6e:84:a6:b3:ea:39",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://crl.certum.pl/ctnca2.crl"],
+                            },
+                            {
+                                "issuer": "CN=Certum Code Signing 2021 CA,O=Asseco Data Systems S.A.,C=PL",
+                                "subject": "CN=Open Source Developer\\, Robert Kausch,O=Open Source Developer,L=Hamburg,C=DE,1.2.840.113549.1.9.1=#0c17726f626572742e6b61757363684066726561632e6f7267",
+                                "not_before": "2023-03-01T13:57:17Z",
+                                "not_after": "2024-02-29T13:57:16Z",
+                                "serial_number": "17:0b:79:ac:82:1f:10:ff:b0:db:9e:b7:8a:57:17:cf",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://ccsca2021.crl.certum.pl/ccsca2021.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "subject": "CN=DigiCert Timestamp 2022 - 2,O=DigiCert,C=US",
+                                "not_before": "2022-09-21T00:00:00Z",
+                                "not_after": "2033-11-21T23:59:59Z",
+                                "serial_number": "0c:4d:69:72:4b:94:fa:3c:2a:4a:3d:29:07:80:3d:5a",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedG4RSA4096SHA256TimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2022-03-23T00:00:00Z",
+                                "not_after": "2037-03-22T23:59:59Z",
+                                "serial_number": "07:36:37:b7:24:54:7c:d8:47:ac:fd:28:66:2a:5e:5b",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2022-08-01T00:00:00Z",
+                                "not_after": "2031-11-09T23:59:59Z",
+                                "serial_number": "0e:9b:18:8e:f9:d0:2d:e7:ef:db:50:e2:08:40:18:5a",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": "null",
+                                "cdps": ["http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl"],
+                            },
+                        ],
+                    },
+                    "imphash": "6f114fc58757db554b902bc9c2402b3c",
+                    "subtype": {"type": "generic"},
+                },
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-core-synch-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-core-synch-l1-1-0.dll",
+            "filesize": 19920,
+            "md5": "979c67ba244e5328a1a2e588ff748e86",
+            "sha1": "4c709ce527550eb7534cb6362afdb3623c98254e",
+            "sha256": "8bb38a7a59fbaa792b3d5f34f94580429588c8c592929cbd307afd5579762abc",
+            "sha512": "49f3c3319aa462b445c6a0b816e10034f6e5a9cf1250ea30b348cfa1ef71525e9f62e2f13253f61375f51fc574847de0d509cffa95103771be356327d5fef90d",
+            "ssdeep": "384:Wjdv3V0dfpkXc0vVaCWfhWt+Y3DGk8ZpH3GCJErHZpn+Y3DGUrUN8JN77hhYl:Wdv3VqpkXc0vVabkDGkiRBEtplDGEUq8",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-core-synch-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 380628238,
+                    "exports": [
+                        "AcquireSRWLockExclusive",
+                        "AcquireSRWLockShared",
+                        "CancelWaitableTimer",
+                        "CreateEventA",
+                        "CreateEventExA",
+                        "CreateEventExW",
+                        "CreateEventW",
+                        "CreateMutexA",
+                        "CreateMutexExA",
+                        "CreateMutexExW",
+                        "CreateMutexW",
+                        "CreateSemaphoreExW",
+                        "CreateWaitableTimerExW",
+                        "DeleteCriticalSection",
+                        "EnterCriticalSection",
+                        "InitializeCriticalSection",
+                        "InitializeCriticalSectionAndSpinCount",
+                        "InitializeCriticalSectionEx",
+                        "InitializeSRWLock",
+                        "LeaveCriticalSection",
+                        "OpenEventA",
+                        "OpenEventW",
+                        "OpenMutexW",
+                        "OpenSemaphoreW",
+                        "OpenWaitableTimerW",
+                        "ReleaseMutex",
+                        "ReleaseSRWLockExclusive",
+                        "ReleaseSRWLockShared",
+                        "ReleaseSemaphore",
+                        "ResetEvent",
+                        "SetCriticalSectionSpinCount",
+                        "SetEvent",
+                        "SetWaitableTimer",
+                        "SetWaitableTimerEx",
+                        "SleepEx",
+                        "TryAcquireSRWLockExclusive",
+                        "TryAcquireSRWLockShared",
+                        "TryEnterCriticalSection",
+                        "WaitForMultipleObjectsEx",
+                        "WaitForSingleObject",
+                        "WaitForSingleObjectEx",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 2648,
+                            "size": 3072,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 4096,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-core-synch-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "bd:2e:df:93:66:8f:63:8d:ba:91:83:45:84:44:22:43:bd:1e:59:5d:5b:63:12:fb:df:3e:63:d0:62:f9:c6:7e",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "63:1f:d0:c3:03:31:f9:92:bc:68:de:99:6a:f4:ce:2a:06:6a:59:bf",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-core-synch-l1-2-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-core-synch-l1-2-0.dll",
+            "filesize": 18384,
+            "md5": "659e4febc208545a2e23c0c8b881a30d",
+            "sha1": "11b890cc05c1e7c95f59eda4bb8ce8bc12b81591",
+            "sha256": "9ac63682e03d55a5d18405d336634af080dd0003b565d12a39d6d71aaa989f48",
+            "sha512": "010ab6d3971fabd2a956f891b8d9d20ef487e722443b2882a1a329830dc5c80d262e03a844cd3f5c3e4efcfbad72b9e1fbbf7d9dc6cf85ed034d84726946ce07",
+            "ssdeep": "384:WHtZ36WfhW8+Y3DGk8ZpH3GCJEFxMDD+Y3DGEC8q8JN77hhFGT:EbDGkiRBEsJDGS13hj+",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-core-synch-l1-2-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 2161497815,
+                    "exports": [
+                        "DeleteSynchronizationBarrier",
+                        "EnterSynchronizationBarrier",
+                        "InitOnceBeginInitialize",
+                        "InitOnceComplete",
+                        "InitOnceExecuteOnce",
+                        "InitOnceInitialize",
+                        "InitializeConditionVariable",
+                        "InitializeSynchronizationBarrier",
+                        "SignalObjectAndWait",
+                        "Sleep",
+                        "SleepConditionVariableCS",
+                        "SleepConditionVariableSRW",
+                        "WaitOnAddress",
+                        "WakeAllConditionVariable",
+                        "WakeByAddressAll",
+                        "WakeByAddressSingle",
+                        "WakeConditionVariable",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1400,
+                            "size": 1536,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 2560,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-core-synch-l1-2-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "d5:7a:e9:28:76:29:a9:dd:7e:32:0b:ca:61:66:77:95:fc:93:7b:de:af:79:0e:5c:cf:df:10:01:19:98:22:76",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "75:ed:b7:f2:16:e8:88:7f:f3:08:76:dc:5d:c9:7c:2a:e4:6c:42:f4",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-core-sysinfo-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-core-sysinfo-l1-1-0.dll",
+            "filesize": 18896,
+            "md5": "cef4b9f680faae322170b961a3421c5b",
+            "sha1": "dd89a2d355df989bbd8648789472bfe9c14afcd5",
+            "sha256": "1fe918979f1653d63bb713d4716910d192cd09f50017a6ecb4ce026ed6285df9",
+            "sha512": "f56617290d4ac25231631d708a6c8b003bdd358bae9672f7dee539a96b292c13e04c65ba5f05937c52f73288eb3dd7cba479ed030942a0d9d3a15512548fa4a9",
+            "ssdeep": "384:WBTnWfhWt+Y3DGk8ZpH3GCJEFxqIDh/h+Y3DGER6vJ8JN77hhHWT:0TsIDGkiRBE+IxfDGM6vW3h5WT",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-core-sysinfo-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 4247013736,
+                    "exports": [
+                        "GetComputerNameExA",
+                        "GetComputerNameExW",
+                        "GetLocalTime",
+                        "GetLogicalProcessorInformation",
+                        "GetLogicalProcessorInformationEx",
+                        "GetSystemDirectoryA",
+                        "GetSystemDirectoryW",
+                        "GetSystemInfo",
+                        "GetSystemTime",
+                        "GetSystemTimeAdjustment",
+                        "GetSystemTimeAsFileTime",
+                        "GetSystemWindowsDirectoryA",
+                        "GetSystemWindowsDirectoryW",
+                        "GetTickCount",
+                        "GetTickCount64",
+                        "GetVersion",
+                        "GetVersionExA",
+                        "GetVersionExW",
+                        "GetWindowsDirectoryA",
+                        "GetWindowsDirectoryW",
+                        "GlobalMemoryStatusEx",
+                        "SetLocalTime",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1608,
+                            "size": 2048,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 3072,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-core-sysinfo-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "12:27:75:72:0b:20:29:90:7d:8c:9e:91:41:f4:60:f6:13:7f:23:e6:db:39:b5:52:53:24:b2:ff:c5:aa:82:6c",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "cb:85:e7:0e:53:77:0d:c1:23:1e:66:5c:b5:7f:87:65:9a:ef:64:d1",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-core-timezone-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-core-timezone-l1-1-0.dll",
+            "filesize": 18384,
+            "md5": "69df2cce4528c9e38d04a461ba1f992b",
+            "sha1": "bb1d0da76cf696acf2e0f4e03e6d63fbad4325aa",
+            "sha256": "a108a8f20ded00e742a1f818ef00eb425990b6b24a2bcd060dea4d7f06d3f165",
+            "sha512": "4d02eecdda0fffc10d5509830079984c7a887b4ca3a80359aa56117b302dcfa594b0710c9f415c823d1674b5c689d31aade44f21750ccd7d53010e67f0b6f0d2",
+            "ssdeep": "384:WGOWfhWc+Y3DGk8ZpH3GCJEFxi+3T7Tu+Y3DGEu8JN77hh2KI:5XDGkiRBEm+uDGQ3h7I",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-core-timezone-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 1549622405,
+                    "exports": [
+                        "EnumDynamicTimeZoneInformation",
+                        "FileTimeToSystemTime",
+                        "GetDynamicTimeZoneInformation",
+                        "GetDynamicTimeZoneInformationEffectiveYears",
+                        "GetTimeZoneInformation",
+                        "GetTimeZoneInformationForYear",
+                        "SetDynamicTimeZoneInformation",
+                        "SetTimeZoneInformation",
+                        "SystemTimeToFileTime",
+                        "SystemTimeToTzSpecificLocalTime",
+                        "SystemTimeToTzSpecificLocalTimeEx",
+                        "TzSpecificLocalTimeToSystemTime",
+                        "TzSpecificLocalTimeToSystemTimeEx",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1352,
+                            "size": 1536,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 2560,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-core-timezone-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "34:6e:05:70:ac:35:c5:e2:d4:9f:8e:22:79:f9:17:3e:2b:3a:d6:d9:78:48:5c:de:73:97:04:6d:84:13:14:35",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "79:39:32:96:a7:50:8e:b4:c7:6d:f9:16:21:28:3e:64:08:f9:7e:77",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-core-util-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-core-util-l1-1-0.dll",
+            "filesize": 17872,
+            "md5": "c6553959aecd5bac01c0673cfdf86b68",
+            "sha1": "045585659843f7214c79659a88302996bfb480a2",
+            "sha256": "68bd9c086d210eb14e78f00988ba88ceaf9056c8f10746ab024990f8512a2296",
+            "sha512": "ae8e42a428202d05fea4f1e6a4d3b919b644a792567f876b0fc392b1cddb856547b4c3b433c002fded6df4d4daec8fb7235f30d1ff9f42943d9e2557ade364d6",
+            "ssdeep": "384:WyzWWfhW++Y3DGk8ZpH3GCJErst5+Y3DGU1a8JN77hh8T:35DGkiRBEQpDGw3hKT",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-core-util-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 1521848211,
+                    "exports": [
+                        "Beep",
+                        "DecodePointer",
+                        "DecodeSystemPointer",
+                        "EncodePointer",
+                        "EncodeSystemPointer",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 568,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 2048,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-core-util-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "66:aa:33:af:38:5e:81:d6:7a:9d:39:f9:d7:b9:63:54:26:b3:cc:8e:4c:9c:e0:27:a7:6a:78:a9:3d:f9:8b:23",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "30:50:36:e1:d2:8a:3a:ae:51:88:03:ee:e4:39:44:d8:86:85:29:de",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-conio-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-conio-l1-1-0.dll",
+            "filesize": 18896,
+            "md5": "7190cbfad2d7773d3b88ccc25533a651",
+            "sha1": "71fe2bacc14b433d51328ea0810c1a030c80d844",
+            "sha256": "4aeeae0ac9f6c1b0b8835067ea3b7fc429f353565f18de7858f4ea5d6f72072e",
+            "sha512": "b314666c400268bf261c5f9e9966ad0680435241e7a24d85b28ae4405d798b80eedb65ed8db7e8d93df90f886a6719a8b7ace8c25d0429392bc061868890c40c",
+            "ssdeep": "384:WL5WfhWO+Y3DGk8ZpH3GCJErBf+Y3DGUCU8JN77hhIw:FVDGkiRBELDGfX3hKw",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-conio-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 3050776381,
+                    "exports": [
+                        "__conio_common_vcprintf",
+                        "__conio_common_vcprintf_p",
+                        "__conio_common_vcprintf_s",
+                        "__conio_common_vcscanf",
+                        "__conio_common_vcwprintf",
+                        "__conio_common_vcwprintf_p",
+                        "__conio_common_vcwprintf_s",
+                        "__conio_common_vcwscanf",
+                        "_cgets",
+                        "_cgets_s",
+                        "_cgetws",
+                        "_cgetws_s",
+                        "_cputs",
+                        "_cputws",
+                        "_getch",
+                        "_getch_nolock",
+                        "_getche",
+                        "_getche_nolock",
+                        "_getwch",
+                        "_getwch_nolock",
+                        "_getwche",
+                        "_getwche_nolock",
+                        "_putch",
+                        "_putch_nolock",
+                        "_putwch",
+                        "_putwch_nolock",
+                        "_ungetch",
+                        "_ungetch_nolock",
+                        "_ungetwch",
+                        "_ungetwch_nolock",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1776,
+                            "size": 2048,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 3072,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-conio-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "d2:50:df:4e:50:dd:3b:af:f7:11:ea:2d:4b:2d:fb:a7:12:7b:a5:80:40:51:52:65:2f:89:14:79:4f:e7:7c:ba",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "e1:e6:e3:77:f5:45:0f:39:9e:9f:35:cf:71:5a:fc:78:1f:bb:99:6c",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-convert-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-convert-l1-1-0.dll",
+            "filesize": 21968,
+            "md5": "3e415147ccd7c712618868bdd7a200cd",
+            "sha1": "b332f29915d846519dcb725d39e8c50604d7b414",
+            "sha256": "77b69e829bdc26c7b2474be6b8a2382345b2957e23046897e40992a8157a7ba1",
+            "sha512": "7e7e50f148414f8a84b4c39d3c7c1e0952f86f95873f3abc25b7f08574bbcce41394a59451868020b178bf68df12615bd356677e8c935c1185c5d07d15e61896",
+            "ssdeep": "384:WluyxWfhWK+Y3DGk8ZpH3GCJEFxkNN0O+Y3DGEhy8JN77hhHL:RhDGkiRBEqDGsd3h9L",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-convert-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 1854479564,
+                    "exports": [
+                        "__toascii",
+                        "wctrans",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 4862,
+                            "size": 5120,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 6144,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-convert-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "af:39:f7:9f:d5:a1:46:43:f5:a6:cd:a6:17:8d:2c:bc:99:5b:17:b6:f9:26:2b:86:77:07:e4:0f:72:7d:9f:44",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "6e:0c:10:bd:e8:f1:57:a4:46:f6:44:ba:7e:c8:8b:38:cd:fe:0e:9e",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-environment-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-environment-l1-1-0.dll",
+            "filesize": 18384,
+            "md5": "ad0cbb9978fcf60d9e9ca45de6a28d30",
+            "sha1": "65549d9d7ee72de7d0cc356f92ad22eeb8dc18cc",
+            "sha256": "6c9c0dc7b36afe07dfb07dd373fc757ff25df4793e6384d7a6021471a474f0b9",
+            "sha512": "aaf4919e7629cd0bcf52283d578214043a4bdf6597a7d808dfcecd5fa1ecbd0b1395c60a165c575d20ca42928500815e14837b9e05530a667c6898e14243d64d",
+            "ssdeep": "384:WgWfhWx+Y3DGk8ZpH3GCJEFxHiA6+Y3DGEi8JN77hhksg:CsDGkiRBEJeDG03hCD",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-environment-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 547272115,
+                    "exports": [
+                        "__p__environ",
+                        "__p__wenviron",
+                        "_dupenv_s",
+                        "_putenv",
+                        "_putenv_s",
+                        "_searchenv",
+                        "_searchenv_s",
+                        "_wdupenv_s",
+                        "_wgetcwd",
+                        "_wgetdcwd",
+                        "_wgetenv",
+                        "_wgetenv_s",
+                        "_wputenv",
+                        "_wputenv_s",
+                        "_wsearchenv",
+                        "_wsearchenv_s",
+                        "getenv",
+                        "getenv_s",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1074,
+                            "size": 1536,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 2560,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-environment-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "12:50:ab:7d:96:b1:03:e5:9c:33:57:e5:a2:a0:b0:20:c6:70:41:b6:fc:13:b7:33:4e:95:4a:ec:63:2c:b4:a8",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "c5:39:0c:5d:fd:6d:02:3f:78:e0:49:32:92:57:8b:49:82:d4:9a:26",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-filesystem-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-filesystem-l1-1-0.dll",
+            "filesize": 19920,
+            "md5": "14f407d94c77b1b0039ae2c89b07a2ff",
+            "sha1": "528b91a8a8611da45463fac0a6bd5c58233f8fbc",
+            "sha256": "85b1b189ce9e3c6f4d2efdd4cd82b0807f681bea2d28851caaf545990de99000",
+            "sha512": "152b97a656acd984592bf58854222ec97c661f9f8d19557ea03501457fb5a07821f90d332f21b1b51a5bce5ab84f862354b8ee21c7c1f6b7aa1c127f4a73ab5d",
+            "ssdeep": "384:Wcq6nWm5CpWfhW++Y3DGk8ZpH3GCJErNi4H+Y3DGUfhd8JN77hhcu:G6nWm5CeBDGkiRBEp5DGk63hqu",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-filesystem-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 1465961369,
+                    "exports": [
+                        "_access",
+                        "_access_s",
+                        "_chdir",
+                        "_chdrive",
+                        "_chmod",
+                        "_findclose",
+                        "_findfirst32",
+                        "_findfirst32i64",
+                        "_findfirst64",
+                        "_findfirst64i32",
+                        "_findnext32",
+                        "_findnext32i64",
+                        "_findnext64",
+                        "_findnext64i32",
+                        "_fstat32",
+                        "_fstat32i64",
+                        "_fstat64",
+                        "_fstat64i32",
+                        "_fullpath",
+                        "_getdiskfree",
+                        "_getdrive",
+                        "_getdrives",
+                        "_lock_file",
+                        "_makepath",
+                        "_makepath_s",
+                        "_mkdir",
+                        "rename",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 3008,
+                            "size": 3072,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 4096,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-filesystem-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "fc:47:2d:ca:6b:a1:9d:72:3c:5f:36:47:b3:d2:7a:57:1a:d1:90:9b:a8:d2:90:fd:0a:65:1c:c0:c9:09:c1:97",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "f9:a5:18:70:cc:4c:b9:ed:b4:4d:b8:5d:43:4e:52:ff:7d:59:3a:56",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-heap-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-heap-l1-1-0.dll",
+            "filesize": 18896,
+            "md5": "9c373c00ac3138233bdf1655c7be8e86",
+            "sha1": "ee38f868e32950d1b8185249edc6ad4e1bc5592f",
+            "sha256": "0166edfb23cfc77519c97862a538a69b5d805d6a17d6e235f46927af5c04b3c9",
+            "sha512": "d2f56b3169c1fea1a604523b2215dbad02c6306bd804445b367756f288310554dd049aefd024babc26a3b270b8aede8b10e5ec8d80e772d3d1076b8013491067",
+            "ssdeep": "384:WgY3eRWfhWn+Y3DGk8ZpH3GCJErTpTX+Y3DGUm8JN77hhwJ:TGeDGkiRBERTVDGm3hiJ",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-heap-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 1888972295,
+                    "exports": [
+                        "realloc",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1558,
+                            "size": 2048,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 3072,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-heap-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "6e:d6:5e:72:3e:36:d8:eb:18:5a:15:7c:b7:d1:d7:a2:94:3a:0a:f8:1d:12:ef:82:99:65:78:35:67:28:54:40",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "14:b3:5f:6d:73:dc:fc:c0:a9:10:3a:cd:c2:7b:b5:5b:25:79:6e:80",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-locale-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-locale-l1-1-0.dll",
+            "filesize": 18384,
+            "md5": "c5d747f96237b6e9aa85c58745d30c80",
+            "sha1": "c6ad21597265faf25ea8d7f09577f3e6f4f7be10",
+            "sha256": "f16447b5fc7fe6fb8a6699a3cef1b2b8ba92d408579bcc272d3dd76acd801e2a",
+            "sha512": "5bcee06d62633ecdfdf5dd1bf92ff9278f535dc5f21bfe36faaca15e378beb4da6be7ba9767569119fbf9f7383ffdb3a4a17c99d5918a64b8e12926ac0ec3140",
+            "ssdeep": "384:WVWfhW2+Y3DGk8ZpH3GCJErYIcc+Y3DGUA8JN77hhKdf:JxDGkiRBE44DGk3h09",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-locale-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 4091918863,
+                    "exports": [
+                        "___lc_codepage_func",
+                        "___lc_collate_cp_func",
+                        "___lc_locale_name_func",
+                        "___mb_cur_max_func",
+                        "___mb_cur_max_l_func",
+                        "__initialize_lconv_for_unsigned_char",
+                        "__pctype_func",
+                        "__pwctype_func",
+                        "_configthreadlocale",
+                        "_create_locale",
+                        "_free_locale",
+                        "_get_current_locale",
+                        "_getmbcp",
+                        "_lock_locales",
+                        "_setmbcp",
+                        "_unlock_locales",
+                        "_wcreate_locale",
+                        "_wsetlocale",
+                        "localeconv",
+                        "setlocale",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1397,
+                            "size": 1536,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 2560,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-locale-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "5a:45:92:9b:72:0d:e4:40:22:56:a2:e1:f6:2a:62:af:87:6b:ea:09:d2:31:d1:f8:19:7d:a0:d3:5a:75:b8:04",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "82:4d:d6:e4:c3:34:d8:4e:2e:38:55:84:0c:2d:a8:9f:20:c3:1b:a7",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-math-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-math-l1-1-0.dll",
+            "filesize": 27088,
+            "md5": "bc418a3461c5fdfa1a0d75f7e03d08a7",
+            "sha1": "5cfefa62226f117b7e2fe58961269294eb62b84c",
+            "sha256": "c7115159babdaa1f52e478e67b4e612da2332fda4e4036999b29425fe303b6e8",
+            "sha512": "4c9f3d461a5fc42d829d517ef523423ceb18f6667e6f2d83f1e5cd645a359d32b58ac8652ea734f567ed3b9e2999f358bf0e95bf38265df7abe3fe4b2f5fa978",
+            "ssdeep": "384:WXQUbM4Oe59Ckb1hgmLVWfhWC+Y3DGk8ZpH3GCJEr0a6eOq+Y3DGUOe8JN77hhoq:SRMq59Bb1jyRDGkiRBEQeOODGp3hqQ",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-math-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 3809642065,
+                    "exports": [
+                        "_Cbuild",
+                        "truncl",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 9883,
+                            "size": 10240,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 11264,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-math-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "3a:0e:44:23:c0:fa:ef:3c:a2:b9:75:e9:78:49:ba:5a:76:a5:a1:f0:55:ca:52:1a:c2:9d:09:8f:b9:66:36:9d",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "33:29:11:ca:36:3c:eb:96:9c:d1:1e:07:b1:15:13:e0:5d:32:92:a8",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-multibyte-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-multibyte-l1-1-0.dll",
+            "filesize": 26064,
+            "md5": "9e9c6f83a015029808f5257f7b7e39c6",
+            "sha1": "5674192eb60eb152773fe0d50161f32759e2ea0f",
+            "sha256": "c6b4e1d903b3cc83bfaffbe4e82eee634cff8f97f12217caa45b464ddc4e1455",
+            "sha512": "6e124732646cbe95ef94773d57b08c68a399854f906b14f15996bb12400d5e92b34596c38795a3ba4cdf8db4e8dd5ad486890634951a4686c6679b486ab19cb0",
+            "ssdeep": "384:WPy+Kr6aLPmIHJI6/CpG3t2G3t4odXLVWfhWS+Y3DGk8ZpH3GCJErRMOnR+Y3DG3:uZKrZPmIHJI6kVDGkiRBE9nDGa3hYV",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-multibyte-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 1197325971,
+                    "exports": [
+                        "__p__mbcasemap",
+                        "_mbtowc_l",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 8708,
+                            "size": 9216,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 10240,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-multibyte-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "14:80:01:b3:58:1c:85:61:5d:26:39:4b:bf:53:f3:3a:df:7e:95:a1:d9:b9:09:26:4e:2d:38:3c:fa:3d:ac:d8",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "07:eb:e8:45:ea:ad:1d:74:5f:21:29:93:a5:86:52:10:29:e7:63:5d",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-private-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-private-l1-1-0.dll",
+            "filesize": 70608,
+            "md5": "ad8d9a6ea592a6c8a78c67a805cec952",
+            "sha1": "3e9f35013044be456f33e300418453ab12c70df8",
+            "sha256": "696c10112d8b86a46e5057cbd0bf40728e79c6bb49cda1f2c67fe45d0fc1258d",
+            "sha512": "31c1b5717432b67e6b150911747f34e8099c1a0870262bb3b5d3ac5c9e28b3b08e4239bd105408318806f983b3fcd10e617b2385511c46efe9fe58a9cd4a7067",
+            "ssdeep": "1536:b/XeuJDe5c4bFe2JyhcvxXWpD7d3334BkZn+P7niDv3hO3:DXeuJDe5c4bFe2JyhcvxXWpD7d3334BD",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-private-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 2148047657,
+                    "exports": [
+                        "_CreateFrameInfo",
+                        "wcsstr",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 53348,
+                            "size": 53760,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 54784,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-private-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "d5:8f:19:a7:1e:bb:8d:26:d4:25:6c:ec:c1:c1:7f:98:c4:a6:fb:ab:28:b6:f5:96:0f:8f:e9:4f:79:e7:d0:a8",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "7a:e3:ab:1d:fc:78:38:8e:30:00:80:bc:88:2f:bb:19:eb:17:50:63",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "x86/api-ms-win-crt-process-l1-1-0.dll",
+            "relpath": "unpack002/x86/api-ms-win-crt-process-l1-1-0.dll",
+            "filesize": 18896,
+            "md5": "66f4e530a19ed2f6862b5ce946437875",
+            "sha1": "016bfa4eafb407e43abdcd9582dbca7dcf85d3de",
+            "sha256": "542a22540cdb7df46d957a0208d50507916f7c737bea833931239d56ebe8d68c",
+            "sha512": "2653b2118f4db250850dcefd3536e0fd2bc55e9774376b51e586658e4e5d79a35cb425ebe0a8391124997e24c8aaa84bac799162a31446ef47db667a4a3f0eb9",
+            "ssdeep": "384:W3KAWfhWk+Y3DGk8ZpH3GCJErW25tL+Y3DGURRQ8JN77hhGz:fDDGkiRBEy4BDG43hgz",
+            "exts": [".dll"],
+            "tags": ["windows:10", "windows", "x64", "arch:x64"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "x86/api-ms-win-crt-process-l1-1-0.dll",
+            "metadata": {
+                "pe": {
+                    "timestamp": 765366727,
+                    "exports": [
+                        "_beep",
+                        "_wspawnvpe",
+                    ],
+                    "sections": [
+                        {
+                            "name": ".rdata",
+                            "offset": 1024,
+                            "virtual_size": 1672,
+                            "size": 2048,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 3072,
+                            "virtual_size": 1008,
+                            "size": 1024,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "magic_number": 523,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+                            "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+                            "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+                        ],
+                        "major_operating_system_version": 10,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_CUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+                            "IMAGE_FILE_DLL",
+                        ],
+                        "pdb_paths": ["api-ms-win-crt-process-l1-1-0.pdb"],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "d7:4d:95:42:60:13:dc:77:da:2e:4b:f6:f5:c6:d7:36:3f:ab:86:9d:2f:12:c3:af:7c:3e:c8:72:2f:1e:2d:18",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2023-07-24T19:20:09Z",
+                                                    "chains": [
+                                                        [
+                                                            "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                                            "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ]
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                            {
+                                "digest_algorithm": "sha1",
+                                "actual_pe_digest": "ad:be:51:42:48:63:74:38:8d:7e:95:8b:ad:67:95:ca:63:a5:fd:b6",
+                                "pe_digests_matches": "true",
+                                "validity": {
+                                    "trusted": "false",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "false",
+                                                    "timestamp": "2025-07-21T17:07:40.414969546Z",
+                                                    "chains": "null",
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            },
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=USERTrust RSA Certification Authority,O=The USERTRUST Network,L=Jersey City,ST=New Jersey,C=US",
+                                "subject": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "not_before": "2019-05-02T00:00:00Z",
+                                "not_after": "2038-01-18T23:59:59Z",
+                                "serial_number": "30:0f:6f:ac:dd:66:98:74:7c:a9:46:36:a7:78:2d:b9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.usertrust.com/USERTrustRSACertificationAuthority.crl"],
+                            },
+                            {
+                                "issuer": "CN=Sectigo RSA Time Stamping CA,O=Sectigo Limited,L=Salford,ST=Greater Manchester,C=GB",
+                                "subject": "CN=Sectigo RSA Time Stamping Signer #4,O=Sectigo Limited,ST=Manchester,C=GB",
+                                "not_before": "2023-05-03T00:00:00Z",
+                                "not_after": "2034-08-02T23:59:59Z",
+                                "serial_number": "39:4c:25:e1:7c:a0:6d:27:a8:65:e2:3b:d9:1d:22:d4",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageContentCommitment"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl.sectigo.com/SectigoRSATimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=Epic Games Inc.,O=Epic Games Inc.,L=Cary,ST=North Carolina,C=US",
+                                "not_before": "2021-02-25T00:00:00Z",
+                                "not_after": "2024-02-29T23:59:59Z",
+                                "serial_number": "0d:fe:7b:a4:82:f0:76:db:90:bc:c2:2b:2c:48:7c:bd",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/sha2-assured-cs-g1.crl",
+                                    "http://crl4.digicert.com/sha2-assured-cs-g1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert SHA2 Assured ID Code Signing CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2013-10-22T12:00:00Z",
+                                "not_after": "2028-10-22T12:00:00Z",
+                                "serial_number": "04:09:18:1b:5f:d5:bb:66:75:53:43:b5:6f:95:50:08",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl4.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                    "http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=VeriSign Universal Root Certification Authority,OU=VeriSign Trust Network+OU=(c) 2008 VeriSign\\, Inc. - For authorized use only,O=VeriSign\\, Inc.,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2016-01-12T00:00:00Z",
+                                "not_after": "2031-01-11T23:59:59Z",
+                                "serial_number": "7b:05:b1:d4:49:68:51:44:f7:c9:89:d2:9c:19:9d:12",
+                                "key_usages": ["KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://s.symcb.com/universal-root.crl"],
+                            },
+                            {
+                                "issuer": "CN=Symantec SHA256 TimeStamping CA,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "subject": "CN=Symantec SHA256 TimeStamping Signer - G3,OU=Symantec Trust Network,O=Symantec Corporation,C=US",
+                                "not_before": "2017-12-23T00:00:00Z",
+                                "not_after": "2029-03-22T23:59:59Z",
+                                "serial_number": "7b:d4:e5:af:ba:cc:07:3f:a1:01:23:04:22:41:4d:12",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://ts-crl.ws.symantec.com/sha256-tss-ca.crl"],
+                            },
+                        ],
+                    },
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 1, "version": 26213, "id": 256},
+                                {"count": 2, "version": 26213, "id": 260},
+                                {"count": 1, "version": 26213, "id": 255},
+                                {"count": 1, "version": 26213, "id": 258},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+        {
+            "filename": "𝗦𝗘𝗧𝗨𝗣.exe",
+            "relpath": "unpack002/𝗦𝗘𝗧𝗨𝗣.exe",
+            "filesize": 1040699,
+            "md5": "0d3dd5fa1a7e29840305ba56d8db906f",
+            "sha1": "a65bca3962000b1a584d0c79a1bd2b9dcf11ab58",
+            "sha256": "5b4d3c0979d885e092860ba91f29a329c0d3ac8e61a85522dc0d1b6ba003903b",
+            "sha512": "a571ea8c44f8df2ae99122974fd26b446b3b72139e2609ec794bf1b2d7d6ee44491c7810b7a5e40685ce04497d823d4973191b0ce1cccecf8656403038e9d1a9",
+            "ssdeep": "24576:6zZldHJFEIRLUYf2upa5FnSHWkc1G0oyPog:6VLEIWMkeDcIjDg",
+            "exts": [".exe"],
+            "tags": ["windows:5", "windows", "x86", "arch:x86"],
+            "depth": 2,
+            "kind": "file",
+            "selected": "true",
+            "runas": "𝗦𝗘𝗧𝗨𝗣.exe",
+            "metadata": {
+                "pe": {
+                    "timestamp": 1309962680,
+                    "imports": [
+                        {
+                            "dll_name": "kernel32",
+                            "imports": [
+                                "SetFileTime",
+                                "lstrlenW",
+                            ],
+                        },
+                        {
+                            "dll_name": "user32",
+                            "imports": [
+                                "ScreenToClient",
+                                "IsWindow",
+                            ],
+                        },
+                        {
+                            "dll_name": "gdi32",
+                            "imports": [
+                                "SetBkColor",
+                                "GetDeviceCaps",
+                                "DeleteObject",
+                                "CreateBrushIndirect",
+                                "CreateFontIndirectW",
+                                "SetBkMode",
+                                "SetTextColor",
+                                "SelectObject",
+                            ],
+                        },
+                        {
+                            "dll_name": "shell32",
+                            "imports": [
+                                "SHBrowseForFolderW",
+                                "SHGetPathFromIDListW",
+                                "SHGetFileInfoW",
+                                "ShellExecuteW",
+                                "SHFileOperationW",
+                                "SHGetSpecialFolderLocation",
+                            ],
+                        },
+                        {
+                            "dll_name": "advapi32",
+                            "imports": [
+                                "RegEnumKeyW",
+                                "RegOpenKeyExW",
+                                "RegCloseKey",
+                                "RegDeleteKeyW",
+                                "RegDeleteValueW",
+                                "RegCreateKeyExW",
+                                "RegSetValueExW",
+                                "RegQueryValueExW",
+                                "RegEnumValueW",
+                            ],
+                        },
+                        {
+                            "dll_name": "comctl32",
+                            "imports": ["ImageList_AddMasked", "ImageList_Destroy", "ord17", "ImageList_Create"],
+                        },
+                        {
+                            "dll_name": "ole32",
+                            "imports": ["CoTaskMemFree", "OleInitialize", "OleUninitialize", "CoCreateInstance"],
+                        },
+                        {
+                            "dll_name": "version",
+                            "imports": ["GetFileVersionInfoSizeW", "GetFileVersionInfoW", "VerQueryValueW"],
+                        },
+                    ],
+                    "sections": [
+                        {
+                            "name": ".text",
+                            "offset": 1024,
+                            "virtual_size": 26396,
+                            "size": 26624,
+                            "characteristics": ["IMAGE_SCN_CNT_CODE", "IMAGE_SCN_MEM_EXECUTE", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".rdata",
+                            "offset": 27648,
+                            "virtual_size": 6614,
+                            "size": 6656,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                        {
+                            "name": ".data",
+                            "offset": 34304,
+                            "virtual_size": 463772,
+                            "size": 512,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_INITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".ndata",
+                            "virtual_size": 593920,
+                            "characteristics": [
+                                "IMAGE_SCN_CNT_UNINITIALIZED_DATA",
+                                "IMAGE_SCN_MEM_READ",
+                                "IMAGE_SCN_MEM_WRITE",
+                            ],
+                        },
+                        {
+                            "name": ".rsrc",
+                            "offset": 34816,
+                            "virtual_size": 18320,
+                            "size": 18432,
+                            "characteristics": ["IMAGE_SCN_CNT_INITIALIZED_DATA", "IMAGE_SCN_MEM_READ"],
+                        },
+                    ],
+                    "header": {
+                        "entry_point": 13333,
+                        "magic_number": 267,
+                        "dll_characteristics": [
+                            "IMAGE_DLLCHARACTERISTICS_NO_SEH",
+                            "IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE",
+                        ],
+                        "major_operating_system_version": 5,
+                        "minor_operating_system_version": 0,
+                        "subsystem": "IMAGE_SUBSYSTEM_WINDOWS_GUI",
+                        "file_characteristics": [
+                            "IMAGE_FILE_RELOCS_STRIPPED",
+                            "IMAGE_FILE_EXECUTABLE_IMAGE",
+                            "IMAGE_FILE_32BIT_MACHINE",
+                        ],
+                    },
+                    "code_sign": {
+                        "signers": [
+                            {
+                                "digest_algorithm": "sha256",
+                                "actual_pe_digest": "01:27:df:f8:71:a2:b3:56:72:3d:c1:c7:80:77:0e:90:e1:61:3b:2b:8d:61:f2:9a:f2:4d:f3:54:50:5a:38:54",
+                                "target_pe_digest": "c7:96:a3:fd:43:fd:c4:bb:74:47:8b:9f:92:e9:1a:5e:b7:8f:dd:f0:51:a0:de:20:55:ba:cd:65:a5:cf:40:22",
+                                "pe_digests_matches": "false",
+                                "validity": {
+                                    "trusted": "true",
+                                    "signature_validations": [
+                                        {
+                                            "signing_certificate": "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                            "verifications": [
+                                                {
+                                                    "is_valid": "true",
+                                                    "timestamp": "2025-06-10T18:05:36Z",
+                                                    "chains": [
+                                                        [
+                                                            "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                                            "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                                            "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ],
+                                                        [
+                                                            "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                                            "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                                            "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                            "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                                        ],
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                },
+                            }
+                        ],
+                        "certificates": [
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2021-04-29T00:00:00Z",
+                                "not_after": "2036-04-28T23:59:59Z",
+                                "serial_number": "08:ad:40:b2:60:d2:9c:4c:9f:5e:cd:a9:bd:93:ae:d9",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1,O=DigiCert\\, Inc.,C=US",
+                                "subject": "SERIALNUMBER=4559077,CN=Now.gg\\, INC,O=Now.gg\\, INC,L=Campbell,ST=California,C=US,2.5.4.15=#131450726976617465204f7267616e697a6174696f6e,1.3.6.1.4.1.311.60.2.1.2=#130844656c6177617265,1.3.6.1.4.1.311.60.2.1.3=#13025553",
+                                "not_before": "2025-03-18T00:00:00Z",
+                                "not_after": "2027-03-17T23:59:59Z",
+                                "serial_number": "0d:f2:24:41:e7:a2:4c:bc:b5:fe:9e:70:58:24:2e:b9",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageCodeSigning"],
+                                "cdps": [
+                                    "http://crl3.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                    "http://crl4.digicert.com/DigiCertTrustedG4CodeSigningRSA4096SHA3842021CA1.crl",
+                                ],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "subject": "CN=DigiCert Timestamp 2024,O=DigiCert,C=US",
+                                "not_before": "2024-09-26T00:00:00Z",
+                                "not_after": "2035-11-25T23:59:59Z",
+                                "serial_number": "0b:ae:66:bc:5a:ba:7f:95:87:c6:f9:e9:04:e3:33:04",
+                                "key_usages": ["KeyUsageDigitalSignature"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedG4RSA4096SHA256TimeStampingCA.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted G4 RSA4096 SHA256 TimeStamping CA,O=DigiCert\\, Inc.,C=US",
+                                "not_before": "2022-03-23T00:00:00Z",
+                                "not_after": "2037-03-22T23:59:59Z",
+                                "serial_number": "07:36:37:b7:24:54:7c:d8:47:ac:fd:28:66:2a:5e:5b",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": ["ExtKeyUsageTimeStamping"],
+                                "cdps": ["http://crl3.digicert.com/DigiCertTrustedRootG4.crl"],
+                            },
+                            {
+                                "issuer": "CN=DigiCert Assured ID Root CA,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "subject": "CN=DigiCert Trusted Root G4,OU=www.digicert.com,O=DigiCert Inc,C=US",
+                                "not_before": "2022-08-01T00:00:00Z",
+                                "not_after": "2031-11-09T23:59:59Z",
+                                "serial_number": "0e:9b:18:8e:f9:d0:2d:e7:ef:db:50:e2:08:40:18:5a",
+                                "key_usages": ["KeyUsageDigitalSignature", "KeyUsageCertSign", "KeyUsageCRLSign"],
+                                "ext_key_usages": "null",
+                                "cdps": ["http://crl3.digicert.com/DigiCertAssuredIDRootCA.crl"],
+                            },
+                        ],
+                    },
+                    "imphash": "bf95d1fc1d10de18b32654b123ad5e1f",
+                    "subtype": {
+                        "type": "generic",
+                        "generic": {
+                            "rich": [
+                                {"count": 3, "productName": "VS2005 build 50727", "version": 50727, "id": 109},
+                                {"count": 17, "productName": "VS2005 build 50727", "version": 50727, "id": 123},
+                                {"count": 168, "productName": "Unmarked objects", "id": 1},
+                                {"count": 11, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 131},
+                                {"count": 1, "productName": "VS2008 build 21022", "version": 21022, "id": 148},
+                                {"count": 1, "productName": "VS2008 SP1 build 30729", "version": 30729, "id": 145},
+                            ]
+                        },
+                    },
+                }
+            },
+        },
+    ],
+    "unpack_count": 9,
+    "error_count": 0,
+    "extracted": [
+        {
+            "dumped_file": "Dodpiem.dwei",
+            "resource": "static1/unpack002/Dodpiem.dwei",
+            "config": {
+                "family": "hijackloader",
+                "rule": "hijackloader",
+                "keys": [{"kind": "xor.hex", "key": "config_key", "value": "0x0c1bee6d"}],
+                "attr": {"inject_dll": "%windir%\\SysWOW64\\pla.dll", "directory": "%APPDATA%\\shtl"},
+            },
+        }
+    ],
+}
+
 query_250710_marksa1mt2 = {
     "version": "0.2",
     "sample": {
@@ -1176,7 +6392,7 @@ query_210609_c67qy7hmpe_static = {
             "tags": ["windows", "x64", "regsvr32"],
             "depth": 0,
             "kind": "file",
-            "selected": True,
+            "selected": "True",
             "runas": "0d78a33a77954db9c2fd31198710d9beef5f8e1b5147890231896f5628bc4a2b.dll",
             "metadata": {
                 "pe": {
@@ -3285,7 +8501,7 @@ query_240828_btyyeszang_static = {
             "tags": ["windows:6", "windows", "x86", "arch:x86"],
             "depth": 0,
             "kind": "file",
-            "selected": True,
+            "selected": "True",
             "runas": "python-3.12.5-amd64.exe",
             "metadata": {
                 "pe": {
@@ -3630,15 +8846,15 @@ query_240828_btyyeszang_static = {
                             {
                                 "digest_algorithm": "sha256",
                                 "actual_pe_digest": "bb:7b:a2:a7:1e:c9:05:94:de:95:d0:58:44:51:3f:c2:ef:1b:f9:19:5c:48:b7:ef:5a:de:15:30:df:d2:a6:75",
-                                "pe_digests_matches": True,
+                                "pe_digests_matches": "True",
                                 "validity": {
-                                    "trusted": True,
+                                    "trusted": "True",
                                     "signature_validations": [
                                         {
                                             "signing_certificate": "CN=Python Software Foundation,O=Python Software Foundation,L=Beaverton,ST=Oregon,C=US",
                                             "verifications": [
                                                 {
-                                                    "is_valid": True,
+                                                    "is_valid": "True",
                                                     "timestamp": "2024-08-06T21:13:59Z",
                                                     "chains": [
                                                         [
@@ -4424,7 +9640,7 @@ query_240908_tpps3axgmd_static = {
             "tags": ["windows:6", "windows", "x86", "arch:x86"],
             "depth": 0,
             "kind": "file",
-            "selected": True,
+            "selected": "True",
             "runas": "MBSetup.exe",
             "metadata": {
                 "pe": {
@@ -4688,15 +9904,15 @@ query_240908_tpps3axgmd_static = {
                             {
                                 "digest_algorithm": "sha256",
                                 "actual_pe_digest": "30:b7:55:7a:3e:e4:00:de:eb:2a:ad:da:d6:53:94:30:67:1f:85:12:cf:65:c9:52:59:dc:ed:34:75:bc:8e:2c",
-                                "pe_digests_matches": True,
+                                "pe_digests_matches": "True",
                                 "validity": {
-                                    "trusted": False,
+                                    "trusted": "false",
                                     "signature_validations": [
                                         {
                                             "signing_certificate": "CN=Malwarebytes Inc,O=Malwarebytes Inc,L=Santa Clara,ST=California,C=US",
                                             "verifications": [
                                                 {
-                                                    "is_valid": False,
+                                                    "is_valid": "false",
                                                     "timestamp": "2024-06-27T14:36:31Z",
                                                     "chains": "null",
                                                 }
@@ -4708,15 +9924,15 @@ query_240908_tpps3axgmd_static = {
                             {
                                 "digest_algorithm": "sha256",
                                 "actual_pe_digest": "30:b7:55:7a:3e:e4:00:de:eb:2a:ad:da:d6:53:94:30:67:1f:85:12:cf:65:c9:52:59:dc:ed:34:75:bc:8e:2c",
-                                "pe_digests_matches": True,
+                                "pe_digests_matches": "True",
                                 "validity": {
-                                    "trusted": True,
+                                    "trusted": "True",
                                     "signature_validations": [
                                         {
                                             "signing_certificate": "CN=Malwarebytes Inc.,O=Malwarebytes Inc.,ST=California,C=US",
                                             "verifications": [
                                                 {
-                                                    "is_valid": True,
+                                                    "is_valid": "True",
                                                     "timestamp": "2024-06-27T14:35:46Z",
                                                     "chains": [
                                                         [
