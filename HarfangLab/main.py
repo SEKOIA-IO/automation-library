@@ -1,5 +1,6 @@
 from sekoia_automation.module import Module
 
+from harfanglab.account_validator import HarfanglabAccountValidator
 from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
 from harfanglab.download_file_from_endpoint import DownloadFileFromEndpointAction
 from harfanglab.endpoint_actions import (
@@ -17,6 +18,7 @@ from harfanglab.threat_actions import AddCommentToThreat, UpdateThreatStatus
 
 if __name__ == "__main__":
     module = Module()
+    module.register_account_validator(HarfanglabAccountValidator)
     module.register(HarfanglabAssetConnector, "harfanglab_asset_connector")
     module.register(GetProcessListAction, "harfanglab_get_process_list")
     module.register(GetPipeListAction, "harfanglab_get_pipe_list")
