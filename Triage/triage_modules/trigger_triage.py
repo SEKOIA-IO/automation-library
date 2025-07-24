@@ -127,19 +127,21 @@ class TriageConfigsTrigger(TriageTrigger):
         signatures = [False]
         static_report = self.client.static_report(sample_id=sample_id)
         for f in static_report.get("files", []):
-            if f.get("metadata"):
-                try:
+            try:
+                if f.get("metadata"):
                     signers = f["metadata"]["pe"]["code_sign"]["signers"]
                     for value in signers:
                         if isinstance(value["validity"]["trusted"], list):
                             for entry in value["validity"]["trusted"]:
                                 if entry:
-                                    signatures.append(entry)
+                                    self.log(f"PE in {sample_id} report has a trusted signature")
+                                    return True
                         else:
                             if value["validity"]["trusted"]:
-                                signatures.append(value["validity"]["trusted"])
-                except (KeyError, TypeError):
-                    signatures.append(False)
+                                self.log(f"PE in {sample_id} report has a trusted signature")
+                                return True
+            except (AttributeError, KeyError, TypeError):
+                signatures.append(False)
         return any(signatures)
 
     def check_suspicious_analysis(self, sample_id: str, data: dict) -> bool:
@@ -177,7 +179,6 @@ class TriageConfigsTrigger(TriageTrigger):
                 sig = self.check_sample_signature(sample_id=sample_id)
                 # Check if the first submitted binary is signed then return nothing
                 if sig:
-                    self.log(f"PE in {sample_id} report has a trusted signature")
                     return sample_iocs
             if self.exclude_suspicious_analysis:
                 suspicious = self.check_suspicious_analysis(sample_id=sample_id, data=data)

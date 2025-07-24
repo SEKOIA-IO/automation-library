@@ -1,5 +1,15 @@
 from datetime import datetime
 
+query_250724_eyxgyavkz5 = {
+    "version": "0.2",
+    "sample": {"sample": "250724-eyxgyavkz5", "kind": "url", "target": "https://lighster.net/"},
+    "task": {"task": "250724-eyxgyavkz5-static1", "target": "https://lighster.net/"},
+    "analysis": {"reported": "2025-07-24T04:21:30Z", "score": 1},
+    "files": "null",
+    "unpack_count": 0,
+    "error_count": 0,
+}
+
 query_250722_kqcqfshn4z = {
     "version": "0.2",
     "sample": {

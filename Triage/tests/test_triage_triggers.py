@@ -28,6 +28,7 @@ from tests.data import (
     query_250106_fypb1azkcr,
     query_250710_marksa1mt2,
     query_250722_kqcqfshn4z,
+    query_250724_eyxgyavkz5,
 )
 from triage_modules.trigger_triage import TriageConfigsTrigger
 
@@ -162,6 +163,10 @@ def triage_mock():
             json=query_250722_kqcqfshn4z,
         )
         m.get(
+            "https://api.tria.ge/v0/samples/250724-eyxgyavkz5/reports/static",
+            json=query_250724_eyxgyavkz5,
+        )
+        m.get(
             "https://api.tria.ge/v0/samples/241118-wj1z9asdqn/overview.json",
             json=query_241118_wj1z9asdqn,
         )
@@ -292,6 +297,12 @@ def test_check_report_with_multiple_signatures_and_missing_keys(trigger2, triage
     # ASSERT THAT AT LEAST ONE SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
     sample_signature = trigger2.check_sample_signature("250722-kqcqfshn4z")
     assert sample_signature is True
+
+
+def test_check_report_without_static_analysis(trigger2, triage_mock):
+    # ASSERT THAT AT LEAST ONE SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
+    sample_signature = trigger2.check_sample_signature("250724-eyxgyavkz5")
+    assert sample_signature is False
 
 
 def test_check_report_with_one_signature(trigger2, triage_mock):
