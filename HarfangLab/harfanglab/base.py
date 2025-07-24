@@ -22,7 +22,7 @@ class HarfanglabAction(GenericAPIAction):
     def get_headers(self):
         return {"Authorization": f"Token {self.api_token}"}
 
-    def get_url(self, arguments):
+    def get_url(self, arguments) -> str:
         match = re.findall("{(.*?)}", self.endpoint)
         for replacement in match:
             self.endpoint = self.endpoint.replace(f"{{{replacement}}}", str(arguments.pop(replacement)), 1)

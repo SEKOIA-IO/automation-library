@@ -1,4 +1,5 @@
 from functools import cached_property
+from typing import Any
 from urllib.parse import urljoin
 
 from sekoia_automation.account_validator import AccountValidator
@@ -20,7 +21,7 @@ class HarfanglabAccountValidator(AccountValidator):
     def base_url(self) -> str:
         return handle_uri(self.module.configuration["url"])
 
-    def _check_credentials_request(self):
+    def _check_credentials_request(self) -> tuple[dict[str, Any], int]:
         check_cred_url = urljoin(self.base_url, self.AUTHENTICATION_ENDPOINT)
         params: dict = {}
 
