@@ -22,7 +22,6 @@ def harfanglab_account_validator():
     yield harfanglab_validator
 
 
-
 def test_validate_success(harfanglab_account_validator, requests_mock):
     requests_mock.get(
         "https://example.com/api/auth/users/me",
@@ -32,6 +31,7 @@ def test_validate_success(harfanglab_account_validator, requests_mock):
 
     assert harfanglab_account_validator.validate() is True
 
+
 def test_validate_failure(harfanglab_account_validator, requests_mock):
     requests_mock.get(
         "https://example.com/api/auth/users/me",
@@ -40,6 +40,7 @@ def test_validate_failure(harfanglab_account_validator, requests_mock):
     )
 
     assert harfanglab_account_validator.validate() is False
+
 
 def test_validate_unexpected_status(harfanglab_account_validator, requests_mock):
     requests_mock.get(

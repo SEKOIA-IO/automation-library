@@ -22,7 +22,7 @@ def test_harfanglab_asset_connector(data_storage):
     test_harfanglab_asset_connector.configuration = {
         "sekoia_base_url": "https://sekoia.io",
         "sekoia_api_key": "fake_api_key",
-        "frequency": 60
+        "frequency": 60,
     }
 
     test_harfanglab_asset_connector.log = Mock()

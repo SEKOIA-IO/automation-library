@@ -14,10 +14,7 @@ class HarfanglabAccountValidator(AccountValidator):
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(
-            token=self.module.configuration["api_token"],
-            instance_url= self.base_url
-        )
+        return ApiClient(token=self.module.configuration["api_token"], instance_url=self.base_url)
 
     @cached_property
     def base_url(self) -> str:

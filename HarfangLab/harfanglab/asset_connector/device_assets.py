@@ -45,10 +45,7 @@ class HarfanglabAssetConnector(AssetConnector):
         Get the API client for the Harfanglab asset connector.
         This client is used to interact with the Harfanglab API.
         """
-        return ApiClient(
-            token=self.module.configuration["api_token"],
-            instance_url= self.base_url
-        )
+        return ApiClient(token=self.module.configuration["api_token"], instance_url=self.base_url)
 
     @cached_property
     def base_url(self) -> str:
@@ -71,7 +68,7 @@ class HarfanglabAssetConnector(AssetConnector):
         return 1000
 
     @staticmethod
-    def extract_timestamp( asset: dict[str, Any]) -> datetime:
+    def extract_timestamp(asset: dict[str, Any]) -> datetime:
         """
         Extract the timestamp from the asset data and transform it to datetime.
 

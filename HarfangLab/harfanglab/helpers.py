@@ -54,6 +54,7 @@ def stix_to_indicators(stix_object, supported_types_map):
 
     return results
 
+
 def handle_uri(uri: str) -> str:
     """
     Handle the URI for the asset connector.
