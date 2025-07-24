@@ -3109,18 +3109,18 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.17.2"
+version = "1.18.2"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "sekoia_automation_sdk-1.17.2-py3-none-any.whl", hash = "sha256:5194e5cc6142ff4e1ebd75939321265e83b36cd07316f80e8aa9419c80ccd003"},
-    {file = "sekoia_automation_sdk-1.17.2.tar.gz", hash = "sha256:cc0d0e511449f34aee337b3e8f3af55bb082e9e3b860bd285f69bca340e96b77"},
+    {file = "sekoia_automation_sdk-1.18.2-py3-none-any.whl", hash = "sha256:4a54d17948d336b3d3299f1e6bd4988418abe23b82667a7606a3734afc79264c"},
+    {file = "sekoia_automation_sdk-1.18.2.tar.gz", hash = "sha256:12b6e39980ecd8fb2d47566059ac55a782f46357e7d25be1774966b5bc30afe5"},
 ]
 
 [package.dependencies]
 black = "*"
-boto3 = ">=1.28,<2.0"
+boto3 = "<1.36"
 cookiecutter = ">=2.1,<3.0"
 Jinja2 = ">=3.0.3,<4.0.0"
 jsonschema = ">=4.22.0,<5.0.0"
