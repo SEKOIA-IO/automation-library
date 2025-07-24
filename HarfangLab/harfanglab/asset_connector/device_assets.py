@@ -22,7 +22,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 
 from harfanglab.helpers import handle_uri
 from harfanglab.client import ApiClient
-from harfanglab.models import HarfanglabAssetConnectorConfiguration
 
 
 class HarfanglabAssetConnector(AssetConnector):
