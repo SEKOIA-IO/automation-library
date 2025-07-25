@@ -13,6 +13,7 @@ requests = "*"
 requests-ratelimiter = "^0.7.0"
 stix2-patterns = "^2.0.0"
 structlog = "^24.4.0"
+findpython = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
