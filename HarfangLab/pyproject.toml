@@ -7,8 +7,8 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
-pydantic = "^2.11.7"
+sekoia-automation-sdk = "1.19.0"
+pydantic = "2.10"
 requests = "*"
 requests-ratelimiter = "^0.7.0"
 stix2-patterns = "^2.0.0"
@@ -20,6 +20,9 @@ pytest-cov = "*"
 requests-mock = "*"
 mypy = "*"
 types-requests = "*"
+
+[tool.poetry.group.dev.dependencies]
+aiohttp = "^3.12.14"
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]

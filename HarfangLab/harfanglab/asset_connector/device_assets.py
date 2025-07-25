@@ -8,12 +8,14 @@ from datetime import timedelta, datetime
 
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector.models.ocsf.base import (
+    Metadata,
+    Product,
+)
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceOCSFModel,
-    Metadata,
     OperatingSystem,
     Device,
-    Product,
     OSTypeStr,
     DeviceTypeId,
     DeviceTypeStr,
