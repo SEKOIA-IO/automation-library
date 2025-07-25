@@ -24,6 +24,7 @@ def test_trigger_job():
             id="595ad86a-c98a-4fc6-8b6d-8a7723e6d386",
             action="getPipeList",
             creationtime="2021-04-11T12:27:23.179844Z",
+            parameters={},
         )
     )
 
