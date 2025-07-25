@@ -126,6 +126,9 @@ class TriageConfigsTrigger(TriageTrigger):
         # Get static report for PE metadata
         signatures = [False]
         static_report = self.client.static_report(sample_id=sample_id)
+        kind = static_report.get("sample").get("kind")
+        if kind == "url":
+            return False
         for f in static_report.get("files", []):
             try:
                 if f.get("metadata"):
