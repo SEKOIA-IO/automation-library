@@ -18,7 +18,8 @@ def test_harfanglab_asset_connector(symphony_storage):
         "api_token": "fake_harfanglab_api_key",
     }
 
-    test_harfanglab_asset_connector = HarfanglabAssetConnector(module=module, data_path=symphony_storage)
+    test_harfanglab_asset_connector = HarfanglabAssetConnector(
+        module=module, data_path=symphony_storage)
     test_harfanglab_asset_connector.configuration = {
         "sekoia_base_url": "https://sekoia.io",
         "sekoia_api_key": "fake_api_key",
@@ -350,7 +351,8 @@ def test_base_url(test_harfanglab_asset_connector):
 def test_extract_timestamp(test_harfanglab_asset_connector):
     asset = {"firstseen": "2023-10-01T12:00:00Z"}
     timestamp = test_harfanglab_asset_connector.extract_timestamp(asset)
-    assert timestamp == datetime.datetime(2023, 10, 1, 12, 0, tzinfo=datetime.timezone.utc)
+    assert timestamp == datetime.datetime(
+        2023, 10, 1, 12, 0, tzinfo=datetime.timezone.utc)
     assert timestamp.isoformat() == "2023-10-01T12:00:00+00:00"
     assert isinstance(timestamp, datetime.datetime)
 
@@ -374,7 +376,8 @@ def test_extract_os_type(test_harfanglab_asset_connector):
 
 
 def test_map_fields(test_harfanglab_asset_connector, asset_first_object):
-    mapped_device = test_harfanglab_asset_connector.map_fields(asset_first_object)
+    mapped_device = test_harfanglab_asset_connector.map_fields(
+        asset_first_object)
 
     # Test static fields
     assert isinstance(mapped_device, DeviceOCSFModel)
@@ -411,8 +414,10 @@ def test_fetch_devices(test_harfanglab_asset_connector, agent_endpoint_response,
             json=agent_endpoint_response,
         )
 
-        from_date = datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
-        devices = list(test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
+        from_date = datetime.datetime(
+            2023, 10, 1, tzinfo=datetime.timezone.utc)
+        devices = list(
+            test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
 
         assert len(devices) == 1
         assert devices[0] == [asset_first_object]
@@ -426,7 +431,9 @@ def test_fetch_devices_no_results(test_harfanglab_asset_connector):
             json={"count": 0, "results": []},
         )
 
-        from_date = datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
-        devices = list(test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
+        from_date = datetime.datetime(
+            2023, 10, 1, tzinfo=datetime.timezone.utc)
+        devices = list(
+            test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
 
         assert len(devices) == 0
