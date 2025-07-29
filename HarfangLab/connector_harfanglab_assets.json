@@ -1,21 +1,13 @@
-{
+  {
   "name": "Harfanglab asset connector",
   "description": "Fetch Harfanglab device asset",
-  "uuid": "37367e7b-5bd5-4333-a431-5d49720169ae",
+  "uuid": "f7da3627-6016-415d-9885-231e1455a7a5",
   "docker_parameters": "harfanglab_asset_connector",
   "type": "asset",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-      "harfanglab_api_key": {
-        "description": "harfanglab API key",
-        "type": "string"
-      },
-      "harfanglab_base_url": {
-        "description": "HarfangLab base URL",
-        "type": "string"
-      },
       "sekoia_base_url": {
         "description": "Sekoia base URL",
         "type": "string"
@@ -31,7 +23,7 @@
           "type": "string"
       }
     },
-    "required": ["sekoia_api_key", "harfanglab_api_key", "harfanglab_base_url"],
-    "secrets": ["sekoia_api_key", "harfanglab_api_key"]
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
   }
 }

@@ -77,3 +77,4 @@ dmypy.json
 # IDE
 .idea
 .vscode/
+*/.devcontainer/*
