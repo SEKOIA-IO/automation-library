@@ -1,0 +1,49 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "type": {
+        "description": "The type of the target incident. Must be 'extendedIncidents' or 'incidents'.",
+        "type": "string",
+        "enum": [
+          "extendedIncidents",
+          "incidents"
+        ]
+      },
+      "incidentId": {
+        "description": "The ID of the incident to update.",
+        "type": "string"
+      },
+      "note": {
+        "description": "The comment to be added to the incident.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "type",
+      "incidentId",
+      "note"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Update an incident comment",
+  "docker_parameters": "bitdefender_gravity_zone_update_comment_incident",
+  "name": "Update an incident comment",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "64c3f7a4-0b4d-4d3d-94e5-fca838d400a7",
+  "slug": "update_comment_incident"
+}

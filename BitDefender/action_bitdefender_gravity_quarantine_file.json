@@ -1,0 +1,43 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "endpointIds": {
+        "description": "A list with the IDs of target endpoints.You can specify maximum 100 targets at once.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "filePath": {
+        "description": "The absolute file path on disk.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "endpointIds",
+      "filePath"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Quarantine a file on a list of endpoints",
+  "docker_parameters": "bitdefender_gravity_quarantine_file",
+  "name": "Quarantine a file on a list of endpoints",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "64c3f7a4-0b4d-4d3d-94e5-fca838d400a7",
+  "slug": "add_file_to_quarantine"
+}

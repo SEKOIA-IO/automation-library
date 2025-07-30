@@ -1,7 +1,7 @@
 from requests.auth import AuthBase
 import base64
 
-class BitdefenderAuth(AuthBase):
+class BitdefenderApiAuth(AuthBase):
     """
     Authentication class for Bitdefender API.
     This class is used to authenticate requests to the Bitdefender API.

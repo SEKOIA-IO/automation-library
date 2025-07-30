@@ -1,0 +1,50 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "processId": {
+        "description": "The ID of the process to kill.",
+        "type": "string"
+      },
+      "path": {
+        "description": "The location of the file that starts the process on the endpoint where it is stored.",
+        "type": "string"
+      },
+      "endpointId": {
+        "description": "The endpoint (or node) where the process is running",
+        "type": "string"
+      },
+      "incidentId": {
+        "description": "[Optional] The ID of the incident generated as a result of this process.",
+        "type": "string",
+        "default": ""
+      }
+    },
+    "required": [
+      "processId",
+      "path",
+      "endpointId"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Kill a process",
+  "docker_parameters": "bitdefender_gravity_zone_kill_process",
+  "name": "Kill a process",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "If the task was successful, contains the ID for the task created as a result of the request.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "64c3f7a4-0b4d-4d3d-94e5-fca838d400a7",
+  "slug": "update_status_incident"
+}

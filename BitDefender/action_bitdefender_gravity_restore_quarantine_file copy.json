@@ -1,0 +1,48 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "quarantineItemsIds": {
+        "description": "The list of IDs for the quarantined items. You can restore maximum 100 items once.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "locationToRestore": {
+        "description": "[Optional] The absolute path to the folder where the items will be restored. If the parameter is not set, the original location will be used.",
+        "type": "string",
+        "default": ""
+      },
+      "addExclusionInPolicy": {
+        "description": "[Optional] If set to True, the restored items will be added to the exclusion list in the policy. Default is False.",
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "quarantineItemsIds"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Restore a file from quarantine",
+  "docker_parameters": "bitdefender_gravity_restore_quarantine_file",
+  "name": "Restore a file from quarantine",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "64c3f7a4-0b4d-4d3d-94e5-fca838d400a7",
+  "slug": "restore_quarantine_file"
+}

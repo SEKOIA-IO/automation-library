@@ -1,0 +1,77 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "targetIds": {
+        "description": "A list with the IDs of the targets to scan. The target ID can designate an endpoint or a container.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "type": {
+        "description": "The type of scan.",
+        "type": "integer",
+        "default": 4,
+        "readOnly": true
+      },
+      "customScanSettings": {
+        "description": "Object containing information such as scan depth and scan path(s). This object should be set only when type parameter has the value 4 (Custom Scan).",
+        "type": "object",
+        "properties": {
+          "scanDepth": {
+            "description": "The scan depth for the custom scan.",
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ]
+          },
+          "scanPaths": {
+            "description": "A list of paths to scan.",
+            "type": "array",
+            "items": {
+              "type": "string" 
+            }
+          }
+        },
+        "default": {}
+      },
+      "returnAllTaskIds": {
+        "description": "If set to true, the method will return all task IDs created by the scan. If set to false, it will return only the first task ID.",
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "targetIds",
+      "type",
+      "customScanSettings"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Create a new custom task scan",
+  "docker_parameters": "bitdefender_gravity_zone_custom_scan_endpoint",
+  "name": "Create a new custom task scan",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns the ID of the newly created task or a boolean value which is true if the creation of the task was successful.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "64c3f7a4-0b4d-4d3d-94e5-fca838d400a7",
+  "slug": "create_custom_scan_task"
+}
