@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-31 - 1.0.2
+
+### Fixed
+
+- Set a default value if the sekoia_base_url parameter is not set in the configuration file
+
 ## 2025-07-16 - 1.0.1
 
 ### Added
