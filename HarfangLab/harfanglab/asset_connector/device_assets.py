@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 from dateutil.parser import isoparse
 from datetime import timedelta, datetime
 
-from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import (
     Metadata,
@@ -21,6 +20,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeStr,
     OSTypeId,
 )
+from sekoia_automation.storage import PersistentJSON
 
 from harfanglab.helpers import handle_uri
 from harfanglab.client import ApiClient
@@ -34,11 +34,18 @@ class HarfanglabAssetConnector(AssetConnector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.context = PersistentJSON("context.json", self._data_path)
 
-        self.cursor = CheckpointDatetime(
-            path=self._data_path, start_at=timedelta(hours=24), ignore_older_than=timedelta(days=7)
-        )
-        self.from_date = self.cursor.offset
+
+    @property
+    def most_recent_date_seen(self) -> datetime | None:
+        with self.context as cache:
+            most_recent_date_seen = cache.get("most_recent_date_seen")
+
+            if most_recent_date_seen is None:
+                return
+
+            return most_recent_date_seen
 
     @cached_property
     def client(self) -> ApiClient:
@@ -129,17 +136,17 @@ class HarfanglabAssetConnector(AssetConnector):
             device=device,
         )
 
-    def __fetch_devices(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
+    def __fetch_devices(self, from_date: str | None) -> Generator[list[dict[str, Any]], None, None]:
         devices_url = urljoin(self.base_url, self.AGENT_ENDPOINT)
-        offset = 0
-        firstseen_param: str = from_date.isoformat()
+        firstseen_param: str = from_date if from_date else ""
 
         params: dict[str, Union[str, int]] = {
             "ordering": self.DEVICE_ORDERING_FIELD,
-            "firstseen": firstseen_param,
             "limit": self.limit,
-            "offset": offset,
         }
+
+        if firstseen_param:
+            params["firstseen"] = firstseen_param
 
         device_response = self.client.get(devices_url, params=params)
         device_response.raise_for_status()
@@ -154,37 +161,31 @@ class HarfanglabAssetConnector(AssetConnector):
 
             yield devices.get("results", [])
 
-            next_page = devices.get("next")
+            if next_page := devices.get("next"):
+                next_page_url = urljoin(self.base_url, next_page)
+            else: return
 
-            # If there is no next page, break the loop
-            if not next_page:
-                return
-
-            # Update the offset for the next request
-            offset += self.limit
-            params["offset"] = offset
-
-            device_response = self.client.get(next_page, params=params)
+            device_response = self.client.get(next_page_url, params=params)
             device_response.raise_for_status()
 
     def next_list_devices(self) -> Generator[list[dict[str, Any]], None, None]:
-        most_recent_date_seen = self.from_date
+        recent_date_seen: datetime | None = None
 
-        for devices in self.__fetch_devices(from_date=most_recent_date_seen):
+        for devices in self.__fetch_devices(from_date=self.most_recent_date_seen):
             if devices:
                 last_event = max(devices, key=self.extract_timestamp)
                 last_event_datetime = self.extract_timestamp(last_event)
 
                 # Update the most recent date seen if the last event is more recent
-                if last_event_datetime > most_recent_date_seen:
-                    most_recent_date_seen = last_event_datetime + timedelta(microseconds=1)
+                if not self.most_recent_date_seen or last_event_datetime > self.most_recent_date_seen:
+                    recent_date_seen = last_event_datetime + timedelta(microseconds=1)
 
                 yield devices
 
-        # Update the cursor with the most recent date seen
-        if most_recent_date_seen > self.from_date:
-            self.cursor.offset = most_recent_date_seen
-            self.from_date = most_recent_date_seen
+        # Update the context with the most recent date seen
+        if recent_date_seen is not None and recent_date_seen < self.most_recent_date_seen:
+            with self.context as cache:
+                cache["most_recent_date_seen"] = recent_date_seen
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         for devices in self.next_list_devices():
