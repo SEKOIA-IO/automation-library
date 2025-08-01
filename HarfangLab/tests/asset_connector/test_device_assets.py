@@ -406,12 +406,12 @@ def test_map_fields(test_harfanglab_asset_connector, asset_first_object):
 def test_fetch_devices(test_harfanglab_asset_connector, agent_endpoint_response, asset_first_object):
     with requests_mock.Mocker() as agent_request:
         agent_request.get(
-            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000&offset=0",
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000",
             status_code=200,
             json=agent_endpoint_response,
         )
 
-        from_date = datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
+        from_date = "2023-10-01T00:00:00+00:00"
         devices = list(test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
 
         assert len(devices) == 1
@@ -421,12 +421,12 @@ def test_fetch_devices(test_harfanglab_asset_connector, agent_endpoint_response,
 def test_fetch_devices_no_results(test_harfanglab_asset_connector):
     with requests_mock.Mocker() as agent_request:
         agent_request.get(
-            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000&offset=0",
+            f"{test_harfanglab_asset_connector.base_url}/api/data/endpoint/Agent?ordering=firstseen&firstseen=2023-10-01T00%3A00%3A00%2B00%3A00&limit=1000",
             status_code=200,
             json={"count": 0, "results": []},
         )
 
-        from_date = datetime.datetime(2023, 10, 1, tzinfo=datetime.timezone.utc)
+        from_date = "2023-10-01T00:00:00+00:00"
         devices = list(test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
 
         assert len(devices) == 0
