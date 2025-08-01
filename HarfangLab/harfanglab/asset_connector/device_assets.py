@@ -36,7 +36,6 @@ class HarfanglabAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
-
     @property
     def most_recent_date_seen(self) -> datetime | None:
         with self.context as cache:
@@ -163,7 +162,8 @@ class HarfanglabAssetConnector(AssetConnector):
 
             if next_page := devices.get("next"):
                 next_page_url = urljoin(self.base_url, next_page)
-            else: return
+            else:
+                return
 
             device_response = self.client.get(next_page_url, params=params)
             device_response.raise_for_status()
