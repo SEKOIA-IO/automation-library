@@ -63,7 +63,7 @@ def test_get_block_list(symphony_storage):
                         "hash": "abcd1234",
                     },
                 }
-            ]
+            ],
         }
 
 
