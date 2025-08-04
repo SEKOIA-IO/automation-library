@@ -1,5 +1,7 @@
 from stix2patterns.pattern import Pattern
 import six
+from .models import GetBlockListActionResponse, ItemsModel, HashModel, PathModel, ConnectionModel
+
 
 def handle_uri(uri: str) -> str:
     """
@@ -21,6 +23,7 @@ def handle_uri(uri: str) -> str:
 
     return uri
 
+
 def is_a_supported_stix_indicator(stix_object):
     # Check if object is an indicator
     if stix_object.get("type") != "indicator":
@@ -32,6 +35,7 @@ def is_a_supported_stix_indicator(stix_object):
         return False
     else:
         return True
+
 
 def stix_to_indicators(stix_object, supported_types_map):
     """
@@ -56,6 +60,42 @@ def stix_to_indicators(stix_object, supported_types_map):
                 continue
             ioc_type = observable_type
             ioc_value = value.strip("'")
-            results.append({"type": ioc_type, "value": ioc_value})
+            results.append(
+                {"type": ioc_type, "value": ioc_value, "path": path})
 
     return results
+
+
+def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
+    items = response['result'].get("items", [])
+    itemModels = []
+    for item in items:
+        type = item.get("type", "")
+        response_details = item.get("details", {})
+        details = {}
+        match type:
+            case "hash":
+                details = HashModel(**response_details)
+            case "path":
+                details = PathModel(**response_details)
+            case "connection":
+                details = ConnectionModel(**response_details)
+            case _:
+                continue
+
+        itemModel = ItemsModel(
+            type=type,
+            id=item.get("id", ""),
+            details=details
+        )
+        itemModels.append(itemModel)
+
+    blockList = GetBlockListActionResponse(
+        total=response.get("total", 0),
+        page=response.get("page", 1),
+        per_page=response.get("perPage", 30),
+        pages_count=response.get("pagesCount", 0),
+        items=itemModels
+    )
+
+    return blockList

@@ -3,7 +3,6 @@ from functools import cached_property
 from sekoia_automation.action import Action
 from bitdefender.client import ApiClient
 from requests import Response
-import uuid
 
 from .logging import get_logger
 from .helpers import handle_uri
@@ -11,8 +10,6 @@ from .helpers import handle_uri
 logger = get_logger()
 
 class BitdefenderAction(Action):
-    endpoint_api: str
-    method_name: str
 
     @cached_property
     def api_key(self):
@@ -28,11 +25,11 @@ class BitdefenderAction(Action):
             instance_url=self.module.configuration["url"],
             api_key=self.module.configuration["api_key"],
             nb_retries=5,
-            ratelimit_per_second=10,
+            ratelimit_per_second=5,
         )
     
-    def get_api_url(self) -> str:
-        return f"{self.api_url}/{self.endpoint_api}"
+    def get_api_url(self, endpoint_api) -> str:
+        return f"{self.api_url}/{endpoint_api}"
     
     def _handle_response_error(self, response: Response) -> None:
         if not response.ok:
@@ -47,22 +44,17 @@ class BitdefenderAction(Action):
             self.log(message=message, level="error")
             response.raise_for_status()
     
-    def run(self, arguments: dict) -> dict:
-        if not self.endpoint_api or not self.method_name:
-            raise ValueError("Endpoint API and method name must be defined.")
+    def execute_request(self, arguments: dict) -> dict:
+        """
+        Execute the request to the Bitdefender API.
+        """
+        if not arguments['api'] or not arguments['body']:
+            raise ValueError("Endpoint API and body must be defined.")
         
-        url = self.get_api_url()
-        body = {
-            "jsonrpc": "2.0",
-            "method": self.method_name,
-            "params": arguments,
-            "id": str(uuid.uuid4()),
-        }
-
-        response = self.client.post(
+        url = self.get_api_url(arguments['api'])
+        response= self.client.post(
             url,
-            json=body
-        )
+            json=arguments['body'])
         
         if not response.ok:
             self._handle_response_error(response)

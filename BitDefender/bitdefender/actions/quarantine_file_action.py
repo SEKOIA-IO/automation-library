@@ -1,10 +1,9 @@
 from ..base import BitdefenderAction
-
+from ..bitdefender_gravity_zone_api import prepare_add_quarantine_file_endpoint
 class QuarantineFileAction(BitdefenderAction):
-    endpoint_api = "api/v1.0/jsonrpc/quarantine/computers"
-    method_name = "createAddFileToQuarantineTask"
 
     def run(self, arguments: dict) -> dict:
-        response = super().run(arguments)
-
+        response = self.execute_request(
+            prepare_add_quarantine_file_endpoint(arguments)
+        )
         return {"result": response.get("result")}

@@ -1,10 +1,10 @@
 from ..base import BitdefenderAction
-
-class UpdateCommentIncidentAction(BitdefenderAction):
-    endpoint_api = "api/v1.0/jsonrpc/network"
-    method_name = "killProcess"
+from ..bitdefender_gravity_zone_api import prepare_kill_process_endpoint
+class KillProcessAction(BitdefenderAction):
 
     def run(self, arguments: dict) -> dict:
-        response = super().run(arguments)
+        response = self.execute_request(
+            prepare_kill_process_endpoint(arguments)
+        )
 
-        return {"result": response.get("result")}
+        return {"result": response.get("result", False)}

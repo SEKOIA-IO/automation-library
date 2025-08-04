@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic.v1 import BaseModel, Field
 
 class DetailsModel(BaseModel):
     """Interface for Details"""
@@ -10,6 +10,8 @@ class HashModel(DetailsModel):
     """
     algorithm: str
     hash: str
+    class Config:
+        allow_population_by_field_name = True
 
 class PathModel(DetailsModel):
     """
@@ -21,37 +23,45 @@ class LocalAddressModel(BaseModel):
     """
     Model for Local Address
     """
-    any: bool
-    ip_mask: str = ""
-    port_range: str = ""
+    any: bool | None = Field(None, alias="any")
+    ip_mask: str | None = Field(None, alias="ipMask")
+    port_range: str | None = Field(None, alias="portRange")
+
+    class Config:
+        allow_population_by_field_name = True
 
 class RemoteAddressModel(BaseModel):
     """
     Model for Remote Address
     """
-    any: bool
-    ip_mask: str = ""
-    port_range: str = ""
+    any: bool | None = Field(None, alias="any")
+    ip_mask: str | None = Field(None, alias="ipMask")
+    port_range: str | None = Field(None, alias="portRange")
+
+    class Config:
+        allow_population_by_field_name = True
 
 class DirectlyConnectedModel(BaseModel):
     """
     Model for Directly Connected
     """
-    any: bool
-    remote_mac: str
+    enable: bool | None = Field(None, alias="enable")
+    remote_mac: str | None = Field(None, alias="remoteMac")
 
 class ConnectionModel(DetailsModel):
     """
     Model for Connection
     """
-    rule_name: str
-    command_line: str = ""
-    protocol: str = ""
-    direction: str = ""
-    ip_version: str = ""
-    local_address: LocalAddressModel = {}
-    remote_address: RemoteAddressModel = {}
-    directly_connected: DirectlyConnectedModel = {}
+    rule_name: str = Field("", alias="ruleName")
+    command_line: str | None = Field(None, alias="commandLine")
+    protocol: str | None = ""
+    direction: str | None = ""
+    ip_version: str | None = Field(None, alias="ipVersion")
+    local_address: LocalAddressModel | None = Field(None, alias="localAddress")
+    remote_address: RemoteAddressModel | None = Field(None, alias="remoteAddress")
+    directly_connected: DirectlyConnectedModel | None = Field(None, alias="directlyConnected")
+    class Config:
+        allow_population_by_field_name = True
 
 
 class RuleModel(BaseModel):
@@ -59,6 +69,8 @@ class RuleModel(BaseModel):
     Model for Rule
     """
     details: DetailsModel
+    class Config:
+        allow_population_by_field_name = True
 
 class BlockListModel(BaseModel):
     """
@@ -66,20 +78,18 @@ class BlockListModel(BaseModel):
     """
     type: str
     rules: list[RuleModel]
-
-# class PushBlockActionRequest(BaseModel):
-#     """
-#     Request model for PushBlockIocAction
-#     """
-#     company_id: str
-#     block: BlockListModel
+    class Config:
+        allow_population_by_field_name = True
 
 class GetBlockListActionRequest(BaseModel):
     """
     Request model for GetBlockListAction
     """
     page: int = 1
-    per_page: int = 30
+    per_page: int = Field(30, alias="perPage")
+
+    class Config:
+        allow_population_by_field_name = True
 
 class ItemsModel(BaseModel):
     """
@@ -95,11 +105,12 @@ class GetBlockListActionResponse(BaseModel):
     """
     total: int
     page: int
-    per_page: int
-    pages_count: int
+    per_page: int = Field(..., alias="perPage")
+    pages_count: int = Field(..., alias="pagesCount")
     items: list[ItemsModel]
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    class Config:
+        allow_population_by_field_name = True
 
 class RemoveBlockActionRequest(BaseModel):
     """

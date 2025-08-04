@@ -1,0 +1,111 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "type": {
+        "description": "The type of block to be push.",
+        "type": "string",
+        "default": "connection",
+        "readonly": true
+      },
+      "rules": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "ruleName": {
+              "description": "The name of the connection block rule.",
+              "type": "string"
+            },
+            "commandLine": {
+              "description": "The command line to be blocked.",
+              "type": "string",
+              "default": null
+            },
+            "protocol": {
+              "description": "The protocol to be blocked (e.g., TCP, UDP).",
+              "type": "string",
+              "enum": ["any","tcp", "udp"],
+              "default": "any"
+            },
+            "direction": {
+              "description": "The direction of the connection to be blocked (e.g., inbound, outbound).",
+              "type": "string",
+              "enum": ["both", "inbound", "outbound"],
+              "default": "both"
+            },
+            "ipVersion": {
+              "description": "The IP version to be blocked (e.g., IPv4, IPv6).",
+              "type": "string",
+              "enum": ["any", "ipv4", "ipv6"],
+              "default": "any"
+            },
+            "localAddress": {
+              "description": "The local address to be blocked.",
+              "type": "object",
+              "properties": {
+                "any": {
+                  "description": "If true, all connections are blocked, regardless of IP address",
+                  "type": "boolean",
+                  "default": true
+                },
+                "ipMask": {
+                  "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
+                  "type": "string"
+                },
+                "portRange": {
+                  "description": "If a range is used, only connections made through ports between these two values are blocked.",
+                  "type": "string"
+                }
+              }
+            },
+            "remoteAddress": {
+              "description": "The remote address to be blocked.",
+              "type": "object",
+              "properties": {
+                "any": {
+                  "description": "If true, all connections are blocked, regardless of IP address",
+                  "type": "boolean",
+                  "default": true
+                },
+                "ipMask": {
+                  "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
+                  "type": "string"
+                },
+                "portRange": {
+                  "description": "If a range is used, only connections made through ports between these two values are blocked.",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "type",
+      "rules"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Push connection blocks from BitDefender GravityZone",
+  "docker_parameters": "bitdefender_gravity_zone_push_connection_block",
+  "name": "Push connection blocks",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "64c3f7a4-0b4d-4d3d-94e5-fca838d400a7",
+  "slug": "push_connection_blocks"
+}

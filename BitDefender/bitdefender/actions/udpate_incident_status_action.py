@@ -1,13 +1,13 @@
 from ..base import BitdefenderAction
-
+from ..bitdefender_gravity_zone_api import prepare_update_incident_status_endpoint
 class UpdateIncidentStatusAction(BitdefenderAction):
-    endpoint_api = "api/v1.0/jsonrpc/incidents"
-    method_name = "changeIncidentStatus"
 
     def run(self, arguments: dict) -> dict:
-        if arguments.get("type") != "extendedIncidents" or arguments.get("type") != "incidents":
+        if arguments.get("type") != "extendedIncidents" and arguments.get("type") != "incidents":
             raise ValueError("Invalid type provided. Must be 'extendedIncidents' or 'incidents'.")
         
-        response = super().run(arguments)
+        response = self.execute_request(
+            prepare_update_incident_status_endpoint(arguments)
+        )
 
         return {"result": response.get("result", False)}

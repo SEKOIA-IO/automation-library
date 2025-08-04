@@ -1,0 +1,53 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "type": {
+        "description": "The type of block to be push.",
+        "type": "string",
+        "default": "path",
+        "readonly": true
+      },
+      "rules": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "description": "The path of the file to be blocked.",
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    "required": [
+      "type",
+      "rules"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Push path blocks from BitDefender GravityZone",
+  "docker_parameters": "bitdefender_gravity_zone_push_path_block",
+  "name": "Push path blocks",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "64c3f7a4-0b4d-4d3d-94e5-fca838d400a7",
+  "slug": "push_path_blocks"
+}

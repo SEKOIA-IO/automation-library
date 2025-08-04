@@ -1,10 +1,11 @@
 from ..base import BitdefenderAction
+from ..bitdefender_gravity_zone_api import prepare_custom_scan_endpoint
 
 class CustomScanEndpointAction(BitdefenderAction):
-    endpoint_api = "api/v1.0/jsonrpc/network"
-    method_name = "createScanTask"
-
     def run(self, arguments: dict) -> dict:
-        response = super().run(arguments)
 
-        return {"result": response.get("result")}
+        response = self.execute_request(
+            prepare_custom_scan_endpoint(arguments)
+        )
+
+        return {"result": response.get("result", False)}

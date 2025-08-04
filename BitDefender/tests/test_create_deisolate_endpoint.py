@@ -12,7 +12,7 @@ def test_create_isolate_endpoint(symphony_storage):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
-            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents/createRestoreEndpointFromIsolationTask",
+            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents",
             json={"result": True},
             status_code=200,
         )
@@ -32,7 +32,7 @@ def test_create_isolate_endpoint_error(symphony_storage):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
-            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents/createRestoreEndpointFromIsolationTask",
+            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents",
             json={"error": "Invalid endpoint ID"},
             status_code=400,
         )
@@ -41,4 +41,4 @@ def test_create_isolate_endpoint_error(symphony_storage):
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents/createRestoreEndpointFromIsolationTask"
+            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents"
