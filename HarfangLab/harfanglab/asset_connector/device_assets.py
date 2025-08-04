@@ -134,15 +134,14 @@ class HarfanglabAssetConnector(AssetConnector):
 
     def __fetch_devices(self, from_date: str | None) -> Generator[list[dict[str, Any]], None, None]:
         devices_url = urljoin(self.base_url, self.AGENT_ENDPOINT)
-        firstseen_param: str = from_date if from_date else ""
 
         params: dict[str, Union[str, int]] = {
             "ordering": self.DEVICE_ORDERING_FIELD,
             "limit": self.limit,
         }
 
-        if firstseen_param:
-            params["firstseen"] = firstseen_param
+        if from_date:
+            params["firstseen"] = from_date
 
         device_response = self.client.get(devices_url, params=params)
         device_response.raise_for_status()
@@ -162,7 +161,7 @@ class HarfanglabAssetConnector(AssetConnector):
             else:
                 return
 
-            device_response = self.client.get(next_page_url, params=params)
+            device_response = self.client.get(next_page_url)
             device_response.raise_for_status()
 
     def next_list_devices(self) -> Generator[list[dict[str, Any]], None, None]:
