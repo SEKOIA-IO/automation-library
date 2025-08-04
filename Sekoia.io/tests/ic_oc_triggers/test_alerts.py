@@ -417,6 +417,53 @@ def test_comment_trigger_filter_by_rule(
         trigger.send_event.assert_called_once()
 
 
+def test_comment_trigger_filter_by_rule_without_version(
+    alert_created_trigger,
+    sample_sicalertapi,
+    module_configuration,
+    symphony_storage,
+    samplenotif_alert_comment_created,
+    sample_notifications,
+):
+    sample_data = {
+        **samplenotif_alert_comment_created,
+        **{"metadata": {"version": None}},  # Simulate without version
+    }
+    trigger = AlertCommentCreatedTrigger()
+    trigger.configuration = {}
+    trigger._data_path = symphony_storage
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.send_event = MagicMock()
+
+    alert_uuid = sample_data.get("attributes").get("alert_uuid")
+    comment_uuid = sample_data.get("attributes").get("uuid")
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"http://fake.url/api/v1/sic/alerts/{alert_uuid}", json=sample_sicalertapi)
+
+        mock.get(
+            f"http://fake.url/api/v1/sic/alerts/{alert_uuid}/comments/{comment_uuid}",
+            json={
+                "uuid": "095be615-a8ad-4c33-8e9c-c7612fbf6c9f",
+                "content": "string",
+                "author": "string",
+                "date": 0,
+                "created_by": "string",
+                "created_by_type": "string",
+                "unseen": True,
+            },
+        )
+
+        trigger.configuration = {"rule_filter": "test"}
+        trigger.handle_event(sample_data)
+        trigger.send_event.assert_not_called()
+
+        trigger.configuration = {"rule_filter": sample_sicalertapi["rule"]["uuid"]}
+        trigger.handle_event(sample_data)
+        trigger.send_event.assert_called_once()
+
+
 def test_comment_trigger_filter_notification_function(
     alert_created_trigger,
     sample_sicalertapi,
