@@ -47,19 +47,24 @@ def test_get_block_list(symphony_storage):
         )
         response = action.run(arguments)
         assert response is not None
-        assert response == GetBlockListActionResponse(
-            total=1,
-            page=1,
-            per_page=30,
-            pages_count=1,
-            items=[
-                ItemsModel(
-                    details=HashModel(algorithm="sha256", hash="abcd1234"),
-                    type="hash",
-                    id="1234",
-                )
-            ],
-        )
+        result = response.get("result", {})
+        assert result is not None
+        assert result == {
+            "total": 1,
+            "page": 1,
+            "perPage": 30,
+            "pagesCount": 1,
+            "items": [
+                {
+                    "type": "hash",
+                    "id": "1234",
+                    "details": {
+                        "algorithm": "sha256",
+                        "hash": "abcd1234",
+                    },
+                }
+            ]
+        }
 
 
 def test_get_block_list_error(symphony_storage):
