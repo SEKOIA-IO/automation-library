@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "Bitdefender gravity zone connector"
+version = "0.0"
+description = ""
+authors = []
+package-mode = false
+
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+requests-ratelimiter = ">=0.7.0,<0.8.0"
+sekoia-automation-sdk = ">=1.19.0,<2.0.0"
+pytest = ">=8.4.1,<9.0.0"
+aiohttp = ">=3.12.14,<4.0.0"
+structlog = ">=25.4.0,<26.0.0"
+requests-mock = ">=1.12.1,<2.0.0"
+stix2-patterns = ">=2.0.0,<3.0.0"
+pydantic = ">=2.11.7,<3.0.0"
+pytest-cov = ">=6.2.1,<7.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+isort = "*"
+black = "*"
+mypy = "*"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+    "dev.py"
+]
