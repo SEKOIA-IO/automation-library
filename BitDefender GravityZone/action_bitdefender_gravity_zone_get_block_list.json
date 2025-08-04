@@ -14,8 +14,8 @@
       }
     },
     "required": [
-      "type",
-      "rules"
+      "page",
+      "perPage"
     ],
     "title": "Arguments",
     "type": "object"

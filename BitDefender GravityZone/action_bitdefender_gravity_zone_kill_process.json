@@ -16,8 +16,7 @@
       },
       "incidentId": {
         "description": "[Optional] The ID of the incident generated as a result of this process.",
-        "type": "string",
-        "default": ""
+        "type": "string"
       }
     },
     "required": [
