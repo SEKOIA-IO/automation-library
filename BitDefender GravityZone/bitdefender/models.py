@@ -74,9 +74,7 @@ class ConnectionModel(DetailsModel):
     ip_version: str | None = Field(None, alias="ipVersion")
     local_address: LocalAddressModel | None = Field(None, alias="localAddress")
     remote_address: RemoteAddressModel | None = Field(None, alias="remoteAddress")
-    directly_connected: DirectlyConnectedModel | None = Field(
-        None, alias="directlyConnected"
-    )
+    directly_connected: DirectlyConnectedModel | None = Field(None, alias="directlyConnected")
 
     class Config:
         allow_population_by_field_name = True

@@ -31,9 +31,7 @@ class PushIocsAction(BitdefenderAction):
         "file": {"hashes.MD5": "md5", "hashes.SHA256": "sha256"},
     }
 
-    def indicator_to_rule(
-        self, type: str, value: str, path: list[str]
-    ) -> RuleModel | None:
+    def indicator_to_rule(self, type: str, value: str, path: list[str]) -> RuleModel | None:
         """
         Convert an indicator to a RuleModel.
         """
@@ -46,9 +44,7 @@ class PushIocsAction(BitdefenderAction):
                     details = HashModel(algorithm="sha256", hash=value)
             case "ipv4-addr":
                 localAddress = LocalAddressModel(any=True, ipMask=None, portRange=None)
-                remoteAddress = RemoteAddressModel(
-                    any=False, ipMask=value, portRange=None
-                )
+                remoteAddress = RemoteAddressModel(any=False, ipMask=value, portRange=None)
                 directlyConnected = DirectlyConnectedModel(enable=False, remoteMac=None)
                 details = ConnectionModel(
                     ruleName=f"{value}",
@@ -62,9 +58,7 @@ class PushIocsAction(BitdefenderAction):
                 )
             case "ipv6-addr":
                 localAddress = LocalAddressModel(any=True, ipMask=None, portRange=None)
-                remoteAddress = RemoteAddressModel(
-                    any=False, ipMask=value, portRange=None
-                )
+                remoteAddress = RemoteAddressModel(any=False, ipMask=value, portRange=None)
                 directlyConnected = DirectlyConnectedModel(enable=False, remoteMac=None)
                 details = ConnectionModel(
                     ruleName=f"{value}",
@@ -107,9 +101,7 @@ class PushIocsAction(BitdefenderAction):
         block_list_request = GetBlockListActionRequest(page=page, perPage=100)
         block_list_response: GetBlockListActionResponse = parse_get_block_list_response(
             self.execute_request(
-                prepare_get_block_list_endpoint(
-                    block_list_request.dict(exclude_none=True, by_alias=True)
-                )
+                prepare_get_block_list_endpoint(block_list_request.dict(exclude_none=True, by_alias=True))
             )
         )
         nb_pages = block_list_response.pages_count
@@ -120,9 +112,7 @@ class PushIocsAction(BitdefenderAction):
             block_list_request.page = page
             block_list_response = parse_get_block_list_response(
                 self.execute_request(
-                    prepare_get_block_list_endpoint(
-                        block_list_request.dict(exclude_none=True, by_alias=True)
-                    )
+                    prepare_get_block_list_endpoint(block_list_request.dict(exclude_none=True, by_alias=True))
                 )
             )
             existing_indicators.extend(block_list_response.items)
@@ -135,16 +125,12 @@ class PushIocsAction(BitdefenderAction):
         for object in stix_objects:
             # Extract value and type from pattern
             self.log(message=f"object in stix_objects {str(object)}", level="debug")
-            indicators = stix_to_indicators(
-                stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP
-            )
+            indicators = stix_to_indicators(stix_object=object, supported_types_map=self.SUPPORTED_TYPES_MAP)
             for indicator in indicators:
                 ioc_value = indicator["value"]
                 ioc_type = indicator["type"]
                 ioc_path = indicator.get("path", [])
-                result = self.indicator_to_rule(
-                    type=ioc_type, value=ioc_value, path=ioc_path
-                )
+                result = self.indicator_to_rule(type=ioc_type, value=ioc_value, path=ioc_path)
 
                 if result is None:
                     continue
@@ -186,11 +172,7 @@ class PushIocsAction(BitdefenderAction):
         """
         if ids := [rule.id for rule in rules]:
             remove_request = RemoveBlockActionRequest(ids=ids)
-            self.execute_request(
-                prepare_remove_block_endpoint(
-                    remove_request.dict(exclude_none=True, by_alias=True)
-                )
-            )
+            self.execute_request(prepare_remove_block_endpoint(remove_request.dict(exclude_none=True, by_alias=True)))
 
         return
 
@@ -209,16 +191,12 @@ class PushIocsAction(BitdefenderAction):
         if len(add_hashes) > 0:
             # Call the API to add hashes
             args = BlockListModel(type="hash", rules=add_hashes)
-            self.execute_request(
-                prepare_push_block_endpoint(args.dict(exclude_none=True, by_alias=True))
-            )
+            self.execute_request(prepare_push_block_endpoint(args.dict(exclude_none=True, by_alias=True)))
 
         if len(add_connections) > 0:
             # Call the API to add connections
             args = BlockListModel(type="connection", rules=add_connections)
-            self.execute_request(
-                prepare_push_block_endpoint(args.dict(exclude_none=True, by_alias=True))
-            )
+            self.execute_request(prepare_push_block_endpoint(args.dict(exclude_none=True, by_alias=True)))
 
         return
 
@@ -236,12 +214,8 @@ class PushIocsAction(BitdefenderAction):
             self.log("Received indicators were not valid and/or not supported")
             return {"result": False}
 
-        rules_to_add = self.remove_existing_rules_to_add(
-            existing_rules, fetch_rules["valid"]
-        )
-        rules_to_revoke = self.remove_non_existing_rules_to_revoke(
-            existing_rules, fetch_rules["revoked"]
-        )
+        rules_to_add = self.remove_existing_rules_to_add(existing_rules, fetch_rules["valid"])
+        rules_to_revoke = self.remove_non_existing_rules_to_revoke(existing_rules, fetch_rules["revoked"])
 
         if len(rules_to_add) == 0 and len(rules_to_revoke) == 0:
             self.log("No new indicators to add or revoke")

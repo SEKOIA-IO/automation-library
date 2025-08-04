@@ -55,9 +55,7 @@ def stix_to_indicators(stix_object, supported_types_map):
         return []
     parsed_pattern = Pattern(stix_object["pattern"])
     results = []
-    for observable_type, comparisons in six.iteritems(
-        parsed_pattern.inspect().comparisons
-    ):
+    for observable_type, comparisons in six.iteritems(parsed_pattern.inspect().comparisons):
         if observable_type not in supported_types_map:
             continue
 
