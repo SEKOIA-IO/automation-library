@@ -1,5 +1,8 @@
 import requests_mock
-from bitdefender.actions.restore_quarantine_file_action import RestoreQuarantineFileAction  
+from bitdefender.actions.restore_quarantine_file_action import (
+    RestoreQuarantineFileAction,
+)
+
 
 def test_restore_quarantine_file(symphony_storage):
     module_configuration = {
@@ -16,10 +19,16 @@ def test_restore_quarantine_file(symphony_storage):
             json={"result": True},
             status_code=200,
         )
-        arguments = {"quarantineItemsIds": ["5b680f6fb1a43d860a7b23c1", "5b680f6fb1a43d860a7b23c2"]}
+        arguments = {
+            "quarantineItemsIds": [
+                "5b680f6fb1a43d860a7b23c1",
+                "5b680f6fb1a43d860a7b23c2",
+            ]
+        }
         response = action.run(arguments)
         assert response is not None
         assert response == {"result": True}
+
 
 def test_restore_quarantine_file_error(symphony_storage):
     module_configuration = {
@@ -41,4 +50,7 @@ def test_restore_quarantine_file_error(symphony_storage):
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/quarantine/computers"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/quarantine/computers"
+            )

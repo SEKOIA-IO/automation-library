@@ -1,5 +1,6 @@
 import requests_mock
-from bitdefender.actions.isolate_endpoint_action import IsolateEndpointAction 
+from bitdefender.actions.isolate_endpoint_action import IsolateEndpointAction
+
 
 def test_create_isolate_endpoint(symphony_storage):
     module_configuration = {
@@ -21,6 +22,7 @@ def test_create_isolate_endpoint(symphony_storage):
         assert response is not None
         assert response == {"result": True}
 
+
 def test_create_isolate_endpoint_error(symphony_storage):
     module_configuration = {
         "api_key": "token",
@@ -37,8 +39,11 @@ def test_create_isolate_endpoint_error(symphony_storage):
             status_code=400,
         )
         arguments = {"endpointId": "invalid_id"}
-        
+
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents"
+            )

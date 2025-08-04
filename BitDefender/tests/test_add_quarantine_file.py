@@ -1,5 +1,6 @@
 import requests_mock
-from bitdefender.actions.quarantine_file_action import QuarantineFileAction  
+from bitdefender.actions.quarantine_file_action import QuarantineFileAction
+
 
 def test_add_quarantine_file(symphony_storage):
     module_configuration = {
@@ -16,10 +17,14 @@ def test_add_quarantine_file(symphony_storage):
             json={"result": True},
             status_code=200,
         )
-        arguments = {"endpointIds": ["5b680f6fb1a43d860a7b23c1", "5b680f6fb1a43d860a7b23c2"], "filePath": "Z:\\path\\to\\file.txt"}
+        arguments = {
+            "endpointIds": ["5b680f6fb1a43d860a7b23c1", "5b680f6fb1a43d860a7b23c2"],
+            "filePath": "Z:\\path\\to\\file.txt",
+        }
         response = action.run(arguments)
         assert response is not None
         assert response == {"result": True}
+
 
 def test_add_quarantine_file_error(symphony_storage):
     module_configuration = {
@@ -36,9 +41,15 @@ def test_add_quarantine_file_error(symphony_storage):
             json={"error": "Invalid endpoint ID"},
             status_code=400,
         )
-        arguments = {"endpointIds": ["invalid_id"], "filePath": "Z:\\path\\to\\file.txt"}
+        arguments = {
+            "endpointIds": ["invalid_id"],
+            "filePath": "Z:\\path\\to\\file.txt",
+        }
 
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/quarantine/computers"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/quarantine/computers"
+            )

@@ -1,6 +1,7 @@
 import requests_mock
-from bitdefender.actions.remove_block_action import RemoveBlockAction 
+from bitdefender.actions.remove_block_action import RemoveBlockAction
 from bitdefender.models import RemoveBlockActionRequest
+
 
 def test_remove_block(symphony_storage):
     module_configuration = {
@@ -22,6 +23,7 @@ def test_remove_block(symphony_storage):
         assert response is not None
         assert response == {"result": True}
 
+
 def test_remove_block_error(symphony_storage):
     module_configuration = {
         "api_key": "token",
@@ -38,8 +40,11 @@ def test_remove_block_error(symphony_storage):
             status_code=400,
         )
         arguments = RemoveBlockActionRequest(ids=["invalid_id"])
-        
+
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.2/jsonrpc/incidents"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.2/jsonrpc/incidents"
+            )

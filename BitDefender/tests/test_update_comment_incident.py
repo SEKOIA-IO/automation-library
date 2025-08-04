@@ -1,5 +1,8 @@
 import requests_mock
-from bitdefender.actions.update_comment_incident_action import UpdateCommentIncidentAction 
+from bitdefender.actions.update_comment_incident_action import (
+    UpdateCommentIncidentAction,
+)
+
 
 def test_update_comment_incident(symphony_storage):
     module_configuration = {
@@ -19,11 +22,12 @@ def test_update_comment_incident(symphony_storage):
         arguments = {
             "type": "incidents",
             "incidentId": "12345",
-            "comment": "This is a test comment."
+            "comment": "This is a test comment.",
         }
         response = action.run(arguments)
         assert response is not None
         assert response == {"result": True}
+
 
 def test_update_comment_incident_error(symphony_storage):
     module_configuration = {
@@ -43,10 +47,13 @@ def test_update_comment_incident_error(symphony_storage):
         arguments = {
             "type": "incidents",
             "incidentId": "invalid_id",
-            "comment": "This is a test comment."
+            "comment": "This is a test comment.",
         }
-        
+
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/incidents"
+            )

@@ -20,12 +20,7 @@ def test_push_block(symphony_storage):
         )
         arguments = BlockListModel(
             type="hash",
-            rules=[RuleModel(
-                details=HashModel(
-                    algorithm="sha256",
-                    hash="abcd1234"
-                )
-            )]
+            rules=[RuleModel(details=HashModel(algorithm="sha256", hash="abcd1234"))],
         )
         response = action.run(arguments)
         assert response is not None
@@ -49,15 +44,12 @@ def test_push_block_error(symphony_storage):
         )
         arguments = BlockListModel(
             type="hash",
-            rules=[RuleModel(
-                details=HashModel(
-                    algorithm="sha256",
-                    hash="abcd1234"
-                )
-            )]
+            rules=[RuleModel(details=HashModel(algorithm="sha256", hash="abcd1234"))],
         )
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(
-                e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.2/jsonrpc/incidents"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.2/jsonrpc/incidents"
+            )

@@ -1,6 +1,13 @@
 import requests_mock
 from bitdefender.actions.get_block_list_action import GetBlockListAction
-from bitdefender.models import GetBlockListActionRequest, GetBlockListActionResponse, ItemsModel, HashModel, PathModel, ConnectionModel
+from bitdefender.models import (
+    GetBlockListActionRequest,
+    GetBlockListActionResponse,
+    ItemsModel,
+    HashModel,
+    PathModel,
+    ConnectionModel,
+)
 
 
 def test_get_block_list(symphony_storage):
@@ -21,12 +28,9 @@ def test_get_block_list(symphony_storage):
                 {
                     "type": "hash",
                     "id": "1234",
-                    "details": {
-                        "algorithm": "sha256",
-                        "hash": "abcd1234"
-                    }
+                    "details": {"algorithm": "sha256", "hash": "abcd1234"},
                 }
-            ]
+            ],
         }
     }
 
@@ -49,8 +53,12 @@ def test_get_block_list(symphony_storage):
             per_page=30,
             pages_count=1,
             items=[
-                ItemsModel(details=HashModel(algorithm="sha256", hash="abcd1234"), type="hash", id="1234")
-            ]
+                ItemsModel(
+                    details=HashModel(algorithm="sha256", hash="abcd1234"),
+                    type="hash",
+                    id="1234",
+                )
+            ],
         )
 
 
@@ -76,5 +84,7 @@ def test_get_block_list_error(symphony_storage):
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(
-                e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.2/jsonrpc/incidents"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.2/jsonrpc/incidents"
+            )

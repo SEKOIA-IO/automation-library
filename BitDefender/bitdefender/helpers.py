@@ -1,6 +1,12 @@
 from stix2patterns.pattern import Pattern
 import six
-from .models import GetBlockListActionResponse, ItemsModel, HashModel, PathModel, ConnectionModel
+from .models import (
+    GetBlockListActionResponse,
+    ItemsModel,
+    HashModel,
+    PathModel,
+    ConnectionModel,
+)
 
 
 def handle_uri(uri: str) -> str:
@@ -48,7 +54,9 @@ def stix_to_indicators(stix_object, supported_types_map):
         return []
     parsed_pattern = Pattern(stix_object["pattern"])
     results = []
-    for observable_type, comparisons in six.iteritems(parsed_pattern.inspect().comparisons):
+    for observable_type, comparisons in six.iteritems(
+        parsed_pattern.inspect().comparisons
+    ):
         if observable_type not in supported_types_map:
             continue
 
@@ -57,14 +65,13 @@ def stix_to_indicators(stix_object, supported_types_map):
                 continue
             ioc_type = observable_type
             ioc_value = value.strip("'")
-            results.append(
-                {"type": ioc_type, "value": ioc_value, "path": path})
+            results.append({"type": ioc_type, "value": ioc_value, "path": path})
 
     return results
 
 
 def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
-    items = response['result'].get("items", [])
+    items = response["result"].get("items", [])
     itemModels = []
     for item in items:
         type = item.get("type", "")
@@ -80,11 +87,7 @@ def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
             case _:
                 continue
 
-        itemModel = ItemsModel(
-            type=type,
-            id=item.get("id", ""),
-            details=details
-        )
+        itemModel = ItemsModel(type=type, id=item.get("id", ""), details=details)
         itemModels.append(itemModel)
 
     blockList = GetBlockListActionResponse(
@@ -92,7 +95,7 @@ def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
         page=response.get("page", 1),
         per_page=response.get("perPage", 30),
         pages_count=response.get("pagesCount", 0),
-        items=itemModels
+        items=itemModels,
     )
 
     return blockList

@@ -1,5 +1,6 @@
 import requests_mock
-from bitdefender.actions.custom_scan_endpoint_action import CustomScanEndpointAction 
+from bitdefender.actions.custom_scan_endpoint_action import CustomScanEndpointAction
+
 
 def test_create_custom_scan_endpoint(symphony_storage):
     module_configuration = {
@@ -23,11 +24,12 @@ def test_create_custom_scan_endpoint(symphony_storage):
                 "scanDepth": 2,
                 "scanPaths": ["/var/log", "/home/user/documents"],
             },
-            "returnAllTaskIds": False
+            "returnAllTaskIds": False,
         }
         response = action.run(arguments)
         assert response is not None
         assert response == {"result": True}
+
 
 def test_create_custom_scan_endpoint_error(symphony_storage):
     module_configuration = {
@@ -51,10 +53,13 @@ def test_create_custom_scan_endpoint_error(symphony_storage):
                 "scanDepth": 2,
                 "scanPaths": ["/var/log", "/home/user/documents"],
             },
-            "returnAllTaskIds": False
+            "returnAllTaskIds": False,
         }
-        
+
         try:
             action.run(arguments)
         except BaseException as e:
-            assert str(e) == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/network"
+            assert (
+                str(e)
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/network"
+            )

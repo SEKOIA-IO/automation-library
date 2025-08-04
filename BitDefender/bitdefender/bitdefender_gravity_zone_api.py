@@ -1,5 +1,6 @@
 import uuid
 
+
 def prepare_request_body(method: str, params: dict) -> dict:
     """
     Prepare the request body for the Bitdefender API.
@@ -11,14 +12,16 @@ def prepare_request_body(method: str, params: dict) -> dict:
         "id": str(uuid.uuid4()),
     }
 
+
 def prepare_custom_scan_endpoint(params: dict) -> dict:
     """
     Prepare the parameters for the custom scan endpoint action.
     """
     return {
-        "api" : "api/v1.0/jsonrpc/network",
-        "body": prepare_request_body("createScanTask", params)
+        "api": "api/v1.0/jsonrpc/network",
+        "body": prepare_request_body("createScanTask", params),
     }
+
 
 def prepare_isolate_endpoint(params: dict) -> dict:
     """
@@ -26,8 +29,9 @@ def prepare_isolate_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/incidents",
-        "body": prepare_request_body("createIsolateEndpointTask", params)
+        "body": prepare_request_body("createIsolateEndpointTask", params),
     }
+
 
 def prepare_deisolate_endpoint(params: dict) -> dict:
     """
@@ -35,8 +39,9 @@ def prepare_deisolate_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/incidents",
-        "body": prepare_request_body("createRestoreEndpointFromIsolationTask", params)
+        "body": prepare_request_body("createRestoreEndpointFromIsolationTask", params),
     }
+
 
 def prepare_kill_process_endpoint(params: dict) -> dict:
     """
@@ -44,8 +49,9 @@ def prepare_kill_process_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/network",
-        "body": prepare_request_body("killProcess", params)
+        "body": prepare_request_body("killProcess", params),
     }
+
 
 def prepare_get_block_list_endpoint(params: dict) -> dict:
     """
@@ -53,8 +59,9 @@ def prepare_get_block_list_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.2/jsonrpc/incidents",
-        "body": prepare_request_body("getBlocklistItems", params)
+        "body": prepare_request_body("getBlocklistItems", params),
     }
+
 
 def prepare_push_block_endpoint(params: dict) -> dict:
     """
@@ -62,8 +69,9 @@ def prepare_push_block_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.2/jsonrpc/incidents",
-        "body": prepare_request_body("addToBlocklist", params)
+        "body": prepare_request_body("addToBlocklist", params),
     }
+
 
 def prepare_add_quarantine_file_endpoint(params: dict) -> dict:
     """
@@ -71,8 +79,9 @@ def prepare_add_quarantine_file_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/quarantine/computers",
-        "body": prepare_request_body("createAddFileToQuarantineTask", params)
+        "body": prepare_request_body("createAddFileToQuarantineTask", params),
     }
+
 
 def prepare_remove_block_endpoint(params: dict) -> dict:
     """
@@ -80,8 +89,9 @@ def prepare_remove_block_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.2/jsonrpc/incidents",
-        "body": prepare_request_body("removeFromBlocklist", params)
+        "body": prepare_request_body("removeFromBlocklist", params),
     }
+
 
 def prepare_restore_quarantine_file_endpoint(params: dict) -> dict:
     """
@@ -89,8 +99,9 @@ def prepare_restore_quarantine_file_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/quarantine/computers",
-        "body": prepare_request_body("createRestoreQuarantineItemTask", params)
+        "body": prepare_request_body("createRestoreQuarantineItemTask", params),
     }
+
 
 def prepare_scan_endpoint(params: dict) -> dict:
     """
@@ -98,8 +109,9 @@ def prepare_scan_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/network",
-        "body": prepare_request_body("createScanTask", params)
+        "body": prepare_request_body("createScanTask", params),
     }
+
 
 def prepare_update_incident_status_endpoint(params: dict) -> dict:
     """
@@ -107,8 +119,9 @@ def prepare_update_incident_status_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/incidents",
-        "body": prepare_request_body("changeIncidentStatus", params)
+        "body": prepare_request_body("changeIncidentStatus", params),
     }
+
 
 def prepare_update_incident_note_endpoint(params: dict) -> dict:
     """
@@ -116,5 +129,5 @@ def prepare_update_incident_note_endpoint(params: dict) -> dict:
     """
     return {
         "api": "api/v1.0/jsonrpc/incidents",
-        "body": prepare_request_body("updateIncidentNote", params)
+        "body": prepare_request_body("updateIncidentNote", params),
     }
