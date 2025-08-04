@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-03 - 2.68.3
+
+### Fixed
+
+- Improve the description of the case identifier argument in the `Attach Alert to Case` action and `Add events to Case` action.
+- Improve the description of the cases argument in the `Get Alert` action.
+
 ## 2025-05-28 - 2.68.2
 
 ### Fixed

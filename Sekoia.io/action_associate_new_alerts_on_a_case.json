@@ -9,15 +9,17 @@
     "title": "associate_new_alerts_on_a_case",
     "properties": {
       "case_uuid": {
+        "description": "UUID or short_id of the case to update",
         "type": "string",
         "in": "path"
       },
       "alerts": {
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+	  "description": "UUID or short_id of the alert to attach to the case"
         },
-        "description": "The list of identifiers of alerts to add",
+        "description": "The list of identifiers (UUID or short_id) of alerts to add",
         "in": "body"
       }
     },
