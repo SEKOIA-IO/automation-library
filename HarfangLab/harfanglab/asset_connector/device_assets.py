@@ -37,12 +37,9 @@ class HarfanglabAssetConnector(AssetConnector):
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
-    def most_recent_date_seen(self) -> datetime | None:
+    def most_recent_date_seen(self) -> str | None:
         with self.context as cache:
-            most_recent_date_seen = cache.get("most_recent_date_seen")
-
-            if most_recent_date_seen is None:
-                return
+            most_recent_date_seen = cache.get("most_recent_date_seen", None)
 
             return most_recent_date_seen
 
@@ -169,23 +166,26 @@ class HarfanglabAssetConnector(AssetConnector):
             device_response.raise_for_status()
 
     def next_list_devices(self) -> Generator[list[dict[str, Any]], None, None]:
-        recent_date_seen: datetime | None = None
+        orig_date: datetime | None = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
+        max_date: datetime | None = None
 
         for devices in self.__fetch_devices(from_date=self.most_recent_date_seen):
-            if devices:
-                last_event = max(devices, key=self.extract_timestamp)
-                last_event_datetime = self.extract_timestamp(last_event)
+            if not devices:
+                continue
 
-                # Update the most recent date seen if the last event is more recent
-                if not self.most_recent_date_seen or last_event_datetime > self.most_recent_date_seen:
-                    recent_date_seen = last_event_datetime + timedelta(microseconds=1)
+            last_event = max(devices, key=self.extract_timestamp)
+            last_ts = self.extract_timestamp(last_event)
 
-                yield devices
+            candidate = last_ts + timedelta(microseconds=1)
 
-        # Update the context with the most recent date seen
-        if recent_date_seen is not None and recent_date_seen < self.most_recent_date_seen:
+            if max_date is None or candidate > max_date:
+                max_date = candidate
+
+            yield devices
+
+        if max_date and (orig_date is None or max_date > orig_date):
             with self.context as cache:
-                cache["most_recent_date_seen"] = recent_date_seen
+                cache["most_recent_date_seen"] = max_date.isoformat()
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         for devices in self.next_list_devices():
