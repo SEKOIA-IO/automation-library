@@ -31,10 +31,7 @@ def is_a_supported_stix_indicator(stix_object):
 
     # Check if indicator is STIX
     pattern_type = stix_object.get("pattern_type")
-    if pattern_type is not None and pattern_type != "stix":
-        return False
-    else:
-        return True
+    return pattern_type is None or pattern_type == "stix"
 
 
 def stix_to_indicators(stix_object, supported_types_map):

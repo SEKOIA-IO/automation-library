@@ -3,7 +3,7 @@ from ..bitdefender_gravity_zone_api import prepare_update_incident_note_endpoint
 class UpdateCommentIncidentAction(BitdefenderAction):
 
     def run(self, arguments: dict) -> dict:
-        if arguments.get("type") != "extendedIncidents" and arguments.get("type") != "incidents":
+        if arguments.get("type") not in {"extendedIncidents", "incidents"}:
             raise ValueError("Invalid type provided. Must be 'extendedIncidents' or 'incidents'.")
         
         response = self.execute_request(

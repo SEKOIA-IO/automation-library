@@ -20,9 +20,9 @@ class PushIocsAction(BitdefenderAction):
         details = None
         match type:
             case "file":
-                if path.__contains__("MD5"):
+                if "MD5" in path or "MD5" in (p.replace("-", "") for p in path):
                     details = HashModel(algorithm="md5", hash=value)
-                if path.__contains__("SHA-256"):
+                if "SHA-256" in path or "SHA256" in path:
                     details = HashModel(algorithm="sha256", hash=value)
             case "ipv4-addr":
                 localAddress = LocalAddressModel(any=True)
@@ -47,10 +47,10 @@ class PushIocsAction(BitdefenderAction):
                                           remote_address=remoteAddress,
                                           directly_connected=directlyConnected)
             case _:
-                return {}
+                return None
 
         if details is None:
-            return {}
+            return None
 
         return RuleModel(details=details)
 
@@ -104,6 +104,9 @@ class PushIocsAction(BitdefenderAction):
                 ioc_path = indicator.get("path", [])
                 result = self.indicator_to_rule(
                     type=ioc_type, value=ioc_value, path=ioc_path)
+                
+                if result is None:
+                    continue
 
                 # Handle revoked objects
                 if object.get("revoked", False):
@@ -114,9 +117,6 @@ class PushIocsAction(BitdefenderAction):
                 if ioc_value in seen_values[ioc_type]:
                     continue
 
-                if result == {}:
-                    continue
-
                 seen_values[ioc_type].append(ioc_value)
                 results["valid"].append(result)
 
@@ -124,11 +124,7 @@ class PushIocsAction(BitdefenderAction):
 
     def remove_existing_rules_to_add(self, existing_rules: list[ItemsModel], fetch_rules: list[RuleModel]) -> list[RuleModel]:
         existing_rules = self.itemsModelList_to_rules(existing_rules)
-        rules = []
-        for rule in fetch_rules:
-            if rule not in existing_rules:
-                rules.append(rule)
-        return rules
+        return [rule for rule in fetch_rules if rule not in existing_rules]
 
     def remove_non_existing_rules_to_revoke(self, existing_rules_items: list[ItemsModel], fetch_rules: list[RuleModel]) -> list[ItemsModel]:
         rules = []
@@ -143,11 +139,7 @@ class PushIocsAction(BitdefenderAction):
         """ 
         Remove revoked rules from the list of rules.
         """
-        ids = []
-        for rule in rules:
-            ids.append(rule.id)
-
-        if len(ids) > 0:
+        if ids := [rule.id for rule in rules]:
             remove_request = RemoveBlockActionRequest(ids=ids)
             self.execute_request(prepare_remove_block_endpoint(
                 remove_request.dict(exclude_none=True, by_alias=True)))
@@ -182,8 +174,10 @@ class PushIocsAction(BitdefenderAction):
 
     def run(self, arguments: dict) -> dict:
         stix_objects = self.json_argument("stix_objects", arguments)
+
         if stix_objects is None or len(stix_objects) == 0:
             self.log("Received stix_objects were empty")
+            return {"result": True}
 
         existing_rules = self.get_existing_rules()
 

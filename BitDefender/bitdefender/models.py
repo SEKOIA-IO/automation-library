@@ -54,8 +54,8 @@ class ConnectionModel(DetailsModel):
     """
     rule_name: str = Field("", alias="ruleName")
     command_line: str | None = Field(None, alias="commandLine")
-    protocol: str | None = ""
-    direction: str | None = ""
+    protocol: str | None = None
+    direction: str | None = None
     ip_version: str | None = Field(None, alias="ipVersion")
     local_address: LocalAddressModel | None = Field(None, alias="localAddress")
     remote_address: RemoteAddressModel | None = Field(None, alias="remoteAddress")
