@@ -1,10 +1,10 @@
 [project]
 name = "bitdefender"
-version = "0.1.0"
+version = "0.0"
 description = ""
 authors = []
-requires-python = ">=3.11,<3.12"
 package-mode = false
+requires-python = ">=3.11,<3.12"
 dependencies = [
     "requests-ratelimiter (>=0.7.0,<0.8.0)",
     "sekoia-automation-sdk (>=1.19.0,<2.0.0)",
