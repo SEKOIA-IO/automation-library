@@ -14,6 +14,7 @@ from ..models import (
     BlockListModel,
     RemoveBlockActionRequest,
     DirectlyConnectedModel,
+    DetailsModel,
 )
 from ..bitdefender_gravity_zone_api import (
     prepare_push_block_endpoint,
@@ -30,11 +31,13 @@ class PushIocsAction(BitdefenderAction):
         "file": {"hashes.MD5": "md5", "hashes.SHA256": "sha256"},
     }
 
-    def indicator_to_rule(self, type: str, value: str, path: list[str]) -> RuleModel:
+    def indicator_to_rule(
+        self, type: str, value: str, path: list[str]
+    ) -> RuleModel | None:
         """
         Convert an indicator to a RuleModel.
         """
-        details = None
+        details: DetailsModel = DetailsModel()
         match type:
             case "file":
                 if "MD5" in path or "MD5" in (p.replace("-", "") for p in path):
@@ -42,35 +45,41 @@ class PushIocsAction(BitdefenderAction):
                 if "SHA-256" in path or "SHA256" in path:
                     details = HashModel(algorithm="sha256", hash=value)
             case "ipv4-addr":
-                localAddress = LocalAddressModel(any=True)
-                remoteAddress = RemoteAddressModel(any=False, ip_mask=value)
-                directlyConnected = DirectlyConnectedModel(enable=False)
+                localAddress = LocalAddressModel(any=True, ipMask=None, portRange=None)
+                remoteAddress = RemoteAddressModel(
+                    any=False, ipMask=value, portRange=None
+                )
+                directlyConnected = DirectlyConnectedModel(enable=False, remoteMac=None)
                 details = ConnectionModel(
-                    rule_name=f"{value}",
-                    ip_version="IPV4",
+                    ruleName=f"{value}",
+                    ipVersion="IPV4",
                     protocol="any",
                     direction="both",
-                    local_address=localAddress,
-                    remote_address=remoteAddress,
-                    directly_connected=directlyConnected,
+                    localAddress=localAddress,
+                    remoteAddress=remoteAddress,
+                    directlyConnected=directlyConnected,
+                    commandLine=None,
                 )
             case "ipv6-addr":
-                localAddress = LocalAddressModel(any=True)
-                remoteAddress = RemoteAddressModel(any=False, ip_mask=value)
-                directlyConnected = DirectlyConnectedModel(enable=False)
+                localAddress = LocalAddressModel(any=True, ipMask=None, portRange=None)
+                remoteAddress = RemoteAddressModel(
+                    any=False, ipMask=value, portRange=None
+                )
+                directlyConnected = DirectlyConnectedModel(enable=False, remoteMac=None)
                 details = ConnectionModel(
-                    rule_name=f"{value}",
-                    ip_version="IPV6",
+                    ruleName=f"{value}",
+                    ipVersion="IPV6",
                     protocol="any",
                     direction="both",
-                    local_address=localAddress,
-                    remote_address=remoteAddress,
-                    directly_connected=directlyConnected,
+                    localAddress=localAddress,
+                    remoteAddress=remoteAddress,
+                    directlyConnected=directlyConnected,
+                    commandLine=None,
                 )
             case _:
                 return None
 
-        if details is None:
+        if details is DetailsModel():
             return None
 
         return RuleModel(details=details)
@@ -95,7 +104,7 @@ class PushIocsAction(BitdefenderAction):
     def get_existing_rules(self) -> list[ItemsModel]:
         page = 1
         existing_indicators: list[ItemsModel] = []
-        block_list_request = GetBlockListActionRequest(page=page, per_page=100)
+        block_list_request = GetBlockListActionRequest(page=page, perPage=100)
         block_list_response: GetBlockListActionResponse = parse_get_block_list_response(
             self.execute_request(
                 prepare_get_block_list_endpoint(
@@ -121,8 +130,8 @@ class PushIocsAction(BitdefenderAction):
         return existing_indicators
 
     def get_valid_rules(self, stix_objects) -> Dict[str, list]:
-        seen_values = defaultdict(list)
-        results = {"valid": [], "revoked": []}
+        seen_values: defaultdict = defaultdict(list)
+        results: dict = {"valid": [], "revoked": []}
         for object in stix_objects:
             # Extract value and type from pattern
             self.log(message=f"object in stix_objects {str(object)}", level="debug")
@@ -157,8 +166,8 @@ class PushIocsAction(BitdefenderAction):
     def remove_existing_rules_to_add(
         self, existing_rules: list[ItemsModel], fetch_rules: list[RuleModel]
     ) -> list[RuleModel]:
-        existing_rules = self.itemsModelList_to_rules(existing_rules)
-        return [rule for rule in fetch_rules if rule not in existing_rules]
+        existing_rules_model = self.itemsModelList_to_rules(existing_rules)
+        return [rule for rule in fetch_rules if rule not in existing_rules_model]
 
     def remove_non_existing_rules_to_revoke(
         self, existing_rules_items: list[ItemsModel], fetch_rules: list[RuleModel]
@@ -225,7 +234,7 @@ class PushIocsAction(BitdefenderAction):
         fetch_rules = self.get_valid_rules(stix_objects)
         if len(fetch_rules["valid"]) == 0 and len(fetch_rules["revoked"]) == 0:
             self.log("Received indicators were not valid and/or not supported")
-            return
+            return {"result": False}
 
         rules_to_add = self.remove_existing_rules_to_add(
             existing_rules, fetch_rules["valid"]

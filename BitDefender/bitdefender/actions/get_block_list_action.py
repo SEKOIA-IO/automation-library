@@ -6,6 +6,7 @@ from ..models import (
     HashModel,
     PathModel,
     ConnectionModel,
+    DetailsModel,
 )
 from ..bitdefender_gravity_zone_api import prepare_get_block_list_endpoint
 
@@ -21,7 +22,7 @@ class GetBlockListAction(BitdefenderAction):
         for item in items:
             type = item.get("type", "")
             response_details = item.get("details", {})
-            details = {}
+            details: DetailsModel = DetailsModel()
             match type:
                 case "hash":
                     details = HashModel(**response_details)
@@ -38,8 +39,8 @@ class GetBlockListAction(BitdefenderAction):
         blockList = GetBlockListActionResponse(
             total=response["result"].get("total", 0),
             page=response["result"].get("page", 1),
-            per_page=response["result"].get("per_page", 30),
-            pages_count=response["result"].get("pages_count", 0),
+            perPage=response["result"].get("per_page", 30),
+            pagesCount=response["result"].get("pages_count", 0),
             items=itemModels,
         )
 

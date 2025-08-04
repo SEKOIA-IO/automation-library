@@ -6,6 +6,7 @@ from .models import (
     HashModel,
     PathModel,
     ConnectionModel,
+    DetailsModel,
 )
 
 
@@ -76,7 +77,7 @@ def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
     for item in items:
         type = item.get("type", "")
         response_details = item.get("details", {})
-        details = {}
+        details: DetailsModel = DetailsModel()
         match type:
             case "hash":
                 details = HashModel(**response_details)
@@ -93,8 +94,8 @@ def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
     blockList = GetBlockListActionResponse(
         total=response.get("total", 0),
         page=response.get("page", 1),
-        per_page=response.get("perPage", 30),
-        pages_count=response.get("pagesCount", 0),
+        perPage=response.get("perPage", 30),
+        pagesCount=response.get("pagesCount", 0),
         items=itemModels,
     )
 
