@@ -5,6 +5,13 @@
       "rule_filter": {
         "type": "string",
         "description": "Create a run only for alerts matching a rule name"
+      },
+      "rule_names_filter": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Create a run only for alerts matching a list of rule name"
       }
     },
     "type": "object",

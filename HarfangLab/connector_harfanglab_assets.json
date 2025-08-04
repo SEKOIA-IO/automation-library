@@ -1,0 +1,29 @@
+  {
+  "name": "Harfanglab asset connector",
+  "description": "Fetch Harfanglab device asset",
+  "uuid": "f7da3627-6016-415d-9885-231e1455a7a5",
+  "docker_parameters": "harfanglab_asset_connector",
+  "type": "asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "minimum": 1,
+          "default": 60
+      },
+      "sekoia_api_key": {
+          "description": "API key to use from sekoia.io",
+          "type": "string"
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
+  }
+}

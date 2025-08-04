@@ -48,7 +48,7 @@
   },
   "description": "Trigger playbook to get Azure Key Vault events information",
   "docker_parameters": "azure_key_vault",
-  "name": "[BETA] Collect Azure Key Vault events",
+  "name": "Collect Azure Key Vault events",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {},

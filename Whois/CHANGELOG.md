@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-08 - 1.25.0
+
+### Fixed
+
+- Fix PywhoisError exception
+- Upgrade sekoia-automation-sdk and python-whois
+
 ## 2024-05-28 - 1.24.0
 
 ### Changed

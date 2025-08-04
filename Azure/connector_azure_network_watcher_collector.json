@@ -1,7 +1,7 @@
 {
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "connector Azure Network Watcher configuration",
+    "title": "Connector Azure Network Watcher configuration",
     "type": "object",
     "properties": {
       "container_name": {
@@ -46,8 +46,8 @@
       "account_key"
     ]
   },
-  "description": "connector playbook to get Azure Network Watcher events information",
+  "description": "Connector playbook to get Azure Network Watcher events information",
   "docker_parameters": "azure_network_watcher",
-  "name": "Collect Azure Network Watcher events",
+  "name": "Collect Azure Network Watcher Network Security Group Flow logs",
   "uuid": "626f4d84-5ab7-11ee-8c99-0242ac120002"
 }

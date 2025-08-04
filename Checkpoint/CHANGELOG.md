@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-04 - 1.5.0
+
+### Changed
+
+- Changed the flow to allow temporal shift to the past 
+ 
+## 2025-05-21 - 1.4.4
+
+### Fixed
+
+- Withdraw the Alert model
+- Handle when datetime are 'No data'
+
+## 2025-05-20 - 1.4.3
+
+### Fixed
+
+- Fix the Alert model
+
+## 2025-05-16 - 1.4.2
+
+### Changed
+
+- Make hour window configurable
+
+## 2024-10-30 - 1.4.1
+
+### Fixed
+
+- Token expiration issue
+
 ## 2024-10-30 - 1.4.0
 
 ### Changed

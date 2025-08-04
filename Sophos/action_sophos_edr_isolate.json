@@ -7,7 +7,9 @@
         "type": "string"
       }
     },
-    "required": ["endpoint_id"],
+    "required": [
+      "endpoint_id"
+    ],
     "title": "Arguments",
     "type": "object"
   },
@@ -15,5 +17,6 @@
   "docker_parameters": "sophos_edr_isolate_endpoint",
   "name": "[BETA] Isolate endpoint",
   "results": {},
-  "uuid": "91d24356-6537-4a3e-ba6f-19c7963db8fe"
+  "uuid": "91d24356-6537-4a3e-ba6f-19c7963db8fe",
+  "slug": "isolate_endpoint"
 }

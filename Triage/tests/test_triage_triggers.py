@@ -23,6 +23,12 @@ from tests.data import (
     query_240828_btyyeszang,
     query_240828_btyyeszang_static,
     query_240908_tpps3axgmd_static,
+    query_241118_wj1z9asdqn,
+    query_241113_rawlystckq,
+    query_250106_fypb1azkcr,
+    query_250710_marksa1mt2,
+    query_250722_kqcqfshn4z,
+    query_250724_eyxgyavkz5,
 )
 from triage_modules.trigger_triage import TriageConfigsTrigger
 
@@ -57,6 +63,24 @@ def trigger2(symphony_storage):
         "frequency": 604800,
         "malware_list": [],
         "exclude_signed": True,
+    }
+    trigger.send_event = Mock()
+    trigger.log = Mock()
+    return trigger
+
+
+@pytest.fixture
+def trigger3(symphony_storage):
+    trigger = TriageConfigsTrigger()
+    trigger.module.configuration = {
+        "api_key": "toto",
+        "api_url": "https://api.tria.ge/",
+    }
+    trigger.configuration = {
+        "frequency": 604800,
+        "malware_list": [],
+        "exclude_signed": True,
+        "exclude_suspicious_analysis": True,
     }
     trigger.send_event = Mock()
     trigger.log = Mock()
@@ -129,6 +153,30 @@ def triage_mock():
         m.get(
             "https://api.tria.ge/v0/samples/240908-tpps3axgmd/reports/static",
             json=query_240908_tpps3axgmd_static,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/250710-marksa1mt2/reports/static",
+            json=query_250710_marksa1mt2,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/250722-kqcqfshn4z/reports/static",
+            json=query_250722_kqcqfshn4z,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/250724-eyxgyavkz5/reports/static",
+            json=query_250724_eyxgyavkz5,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/241118-wj1z9asdqn/overview.json",
+            json=query_241118_wj1z9asdqn,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/241113_rawlystckq/overview.json",
+            json=query_241113_rawlystckq,
+        )
+        m.get(
+            "https://api.tria.ge/v0/samples/250106-fypb1azkcr/overview.json",
+            json=query_250106_fypb1azkcr,
         )
         yield m
 
@@ -234,15 +282,63 @@ def test_check_sample_without_signature(trigger2, triage_mock):
 
 
 def test_check_sample_with_signature(trigger2, triage_mock):
-    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
     sample_signature = trigger2.check_sample_signature("240828-btyyeszang")
     assert sample_signature is True
 
 
 def test_check_report_with_multiple_signatures(trigger2, triage_mock):
-    # ASSERT THAT SIGNATURE OF A SPECIFIC ANALYSIS IS NOT PRESENT
+    # ASSERT THAT AT LEAST ONE SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
     sample_signature = trigger2.check_sample_signature("240908-tpps3axgmd")
     assert sample_signature is True
+
+
+def test_check_report_with_multiple_signatures_and_missing_keys(trigger2, triage_mock):
+    # ASSERT THAT AT LEAST ONE SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
+    sample_signature = trigger2.check_sample_signature("250722-kqcqfshn4z")
+    assert sample_signature is True
+
+
+def test_check_report_without_static_analysis(trigger2, triage_mock):
+    # ASSERT THAT AT LEAST ONE SIGNATURE OF A SPECIFIC ANALYSIS IS PRESENT
+    sample_signature = trigger2.check_sample_signature("250724-eyxgyavkz5")
+    assert sample_signature is False
+
+
+def test_check_report_with_one_signature(trigger2, triage_mock):
+    # ASSERT THAT SIGNATURE ONE TRUSTED SIGNATURE IS PRESENT
+    sample_signature = trigger2.check_sample_signature("250710-marksa1mt2")
+    assert sample_signature is True
+
+
+def test_check_report_without_enough_dynamic_analysis(trigger3, triage_mock):
+    # ASSERT THAT CHECK SUSPICIOUS IS TRUE WHEN DYNAMIC ANALYSIS IS LESS THAN 2
+    analysis_is_suspicious = trigger3.check_suspicious_analysis("241118-wj1z9asdqn", query_241118_wj1z9asdqn)
+    assert analysis_is_suspicious is True
+
+
+def test_check_report_with_enough_dynamic_analysis(trigger3, triage_mock):
+    # ASSERT THAT CHECK SUSPICIOUS IS FALSE WHEN DYNAMIC ANALYSIS IS MORE OR EQUAL TO 2
+    analysis_is_suspicious = trigger3.check_suspicious_analysis("210609-c67qy7hmpe", query_210609_c67qy7hmpe)
+    assert analysis_is_suspicious is False
+
+
+def test_check_report_with_suspicious_score_gap(trigger3, triage_mock):
+    # ASSERT THAT CHECK SUSPICIOUS IS TRUE WHEN DYNAMIC ANALYSIS HAS A SCORE GAP
+    analysis_is_suspicious = trigger3.check_suspicious_analysis("241113_rawlystckq", query_241113_rawlystckq)
+    assert analysis_is_suspicious is True
+
+
+def test_check_report_without_suspicious_score_gap(trigger3, triage_mock):
+    # ASSERT THAT CHECK SUSPICIOUS IS FALSE WHEN DYNAMIC ANALYSIS DOES NOT HAVE A SCORE GAP
+    analysis_is_suspicious = trigger3.check_suspicious_analysis("210609-c67qy7hmpe", query_210609_c67qy7hmpe)
+    assert analysis_is_suspicious is False
+
+
+def test_check_report_without_suspicious_linux(trigger3, triage_mock):
+    # ASSERT THAT CHECK SUSPICIOUS IS FALSE WHEN DYNAMIC ANALYSIS IS ON LINUX
+    analysis_is_suspicious = trigger3.check_suspicious_analysis("250106-fypb1azkcr", query_250106_fypb1azkcr)
+    assert analysis_is_suspicious is False
 
 
 def test_get_malware_iocs(trigger, triage_mock):

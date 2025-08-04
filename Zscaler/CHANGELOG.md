@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-10 - 1.0.2
+
+### Added
+
+- Added field to block/unblock multiple IoCs
+
+## 2025-03-27 - 1.0.1
+
+### Fixed
+
+- Fixed logging for authorization errors 
+
 ## 2024-05-28 - 1.0.0
 
 ### Changed

@@ -3,6 +3,8 @@ import requests_mock
 
 from thehive.create_alert import TheHiveCreateAlertV5
 
+SEKOIA_BASE_URL: str = "https://app.sekoia.io"
+
 ALERT: dict[str, Any] = {
     "uuid": "4764296a-f8d5-485f-92f1-bf4b28885ef6",
     "short_id": "AL123456789",
@@ -51,7 +53,7 @@ def test_create_alert_action_success():
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(url="https://thehive-project.org/api/v1/alert", status_code=200, json=HIVE_OUTPUT)
 
-        result = action.run({"alert": ALERT})
+        result = action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT})
         assert result is not None
         assert result["title"] == ALERT["title"]
 
@@ -66,7 +68,7 @@ def test_create_alert_action_api_error(requests_mock):
         "organisation": "SEKOIA",
     }
 
-    result = action.run({"alert": ALERT})
+    result = action.run({"sekoia_base_url": SEKOIA_BASE_URL, "alert": ALERT})
 
     assert not result
     assert mock_alert.call_count == 1

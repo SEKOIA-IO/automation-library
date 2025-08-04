@@ -42,5 +42,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "ip_passive_dns"
 }

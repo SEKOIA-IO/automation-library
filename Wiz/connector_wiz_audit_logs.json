@@ -1,0 +1,31 @@
+{
+  "description": "Collect Audit Logs from Wiz",
+  "docker_parameters": "wiz_audit_logs_connector",
+  "name": "Collect Wiz Audit Logs",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+    "secrets": [],
+    "title": "Wiz Audit Logs connector",
+    "type": "object"
+  },
+  "uuid": "5a0a3fda-e0bd-4c4b-a434-3f57dc76d8d7"
+}

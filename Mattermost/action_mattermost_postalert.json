@@ -36,5 +36,6 @@
   "docker_parameters": "mattermost_post_alert",
   "name": "Post Sekoia.io Alert",
   "results": {},
-  "uuid": "ef3794ca-b5fa-4cee-af3f-fd5ffac01c88"
+  "uuid": "ef3794ca-b5fa-4cee-af3f-fd5ffac01c88",
+  "slug": "post_alert"
 }

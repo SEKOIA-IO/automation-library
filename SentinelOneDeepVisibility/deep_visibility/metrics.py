@@ -1,4 +1,4 @@
-""" All necessary metrics """
+"""All necessary metrics"""
 
 from prometheus_client import Counter
 

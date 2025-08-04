@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "e9945027-ef91-4002-b509-2262bb812b41"
+  "uuid": "e9945027-ef91-4002-b509-2262bb812b41",
+  "slug": "lookup_forward_dns"
 }

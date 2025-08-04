@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "351ac8e2-05d7-4a2f-b0a0-75085b7a3da1"
+  "uuid": "351ac8e2-05d7-4a2f-b0a0-75085b7a3da1",
+  "slug": "get_pastries"
 }

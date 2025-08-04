@@ -10,42 +10,66 @@
     "properties": {
       "search": {
         "in": "query",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Search assets by name"
       },
       "uuids": {
         "in": "query",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Filter by comma-separated list of asset UUIDs"
       },
       "community_uuids": {
         "in": "query",
-       "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Filter by comma-separated list of community UUIDs"
       },
       "type": {
         "in": "query",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Filter by comma-separated list of asset types"
       },
       "category": {
         "in": "query",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Filter by comma-separated list of asset categories"
       },
       "source": {
         "in": "query",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Filter by comma-separated list of asset sources"
       },
       "reviewed": {
         "in": "query",
-        "type": ["boolean", "null"],
+        "type": [
+          "boolean",
+          "null"
+        ],
         "description": "Filter reviewed assets only"
       },
       "criticality": {
         "in": "query",
-        "type": ["integer", "null"],
+        "type": [
+          "integer",
+          "null"
+        ],
         "description": "Filter assets with higher criticality"
       },
       "sort": {
@@ -85,12 +109,18 @@
       },
       "rule_uuid": {
         "in": "query",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Rule Uuid"
       },
       "rule_version": {
         "in": "query",
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "description": "Rule Version"
       },
       "offset": {
@@ -147,12 +177,19 @@
               "type": "string"
             },
             "category": {
-              "type": ["string", "object", "null"],
+              "type": [
+                "string",
+                "object",
+                "null"
+              ],
               "default": null,
               "description": "The category of the asset"
             },
             "criticality": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "default": null,
               "title": "Criticality"
             },
@@ -183,7 +220,10 @@
               "title": "Created By"
             },
             "created_by_type": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "default": null,
               "title": "type of the asset creator"
             },
@@ -227,12 +267,18 @@
               "title": "Last Seen"
             },
             "nb_events": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "default": null,
               "title": "Nb Events"
             },
             "nb_alerts": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "default": null,
               "title": "Nb Alerts"
             },
@@ -242,12 +288,18 @@
               "type": "integer"
             },
             "atoms": {
-              "type": ["object", "null"],
+              "type": [
+                "object",
+                "null"
+              ],
               "default": null,
               "title": "Atoms"
             },
             "props": {
-              "type": ["object", "null"],
+              "type": [
+                "object",
+                "null"
+              ],
               "default": null,
               "title": "Props"
             },
@@ -345,17 +397,26 @@
               "title": "Rule Uuid"
             },
             "rule_version": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "default": null,
               "title": "Rule Version"
             },
             "criticity": {
-              "type": ["object", "null"],
+              "type": [
+                "object",
+                "null"
+              ],
               "default": null,
               "description": "The criticality of the asset"
             },
             "asset_type": {
-              "type": ["object", "null"],
+              "type": [
+                "object",
+                "null"
+              ],
               "default": null,
               "description": "The type of the asset"
             }
@@ -373,5 +434,6 @@
         "format": "int32"
       }
     }
-  }
+  },
+  "slug": "list_assetsv2"
 }

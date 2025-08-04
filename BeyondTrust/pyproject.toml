@@ -1,0 +1,56 @@
+[tool.poetry]
+name = "Automation module for Beyondtrust"
+version = "0.0"
+description = ""
+authors = []
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+sekoia-automation-sdk = "^1.18.1"
+orjson = "^3.10.15"
+lxml = "^5.3.0"
+structlog = "^25.1.0"
+cachetools = "^5.5.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=beyondtrust_modules
+  --cov-branch
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=5
+  --capture=sys
+'''

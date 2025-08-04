@@ -272,13 +272,13 @@ class EventStreamReader(threading.Thread):
             json={"action_name": "refresh_active_stream_session", "appId": self.app_id},
         )
         if not response.ok:
-            logger.error(
+            logger.warning(
                 "Failed to refresh the event stream",
                 refresh_url=refresh_url,
                 status_code=response.status_code,
                 content=response.text,
             )
-            self.log(level="error", message="failed to refresh the event stream")
+            self.log(level="warning", message="failed to refresh the event stream")
         else:
             logger.info("successfully refreshed event stream", refresh_url=refresh_url)
 

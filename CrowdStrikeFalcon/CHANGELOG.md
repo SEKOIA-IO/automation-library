@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-01 - 1.22.1
+
+### Changed
+
+- Changed logging level to warning when unable to refresh stream
+
 ## 2024-10-24 - 1.22.0
 
 ### Added

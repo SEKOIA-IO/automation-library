@@ -1,0 +1,11 @@
+{
+  "configuration": {},
+  "description": "Seckiot provides its clients with advanced solutions to enhance the security of their industrial systems. With tools like Seckiot Citadelle and Seckiot Explore, it enables real-time monitoring of critical infrastructures, precise network mapping, and proactive threat detection.",
+  "name": "Seckiot",
+  "uuid": "8566c462-1475-4579-8ece-b4dec1f86136",
+  "version": "1.0.0",
+  "slug": "seckiot",
+  "categories": [
+    "Network"
+  ]
+}

@@ -30,7 +30,7 @@
   "uuid": "ab1540c3-1b60-4bad-9f5b-13d86a554826",
   "name": "RiskIQ",
   "slug": "riskiq",
-  "description": "[RiskIQ](https://www.riskiq.com/) is a cyber security company providing software as a service to detect phishing, fraud, malware, and other online security threats.",
+  "description": "RiskIQ is a cyber security company providing software as a service to detect phishing, fraud, malware, and other online security threats.",
   "version": "1.25.1",
   "categories": [
     "Threat Intelligence"

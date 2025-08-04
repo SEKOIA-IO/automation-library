@@ -29,7 +29,7 @@
       "pem_file"
     ]
   },
-  "description": "Github connector for audit logs",
+  "description": "GitHub is a leading platform for version control and collaboration, allowing developers to host, review, and manage code projects using Git. It fosters collaboration through features like pull requests, issues, and project management tools.",
   "name": "Github",
   "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
   "slug": "github",

@@ -3,6 +3,7 @@ import re
 import time
 from datetime import datetime
 from typing import Any
+from statistics import stdev
 
 from cached_property import cached_property
 from dateutil.relativedelta import relativedelta
@@ -40,6 +41,10 @@ class TriageTrigger(Trigger):
     @property
     def exclude_signed(self):
         return self.configuration.get("exclude_signed", False)
+
+    @property
+    def exclude_suspicious_analysis(self):
+        return self.configuration.get("exclude_suspicious_analysis", False)
 
     @property
     def frequency(self):
@@ -118,18 +123,50 @@ class TriageConfigsTrigger(TriageTrigger):
             return []
 
     def check_sample_signature(self, sample_id: str) -> bool:
+        # Get static report for PE metadata
+        signatures = [False]
+        static_report = self.client.static_report(sample_id=sample_id)
+        kind = static_report.get("sample").get("kind")
+        if kind == "url":
+            return False
+        for f in static_report.get("files", []):
+            try:
+                if f.get("metadata"):
+                    signers = f["metadata"]["pe"]["code_sign"]["signers"]
+                    for value in signers:
+                        if isinstance(value["validity"]["trusted"], list):
+                            for entry in value["validity"]["trusted"]:
+                                if entry:
+                                    self.log(f"PE in {sample_id} report has a trusted signature")
+                                    return True
+                        else:
+                            if value["validity"]["trusted"]:
+                                self.log(f"PE in {sample_id} report has a trusted signature")
+                                return True
+            except (AttributeError, KeyError, TypeError):
+                signatures.append(False)
+        return any(signatures)
+
+    def check_suspicious_analysis(self, sample_id: str, data: dict) -> bool:
         try:
-            # Get static report for PE metadata
-            static_report = self.client.static_report(sample_id=sample_id)
-            signers = static_report.get("files")[0]["metadata"]["pe"]["code_sign"]["signers"]
-            for value in signers:
-                if isinstance(value["validity"]["trusted"], list):
-                    for entry in value["validity"]["trusted"]:
-                        if entry:
-                            signature = entry
-                else:
-                    signature = value["validity"]["trusted"]
-            return signature
+            tags: list[str] = list()
+            tasks: list[dict] = list()
+            tags = data.get("analysis", {}).get("tags")
+            if len(tags) == 0 or "linux" in tags:
+                return False
+            tasks = data.get("tasks", [])
+            scores = []
+            for t in tasks:
+                if t.get("kind") == "behavioral" and "score" in t:
+                    scores.append(t["score"])
+            if len(scores) < 2:
+                self.log(f"PE in {sample_id} report does not have at least two dynamic analysis")
+                return True
+            if stdev(scores) > 2.5:
+                self.log(f"PE in {sample_id} has an important score gap between some dynamic analysis")
+                return True
+            else:
+                return False
         except (KeyError, TypeError):
             return False
 
@@ -145,7 +182,10 @@ class TriageConfigsTrigger(TriageTrigger):
                 sig = self.check_sample_signature(sample_id=sample_id)
                 # Check if the first submitted binary is signed then return nothing
                 if sig:
-                    self.log(f"PE in {sample_id} report has a trusted signature")
+                    return sample_iocs
+            if self.exclude_suspicious_analysis:
+                suspicious = self.check_suspicious_analysis(sample_id=sample_id, data=data)
+                if suspicious:
                     return sample_iocs
         except ServerError as ex:
             self.log(f"Requests to Triage failed: {str(ex)}", level="error")

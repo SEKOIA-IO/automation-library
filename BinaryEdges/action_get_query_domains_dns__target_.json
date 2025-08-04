@@ -60,5 +60,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "list_dns_targets_by_domain"
 }

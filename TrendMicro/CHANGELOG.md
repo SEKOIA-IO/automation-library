@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-01-16 - 1.7.0
+## 2025-04-02 - 1.6.1
 
-### Added
+### Changed
 
-- Added Trend Micro Vision One remediation actions
+- Persist latest pushed events to local cache
 
 ## 2024-12-09 - 1.6.0
 

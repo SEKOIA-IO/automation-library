@@ -25,5 +25,6 @@
   "docker_parameters": "mattermost_post_message",
   "name": "Post Message",
   "results": {},
-  "uuid": "e682ce5e-57aa-49b0-aace-9849448b2082"
+  "uuid": "e682ce5e-57aa-49b0-aace-9849448b2082",
+  "slug": "post_message"
 }

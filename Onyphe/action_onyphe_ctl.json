@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "5821487e-64a3-46b5-ac86-150d0e10ba82"
+  "uuid": "5821487e-64a3-46b5-ac86-150d0e10ba82",
+  "slug": "get_domain_name_ctls"
 }

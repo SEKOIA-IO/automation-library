@@ -184,5 +184,6 @@
       }
     },
     "type": "object"
-  }
+  },
+  "slug": "count_security_events"
 }

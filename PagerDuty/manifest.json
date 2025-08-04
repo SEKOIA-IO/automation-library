@@ -18,7 +18,7 @@
     "title": "Arguments",
     "type": "object"
   },
-  "description": "[PagerDuty](https://www.pagerduty.com/) is an incident response platform for IT departments it allows triggering alerts and managing incidents.",
+  "description": "PagerDuty is an incident response platform for IT departments it allows triggering alerts and managing incidents.",
   "name": "PagerDuty",
   "uuid": "97864342-32c5-4076-b590-ba0179db9233",
   "slug": "pagerduty",

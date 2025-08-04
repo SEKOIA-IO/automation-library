@@ -2,15 +2,16 @@
 
 import os
 from abc import ABCMeta
+from asyncio import BoundedSemaphore
+from collections.abc import AsyncGenerator
 from functools import cached_property
-from gzip import decompress
-from typing import Any, Optional
+from typing import Any, BinaryIO, Optional
 
 import orjson
 
 from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
 from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
-from aws_helpers.utils import normalize_s3_key
+from aws_helpers.utils import normalize_s3_key, AsyncReader
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
 
@@ -34,6 +35,9 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
+        self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
+        self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
+        self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
     @cached_property
     def s3_wrapper(self) -> S3Wrapper:
@@ -70,33 +74,17 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         return SqsWrapper(config)
 
-    def _parse_content(self, content: bytes) -> list[str]:  # pragma: no cover
+    def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:  # pragma: no cover
         """
-        Parse the content of the object and return a list of records.
+        Parse the content of the S3 object and return the records as a generator.
 
         Args:
-            content: bytes
+            stream: BinaryIO
 
         Returns:
-             list:
+             Generator:
         """
         raise NotImplementedError()
-
-    @staticmethod
-    def decompress_content(data: bytes) -> bytes:
-        """
-        Decompress content if it is compressed.
-
-        Args:
-            data:
-
-        Returns:
-            bytes:
-        """
-        if data[0:2] == b"\x1f\x8b":
-            return decompress(data)
-
-        return data
 
     def _get_notifs_from_sqs_message(self, sqs_message: str) -> list[dict[str, Any]]:
         """
@@ -112,7 +100,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             "object", {}
         ).get("key")
 
-    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[list[str], list[int]]:
+    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -122,15 +110,16 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
             previous_processing_end: float | None
 
         Returns:
-            tuple[list[str], int]:
+            tuple[int, list[int]]:
         """
         records = []
+        result = 0
         timestamps_to_log: list[int] = []
 
         continue_receiving = True
 
         while continue_receiving:
-            async with self.sqs_wrapper.receive_messages(max_messages=10) as messages:
+            async with self.sqs_wrapper.receive_messages(max_messages=self.sqs_max_messages) as messages:
                 message_records = []
 
                 if not messages:
@@ -146,6 +135,9 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
+                if not message_records:
+                    continue_receiving = False
+
                 INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
                 for record in message_records:
                     try:
@@ -159,8 +151,17 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
                         normalized_key = normalize_s3_key(s3_key)
 
-                        async with self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as content:
-                            records.extend(self._parse_content(self.decompress_content(content)))
+                        async with (
+                            self.s3_fetch_concurrency_sem,
+                            self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                        ):
+                            async for event in self._parse_content(stream):
+                                records.append(event)
+
+                                if len(records) >= self.limit_of_events_to_push:
+                                    continue_receiving = False
+                                    result += len(await self.push_data_to_intakes(events=records))
+                                    records = []
 
                     except Exception as e:
                         self.log(
@@ -168,9 +169,10 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
                             level="warning",
                         )
 
-            if len(records) >= self.limit_of_events_to_push or not records:
+            if not records:
                 continue_receiving = False
 
-        result = await self.push_data_to_intakes(events=records)
+        if records:
+            result += len(await self.push_data_to_intakes(events=records))
 
         return result, timestamps_to_log

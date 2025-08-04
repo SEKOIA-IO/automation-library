@@ -1,5 +1,7 @@
 from sekoia_automation.module import Module
 
+from harfanglab.account_validator import HarfanglabAccountValidator
+from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
 from harfanglab.download_file_from_endpoint import DownloadFileFromEndpointAction
 from harfanglab.endpoint_actions import (
     EndpointAgentDeisolationAction,
@@ -7,6 +9,7 @@ from harfanglab.endpoint_actions import (
     EndpointGroupDeisolationAction,
     EndpointGroupIsolationAction,
 )
+from harfanglab.get_agent_telemetry import GetAgentTelemetry
 from harfanglab.get_hostnames_by_ip_action import GetHostnamesByIP
 from harfanglab.get_pipe_list_action import GetPipeListAction
 from harfanglab.get_process_list_action import GetProcessListAction
@@ -15,6 +18,8 @@ from harfanglab.threat_actions import AddCommentToThreat, UpdateThreatStatus
 
 if __name__ == "__main__":
     module = Module()
+    module.register_account_validator(HarfanglabAccountValidator)
+    module.register(HarfanglabAssetConnector, "harfanglab_asset_connector")
     module.register(GetProcessListAction, "harfanglab_get_process_list")
     module.register(GetPipeListAction, "harfanglab_get_pipe_list")
     module.register(EndpointGroupIsolationAction, "harfanglab_endpoint_group_isolation")
@@ -22,6 +27,7 @@ if __name__ == "__main__":
     module.register(EndpointAgentIsolationAction, "harfanglab_endpoint_agent_isolation")
     module.register(EndpointAgentDeisolationAction, "harfanglab_endpoint_agent_deisolation")
     module.register(GetHostnamesByIP, "harfanglab_get_hostnames_by_ip")
+    module.register(GetAgentTelemetry, "harfanglab_get_agent_telemetry")
     module.register(DownloadFileFromEndpointAction, "harfanglab_download_file_from_endpoint")
     module.register(UpdateThreatStatus, "harfanglab_update_threat_status")
     module.register(AddCommentToThreat, "harfanglab_add_comment_to_threat")

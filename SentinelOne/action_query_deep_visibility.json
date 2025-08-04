@@ -444,5 +444,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "6979e852-d2c0-42aa-b713-9bae8c93b274"
+  "uuid": "6979e852-d2c0-42aa-b713-9bae8c93b274",
+  "slug": "dv_query_events"
 }

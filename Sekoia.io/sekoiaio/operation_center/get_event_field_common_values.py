@@ -42,6 +42,7 @@ class GetEventFieldCommonValues(BaseGetEvents):
                 must_continue_in_pages = True
 
         return {
-            "fields": [{"name": field_name, "common_values": field_values}]
-            for field_name, field_values in results.items()
+            "fields": [
+                {"name": field_name, "common_values": field_values} for field_name, field_values in results.items()
+            ]
         }

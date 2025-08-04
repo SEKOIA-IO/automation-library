@@ -10,5 +10,8 @@
   "name": "Wallix",
   "uuid": "29e11ced-ad75-4a5e-ad8d-9e47227bb218",
   "version": "1.0.0",
-  "slug": "wallix"
+  "slug": "wallix",
+  "categories": [
+    "IAM"
+  ]
 }

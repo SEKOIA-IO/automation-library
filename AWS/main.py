@@ -9,9 +9,9 @@ from connectors.s3.trigger_s3_cloudfront import AwsS3CloudFrontTrigger
 from connectors.s3.trigger_s3_flowlogs import AwsS3FlowLogsTrigger
 from connectors.s3.trigger_s3_flowlogs_parquet import AwsS3FlowLogsParquetRecordsTrigger
 from connectors.s3.trigger_s3_logs import AwsS3LogsTrigger
+from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
 from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
 from connectors.trigger_sqs_messages import AwsSqsMessagesTrigger
-from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
 
 if __name__ == "__main__":
     init_logging()

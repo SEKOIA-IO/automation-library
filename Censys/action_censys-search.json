@@ -55,5 +55,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "46d958ca-5965-4289-abb3-45e65865a1b9"
+  "uuid": "46d958ca-5965-4289-abb3-45e65865a1b9",
+  "slug": "search"
 }

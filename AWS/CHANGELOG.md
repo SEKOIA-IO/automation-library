@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-04-07 - 1.33.1
+
+### Added
+
+- Add a semaphore to control the number of S3 Objects processed at the same time
+
+### Changed
+
+- Change the criteria to stop the consumption of SQS messages
+
+### Fixed
+
+- Free S3 Objects after processing to prevent high-memory usage
+
+## 2025-03-22 - 1.33.0
+
+### Changed
+
+- Refactor the way to read the content of S3 Objects and extract the events
+  * Previously: S3 object content was read fully into memory before processing which could lead to performance bottlenecks and increased memory usage.
+  * Now: The system leverages a streaming approach, allowing events to be extracted on-the-fly as data is read, thereby improving performance and reducing resource utilization.
+
+## 2025-03-05 - 1.32.6
+
+### Changed
+
+- Refactor the way to define the number of max messages fetched from the SQS queue
+
+## 2025-03-05 - 1.32.5
+
+### Fixed
+
+- Fix typing issue and reset the records list when pushing it
+
+## 2025-03-04 - 1.32.4
+
+### Fixed
+
+- Memory leak issue when parse too many events
+
+## 2025-02-20 - 1.32.3
+
+### Changed
+
+- Bump version of AWS SDK
+
 ## 2024-11-22 - 1.32.2
 
 ### Fixed

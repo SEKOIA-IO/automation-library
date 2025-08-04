@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-04 - 1.28.1
+
+### Fixed
+
+- Upgrade the sekoia-automation-sdk
+
+## 2025-06-04 - 1.28.0
+
+### Added
+
+- Device asset connector
+
+## 2025-06-04 - 1.27.1
+
+### Fixed
+
+- Fix Job actions
+
+## 2025-05-30 - 1.27.0
+
+### Fixed
+
+- Use new endpoint in actions instead of the deprecated one
+
+## 2025-05-20 - 1.26.1
+
+### Added
+
+- Update return type for agent telemetry action
+
+## 2025-05-20 - 1.26.0
+
+### Added
+
+- Added action to retrieve agent telemetry
+
 ## 2024-10-24 - 1.25.0
 
 ### Added

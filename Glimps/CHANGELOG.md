@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-18 - 1.14.3
+
+### Changed
+
+- Rename [TEST] actions now in GA
+
+## 2024-11-14 - 1.14.0
+
+### Added
+
+- Waitfor action: submit a file to GLIMPS detect and wait for analysis to finish
+- Get status action: get GLIMPS detect profile status
+- Export submission: export analysis result in a given format and layout
+
+### Changed
+
+- Upgrade sekoia-automation-sdk
+- Use GLIMPS py-gdetect client to perform actions
+
 ## 2024-05-28 - 1.13.0
 
 ### Changed

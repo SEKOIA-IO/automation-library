@@ -331,3 +331,46 @@ def test_get_observables_from_url_without_http(action):
         if item["type"] == "url":
             assert item["value"] == "http://193.233.20.15/dF30Hn4m/index.php"
     assert count["file"] == 1
+
+
+def test_exclude_wrong_domain_port_pattern(action):
+    """ "
+    Make sure the domain:port pattern includes only one port
+    """
+    arguments = {
+        "triage_raw_results": [
+            {
+                "malware": "xworm",
+                "samples": {
+                    "250205-ep1g8synhz": {
+                        "sample_c2s": ["dvd-crossword.gl.at.ply.gg:43216:43216", "dvd-crossword.gl.at.ply.gg:43216"],
+                        "sample_urls": [],
+                        "sample_hashes": [
+                            "0de45ff4c9d8c08551619009eb07265a",
+                            "b16530d8c5d9358e63ec1113e3e22aa80c51102f",
+                            "c68385c8744b3558b7357eccaca2ad45f3089578454fe2fd31e17aff3ff456c3",
+                            "70716ae8d4c0b2d77ab4685b017aa2ed92c56206f8d5cc42793cc83ffed0f2ba"
+                            "d34fc8220ed82d4e0eee641c6b71820b6f4c4f82beba00591b4af6927bf67649",
+                        ],
+                    }
+                },
+            },
+        ]
+    }
+    res = action.run(arguments)
+    print(res)
+    assert "observables" in res
+    assert res["observables"]["type"] == "bundle"
+
+    count = defaultdict(lambda: 0)
+    for item in res["observables"]["objects"]:
+        count[item["type"]] += 1
+
+    assert count["file"] == 1
+    assert count["domain-name"] == 1
+
+    for item in res["observables"]["objects"]:
+        if item["type"] == "domain-name":
+            assert item["value"] == "dvd-crossword.gl.at.ply.gg"
+            assert item["x_inthreat_tags"][0]["port"] == "43216"
+    assert count["file"] == 1

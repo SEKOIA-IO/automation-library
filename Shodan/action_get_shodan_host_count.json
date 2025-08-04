@@ -53,5 +53,6 @@
         "type": "integer"
       }
     }
-  }
+  },
+  "slug": "count_hosts"
 }

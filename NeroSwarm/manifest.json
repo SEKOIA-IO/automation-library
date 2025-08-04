@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "NeroSwarm",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "NeroSwarm is a Deception-as-a-Service platform designed to deploy decoy systems across networks.",
+  "name": "NeroSwarm Honeypot",
+  "uuid": "ec5559a5-3769-48b1-b046-f5675d097353",
+  "version": "0.1.0",
+  "slug": "neroswarm",
+  "categories": [
+    "Threat Intelligence"
+  ]
+}

@@ -6,13 +6,13 @@ from abc import ABCMeta
 from functools import cached_property
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
-from sekoia_automation.connector import DefaultConnectorConfiguration, Connector
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, MESSAGES_AGE
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, MESSAGES_AGE, OUTCOMING_EVENTS
 
 
 class AwsModuleConfiguration(BaseModel):
@@ -59,7 +59,7 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
 
         return AwsClient(config)
 
-    async def next_batch(self) -> tuple[list[str], list[int]]:
+    async def next_batch(self) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
 
@@ -80,20 +80,20 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
                     processing_start = time.time()
                     current_lag: int = 0
 
-                    batch_result: tuple[list[str], list[int]] = loop.run_until_complete(self.next_batch())
-                    message_ids, messages_timestamp = batch_result
+                    batch_result: tuple[int, list[int]] = loop.run_until_complete(self.next_batch())
+                    message_count, messages_timestamp = batch_result
 
                     # compute the duration of the batch
                     processing_end = time.time()
                     batch_duration = processing_end - processing_start
 
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(message_count)
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
                         processing_end - processing_start
                     )
 
-                    if len(message_ids) > 0:
-                        self.log(message="Pushed {0} records".format(len(message_ids)), level="info")
+                    if message_count > 0:
+                        self.log(message="Pushed {0} records".format(message_count), level="info")
 
                         # Identify delay between message timestamp ( when it was pushed to sqs )
                         # and current timestamp ( when it was processed )
@@ -113,7 +113,7 @@ class AbstractAwsConnector(AsyncConnector, metaclass=ABCMeta):
 
                     # compute the remaining sleeping time. If greater than 0 and no messages were fetched, sleep
                     delta_sleep = self.configuration.frequency - batch_duration
-                    if len(message_ids) == 0 and delta_sleep > 0:
+                    if message_count == 0 and delta_sleep > 0:
                         self.log(message=f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
                         time.sleep(delta_sleep)
 

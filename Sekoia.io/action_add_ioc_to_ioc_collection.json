@@ -55,5 +55,6 @@
   "docker_parameters": "add_ioc_to_ioc_collection",
   "name": "Add IOC to IOC Collection",
   "results": {},
-  "uuid": "0acabc04-43b4-4564-b9b2-08b80e0e1ecf"
+  "uuid": "0acabc04-43b4-4564-b9b2-08b80e0e1ecf",
+  "slug": "add_to_ioc_collection"
 }

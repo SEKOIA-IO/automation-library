@@ -84,5 +84,6 @@
         "description": "Whether the community is disabled"
       }
     }
-  }
+  },
+  "slug": "get_community"
 }

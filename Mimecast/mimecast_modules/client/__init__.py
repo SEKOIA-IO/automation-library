@@ -8,9 +8,11 @@ from .retry import Retry
 
 
 class ApiClient(requests.Session):
+    auth: ApiKeyAuthentication
+
     def __init__(
         self,
-        auth: AuthBase,
+        auth: ApiKeyAuthentication,
         limiter_batch: Limiter,
         limiter_default: Limiter,
         nb_retries: int = 5,
@@ -19,6 +21,7 @@ class ApiClient(requests.Session):
         self.auth = auth
         self.limiter_batch = limiter_batch
         self.limiter_default = limiter_default
+        self.headers.update({"Accept-Encoding": "gzip,deflate"})
 
         self.mount(
             "https://api.services.mimecast.com/siem/v1/batch/events/cg",

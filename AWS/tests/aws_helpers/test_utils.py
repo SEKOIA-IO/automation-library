@@ -1,11 +1,14 @@
 """Test utils module."""
 
+import io
 from gzip import compress
 from unittest.mock import MagicMock
 
+import aiofiles
+import pytest
 from faker import Faker
 
-from aws_helpers.utils import get_content, is_gzip_compressed, normalize_s3_key
+from aws_helpers.utils import async_gzip_open, get_content, is_gzip_compressed, normalize_s3_key
 
 
 def test_normalize_s3_key():
@@ -52,3 +55,14 @@ def test_is_gzip_compressed():
     assert is_gzip_compressed(b"") is False
     assert is_gzip_compressed(parquet_content) is False
     assert is_gzip_compressed(gzip_content) is True
+
+
+@pytest.mark.asyncio
+async def test_async_gzip_reader():
+    content = b"data"
+    async with aiofiles.tempfile.NamedTemporaryFile("wb+") as f:
+        await f.write(compress(content))
+        await f.seek(0)
+
+        reader = await async_gzip_open(io.BytesIO(await f.read()))
+        assert await reader.read() == content

@@ -6,8 +6,8 @@ from sekoia_automation.action import Action
 
 from triage_modules.utils import datetime_to_str, IPV4_ADDRESS_REGEX, URL_REGEX
 
-domain_regex = r"\b((?=[a-z0-9-_]{1,63}\.)(xn--)?[a-z0-9]+([-_]+[a-z0-9]+)*\.)+[a-z]{2,63}\b"
-domain_port_regex = r"\b((?=[a-z0-9-_]{1,63}\.)(xn--)?[a-z0-9]+([-_]+[a-z0-9]+)*\.)+[a-z]{2,63}\b:\d{2,5}"
+domain_regex = r"\b((?=[a-z0-9-_]{1,63}\.)(xn--)?[a-z0-9]+([-_]+[a-z0-9]+)*\.)+[a-z]{2,63}\b$"
+domain_port_regex = r"\b((?=[a-z0-9-_]{1,63}\.)(xn--)?[a-z0-9]+([-_]+[a-z0-9]+)*\.)+[a-z]{2,63}\b:\d{2,5}$"
 hash_regex = "^([a-f0-9]{32}|[0-9a-f]{40}|[0-9a-f]{64}|[0-9a-f]{128})$"
 ipv4_port_regex = r"^(?:(?:\d|[01]?\d\d|2[0-4]\d|25[0-5])\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d|\d)(?:\d{1,2})?:\d{2,5}$"
 url_without_scheme = (

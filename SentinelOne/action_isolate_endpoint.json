@@ -55,5 +55,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "1268a50e-e31d-49f3-b473-f5f9e2e93c6e"
+  "uuid": "1268a50e-e31d-49f3-b473-f5f9e2e93c6e",
+  "slug": "isolate_endpoint"
 }

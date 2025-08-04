@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-11 - 1.0.2
+
+### Added
+
+- Add new connector and trigger for Ubika Cloud Protector Next Gen
+
 ## 2024-09-02 - 1.0.1
 
 ### Fixed

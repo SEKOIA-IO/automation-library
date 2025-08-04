@@ -7,8 +7,8 @@
     "properties": {
       "frequency": {
         "type": "integer",
-        "description": "Batch frequency in seconds",
-        "default": 60
+        "description": "Batch frequency in seconds (default to 8 minutes; because batches are available every 15 minutes)",
+        "default": 480
       },
       "chunk_size": {
         "type": "integer",

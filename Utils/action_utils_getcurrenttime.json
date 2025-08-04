@@ -59,5 +59,6 @@
     "required": [],
     "title": "Results",
     "type": "object"
-  }
+  },
+  "slug": "get_current_time"
 }

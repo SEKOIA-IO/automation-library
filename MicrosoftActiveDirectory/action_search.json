@@ -27,9 +27,16 @@
               "type": "string"
             }
           },
-          {"type": "null"}
+          {
+            "type": "null"
+          }
         ],
         "default": null
+      },
+      "to_file": {
+        "type": "boolean",
+        "description": "Whether the event should be saved in a file or sent directly",
+        "default": false
       }
     }
   },
@@ -41,7 +48,12 @@
         "items": {
           "type": "object"
         }
+      },
+      "output_path": {
+        "description": "Path to the file with the content",
+        "type": "object"
       }
     }
-  }
+  },
+  "slug": "search_in_ad"
 }

@@ -1,0 +1,39 @@
+{
+  "configuration": {
+    "title": "MicrosoftOutlookModuleConfiguration",
+    "type": "object",
+    "properties": {
+      "tenant_id": {
+        "title": "Directory (tenant) ID",
+        "description": "ID of the Azure AD tenant",
+        "type": "string"
+      },
+      "client_id": {
+        "title": "Application (client) ID",
+        "description": "Client ID. An application needs to be created in the Azure Portal and assigned relevant permissions. Its Client ID should then be used in this configuration.",
+        "type": "string"
+      },
+      "client_secret": {
+        "title": "The value of the client secret",
+        "description": "Client Secret associated with the registered application. Admin Consent has to be granted to the application for it to work.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "tenant_id",
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
+  },
+  "description": "Microsoft Outlook is an email client and personal information manager that includes calendar, task management, contact management, note-taking, and web browsing features. It integrates with Microsoft Office suite for seamless productivity and communication.",
+  "name": "Microsoft Outlook",
+  "slug": "microsoft-outlook",
+  "uuid": "26075aca-cd73-49d2-98f6-d03ac58e773d",
+  "categories": [
+    "Email"
+  ],
+  "version": "0.1.1"
+}

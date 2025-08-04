@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-02-28 - 1.5.2
+
+### Changed
+
+- Change the way to handle 401 and 500 HTTP errors when the connector is running
+
 ## 2024-10-29 - 1.5.1
 
 ### Fixed

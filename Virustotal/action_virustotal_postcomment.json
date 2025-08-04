@@ -36,5 +36,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "52ad1995-960b-4606-bac4-91c64bab63f9"
+  "uuid": "52ad1995-960b-4606-bac4-91c64bab63f9",
+  "slug": "post_comment"
 }

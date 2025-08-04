@@ -22,5 +22,6 @@
   "docker_parameters": "block_ioc",
   "name": "Block IOC",
   "results": {},
-  "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f9"
+  "uuid": "88d53f94-138d-4f77-95d8-fb9b0425d1f9",
+  "slug": "block_ioc"
 }

@@ -1,0 +1,8 @@
+{
+  "configuration": {},
+  "description": "Kubernetes is an open-source container orchestration system for automating software deployment, scaling and management.",
+  "name": "Kubernetes",
+  "uuid": "b633239c-2c91-4c1d-9da6-c361638a9064",
+  "slug": "kubernetes",
+  "version": "1.0"
+}

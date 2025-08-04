@@ -25,5 +25,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "41cd724b-bfcc-4fb7-bee7-ef5d02176e4c"
+  "uuid": "41cd724b-bfcc-4fb7-bee7-ef5d02176e4c",
+  "slug": "wait"
 }

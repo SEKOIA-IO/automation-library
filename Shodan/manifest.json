@@ -22,7 +22,7 @@
       "api_key"
     ]
   },
-  "description": "[Shodan](https://www.shodan.io/) is a Cybersecurity company keeping track of devices exposed to the Internet. It collect information on devices, running software and related CVEs.",
+  "description": "Shodan is a Cybersecurity company keeping track of devices exposed to the Internet. It collect information on devices, running software and related CVEs.",
   "name": "Shodan",
   "uuid": "25c9c44e-b3dc-4485-a2cb-4e9a116bc8fd",
   "slug": "shodan",

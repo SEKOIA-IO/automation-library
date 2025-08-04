@@ -1,0 +1,36 @@
+{
+  "configuration": {
+    "title": "Wiz",
+    "type": "object",
+    "properties": {
+      "client_id": {
+        "description": "Client id to interact with Wiz API",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "Client secret to interact with Wiz API",
+        "type": "string"
+      },
+      "tenant_url": {
+        "description": "Base url of the Wiz tenant (e.g https://api.us17.app.wiz.io)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "client_id",
+      "client_secret",
+      "tenant_url"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
+  },
+  "description": "Wiz is a cybersecurity company specializing in cloud security solutions that help businesses detect and manage risks across their cloud environments.",
+  "name": "Wiz",
+  "uuid": "860eaa8b-ecb1-43dc-8a3d-6ec10144e6e9",
+  "slug": "wiz",
+  "version": "1.3.1",
+  "categories": [
+    "Network"
+  ]
+}

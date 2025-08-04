@@ -11,6 +11,12 @@
         "description": "(Optional) Identifier of the community",
         "type": "string",
         "in": "query"
+      },
+      "render": {
+        "description": "(Optional) Render boolean",
+        "type": "boolean",
+        "in": "query",
+        "default": true
       }
     },
     "required": [
@@ -493,5 +499,6 @@
       "uuid"
     ]
   },
-  "uuid": "0ecabc04-43b4-4564-b9b2-08b80e0e1ecf"
+  "uuid": "0ecabc04-43b4-4564-b9b2-08b80e0e1ecf",
+  "slug": "get_case"
 }

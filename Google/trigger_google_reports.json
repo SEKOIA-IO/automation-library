@@ -1,5 +1,5 @@
 {
-  "description": "Get user activities using google reports",
+  "description": "Get user activities using google workspace and from chromOS devices",
   "docker_parameters": "run-google_reports_trigger",
   "name": "Get user activities",
   "arguments": {
@@ -38,7 +38,7 @@
       "timedelta": {
         "type": "integer",
         "description": "The temporal shift, in the past, in minutes, the connector applies when fetching the events (default to 0 minutes ago)",
-        "default": 0
+        "default": 15
       },
       "start_time": {
         "type": "integer",
@@ -69,7 +69,7 @@
       "intake_key",
       "application_name"
     ],
-    "title": "Google Reports",
+    "title": "Google Workspace / ChromeOS",
     "type": "object"
   },
   "results": {},

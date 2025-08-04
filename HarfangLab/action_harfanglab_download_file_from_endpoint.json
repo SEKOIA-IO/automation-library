@@ -35,5 +35,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "10906548-7003-4316-914a-1203a690730d"
+  "uuid": "10906548-7003-4316-914a-1203a690730d",
+  "slug": "download_file_from_endpoint"
 }

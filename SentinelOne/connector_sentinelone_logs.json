@@ -18,6 +18,16 @@
       "intake_key": {
         "description": "Intake key to use when sending events",
         "type": "string"
+      },
+      "activities_batch_size": {
+        "type": "integer",
+        "description": "Number of activities to fetch in a single batch",
+        "default": 1000
+      },
+      "threats_batch_size": {
+        "type": "integer",
+        "description": "Number of threats to fetch in a single batch",
+        "default": 1000
       }
     },
     "required": [

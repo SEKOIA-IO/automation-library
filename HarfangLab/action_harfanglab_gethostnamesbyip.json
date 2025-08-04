@@ -35,5 +35,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "0ecd45f2-f99a-4af2-920d-39cbbe94b322"
+  "uuid": "0ecd45f2-f99a-4af2-920d-39cbbe94b322",
+  "slug": "hostname_by_ip"
 }

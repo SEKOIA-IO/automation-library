@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "6fa3d496-c4e5-4833-9aa6-3ba0b18eb23a"
+  "uuid": "6fa3d496-c4e5-4833-9aa6-3ba0b18eb23a",
+  "slug": "lookup_reverse_dns"
 }

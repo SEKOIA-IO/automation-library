@@ -2,6 +2,7 @@ import asyncio
 import time
 from asyncio import Queue
 from datetime import datetime, timedelta, timezone
+from functools import reduce
 from typing import Any, Optional, TypeAlias
 
 import orjson
@@ -29,8 +30,8 @@ class CompanyCheckpoint(BaseModel):
         """
         Get CompanyCheckpoint with updated last_see corresponded to the next logic.
 
-        If last_seen is None, then update it with 7 days before now and set offset to 0.
-        If last_seen is not None and lower then 7 days before now, then update it with 7 days before now and set offset to 0.
+        If last_seen is None, then update it with 1 day before now and set offset to 0.
+        If last_seen is not None and lower then 1 day before now, then update it with 1 day before now and set offset to 0.
 
         Format should be 'YYYY-MM-DD' corresponded to the Bitsight API:
             https://help.bitsighttech.com/hc/en-us/articles/360022913734-GET-Finding-Details
@@ -38,7 +39,7 @@ class CompanyCheckpoint(BaseModel):
         Returns:
             datetime:
         """
-        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=7)
+        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=1)
 
         parsed_last_seen = (
             datetime.fromisoformat(self.last_seen).replace(tzinfo=timezone.utc) if self.last_seen else None
@@ -60,12 +61,33 @@ class Checkpoint(BaseModel):
 
         return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen()
 
+    def recalculate_company_checkpoint(self, company_uuid: str) -> None:
+        company_checkpoint = self.get_company_checkpoint(company_uuid)
+        if company_checkpoint is None:
+            return
+
+        last_seen = (
+            datetime.fromisoformat(company_checkpoint.last_seen or datetime.now(timezone.utc).isoformat())
+            .replace(tzinfo=timezone.utc)
+            .replace(microsecond=0, second=0, minute=0, hour=0)
+        )
+
+        next_day = last_seen + timedelta(days=1)
+        now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0)
+        if next_day <= now:
+            company_checkpoint.last_seen = next_day.strftime("%Y-%m-%d")
+            company_checkpoint.offset = 1
+
+        self.values = [value for value in self.values if value.company_uuid != company_uuid] + [company_checkpoint]
+
     def increment_company_checkpoint(self, company_uuid: str, last_seen: str) -> None:
         company_checkpoint = self.get_company_checkpoint(company_uuid)
         if company_checkpoint is None:
             company_checkpoint = CompanyCheckpoint(company_uuid=company_uuid, last_seen=last_seen, offset=0)
 
-        checkpoint_last_seen_datetime = datetime.fromisoformat(company_checkpoint.last_seen or last_seen)
+        checkpoint_last_seen_datetime = datetime.fromisoformat(company_checkpoint.last_seen or last_seen).replace(
+            microsecond=0, second=0, minute=0, hour=0
+        )
 
         last_seen_datetime = datetime.fromisoformat(last_seen)
 
@@ -167,21 +189,21 @@ class PullFindingsConnector(AsyncConnector):
 
         return result
 
-    async def consume_finding_events(self, queue: FindingQueue, checkpoint: Checkpoint, company_ids: list[str]) -> int:
-        logger.info("Start to consume finding events")
-        in_progress_company_ids = set(company_ids)
+    async def process_findings_for_company(self, checkpoint: Checkpoint, company_id: str) -> int:
+        last_seen = checkpoint.get_company_checkpoint(company_id).last_seen
+        offset = checkpoint.get_company_checkpoint(company_id).offset
+
+        logger.info(
+            "Start to fetch findings for company {0} with last_seen {1} and offset {2}",
+            company_id,
+            last_seen,
+            offset,
+        )
+
         data_to_push = []
         total_pushed_events = 0
-        while len(in_progress_company_ids) > 0:
-            finding, company_id = await queue.get()
-            queue.task_done()
 
-            if finding is None:
-                # If finding is None it means that all findings for this company have been fetched
-                # so we can remove it from in_progress_company_ids
-                in_progress_company_ids.remove(company_id)
-                continue
-
+        async for finding in self.bitsight_client.findings_result(company_id, last_seen, offset):
             checkpoint.increment_company_checkpoint(company_id, finding["last_seen"])
             data_to_push.extend(self.format_finding(finding, company_id))
 
@@ -198,30 +220,14 @@ class PullFindingsConnector(AsyncConnector):
             pushed_events = len(data_to_push)
             logger.info("Pushed {0} events to intakes", pushed_events)
             total_pushed_events += pushed_events
-            self.save_checkpoint(checkpoint)
 
-        return total_pushed_events
-
-    async def process_findings_for_company(
-        self,
-        queue: FindingQueue,
-        company_uuid: str,
-        last_seen: str | None = None,
-        offset: int | None = None,
-    ) -> None:
-        logger.info(
-            "Start to fetch findings for company {0} with last_seen {1} and offset {2}",
-            company_uuid,
-            last_seen,
-            offset,
-        )
-
-        async for finding in self.bitsight_client.findings_result(company_uuid, last_seen, offset):
-            await queue.put((finding, company_uuid))
+        checkpoint.recalculate_company_checkpoint(company_id)
+        self.save_checkpoint(checkpoint)
 
         # Add None to queue to indicate that all findings for this company have been fetched
-        await queue.put((None, company_uuid))
-        logger.info("Finished fetching findings for company {0}", company_uuid)
+        logger.info("Finished fetching findings for company {0}", company_id)
+
+        return total_pushed_events
 
     async def next_batch(self) -> tuple[int, Checkpoint]:
         """
@@ -229,24 +235,14 @@ class PullFindingsConnector(AsyncConnector):
         """
         logger.info("Start fetching next batch of findings. Companies {0}", self.module.configuration.company_uuids)
         checkpoint = self.get_checkpoint()
-        queue: FindingQueue = asyncio.Queue()
 
         company_ids = self.module.configuration.company_uuids
 
-        processed_result: Any = await asyncio.gather(
-            *[
-                self.process_findings_for_company(
-                    queue,
-                    checkpoint.get_company_checkpoint(company).company_uuid,
-                    checkpoint.get_company_checkpoint(company).last_seen,
-                    checkpoint.get_company_checkpoint(company).offset,
-                )
-                for company in company_ids
-            ],
-            self.consume_finding_events(queue, checkpoint, company_ids),
-        )
+        processed_result: Any = [
+            await self.process_findings_for_company(checkpoint, company) for company in company_ids
+        ]
 
-        pushed_events = processed_result[-1]
+        pushed_events: int = reduce(lambda x, y: x + y, processed_result)
         logger.info("Finished with pushing events intakes. Total count is {0}", pushed_events)
 
         return pushed_events, self.get_checkpoint()

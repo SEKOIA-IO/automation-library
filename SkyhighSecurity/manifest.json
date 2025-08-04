@@ -4,7 +4,7 @@
     "type": "object",
     "properties": {}
   },
-  "description": "Skyhigh Security",
+  "description": "SkyHigh Security specializes in cloud security solutions, offering services such as data loss prevention, secure web gateways, and cloud access security broker (CASB) tools. It helps organizations safeguard data and ensure compliance in cloud environments.",
   "name": "Skyhigh Security",
   "uuid": "86cf0970-63e7-446a-b608-5d6f7e778a9b",
   "slug": "skyhigh-security",

@@ -9,8 +9,8 @@ package-mode = false
 python = ">=3.10,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
-requests-ratelimiter = "^0.4.0"
-sekoia-automation-sdk = "^1.13.0"
+sekoia-automation-sdk = "^1.18.3"
+cachetools = "^6.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -37,3 +37,23 @@ omit = [
     "main.py",
     "dev.py"
 ]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore:.*unclosed.*:ResourceWarning",
+]
+addopts = '''
+  --strict-markers
+  --tb=short
+  --cov=ubika_modules
+  --cache-clear
+  --cov-report=html
+  --cov-report=term-missing:skip-covered
+  --cov-fail-under=5
+'''

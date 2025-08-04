@@ -7,6 +7,115 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-05-28 - 2.68.2
+
+### Fixed
+
+- Returning empty list when fetching source references failed.
+
+## 2025-05-28 - 2.68.1
+
+### Fixed
+
+- Returning confidence when resolving source references from Feed consumption.
+
+## 2025-05-27 - 2.68.0
+
+### Added
+
+- Resolve source references in the objects by fetching them from the Sekoia.io API for Feed consumption.
+
+
+## 2025-04-14 - 2.67.15
+
+### Fixed
+
+- Fix datetime serialization problem
+
+## 2025-04-10 - 2.67.14
+
+### Fixed
+
+- Rename get asset in the main script
+
+## 2025-04-10 - 2.67.13
+
+### Fixed
+
+- Rename the delete case action
+- Rename the list of deleted alerts in the case alerts updated
+
+### Added
+
+- Add more tests about the filters used in the automation cases triggers
+
+## 2025-04-07 - 2.67.12
+
+### Fixed
+
+- Fix on automation cases triggers
+
+## 2025-04-03 - 2.67.11
+
+### Added
+
+- Addition of render filter in get_case
+
+## 2025-04-02 - 2.67.10
+
+### Fixed
+
+- Support for file input - action synchronize asset - Fix output type
+
+## 2025-03-20 - 2.67.9
+
+### Added
+
+- Addition of cases actions and triggers
+
+## 2025-03-03 - 2.67.8
+
+### Fixed
+
+Support for file input - action synchronize asset - Fix output type
+
+## 2025-03-18 - 2.67.7
+
+### Fixed
+
+Fix the return variable for the Get Common Values module
+
+
+## 2025-02-04 - 2.67.6
+
+### Added
+
+Support for file input - action synchronize asset
+
+## 2025-02-10 - 2.67.5
+
+### Changed
+
+- Update `Update Alert Status by name` to add a comment when changing alert status
+
+## 2025-02-10 - 2.67.4
+
+### Added
+
+- Update Alert trigger with rule_names_filter
+ 
+## 2025-01-27 - 2.67.3
+
+### Fixed
+
+- Fix `docker-parameters` of new action to update statuses by name
+
+## 2025-01-21 - 2.67.2
+
+### Changed
+
+- Update the module description
+
 ## 2025-01-03 - 2.67.1
 
 ### Fixed

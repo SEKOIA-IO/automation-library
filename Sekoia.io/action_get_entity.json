@@ -49,5 +49,6 @@
         "description": "The number of configured intakes for this entity"
       }
     }
-  }
+  },
+  "slug": "get_entity"
 }

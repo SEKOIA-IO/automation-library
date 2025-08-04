@@ -1,9 +1,10 @@
 import time
+from typing import Any
 
 import requests
 from sekoia_automation.action import Action
 
-from harfanglab.models import JobAction, JobStatus, JobTarget, JobTriggerResult
+from harfanglab.models import JobAction, JobBatchInformation, JobTarget, JobTriggerResult
 
 
 class JobExecutor(Action):
@@ -25,7 +26,8 @@ class JobExecutor(Action):
 
     @property
     def job_endpoint(self) -> str:
-        return f"{self.instance_url.rstrip('/')}/api/data/Job/"
+        # After deprecation of the old endpoint, we use the new one.
+        return f"{self.instance_url.rstrip('/')}/api/data/job/batch/"
 
     @property
     def job_id(self) -> str:
@@ -38,17 +40,17 @@ class JobExecutor(Action):
             raise RuntimeError("JobExecutor.trigger_job() not called")  # pragma: no cover
         return self._job_is_running
 
-    def trigger_job(self, target: JobTarget, actions: list[JobAction]) -> JobTriggerResult:
+    def trigger_job(self, target: JobTarget, job: JobAction) -> JobTriggerResult:
 
-        params: dict = {
-            "targets": target.dict(),
-            "actions": [action.dict() for action in actions],
+        params: dict[str, Any] = {
+            "targets": target.dict(exclude_none=True),
+            "jobs": [job.as_params()],
         }
 
         response: requests.Response = requests.post(url=self.job_endpoint, json=params, headers=self.auth_headers)
         response.raise_for_status()
 
-        job_result = JobTriggerResult(**response.json()[0])
+        job_result = JobTriggerResult(**response.json(), action=job.value, parameters=job.params)
 
         self._job_id = job_result.id
         self._job_is_running = True
@@ -58,7 +60,7 @@ class JobExecutor(Action):
     def wait_for_job_completion(self) -> None:  # pragma: no cover
         """Wait until all job actions are done. Caution, can wait forever."""
 
-        job_status: JobStatus | None = None
+        job_info: JobBatchInformation | None = None
 
         while self.job_is_running():
 
@@ -67,22 +69,22 @@ class JobExecutor(Action):
             )
             response.raise_for_status()
 
-            job_status = JobStatus(**response.json())
-            self._job_is_running = job_status.is_running()
+            job_info = JobBatchInformation(**response.json())
+            self._job_is_running = job_info.status.is_running()
 
             if self.job_is_running():
                 time.sleep(1)
 
-        if job_status is None:
+        if job_info is None:
             raise RuntimeError("JobExecutor.wait_for_job_completion() can only be called once")  # pragma: no cover
 
-        if job_status.error > 0:
+        if job_info.status.error > 0:
             self.log(
                 message=f"One or more tasks failed for job id {self.job_id}",  # pragma: no cover
                 level="error",
             )
 
-        if job_status.canceled > 0:
+        if job_info.status.canceled > 0:
             self.log(
                 message=f"One or more tasks have been canceled for job id {self.job_id}",  # pragma: no cover
                 level="warning",

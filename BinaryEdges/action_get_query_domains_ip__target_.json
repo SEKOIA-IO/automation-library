@@ -72,5 +72,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "list_domains_by_ip"
 }

@@ -31,16 +31,27 @@
       "severity": {
         "description": "Severity",
         "type": "string",
-        "enum": ["Informational", "Low", "Medium", "High"]
+        "enum": [
+          "Informational",
+          "Low",
+          "Medium",
+          "High"
+        ]
       },
       "generate_alert": {
         "description": "Generate Alert?",
         "type": "boolean"
       }
     },
-    "required": ["stix_objects_path", "action", "severity", "generate_alert"],
+    "required": [
+      "stix_objects_path",
+      "action",
+      "severity",
+      "generate_alert"
+    ],
     "title": "Arguments",
     "type": "object"
   },
-  "results": {}
+  "results": {},
+  "slug": "create_iocs_from_stix_bundle"
 }

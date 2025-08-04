@@ -10,5 +10,8 @@
   "name": "Claroty",
   "uuid": "e215ed98-7ff2-4a01-b5fc-aa6bda025ea6",
   "version": "1.0.0",
-  "slug": "claroty"
+  "slug": "claroty",
+  "categories": [
+    "Network"
+  ]
 }

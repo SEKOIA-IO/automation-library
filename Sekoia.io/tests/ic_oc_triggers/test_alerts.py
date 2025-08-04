@@ -366,6 +366,12 @@ def test_alert_trigger_filter_by_rule(
         alert_trigger.handle_event(samplenotif_alert_created)
         assert alert_trigger.send_event.called
 
+        alert_trigger.send_event.reset_mock()
+        # match rule names in list
+        alert_trigger.configuration = {"rule_names_filter": [sample_sicalertapi["rule"]["name"]]}
+        alert_trigger.handle_event(samplenotif_alert_created)
+        assert alert_trigger.send_event.called
+
 
 def test_comment_trigger_filter_by_rule(
     alert_created_trigger,

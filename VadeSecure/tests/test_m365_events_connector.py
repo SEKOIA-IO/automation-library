@@ -31,6 +31,13 @@ def trigger(symphony_storage):
     trigger.log = Mock()
     trigger.log_exception = Mock()
 
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            trigger.module.configuration.oauth2_authorization_url,
+            json={"token_type": "Bearer", "access_token": "123456", "expires_in": 5},
+        )
+        trigger.client = trigger.create_client()
+
     return trigger
 
 

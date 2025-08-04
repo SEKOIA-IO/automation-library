@@ -27,5 +27,6 @@
     "required": [
       "worth_human_attention"
     ]
-  }
+  },
+  "slug": "predict_alert_state"
 }

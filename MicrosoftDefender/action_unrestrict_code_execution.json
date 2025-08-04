@@ -15,7 +15,10 @@
         "type": "string"
       }
     },
-    "required": ["machine_id", "comment"]
+    "required": [
+      "machine_id",
+      "comment"
+    ]
   },
   "results": {
     "type": "object",
@@ -45,5 +48,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "unrestrict_code_execution"
 }

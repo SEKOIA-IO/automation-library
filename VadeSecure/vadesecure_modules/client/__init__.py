@@ -16,6 +16,7 @@ class ApiClient(requests.Session):
     ) -> None:
         super().__init__()
         self.auth: ApiKeyAuthentication = ApiKeyAuthentication(auth_url, client_id, client_secret)
+        self.auth.authenticate()
 
         rate_limiter = LimiterAdapter(
             per_second=ratelimit_per_second,

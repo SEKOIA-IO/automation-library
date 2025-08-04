@@ -83,5 +83,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "be59c0f9-194e-4405-8492-383155769ac9"
+  "uuid": "be59c0f9-194e-4405-8492-383155769ac9",
+  "slug": "get_ip_threat_list"
 }

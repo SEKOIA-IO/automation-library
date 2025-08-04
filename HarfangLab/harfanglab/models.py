@@ -4,36 +4,37 @@ Data models of the HarfangLab module
 """
 
 # natives
-import time
 from typing import Any, Dict, List, Optional
 
 # third parties
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class JobTarget(BaseModel):
-    agents: List[str]
-    groups: List[str]
+    agent_ids: list[str] | None = None
+    group_ids: list[str] | None = None
 
 
 class JobAction(BaseModel):
-    label: str  # name of the job in the EDR instance
     value: str  # job action identifier (eg: getPipeList, downloadFile, etc.)
-    params: Optional[Dict[str, Any]]
-    isValid: bool = True
-    id: int = Field(default_factory=lambda: int(time.time() * 1000))
+    params: Any
+
+    def as_params(self) -> dict[str, Any]:
+        return {
+            self.value: self.params,
+        }
 
 
 class JobTriggerResult(BaseModel):
     id: str  # job's id
     action: str  # job action identifier (eg: getPipeList, downloadFile, etc.)
     creationtime: str
-    parameters: Optional[Dict[str, Any]]
+    parameters: Any
 
 
 class JobStatus(BaseModel):
 
-    instance: int  # number of job actions to be executed
+    total: int  # number of job actions to be executed
 
     # status when running (in exec-time order)
     waiting: int
@@ -47,6 +48,10 @@ class JobStatus(BaseModel):
 
     def is_running(self) -> bool:
         return (self.waiting + self.running + self.injecting) > 0
+
+
+class JobBatchInformation(BaseModel):
+    status: JobStatus
 
 
 class HostnameEntry(BaseModel):

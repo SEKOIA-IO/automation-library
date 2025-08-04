@@ -14,7 +14,7 @@
     "title": "Arguments",
     "type": "object"
   },
-  "description": "[Mattermost](https://mattermost.com/) is a secure, open and flexible collaboration platform",
+  "description": "Mattermost is a secure, open and flexible collaboration platform",
   "name": "Mattermost",
   "uuid": "89c860f0-3e73-4946-a5c9-431deb33b0e8",
   "slug": "mattermost",

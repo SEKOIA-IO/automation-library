@@ -25,11 +25,10 @@ class ApiKeyAuthentication(AuthBase):
             ),
         )
 
-    def get_authorization(self) -> str:
+    def authenticate(self) -> None:
         """
-        Returns the access token and uses the OAuth2 to compute it if required
+        Generate or refresh the OAUTH2.0 access token
         """
-
         if (
             self.__api_credentials is None
             or datetime.utcnow() + timedelta(seconds=300) >= self.__api_credentials["expires_in"]
@@ -52,7 +51,12 @@ class ApiKeyAuthentication(AuthBase):
             api_credentials["expires_in"] = current_dt + timedelta(seconds=api_credentials["expires_in"])
             self.__api_credentials = api_credentials
 
-        return f"{self.__api_credentials['token_type'].title()} {self.__api_credentials['access_token']}"
+    def get_authorization(self) -> str:
+        """
+        Returns the access token and uses the OAuth2 to compute it if required
+        """
+        self.authenticate()
+        return f"{self.__api_credentials['token_type'].title()} {self.__api_credentials['access_token']}"  # type: ignore
 
     def __call__(self, request: PreparedRequest) -> PreparedRequest:
         request.headers["Authorization"] = self.get_authorization()

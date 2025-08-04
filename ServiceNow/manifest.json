@@ -29,7 +29,7 @@
   "uuid": "2b2f877e-6eaa-4d6c-a18e-f3383e52a429",
   "name": "ServiceNow",
   "slug": "servicenow",
-  "description": "[ServiceNow](https://www.servicenow.com/) is an IT company allowing creating workflow to empower employees productivity and to improve customers experience",
+  "description": "ServiceNow is an IT company allowing creating workflow to empower employees productivity and to improve customers experience",
   "version": "1.25.0",
   "categories": [
     "Collaboration Tools"

@@ -134,5 +134,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "a763b09c-ceb7-41f8-aa13-58a8caac8296"
+  "uuid": "a763b09c-ceb7-41f8-aa13-58a8caac8296",
+  "slug": "execute_remote_script"
 }

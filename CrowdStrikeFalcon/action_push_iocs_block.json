@@ -22,5 +22,6 @@
   "docker_parameters": "push_iocs_block",
   "name": "Push IOCs for prevention",
   "results": {},
-  "uuid": "103d8377-7a61-4558-8eae-1041b130c870"
+  "uuid": "103d8377-7a61-4558-8eae-1041b130c870",
+  "slug": "push_iocs_for_prevention"
 }

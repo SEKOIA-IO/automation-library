@@ -21,7 +21,7 @@
       "secret"
     ]
   },
-  "description": "Interact with WithSecure Elements",
+  "description": "WithSecure, formerly known as F-Secure Business, provides cybersecurity solutions focusing on threat detection, incident response, and endpoint protection. It delivers comprehensive security services tailored to businesses to safeguard against evolving cyber threats.",
   "name": "WithSecure",
   "uuid": "8aa9f86c-f360-4ae7-84f5-b61c6917cf01",
   "slug": "withsecure",

@@ -28,5 +28,6 @@
   "docker_parameters": "pagerduty_trigger_alert",
   "name": "Trigger Alert",
   "results": {},
-  "uuid": "34e0bd73-a7d2-426a-b9fd-21b1124bb395"
+  "uuid": "34e0bd73-a7d2-426a-b9fd-21b1124bb395",
+  "slug": "trigger_alert"
 }

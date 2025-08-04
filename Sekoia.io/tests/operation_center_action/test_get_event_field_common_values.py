@@ -126,11 +126,24 @@ def test_get_event_field_common_values(requests_mock):
     assert results == {
         "fields": [
             {
+                "common_values": [],
+                "name": "action.id",
+            },
+            {
+                "common_values": [
+                    {
+                        "name": "openssh",
+                        "value": 100.0,
+                    },
+                ],
+                "name": "event.dialect",
+            },
+            {
                 "name": "action.outcome",
                 "common_values": [
                     {"value": 50.0, "name": "False"},
                     {"value": 50.0, "name": "True"},
                 ],
-            }
+            },
         ]
     }

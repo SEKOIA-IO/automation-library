@@ -1,18 +1,17 @@
 import time
 from datetime import datetime, timedelta, timezone
-
 from functools import cached_property
-import orjson
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Any, Dict, List, Optional, Tuple
 
+import orjson
 from requests.exceptions import HTTPError
-from urllib3.exceptions import HTTPError as BaseHTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
+from urllib3.exceptions import HTTPError as BaseHTTPError
 
-from cortex_module.helper import handle_fqdn
 from cortex_module.base import CortexConnector
 from cortex_module.client import ApiClient
+from cortex_module.helper import handle_fqdn
 from cortex_module.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 
@@ -83,15 +82,19 @@ class CortexQueryEDRTrigger(CortexConnector):
         )
 
     def split_alerts_events(self, alerts: List[Any]) -> List[str]:
-        """Split events from alerts and put them in the same list"""
-
         combined_data = []
         for alert in alerts:
-            shared_id = alert.get("alert_id")
-            events = alert.get("events")
-            del alert["events"]
+            shared_id = alert["alert_id"]
+            events = alert["events"]
+
+            # first event should stay in alert, others should be separated
+            events_to_split = events[1:] if len(events) > 1 else []
+            if len(events) > 1:
+                del alert["events"][1:]
+
             combined_data.append(orjson.dumps(alert).decode("utf-8"))
-            for event in events:
+
+            for event in events_to_split:
                 event["alert_id"] = shared_id
                 combined_data.append(orjson.dumps(event).decode("utf-8"))
 

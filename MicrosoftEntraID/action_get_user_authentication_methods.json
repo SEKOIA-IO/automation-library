@@ -96,17 +96,18 @@
             }
           },
           "required": [
-          "id",
-          "userPrincipalName",
-          "isSsprRegistered",
-          "isSsprEnabled",
-          "isSsprCapable",
-          "isMfaRegistered",
-          "isMfaCapable",
-          "isPasswordlessCapable"
+            "id",
+            "userPrincipalName",
+            "isSsprRegistered",
+            "isSsprEnabled",
+            "isSsprCapable",
+            "isMfaRegistered",
+            "isMfaCapable",
+            "isPasswordlessCapable"
           ]
         }
       }
     }
-  }
+  },
+  "slug": "get_user_authentication_methods"
 }

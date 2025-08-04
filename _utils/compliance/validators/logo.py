@@ -51,20 +51,6 @@ def check_logo_image(result: CheckResult) -> None:
             )
         )
 
-    if not has_transparency(image):
-        result.errors.append(
-            CheckError(
-                filepath=image_path,
-                error="Logo background is not transparent",
-                fix_label="Make logo background transparent",
-                fix=partial(
-                    fix_transparent_background,
-                    source=image_path,
-                    destination=image_path,
-                ),
-            )
-        )
-
     if os.path.getsize(image_path) > 50 * 1024:
         result.errors.append(
             CheckError(
@@ -80,31 +66,6 @@ def check_logo_image(result: CheckResult) -> None:
     image.close()
 
     result.options["logo_path"] = image_path
-
-
-def has_transparency(img: Image) -> bool:
-    if img.info.get("transparency", None) is not None:
-        return True
-
-    elif img.mode == "P":
-        transparent = img.info.get("transparency", -1)
-        for _, index in img.getcolors():
-            if index == transparent:
-                return True
-
-    elif img.mode == "RGBA":
-        extrema = img.getextrema()
-        if extrema[3][0] < 255:
-            return True
-
-    return False
-
-
-def fix_transparent_background(source: Path, destination: Path, fuzz: int = 0):
-    """
-    Transform the white background into transparent one
-    """
-    transparent_background(Image.open(source), fuzz).save(destination)
 
 
 def fix_resize_canvas(

@@ -30,5 +30,6 @@
         "type": "string"
       }
     }
-  }
+  },
+  "slug": "list_processes"
 }

@@ -21,7 +21,7 @@
       "misp_api_key"
     ]
   },
-  "description": "[MISP](https://www.misp-project.org/) is a opensource platform to gather, store, share and correlate threat intelligence like cyber security indicators",
+  "description": "MISP is a opensource platform to gather, store, share and correlate threat intelligence like cyber security indicators",
   "name": "MISP",
   "uuid": "df3a0c67-592b-45b2-8465-48473929c7f9",
   "slug": "misp",

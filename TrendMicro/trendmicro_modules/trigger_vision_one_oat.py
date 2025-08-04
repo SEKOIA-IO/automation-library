@@ -50,7 +50,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
         url = urljoin(self.configuration.base_url, "v3.0/oat/detections")
         response = self.client.get(url, params=query_params, headers=headers, timeout=60)
 
-        while self.running:
+        while self.running:  # pragma: no cover
             self.handle_response_error(response)
 
             message = response.json()
@@ -86,7 +86,7 @@ class TrendMicroVisionOneOATConnector(TrendMicroVisionOneBaseConnector):
                 yield next_events
 
         # save the most recent date
-        if most_recent_date_seen > self.from_date:
+        if most_recent_date_seen > self.from_date:  # pragma: no cover
             self.from_date = most_recent_date_seen
             self.cursor.offset = self.from_date
 

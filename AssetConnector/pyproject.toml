@@ -1,0 +1,43 @@
+[project]
+name = "asset_connector"
+version = "1.0.0"
+description = ""
+authors = []
+package-mode = false
+packages = [
+  { include = "asset_connector" }
+]
+
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+sekoia-automation-sdk = "^1.18.3"
+faker = "^37.3.0"
+requests = "^2.32.3"
+types-requests = "^2.32.0.20250515"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests = "*"
+requests-mock = "*"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]

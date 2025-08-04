@@ -10,5 +10,8 @@
   "name": "ManageEngine",
   "uuid": "c894a249-536d-4d73-8412-d922a3399889",
   "version": "1.0.0",
-  "slug": "manage-engine"
+  "slug": "manage-engine",
+  "categories": [
+    "IAM"
+  ]
 }

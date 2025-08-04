@@ -40,5 +40,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "09e9dc3a-aeb2-4dde-ad96-3ee543afdf51"
+  "uuid": "09e9dc3a-aeb2-4dde-ad96-3ee543afdf51",
+  "slug": "download_file"
 }

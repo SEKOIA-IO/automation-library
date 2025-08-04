@@ -390,5 +390,6 @@
       "updated_at",
       "instance_uuid"
     ]
-  }
+  },
+  "slug": "get_rule"
 }

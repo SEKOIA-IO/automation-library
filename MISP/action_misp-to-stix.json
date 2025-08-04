@@ -30,5 +30,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "710c46f9-9984-437e-a6a0-cd28db7978d0"
+  "uuid": "710c46f9-9984-437e-a6a0-cd28db7978d0",
+  "slug": "misp_to_stix"
 }

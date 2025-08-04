@@ -219,5 +219,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "68a93925-d0c3-40e5-98a3-836d4b2e8f5e"
+  "uuid": "68a93925-d0c3-40e5-98a3-836d4b2e8f5e",
+  "slug": "scan_domain"
 }

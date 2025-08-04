@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-07-17 - 1.20.11
+
+### Fixed
+
+- Fix metrics
+
+## 2025-07-17 - 1.20.10
+
+### Fixed
+
+- Fix event lag for the case when 0 events received
+
+## 2025-07-04 - 1.20.9
+
+### Changed
+
+- Update cache size for connector to 10000
+
+## 2025-05-30 - 1.20.8
+
+### Changed
+
+- Split checkpoints by consumer type
+
+## 2025-05-26 - 1.20.7
+
+### Changed
+
+- Allow to define the number of activities and threats to fetch per request
+
+## 2025-05-14 - 1.20.6
+
+### Fixed
+
+- Improve error handling in the connector
+
+## 2025-05-05 - 1.20.5
+
+### Fixed
+
+- Fix small typo on the name
+
+## 2025-05-05 - 1.20.4
+
+### Fixed
+
+- Fix the new verdict problem
+
+## 2025-01-10 - 1.20.3
+
+### Fixed
+
+- Fix caching problem
+
+## 2025-03-03 - 1.20.2
+
+### Fixed
+
+- Fix sentinelone action uppercase arguments problem
+
+
 ## 2025-01-10 - 1.20.1
 
 ### Fixed

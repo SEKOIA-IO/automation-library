@@ -10,5 +10,9 @@
   "name": "Broadcom",
   "uuid": "b58b7f4d-4384-4e30-ad46-cba0c36cdb5e",
   "version": "1.0.0",
-  "slug": "broadcom"
+  "slug": "broadcom",
+  "categories": [
+    "Endpoint",
+    "Network"
+  ]
 }

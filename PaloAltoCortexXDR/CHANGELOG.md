@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-06-13 - 1.3.6
+
+### Fixed
+
+- Fix quarantine action problem
+
+## 2025-06-12 - 1.3.5
+
+### Fixed
+
+- Fix size of hash list problem
+
+## 2025-06-12 - 1.3.4
+
+### Fixed
+
+- Fix some more endpoint problems
+
+## 2025-06-11 - 1.3.3
+
+### Fixed
+
+- Fix duplicate hashes in payload
+- Delete useless line
+
+## 2025-06-11 - 1.3.2
+
+### Fixed
+
+- Fix small typo on query action endpoint
+
+## 2025-06-06 - 1.3.1
+
+### Fixed
+
+- Fix cast class error when running actions
+
+## 2025-05-20 - 1.3.0
+
+### Changed
+
+- Add new actions to the integration
+
+## 2025-03-28 - 1.2.0
+
+### Changed
+
+- If there is only one event within alert, we won't separate them anymore
+
 ## 2024-11-22 - 1.1.4
 
 ### Fixed

@@ -112,5 +112,6 @@
         }
       }
     }
-  }
+  },
+  "slug": "list_detections_for_incident"
 }

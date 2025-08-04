@@ -35,5 +35,6 @@
     "title": "Results",
     "type": "object"
   },
-  "uuid": "77fa2ed4-1b8d-4ea7-9e9f-4485eb6a0699"
+  "uuid": "77fa2ed4-1b8d-4ea7-9e9f-4485eb6a0699",
+  "slug": "isolate_endpoint"
 }

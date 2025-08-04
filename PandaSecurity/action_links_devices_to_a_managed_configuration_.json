@@ -36,5 +36,6 @@
       "device_ids"
     ]
   },
-  "results": {}
+  "results": {},
+  "slug": "link_devices_to_managed_configurations"
 }

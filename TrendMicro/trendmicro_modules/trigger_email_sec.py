@@ -3,7 +3,7 @@ import traceback
 import urllib.parse
 from functools import cached_property
 from threading import Event, Lock, Thread
-from typing import Generator
+from typing import Any, Generator
 
 import orjson
 from pydantic import Field
@@ -76,11 +76,41 @@ class TrendMicroWorker(Thread):
 
         return most_recent_ts_seen
 
+    def get_recent_pushed_events(self) -> list[Any]:
+        self.connector.context_lock.acquire()
+        with self.connector.context as cache:
+            result = cache.get(self.log_type, {}).get("recent_pushed_events", [])
+        self.connector.context_lock.release()
+
+        return result
+
     def set_last_timestamp(self, last_timestamp: int) -> None:
         self.connector.context_lock.acquire()
 
         with self.connector.context as cache:
-            cache[self.log_type] = {"last_timestamp": last_timestamp}
+            if self.log_type not in cache.keys():
+                cache[self.log_type] = {}
+
+            cache[self.log_type]["last_timestamp"] = last_timestamp
+
+        self.connector.context_lock.release()
+
+    @staticmethod
+    def get_event_metadata(event: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "mailID": event.get("mailID"),
+            "messageID": event.get("messageID"),
+            "action": event.get("action"),
+        }
+
+    def set_recent_pushed_events(self, events: list[Any]) -> None:
+        self.connector.context_lock.acquire()
+
+        with self.connector.context as cache:
+            if self.log_type not in cache.keys():
+                cache[self.log_type] = {}
+
+            cache[self.log_type]["recent_pushed_events"] = [self.get_event_metadata(event) for event in events]
 
         self.connector.context_lock.release()
 
@@ -94,7 +124,7 @@ class TrendMicroWorker(Thread):
         url = f"{self.service_url}/api/{self.API_VERSION}/log/mailtrackinglog"
         response = self.client.get(url, params=params, timeout=60)
 
-        if not response.ok:
+        if not response.ok:  # pragma: no cover
             self.log(
                 message=(
                     f"Request on Trend Micro Email Security API to fetch {response.url} "
@@ -146,21 +176,10 @@ class TrendMicroWorker(Thread):
             content = self.request_logs_page(params=params)
 
     def fetch_events(self) -> Generator[list, None, None]:
-        most_recent_timestamp_seen = self.get_last_timestamp()
-
-        for next_events in self.iterate_through_pages(most_recent_timestamp_seen):
-            if next_events:
-                last_event = max(next_events, key=lambda x: iso8601_to_timestamp(x.get("genTime")))
-                last_event_timestamp = iso8601_to_timestamp(last_event.get("genTime"))
-
-                if last_event_timestamp > most_recent_timestamp_seen:
-                    most_recent_timestamp_seen = last_event_timestamp + 1
-                    self.set_last_timestamp(most_recent_timestamp_seen)
-
-                events_lag = int(time.time()) - most_recent_timestamp_seen
-                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
-                    events_lag
-                )
+        for events in self.iterate_through_pages(self.get_last_timestamp()):
+            if events:
+                recent_events = self.get_recent_pushed_events()
+                next_events = [event for event in events if self.get_event_metadata(event) not in recent_events]
 
                 yield next_events
 
@@ -170,19 +189,33 @@ class TrendMicroWorker(Thread):
         # Iterate through batches
         try:
             events = next(self.fetch_events())
+            events_len = len(events)
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
                 self.log(
-                    message=f"{self.log_type}: Forwarded {len(batch_of_events)} events to the intake",
+                    message=f"{self.log_type}: Forwarded {events_len} events to the intake",
                     level="info",
                 )
                 INCOMING_MESSAGES.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
-                    len(batch_of_events)
+                    events_len
                 )
 
                 self.connector.push_events_to_intakes(events=batch_of_events)
+
+                # We should persist the last event timestamp only after pushing the events
+                last_event = max(events, key=lambda x: iso8601_to_timestamp(x.get("genTime")))
+                last_event_timestamp = iso8601_to_timestamp(last_event.get("genTime"))
+                most_recent_timestamp_seen = self.get_last_timestamp()
+                if last_event_timestamp > most_recent_timestamp_seen:
+                    self.set_last_timestamp(last_event_timestamp)
+                events_lag = int(time.time()) - most_recent_timestamp_seen
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).set(
+                    events_lag
+                )
+                # We should cache the list of events that we pushed as well
+                self.set_recent_pushed_events(events)
 
                 OUTCOMING_EVENTS.labels(intake_key=self.connector.configuration.intake_key, type=self.log_type).inc(
                     len(batch_of_events)
@@ -215,7 +248,7 @@ class TrendMicroWorker(Thread):
             )
             time.sleep(delta_sleep)
 
-    def run(self):
+    def run(self):  # pragma: no cover
         self.log(
             message=f"Start fetching `{self.log_type}` logs from Trend Micro Email Security",
             level="info",
@@ -267,7 +300,7 @@ class TrendMicroEmailSecurityConnector(Connector):
                 self.log(message=f"Stopping `{consumer_name}` consumer", level="info")
                 consumer.stop()
 
-    def run(self):
+    def run(self):  # pragma: no cover
         consumers = self.start_consumers()
 
         while self.running:

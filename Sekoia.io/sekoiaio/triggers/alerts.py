@@ -50,6 +50,10 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             if alert["rule"]["name"] != rule_filter and alert["rule"]["uuid"] != rule_filter:
                 return
 
+        if rule_names_filter := self.configuration.get("rule_names_filter"):
+            if alert["rule"]["name"] not in rule_names_filter:
+                return
+
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
         alert_path = work_dir.joinpath("alert.json")
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -196,6 +200,10 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
 
         if rule_filter := self.configuration.get("rule_filter"):
             if alert["rule"]["name"] != rule_filter and alert["rule"]["uuid"] != rule_filter:
+                return
+
+        if rule_names_filter := self.configuration.get("rule_names_filter"):
+            if alert["rule"]["name"] not in rule_names_filter:
                 return
 
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
