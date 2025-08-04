@@ -3,8 +3,21 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Bitdefender",
     "type": "object",
-    "properties": {},
-    "required": []
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "description": "The URL of the Bitdefender GravityZone API endpoint."
+      },
+      "api_key": {
+        "type": "string",
+        "description": "The API key for authenticating with the Bitdefender GravityZone API."
+      }
+    },
+    "required": [
+      "url",
+      "api_key"
+    ]
   },
   "description": "Bitdefender is a global cybersecurity company renowned for its advanced antivirus software, providing comprehensive security solutions and threat intelligence for individuals and enterprises, safeguarding against evolving cyber threats.",
   "name": "Bitdefender",
