@@ -1,16 +1,20 @@
 from abc import ABC
+from functools import cached_property
 from typing import Any
 
 import requests
 from sekoia_automation.action import Action
 
-from .client import TrendMicroVisionApiClient
+from . import TrendMicroVisionOneModule
+from .client import TrendMicroVisionOneApiClient
 
 
 class TrendMicroVisionOneBaseAction(Action, ABC):
-    @staticmethod
-    def get_client(api_key: str) -> TrendMicroVisionApiClient:
-        return TrendMicroVisionApiClient(api_key=api_key)
+    module: TrendMicroVisionOneModule
+
+    @cached_property
+    def client(self) -> TrendMicroVisionOneApiClient:
+        return TrendMicroVisionOneApiClient(api_key=self.module.configuration.api_key)
 
     def process_response(self, response: requests.Response, headers_to_include: list[str] | None = None) -> Any:
         if headers_to_include is None:

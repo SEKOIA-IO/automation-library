@@ -5,29 +5,8 @@
   "docker_parameters": "action_terminate_process",
   "arguments": {
     "type": "object",
-    "required": ["base_url", "api_key", "agent_guids", "file_sha1"],
-    "secrets": ["api_key"],
+    "required": ["agent_guids", "file_sha1"],
     "properties": {
-      "base_url": {
-        "description": "Base URL",
-        "type": "string",
-        "format": "uri",
-        "enum": [
-          "https://api.xdr.trendmicro.com",
-          "https://api.au.xdr.trendmicro.com",
-          "https://api.eu.xdr.trendmicro.com",
-          "https://api.in.xdr.trendmicro.com",
-          "https://api.xdr.trendmicro.co.jp",
-          "https://api.sg.xdr.trendmicro.com",
-          "https://api.mea.xdr.trendmicro.com",
-          "https://api.usgov.xdr.trendmicro.com"
-        ],
-        "default": "https://api.xdr.trendmicro.com"
-      },
-      "api_key": {
-        "description": "Trend Micro api_key",
-        "type": "string"
-      },
       "agent_guids": {
         "description": "The identifiers of the endpoints",
         "type": "array",

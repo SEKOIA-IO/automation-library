@@ -1,0 +1,21 @@
+{
+  "name": "Add alert note",
+  "description": "Add a note to a workbench alert",
+  "uuid": "a5495588-295a-5258-828a-ae72499fd9d9",
+  "docker_parameters": "action_add_alert_note",
+  "arguments": {
+    "type": "object",
+    "required": ["alert_id", "note"],
+    "properties": {
+      "alert_id": {
+        "description": "The identifier of the alert",
+        "type": "string"
+      },
+      "note": {
+        "description": "The content of the note",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}
