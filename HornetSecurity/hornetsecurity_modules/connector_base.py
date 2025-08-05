@@ -104,24 +104,37 @@ class BaseConnector(Connector):
 
     def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
         for start_date, end_date in self.time_stepper.ranges():
+            # save the starting time
+            batch_start_time = time.time()
+
+            nb_events = 0
             for fetched_events in self._fetch_events(start_date, end_date):
                 # fetch events from the current context
                 INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(fetched_events))
 
                 if next_events := remove_duplicates(fetched_events, self.events_cache, self.ID_FIELD):
+                    nb_events += len(next_events)
+
                     # forward current events
                     yield next_events
 
             # save in context the end date of the last batch period
             self.cursor.offset = end_date
 
-    def next_batch(self) -> None:
-        # save the starting time
-        batch_start_time = time.time()
+            # get the ending time and compute the duration to fetch the events
+            batch_end_time = time.time()
+            batch_duration = int(batch_end_time - batch_start_time)
+            self.log(
+                message=f"Fetched {nb_events} events in {batch_duration} seconds",
+                level="info",
+            )
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
+    def next_batch(self) -> None:
         # Fetch next batch
-        batch_of_events = []
         for events in self.fetch_events():
+
+            batch_of_events = []
             # for each fetched event
             for event in events:
                 # add to the batch as json-serialized object
@@ -137,23 +150,14 @@ class BaseConnector(Connector):
                     self.push_events_to_intakes(events=batch_of_events)
                     batch_of_events = []
 
-        # if the last batch is not empty, push it
-        if len(batch_of_events) > 0:
-            self.log(
-                message=f"Forward {len(batch_of_events)} events to the intake",
-                level="info",
-            )
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-            self.push_events_to_intakes(events=batch_of_events)
-
-        # get the ending time and compute the duration to fetch the events
-        batch_end_time = time.time()
-        batch_duration = int(batch_end_time - batch_start_time)
-        self.log(
-            message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
-            level="info",
-        )
-        FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+            # if the last batch is not empty, push it
+            if len(batch_of_events) > 0:
+                self.log(
+                    message=f"Forward {len(batch_of_events)} events to the intake",
+                    level="info",
+                )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                self.push_events_to_intakes(events=batch_of_events)
 
     def run(self) -> None:  # pragma: no cover
         # Start the connector and run the event fetching loop.
