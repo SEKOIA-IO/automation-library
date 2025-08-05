@@ -31,5 +31,5 @@
     "type": "object"
   },
   "uuid": "dfe4a7d4-2a89-4d6d-90d5-a77e055f1146",
-  "slug": "create_isolate_endpoint"
+  "slug": "isolate_endpoint"
 }

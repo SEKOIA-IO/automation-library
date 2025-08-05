@@ -12,7 +12,7 @@
       "locationToRestore": {
         "description": "[Optional] The absolute path to the folder where the items will be restored. If the parameter is not set, the original location will be used.",
         "type": "string",
-        "default": ""
+        "default": null
       },
       "addExclusionInPolicy": {
         "description": "[Optional] If set to True, the restored items will be added to the exclusion list in the policy. Default is False.",
@@ -44,5 +44,5 @@
     "type": "object"
   },
   "uuid": "145ec900-df21-42f6-a6b3-14515a45d0d5",
-  "slug": "restore_quarantine_file"
+  "slug": "restore_quarantined_file"
 }

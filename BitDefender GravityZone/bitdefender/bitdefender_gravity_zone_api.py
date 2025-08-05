@@ -113,7 +113,7 @@ def prepare_scan_endpoint(params: dict) -> dict:
     }
 
 
-def prepare_update_incident_status_endpoint(params: dict) -> dict:
+def prepare_update_incident_status(params: dict) -> dict:
     """
     Prepare the parameters for the update incident status action.
     """
@@ -123,7 +123,7 @@ def prepare_update_incident_status_endpoint(params: dict) -> dict:
     }
 
 
-def prepare_update_incident_note_endpoint(params: dict) -> dict:
+def prepare_update_incident_note(params: dict) -> dict:
     """
     Prepare the parameters for the update incident note action.
     """

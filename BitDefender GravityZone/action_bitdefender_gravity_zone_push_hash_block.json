@@ -40,7 +40,7 @@
   },
   "description": "Push hash blocks from BitDefender GravityZone",
   "docker_parameters": "bitdefender_gravity_zone_push_hash_block",
-  "name": "Push hash blocks",
+  "name": "Block hashes",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -56,5 +56,5 @@
     "type": "object"
   },
   "uuid": "8bde4dd0-d037-4983-8e51-d7e195c21bb5",
-  "slug": "push_hash_blocks"
+  "slug": "block_hashes"
 }

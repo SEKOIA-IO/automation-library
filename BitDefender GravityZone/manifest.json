@@ -7,7 +7,8 @@
       "url": {
         "type": "string",
         "format": "uri",
-        "description": "The URL of the Bitdefender GravityZone API endpoint."
+        "description": "The URL of the Bitdefender GravityZone API endpoint.",
+        "default": "https://cloudgz.gravityzone.bitdefender.com"
       },
       "api_key": {
         "type": "string",
@@ -15,7 +16,6 @@
       }
     },
     "required": [
-      "url",
       "api_key"
     ]
   },

@@ -28,7 +28,6 @@
                 "protocol": {
                   "description": "The protocol to be blocked (e.g., TCP, UDP).",
                   "type": "string",
-                  "enum": ["any","tcp", "udp"],
                   "default": "any"
                 },
                 "direction": {
@@ -38,9 +37,9 @@
                   "default": "both"
                 },
                 "ipVersion": {
-                  "description": "The IP version to be blocked (e.g., IPv4, IPv6).",
+                  "description": "The IP version to be blocked (e.g., IPV4, IPV6).",
                   "type": "string",
-                  "enum": ["any", "ipv4", "ipv6"],
+                  "enum": ["any", "IPV4", "IPV6"],
                   "default": "any"
                 },
                 "localAddress": {
@@ -96,7 +95,7 @@
   },
   "description": "Push connection blocks from BitDefender GravityZone",
   "docker_parameters": "bitdefender_gravity_zone_push_connection_block",
-  "name": "Push connection blocks",
+  "name": "Block connections",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -112,5 +111,5 @@
     "type": "object"
   },
   "uuid": "0c7c3d01-fb35-4e04-b512-9eee1396dc11",
-  "slug": "push_connection_blocks"
+  "slug": "block_connections"
 }

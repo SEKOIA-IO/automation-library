@@ -15,7 +15,7 @@
         "type": "string"
       },
       "status": {
-        "description": "The status to be assigned to the incident.",
+        "description": "The status to be assigned to the incident. Possible values are: 1 - Open, 2 - Investigating, 3 - Closed, 4 - False positive.",
         "type": "integer",
         "enum": [
           1,  
@@ -51,5 +51,5 @@
     "type": "object"
   },
   "uuid": "3bb38802-328d-44fc-b6d0-9f6c9267d609",
-  "slug": "update_status_incident"
+  "slug": "update_incident_status"
 }

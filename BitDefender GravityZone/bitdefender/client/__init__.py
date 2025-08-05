@@ -1,7 +1,7 @@
 import requests
 from requests_ratelimiter import LimiterAdapter
 from urllib3 import Retry
-from .auth import BitdefenderApiAuth
+from requests.auth import HTTPBasicAuth
 
 
 class ApiClient(requests.Session):
@@ -17,7 +17,7 @@ class ApiClient(requests.Session):
         self.instance_url = instance_url
         self.api_key = api_key
 
-        self.auth = BitdefenderApiAuth(api_key)
+        self.auth = HTTPBasicAuth(username=api_key, password="")
         self.mount(
             "https://",
             LimiterAdapter(

@@ -134,5 +134,5 @@
     "type": "object"
   },
   "uuid": "d1c8fc27-62e6-45a5-8183-62cfbf438bd5",
-  "slug": "push_connection_blocks"
+  "slug": "get_blocks"
 }

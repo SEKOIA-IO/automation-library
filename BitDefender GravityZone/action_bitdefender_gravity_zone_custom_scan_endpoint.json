@@ -72,5 +72,5 @@
     "type": "object"
   },
   "uuid": "9f51b882-5b1f-40f9-9cc5-7682f6ba7787",
-  "slug": "create_custom_scan_task"
+  "slug": "custom_scan"
 }

@@ -46,5 +46,5 @@
     "type": "object"
   },
   "uuid": "fc13420d-f96b-4b98-a2de-2ab28898aa86",
-  "slug": "update_status_incident"
+  "slug": "kill_process"
 }

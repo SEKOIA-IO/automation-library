@@ -39,7 +39,7 @@
   },
   "description": "Push path blocks from BitDefender GravityZone",
   "docker_parameters": "bitdefender_gravity_zone_push_path_block",
-  "name": "Push path blocks",
+  "name": "Block Paths",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
@@ -55,5 +55,5 @@
     "type": "object"
   },
   "uuid": "4b5b2921-9a29-414c-9a60-6e985571a55b",
-  "slug": "push_path_blocks"
+  "slug": "block_paths"
 }
