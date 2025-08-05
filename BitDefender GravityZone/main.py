@@ -5,13 +5,11 @@ from bitdefender.actions import (
     DeisolateEndpointAction,
     CustomScanEndpointAction,
     ScanEndpointAction,
-    QuarantineFileAction,
     KillProcessAction,
     UpdateCommentIncidentAction,
     UpdateIncidentStatusAction,
     PushBlockAction,
     RemoveBlockAction,
-    RestoreQuarantineFileAction,
     GetBlockListAction,
 )
 
@@ -21,7 +19,6 @@ if __name__ == "__main__":
     module.register(DeisolateEndpointAction, "bitdefender_gravity_zone_deisolate_endpoint")
     module.register(CustomScanEndpointAction, "bitdefender_gravity_zone_custom_scan_endpoint")
     module.register(ScanEndpointAction, "bitdefender_gravity_zone_scan_endpoint")
-    module.register(QuarantineFileAction, "bitdefender_gravity_quarantine_file")
     module.register(KillProcessAction, "bitdefender_gravity_zone_kill_process")
     module.register(UpdateCommentIncidentAction, "bitdefender_gravity_zone_update_comment_incident")
     module.register(UpdateIncidentStatusAction, "bitdefender_gravity_zone_update_incident_status")
@@ -30,5 +27,4 @@ if __name__ == "__main__":
     module.register(PushBlockAction, "bitdefender_gravity_zone_push_hash_block")
     module.register(PushBlockAction, "bitdefender_gravity_zone_push_path_block")
     module.register(RemoveBlockAction, "bitdefender_gravity_zone_remove_block")
-    module.register(RestoreQuarantineFileAction, "bitdefender_gravity_restore_quarantine_file")
     module.run()
