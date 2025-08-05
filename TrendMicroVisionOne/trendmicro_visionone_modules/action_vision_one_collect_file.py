@@ -1,11 +1,9 @@
 from typing import Any
 
-from . import TrendMicroVisionOneModule
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
 class CollectFileAction(TrendMicroVisionOneBaseAction):
-
     def run(self, arguments: Any) -> Any:
         agent_guids: list[str] = arguments["agent_guids"]
         description: str | None = arguments.get("description")

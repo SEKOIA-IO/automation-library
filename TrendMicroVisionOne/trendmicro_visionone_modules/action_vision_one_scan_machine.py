@@ -1,6 +1,5 @@
 from typing import Any
 
-from . import TrendMicroVisionOneModule
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 

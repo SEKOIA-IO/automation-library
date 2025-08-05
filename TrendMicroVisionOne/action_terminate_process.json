@@ -5,7 +5,7 @@
   "docker_parameters": "action_terminate_process",
   "arguments": {
     "type": "object",
-    "required": ["agent_guids", "file_sha1"],
+    "required": ["agent_guids", "process_id"],
     "properties": {
       "agent_guids": {
         "description": "The identifiers of the endpoints",
@@ -14,6 +14,10 @@
         "items": {
           "type": "string"
         }
+      },
+      "process_id": {
+        "description": "Process ID",
+        "type": "integer"
       },
       "description": {
         "description": "The reason of the action",

@@ -1,12 +1,9 @@
 from typing import Any
 
-from . import TrendMicroVisionOneModule
 from .action_vision_one_base import TrendMicroVisionOneBaseAction
 
 
 class AddAlertNoteAction(TrendMicroVisionOneBaseAction):
-    module: TrendMicroVisionOneModule
-
     def run(self, arguments: Any) -> Any:
         alert_id: list[str] = arguments["alert_id"]
         note: str = arguments["note"]
