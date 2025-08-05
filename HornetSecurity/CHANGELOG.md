@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix the batch system for little batches
+- Fix the batch system for small batches
 
 ## 2025-06-18 - 1.0.2
 
