@@ -97,11 +97,7 @@ class ZscalerAction(Action, ABC):
 
     def post_activate_configuration_changes(self):
         api = self.zia_auth()
-        raw_response = api.activate_status()
-        try:
-            response = raw_response.json()
-        except JSONDecodeError as e:
-            return None
+        response = api.activate_status()
         return response
 
     def list_security_blacklisted_urls(self):
