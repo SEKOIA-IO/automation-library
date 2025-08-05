@@ -12,7 +12,7 @@ from trendmicro_visionone_modules.action_vision_one_update_alert import UpdateAl
 
 
 @pytest.fixture
-def module() -> TrendMicroVisionOneModule:
+def module():
     m = TrendMicroVisionOneModule()
     m.configuration = {
         "base_url": "https://api.eu.xdr.trendmicro.com",
@@ -153,7 +153,7 @@ def test_terminate_process_action(module):
             arguments={
                 "agent_guids": ["171d5516-f91b-41d6-82c0-3096fd6df927"],
                 "description": "Some Description",
-                "file_sha1": "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed",
+                "process_id": "123",
             }
         )
 
