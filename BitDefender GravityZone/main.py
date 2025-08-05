@@ -31,5 +31,4 @@ if __name__ == "__main__":
     module.register(PushBlockAction, "bitdefender_gravity_zone_push_path_block")
     module.register(RemoveBlockAction, "bitdefender_gravity_zone_remove_block")
     module.register(RestoreQuarantineFileAction, "bitdefender_gravity_restore_quarantine_file")
-    module.register()
     module.run()
