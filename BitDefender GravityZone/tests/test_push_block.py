@@ -27,6 +27,7 @@ def test_push_hash_block(symphony_storage):
         assert response is not None
         assert response == {"result": True}
 
+
 def test_push_path_block(symphony_storage):
     module_configuration = {
         "api_key": "token",
@@ -51,6 +52,7 @@ def test_push_path_block(symphony_storage):
         assert response is not None
         assert response == {"result": True}
 
+
 def test_push_connection_block(symphony_storage):
     module_configuration = {
         "api_key": "token",
@@ -68,12 +70,13 @@ def test_push_connection_block(symphony_storage):
         )
         arguments = BlockListModel(
             type="connection",
-            rules=[RuleModel(details=ConnectionModel(ruleName='BlockConnection'))],
+            rules=[RuleModel(details=ConnectionModel(ruleName="BlockConnection"))],
         ).dict(exclude_none=True, by_alias=True)
 
         response = action.run(arguments)
         assert response is not None
         assert response == {"result": True}
+
 
 def test_push_block_error(symphony_storage):
     module_configuration = {
