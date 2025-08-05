@@ -12,69 +12,74 @@
         "type": "array",
         "items": {
           "type": "object",
-          "properties": {
-            "ruleName": {
-              "description": "The name of the connection block rule.",
-              "type": "string"
-            },
-            "commandLine": {
-              "description": "The command line to be blocked.",
-              "type": "string",
-              "default": null
-            },
-            "protocol": {
-              "description": "The protocol to be blocked (e.g., TCP, UDP).",
-              "type": "string",
-              "enum": ["any","tcp", "udp"],
-              "default": "any"
-            },
-            "direction": {
-              "description": "The direction of the connection to be blocked (e.g., inbound, outbound).",
-              "type": "string",
-              "enum": ["both", "inbound", "outbound"],
-              "default": "both"
-            },
-            "ipVersion": {
-              "description": "The IP version to be blocked (e.g., IPv4, IPv6).",
-              "type": "string",
-              "enum": ["any", "ipv4", "ipv6"],
-              "default": "any"
-            },
-            "localAddress": {
-              "description": "The local address to be blocked.",
+          "properties":{
+            "details": {
               "type": "object",
               "properties": {
-                "any": {
-                  "description": "If true, all connections are blocked, regardless of IP address",
-                  "type": "boolean",
-                  "default": true
-                },
-                "ipMask": {
-                  "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
+                "ruleName": {
+                  "description": "The name of the connection block rule.",
                   "type": "string"
                 },
-                "portRange": {
-                  "description": "If a range is used, only connections made through ports between these two values are blocked.",
-                  "type": "string"
-                }
-              }
-            },
-            "remoteAddress": {
-              "description": "The remote address to be blocked.",
-              "type": "object",
-              "properties": {
-                "any": {
-                  "description": "If true, all connections are blocked, regardless of IP address",
-                  "type": "boolean",
-                  "default": true
+                "commandLine": {
+                  "description": "The command line to be blocked.",
+                  "type": "string",
+                  "default": null
                 },
-                "ipMask": {
-                  "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
-                  "type": "string"
+                "protocol": {
+                  "description": "The protocol to be blocked (e.g., TCP, UDP).",
+                  "type": "string",
+                  "enum": ["any","tcp", "udp"],
+                  "default": "any"
                 },
-                "portRange": {
-                  "description": "If a range is used, only connections made through ports between these two values are blocked.",
-                  "type": "string"
+                "direction": {
+                  "description": "The direction of the connection to be blocked (e.g., inbound, outbound).",
+                  "type": "string",
+                  "enum": ["both", "inbound", "outbound"],
+                  "default": "both"
+                },
+                "ipVersion": {
+                  "description": "The IP version to be blocked (e.g., IPv4, IPv6).",
+                  "type": "string",
+                  "enum": ["any", "ipv4", "ipv6"],
+                  "default": "any"
+                },
+                "localAddress": {
+                  "description": "The local address to be blocked.",
+                  "type": "object",
+                  "properties": {
+                    "any": {
+                      "description": "If true, all connections are blocked, regardless of IP address",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "ipMask": {
+                      "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
+                      "type": "string"
+                    },
+                    "portRange": {
+                      "description": "If a range is used, only connections made through ports between these two values are blocked.",
+                      "type": "string"
+                    }
+                  }
+                },
+                "remoteAddress": {
+                  "description": "The remote address to be blocked.",
+                  "type": "object",
+                  "properties": {
+                    "any": {
+                      "description": "If true, all connections are blocked, regardless of IP address",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "ipMask": {
+                      "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
+                      "type": "string"
+                    },
+                    "portRange": {
+                      "description": "If a range is used, only connections made through ports between these two values are blocked.",
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }

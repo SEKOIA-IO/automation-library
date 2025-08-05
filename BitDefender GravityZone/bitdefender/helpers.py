@@ -7,6 +7,8 @@ from .models import (
     PathModel,
     ConnectionModel,
     DetailsModel,
+    RuleModel,
+    BlockListModel,
 )
 
 
@@ -68,6 +70,31 @@ def stix_to_indicators(stix_object, supported_types_map):
 
     return results
 
+
+def parse_push_block(arguments: dict) -> BlockListModel:
+    type = arguments.get("type", "")
+    rules = arguments.get("rules", [])
+    if not type or not rules:
+        raise ValueError("Invalid arguments: 'type' and 'rules' are required")
+    
+    ruleModels = []
+    for rule in rules:
+        details: DetailsModel = DetailsModel()
+        if "details" not in rule:
+            raise ValueError("Invalid rule: 'details' is required")
+        match type:
+            case "hash":
+                details = HashModel(**rule["details"])
+            case "path":
+                details = PathModel(**rule["details"])
+            case "connection":
+                details = ConnectionModel(**rule["details"])
+            case _:
+                raise ValueError(f"Unsupported type: {type}")
+
+        ruleModels.append(RuleModel(details=details))
+
+    return BlockListModel(type=type, rules=ruleModels)
 
 def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
     items = response["result"].get("items", [])

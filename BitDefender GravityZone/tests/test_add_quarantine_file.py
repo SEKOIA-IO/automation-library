@@ -13,7 +13,7 @@ def test_add_quarantine_file(symphony_storage):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
-            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/quarantine/computers",
+            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.1/jsonrpc/quarantine/computers",
             json={"result": True},
             status_code=200,
         )
@@ -37,7 +37,7 @@ def test_add_quarantine_file_error(symphony_storage):
     with requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
-            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/quarantine/computers",
+            "mock://cloudgz.gravityzone.bitdefender.com/api/v1.1/jsonrpc/quarantine/computers",
             json={"error": "Invalid endpoint ID"},
             status_code=400,
         )
@@ -51,5 +51,5 @@ def test_add_quarantine_file_error(symphony_storage):
         except BaseException as e:
             assert (
                 str(e)
-                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.0/jsonrpc/quarantine/computers"
+                == "400 Client Error: None for url: mock://cloudgz.gravityzone.bitdefender.com/api/v1.1/jsonrpc/quarantine/computers"
             )

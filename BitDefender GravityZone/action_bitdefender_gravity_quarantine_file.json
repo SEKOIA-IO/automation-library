@@ -28,8 +28,11 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "result": {
-        "description": "This method returns a Boolean which is True if the operation was successful.",
-        "type": "boolean"
+        "description": "This method returns an array of parent task ids of the created tasks.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "required": [

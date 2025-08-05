@@ -21,7 +21,8 @@ def test_push_block(symphony_storage):
         arguments = BlockListModel(
             type="hash",
             rules=[RuleModel(details=HashModel(algorithm="sha256", hash="abcd1234"))],
-        )
+        ).dict(exclude_none=True, by_alias=True)
+
         response = action.run(arguments)
         assert response is not None
         assert response == {"result": True}
@@ -45,7 +46,7 @@ def test_push_block_error(symphony_storage):
         arguments = BlockListModel(
             type="hash",
             rules=[RuleModel(details=HashModel(algorithm="sha256", hash="abcd1234"))],
-        )
+        ).dict(exclude_none=True, by_alias=True)
         try:
             action.run(arguments)
         except BaseException as e:

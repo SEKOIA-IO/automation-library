@@ -1,4 +1,5 @@
 from functools import cached_property
+import json
 
 from sekoia_automation.action import Action
 from bitdefender.client import ApiClient
@@ -45,6 +46,21 @@ class BitdefenderAction(Action):
             self.log(message=message, level="error")
             response.raise_for_status()
 
+        json_body = json.loads(response.text)
+
+        if "error" in json_body:
+            error_message = json_body["error"].get("message", "Unknown error")
+            error_data = json_body["error"].get("data", {})
+            if error_data:
+                error_message += f" - {error_data}"
+            logger.error(
+                "Bitdefender API returned an error",
+                error=error_message,
+                status_code=response.status_code,
+            )
+            raise ValueError(f"Bitdefender API returned an error: {error_message}")
+        
+
     def execute_request(self, arguments: dict) -> dict:
         """
         Execute the request to the Bitdefender API.
@@ -55,7 +71,6 @@ class BitdefenderAction(Action):
         url = self.get_api_url(arguments["api"])
         response = self.client.post(url, json=arguments["body"])
 
-        if not response.ok:
-            self._handle_response_error(response)
+        self._handle_response_error(response)
 
         return response.json()

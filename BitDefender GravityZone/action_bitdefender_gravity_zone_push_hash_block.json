@@ -13,20 +13,22 @@
         "items": {
           "type": "object",
           "properties": {
-            "algorithm": {
-              "description": "The algorithm used to calculate the hash.",
-              "type": "string"
-            },
-            "hash": {
-              "description": "The hash of the file to be blocked.",
-              "type": "string"
+            "details": {
+              "type" : "object",
+              "properties": {
+                "algorithm": {
+                  "description": "The algorithm used to calculate the hash.",
+                  "type": "string"
+                },
+                "hash": {
+                  "description": "The hash of the file to be blocked.",
+                  "type": "string"
+                }
+              },
+              "required": ["hash", "algorithm"]
             }
           }
-        },
-        "required": [
-          "algorithm",
-          "hash"
-        ]
+        }
       }
     },
     "required": [

@@ -13,10 +13,6 @@
         "default": 30
       }
     },
-    "required": [
-      "page",
-      "perPage"
-    ],
     "title": "Arguments",
     "type": "object"
   },

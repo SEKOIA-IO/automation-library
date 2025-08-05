@@ -28,7 +28,7 @@
               3
             ]
           },
-          "scanPaths": {
+          "scanPath": {
             "description": "A list of paths to scan.",
             "type": "array",
             "items": {
@@ -46,7 +46,6 @@
     },
     "required": [
       "targetIds",
-      "type",
       "customScanSettings"
     ],
     "title": "Arguments",

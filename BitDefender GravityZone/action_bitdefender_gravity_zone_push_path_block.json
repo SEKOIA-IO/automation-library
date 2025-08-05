@@ -13,9 +13,15 @@
         "items": {
           "type": "object",
           "properties": {
-            "path": {
-              "description": "The path of the file to be blocked.",
-              "type": "string"
+            "details": {
+              "type" : "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "The path of the file or directory to block."
+                }
+              },
+              "required": ["path"]
             }
           }
         },

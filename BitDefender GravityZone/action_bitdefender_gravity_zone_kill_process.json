@@ -4,7 +4,7 @@
     "properties": {
       "processId": {
         "description": "The ID of the process to kill.",
-        "type": "string"
+        "type": "integer"
       },
       "path": {
         "description": "The location of the file that starts the process on the endpoint where it is stored.",
@@ -16,7 +16,8 @@
       },
       "incidentId": {
         "description": "[Optional] The ID of the incident generated as a result of this process.",
-        "type": "string"
+        "type": "string",
+        "default": null
       }
     },
     "required": [

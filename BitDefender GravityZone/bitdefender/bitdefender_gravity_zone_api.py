@@ -78,7 +78,7 @@ def prepare_add_quarantine_file_endpoint(params: dict) -> dict:
     Prepare the parameters for the add file to quarantine action.
     """
     return {
-        "api": "api/v1.0/jsonrpc/quarantine/computers",
+        "api": "api/v1.1/jsonrpc/quarantine/computers",
         "body": prepare_request_body("createAddFileToQuarantineTask", params),
     }
 
