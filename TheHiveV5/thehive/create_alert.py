@@ -15,7 +15,7 @@ class TheHiveCreateAlertV5(Action):
             organisation=self.module.configuration["organisation"],
         )
 
-        arg_sekoia_server = arguments["sekoia_base_url"]
+        arg_sekoia_server = arguments.get("sekoia_base_url", "https://app.sekoia.io")
         arg_alert = arguments["alert"]
 
         alert_type = f"{arg_alert['alert_type']['category']}/{arg_alert['alert_type']['value']}"
