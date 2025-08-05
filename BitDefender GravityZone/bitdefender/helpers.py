@@ -76,7 +76,7 @@ def parse_push_block(arguments: dict) -> BlockListModel:
     rules = arguments.get("rules", [])
     if not type or not rules:
         raise ValueError("Invalid arguments: 'type' and 'rules' are required")
-    
+
     ruleModels = []
     for rule in rules:
         details: DetailsModel = DetailsModel()
@@ -95,6 +95,7 @@ def parse_push_block(arguments: dict) -> BlockListModel:
         ruleModels.append(RuleModel(details=details))
 
     return BlockListModel(type=type, rules=ruleModels)
+
 
 def parse_get_block_list_response(response: dict) -> GetBlockListActionResponse:
     items = response["result"].get("items", [])

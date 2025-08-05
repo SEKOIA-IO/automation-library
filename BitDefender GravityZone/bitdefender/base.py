@@ -59,7 +59,6 @@ class BitdefenderAction(Action):
                 status_code=response.status_code,
             )
             raise ValueError(f"Bitdefender API returned an error: {error_message}")
-        
 
     def execute_request(self, arguments: dict) -> dict:
         """
