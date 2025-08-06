@@ -169,7 +169,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             # Bypass the version check for backward compatibility
             # Looks like in some cases version might be missing.
             self.log(
-                "Received event without version specified. Default version is `2`.", level="warning", event=message
+                "Received event without version specified. Expected version is `2`.", level="warning", event=message
             )
         elif str(event_version) != "2":
             self.log(
