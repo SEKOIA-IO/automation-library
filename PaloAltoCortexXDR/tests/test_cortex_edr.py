@@ -36,7 +36,7 @@ def alert_query_2():
             "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 0,
             "search_to": 2,
-            "sort": {"field": "server_creation_time", "keyword": "desc"},
+            "sort": {"field": "creation_time", "keyword": "desc"},
         }
     }
 
@@ -48,7 +48,7 @@ def alert_query_4():
             "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 2,
             "search_to": 4,
-            "sort": {"field": "server_creation_time", "keyword": "desc"},
+            "sort": {"field": "creation_time", "keyword": "desc"},
         }
     }
 

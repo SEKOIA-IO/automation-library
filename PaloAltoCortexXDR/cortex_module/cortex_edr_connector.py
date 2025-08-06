@@ -36,7 +36,7 @@ class CortexQueryEDRTrigger(CortexConnector):
                 "filters": [{"field": "server_creation_time", "operator": "gte", "value": 0}],
                 "search_from": 0,
                 "search_to": 0,
-                "sort": {"field": "server_creation_time", "keyword": "desc"},
+                "sort": {"field": "creation_time", "keyword": "desc"},
             }
         }
         self._timestamp_cursor = 0
