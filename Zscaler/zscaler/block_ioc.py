@@ -25,23 +25,19 @@ class ZscalerAction(Action, ABC):
             raise
 
     def get_valid_indicators_from_list(self, arguments) -> list:
-        try:
-            single_ioc = arguments.get("IoC")
-            multiple_iocs = arguments.get("IoCs")
+        single_ioc = arguments.get("IoC")
+        multiple_iocs = arguments.get("IoCs")
 
-            IOC_list = []
-            if single_ioc:
-                IOC_list.append(single_ioc)
+        IOC_list = []
 
-            if multiple_iocs:
-                IOC_list.extend(multiple_iocs)
+        if single_ioc:
+            IOC_list.append(single_ioc)
 
-            self.log(f"IOC_list to block {IOC_list}")
-            return IOC_list
+        if multiple_iocs:
+            IOC_list.extend(multiple_iocs)
 
-        except Exception as e:
-            self.log(f"Build of IOC list failed: {str(e)}", level="error")
-            return []
+        self.log(f"IOC_list to block {IOC_list}")
+        return IOC_list
 
     def get_valid_indicators_from_stix(self, stix_objects):
         """
@@ -97,11 +93,7 @@ class ZscalerAction(Action, ABC):
 
     def post_activate_configuration_changes(self):
         api = self.zia_auth()
-        raw_response = api.activate_status()
-        try:
-            response = raw_response.json()
-        except JSONDecodeError as e:
-            return None
+        response = api.activate_status()
         return response
 
     def list_security_blacklisted_urls(self):
