@@ -19,7 +19,7 @@
       "cases": {
         "in": "query",
         "type": "boolean",
-        "description": "Get the cases associated with this alert",
+        "description": "Fetch the cases associated with this alert in addition (default: false)",
         "default": false
       }
     },

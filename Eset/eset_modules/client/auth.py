@@ -53,9 +53,13 @@ class EsetProtectApiAuthentication(AuthBase):
                     "username": self.__username,
                     "password": self.__password,
                 },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "3rd-integration": "Sekoia.io",
+                },
                 timeout=60,
             )
+
             response.raise_for_status()
 
             api_credentials: dict = response.json()
@@ -70,4 +74,6 @@ class EsetProtectApiAuthentication(AuthBase):
 
     def __call__(self, request):
         request.headers["Authorization"] = self.get_credentials().authorization
+        request.headers["3rd-integration"] = "Sekoia.io"
+
         return request
