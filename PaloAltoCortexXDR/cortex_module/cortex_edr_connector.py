@@ -33,7 +33,7 @@ class CortexQueryEDRTrigger(CortexConnector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.query: Dict[str, Any] = {
             "request_data": {
-                "filters": [{"field": "creation_time", "operator": "gte", "value": 0}],
+                "filters": [{"field": "server_creation_time", "operator": "gte", "value": 0}],
                 "search_from": 0,
                 "search_to": 0,
                 "sort": {"field": "creation_time", "keyword": "desc"},
@@ -100,13 +100,15 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         return combined_data
 
-    def get_alerts_events_by_offset(self, offset: int, creation_time: int, pagination: int) -> Tuple[int, List[Any]]:
+    def get_alerts_events_by_offset(
+        self, offset: int, server_creation_time: int, pagination: int
+    ) -> Tuple[int, List[Any]]:
         """Requests the Cortex API using the offset"""
 
-        search_from, serch_to = offset, offset + pagination
+        search_from, search_to = offset, offset + pagination
         self.query["request_data"]["search_from"] = search_from
-        self.query["request_data"]["search_to"] = serch_to
-        self.query["request_data"]["filters"][0]["value"] = creation_time
+        self.query["request_data"]["search_to"] = search_to
+        self.query["request_data"]["filters"][0]["value"] = server_creation_time
 
         # Get the alerts
         response = self.client.post(url=self.alert_url, json=self.query)
