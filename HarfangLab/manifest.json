@@ -29,5 +29,6 @@
   "version": "1.28.2",
   "categories": [
     "Endpoint"
-  ]
+  ],
+  "supports_validation": true
 }
