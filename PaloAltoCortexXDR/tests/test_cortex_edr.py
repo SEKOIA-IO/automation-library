@@ -375,3 +375,32 @@ def test_splitting_events(trigger, alert_response_4):
         '"detection_timestamp":1705912200}',
         '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}',
     ]
+
+
+@freeze_time("2024-01-23 10:00:00")
+def test_external_id_cache_prevents_duplicates(trigger, alert_response_2, alert_query_2):
+    """
+    First call with these two alerts should return them.
+    A second call with the same external_ids should yield (0, []).
+    """
+    fqdn = trigger.module.configuration.fqdn
+    alert_url = f"https://api-{fqdn}/public_api/v1/alerts/get_alerts_multi_events"
+
+    with requests_mock.Mocker() as mock:
+        # Always return the same two-alert response
+        mock.post(
+            alert_url,
+            status_code=200,
+            json=alert_response_2,
+            additional_matcher=lambda req: req.json() == alert_query_2,
+        )
+
+        # First fetch: we expect 2 alerts back
+        total1, events1 = trigger.get_alerts_events_by_offset(0, trigger.timestamp_cursor, 2)
+        assert total1 == 2
+        assert isinstance(events1, list) and len(events1) == 2
+
+        # Second fetch with the same batch: should be filtered out by the cache
+        total2, events2 = trigger.get_alerts_events_by_offset(0, trigger.timestamp_cursor, 2)
+        assert total2 == 0
+        assert events2 == []
