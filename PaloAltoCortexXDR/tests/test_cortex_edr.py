@@ -33,10 +33,10 @@ def trigger(module, symphony_storage):
 def alert_query_2():
     return {
         "request_data": {
-            "filters": [{"field": "creation_time", "operator": "gte", "value": 1706003700}],
+            "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 0,
             "search_to": 2,
-            "sort": {"field": "creation_time", "keyword": "desc"},
+            "sort": {"field": "server_creation_time", "keyword": "desc"},
         }
     }
 
@@ -45,10 +45,10 @@ def alert_query_2():
 def alert_query_4():
     return {
         "request_data": {
-            "filters": [{"field": "creation_time", "operator": "gte", "value": 1706003700}],
+            "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 2,
             "search_to": 4,
-            "sort": {"field": "creation_time", "keyword": "desc"},
+            "sort": {"field": "server_creation_time", "keyword": "desc"},
         }
     }
 
