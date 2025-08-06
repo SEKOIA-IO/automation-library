@@ -174,7 +174,7 @@ class _SEKOIANotificationBaseTrigger(Trigger):
         elif str(event_version) != "2":
             self.log(
                 f"Received event with version that cannot be handled by the trigger."
-                + f" Supported version is `2`, but received version is `{event_version}`",
+                + f" Expected version is `2`, but received version is `{event_version}`",
                 level="error",
                 event=message,
             )
