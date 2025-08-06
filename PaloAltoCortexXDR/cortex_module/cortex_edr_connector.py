@@ -100,7 +100,9 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         return combined_data
 
-    def get_alerts_events_by_offset(self, offset: int, server_creation_time: int, pagination: int) -> Tuple[int, List[Any]]:
+    def get_alerts_events_by_offset(
+        self, offset: int, server_creation_time: int, pagination: int
+    ) -> Tuple[int, List[Any]]:
         """Requests the Cortex API using the offset"""
 
         search_from, serch_to = offset, offset + pagination
