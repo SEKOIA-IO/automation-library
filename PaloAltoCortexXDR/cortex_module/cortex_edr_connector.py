@@ -121,7 +121,16 @@ class CortexQueryEDRTrigger(CortexConnector):
         alerts = response_query.get("alerts") or []
         combined_data = self.split_alerts_events(alerts)
 
-        return response_query["total_count"], combined_data
+        with self.context as cache:
+            last_id = cache.get("_last_alert_external_id")
+            ext_id = alerts[0].get("external_id")
+            if last_id and ext_id == last_id:
+                # no new alerts since last run
+                return 0, []
+            else:
+                # new alerts found
+                cache["_last_alert_external_id"] = ext_id
+            return response_query["total_count"], combined_data
 
     def get_all_alerts(self, pagination: int) -> None:
         """Get all Cortex alerts from the API"""
