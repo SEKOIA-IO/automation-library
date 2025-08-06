@@ -105,9 +105,9 @@ class CortexQueryEDRTrigger(CortexConnector):
     ) -> Tuple[int, List[Any]]:
         """Requests the Cortex API using the offset"""
 
-        search_from, serch_to = offset, offset + pagination
+        search_from, search_to = offset, offset + pagination
         self.query["request_data"]["search_from"] = search_from
-        self.query["request_data"]["search_to"] = serch_to
+        self.query["request_data"]["search_to"] = search_to
         self.query["request_data"]["filters"][0]["value"] = server_creation_time
 
         # Get the alerts
