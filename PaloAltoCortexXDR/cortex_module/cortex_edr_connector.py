@@ -44,10 +44,10 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         # This cache should be big enough to cover all events within 1 second.
         self.cache_size = 10_000
-        self.alerts_cache: Cache = self.load_alerts_cache()
+        self.alerts_cache: Cache[str, bool] = self.load_alerts_cache()
 
-    def load_alerts_cache(self) -> Cache:
-        result: LRUCache = LRUCache(maxsize=self.cache_size)
+    def load_alerts_cache(self) -> Cache[str, bool]:
+        result: LRUCache[str, bool] = LRUCache(maxsize=self.cache_size)
 
         with self.context as cache:
             events_ids = cache.get("alerts", [])
