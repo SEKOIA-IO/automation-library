@@ -6,19 +6,24 @@
   "slug": "kill_process",
   "arguments": {
     "type": "object",
-    "required": ["agent_guids", "process_id"],
+    "required": ["agent_guids_process_ids"],
     "properties": {
-      "agent_guids": {
-        "description": "The identifiers of the endpoints",
-        "type": "array",
+      "agent_guids_process_ids": {
+        "description": "Agent GUIDs and process IDs",
         "minItems": 1,
         "items": {
-          "type": "string"
+          "type": "object",
+          "properties": {
+            "agent_guid": {
+              "description": "Agent GUID",
+              "type": "string"
+            },
+            "process_id": {
+              "description": "Process ID",
+              "type": "integer"
+            }
+          }
         }
-      },
-      "process_id": {
-        "description": "Process ID",
-        "type": "integer"
       },
       "description": {
         "description": "The reason of the action",

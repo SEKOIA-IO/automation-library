@@ -6,7 +6,7 @@
   "slug": "update_alert",
   "arguments": {
     "type": "object",
-    "required": ["alert_id", "status", "investigation_result"],
+    "required": ["alert_id"],
     "secrets": ["api_key"],
     "properties": {
       "alert_id": {
