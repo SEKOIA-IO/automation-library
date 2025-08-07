@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2025-07-30 - 2.68.4
 
+### Added
+
+- Add debugging logs in triggers
+
 ### Fixed
 
 - Handle empty `version` in `metadata`.
