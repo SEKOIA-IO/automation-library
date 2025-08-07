@@ -1,14 +1,11 @@
 import hashlib
 import os
-
 from unittest.mock import Mock, call, patch
 
 import pytest
 import requests_mock
 
-
 from cortex_module.actions.action_block_malicious_files import BlockMaliciousFilesAction, BlockMaliciousFilesArguments
-
 
 STIX_OBJECT_FILE_HASH = {
     "lang": "en",

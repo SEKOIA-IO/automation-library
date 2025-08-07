@@ -11,6 +11,7 @@ sekoia-automation-sdk = { version="^1.13.0", extras=["all"] }
 requests-ratelimiter = "^0.4.2"
 freezegun = "^1.4.0"
 stix2-patterns = "^2.0.0"
+cachetools = "^6.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
