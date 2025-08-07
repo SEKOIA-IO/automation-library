@@ -1,0 +1,35 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "endpointId": {
+        "description": "The ID of the endpoint to be isolated.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "endpointId"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Isolate an endpoint",
+  "docker_parameters": "bitdefender_gravity_zone_isolate_endpoint",
+  "name": "Isolate an endpoint",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "dfe4a7d4-2a89-4d6d-90d5-a77e055f1146",
+  "slug": "isolate_endpoint"
+}

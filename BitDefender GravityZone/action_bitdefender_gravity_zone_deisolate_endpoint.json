@@ -1,0 +1,35 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "endpointId": {
+        "description": "The ID of the endpoint to be deisolated.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "endpointId"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Deisolate an endpoint",
+  "docker_parameters": "bitdefender_gravity_zone_deisolate_endpoint",
+  "name": "Deisolate an endpoint",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "0b504757-0351-409f-99f3-6a5dad24c2bb",
+  "slug": "deisolate_endpoint"
+}

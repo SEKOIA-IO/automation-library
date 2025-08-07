@@ -1,0 +1,138 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "page": {
+        "description": "The current page.",
+        "type": "integer",
+        "default": 1
+      },
+      "perPage": {
+        "description": "The number of items to return per page.",
+        "type": "integer",
+        "default": 30
+      }
+    },
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Get blocked items from BitDefender GravityZone",
+  "docker_parameters": "bitdefender_gravity_zone_get_block_list",
+  "name": "Get blocked items",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "",
+        "type": "object",
+        "properties": {
+          "total": {
+            "description": "The total number of items.",
+            "type": "integer"
+          },
+          "page": {
+            "description": "The current page number.",
+            "type": "integer"
+          },
+          "perPage": {
+            "description": "The number of items per page.",
+            "type": "integer"
+          },
+          "pagesCount": {
+            "description": "The total number of pages.",
+            "type": "integer"
+          },
+          "items": {
+            "description": "The list of blocked items.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "The type of the block (e.g., 'ip', 'domain')."
+                },
+                "id": {
+                  "type": "string",
+                  "description": "The unique identifier for the blocked item."
+                },
+                "details": {
+                  "type": "array",
+                  "description": "Details about the blocked item.",
+                  "items": {
+                    "type": "object",
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "algorithm": {
+                            "type": "string",
+                            "description": "Hash algorithm."
+                          },
+                          "hash": {
+                            "type": "string",
+                            "description": "Hash value of the file."
+                          }
+                        }
+                      },
+                      {
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "description": "File path."
+                          }
+                        }
+                      },
+                      {
+                        "properties":{
+                          "ruleName": {
+                            "type": "string",
+                            "description": "Name of the rule that triggered the block."
+                          },
+                          "commandLine": {
+                            "type": "string",
+                            "description": "Command line that was executed."
+                          },
+                          "protocol": {
+                            "type": "string",
+                            "description": "Network protocol used."
+                          },
+                          "direction": {
+                            "type": "string",
+                            "description": "Direction of the network traffic (e.g., 'inbound', 'outbound')."
+                          },
+                          "ipVersion": {
+                            "type": "string",
+                            "description": "IP version (e.g., 'IPv4', 'IPv6')."
+                          },
+                          "localAddress": {
+                            "type": "object",
+                            "description": "Local IP address involved in the connection."
+                          },
+                          "remoteAddress": {
+                            "type": "object",
+                            "description": "Remote IP address involved in the connection."
+                          },
+                          "directlyConnected": {
+                            "type": "object",
+                            "description": "Indicates if the connection was directly connected."
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        } 
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "d1c8fc27-62e6-45a5-8183-62cfbf438bd5",
+  "slug": "get_blocks"
+}

@@ -1,0 +1,57 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "targetIds": {
+        "description": "A list with the IDs of the targets to scan. The target ID can designate an endpoint or a container.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "type": {
+        "description": "The type of scan.",
+        "type": "integer",
+        "enum": [
+          1,  
+          2,  
+          3  
+        ],
+        "default": 1 
+      },
+      "returnAllTaskIds": {
+        "description": "If set to true, the method will return all task IDs created by the scan. If set to false, it will return only the first task ID.",
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "required": [
+      "targetIds",
+      "type"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Create a new task scan",
+  "docker_parameters": "bitdefender_gravity_zone_scan_endpoint",
+  "name": "Create a new task scan",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns the ID of the newly created task or a boolean value which is true if the creation of the task was successful.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "834a8963-cabc-4c67-8b35-75141c153a59",
+  "slug": "scan"
+}

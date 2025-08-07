@@ -1,0 +1,60 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "type": {
+        "description": "The type of block to be push.",
+        "type": "string",
+        "default": "hash",
+        "readonly": true
+      },
+      "rules": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "details": {
+              "type" : "object",
+              "properties": {
+                "algorithm": {
+                  "description": "The algorithm used to calculate the hash.",
+                  "type": "string"
+                },
+                "hash": {
+                  "description": "The hash of the file to be blocked.",
+                  "type": "string"
+                }
+              },
+              "required": ["hash", "algorithm"]
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "type",
+      "rules"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Push hash blocks from BitDefender GravityZone",
+  "docker_parameters": "bitdefender_gravity_zone_push_hash_block",
+  "name": "Block hashes",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "8bde4dd0-d037-4983-8e51-d7e195c21bb5",
+  "slug": "block_hashes"
+}

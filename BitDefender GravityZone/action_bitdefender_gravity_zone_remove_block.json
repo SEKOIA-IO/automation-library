@@ -1,0 +1,38 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "ids": {
+        "description": "List of block IDs to be removed.",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "ids"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Remove blocks from BitDefender GravityZone",
+  "docker_parameters": "bitdefender_gravity_zone_remove_block",
+  "name": "Remove blocks",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "19c2e8c3-e2fb-4d86-8b91-fb64cd5100eb",
+  "slug": "remove_blocks"
+}
