@@ -3,6 +3,7 @@
   "description": "Terminate a process that is running on a list of endpoints",
   "uuid": "903e85fd-05d6-524e-941d-adfaff02cb8c",
   "docker_parameters": "action_terminate_process",
+  "slug": "kill_process",
   "arguments": {
     "type": "object",
     "required": ["agent_guids", "process_id"],

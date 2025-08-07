@@ -3,6 +3,7 @@
   "description": "Update the status of an alert",
   "uuid": "acbd08cc-e2d0-5a73-bbaf-ba7c6063c157",
   "docker_parameters": "action_update_alert",
+  "slug": "update_alert",
   "arguments": {
     "type": "object",
     "required": ["alert_id", "status", "investigation_result"],

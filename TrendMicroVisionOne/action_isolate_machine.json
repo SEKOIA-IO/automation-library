@@ -3,6 +3,7 @@
   "description": "Isolate a list of endpoints from the network",
   "uuid": "0f3f204b-58e3-5c38-a1c6-db1ec6eb4745",
   "docker_parameters": "action_isolate_machine",
+  "slug": "isolate_endpoints",
   "arguments": {
     "type": "object",
     "required": ["agent_guids"],

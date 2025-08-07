@@ -3,6 +3,7 @@
   "description": "Initialize a scan on the endpoints",
   "uuid": "dc8e5ee0-3bd7-57d7-bcf2-e9f313353d3c",
   "docker_parameters": "action_scan_machine",
+  "slug": "scan",
   "arguments": {
     "type": "object",
     "required": ["agent_guids"],

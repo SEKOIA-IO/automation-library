@@ -3,6 +3,7 @@
   "description": "Collect a file from a list of endpoints and send it to TrendMicro VisionOne",
   "uuid": "2ef8e6cf-9fcb-5b93-8292-34a66012e717",
   "docker_parameters": "action_collect_file",
+  "slug": "collect_file",
   "arguments": {
     "type": "object",
     "required": ["agent_guids", "file_path"],

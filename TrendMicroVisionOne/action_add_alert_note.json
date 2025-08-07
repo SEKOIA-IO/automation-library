@@ -3,6 +3,7 @@
   "description": "Add a note to a workbench alert",
   "uuid": "a5495588-295a-5258-828a-ae72499fd9d9",
   "docker_parameters": "action_add_alert_note",
+  "slug": "comment_alert",
   "arguments": {
     "type": "object",
     "required": ["alert_id", "note"],

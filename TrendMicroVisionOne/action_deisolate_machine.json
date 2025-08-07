@@ -3,6 +3,7 @@
   "description": "Restores the network connectivity of the endpoints",
   "uuid": "ef06e7c3-de9d-55ab-b250-d550aee579d3",
   "docker_parameters": "action_deisolate_machine",
+  "slug": "deisolate_endpoints",
   "arguments": {
     "type": "object",
     "required": ["agent_guids"],
