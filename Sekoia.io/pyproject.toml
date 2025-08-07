@@ -15,6 +15,7 @@ ujson = "*"
 websocket-client = "*"
 gevent = "*"
 orjson = "*"
+structlog = "^25.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
