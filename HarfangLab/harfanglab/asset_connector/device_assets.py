@@ -135,7 +135,7 @@ class HarfanglabAssetConnector(AssetConnector):
         )
 
     def __fetch_devices(self, from_date: str | None) -> Generator[list[dict[str, Any]], None, None]:
-        self.log("Start fetching devices from Harfanglab API", level="debug")
+        self.log("Start fetching devices from Harfanglab API", level="info")
 
         devices_url = urljoin(self.base_url, self.AGENT_ENDPOINT)
 
@@ -153,7 +153,7 @@ class HarfanglabAssetConnector(AssetConnector):
         while self.running:
             devices = device_response.json()
 
-            self.log(f"Fetched {devices.get('count', 0)} device assets from Harfanglab API", level="debug")
+            self.log(f"Fetched {devices.get('count', 0)} device assets from Harfanglab API", level="info")
             # Check if there are no devices or if the count is zero
             # This is to handle the case where there are no devices returned
             if not devices or devices.get("count") == 0:
@@ -174,7 +174,7 @@ class HarfanglabAssetConnector(AssetConnector):
         orig_date: datetime | None = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
         max_date: datetime | None = None
 
-        self.log("Start looping through devices from Harfanglab API", level="debug")
+        self.log("Start looping through devices from Harfanglab API", level="info")
         for devices in self.__fetch_devices(from_date=self.most_recent_date_seen):
             if not devices:
                 continue
@@ -192,13 +192,13 @@ class HarfanglabAssetConnector(AssetConnector):
         if max_date and (orig_date is None or max_date > orig_date):
             self.log(
                 f"Finished fetching devices from Harfanglab API and found a new most recent date: {max_date.isoformat()}",
-                level="debug"
+                level="info",
             )
             with self.context as cache:
                 cache["most_recent_date_seen"] = max_date.isoformat()
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
-        self.log("Start the getting assets generator !!", level="debug")
+        self.log("Start the getting assets generator !!", level="info")
         for devices in self.next_list_devices():
             for device in devices:
                 mapped_device: DeviceOCSFModel = self.map_fields(device)
