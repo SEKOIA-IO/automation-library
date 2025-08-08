@@ -190,7 +190,9 @@ class HarfanglabAssetConnector(AssetConnector):
             yield devices
 
         if max_date and (orig_date is None or max_date > orig_date):
-            self.log(f"Finished fetching devices from Harfanglab API and found a new most recent date: {max_date.isoformat()}")
+            self.log(
+                f"Finished fetching devices from Harfanglab API and found a new most recent date: {max_date.isoformat()}"
+            )
             with self.context as cache:
                 cache["most_recent_date_seen"] = max_date.isoformat()
 
