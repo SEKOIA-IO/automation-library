@@ -1,0 +1,36 @@
+{
+  "name": "Update alert status",
+  "description": "Update the status of an alert",
+  "uuid": "acbd08cc-e2d0-5a73-bbaf-ba7c6063c157",
+  "docker_parameters": "action_update_alert",
+  "slug": "update_alert",
+  "arguments": {
+    "type": "object",
+    "required": ["alert_id"],
+    "secrets": ["api_key"],
+    "properties": {
+      "alert_id": {
+        "description": "The identifier of the alert to update",
+        "type": "string"
+      },
+      "status": {
+        "description": "The new status of the alert",
+        "type": "string",
+        "enum": ["Open", "In Progress", "Closed"]
+      },
+      "investigation_result": {
+        "description": "The result of the investigation",
+        "type": "string",
+        "enum": [
+          "No findings",
+          "Noteworthy",
+          "True Positive",
+          "False Positive",
+          "Benign True Positive",
+          "Other Findings"
+        ]
+      }
+    }
+  },
+  "results": {}
+}

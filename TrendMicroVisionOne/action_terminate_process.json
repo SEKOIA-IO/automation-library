@@ -1,0 +1,43 @@
+{
+  "name": "Terminate a process",
+  "description": "Terminate a process that is running on a list of endpoints",
+  "uuid": "903e85fd-05d6-524e-941d-adfaff02cb8c",
+  "docker_parameters": "action_terminate_process",
+  "slug": "kill_process",
+  "arguments": {
+    "type": "object",
+    "required": ["agent_guids_process_ids"],
+    "properties": {
+      "agent_guids_process_ids": {
+        "description": "Agent GUIDs and process IDs",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "agent_guid": {
+              "description": "Agent GUID",
+              "type": "string"
+            },
+            "process_id": {
+              "description": "Process ID",
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "description": {
+        "description": "The reason of the action",
+        "type": "string"
+      },
+      "file_sha1": {
+        "description": "The SHA-1 hash of the executable file of the process to terminate",
+        "type": "string"
+      },
+      "file_name": {
+        "description": "The Filename of the response task target",
+        "type": "string"
+      }
+    }
+  },
+  "results": {}
+}
