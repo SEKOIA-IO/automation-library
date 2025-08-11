@@ -9,7 +9,6 @@ from harfanglab.client import ApiClient
 from harfanglab.helpers import handle_uri
 
 
-
 class HarfanglabCredentialsTimeoutError(Exception):
     pass
 
@@ -31,7 +30,7 @@ class HarfanglabAccountValidator(AccountValidator):
         check_cred_url = urljoin(self.base_url, self.AUTHENTICATION_ENDPOINT)
         params: dict = {}
 
-        try :
+        try:
             check_cred_response = self.client.get(check_cred_url, params=params, timeout=self.TIMEOUT)
             check_cred_response.raise_for_status()
             return check_cred_response.json(), check_cred_response.status_code
