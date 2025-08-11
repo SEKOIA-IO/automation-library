@@ -22,7 +22,7 @@
   "description": "Bitdefender is a global cybersecurity company renowned for its advanced antivirus software, providing comprehensive security solutions and threat intelligence for individuals and enterprises, safeguarding against evolving cyber threats.",
   "name": "Bitdefender GravityZone",
   "uuid": "4d874ec5-0927-4f8a-9a47-61d0b8b995b1",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "slug": "bitdefender_gravityzone",
   "categories": [
     "Endpoint"
