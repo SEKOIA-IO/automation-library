@@ -84,8 +84,8 @@
                   "description": "If enabled, the rule applies only to connections to or from specific Mac addresses.",
                   "type": "object",
                   "properties": {
-                    "any": {
-                      "description": "Indicates if this option is enabled.",
+                    "enable": {
+                      "description": "If enabled, the rule applies only to connections to or from specific Mac addresses.",
                       "type": "boolean",
                       "default": false
                     },
