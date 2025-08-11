@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-08 - 1.28.4
+
+### Added
+
+- Add timeout exception to the credential validator
+
 ## 2025-08-08 - 1.28.3
 
 ### Added
