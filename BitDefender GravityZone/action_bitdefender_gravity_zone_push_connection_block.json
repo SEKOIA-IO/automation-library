@@ -79,6 +79,21 @@
                       "type": "string"
                     }
                   }
+                },
+                "directlyConnected": {
+                  "description": "If enabled, the rule applies only to connections to or from specific Mac addresses.",
+                  "type": "object",
+                  "properties": {
+                    "any": {
+                      "description": "Indicates if this option is enabled.",
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "remoteMac": {
+                      "description": "Only connections from the specified Mac addresses are allowed.",
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
