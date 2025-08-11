@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-08 - 1.6.2
+
+### Changed
+
+- Moved VisionOne to a separate automation module
+
 ## 2025-04-02 - 1.6.1
 
 ### Changed
