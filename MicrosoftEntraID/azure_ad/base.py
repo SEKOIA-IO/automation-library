@@ -4,7 +4,7 @@ from azure.identity.aio import ClientSecretCredential  # async credentials only
 from azure.identity import UsernamePasswordCredential
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
-from pydantic import BaseModel, Field, root_validator
+from pydantic.v1 import BaseModel, Field, root_validator
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
