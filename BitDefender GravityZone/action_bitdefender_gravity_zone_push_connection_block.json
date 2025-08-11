@@ -47,16 +47,16 @@
                   "type": "object",
                   "properties": {
                     "any": {
-                      "description": "If true, all connections are blocked, regardless of IP address",
+                      "description": "If set to true, all local connections are blocked, regardless of IP address.",
                       "type": "boolean",
                       "default": true
                     },
                     "ipMask": {
-                      "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
+                      "description": "If any set to false, only connections to or from the local addresses specified under this setting are blocked.",
                       "type": "string"
                     },
                     "portRange": {
-                      "description": "If a range is used, only connections made through ports between these two values are blocked.",
+                      "description": "If a range is used, only local connections made through ports between these two values are blocked.",
                       "type": "string"
                     }
                   }
@@ -66,16 +66,16 @@
                   "type": "object",
                   "properties": {
                     "any": {
-                      "description": "If true, all connections are blocked, regardless of IP address",
+                      "description": "If set to true, all remote connections are blocked, regardless of IP address.",
                       "type": "boolean",
                       "default": true
                     },
                     "ipMask": {
-                      "description": "If any = false, only connections to or from the addresses specified under this setting are blocked.",
+                      "description": "If any set to false, only connections to or from the remote addresses specified under this setting are blocked.",
                       "type": "string"
                     },
                     "portRange": {
-                      "description": "If a range is used, only connections made through ports between these two values are blocked.",
+                      "description": "If a range is used, only remote connections made through ports between these two values are blocked.",
                       "type": "string"
                     }
                   }
@@ -84,13 +84,13 @@
                   "description": "If enabled, the rule applies only to connections to or from specific Mac addresses.",
                   "type": "object",
                   "properties": {
-                    "any": {
-                      "description": "Indicates if this option is enabled.",
+                    "enable": {
+                      "description": "If enabled, the rule applies only to connections to or from specific Mac addresses. For Directly connected",
                       "type": "boolean",
                       "default": false
                     },
                     "remoteMac": {
-                      "description": "Only connections from the specified Mac addresses are allowed.",
+                      "description": "Only connections from the specified Mac addresses are allowed. For Directly connected",
                       "type": "string"
                     }
                   }
