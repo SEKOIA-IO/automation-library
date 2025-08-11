@@ -47,16 +47,16 @@
                   "type": "object",
                   "properties": {
                     "any": {
-                      "description": "If true, all connections are blocked, regardless of IP address. For Local address",
+                      "description": "If set to true, all local connections are blocked, regardless of IP address.",
                       "type": "boolean",
                       "default": true
                     },
                     "ipMask": {
-                      "description": "If any = false, only connections to or from the addresses specified under this setting are blocked. For Local address",
+                      "description": "If any = false, only connections to or from the local addresses specified under this setting are blocked.",
                       "type": "string"
                     },
                     "portRange": {
-                      "description": "If a range is used, only connections made through ports between these two values are blocked. For Local address",
+                      "description": "If a range is used, only local connections made through ports between these two values are blocked.",
                       "type": "string"
                     }
                   }
@@ -66,16 +66,16 @@
                   "type": "object",
                   "properties": {
                     "any": {
-                      "description": "If true, all connections are blocked, regardless of IP address. For Remote address",
+                      "description": "If true, all remote connections are blocked, regardless of IP address.",
                       "type": "boolean",
                       "default": true
                     },
                     "ipMask": {
-                      "description": "If any = false, only connections to or from the addresses specified under this setting are blocked. For Remote address",
+                      "description": "If any = false, only connections to or from the remote addresses specified under this setting are blocked.",
                       "type": "string"
                     },
                     "portRange": {
-                      "description": "If a range is used, only connections made through ports between these two values are blocked. For Remote address",
+                      "description": "If a range is used, only remote connections made through ports between these two values are blocked.",
                       "type": "string"
                     }
                   }
