@@ -151,7 +151,9 @@ def test_terminate_process_action(module):
         action = TerminateProcessAction(module)
         action.run(
             arguments={
-                "agent_guids_process_ids": [{"agent_guid": "171d5516-f91b-41d6-82c0-3096fd6df927", "process_id": 123}],
+                "agent_guid": "171d5516-f91b-41d6-82c0-3096fd6df927",
+                "process_id": 123,
+                "file_name": "virus.exe",
                 "description": "Some Description",
             }
         )
