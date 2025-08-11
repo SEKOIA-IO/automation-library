@@ -52,7 +52,7 @@
                       "default": true
                     },
                     "ipMask": {
-                      "description": "If any = false, only connections to or from the local addresses specified under this setting are blocked.",
+                      "description": "If any set to false, only connections to or from the local addresses specified under this setting are blocked.",
                       "type": "string"
                     },
                     "portRange": {
@@ -66,12 +66,12 @@
                   "type": "object",
                   "properties": {
                     "any": {
-                      "description": "If true, all remote connections are blocked, regardless of IP address.",
+                      "description": "If set to true, all remote connections are blocked, regardless of IP address.",
                       "type": "boolean",
                       "default": true
                     },
                     "ipMask": {
-                      "description": "If any = false, only connections to or from the remote addresses specified under this setting are blocked.",
+                      "description": "If any set to false, only connections to or from the remote addresses specified under this setting are blocked.",
                       "type": "string"
                     },
                     "portRange": {
