@@ -135,7 +135,7 @@ class HarfanglabAssetConnector(AssetConnector):
         )
 
     def __fetch_devices(self, from_date: str | None) -> Generator[list[dict[str, Any]], None, None]:
-        self.log("Start fetching devices from Harfanglab API", level="info")
+        self.log(f"Start fetching devices from Harfanglab API from date {from_date}", level="info")
 
         devices_url = urljoin(self.base_url, self.AGENT_ENDPOINT)
 
