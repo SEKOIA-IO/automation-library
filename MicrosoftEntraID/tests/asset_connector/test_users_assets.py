@@ -29,12 +29,14 @@ def test_entra_id_asset_connector(symphony_storage):
 
     yield test_entra_id_asset_connector
 
+
 def mock_graph_service_client():
     """
     Returns a mock GraphServiceClient with users.get() async method returning a mock response.
     """
     mock_client = MagicMock()
     return mock_client
+
 
 def mock_graph_service_client_for_users(mock_client, mock_user_list):
     """
@@ -44,6 +46,7 @@ def mock_graph_service_client_for_users(mock_client, mock_user_list):
     mock_users.get = AsyncMock(return_value=MagicMock(value=mock_user_list, odata_next_link=None))
     mock_client.users = mock_users
     return mock_client
+
 
 def mock_graph_service_client_by_user_id(mock_client, mock_user):
     """
@@ -55,6 +58,7 @@ def mock_graph_service_client_by_user_id(mock_client, mock_user):
     mock_users.by_user_id.return_value = mock_by_user_id
     mock_client.users = mock_users
     return mock_client
+
 
 def mock_graph_service_client_for_groups(mock_client, mock_group_list):
     """
@@ -70,10 +74,12 @@ def mock_graph_service_client_for_groups(mock_client, mock_group_list):
     mock_client.users = mock_users
     return mock_client
 
+
 def test_configuration(test_entra_id_asset_connector):
     assert test_entra_id_asset_connector.module.configuration["tenant_id"] == "fake_tenant_id"
     assert test_entra_id_asset_connector.module.configuration["client_id"] == "fake_client_id"
     assert test_entra_id_asset_connector.module.configuration["client_secret"] == "fake_client_secret"
+
 
 def test_map_fields(test_entra_id_asset_connector):
     # Mocking the UserOCSFModel and UserOCSF for testing
@@ -86,7 +92,7 @@ def test_map_fields(test_entra_id_asset_connector):
         id="user_id",
         display_name="Test User",
         mail="testuser@example.com",
-        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc)
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
     has_mfa = True
     asset_groups = []
@@ -94,6 +100,7 @@ def test_map_fields(test_entra_id_asset_connector):
     assert result.user.name == "testuser@example.com"
     assert result.user.uid == 0
     assert result.user.has_mfa == has_mfa
+
 
 @pytest.mark.asyncio
 async def test_fetch_user_groups(test_entra_id_asset_connector):
@@ -103,6 +110,7 @@ async def test_fetch_user_groups(test_entra_id_asset_connector):
     mock_group.display_name = "Test Group"
     mock_group.id = "group-id"
     from msgraph.generated.models.group import Group
+
     mock_group.__class__ = Group
     mock_client = mock_graph_service_client()
     # Patch the client to return the mock response
@@ -116,13 +124,16 @@ async def test_fetch_user_groups(test_entra_id_asset_connector):
     assert groups[0].name == "Test Group"
     assert groups[0].uid == "group-id"
 
+
 @pytest.mark.asyncio
 async def test_fetch_user_mfa(test_entra_id_asset_connector):
     user_id = "test-user-id"
     test_entra_id_asset_connector.client = mock_graph_service_client()
 
     # Mock authentication methods
-    from msgraph.generated.models.microsoft_authenticator_authentication_method import MicrosoftAuthenticatorAuthenticationMethod
+    from msgraph.generated.models.microsoft_authenticator_authentication_method import (
+        MicrosoftAuthenticatorAuthenticationMethod,
+    )
     from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
     from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
 
@@ -130,29 +141,38 @@ async def test_fetch_user_mfa(test_entra_id_asset_connector):
     mock_method = MicrosoftAuthenticatorAuthenticationMethod()
     mock_response = MagicMock()
     mock_response.value = [mock_method]
-    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(return_value=mock_response)
+    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(
+        return_value=mock_response
+    )
     has_mfa = await test_entra_id_asset_connector.fetch_user_mfa(user_id)
     assert has_mfa is True
 
     # Case 2: User has Software OATH (should return True)
     mock_method = SoftwareOathAuthenticationMethod()
     mock_response.value = [mock_method]
-    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(return_value=mock_response)
+    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(
+        return_value=mock_response
+    )
     has_mfa = await test_entra_id_asset_connector.fetch_user_mfa(user_id)
     assert has_mfa is True
 
     # Case 3: User has Phone Authentication (should return True)
     mock_method = PhoneAuthenticationMethod()
     mock_response.value = [mock_method]
-    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(return_value=mock_response)
+    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(
+        return_value=mock_response
+    )
     has_mfa = await test_entra_id_asset_connector.fetch_user_mfa(user_id)
     assert has_mfa is True
 
     # Case 4: User has no MFA methods (should return False)
     mock_response.value = []
-    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(return_value=mock_response)
+    test_entra_id_asset_connector.client.users.by_user_id.return_value.authentication.methods.get = AsyncMock(
+        return_value=mock_response
+    )
     has_mfa = await test_entra_id_asset_connector.fetch_user_mfa(user_id)
     assert has_mfa is False
+
 
 @pytest.mark.asyncio
 async def test_fetch_new_users(test_entra_id_asset_connector):
@@ -165,14 +185,14 @@ async def test_fetch_new_users(test_entra_id_asset_connector):
         user_principal_name="user1@example.com",
         display_name="User One",
         mail="user1@example.com",
-        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc)
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
     mock_user2 = User(
         id="user2",
         user_principal_name="user2@example.com",
         display_name="User Two",
         mail="user2@example.com",
-        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc)
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
     mock_users_response = MagicMock()
     mock_users_response.value = [mock_user1, mock_user2]
@@ -196,6 +216,7 @@ async def test_fetch_new_users(test_entra_id_asset_connector):
     assert test_entra_id_asset_connector.fetch_user.await_count == 2
     assert all(user is mock_user_ocsf_model for user in result)
 
+
 @pytest.mark.asyncio
 async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
     from msgraph.generated.models.user import User
@@ -204,10 +225,7 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
 
     # First page of users
     mock_user1 = User(
-        id="user1",
-        user_principal_name="user1@example.com",
-        display_name="User One",
-        mail="user1@example.com"
+        id="user1", user_principal_name="user1@example.com", display_name="User One", mail="user1@example.com"
     )
     mock_users_response_1 = MagicMock()
     mock_users_response_1.value = [mock_user1]
@@ -215,10 +233,7 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
 
     # Second page of users
     mock_user2 = User(
-        id="user2",
-        user_principal_name="user2@example.com",
-        display_name="User Two",
-        mail="user2@example.com"
+        id="user2", user_principal_name="user2@example.com", display_name="User Two", mail="user2@example.com"
     )
     mock_users_response_2 = MagicMock()
     mock_users_response_2.value = [mock_user2]
@@ -227,7 +242,9 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
     # Patch the GraphServiceClient to return the mock users for each page
     test_entra_id_asset_connector.client = MagicMock()
     test_entra_id_asset_connector.client.users.get = AsyncMock(return_value=mock_users_response_1)
-    test_entra_id_asset_connector.client.users.with_url.return_value.get = AsyncMock(return_value=mock_users_response_2)
+    test_entra_id_asset_connector.client.users.with_url.return_value.get = AsyncMock(
+        return_value=mock_users_response_2
+    )
 
     # Patch fetch_user to avoid calling real sub-methods
     mock_user_ocsf_model_1 = MagicMock()
