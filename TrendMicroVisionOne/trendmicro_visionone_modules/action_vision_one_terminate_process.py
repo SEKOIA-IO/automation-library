@@ -12,6 +12,10 @@ class TerminateProcessAction(TrendMicroVisionOneBaseAction):
         file_name: str | None = arguments.get("file_name")
         description: str | None = arguments.get("description")
 
+        if file_sha1 is None and file_name is None:
+            self.log("You should provide either file's name or SHA-1 hash", level="critical")
+            return
+
         base_url: str = self.module.configuration.base_url
         url = f"{base_url}/v3.0/response/endpoints/terminateProcess"
 

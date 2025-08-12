@@ -6,10 +6,6 @@
   "slug": "kill_process",
   "arguments": {
     "type": "object",
-    "oneOf": [
-      { "required": ["agent_guid", "process_id", "file_sha1"] },
-      { "required": ["agent_guid", "process_id", "file_name"] }
-    ],
     "properties": {
       "agent_guid": {
         "description": "The identifiers of the endpoints to isolate",
