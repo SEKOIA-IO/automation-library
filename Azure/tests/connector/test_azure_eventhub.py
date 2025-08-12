@@ -71,7 +71,7 @@ def trigger(symphony_storage):
 
 
 @pytest.mark.asyncio
-async def test_handle_messages(trigger):
+async def test_handle_messages_1(trigger):
     # arrange
     events: list[str] = [
         '{"records": [{"name": "record1"}, null, {"name": "record2"}]}',
@@ -89,6 +89,29 @@ async def test_handle_messages(trigger):
     assert partition_context.update_checkpoint.called
     calls = [record for call in trigger.push_data_to_intakes.await_args_list for record in call.kwargs["events"]]
     assert len(calls) == 6
+
+
+@pytest.mark.asyncio
+async def test_handle_messages_with_filtering(trigger):
+    # arrange
+    events: list[str] = [
+        '{"records": [{"name": "record1"}, null, {"name": "record2"}]}',
+        '{"type": "heartbeat"}',
+        '[{"name": "record3"}, {"name": "record4"}, {"name": "record5"}]',
+        '{"name": "record6"}',
+        '[{"name": "record7", "category": "test1"}, {"name": "record8", "category": "test3"}, {"name": "record9", "category": "test2"}]',
+    ]
+    messages: list[EventData] = [EventData(event) for event in events]
+    partition_context = AsyncMock()
+    trigger.configuration.categories = ["test1", "test2"]  # Only process records with these categories
+
+    # act
+    await trigger.handle_messages(partition_context, messages)
+
+    # assert
+    assert partition_context.update_checkpoint.called
+    calls = [record for call in trigger.push_data_to_intakes.await_args_list for record in call.kwargs["events"]]
+    assert len(calls) == 2
 
 
 @pytest.mark.asyncio
