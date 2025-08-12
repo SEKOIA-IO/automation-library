@@ -1,5 +1,6 @@
-from zscaler.block_ioc import ZscalerAction
 from unittest.mock import MagicMock
+
+from zscaler.actions import ZscalerBaseAction
 
 
 def test_get_valid_indicators_from_stix():
@@ -28,7 +29,7 @@ def test_get_valid_indicators_from_stix():
     ]
 
     # Call the method you want to test
-    results = ZscalerAction.get_valid_indicators_from_stix(None, stix_objects)
+    results = ZscalerBaseAction.get_valid_indicators_from_stix(None, stix_objects)
     print(results)
     # Perform assertions based on the expected behavior of the method
     assert "valid" in results
