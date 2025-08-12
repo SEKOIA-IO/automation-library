@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 from functools import cached_property
 from collections.abc import Generator
 
@@ -91,7 +92,7 @@ class EntraIDAssetConnector(AssetConnector):
             type_uid=500302,
             severity="Informational",
             severity_id=1,
-            time=0.0,  # Placeholder, adjust as needed
+            time=datetime.timestamp(user.created_date_time),
             metadata=metadata,
             user=user_data,
             type_name="User Inventory",
@@ -154,37 +155,42 @@ class EntraIDAssetConnector(AssetConnector):
         new_users: list[UserOCSFModel] = []
         query_params = UsersRequestBuilder.UsersRequestBuilderGetQueryParameters(
             select=["id", "displayName", "mail", "identities", "createdDateTime", "userPrincipalName", "mailNickname"],
+            filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )
 
         request_configuration = RequestConfiguration(
             query_parameters=query_params,
         )
+        request_configuration.headers.add("ConsistencyLevel", "eventual")
+
         users = await self.client.users.get(request_configuration=request_configuration)
 
         if users:
             for user in users.value:
                 ## Fetch MFA status of the user
-                test = await self.fetch_user(user)
-                new_users.append(test)
-                # yield test
+                new_user = await self.fetch_user(user)
+                new_users.append(new_user)
 
         ## Implement if there is more than one page of results
-
         while users is not None and users.odata_next_link is not None:
             users = await self.client.users.with_url(users.odata_next_link).get(
                 request_configuration=request_configuration
             )
             if users:
                 for user in users.value:
-                    test = await self.fetch_user(user)
-                    new_users.append(test)
-                    # yield self.map_fields(user)
+                    new_user = await self.fetch_user(user)
+                    new_users.append(new_user)
 
-        return new_users
+        ## Save the most recent date seen
+        if new_users:
+            most_recent_date: float = max(user.time for user in new_users)
+            with self.context as cache:
+                cache["most_recent_date_seen"] = datetime.fromtimestamp(most_recent_date, timezone.utc).replace(microsecond=0).isoformat()
+                return new_users
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         ### Fetch users from Microsoft Graph API
-        # last_run_date = self.most_recent_date_seen
-        new_users = asyncio.run(self.fetch_new_users())
+        last_run_date: datetime | None = self.most_recent_date_seen if self.most_recent_date_seen else None
+        new_users = asyncio.run(self.fetch_new_users(last_run_date=last_run_date))
         for user in new_users:
             yield user
