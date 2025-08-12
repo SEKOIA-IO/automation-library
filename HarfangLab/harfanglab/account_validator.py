@@ -32,7 +32,6 @@ class HarfanglabAccountValidator(AccountValidator):
 
         try:
             check_cred_response = self.client.get(check_cred_url, params=params, timeout=self.TIMEOUT)
-            check_cred_response.raise_for_status()
             return check_cred_response.json(), check_cred_response.status_code
         except requests.Timeout:
             raise HarfanglabCredentialsTimeoutError(
