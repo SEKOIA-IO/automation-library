@@ -185,7 +185,9 @@ class EntraIDAssetConnector(AssetConnector):
         if new_users:
             most_recent_date: float = max(user.time for user in new_users)
             with self.context as cache:
-                cache["most_recent_date_seen"] = datetime.fromtimestamp(most_recent_date, timezone.utc).replace(microsecond=0).isoformat()
+                cache["most_recent_date_seen"] = (
+                    datetime.fromtimestamp(most_recent_date, timezone.utc).replace(microsecond=0).isoformat()
+                )
                 return new_users
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
