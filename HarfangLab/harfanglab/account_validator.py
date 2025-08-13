@@ -2,10 +2,15 @@ from functools import cached_property
 from typing import Any
 from urllib.parse import urljoin
 
+import requests
 from sekoia_automation.account_validator import AccountValidator
 
 from harfanglab.client import ApiClient
 from harfanglab.helpers import handle_uri
+
+
+class HarfanglabCredentialsTimeoutError(Exception):
+    pass
 
 
 class HarfanglabAccountValidator(AccountValidator):
@@ -25,9 +30,13 @@ class HarfanglabAccountValidator(AccountValidator):
         check_cred_url = urljoin(self.base_url, self.AUTHENTICATION_ENDPOINT)
         params: dict = {}
 
-        check_cred_response = self.client.get(check_cred_url, params=params, timeout=self.TIMEOUT)
-
-        return check_cred_response.json(), check_cred_response.status_code
+        try:
+            check_cred_response = self.client.get(check_cred_url, params=params, timeout=self.TIMEOUT)
+            return check_cred_response.json(), check_cred_response.status_code
+        except requests.Timeout:
+            raise HarfanglabCredentialsTimeoutError(
+                f"Timeout while checking credentials for Harfanglab asset connector at {check_cred_url}"
+            )
 
     def validate(self) -> bool:
         check_cred_response, status_code = self._check_credentials_request()
