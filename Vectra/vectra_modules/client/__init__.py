@@ -21,3 +21,5 @@ class ApiClient(requests.Session):
                 ),
             ),
         )
+        user_agent = "Sekoia_Vectra_Connector/1.2.1"
+        self.headers.update({"User-Agent": user_agent})
