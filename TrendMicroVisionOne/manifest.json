@@ -31,6 +31,6 @@
   "name": "TrendMicro VisionOne",
   "slug": "trend-micro-vision-one",
   "uuid": "6f3d8a54-d51c-47d0-b77c-dbcf31393d59",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "categories": ["Endpoint"]
 }
