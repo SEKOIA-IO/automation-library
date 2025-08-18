@@ -31,8 +31,8 @@ class TrendMicroVisionOneBaseAction(Action, ABC):
         if "application/json" in response.headers.get("Content-Type", ""):
             body = response.json()
             if isinstance(body, list):
-                # multiple responses - return as is
-                return body
+                # multiple responses - wrap as dict
+                return {"result": body}
 
         else:
             body = response.text
