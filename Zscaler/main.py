@@ -1,6 +1,6 @@
 from sekoia_automation.module import Module
 
-from zscaler.block_ioc import ZscalerActivateChanges, ZscalerBlockIOC, ZscalerPushIOCBlock, ZscalerUnBlockIOC
+from zscaler.actions import ZscalerActivateChanges, ZscalerBlockIOC, ZscalerPushIOCBlock, ZscalerUnBlockIOC
 
 if __name__ == "__main__":
     module = Module()
