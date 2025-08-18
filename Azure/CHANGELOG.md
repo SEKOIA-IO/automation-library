@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-12 - 2.7.0
+
+### Added
+
+- Add filtering on the Azure EventHub connector to only process messages with a specific category if provided
+
 ## 2025-05-07 - 2.6.5
 
 ### Added
