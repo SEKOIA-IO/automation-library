@@ -6,6 +6,7 @@
   "slug": "kill_process",
   "arguments": {
     "type": "object",
+    "required": ["agent_guid", "process_id"],
     "properties": {
       "agent_guid": {
         "description": "The identifiers of the endpoints to isolate",
