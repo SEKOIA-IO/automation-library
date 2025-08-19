@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-19 - 1.28.5
+
+### Added
+
+- Fix harfanglab asset connector
+
 ## 2025-08-08 - 1.28.4
 
 ### Added
