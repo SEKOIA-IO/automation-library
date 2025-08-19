@@ -1,3 +1,5 @@
+import tempfile
+import uuid
 from functools import cached_property
 from collections.abc import Generator
 from typing import Any, Union
@@ -34,7 +36,10 @@ class HarfanglabAssetConnector(AssetConnector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
+        # Temporary path to store the context
+        self.context_path = tempfile.gettempdir()
+        tempfile_name = str(uuid.uuid4())
+        self.context = PersistentJSON(tempfile_name, self.context_path)
 
     @property
     def most_recent_date_seen(self) -> str | None:
