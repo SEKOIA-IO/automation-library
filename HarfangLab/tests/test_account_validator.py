@@ -4,8 +4,12 @@ from unittest.mock import Mock
 import requests
 from sekoia_automation.module import Module
 
-from harfanglab.account_validator import HarfanglabAccountValidator, HarfanglabCredentialsTimeoutError, \
-    HarfanglabCredentialsConnectionError, HarfanglabCredentialsUnexpectedError
+from harfanglab.account_validator import (
+    HarfanglabAccountValidator,
+    HarfanglabCredentialsTimeoutError,
+    HarfanglabCredentialsConnectionError,
+    HarfanglabCredentialsUnexpectedError,
+)
 
 
 @pytest.fixture

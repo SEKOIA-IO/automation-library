@@ -48,7 +48,9 @@ class HarfanglabAccountValidator(AccountValidator):
         except RequestException as e:
             raise HarfanglabCredentialsConnectionError(f"Network error: {e}")
         except Exception as e:
-            raise HarfanglabCredentialsUnexpectedError("An unexpected error occurred while checking credentials") from e
+            raise HarfanglabCredentialsUnexpectedError(
+                "An unexpected error occurred while checking credentials"
+            ) from e
 
     def validate(self) -> bool:
         check_cred_response, status_code = self._check_credentials_request()
