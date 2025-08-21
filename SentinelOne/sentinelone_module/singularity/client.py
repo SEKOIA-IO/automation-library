@@ -1,5 +1,6 @@
 import logging
 import os
+import ssl
 from contextlib import asynccontextmanager
 from posixpath import join as urljoin
 from typing import Any, AsyncGenerator
@@ -10,7 +11,6 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportServerError
 from gql.transport.requests import log as requests_logger
-from graphql import ExecutionResult
 from pydantic import BaseModel
 
 requests_logger.setLevel(int(os.getenv("GQL_LOG_LEVEL", logging.WARNING)))  # Warning level by default
@@ -39,9 +39,16 @@ class SingularityClient(object):
     _client: Client | None = None
     _rate_limiter: AsyncLimiter | None = None
 
-    def __init__(self, api_token: str, hostname: str) -> None:
+    def __init__(self, api_token: str, hostname: str, verify_ssl: bool | None = None) -> None:
+        if not api_token.strip():
+            raise ValueError("API token cannot be empty")
         self.api_token = api_token
+
+        if not hostname.strip():
+            raise ValueError("Hostname cannot be empty")
         self.hostname = hostname
+
+        self.verify_ssl = verify_ssl
 
     async def close(self) -> None:
         if self._client is not None:
@@ -53,9 +60,15 @@ class SingularityClient(object):
     @asynccontextmanager
     async def _session(self) -> AsyncGenerator[Client, None]:
         if self._client is None:
+            ssl_context = ssl.create_default_context()
+            if self.verify_ssl is not None and self.verify_ssl == False:
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+
             transport = AIOHTTPTransport(
                 url=urljoin(f"https://{self.hostname}", "web/api/v2.1/unifiedalerts/graphql"),
                 headers={"Authorization": f"Bearer {self.api_token}"},
+                ssl=ssl_context if self.verify_ssl == True else False,  # default to False based on constructor
             )
 
             self._client = Client(transport=transport)

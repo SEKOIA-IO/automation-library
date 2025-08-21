@@ -9,6 +9,9 @@ from sekoia_automation.module import Module
 class SentinelOneConfiguration(BaseModel):
     hostname: str = Field(..., description="The url to the SentinelOne instance")
     api_token: str = Field(secret=True, description="The API token to authenticate the requests")
+    verify_ssl: bool | None = Field(
+        default=None, description="Whether to verify the SSL certificate of the SentinelOne instance"
+    )
 
 
 class SentinelOneModule(Module):

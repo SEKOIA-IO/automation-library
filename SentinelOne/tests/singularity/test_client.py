@@ -66,9 +66,19 @@ async def test_session(mock_limiter, mock_client, mock_transport, client):
     mock_transport.assert_called_once_with(
         url=f"https://{client.hostname}/web/api/v2.1/unifiedalerts/graphql",
         headers={"Authorization": f"Bearer {client.api_token}"},
+        ssl=False,
     )
     mock_client.assert_called_once_with(transport=mock_transport_instance)
     mock_limiter.assert_called_once_with(max_rate=25, time_period=1)
+
+
+@pytest.mark.asyncio
+async def test_create_client(client):
+    with pytest.raises(ValueError):
+        SingularityClient("", "testhost")
+
+    with pytest.raises(ValueError):
+        SingularityClient("test_token", "")
 
 
 @pytest.mark.asyncio

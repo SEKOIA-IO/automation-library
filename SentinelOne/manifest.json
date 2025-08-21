@@ -12,6 +12,11 @@
         "title": "API Token",
         "description": "The API token to authenticate to SentinelOne",
         "type": "string"
+      },
+      "verify_ssl": {
+        "title": "Verify SSL",
+        "description": "Whether to verify the SSL certificate of the SentinelOne instance",
+        "type": "boolean"
       }
     },
     "required": [
@@ -26,7 +31,7 @@
   "name": "SentinelOne",
   "uuid": "ff675e74-e5c1-47c8-a571-d207fc297464",
   "slug": "sentinelone",
-  "version": "1.20.11",
+  "version": "1.20.12",
   "categories": [
     "Endpoint"
   ]
