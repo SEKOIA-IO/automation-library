@@ -45,6 +45,7 @@ class AbstractSingularityConnector(AsyncConnector, ABC):
         return SingularityClient(
             hostname=self.module.configuration.hostname,
             api_token=self.module.configuration.api_token,
+            verify_ssl=self.module.configuration.verify_ssl,
         )
 
     def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:
