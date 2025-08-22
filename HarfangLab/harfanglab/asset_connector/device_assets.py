@@ -199,6 +199,7 @@ class HarfanglabAssetConnector(AssetConnector):
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         self.log("Start the getting assets generator !!", level="info")
+        self.log(f"The data path is: {self._data_path.absolute()}", level="info")
         for devices in self.next_list_devices():
             for device in devices:
                 mapped_device: DeviceOCSFModel = self.map_fields(device)
