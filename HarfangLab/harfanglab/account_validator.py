@@ -2,22 +2,28 @@ from functools import cached_property
 from typing import Any
 from urllib.parse import urljoin
 
-from requests.exceptions import HTTPError, RequestException, Timeout
+from requests.exceptions import RequestException, Timeout
 from sekoia_automation.account_validator import AccountValidator
 
 from harfanglab.client import ApiClient
 from harfanglab.helpers import handle_uri
 
 
-class HarfanglabCredentialsTimeoutError(Exception):
+class HarfanglabCredentialsError(Exception):
+    """Base exception for credential validation errors."""
+
     pass
 
 
-class HarfanglabCredentialsConnectionError(Exception):
+class HarfanglabCredentialsTimeoutError(HarfanglabCredentialsError):
     pass
 
 
-class HarfanglabCredentialsUnexpectedError(Exception):
+class HarfanglabCredentialsConnectionError(HarfanglabCredentialsError):
+    pass
+
+
+class HarfanglabCredentialsUnexpectedError(HarfanglabCredentialsError):
     pass
 
 
@@ -34,41 +40,51 @@ class HarfanglabAccountValidator(AccountValidator):
     def base_url(self) -> str:
         return handle_uri(self.module.configuration["url"])
 
+    @cached_property
+    def auth_url(self) -> str:
+        return urljoin(self.base_url, self.AUTHENTICATION_ENDPOINT)
+
     def _check_credentials_request(self) -> tuple[dict[str, Any], int]:
-        check_cred_url = urljoin(self.base_url, self.AUTHENTICATION_ENDPOINT)
-        params: dict = {}
 
         try:
-            check_cred_response = self.client.get(check_cred_url, params=params, timeout=self.TIMEOUT)
+            check_cred_response = self.client.get(self.auth_url, timeout=self.TIMEOUT)
             return check_cred_response.json(), check_cred_response.status_code
         except Timeout:
             raise HarfanglabCredentialsTimeoutError(
-                f"Timeout while checking credentials for Harfanglab asset connector at {check_cred_url}"
+                f"Timeout while checking credentials for Harfanglab at {self.auth_url}"
             )
         except RequestException as e:
-            raise HarfanglabCredentialsConnectionError(f"Network error: {e}")
+            raise HarfanglabCredentialsConnectionError(
+                f"Network error while trying to reach {self.auth_url}. Reason: {e}"
+            )
         except Exception as e:
             raise HarfanglabCredentialsUnexpectedError(
-                "An unexpected error occurred while checking credentials"
+                f"An unexpected error occurred while checking credentials : {e}"
             ) from e
 
     def validate(self) -> bool:
-        check_cred_response, status_code = self._check_credentials_request()
-        if status_code == 200:
-            self.log(
-                message="Successfully validated credentials for Harfanglab asset connector",
-                level="info",
-            )
+        self.log(message="Start Validation credentials process for Harfanglab asset connector", level="info")
+
+        try:
+            check_cred_response, status_code = self._check_credentials_request()
+
+            if 400 <= status_code < 500:
+                self.log(
+                    message=f"{status_code} Client Error: {check_cred_response.get('detail', 'No details')} for base url: {self.base_url}",
+                    level="error",
+                )
+                return False
+
+            elif 500 <= status_code < 600:
+                self.log(
+                    message=f"{status_code} Server Error: {check_cred_response.get('detail', 'No details')} for base url: {self.base_url}",
+                    level="error",
+                )
+                return False
+
+            self.log(message="Credentials validated successfully", level="info")
             return True
-        elif status_code == 401:
-            self.log(
-                message="Invalid credentials for Harfanglab asset connector",
-                level="error",
-            )
-            return False
-        else:
-            self.log(
-                message=f"Unexpected status code {status_code} while validating credentials for Harfanglab asset connector",
-                level="error",
-            )
+
+        except HarfanglabCredentialsError as e:
+            self.log(message=str(e), level="error")
             return False
