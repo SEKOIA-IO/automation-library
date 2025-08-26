@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## 2025-08-08 - 1.28.8
+
+### Added
+
+- Add extra exception to the credential validator
+
 ## 2025-08-20 - 1.28.7
 
 ### Added
@@ -24,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Fix harfanglab asset connector
+
 
 ## 2025-08-08 - 1.28.4
 
