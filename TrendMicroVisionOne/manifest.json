@@ -1,0 +1,36 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "TrendMicro VisionOne",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "format": "uri",
+        "enum": [
+          "https://api.xdr.trendmicro.com",
+          "https://api.au.xdr.trendmicro.com",
+          "https://api.eu.xdr.trendmicro.com",
+          "https://api.in.xdr.trendmicro.com",
+          "https://api.xdr.trendmicro.co.jp",
+          "https://api.sg.xdr.trendmicro.com",
+          "https://api.mea.xdr.trendmicro.com",
+          "https://api.usgov.xdr.trendmicro.com"
+        ],
+        "default": "https://api.xdr.trendmicro.com"
+      },
+      "api_key": {
+        "description": "Trend Micro api_key",
+        "type": "string"
+      }
+    },
+    "required": ["base_url", "api_key"]
+  },
+  "description": "Trend Micro Vision One is a comprehensive XDR platform that integrates data from various sources, such as: email, company intranet, workstations and servers, containerized environments, cloud environments, integrated solutions from the Trend Micro ecosystem, and third-party integrations (EntraID, Okta, Office365, etc.) to detect, analyze, and respond to threats.",
+  "name": "TrendMicro VisionOne",
+  "slug": "trend-micro-vision-one",
+  "uuid": "6f3d8a54-d51c-47d0-b77c-dbcf31393d59",
+  "version": "0.1.3",
+  "categories": ["Endpoint"]
+}

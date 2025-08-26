@@ -1,0 +1,30 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Bitdefender GravityZone",
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "format": "uri",
+        "description": "The URL of the Bitdefender GravityZone API endpoint.",
+        "default": "https://cloudgz.gravityzone.bitdefender.com"
+      },
+      "api_key": {
+        "type": "string",
+        "description": "The API key for authenticating with the Bitdefender GravityZone API."
+      }
+    },
+    "required": [
+      "api_key"
+    ]
+  },
+  "description": "Bitdefender is a global cybersecurity company renowned for its advanced antivirus software, providing comprehensive security solutions and threat intelligence for individuals and enterprises, safeguarding against evolving cyber threats.",
+  "name": "Bitdefender GravityZone",
+  "uuid": "26277889-b91b-46d0-8bac-7f6b2f6fb9a3",
+  "version": "1.0.6",
+  "slug": "bitdefender_gravityzone",
+  "categories": [
+    "Endpoint"
+  ]
+}

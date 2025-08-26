@@ -1,0 +1,130 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "type": {
+        "description": "The type of block to be push.",
+        "type": "string",
+        "default": "connection",
+        "readonly": true
+      },
+      "rules": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties":{
+            "details": {
+              "type": "object",
+              "properties": {
+                "ruleName": {
+                  "description": "The name of the connection block rule.",
+                  "type": "string"
+                },
+                "commandLine": {
+                  "description": "The command line to be blocked.",
+                  "type": "string",
+                  "default": null
+                },
+                "protocol": {
+                  "description": "The protocol to be blocked (e.g., TCP, UDP).",
+                  "type": "string",
+                  "default": "any"
+                },
+                "direction": {
+                  "description": "The direction of the connection to be blocked (e.g., inbound, outbound).",
+                  "type": "string",
+                  "enum": ["both", "inbound", "outbound"],
+                  "default": "both"
+                },
+                "ipVersion": {
+                  "description": "The IP version to be blocked (e.g., IPV4, IPV6).",
+                  "type": "string",
+                  "enum": ["any", "IPV4", "IPV6"],
+                  "default": "any"
+                },
+                "localAddress": {
+                  "description": "The local address to be blocked.",
+                  "type": "object",
+                  "properties": {
+                    "any": {
+                      "description": "If set to true, all local connections are blocked, regardless of IP address.",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "ipMask": {
+                      "description": "If any set to false, only connections to or from the local addresses specified under this setting are blocked.",
+                      "type": "string"
+                    },
+                    "portRange": {
+                      "description": "If a range is used, only local connections made through ports between these two values are blocked.",
+                      "type": "string"
+                    }
+                  }
+                },
+                "remoteAddress": {
+                  "description": "The remote address to be blocked.",
+                  "type": "object",
+                  "properties": {
+                    "any": {
+                      "description": "If set to true, all remote connections are blocked, regardless of IP address.",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "ipMask": {
+                      "description": "If any set to false, only connections to or from the remote addresses specified under this setting are blocked.",
+                      "type": "string"
+                    },
+                    "portRange": {
+                      "description": "If a range is used, only remote connections made through ports between these two values are blocked.",
+                      "type": "string"
+                    }
+                  }
+                },
+                "directlyConnected": {
+                  "description": "If enabled, the rule applies only to connections to or from specific Mac addresses.",
+                  "type": "object",
+                  "properties": {
+                    "enable": {
+                      "description": "If enabled, the rule applies only to connections to or from specific Mac addresses. For Directly connected",
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "remoteMac": {
+                      "description": "Only connections from the specified Mac addresses are allowed. For Directly connected",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "type",
+      "rules"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Push connection blocks from BitDefender GravityZone",
+  "docker_parameters": "bitdefender_gravity_zone_push_connection_block",
+  "name": "Block connections",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "result": {
+        "description": "This method returns a Boolean which is True if the operation was successful.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "result"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "0c7c3d01-fb35-4e04-b512-9eee1396dc11",
+  "slug": "block_connections"
+}
