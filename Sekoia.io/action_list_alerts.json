@@ -88,10 +88,6 @@
         "in": "query",
         "type": "string"
       },
-      "visible": {
-        "in": "query",
-        "type": "boolean"
-      },
       "limit": {
         "in": "query",
         "type": "integer",
