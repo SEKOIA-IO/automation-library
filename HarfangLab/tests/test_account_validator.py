@@ -4,12 +4,7 @@ from unittest.mock import Mock
 import requests
 from sekoia_automation.module import Module
 
-from harfanglab.account_validator import (
-    HarfanglabAccountValidator,
-    HarfanglabCredentialsTimeoutError,
-    HarfanglabCredentialsConnectionError,
-    HarfanglabCredentialsUnexpectedError,
-)
+from harfanglab.account_validator import HarfanglabAccountValidator
 
 
 @pytest.fixture
@@ -64,8 +59,7 @@ def test_check_timeout(harfanglab_account_validator, requests_mock):
         exc=requests.Timeout,
     )
 
-    with pytest.raises(HarfanglabCredentialsTimeoutError):
-        harfanglab_account_validator.validate()
+    assert harfanglab_account_validator.validate() is False
 
 
 def test_check_connection_error(harfanglab_account_validator, requests_mock):
@@ -74,8 +68,7 @@ def test_check_connection_error(harfanglab_account_validator, requests_mock):
         exc=requests.ConnectionError,
     )
 
-    with pytest.raises(HarfanglabCredentialsConnectionError):
-        harfanglab_account_validator.validate()
+    assert harfanglab_account_validator.validate() is False
 
 
 def test_check_unexpected_error(harfanglab_account_validator, requests_mock):
@@ -84,5 +77,4 @@ def test_check_unexpected_error(harfanglab_account_validator, requests_mock):
         exc=Exception("Unexpected error"),
     )
 
-    with pytest.raises(HarfanglabCredentialsUnexpectedError):
-        harfanglab_account_validator.validate()
+    assert harfanglab_account_validator.validate() is False
