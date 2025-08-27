@@ -4,7 +4,7 @@ from collections.abc import Generator
 
 from datetime import datetime
 from dateutil.parser import isoparse
-
+from typing import Optional
 from sekoia_automation.storage import PersistentJSON
 
 from sekoia_automation.asset_connector import AssetConnector
@@ -32,18 +32,17 @@ class AwsDevice:
 class AwsDeviceAssetConnector(AssetConnector):
     PRODUCT_NAME: str = "AWS EC2"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
-    def most_recent_date_seen(self) -> str | None:
+    def most_recent_date_seen(self) -> Optional[str]:
         with self.context as cache:
-            most_recent_date_seen = cache.get("most_recent_date_seen", None)
+            value = cache.get("most_recent_date_seen")
+            return value if value is None or isinstance(value, str) else str(value)
 
-            return most_recent_date_seen
-
-    def client(self):
+    def client(self) -> boto3.client:
         session = boto3.Session(
             aws_access_key_id=self.module.configuration["aws_access_key"],
             aws_secret_access_key=self.module.configuration["aws_secret_access_key"],
