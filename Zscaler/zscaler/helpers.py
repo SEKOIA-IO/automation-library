@@ -1,5 +1,5 @@
-from stix2patterns.pattern import Pattern
 import six
+from stix2patterns.pattern import Pattern
 
 
 def is_a_supported_stix_indicator(stix_object):
