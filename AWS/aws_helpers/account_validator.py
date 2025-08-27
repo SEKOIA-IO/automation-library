@@ -11,7 +11,7 @@ class AwsCredentialsError(Exception):
 
 class AwsAccountValidator(AccountValidator):
 
-    def client(self):
+    def client(self) -> boto3.client:
         session = boto3.Session(
             aws_access_key_id=self.module.configuration["aws_access_key"],
             aws_secret_access_key=self.module.configuration["aws_secret_access_key"],
