@@ -22,10 +22,12 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeStr,
 )
 
-class AwsDevice():
+
+class AwsDevice:
     def __init__(self, device: Device, date: datetime):
         self.device = device
         self.date = date
+
 
 class AwsDeviceAssetConnector(AssetConnector):
     PRODUCT_NAME: str = "AWS EC2"
@@ -47,36 +49,36 @@ class AwsDeviceAssetConnector(AssetConnector):
             aws_secret_access_key=self.module.configuration["aws_secret_access_key"],
             region_name=self.module.configuration["aws_region_name"],
         )
-        return session.client('ec2')
+        return session.client("ec2")
 
     def get_device_os(self, platform_details: str) -> OperatingSystem:
-        if 'Windows' in platform_details:
-            return OperatingSystem(name='Windows', type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS)
-        if 'Linux' in platform_details:
-            return OperatingSystem(name='Linux', type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX)
-        if 'MacOS' in platform_details:
-            return OperatingSystem(name='MacOS', type=OSTypeStr.MACOS, type_id=OSTypeId.MACOS)
+        if "Windows" in platform_details:
+            return OperatingSystem(name="Windows", type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS)
+        if "Linux" in platform_details:
+            return OperatingSystem(name="Linux", type=OSTypeStr.LINUX, type_id=OSTypeId.LINUX)
+        if "MacOS" in platform_details:
+            return OperatingSystem(name="MacOS", type=OSTypeStr.MACOS, type_id=OSTypeId.MACOS)
         return OperatingSystem(name=platform_details, type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN)
-    
+
     def get_aws_devices(self) -> Generator[list[AwsDevice], None, None]:
         self.log("Start fetching AWS devices...", level="info")
-        paginator = self.client().get_paginator('describe_instances')
+        paginator = self.client().get_paginator("describe_instances")
         page_iterator = paginator.paginate()
         date_filter: datetime | None = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
         for page in page_iterator:
             devices = []
-            for reservation in page['Reservations']:
-                for instance in reservation['Instances']:
-                    created_time: datetime = instance['BlockDeviceMappings'][0]['Ebs']['AttachTime']
+            for reservation in page["Reservations"]:
+                for instance in reservation["Instances"]:
+                    created_time: datetime = instance["BlockDeviceMappings"][0]["Ebs"]["AttachTime"]
                     created_time = created_time.replace(tzinfo=pytz.UTC)
                     if date_filter and (created_time < date_filter):
                         continue
                     device_obj = Device(
                         type_id=DeviceTypeId.SERVER,
                         type=DeviceTypeStr.SERVER,
-                        uid=instance['InstanceId'],
-                        hostname=instance['PublicDnsName'],
-                        os=self.get_device_os(instance['PlatformDetails']),
+                        uid=instance["InstanceId"],
+                        hostname=instance["PublicDnsName"],
+                        os=self.get_device_os(instance["PlatformDetails"]),
                         location=None,
                     )
                     self.log(f"Fetched device: {device_obj.hostname}", level="debug")
