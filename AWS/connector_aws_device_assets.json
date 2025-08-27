@@ -1,0 +1,29 @@
+  {
+  "name": "AWS device asset connector",
+  "description": "Fetch AWS device asset",
+  "uuid": "c9e8b2d1-4f3a-4e2c-9a7f-8f2a1b6e3c4d",
+  "docker_parameters": "aws_device_asset_connector",
+  "type": "asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "minimum": 1,
+          "default": 60
+      },
+      "sekoia_api_key": {
+          "description": "API key to use from sekoia.io",
+          "type": "string"
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
+  }
+}
