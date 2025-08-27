@@ -42,7 +42,7 @@
       },
       "categories": {
         "type": "array",
-        "description": "The categories to use for the events",
+        "description": "A list of events' categories to select (let empty to select all events)",
         "items": {
           "type": "string"
         },
