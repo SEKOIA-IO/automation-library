@@ -6,7 +6,8 @@
       "hostname": {
         "title": "Hostname",
         "description": "The domain-name to the SentinelOne instance",
-        "type": "string"
+        "type": "string",
+	"pattern": "^[A-Za-z0-9][A-Za-z0-9.-]+(:\\d+)?$"
       },
       "api_token": {
         "title": "API Token",
