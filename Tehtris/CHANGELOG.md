@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### 2025-09-01 - 1.16.1
+
+### Changed
+
+- Add rate limiting
+- Improve logging
+
 ## 2024-11-07 - 1.16.0
 
 ### Changed
