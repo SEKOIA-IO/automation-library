@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
+import requests
 from sekoia_automation.module import Module
 
 from harfanglab.account_validator import HarfanglabAccountValidator
@@ -47,6 +48,33 @@ def test_validate_unexpected_status(harfanglab_account_validator, requests_mock)
         "https://example.com/api/auth/users/me",
         json={"detail": "Unexpected error"},
         status_code=500,
+    )
+
+    assert harfanglab_account_validator.validate() is False
+
+
+def test_check_timeout(harfanglab_account_validator, requests_mock):
+    requests_mock.get(
+        "https://example.com/api/auth/users/me",
+        exc=requests.Timeout,
+    )
+
+    assert harfanglab_account_validator.validate() is False
+
+
+def test_check_connection_error(harfanglab_account_validator, requests_mock):
+    requests_mock.get(
+        "https://example.com/api/auth/users/me",
+        exc=requests.ConnectionError,
+    )
+
+    assert harfanglab_account_validator.validate() is False
+
+
+def test_check_unexpected_error(harfanglab_account_validator, requests_mock):
+    requests_mock.get(
+        "https://example.com/api/auth/users/me",
+        exc=Exception("Unexpected error"),
     )
 
     assert harfanglab_account_validator.validate() is False

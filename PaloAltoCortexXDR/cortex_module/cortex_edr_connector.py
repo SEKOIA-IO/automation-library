@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import Any, Dict, List, Optional, Tuple
 
 import orjson
+from cachetools import Cache, LRUCache
 from requests.exceptions import HTTPError
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -33,13 +34,32 @@ class CortexQueryEDRTrigger(CortexConnector):
         self.context = PersistentJSON("context.json", self._data_path)
         self.query: Dict[str, Any] = {
             "request_data": {
-                "filters": [{"field": "creation_time", "operator": "gte", "value": 0}],
+                "filters": [{"field": "server_creation_time", "operator": "gte", "value": 0}],
                 "search_from": 0,
                 "search_to": 0,
                 "sort": {"field": "creation_time", "keyword": "desc"},
             }
         }
         self._timestamp_cursor = 0
+
+        # This cache should be big enough to cover all events within 1 second.
+        self.cache_size = 10_000
+        self.alerts_cache: Cache[str, bool] = self.load_alerts_cache()
+
+    def load_alerts_cache(self) -> Cache[str, bool]:
+        result: LRUCache[str, bool] = LRUCache(maxsize=self.cache_size)
+
+        with self.context as cache:
+            events_ids = cache.get("alerts", [])
+
+        for event_id in events_ids:
+            result[event_id] = True
+
+        return result
+
+    def save_alerts_cache(self) -> None:
+        with self.context as cache:
+            cache["alerts"] = list(self.alerts_cache.keys())
 
     @property
     def timestamp_cursor(self) -> int:
@@ -84,6 +104,13 @@ class CortexQueryEDRTrigger(CortexConnector):
     def split_alerts_events(self, alerts: List[Any]) -> List[str]:
         combined_data = []
         for alert in alerts:
+            # Skip already processed alerts
+            external_id = alert.get("external_id")
+            if external_id in self.alerts_cache:
+                continue
+
+            self.alerts_cache[external_id] = True
+
             shared_id = alert["alert_id"]
             events = alert["events"]
 
@@ -100,13 +127,15 @@ class CortexQueryEDRTrigger(CortexConnector):
 
         return combined_data
 
-    def get_alerts_events_by_offset(self, offset: int, creation_time: int, pagination: int) -> Tuple[int, List[Any]]:
+    def get_alerts_events_by_offset(
+        self, offset: int, server_creation_time: int, pagination: int
+    ) -> Tuple[int, List[Any]]:
         """Requests the Cortex API using the offset"""
 
-        search_from, serch_to = offset, offset + pagination
+        search_from, search_to = offset, offset + pagination
         self.query["request_data"]["search_from"] = search_from
-        self.query["request_data"]["search_to"] = serch_to
-        self.query["request_data"]["filters"][0]["value"] = creation_time
+        self.query["request_data"]["search_to"] = search_to
+        self.query["request_data"]["filters"][0]["value"] = server_creation_time
 
         # Get the alerts
         response = self.client.post(url=self.alert_url, json=self.query)
@@ -141,6 +170,7 @@ class CortexQueryEDRTrigger(CortexConnector):
             if len(combined_data) > 0:
                 OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(combined_data))
                 self.push_events_to_intakes(events=combined_data)
+                self.save_alerts_cache()
 
         current_lag: int = 0
         if len(events) > 0:

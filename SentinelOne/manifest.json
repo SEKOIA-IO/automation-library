@@ -6,7 +6,8 @@
       "hostname": {
         "title": "Hostname",
         "description": "The domain-name to the SentinelOne instance",
-        "type": "string"
+        "type": "string",
+	"pattern": "^[A-Za-z0-9][A-Za-z0-9.-]+(:\\d+)?$"
       },
       "api_token": {
         "title": "API Token",
@@ -26,7 +27,7 @@
   "name": "SentinelOne",
   "uuid": "ff675e74-e5c1-47c8-a571-d207fc297464",
   "slug": "sentinelone",
-  "version": "1.20.11",
+  "version": "1.20.12",
   "categories": [
     "Endpoint"
   ]

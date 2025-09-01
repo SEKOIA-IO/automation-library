@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## 2025-08-08 - 1.28.8
+
+### Added
+
+- Add extra exception to the credential validator
+
+## 2025-08-20 - 1.28.7
+
+### Added
+
+- Add some logs on harfanglab asset connector
+
+## 2025-08-19 - 1.28.6
+
+### Added
+
+- Some Fix harfanglab asset connector
+
+## 2025-08-19 - 1.28.5
+
+### Added
+
+- Fix harfanglab asset connector
+
+
+## 2025-08-08 - 1.28.4
+
+### Added
+
+- Add timeout exception to the credential validator
+
+## 2025-08-08 - 1.28.3
+
+### Added
+
+- Add some additional logs to the asset connector
+
 ## 2025-08-04 - 1.28.2
 
 ### Fixed

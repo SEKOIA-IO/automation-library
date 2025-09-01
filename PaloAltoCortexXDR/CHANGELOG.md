@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-07 - 1.3.8
+
+### Fixed
+
+- Add caching to avoid duplicate alerts
+
+## 2025-08-06 - 1.3.7
+
+### Fixed
+
+- Fix connector issue with alert creation time
+
 ## 2025-06-13 - 1.3.6
 
 ### Fixed

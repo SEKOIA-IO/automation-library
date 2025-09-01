@@ -1,10 +1,11 @@
-import os
-import pytest
 import io
 import json
+import os
 from unittest.mock import patch
 
-from zscaler.block_ioc import ZscalerBlockIOC, ZscalerUnBlockIOC, ZscalerPushIOCBlock, ZscalerListBLockIOC
+import pytest
+
+from zscaler.actions import ZscalerBlockIOC, ZscalerListBlockedIOC, ZscalerPushIOCBlock, ZscalerUnBlockIOC
 
 
 @pytest.mark.skipif(
@@ -24,7 +25,7 @@ def test_block_ioc_action_success():
     action.module.configuration = ZSCALER_TEST_TENANT_CONF
     action.run({"IoC": IOC_to_test})
 
-    verif = ZscalerListBLockIOC()
+    verif = ZscalerListBlockedIOC()
     verif.module.configuration = ZSCALER_TEST_TENANT_CONF
     response = verif.run()
     if IOC_to_test in response["blacklistUrls"]:
@@ -132,7 +133,7 @@ def test_push_ioc_action_success():
         action.module.configuration = ZSCALER_TEST_TENANT_CONF
         action.run({"stix_objects_path": "./stix_object.json"})
 
-        verif = ZscalerListBLockIOC()
+        verif = ZscalerListBlockedIOC()
         verif.module.configuration = ZSCALER_TEST_TENANT_CONF
         response = verif.run()
         if "77.91.78.118" in response["blacklistUrls"]:
@@ -157,7 +158,7 @@ def test_unblock_ioc_action_success():
     action.module.configuration = ZSCALER_TEST_TENANT_CONF
     action.run({"IoC": IOC_to_test})
 
-    verif = ZscalerListBLockIOC()
+    verif = ZscalerListBlockedIOC()
     verif.module.configuration = ZSCALER_TEST_TENANT_CONF
     response = verif.run()
     if IOC_to_test not in response["blacklistUrls"]:

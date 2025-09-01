@@ -33,7 +33,7 @@ def trigger(module, symphony_storage):
 def alert_query_2():
     return {
         "request_data": {
-            "filters": [{"field": "creation_time", "operator": "gte", "value": 1706003700}],
+            "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 0,
             "search_to": 2,
             "sort": {"field": "creation_time", "keyword": "desc"},
@@ -45,7 +45,7 @@ def alert_query_2():
 def alert_query_4():
     return {
         "request_data": {
-            "filters": [{"field": "creation_time", "operator": "gte", "value": 1706003700}],
+            "filters": [{"field": "server_creation_time", "operator": "gte", "value": 1706003700}],
             "search_from": 2,
             "search_to": 4,
             "sort": {"field": "creation_time", "keyword": "desc"},
@@ -74,7 +74,7 @@ def alert_response_2():
                     "detection_timestamp": 1705912900118,
                 },
                 {
-                    "external_id": "7317728957437371548",
+                    "external_id": "7317728957437371542",
                     "severity": "medium",
                     "events": [
                         {
@@ -113,7 +113,7 @@ def alert_response_3_2():
                     "detection_timestamp": 1705912900118,
                 },
                 {
-                    "external_id": "7317728957437371548",
+                    "external_id": "7317728957437374548",
                     "severity": "medium",
                     "events": [
                         {
@@ -165,7 +165,7 @@ def alert_response_4():
             "result_count": 1,
             "alerts": [
                 {
-                    "external_id": "7317728957437371548",
+                    "external_id": "7317728957437371558",
                     "severity": "medium",
                     "events": [
                         {
@@ -370,7 +370,23 @@ def test_splitting_events(trigger, alert_response_4):
     result = trigger.split_alerts_events(alerts=alert_response_4["reply"]["alerts"])
 
     assert result == [
-        '{"external_id":"7317728957437371548","severity":"medium","events":[{"agent_install_type":"STANDARD",'
+        '{"external_id":"7317728957437371558","severity":"medium","events":[{"agent_install_type":"STANDARD",'
+        '"agent_host_boot_time":null,"event_sub_type":null,"image_name":null}],"alert_id":"2",'
+        '"detection_timestamp":1705912200}',
+        '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}',
+    ]
+
+
+def test_splitting_events_with_cache(trigger, alert_response_4):
+    data = []
+    for _ in range(10):
+        data += alert_response_4["reply"]["alerts"]
+
+    result = trigger.split_alerts_events(alerts=data)
+
+    # caching should protect from duplicates
+    assert result == [
+        '{"external_id":"7317728957437371558","severity":"medium","events":[{"agent_install_type":"STANDARD",'
         '"agent_host_boot_time":null,"event_sub_type":null,"image_name":null}],"alert_id":"2",'
         '"detection_timestamp":1705912200}',
         '{"agent_install_type":"STANDARD","agent_host_boot_time":null,"event_sub_type":"process","alert_id":"2"}',
