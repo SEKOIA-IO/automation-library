@@ -39,6 +39,14 @@
         "type": "integer",
         "description": "The max size of chunks for the batch processing",
         "default": 1000
+      },
+      "categories": {
+        "type": "array",
+        "description": "A list of events' categories to select (let empty to select all events)",
+        "items": {
+          "type": "string"
+        },
+        "default": []
       }
     },
     "required": [

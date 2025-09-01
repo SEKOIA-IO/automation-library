@@ -21,6 +21,7 @@ class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
     hub_consumer_group: str
     storage_connection_string: str
     storage_container_name: str
+    categories: list[str] = []
 
 
 class Client(object):
@@ -130,6 +131,18 @@ class AzureEventsHubTrigger(AsyncConnector):
             for record in body:
                 if record is not None:
                     if body_type == "json":
+                        # Check if the record is a dict and has a category that is in the configured list
+                        if (
+                            len(self.configuration.categories) > 0
+                            and isinstance(record, dict)
+                            and record.get("category") not in self.configuration.categories
+                        ):
+                            self.log(
+                                message=f"Skip record as its category {record.get('category')} not in allowed categories {self.configuration.categories}",
+                                level="debug",
+                            )
+                            continue
+
                         records.append(orjson.dumps(record).decode("utf-8"))
                     else:
                         records.append(record)
