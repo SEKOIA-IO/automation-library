@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-28 - 1.20.12
+
+### Fixed
+
+- Fix the module configuration to force the hostname to be without https://
+
 ## 2025-07-17 - 1.20.11
 
 ### Fixed
