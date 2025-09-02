@@ -19,7 +19,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     Group,
     Account,
     AccountTypeId,
-    AccountTypeStr
+    AccountTypeStr,
 )
 
 
@@ -72,7 +72,6 @@ class AwsUsersAssetConnector(AssetConnector):
         self.log(f"User {user_name} has MFA: {has_mfa}", level="debug")
         return has_mfa
 
-
     def get_aws_users(self) -> Generator[list[AwsUser], None, None]:
         self.log("Start fetching AWS users...", level="info")
         paginator = self.client().get_paginator("list_users")
@@ -89,11 +88,11 @@ class AwsUsersAssetConnector(AssetConnector):
                     name=user["UserName"],
                     type=AccountTypeStr.AWS_ACCOUNT,
                     type_id=AccountTypeId.AWS_ACCOUNT,
-                    uid=user['Arn'],
+                    uid=user["Arn"],
                 )
                 user_obj = User(
                     name=user["UserName"],
-                    uid=user['Arn'],
+                    uid=user["Arn"],
                     groups=self.get_groups_for_user(user["UserName"]),
                     has_mfa=self.get_mfa_status_for_user(user["UserName"]),
                     account=account,
