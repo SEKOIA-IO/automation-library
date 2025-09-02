@@ -1,7 +1,7 @@
   {
   "name": "AWS device asset connector",
   "description": "Fetch AWS device asset",
-  "uuid": "c9e8b2d1-4f3a-4e2c-9a7f-8f2a1b6e3c4d",
+  "uuid": "e2a7c6b4-9f1d-4b8a-8c3e-2d5f7a1e4b9c",
   "docker_parameters": "aws_device_asset_connector",
   "type": "asset",
   "arguments": {

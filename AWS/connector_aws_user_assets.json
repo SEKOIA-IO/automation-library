@@ -1,7 +1,7 @@
   {
   "name": "AWS users asset connector",
   "description": "Fetch AWS users asset",
-  "uuid": "c9e8b2d1-4f3a-4e2c-9a7f-8f2a1b6e3c4d",
+  "uuid": "e2a7c1b4-5d8f-4e3a-9c2b-7f1e6d8a3b2c",
   "docker_parameters": "aws_users_asset_connector",
   "type": "asset",
   "arguments": {
