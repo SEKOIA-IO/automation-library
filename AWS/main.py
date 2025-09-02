@@ -12,12 +12,17 @@ from connectors.s3.trigger_s3_logs import AwsS3LogsTrigger
 from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
 from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
 from connectors.trigger_sqs_messages import AwsSqsMessagesTrigger
+from asset_connector.device_assets import AwsDeviceAssetConnector
+from asset_connector.users_assets import AwsUsersAssetConnector
+from aws_helpers.account_validator import AwsAccountValidator
 
 if __name__ == "__main__":
     init_logging()
 
     module = AwsModule()
-
+    module.register_account_validator(AwsAccountValidator)
+    module.register(AwsDeviceAssetConnector, "aws_device_asset_connector")
+    module.register(AwsUsersAssetConnector, "aws_users_asset_connector")
     module.register(CloudTrailLogsTrigger, "cloudtrail_logs_trigger")
     module.register(FlowlogRecordsTrigger, "flowlog_records_trigger")
     module.register(AwsS3LogsTrigger, "aws_s3_logs_trigger")

@@ -11,15 +11,17 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version="^1.18.3", extras=["all"] } # TODO: update after release of `automation-sdk`
-boto3 = "^1.35.93"
-aiobotocore = "^2.17.0"
+sekoia-automation-sdk = "^1.19.3"
+boto3 = ">=1.39.9"
+botocore = ">=1.39.9"
+aiobotocore = ">=2.24.0"
 orjson = "^3.6.7"
 pandas = "^2.2.2"
 pyarrow = "^17.0.0"
 loguru = "^0.7.0"
 async-lru = "^2.0.2"
 aiofiles = "^23.1.0"
+aiolimiter = ">=1.1.0,<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
