@@ -17,6 +17,9 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
     User,
     Group,
+    Account,
+    AccountTypeId,
+    AccountTypeStr
 )
 
 
@@ -69,6 +72,7 @@ class AwsUsersAssetConnector(AssetConnector):
         self.log(f"User {user_name} has MFA: {has_mfa}", level="debug")
         return has_mfa
 
+
     def get_aws_users(self) -> Generator[list[AwsUser], None, None]:
         self.log("Start fetching AWS users...", level="info")
         paginator = self.client().get_paginator("list_users")
@@ -81,15 +85,18 @@ class AwsUsersAssetConnector(AssetConnector):
                 created_time = created_time.replace(tzinfo=pytz.UTC)
                 if date_filter and (created_time < date_filter):
                     continue
-                ## TODO: Add account type
+                account = Account(
+                    name=user["UserName"],
+                    type=AccountTypeStr.AWS_ACCOUNT,
+                    type_id=AccountTypeId.AWS_ACCOUNT,
+                    uid=user['Arn'],
+                )
                 user_obj = User(
                     name=user["UserName"],
-                    # uid=user['Arn'],
-                    uid=0,
+                    uid=user['Arn'],
                     groups=self.get_groups_for_user(user["UserName"]),
                     has_mfa=self.get_mfa_status_for_user(user["UserName"]),
-                    email_addr="",  # AWS IAM does not provide email address
-                    full_name="",  # AWS IAM does not provide full name
+                    account=account,
                 )
                 self.log(f"Fetched user: {user_obj.name}", level="debug")
                 users.append(AwsUser(user=user_obj, date=user["CreateDate"]))
