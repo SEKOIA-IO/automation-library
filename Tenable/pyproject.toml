@@ -8,7 +8,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.19.2"
+sekoia-automation-sdk = "^1.19.3"
 pydantic = "^2.11.7"
 pytenable = "^1.8.2"
 
