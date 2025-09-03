@@ -12,6 +12,9 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
     User as UserOCSF,
     Group as UserOCSFGroup,
+    Account,
+    AccountTypeId,
+    AccountTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.base import (
     Metadata,
@@ -73,14 +76,21 @@ class EntraIDAssetConnector(AssetConnector):
             name=self.PRODUCT_NAME,
             version=self.PRODUCT_VERSION,
         )
-        metadata = Metadata(product=product, version="1.0")
+        metadata = Metadata(product=product, version="1.6.0")
+        account = Account(
+            name=user.user_principal_name or "Unknown",
+            type_id=AccountTypeId.AZURE_AD_ACCOUNT,
+            type=AccountTypeStr.AZURE_AD_ACCOUNT,
+            uid=user.id,
+        )
         user_data = UserOCSF(
             has_mfa=has_mfa,
             name=user.user_principal_name or "Unknown",
-            uid=0,  # Placeholder, need to change to a unique identifier
+            uid=user.id,
             groups=groups,
             full_name=user.display_name or "Unknown",
             email_addr=user.mail or "Unknown",
+            account=account,
         )
         user_ocsf_model = UserOCSFModel(
             activity_id=2,

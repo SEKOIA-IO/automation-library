@@ -98,7 +98,7 @@ def test_map_fields(test_entra_id_asset_connector):
     asset_groups = []
     result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
     assert result.user.name == "testuser@example.com"
-    assert result.user.uid == 0
+    assert result.user.uid == "user_id"
     assert result.user.has_mfa == has_mfa
 
 
