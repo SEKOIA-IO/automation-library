@@ -102,7 +102,7 @@ class EntraIDAssetConnector(AssetConnector):
             type_uid=500302,
             severity="Informational",
             severity_id=1,
-            time=datetime.timestamp(user.created_date_time),
+            time=datetime.timestamp(user.created_date_time) if user.created_date_time is not None else 0,
             metadata=metadata,
             user=user_data,
             type_name="User Inventory",
@@ -116,7 +116,7 @@ class EntraIDAssetConnector(AssetConnector):
         groups: list[UserOCSFGroup] = []
         user_groups = await self.client.users.by_user_id(user_id).member_of.get()
 
-        if user_groups:
+        if user_groups and user_groups.value:
             for group in user_groups.value:
                 if isinstance(group, Group):
                     groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
@@ -126,7 +126,7 @@ class EntraIDAssetConnector(AssetConnector):
             user_groups = (
                 await self.client.users.by_user_id(user_id).member_of.with_url(user_groups.odata_next_link).get()
             )
-            if user_groups:
+            if user_groups and user_groups.value:
                 for group in user_groups.value:
                     if isinstance(group, Group):
                         groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
@@ -139,22 +139,24 @@ class EntraIDAssetConnector(AssetConnector):
         """
         user_mfa = await self.client.users.by_user_id(user_id).authentication.methods.get()
         has_mfa = False
-        for method in user_mfa.value:
-            if (
-                isinstance(method, MicrosoftAuthenticatorAuthenticationMethod)
-                or isinstance(method, SoftwareOathAuthenticationMethod)
-                or isinstance(method, PhoneAuthenticationMethod)
-            ):
-                has_mfa = True
-                break
+        if user_mfa and user_mfa.value:
+            for method in user_mfa.value:
+                if (
+                    isinstance(method, MicrosoftAuthenticatorAuthenticationMethod)
+                    or isinstance(method, SoftwareOathAuthenticationMethod)
+                    or isinstance(method, PhoneAuthenticationMethod)
+                ):
+                    has_mfa = True
+                    break
         return has_mfa
 
     async def fetch_user(self, user: User) -> UserOCSFModel:
         """
         Fetch user details and map to UserOCSFModel.
         """
-        user_mfa = await self.fetch_user_mfa(user.id)
-        user_groups = await self.fetch_user_groups(user.id)
+        if user.id:
+            user_mfa = await self.fetch_user_mfa(user.id)
+            user_groups = await self.fetch_user_groups(user.id)
         return self.map_fields(user, user_mfa, user_groups)
 
     async def fetch_new_users(self, last_run_date: str | None = None) -> list[UserOCSFModel]:
@@ -175,7 +177,7 @@ class EntraIDAssetConnector(AssetConnector):
 
         users = await self.client.users.get(request_configuration=request_configuration)
 
-        if users:
+        if users and users.value:
             for user in users.value:
                 ## Fetch MFA status of the user
                 new_user = await self.fetch_user(user)
@@ -186,23 +188,23 @@ class EntraIDAssetConnector(AssetConnector):
             users = await self.client.users.with_url(users.odata_next_link).get(
                 request_configuration=request_configuration
             )
-            if users:
+            if users and users.value:
                 for user in users.value:
                     new_user = await self.fetch_user(user)
                     new_users.append(new_user)
 
         ## Save the most recent date seen
-        if new_users:
+        if len(new_users) > 0:
             most_recent_date: float = max(user.time for user in new_users)
             with self.context as cache:
                 cache["most_recent_date_seen"] = (
                     datetime.fromtimestamp(most_recent_date, timezone.utc).replace(microsecond=0).isoformat()
                 )
-                return new_users
+        return new_users
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         ### Fetch users from Microsoft Graph API
-        last_run_date: datetime | None = self.most_recent_date_seen if self.most_recent_date_seen else None
+        last_run_date: str | None = self.most_recent_date_seen if self.most_recent_date_seen else None
         new_users = asyncio.run(self.fetch_new_users(last_run_date=last_run_date))
         for user in new_users:
             yield user
