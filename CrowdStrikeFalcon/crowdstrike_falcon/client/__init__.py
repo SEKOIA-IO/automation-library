@@ -4,7 +4,7 @@ from posixpath import join as urljoin
 from typing import Any
 
 import requests
-from requests.auth import AuthBase, HTTPBasicAuth
+from requests.auth import AuthBase
 from requests.exceptions import HTTPError
 from requests_ratelimiter import LimiterAdapter
 
@@ -162,36 +162,19 @@ class CrowdstrikeFalconClient(ApiClient):
             },
         )
 
-
-class CrowdstrikeThreatGraphClient(ApiClient):
-    def __init__(
-        self,
-        base_url: str,
-        username: str,
-        password: str,
-        nb_retries: int = 5,
-        default_headers: dict[str, str] | None = None,
-    ):
-        super().__init__(
-            base_url,
-            HTTPBasicAuth(username, password),
-            nb_retries=nb_retries,
-            default_headers=default_headers,
-        )
-
     def get_edge_types(self, **kwargs) -> Generator[str, None, None]:
-        yield from self.request_endpoint("GET", "threatgraph/queries/edge-types/v1", **kwargs)
-
+        yield from self.request_endpoint("GET", "/threatgraph/queries/edge-types/v1", **kwargs)
+    
     def list_edges(
         self, verticle_id: str, edge_type: str, scope: str = "device", **kwargs
     ) -> Generator[dict, None, None]:
         yield from self.request_endpoint(
             "GET",
-            "threatgraph/combined/edges/v1",
+            "/threatgraph/combined/edges/v1",
             params={"ids": verticle_id, "edge_type": edge_type, "scope": scope},
             **kwargs,
         )
-
+    
     def get_verticles_details(
         self,
         verticle_ids: list[str],
@@ -201,7 +184,7 @@ class CrowdstrikeThreatGraphClient(ApiClient):
     ) -> Generator[dict, None, None]:
         yield from self.request_endpoint(
             "GET",
-            f"threatgraph/entities/{verticle_type}/v1",
+            f"/threatgraph/entities/{verticle_type}/v1",
             params={"ids": verticle_ids, "scope": scope},
             **kwargs,
         )
