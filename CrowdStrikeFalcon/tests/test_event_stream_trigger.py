@@ -88,7 +88,6 @@ def test_authentication_exceed_ratelimit(trigger):
         trigger.stop()
         trigger.run()
         mock_time.assert_called_once_with(60)
-        return
 
 
 def test_refresh_stream(trigger):
@@ -117,7 +116,6 @@ def test_refresh_stream(trigger):
         )
 
         reader.refresh_stream(refresh_url)
-        return
 
 
 def test_refresh_stream_failed(trigger):
@@ -322,6 +320,15 @@ def test_run(trigger, symphony_storage):
 
     with patch("crowdstrike_falcon.event_stream_trigger.EventStreamReader"), requests_mock.Mocker() as mock:
         mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
             "GET",
             "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
             json={
@@ -331,7 +338,6 @@ def test_run(trigger, symphony_storage):
             },
         )
         trigger.run()
-        return
 
 
 def test_read_stream_consider_offset(trigger):
