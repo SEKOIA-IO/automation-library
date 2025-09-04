@@ -105,3 +105,14 @@ def filter_collected_events(events: Sequence, getter: Callable, cache: Cache) ->
         selected_events.append(event)
 
     return selected_events
+
+
+def clean_hostname(hostname: str) -> str:
+    """
+    Removes any extra information from a hostname string, such as protocol prefixes (http://, https://) or url paths.
+    """
+    if "://" in hostname:
+        hostname = hostname.split("://")[1]
+    if "/" in hostname:
+        hostname = hostname.split("/")[0]
+    return hostname
