@@ -31,10 +31,7 @@ def trigger(symphony_storage):
         "client_secret": "bar",
     }
     trigger.configuration = {
-        "tg_username": "username",
-        "tg_password": "password",
         "intake_key": "intake_key",
-        "tg_base_url": "https://my.fake.sekoia",
     }
     trigger.app_id = "sio-00000"
     return trigger
@@ -91,6 +88,7 @@ def test_authentication_exceed_ratelimit(trigger):
         trigger.stop()
         trigger.run()
         mock_time.assert_called_once_with(60)
+        return
 
 
 def test_refresh_stream(trigger):
@@ -119,6 +117,7 @@ def test_refresh_stream(trigger):
         )
 
         reader.refresh_stream(refresh_url)
+        return
 
 
 def test_refresh_stream_failed(trigger):
@@ -332,6 +331,7 @@ def test_run(trigger, symphony_storage):
             },
         )
         trigger.run()
+        return
 
 
 def test_read_stream_consider_offset(trigger):
@@ -381,9 +381,6 @@ def test_read_stream_integration(symphony_storage):
     trigger.configuration = {
         "frequency": 0,
         "intake_key": "0123456789",
-        "tg_username": os.environ.get("CROWDSTRIKE_FALCON_USERNAME"),
-        "tg_password": os.environ.get("CROWDSTRIKE_FALCON_PASSWORD"),
-        "tg_base_url": os.environ.get("CROWDSTRIKE_BASE_URL", "https://falconapi.eu-1.crowdstrike.com"),
     }
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()

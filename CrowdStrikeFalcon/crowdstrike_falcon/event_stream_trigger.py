@@ -23,7 +23,6 @@ from crowdstrike_falcon.helpers import (
 )
 from crowdstrike_falcon.logging import get_logger
 from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
-from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
 
 logger = get_logger()
 
