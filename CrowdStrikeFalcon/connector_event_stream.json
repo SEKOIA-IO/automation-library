@@ -8,28 +8,6 @@
       "intake_key": {
         "description": "Intake key to use when sending events",
         "type": "string"
-      },
-      "tg_base_url": {
-        "description": "The base_url for the ThreatGraphAPI",
-        "type": "string",
-        "default": "https://falconapi.eu-1.crowdstrike.com",
-        "format": "uri"
-      },
-      "tg_username": {
-        "description": "The username for the ThreatGraphAPI",
-        "type": [
-          "string",
-          "null"
-        ],
-        "default": null
-      },
-      "tg_password": {
-        "description": "The password for the ThreatGraphAPI",
-        "type": [
-          "string",
-          "null"
-        ],
-        "default": null
       }
     },
     "required": [
