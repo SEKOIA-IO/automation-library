@@ -114,8 +114,8 @@ class HarfanglabAssetConnector(AssetConnector):
         os_type = self.extract_os_type(asset.get("ostype"))
         os_obj = OperatingSystem(name=asset.get("osproducttype"), type=OSTypeStr[os_type], type_id=OSTypeId[os_type])
         device = Device(
-            type_id=DeviceTypeId.DESKTOP,
-            type=DeviceTypeStr.DESKTOP,
+            type_id=DeviceTypeId.DESKTOP.value,
+            type=DeviceTypeStr.DESKTOP.value,
             uid=asset["id"],
             os=os_obj,
             hostname=asset["hostname"],

@@ -394,8 +394,8 @@ def test_map_fields(test_harfanglab_asset_connector, asset_first_object):
     assert mapped_device.metadata.version == "1.5.0"
 
     # Test device fields
-    assert mapped_device.device.type_id.value == 2
-    assert mapped_device.device.type.value == "Desktop"
+    assert mapped_device.device.type_id == 2
+    assert mapped_device.device.type == "Desktop"
     assert mapped_device.device.uid == asset_first_object["id"]
     assert mapped_device.device.os.name == asset_first_object["osproducttype"]
     assert mapped_device.device.os.type.value == asset_first_object["ostype"]
