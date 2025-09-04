@@ -1231,4 +1231,3 @@ def test_read_stream_with_verticles_with_alert(trigger):
             pass
 
         assert actual_events == expected_events
-

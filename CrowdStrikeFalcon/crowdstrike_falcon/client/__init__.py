@@ -164,7 +164,7 @@ class CrowdstrikeFalconClient(ApiClient):
 
     def get_edge_types(self, **kwargs) -> Generator[str, None, None]:
         yield from self.request_endpoint("GET", "/threatgraph/queries/edge-types/v1", **kwargs)
-    
+
     def list_edges(
         self, verticle_id: str, edge_type: str, scope: str = "device", **kwargs
     ) -> Generator[dict, None, None]:
@@ -174,7 +174,7 @@ class CrowdstrikeFalconClient(ApiClient):
             params={"ids": verticle_id, "edge_type": edge_type, "scope": scope},
             **kwargs,
         )
-    
+
     def get_verticles_details(
         self,
         verticle_ids: list[str],
