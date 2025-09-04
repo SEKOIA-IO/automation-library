@@ -38,7 +38,7 @@ def sentinelone_hostname():
 @pytest.fixture(scope="session")
 def sentinelone_module(sentinelone_hostname):
     module = SentinelOneModule()
-    module.configuration = {"hostname": sentinelone_hostname, "api_token": "1234567890"}
+    module.configuration = {"hostname": f"https://{sentinelone_hostname}/a/path/", "api_token": "1234567890"}
     return module
 
 

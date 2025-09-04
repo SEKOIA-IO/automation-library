@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
+from sentinelone_module.helpers import clean_hostname
+
 
 class SentinelOneConfiguration(BaseModel):
     hostname: str = Field(..., description="The url to the SentinelOne instance")
@@ -21,6 +23,6 @@ class SentinelOneAction(Action):
     @cached_property
     def client(self):
         return Management(
-            hostname=self.module.configuration.hostname,
+            hostname=clean_hostname(self.module.configuration.hostname),
             api_token=self.module.configuration.api_token,
         )
