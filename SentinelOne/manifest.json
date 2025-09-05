@@ -5,7 +5,7 @@
     "properties": {
       "hostname": {
         "title": "Hostname",
-        "description": "The domain-name to the SentinelOne instance (e.g., <region>.sentinelone.com)",
+        "description": "The domain-name to the SentinelOne instance (e.g., <region>.sentinelone.net)",
         "type": "string",
 	"pattern": "^[A-Za-z0-9][A-Za-z0-9.-]+(:\\d+)?$"
       },
@@ -27,7 +27,7 @@
   "name": "SentinelOne",
   "uuid": "ff675e74-e5c1-47c8-a571-d207fc297464",
   "slug": "sentinelone",
-  "version": "1.20.13",
+  "version": "1.20.14",
   "categories": [
     "Endpoint"
   ]
