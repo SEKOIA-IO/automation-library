@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-05 - 1.20.14
+
+### Fixed
+
+- Fix the description of the hostname parameter in the module configuration
+
 ## 2025-09-04 - 1.20.13
 
 ### Fixed
