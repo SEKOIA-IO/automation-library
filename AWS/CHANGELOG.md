@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-05 - 1.33.2
+
+### Fixed
+
+- Fix the SQS messages trigger to handle differently AWS notifications from raw messages
+
 ## 2025-04-07 - 1.33.1
 
 ### Added
