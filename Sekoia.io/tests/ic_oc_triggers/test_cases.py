@@ -48,12 +48,13 @@ def test_securitycasestrigger_retrieve_case_from_api(case_trigger, sample_siccas
 
 
 @pytest.fixture
-def case_created_trigger(module_configuration, symphony_storage):
+def case_created_trigger(symphony_storage, module_configuration):
     trigger = CaseCreatedTrigger()
     trigger.configuration = {}
     trigger._data_path = symphony_storage
     trigger.module.configuration = module_configuration
     trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.log = Mock()
 
     yield trigger
 
@@ -80,14 +81,14 @@ def case_alerts_updated_trigger(module_configuration, symphony_storage):
     yield trigger
 
 
-def test_casecreatedtrigger_handler_dispatch_case_message(case_created_trigger, samplenotif_case_updated):
+def test_case_created_trigger_handler_dispatch_case_message(case_created_trigger, samplenotif_case_updated):
     case_created_trigger.handle_event = Mock()
 
     case_created_trigger.handler_dispatcher(json.dumps(samplenotif_case_updated))
     case_created_trigger.handle_event.assert_called()
 
 
-def test_casecreatedtrigger_handle_case_invalid_message(case_created_trigger):
+def test_case_created_trigger_handle_case_invalid_message(case_created_trigger):
     invalid_messages = [
         {"event_version": "1", "event_type": "case"},
         {"event_version": "1", "event_type": "case", "attributes": {}},
@@ -349,4 +350,107 @@ def test_case_combined_filters(
             "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
         }
         case_updated_trigger.handle_event(samplenotif_case_updated)
+        assert case_updated_trigger.send_event.call_count == 4
+
+
+def test_case_combined_filters_without_version(
+    case_updated_trigger,
+    samplenotif_case_updated,
+    sample_siccaseapi_mock,
+    sample_siccaseapi,
+):
+    case_updated_trigger.send_event = MagicMock()
+
+    sample_without_version = {
+        **samplenotif_case_updated,
+        **{
+            "metadata": {
+                "version": None,  # Simulate older event format without version
+            }
+        },
+    }
+
+    with sample_siccaseapi_mock:
+
+        mode = "manual" if sample_siccaseapi["manual"] else "automatic"
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": ["foo"],
+            "mode_filter": "foo",
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": [sample_siccaseapi["uuid"]],
+            "assignees_filter": ["foo"],
+            "mode_filter": "foo",
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+            "mode_filter": "foo",
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": ["foo"],
+            "mode_filter": mode,
+            "priority_uuids_filter": ["foo"],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
+        assert not case_updated_trigger.send_event.called
+
+        # no match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": ["foo"],
+            "assignees_filter": ["foo"],
+            "mode_filter": "foo",
+            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
+        assert not case_updated_trigger.send_event.called
+
+        # match case all criteria
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": [sample_siccaseapi["uuid"]],
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+            "mode_filter": mode,
+            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
+        assert case_updated_trigger.send_event.call_count == 1
+
+        # match
+        case_updated_trigger.configuration = {"case_uuids_filter": [sample_siccaseapi["uuid"]], "mode_filter": mode}
+        case_updated_trigger.handle_event(sample_without_version)
+        assert case_updated_trigger.send_event.call_count == 2
+
+        # match
+        case_updated_trigger.configuration = {
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+            "priority_uuids_filter": [sample_siccaseapi["custom_priority_uuid"]],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
+        assert case_updated_trigger.send_event.call_count == 3
+
+        # match
+        case_updated_trigger.configuration = {
+            "case_uuids_filter": [sample_siccaseapi["uuid"]],
+            "assignees_filter": [sample_siccaseapi["subscribers"][0]["avatar_uuid"]],
+        }
+        case_updated_trigger.handle_event(sample_without_version)
         assert case_updated_trigger.send_event.call_count == 4

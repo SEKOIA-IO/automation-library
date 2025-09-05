@@ -5,9 +5,13 @@ import orjson
 import requests
 from tenacity import retry, wait_exponential, stop_after_attempt
 
+from sekoiaio.logging import get_logger
 from sekoiaio.utils import user_agent
 
 from .base import _SEKOIANotificationBaseTrigger
+
+
+logger = get_logger(__name__)
 
 
 class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
@@ -30,14 +34,19 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
 
         # Ignore alert “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
+            logger.debug(
+                "Discard the notification", received_event_type=event_type, received_event_action=event_action
+            )
             return
 
         # Is the notification in a format we can understand?
         alert_uuid: str = alert_attrs.get("uuid", "")
         if not alert_uuid:
+            logger.debug("The notification does not contain an alert UUID", alert_attrs=alert_attrs)
             return
 
         if not self._filter_notifications(message):
+            logger.debug("The notification does not match the filters", alert_uuid=alert_uuid, alert_attrs=alert_attrs)
             return
 
         try:
@@ -48,10 +57,23 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
 
         if rule_filter := self.configuration.get("rule_filter"):
             if alert["rule"]["name"] != rule_filter and alert["rule"]["uuid"] != rule_filter:
+                logger.debug(
+                    "Alert does not match the rule filter",
+                    alert_uuid=alert_uuid,
+                    alert_rule_name=alert["rule"]["name"],
+                    alert_rule_uuid=alert["rule"]["uuid"],
+                    rule_filter=rule_filter,
+                )
                 return
 
         if rule_names_filter := self.configuration.get("rule_names_filter"):
             if alert["rule"]["name"] not in rule_names_filter:
+                logger.debug(
+                    "Alert does not match the rule names filter",
+                    alert_uuid=alert_uuid,
+                    alert_rule_name=alert["rule"]["name"],
+                    rule_names_filter=rule_names_filter,
+                )
                 return
 
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))
@@ -177,18 +199,24 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
 
         # Ignore alert “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
+            logger.debug(
+                "Discard the notification", received_event_type=event_type, received_event_action=event_action
+            )
             return
 
         # Is the notification in a format we can understand?
         alert_uuid: str = alert_attrs.get("alert_uuid", "")
         if not alert_uuid:
+            logger.debug("The notification does not contain an alert UUID", alert_attrs=alert_attrs)
             return
 
         comment_uuid: str = alert_attrs.get("uuid", "")
         if not comment_uuid:
+            logger.debug("The notification does not contain a comment UUID", alert_attrs=alert_attrs)
             return
 
         if not self._filter_notifications(message):
+            logger.debug("The notification does not match the filters", alert_uuid=alert_uuid, alert_attrs=alert_attrs)
             return
 
         try:
@@ -200,10 +228,23 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
 
         if rule_filter := self.configuration.get("rule_filter"):
             if alert["rule"]["name"] != rule_filter and alert["rule"]["uuid"] != rule_filter:
+                logger.debug(
+                    "Alert does not match the rule filter",
+                    alert_uuid=alert_uuid,
+                    alert_rule_name=alert["rule"]["name"],
+                    alert_rule_uuid=alert["rule"]["uuid"],
+                    rule_filter=rule_filter,
+                )
                 return
 
         if rule_names_filter := self.configuration.get("rule_names_filter"):
             if alert["rule"]["name"] not in rule_names_filter:
+                logger.debug(
+                    "Alert does not match the rule names filter",
+                    alert_uuid=alert_uuid,
+                    alert_rule_name=alert["rule"]["name"],
+                    rule_names_filter=rule_names_filter,
+                )
                 return
 
         work_dir = self._data_path.joinpath("sekoiaio_securityalerts").joinpath(str(uuid.uuid4()))

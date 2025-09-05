@@ -5,9 +5,13 @@ import orjson
 import requests
 from tenacity import retry, wait_exponential, stop_after_attempt
 
+from sekoiaio.logging import get_logger
 from sekoiaio.utils import user_agent
 
 from .base import _SEKOIANotificationBaseTrigger
+
+
+logger = get_logger(__name__)
 
 
 class SecurityCasesTrigger(_SEKOIANotificationBaseTrigger):
@@ -104,11 +108,17 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
 
         # Ignore cases “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
+            logger.debug(
+                "Discard no case created notification",
+                received_event_type=event_type,
+                receive_event_action=event_action,
+            )
             return
 
         # Is the notification in a format we can understand?
         case_uuid: str = case_attrs.get("uuid", "")
         if not case_uuid:
+            logger.debug("The notification does not contain a case UUID", case_attrs=case_attrs)
             return
 
         try:
@@ -125,6 +135,7 @@ class CaseCreatedTrigger(SecurityCasesTrigger):
         ]
 
         if not all(filter for filter in filter_case):
+            logger.debug("Case does not match the filters", case_uuid=case_uuid, case_attrs=case_attrs)
             return
 
         case_short_id = case_attrs.get("short_id")
@@ -157,13 +168,20 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         case_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
+
         # Ignore cases “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
+            logger.debug(
+                "Discard no case updated notification",
+                received_event_type=event_type,
+                receive_event_action=event_action,
+            )
             return
 
         # Is the notification in a format we can understand?
         case_uuid: str = case_attrs.get("uuid", "")
         if not case_uuid:
+            logger.debug("The notification does not contain a case UUID", case_attrs=case_attrs)
             return
 
         try:
@@ -180,6 +198,7 @@ class CaseUpdatedTrigger(SecurityCasesTrigger):
         ]
 
         if not all(filter_case):
+            logger.debug("Case does not match the filters", case_uuid=case_uuid, case_attrs=case_attrs)
             return
 
         case_short_id = case.get("short_id")
@@ -218,13 +237,20 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
         case_attrs = message.get("attributes", {})
         event_type: str = message.get("type", "")
         event_action: str = message.get("action", "")
+
         # Ignore cases “sub event” types that we can’t (yet) handle.
         if (event_type, event_action) not in self.HANDLED_EVENT_SUB_TYPES:
+            logger.debug(
+                "Discard no case alert-updated notification",
+                received_event_type=event_type,
+                receive_event_action=event_action,
+            )
             return
 
         # Is the notification in a format we can understand?
         case_uuid: str = case_attrs.get("uuid", "")
         if not case_uuid:
+            logger.debug("The notification does not contain a case UUID", case_attrs=case_attrs)
             return
 
         try:
@@ -241,6 +267,7 @@ class CaseAlertsUpdatedTrigger(SecurityCasesTrigger):
         ]
 
         if not all(filter for filter in filter_case):
+            logger.debug("Case does not match the filters", case_uuid=case_uuid, case_attrs=case_attrs)
             return
 
         case_short_id = case.get("short_id")
