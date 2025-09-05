@@ -51,6 +51,17 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         return SqsWrapper(config)
 
+    def is_aws_notification(self, message: Any) -> bool:
+        """
+        Check if message is AWS notification.
+
+        Args:
+            message: dict
+        Returns:
+            bool: True if message is AWS notification
+        """
+        return isinstance(message, dict) and "Records" in message and isinstance(message["Records"], list)
+
     async def next_batch(self) -> tuple[int, list[int]]:
         """
         Get next batch of messages.

@@ -182,3 +182,27 @@ async def test_trigger_sqs_messages_with_one_failed(
     ]
 
     assert await connector.next_batch() == expected_result
+
+
+@pytest.mark.parametrize(
+    "message, expected",
+    [
+        ({"Records": []}, True),
+        ({"Records": [{}]}, True),
+        ({}, False),
+        ({"message": []}, False),
+        ({"message": "hello"}, False),
+        ({"Records": "string"}, False),
+        ("string", False),
+    ],
+)
+def test_is_aws_notification(message: dict, expected: bool, connector: AwsSqsMessagesTrigger):
+    """
+    Test is_aws_notification method.
+
+    Args:
+        message: dict
+        expected: bool
+        connector: AwsSqsMessagesTrigger
+    """
+    assert connector.is_aws_notification(message) is expected
