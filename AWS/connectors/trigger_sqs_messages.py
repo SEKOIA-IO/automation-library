@@ -85,8 +85,13 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
                     timestamps_to_log.append(message_timestamp)
                     try:
-                        # Records is a list of strings
-                        records.extend(orjson.loads(message).get("Records", []))
+                        content = orjson.loads(message)
+                        if self.is_aws_notification(content):
+                            # The message is an AWS notification, we extract the Records field
+                            records.extend(content.get("Records", []))
+                        else:
+                            # The message is a raw message, we add it as is
+                            records.append(content)
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
