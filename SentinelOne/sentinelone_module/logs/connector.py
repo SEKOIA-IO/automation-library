@@ -18,7 +18,7 @@ from sekoia_automation.connector import Connector
 
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.exceptions import SENTINEL_ONE_EMPTY_RESPONSE, SentinelOneManagementResponseError
-from sentinelone_module.helpers import filter_collected_events
+from sentinelone_module.helpers import clean_hostname, filter_collected_events
 from sentinelone_module.logging import get_logger
 from sentinelone_module.logs.configuration import SentinelOneLogsConnectorConfiguration
 from sentinelone_module.logs.helpers import get_latest_event_timestamp
@@ -96,7 +96,9 @@ class SentinelOneLogsConsumer(Thread):
         Returns:
             Management: SentinelOne client instance
         """
-        return Management(hostname=self.module.configuration.hostname, api_token=self.module.configuration.api_token)
+        return Management(
+            hostname=clean_hostname(self.module.configuration.hostname), api_token=self.module.configuration.api_token
+        )
 
     def load_events_cache(self) -> Cache:
         events_cache: LRUCache = LRUCache(maxsize=10000)

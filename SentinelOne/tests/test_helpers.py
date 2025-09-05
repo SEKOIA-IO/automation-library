@@ -4,6 +4,7 @@ import pytest
 from cachetools import LRUCache
 
 from sentinelone_module.helpers import (
+    clean_hostname,
     filter_collected_events,
     generate_password,
     is_a_supported_stix_indicator,
@@ -95,3 +96,21 @@ def test_stix_to_indicators():
 )
 def test_filter_collected_events(events, getter, cache, expected_list):
     assert filter_collected_events(events, getter, cache) == expected_list
+
+
+@pytest.mark.parametrize(
+    "hostname,expected_hostname",
+    [
+        ("example.com", "example.com"),
+        ("http://example.com", "example.com"),
+        ("https://example.com", "example.com"),
+        ("http://example.com/path/to/resource", "example.com"),
+        ("https://example.com/path/to/resource", "example.com"),
+        ("ftp://example.com/resource", "example.com"),
+        ("example.com/path/to/resource", "example.com"),
+        ("http://subdomain.example.com", "subdomain.example.com"),
+        ("https://subdomain.example.com/path", "subdomain.example.com"),
+    ],
+)
+def test_clean_hostname(hostname, expected_hostname):
+    assert clean_hostname(hostname) == expected_hostname

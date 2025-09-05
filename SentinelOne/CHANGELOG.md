@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-04 - 1.20.13
+
+### Fixed
+
+- Clean the hostname to remove protocol scheme and url path, in the module configuration
+
 ## 2025-08-28 - 1.20.12
 
 ### Fixed
