@@ -182,3 +182,63 @@ async def test_trigger_sqs_messages_with_one_failed(
     ]
 
     assert await connector.next_batch() == expected_result
+
+
+@pytest.mark.asyncio
+async def test_trigger_sqs_with_custom_messages(
+    symphony_storage: Path, session_faker: Faker, connector: AwsSqsMessagesTrigger
+):
+    """
+    Test trigger AwsSqsMessagesTriggerConfiguration.
+
+    Args:
+        symphony_storage: Path,
+        session_faker: Faker
+        sqs_message: str
+        connector: AwsSqsMessagesTrigger
+    """
+    amount_of_messages = session_faker.pyint(min_value=5, max_value=100)
+    the_message = '{"message": "hello"}'
+
+    valid_messages = [
+        (the_message, session_faker.pyint(min_value=1, max_value=1000)) for _ in range(amount_of_messages)
+    ]
+    expected_messages = []
+    expected_timestamps = []
+    for data in valid_messages:
+        message, timestamp = data
+
+        expected_messages.extend([orjson.dumps(record).decode("utf-8") for record in orjson.loads(message)])
+        expected_timestamps.append(timestamp)
+
+    expected_result = len(expected_messages), expected_timestamps
+
+    connector.sqs_wrapper = MagicMock()
+    connector.sqs_wrapper.receive_messages = MagicMock()
+    connector.sqs_wrapper.receive_messages.return_value.__aenter__.return_value = valid_messages
+
+    assert await connector.next_batch() == expected_result
+
+
+@pytest.mark.parametrize(
+    "message, expected",
+    [
+        ({"Records": []}, True),
+        ({"Records": [{}]}, True),
+        ({}, False),
+        ({"message": []}, False),
+        ({"message": "hello"}, False),
+        ({"Records": "string"}, False),
+        ("string", False),
+    ],
+)
+def test_is_aws_notification(message: dict, expected: bool, connector: AwsSqsMessagesTrigger):
+    """
+    Test is_aws_notification method.
+
+    Args:
+        message: dict
+        expected: bool
+        connector: AwsSqsMessagesTrigger
+    """
+    assert connector.is_aws_notification(message) is expected
