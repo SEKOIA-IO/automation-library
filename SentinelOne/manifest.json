@@ -5,7 +5,7 @@
     "properties": {
       "hostname": {
         "title": "Hostname",
-        "description": "The domain-name to the SentinelOne instance",
+        "description": "The domain-name to the SentinelOne instance (e.g., <region>.sentinelone.com)",
         "type": "string",
 	"pattern": "^[A-Za-z0-9][A-Za-z0-9.-]+(:\\d+)?$"
       },
