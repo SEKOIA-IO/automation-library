@@ -27,9 +27,11 @@ class BaseGetEvents(Action):
         # Configure http with retry strategy
         retry_strategy = Retry(
             total=10,
+            status=10,
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=0.2,
+            backoff_factor=1,
+            backoff_max=120,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.http_session = requests.Session()
