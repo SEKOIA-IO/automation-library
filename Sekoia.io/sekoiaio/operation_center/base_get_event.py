@@ -96,7 +96,7 @@ class BaseGetEvents(Action):
 
             # If we exceed the timeout, raise an error
             if time.time() - start_wait > timeout:
-                raise TimeoutError(f"Event search job took more than {timeout}s to {action}")
+                raise TimeoutError(f"Event search job {event_search_job_uuid} took more than {timeout}s to {action}")
 
     def wait_for_search_job_execution(self, event_search_job_uuid: str) -> None:
         # Wait for job to start (20 min)
