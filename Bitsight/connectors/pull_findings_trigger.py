@@ -7,7 +7,7 @@ from typing import Any, Optional, TypeAlias
 
 import orjson
 from loguru import logger
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
@@ -26,12 +26,13 @@ class CompanyCheckpoint(BaseModel):
     last_seen: str | None = None
     offset: int | None = None
 
-    def with_updated_last_seen(self) -> "CompanyCheckpoint":
+    def with_updated_last_seen(self, time_delta: int) -> "CompanyCheckpoint":
         """
         Get CompanyCheckpoint with updated last_see corresponded to the next logic.
 
-        If last_seen is None, then update it with 1 day before now and set offset to 0.
-        If last_seen is not None and lower then 1 day before now, then update it with 1 day before now and set offset to 0.
+        If last_seen is None, then update it with `time_delta` day(s) before now and set offset to 0.
+        If last_seen is not None and earlier than `time_delta` day(s) before now, then update it
+        with `time_delta` day(s) before now and set offset to 0.
 
         Format should be 'YYYY-MM-DD' corresponded to the Bitsight API:
             https://help.bitsighttech.com/hc/en-us/articles/360022913734-GET-Finding-Details
@@ -39,7 +40,9 @@ class CompanyCheckpoint(BaseModel):
         Returns:
             datetime:
         """
-        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(days=1)
+        result = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
+            days=time_delta
+        )
 
         parsed_last_seen = (
             datetime.fromisoformat(self.last_seen).replace(tzinfo=timezone.utc) if self.last_seen else None
@@ -54,15 +57,15 @@ class CompanyCheckpoint(BaseModel):
 class Checkpoint(BaseModel):
     values: list[CompanyCheckpoint] = []
 
-    def get_company_checkpoint(self, company_uuid: str) -> CompanyCheckpoint:
+    def get_company_checkpoint(self, company_uuid: str, time_delta: int) -> CompanyCheckpoint:
         for value in self.values:
             if value.company_uuid == company_uuid:
-                return value.with_updated_last_seen()
+                return value.with_updated_last_seen(time_delta=time_delta)
 
-        return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen()
+        return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen(time_delta=time_delta)
 
-    def recalculate_company_checkpoint(self, company_uuid: str) -> None:
-        company_checkpoint = self.get_company_checkpoint(company_uuid)
+    def recalculate_company_checkpoint(self, company_uuid: str, time_delta: int) -> None:
+        company_checkpoint = self.get_company_checkpoint(company_uuid, time_delta=time_delta)
         if company_checkpoint is None:
             return
 
@@ -73,15 +76,17 @@ class Checkpoint(BaseModel):
         )
 
         next_day = last_seen + timedelta(days=1)
-        now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0)
+        now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
+            days=time_delta
+        )
         if next_day <= now:
             company_checkpoint.last_seen = next_day.strftime("%Y-%m-%d")
             company_checkpoint.offset = 1
 
         self.values = [value for value in self.values if value.company_uuid != company_uuid] + [company_checkpoint]
 
-    def increment_company_checkpoint(self, company_uuid: str, last_seen: str) -> None:
-        company_checkpoint = self.get_company_checkpoint(company_uuid)
+    def increment_company_checkpoint(self, company_uuid: str, last_seen: str, time_delta: int) -> None:
+        company_checkpoint = self.get_company_checkpoint(company_uuid, time_delta=time_delta)
         if company_checkpoint is None:
             company_checkpoint = CompanyCheckpoint(company_uuid=company_uuid, last_seen=last_seen, offset=0)
 
@@ -104,8 +109,9 @@ class Checkpoint(BaseModel):
 class PullFindingsConnectorConfiguration(DefaultConnectorConfiguration):
     """Connector configuration for Bitsight findings."""
 
-    frequency: int = 10
-    batch_limit: int = 10000
+    frequency: int = 60
+    batch_limit: int = 100
+    timedelta: int = 2
 
 
 class PullFindingsConnector(AsyncConnector):
@@ -190,8 +196,8 @@ class PullFindingsConnector(AsyncConnector):
         return result
 
     async def process_findings_for_company(self, checkpoint: Checkpoint, company_id: str) -> int:
-        last_seen = checkpoint.get_company_checkpoint(company_id).last_seen
-        offset = checkpoint.get_company_checkpoint(company_id).offset
+        last_seen = checkpoint.get_company_checkpoint(company_id, time_delta=self.configuration.timedelta).last_seen
+        offset = checkpoint.get_company_checkpoint(company_id, time_delta=self.configuration.timedelta).offset
 
         logger.info(
             "Start to fetch findings for company {0} with last_seen {1} and offset {2}",
@@ -204,7 +210,9 @@ class PullFindingsConnector(AsyncConnector):
         total_pushed_events = 0
 
         async for finding in self.bitsight_client.findings_result(company_id, last_seen, offset):
-            checkpoint.increment_company_checkpoint(company_id, finding["last_seen"])
+            checkpoint.increment_company_checkpoint(
+                company_id, finding["last_seen"], time_delta=self.configuration.timedelta
+            )
             data_to_push.extend(self.format_finding(finding, company_id))
 
             if len(data_to_push) >= self.configuration.batch_limit:
@@ -221,7 +229,7 @@ class PullFindingsConnector(AsyncConnector):
             logger.info("Pushed {0} events to intakes", pushed_events)
             total_pushed_events += pushed_events
 
-        checkpoint.recalculate_company_checkpoint(company_id)
+        checkpoint.recalculate_company_checkpoint(company_id, time_delta=self.configuration.timedelta)
         self.save_checkpoint(checkpoint)
 
         # Add None to queue to indicate that all findings for this company have been fetched

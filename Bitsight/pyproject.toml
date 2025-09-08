@@ -7,7 +7,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version = "^1.16.0", extras = ["all"] }
+sekoia-automation-sdk = "^1.19.3"
 orjson = "^3.8.12"
 aiohttp = "^3.8.5"
 aiolimiter = "^1.1.0"
@@ -71,7 +71,6 @@ addopts = '''
   --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=90
-  --numprocesses=auto
 '''
 
 [tool.coverage.run]
