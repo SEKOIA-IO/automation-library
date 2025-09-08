@@ -27,8 +27,8 @@ class BaseGetEvents(Action):
 
         # Configure http with retry strategy
         retry_strategy = Retry(
-            total=10,
-            status=10,
+            total=10,  # Total number of retries for all types of errors
+            status=10,  # Number of retries specifically for responses with status codes in status_forcelist
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
             backoff_factor=1,
@@ -67,14 +67,14 @@ class BaseGetEvents(Action):
         return response_start.json()["uuid"]
 
     def _wait_for_search_job_step(
-        self, event_search_job_uuid: str, should_we_wait: Callable[[int], bool], error: str, timeout: int = 300
+        self, event_search_job_uuid: str, should_we_wait: Callable[[int], bool], action: str, timeout: int = 300
     ) -> None:
         """
         Wait for a step in the search job execution
 
         :param event_search_job_uuid: The UUID of the event search job
         :param should_we_wait: A function that takes the current status and returns True if we should keep waiting
-        :param error: The error message to raise if the timeout is reached
+        :param action: The expected action to be performed
         :param timeout: The maximum time to wait in seconds
         """
         start_wait = time.time()
@@ -96,21 +96,21 @@ class BaseGetEvents(Action):
 
             # If we exceed the timeout, raise an error
             if time.time() - start_wait > timeout:
-                raise TimeoutError(error.format(timeout=timeout))
+                raise TimeoutError(f"Event search job took more than {timeout}s to {action}")
 
     def wait_for_search_job_execution(self, event_search_job_uuid: str) -> None:
         # Wait for job to start (20 min)
         self._wait_for_search_job_step(
             event_search_job_uuid,
             lambda status: status == 0,  # Wait for status to change from 0 (not started)
-            "Event search job took more than {timeout}s to start",
+            "start",
             1200,
         )
         # Wait for job to complete (30 min)
         self._wait_for_search_job_step(
             event_search_job_uuid,
             lambda status: status == 1,  # Wait for status to change from 1 (in progress)
-            "Event search job took more than {timeout}s to complete",
+            "complete",
             1800,
         )
 
