@@ -190,6 +190,7 @@ class WizGqlClient(object):
               issuesV2(
                 filterBy: {
                     status: [OPEN, IN_PROGRESS],
+                    type:  [TOXIC_COMBINATION, THREAT_DETECTION, CLOUD_CONFIGURATION] 
                     createdAt: {after: $startDateTime}
                 }
                 first: $limit
