@@ -1,17 +1,39 @@
 {
   "configuration": {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Tenable",
+    "properties": {
+      "base_url": {
+        "description": "URL of the Tenable instance",
+        "type": "string",
+        "format": "uri"
+      },
+      "access_key": {
+        "description": "Access key for the tenable API",
+        "type": "string"
+      },
+      "secret_key": {
+        "description": "Secret key for the tenable API",
+        "type": "string"
+      }
+    },
+    "required": [
+      "url",
+      "access_key",
+      "secret_key"
+    ],
+    "title": "Arguments",
     "type": "object",
-    "properties": {},
-    "required": []
+    "secrets": [
+      "secret_key"
+    ]
   },
   "description": "Tenable is a cybersecurity company specializing in vulnerability management and risk assessment solutions, known for its flagship product, Nessus. It helps organizations identify, assess, and prioritize security risks across their IT infrastructure.",
   "name": "Tenable",
-  "uuid": "0ef9b9af-8a95-455a-bf2c-6268af6bb5a5",
+  "uuid": "1214e603-6c86-4e86-896f-70198c9ade86",
   "version": "1.0.0",
   "slug": "tenable",
   "categories": [
-    "IAM"
-  ]
+    "Endpoint"
+  ],
+  "supports_validation": true
 }
