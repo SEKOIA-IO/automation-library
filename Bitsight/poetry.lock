@@ -109,7 +109,6 @@ files = [
 [package.dependencies]
 aiohappyeyeballs = ">=2.5.0"
 aiosignal = ">=1.4.0"
-async-timeout = {version = ">=4.0,<6.0", markers = "python_version < \"3.11\""}
 attrs = ">=17.3.0"
 frozenlist = ">=1.1.1"
 multidict = ">=4.5,<7.0"
@@ -191,17 +190,6 @@ doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints
 test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2021.1)", "simplejson (==3.*)"]
 
 [[package]]
-name = "async-timeout"
-version = "5.0.1"
-description = "Timeout context manager for asyncio programs"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c"},
-    {file = "async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3"},
-]
-
-[[package]]
 name = "attrs"
 version = "25.3.0"
 description = "Classes Without Boilerplate"
@@ -233,18 +221,6 @@ files = [
 
 [package.dependencies]
 pyflakes = ">=1.1.0,<3"
-tomli = {version = ">=2.0.1", markers = "python_version < \"3.11\""}
-
-[[package]]
-name = "backports-asyncio-runner"
-version = "1.2.0"
-description = "Backport of asyncio.Runner, a context manager that controls event loop life cycle."
-optional = false
-python-versions = "<3.11,>=3.8"
-files = [
-    {file = "backports_asyncio_runner-1.2.0-py3-none-any.whl", hash = "sha256:0da0a936a8aeb554eccb426dc55af3ba63bcdc69fa1a600b5bb305413a4477b5"},
-    {file = "backports_asyncio_runner-1.2.0.tar.gz", hash = "sha256:a5aa7b2b7d8f8bfcaa2b57313f70792df84e32a2a746f585213373f900b42162"},
-]
 
 [[package]]
 name = "binaryornot"
@@ -298,8 +274,6 @@ mypy-extensions = ">=0.4.3"
 packaging = ">=22.0"
 pathspec = ">=0.9.0"
 platformdirs = ">=2"
-tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
-typing-extensions = {version = ">=4.0.1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -358,10 +332,8 @@ files = [
 
 [package.dependencies]
 colorama = {version = "*", markers = "os_name == \"nt\""}
-importlib-metadata = {version = ">=4.6", markers = "python_full_version < \"3.10.2\""}
 packaging = ">=19.1"
 pyproject_hooks = "*"
-tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 
 [package.extras]
 uv = ["uv (>=0.1.18)"]
@@ -752,9 +724,6 @@ files = [
     {file = "coverage-7.10.6.tar.gz", hash = "sha256:f644a3ae5933a552a29dbb9aa2f90c677a875f80ebea028e5a52a4f429044b90"},
 ]
 
-[package.dependencies]
-tomli = {version = "*", optional = true, markers = "python_full_version <= \"3.11.0a6\" and extra == \"toml\""}
-
 [package.extras]
 toml = ["tomli"]
 
@@ -925,23 +894,6 @@ fastimport = ["fastimport"]
 https = ["urllib3 (>=1.24.1)"]
 paramiko = ["paramiko"]
 pgp = ["gpg"]
-
-[[package]]
-name = "exceptiongroup"
-version = "1.3.0"
-description = "Backport of PEP 654 (exception groups)"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "exceptiongroup-1.3.0-py3-none-any.whl", hash = "sha256:4d111e6e0c13d0644cad6ddaa7ed0261a0b36971f6d23e7ec9b4b9097da78a10"},
-    {file = "exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88"},
-]
-
-[package.dependencies]
-typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.13\""}
-
-[package.extras]
-test = ["pytest (>=6)"]
 
 [[package]]
 name = "execnet"
@@ -1649,9 +1601,6 @@ files = [
     {file = "multidict-6.6.4.tar.gz", hash = "sha256:d2d4e4787672911b48350df02ed3fa3fffdc2f2e8ca06dd6afdf34189b76a9dd"},
 ]
 
-[package.dependencies]
-typing-extensions = {version = ">=4.1.0", markers = "python_version < \"3.11\""}
-
 [[package]]
 name = "mypy"
 version = "1.17.1"
@@ -1702,7 +1651,6 @@ files = [
 [package.dependencies]
 mypy_extensions = ">=1.0.0"
 pathspec = ">=0.9.0"
-tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 typing_extensions = ">=4.6.0"
 
 [package.extras]
@@ -1956,7 +1904,6 @@ pyproject-hooks = ">=1.0.0,<2.0.0"
 requests = ">=2.26,<3.0"
 requests-toolbelt = ">=1.0.0,<2.0.0"
 shellingham = ">=1.5,<2.0"
-tomli = {version = ">=2.0.1,<3.0.0", markers = "python_version < \"3.11\""}
 tomlkit = ">=0.11.4,<1.0.0"
 trove-classifiers = ">=2022.5.19"
 virtualenv = ">=20.26.6,<21.0.0"
@@ -2338,12 +2285,10 @@ files = [
 
 [package.dependencies]
 colorama = {version = ">=0.4", markers = "sys_platform == \"win32\""}
-exceptiongroup = {version = ">=1", markers = "python_version < \"3.11\""}
 iniconfig = ">=1"
 packaging = ">=20"
 pluggy = ">=1.5,<2"
 pygments = ">=2.7.2"
-tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests", "setuptools", "xmlschema"]
@@ -2360,7 +2305,6 @@ files = [
 ]
 
 [package.dependencies]
-backports-asyncio-runner = {version = ">=1.1,<2", markers = "python_version < \"3.11\""}
 pytest = ">=8.2,<9"
 
 [package.extras]
@@ -2399,7 +2343,6 @@ files = [
 
 [package.dependencies]
 pytest = ">=8.3.3"
-tomli = {version = ">=2.0.1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 testing = ["covdefaults (>=2.3)", "coverage (>=7.6.1)", "pytest-mock (>=3.14)"]
@@ -2908,13 +2851,13 @@ files = [
 
 [[package]]
 name = "s3path"
-version = "0.5.8"
+version = "0.6.4"
 description = ""
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "s3path-0.5.8-py3-none-any.whl", hash = "sha256:6b2b1e53a2440c53332c09f0a10813ccaef64799093e6b627e973310f612e211"},
-    {file = "s3path-0.5.8.tar.gz", hash = "sha256:af5a46ae67694f4fff70b0975cb292a9c557282fae6ffb246d082ade2985e48f"},
+    {file = "s3path-0.6.4-py3-none-any.whl", hash = "sha256:689232a9df906a7c90e2a00c347c34c4c3dad25cde89b050dd6cf5b6f00c723e"},
+    {file = "s3path-0.6.4.tar.gz", hash = "sha256:1006cf38e17c5af031ed8808f8aa9bb7ced06fc8ce3ea92a7e3639290711e5d2"},
 ]
 
 [package.dependencies]
@@ -2955,13 +2898,13 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.19.3"
+version = "1.20.0"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
-python-versions = "<4.0,>=3.10"
+python-versions = "<4.0,>=3.11"
 files = [
-    {file = "sekoia_automation_sdk-1.19.3-py3-none-any.whl", hash = "sha256:3d502d3478846f736264c622b88df400f213ebbee4a0e9357615ea959178afb0"},
-    {file = "sekoia_automation_sdk-1.19.3.tar.gz", hash = "sha256:d9f3933a3e425c9179050468244b5e3c396580a95c88fb37eb96e974578cf40e"},
+    {file = "sekoia_automation_sdk-1.20.0-py3-none-any.whl", hash = "sha256:4f15bc37ad3c4e5fd373f76e89e4a6ee4e944bb2f66d75822c35718b3dd2ff45"},
+    {file = "sekoia_automation_sdk-1.20.0.tar.gz", hash = "sha256:b0381544bb70c6f05bac787fbd15fe8a302d0cab48d626d5b3413b65eebb9804"},
 ]
 
 [package.dependencies]
@@ -2978,10 +2921,10 @@ python-slugify = ">=5.0.2,<6.0.0"
 PyYAML = ">=6.0,<7.0"
 requests = ">=2.25,<3.0"
 requests-ratelimiter = ">=0.7.0,<0.8.0"
-s3path = ">=0.5,<0.6"
+s3path = ">=0.6.4,<0.7.0"
 sentry-sdk = "*"
 tenacity = "*"
-typer = {version = ">=0.12,<0.13", extras = ["all"]}
+typer = {version = ">=0.17.3,<0.18.0", extras = ["all"]}
 
 [package.extras]
 all = ["aiobotocore (>=2.20.0,<3.0.0)", "aiocsv (>=1.2.4,<2.0.0)", "aiofiles (>=23.1.0,<24.0.0)", "aiolimiter (>=1.1.0,<2.0.0)", "boto3 (>=1.36.23,<2.0.0)", "loguru (>=0.7.0,<0.8.0)"]
@@ -3185,13 +3128,13 @@ files = [
 
 [[package]]
 name = "typer"
-version = "0.12.5"
+version = "0.17.4"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "typer-0.12.5-py3-none-any.whl", hash = "sha256:62fe4e471711b147e3365034133904df3e235698399bc4de2b36c8579298d52b"},
-    {file = "typer-0.12.5.tar.gz", hash = "sha256:f592f089bedcc8ec1b974125d64851029c3b1af145f04aca64d69410f0c9b722"},
+    {file = "typer-0.17.4-py3-none-any.whl", hash = "sha256:015534a6edaa450e7007eba705d5c18c3349dcea50a6ad79a5ed530967575824"},
+    {file = "typer-0.17.4.tar.gz", hash = "sha256:b77dc07d849312fd2bb5e7f20a7af8985c7ec360c45b051ed5412f64d8dc1580"},
 ]
 
 [package.dependencies]
@@ -3268,7 +3211,6 @@ files = [
 distlib = ">=0.3.7,<1"
 filelock = ">=3.12.2,<4"
 platformdirs = ">=3.9.1,<5"
-typing-extensions = {version = ">=4.13.2", markers = "python_version < \"3.11\""}
 
 [package.extras]
 docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2,!=7.3)", "sphinx-argparse (>=0.4)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
@@ -3602,5 +3544,5 @@ type = ["pytest-mypy"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.10,<3.12"
-content-hash = "5ee2ca6242d661113f20b63e64a41e308fe2d1a09e71632971260b4cdc4edffa"
+python-versions = ">=3.11,<3.12"
+content-hash = "d4d22c5ed5274baf5507964fda6895cfba56e96e0f3c6d013971729ff532d58e"
