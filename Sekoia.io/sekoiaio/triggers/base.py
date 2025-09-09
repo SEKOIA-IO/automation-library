@@ -2,6 +2,7 @@
 import os
 from datetime import datetime, timedelta
 from posixpath import join as urljoin
+from typing import Any
 
 from tenacity import Retrying, wait_exponential, stop_after_attempt
 
@@ -163,8 +164,20 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             return
 
         # We can only manage v2 events
-        if str(message.get("metadata", {}).get("version")) != "2":
-            self.log("Received event with version not handled by the trigger", level="info", event=message)
+        event_version = message.get("metadata", {}).get("version")
+        if event_version is None:
+            # Bypass the version check for backward compatibility
+            # Looks like in some cases version might be missing.
+            self.log(
+                "Received event without version specified. Expected version is `2`.", level="warning", event=message
+            )
+        elif str(event_version) != "2":
+            self.log(
+                f"Received event with version that cannot be handled by the trigger."
+                + f" Expected version is `2`, but received version is `{event_version}`",
+                level="error",
+                event=message,
+            )
             return
 
         event_type = message.get("type")
@@ -175,6 +188,9 @@ class _SEKOIANotificationBaseTrigger(Trigger):
             return
 
         self.handle_event(message)
+
+    def handle_event(self, message: dict[str, Any]) -> None:
+        raise NotImplementedError("`handle_event` method should be implemented.")
 
     def stop(self, *args, **kwargs):
         super().stop(*args, **kwargs)
