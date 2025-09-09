@@ -11,6 +11,7 @@ sekoia-automation-sdk = "^1.19.3"
 orjson = "^3.8.12"
 aiohttp = "^3.8.5"
 aiolimiter = "^1.1.0"
+loguru = "^0.7.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

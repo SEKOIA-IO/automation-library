@@ -282,7 +282,8 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
                 values=[
                     CompanyCheckpoint(company_uuid=company_id_1, last_seen=now.strftime("%Y-%m-%d"), offset=7),
                     CompanyCheckpoint(company_uuid=company_id_2, last_seen=now.strftime("%Y-%m-%d"), offset=130),
-                ]
+                ],
+                time_delta=1,
             ).dict()
         )
 

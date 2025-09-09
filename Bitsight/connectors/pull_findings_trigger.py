@@ -3,10 +3,11 @@ import time
 from asyncio import Queue
 from datetime import datetime, timedelta, timezone
 from functools import reduce
-from typing import Any, Optional, TypeAlias
+from typing import Annotated, Any, Optional, TypeAlias, cast
 
 import orjson
 from loguru import logger
+from pydantic import Field
 from pydantic.v1 import BaseModel
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import DefaultConnectorConfiguration
@@ -56,16 +57,17 @@ class CompanyCheckpoint(BaseModel):
 
 class Checkpoint(BaseModel):
     values: list[CompanyCheckpoint] = []
+    time_delta: int = cast(int, None)
 
-    def get_company_checkpoint(self, company_uuid: str, time_delta: int) -> CompanyCheckpoint:
+    def get_company_checkpoint(self, company_uuid: str) -> CompanyCheckpoint:
         for value in self.values:
             if value.company_uuid == company_uuid:
-                return value.with_updated_last_seen(time_delta=time_delta)
+                return value.with_updated_last_seen(time_delta=self.time_delta)
 
-        return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen(time_delta=time_delta)
+        return CompanyCheckpoint(company_uuid=company_uuid).with_updated_last_seen(time_delta=self.time_delta)
 
-    def recalculate_company_checkpoint(self, company_uuid: str, time_delta: int) -> None:
-        company_checkpoint = self.get_company_checkpoint(company_uuid, time_delta=time_delta)
+    def recalculate_company_checkpoint(self, company_uuid: str) -> None:
+        company_checkpoint = self.get_company_checkpoint(company_uuid)
         if company_checkpoint is None:
             return
 
@@ -77,7 +79,7 @@ class Checkpoint(BaseModel):
 
         next_day = last_seen + timedelta(days=1)
         now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
-            days=time_delta
+            days=self.time_delta
         )
         if next_day <= now:
             company_checkpoint.last_seen = next_day.strftime("%Y-%m-%d")
@@ -85,8 +87,8 @@ class Checkpoint(BaseModel):
 
         self.values = [value for value in self.values if value.company_uuid != company_uuid] + [company_checkpoint]
 
-    def increment_company_checkpoint(self, company_uuid: str, last_seen: str, time_delta: int) -> None:
-        company_checkpoint = self.get_company_checkpoint(company_uuid, time_delta=time_delta)
+    def increment_company_checkpoint(self, company_uuid: str, last_seen: str) -> None:
+        company_checkpoint = self.get_company_checkpoint(company_uuid)
         if company_checkpoint is None:
             company_checkpoint = CompanyCheckpoint(company_uuid=company_uuid, last_seen=last_seen, offset=0)
 
@@ -136,7 +138,10 @@ class PullFindingsConnector(AsyncConnector):
             Checkpoint:
         """
         with self.context as cache:
-            return Checkpoint.parse_obj(cache.get("checkpoints", {}))
+            checkpoint = Checkpoint.parse_obj(cache.get("checkpoints", {}))
+            checkpoint.time_delta = self.configuration.timedelta
+
+        return checkpoint
 
     def save_checkpoint(self, checkpoint: Checkpoint) -> None:
         """
@@ -196,8 +201,9 @@ class PullFindingsConnector(AsyncConnector):
         return result
 
     async def process_findings_for_company(self, checkpoint: Checkpoint, company_id: str) -> int:
-        last_seen = checkpoint.get_company_checkpoint(company_id, time_delta=self.configuration.timedelta).last_seen
-        offset = checkpoint.get_company_checkpoint(company_id, time_delta=self.configuration.timedelta).offset
+        company_checkpoint = checkpoint.get_company_checkpoint(company_id)
+        last_seen = company_checkpoint.last_seen
+        offset = company_checkpoint.offset
 
         logger.info(
             "Start to fetch findings for company {0} with last_seen {1} and offset {2}",
@@ -210,9 +216,7 @@ class PullFindingsConnector(AsyncConnector):
         total_pushed_events = 0
 
         async for finding in self.bitsight_client.findings_result(company_id, last_seen, offset):
-            checkpoint.increment_company_checkpoint(
-                company_id, finding["last_seen"], time_delta=self.configuration.timedelta
-            )
+            checkpoint.increment_company_checkpoint(company_id, finding["last_seen"])
             data_to_push.extend(self.format_finding(finding, company_id))
 
             if len(data_to_push) >= self.configuration.batch_limit:
@@ -229,7 +233,7 @@ class PullFindingsConnector(AsyncConnector):
             logger.info("Pushed {0} events to intakes", pushed_events)
             total_pushed_events += pushed_events
 
-        checkpoint.recalculate_company_checkpoint(company_id, time_delta=self.configuration.timedelta)
+        checkpoint.recalculate_company_checkpoint(company_id)
         self.save_checkpoint(checkpoint)
 
         # Add None to queue to indicate that all findings for this company have been fetched
