@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-26 - 2.68.5
+
+### Fixed
+
+- Remove "visible" parameter from search alert action
+
 ## 2025-06-03 - 2.68.4
 
 ### Fixed
