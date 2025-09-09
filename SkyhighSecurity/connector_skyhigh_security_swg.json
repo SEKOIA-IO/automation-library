@@ -33,8 +33,8 @@
         "default": 20
       },
       "api_domain_name": {
-        "description": "Domain name to use (Europe :eu.msg.mcafeesaas.com, North America: us.msg.mcafeesaas.com)",
-        "default": "eu.msg.mcafeesaas.com",
+        "description": "Domain name to use (`<region>.logapi.skyhigh.cloud`; e.g. Germany: de.logapi.skyhigh.cloud, North America: us.logapi.skyhigh.cloud, ...)",
+        "default": "de.logapi.skyhigh.cloud",
         "type": "string"
       },
       "intake_server": {
