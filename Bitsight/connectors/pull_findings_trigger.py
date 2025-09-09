@@ -89,8 +89,6 @@ class Checkpoint(BaseModel):
 
     def increment_company_checkpoint(self, company_uuid: str, last_seen: str) -> None:
         company_checkpoint = self.get_company_checkpoint(company_uuid)
-        if company_checkpoint is None:
-            company_checkpoint = CompanyCheckpoint(company_uuid=company_uuid, last_seen=last_seen, offset=0)
 
         checkpoint_last_seen_datetime = datetime.fromisoformat(company_checkpoint.last_seen or last_seen).replace(
             microsecond=0, second=0, minute=0, hour=0
