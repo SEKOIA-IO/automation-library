@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-08 - 1.28.9
 
+### Fixed
+
+- Fix enum class values
+- 
 ## 2025-08-08 - 1.28.8
 
 ### Added

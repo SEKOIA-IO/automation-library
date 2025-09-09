@@ -6,8 +6,8 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.19.3"
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.20.0"
 pydantic = "2.10"
 requests = "*"
 requests-ratelimiter = "^0.7.0"
