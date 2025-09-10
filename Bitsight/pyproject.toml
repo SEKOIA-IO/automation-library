@@ -6,11 +6,12 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = { version = "^1.16.0", extras = ["all"] }
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.20.0"
 orjson = "^3.8.12"
 aiohttp = "^3.8.5"
 aiolimiter = "^1.1.0"
+loguru = "^0.7.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -22,9 +23,9 @@ pytest-flake8 = "*"
 aioresponses = "^0.7.4"
 Faker = "^13.12.0"
 autoflake = "^1.4"
-isort = "^5.10.1"
-black = { version = "^24.4.2", extras = ["colorama"] }
-mypy = "^0.960"
+isort = "*"
+black = { version = "*", extras = ["colorama"] }
+mypy = "*"
 poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
 
 [build-system]
@@ -71,7 +72,6 @@ addopts = '''
   --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=90
-  --numprocesses=auto
 '''
 
 [tool.coverage.run]
