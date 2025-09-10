@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-08 - 2.68.5
+
+### Changed
+
+- Increase the backoff factor when getting events
+- Change the way to wait the completion of an event search job
+
 ## 2025-06-03 - 2.68.4
 
 ### Fixed
