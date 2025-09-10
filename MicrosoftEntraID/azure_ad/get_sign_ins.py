@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 import asyncio
 
 from .base import MicrosoftGraphAction, SingleUserArguments, IdArguments
