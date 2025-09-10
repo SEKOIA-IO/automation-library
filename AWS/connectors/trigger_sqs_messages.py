@@ -51,6 +51,17 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
         return SqsWrapper(config)
 
+    def is_aws_notification(self, message: Any) -> bool:
+        """
+        Check if message is AWS notification.
+
+        Args:
+            message: dict
+        Returns:
+            bool: True if message is AWS notification
+        """
+        return isinstance(message, dict) and "Records" in message and isinstance(message["Records"], list)
+
     async def next_batch(self) -> tuple[int, list[int]]:
         """
         Get next batch of messages.
@@ -74,8 +85,13 @@ class AwsSqsMessagesTrigger(AbstractAwsConnector):
 
                     timestamps_to_log.append(message_timestamp)
                     try:
-                        # Records is a list of strings
-                        records.extend(orjson.loads(message).get("Records", []))
+                        content = orjson.loads(message)
+                        if self.is_aws_notification(content):
+                            # The message is an AWS notification, we extract the Records field
+                            records.extend(content.get("Records", []))
+                        else:
+                            # The message is a raw message, we add it as is
+                            records.append(content)
                     except ValueError as e:
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
