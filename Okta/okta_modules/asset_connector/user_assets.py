@@ -1,116 +1,235 @@
+"""Okta User Asset Connector module.
+
+This module provides functionality to collect user assets from Okta
+and format them according to OCSF standards.
+"""
+
 import asyncio
+from collections.abc import Generator
 from functools import cached_property
-from collections.abc import AsyncGenerator, Generator
+from typing import Any, Dict
+
+from dateutil.parser import isoparse
+from okta.client import Client as OktaClient
+
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import (
     Metadata,
     Product,
 )
 from sekoia_automation.asset_connector.models.ocsf.user import (
-    UserOCSFModel,
-    User,
-    Group,
     Account,
     AccountTypeId,
-    AccountTypeStr
+    AccountTypeStr,
+    Group,
+    User,
+    UserOCSFModel,
 )
 from sekoia_automation.storage import PersistentJSON
 
-from okta.client import Client as OktaClient
 
 class OktaUserAssetConnector(AssetConnector):
+    """Asset connector for collecting user data from Okta.
 
-    def __init__(self, *args, **kwargs):
+    This connector fetches user information from Okta and formats it
+    according to OCSF (Open Cybersecurity Schema Framework) standards.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the Okta User Asset Connector.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+        """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
 
     @property
     def most_recent_date_seen(self) -> str | None:
-        with self.context as cache:
-            most_recent_date_seen = cache.get("most_recent_date_seen", None)
+        """Get the most recent date seen from the context cache.
 
-            return most_recent_date_seen
-        
+        Returns:
+            The most recent date seen as a string, or None if not set.
+        """
+        with self.context as cache:
+            return cache.get("most_recent_date_seen", None)
+
     @cached_property
-    def client(self):
+    def client(self) -> OktaClient:
+        """Get the Okta client instance.
+
+        Returns:
+            Configured OktaClient instance.
+        """
         config = {
-            'orgUrl': self.module.configuration["base_url"],
-            'token': self.module.configuration["apikey"]
+            "orgUrl": self.module.configuration["base_url"],
+            "token": self.module.configuration["apikey"],
         }
         return OktaClient(config)
 
-    async def map_fields(self, okta_user: dict) -> UserOCSFModel:
-        account = Account(
-            name=okta_user.get("profile", {}).get("login", ""),
-            type_id=AccountTypeId.OTHER,
-            type_str=AccountTypeStr.OTHER,
-            uid=okta_user.get("id"),
-
-        )
-        user = User(
-            uid=okta_user.get("id"),
-            full_name=okta_user.get("profile", {}).get("firstName", "") + " " + okta_user.get("profile", {}).get("lastName", ""),
-            email_addr=okta_user.get("profile", {}).get("email", ""),
-            name=okta_user.get("profile", {}).get("login", ""),
-            account=account,
-            groups= await self.get_user_groups(okta_user.get("id"))
-        )
-        return UserOCSFModel(
-            metadata=Metadata(
-                product=Product(
-                    name="Okta",
-                    vendor="Okta",
-                    version="N/A"
-                ),
-                version="1.6.0"
-            ),
-            user=user
-        )
-
     async def get_user_groups(self, user_id: str) -> list[Group]:
-        self.log(f"Fetching groups for user ID: {user_id}", level="info")
-        groups, _, err = await self.client.list_user_groups(user_id)
+        """Get all groups for a specific user.
+
+        Args:
+            user_id: The unique identifier of the user.
+
+        Returns:
+            List of Group objects associated with the user.
+        """
+        groups, resp, err = await self.client.list_user_groups(user_id)
         if err:
             self.log(f"Error while fetching groups for user {user_id}: {err}", level="error")
             return []
+
         if not groups:
             self.log(f"No groups found for user {user_id}", level="warning")
             return []
+
         group_list = []
         for group in groups:
-            group_list.append(Group(
-                name=group.get("profile", {}).get("name", ""),
-                uid=group.get("id"),
-                desc=group.get("profile", {}).get("description", "")
-            ))
+            group_list.append(
+                Group(
+                    name=group.profile.name,
+                    uid=group.id,
+                    desc=group.profile.description,
+                )
+            )
+
+        while resp.has_next():
+            groups, resp, err = await resp.next()
+            if err:
+                self.log(f"Error while fetching groups for user {user_id}: {err}", level="error")
+                return group_list
+
+            for group in groups:
+                group_list.append(
+                    Group(
+                        name=group.profile.name,
+                        uid=group.id,
+                        desc=group.profile.description,
+                    )
+                )
+
         return group_list
-    
+
     async def get_user_mfa(self, user_id: str) -> bool:
-        self.log(f"Fetching MFA status for user ID: {user_id}", level="info")
-        factors, _, err = await self.client.user(user_id)
+        """Check if a user has MFA enabled.
+
+        Args:
+            user_id: The unique identifier of the user.
+
+        Returns:
+            True if the user has MFA factors configured, False otherwise.
+        """
+        factors, _, err = await self.client.list_factors(user_id)
         if err:
             self.log(f"Error while fetching MFA status for user {user_id}: {err}", level="error")
             return False
+
         if not factors:
             self.log(f"No MFA factors found for user {user_id}", level="warning")
             return False
+
         return True
 
-    async def next_list_users(self) -> list[dict]:
-        self.log("Start the listing users generator !!", level="info")
-        users, _, err = await self.client.list_users()
-        if err:
-            self.log(f"Error while listing users: {err}", level="error")
+    async def next_list_users(self) -> list[Dict[str, Any]]:
+        """Fetch all users from Okta.
+
+        Returns:
+            List of user dictionaries from Okta.
+        """
+        all_users = []
+        try:
+            users, resp, err = await self.client.list_users()
+            if err:
+                self.log(f"Error while listing users: {err}", level="error")
+                return []
+
+            if not users:
+                self.log("No users found", level="warning")
+                return []
+
+            all_users.extend(users)
+
+            while resp.has_next():
+                users, resp, err = await resp.next()
+                if err:
+                    self.log(f"Error while listing users: {err}", level="error")
+                    return all_users
+                all_users.extend(users)
+
+        except Exception as e:
+            self.log(f"Exception while listing users: {e}", level="error")
             return []
-        if not users:
-            self.log("No users found", level="warning")
-            return []
-        return users
+
+        return all_users
+
+    async def map_fields(self, okta_user: Dict[str, Any]) -> UserOCSFModel:
+        """Map Okta user data to OCSF format.
+
+        Args:
+            okta_user: Dictionary containing Okta user data.
+
+        Returns:
+            UserOCSFModel instance with mapped user data.
+        """
+        account = Account(
+            name=okta_user.profile.login,
+            type_id=AccountTypeId.OTHER,
+            type=AccountTypeStr.OTHER,
+            uid=okta_user.id,
+        )
+
+        user = User(
+            uid=okta_user.id,
+            full_name=f"{okta_user.profile.firstName} {okta_user.profile.lastName}",
+            email_addr=okta_user.profile.email,
+            name=okta_user.profile.login,
+            account=account,
+            groups=await self.get_user_groups(okta_user.id),
+            has_mfa=await self.get_user_mfa(okta_user.id),
+        )
+
+        return UserOCSFModel(
+            activity_id=2,
+            activity_name="Collect",
+            category_name="Discovery",
+            category_uid=5,
+            class_name="User Inventory Info",
+            class_uid=5003,
+            type_name="User Inventory Info: Collect",
+            type_uid=5003002,
+            severity="Informational",
+            severity_id=1,
+            time=isoparse(okta_user.created).timestamp(),
+            metadata=Metadata(
+                product=Product(
+                    name="Okta",
+                    vendor_name="Okta",
+                    version="N/A",
+                ),
+                version="1.6.0",
+            ),
+            user=user,
+        )
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
-        self.log("Start the getting assets generator !!", level="info")
-        self.log(f"The data path is: {self._data_path.absolute()}", level="info")
-        for users in asyncio.run(self.next_list_users()):
-            for user in users:
-                mapped_user: UserOCSFModel = self.map_fields(user)
-                yield mapped_user
+        """Generate user assets from Okta.
+
+        Yields:
+            UserOCSFModel instances for each user found in Okta.
+        """
+        self.log("Starting Okta user assets generator", level="info")
+        self.log(f"Data path: {self._data_path.absolute()}", level="info")
+
+        loop = asyncio.get_event_loop()
+        users = loop.run_until_complete(self.next_list_users())
+
+        for user in users:
+            try:
+                yield loop.run_until_complete(self.map_fields(user))
+            except Exception as e:
+                user_id = user.get("id", "unknown")
+                self.log(f"Error while mapping user {user_id}: {e}", level="error")
+                continue
