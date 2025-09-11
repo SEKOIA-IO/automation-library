@@ -579,7 +579,7 @@ def test_verticles_collector_property_403_error(trigger):
 
         collector = trigger.verticles_collector
         assert collector is None
-        trigger.log.assert_called_with(message="Not enough permissions to use ThreatGraph API", level="error")
+        trigger.log.assert_called_with(message="Not enough permissions to use ThreatGraph API", level="warning")
 
 
 def test_verticles_collector_property_other_http_error(trigger):
