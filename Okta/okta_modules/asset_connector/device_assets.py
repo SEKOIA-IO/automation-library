@@ -29,11 +29,8 @@ class OktaDeviceProfile(BaseModel):
 
     displayName: str
     platform: str
-    serialNumber: str
-    sid: str
     registered: bool
     secureHardwarePresent: bool
-    diskEncryptionType: str
     osVersion: str
 
 
@@ -60,6 +57,7 @@ class OktaDeviceAssetConnector(AssetConnector):
         return OktaClient(config)
 
     async def fetch_next_devices(self, url: str) -> tuple[List[OktaDevice], Any]:
+        all_devices = []
         try:
             request, error = await self.client.get_request_executor().create_request(
                 method="GET", url=url, body={}, headers={}, oauth=False
@@ -67,12 +65,13 @@ class OktaDeviceAssetConnector(AssetConnector):
             response, error = await self.client.get_request_executor().execute(request, list[OktaDevice])
             if error:
                 self.log(f"Error while fetching devices from {url}: {error}", level="error")
-                return []
-            devices: list[OktaDevice] = response.get_type()(response.get_body())
-            if not devices:
+                return [], None
+            for device in response.get_body():
+                all_devices.append(OktaDevice(**device))
+            if not all_devices:
                 self.log(f"No devices found at {url}", level="warning")
-                return []
-            return devices, response
+                return [], None
+            return all_devices, response
         except Exception as e:
             self.log(f"Exception while fetching devices from {url}: {e}", level="error")
             return [], None
@@ -107,14 +106,12 @@ class OktaDeviceAssetConnector(AssetConnector):
 
     async def map_fields(self, okta_device: OktaDevice) -> DeviceOCSFModel:
         device = Device(
-            hostname=okta_device.get("profile").get("displayName"),
-            uid=okta_device.get("id"),
+            hostname=okta_device.profile.displayName,
+            uid=okta_device.id,
             type_id=DeviceTypeId.OTHER,
             type=DeviceTypeStr.OTHER,
             location=None,
-            os=self.get_device_os(
-                okta_device.get("profile").get("platform"), okta_device.get("profile").get("osVersion")
-            ),
+            os=self.get_device_os(okta_device.profile.platform, okta_device.profile.osVersion),
         )
         return DeviceOCSFModel(
             activity_id=2,
@@ -124,7 +121,7 @@ class OktaDeviceAssetConnector(AssetConnector):
             class_name="Device Inventory Info",
             class_uid=5001,
             device=device,
-            time=isoparse(okta_device.get("created")).timestamp(),
+            time=isoparse(okta_device.created).timestamp(),
             metadata=Metadata(product=Product(name="Okta", vendor_name="Okta", version="N/A"), version="1.6.0"),
             severity="Informational",
             severity_id=1,
@@ -140,5 +137,5 @@ class OktaDeviceAssetConnector(AssetConnector):
             try:
                 yield loop.run_until_complete(self.map_fields(device))
             except Exception as e:
-                self.log(f"Error while mapping device {device.get('id')}: {e}", level="error")
+                self.log(f"Error while mapping device {device.id}: {e}", level="error")
                 continue
