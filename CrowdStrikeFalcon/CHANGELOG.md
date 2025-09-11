@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-04 - 1.23.0
+
+### Changed
+
+- New oauth2.0 client for threatgraph api
+
 ## 2025-07-01 - 1.22.1
 
 ### Changed

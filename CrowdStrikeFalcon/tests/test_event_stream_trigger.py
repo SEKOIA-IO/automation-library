@@ -1,17 +1,16 @@
 import os
 import queue
-import threading
 import time
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
 import orjson
 import pytest
-import requests.exceptions
 import requests_mock
+from requests.exceptions import HTTPError
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
-from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
+from crowdstrike_falcon.client import CrowdstrikeFalconClient
 from crowdstrike_falcon.event_stream_trigger import (
     EventForwarder,
     EventStreamReader,
@@ -33,10 +32,7 @@ def trigger(symphony_storage):
         "client_secret": "bar",
     }
     trigger.configuration = {
-        "tg_username": "username",
-        "tg_password": "password",
         "intake_key": "intake_key",
-        "tg_base_url": "https://my.fake.sekoia",
     }
     trigger.app_id = "sio-00000"
     return trigger
@@ -325,6 +321,15 @@ def test_run(trigger, symphony_storage):
 
     with patch("crowdstrike_falcon.event_stream_trigger.EventStreamReader"), requests_mock.Mocker() as mock:
         mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
             "GET",
             "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
             json={
@@ -383,9 +388,6 @@ def test_read_stream_integration(symphony_storage):
     trigger.configuration = {
         "frequency": 0,
         "intake_key": "0123456789",
-        "tg_username": os.environ.get("CROWDSTRIKE_FALCON_USERNAME"),
-        "tg_password": os.environ.get("CROWDSTRIKE_FALCON_PASSWORD"),
-        "tg_base_url": os.environ.get("CROWDSTRIKE_BASE_URL", "https://falconapi.eu-1.crowdstrike.com"),
     }
     trigger.push_events_to_intakes = Mock()
     trigger.log_exception = Mock()
@@ -413,17 +415,21 @@ def test_read_stream_integration(symphony_storage):
 
 @pytest.fixture
 def verticles_collector(trigger):
-    tg_client = CrowdstrikeThreatGraphClient(
-        trigger.configuration.tg_base_url,
-        trigger.configuration.tg_username,
-        trigger.configuration.tg_password,
-    )
     falcon_client = CrowdstrikeFalconClient(
         trigger.module.configuration.base_url,
         trigger.module.configuration.client_id,
         trigger.module.configuration.client_secret,
     )
     with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
         mock.register_uri(
             "GET",
             "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
@@ -433,7 +439,7 @@ def verticles_collector(trigger):
                 ]
             },
         )
-        yield VerticlesCollector(trigger, tg_client, falcon_client)
+        yield VerticlesCollector(trigger, falcon_client)
 
 
 def test_verticle_collector_get_graph_ids_from_detection(verticles_collector):
@@ -528,6 +534,156 @@ def test_verticle_collector_get_alert_details_wo_permissions(trigger, verticles_
 
         _ = list(verticles_collector.collect_verticles_from_alert(composite_id="id:123456"))
         assert trigger.use_alert_api is False
+
+
+def test_verticles_collector_property_success(trigger):
+    """Test successful creation of verticles_collector property"""
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
+            json={
+                "resources": [
+                    "child_process",
+                    "device",
+                    "hunting_lead",
+                ]
+            },
+        )
+
+        collector = trigger.verticles_collector
+        assert collector is not None
+        assert isinstance(collector, VerticlesCollector)
+        assert collector.connector == trigger
+        assert collector.falcon_client == trigger.client
+        assert collector.edge_types == {"child_process"}
+
+
+def test_verticles_collector_property_403_error(trigger):
+    """Test verticles_collector property returns None on 403 error"""
+    with patch("crowdstrike_falcon.event_stream_trigger.VerticlesCollector") as mock_collector_class:
+        mock_collector = MagicMock()
+        mock_collector.falcon_client.get_edge_types.side_effect = HTTPError(
+            "403 Client Error: Forbidden", response=MagicMock(status_code=403)
+        )
+        mock_collector_class.return_value = mock_collector
+
+        collector = trigger.verticles_collector
+        assert collector is None
+        trigger.log.assert_called_with(message="Not enough permissions to use ThreatGraph API", level="warning")
+
+
+def test_verticles_collector_property_other_http_error(trigger):
+    """Test verticles_collector property handles other HTTP errors"""
+    trigger.log_exception = MagicMock()
+
+    with patch("crowdstrike_falcon.event_stream_trigger.VerticlesCollector") as mock_collector_class:
+        mock_collector = MagicMock()
+        mock_collector.falcon_client.get_edge_types.side_effect = HTTPError(
+            "500 Server Error: Internal Server Error", response=MagicMock(status_code=500)
+        )
+        mock_collector_class.return_value = mock_collector
+
+        collector = trigger.verticles_collector
+        assert collector is None
+        trigger.log_exception.assert_called()
+
+
+def test_verticles_collector_property_general_exception(trigger):
+    """Test verticles_collector property handles general exceptions"""
+    trigger.log_exception = MagicMock()
+
+    with patch("crowdstrike_falcon.event_stream_trigger.VerticlesCollector") as mock_collector_class:
+        mock_collector = MagicMock()
+        mock_collector.falcon_client.get_edge_types.side_effect = ValueError("Some error")
+        mock_collector_class.return_value = mock_collector
+
+        collector = trigger.verticles_collector
+        assert collector is None
+        trigger.log_exception.assert_called()
+
+
+def test_verticles_collector_property_cached(trigger):
+    """Test that verticles_collector property is cached"""
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
+            json={
+                "resources": [
+                    "child_process",
+                ]
+            },
+        )
+
+        # First call
+        collector1 = trigger.verticles_collector
+        assert collector1 is not None
+
+        # Second call should return the same instance (cached)
+        collector2 = trigger.verticles_collector
+        assert collector2 is collector1
+
+        # Third call should also return the same instance
+        collector3 = trigger.verticles_collector
+        assert collector3 is collector1
+        assert collector3 is collector2
+
+
+def test_verticles_collector_property_with_different_edge_types(trigger):
+    """Test verticles_collector property with various edge types"""
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
+            json={
+                "resources": [
+                    "child_process",
+                    "file_access",
+                    "network_connection",
+                    "device",  # Should be excluded
+                    "hunting_lead",  # Should be excluded
+                    "process_creation",
+                ]
+            },
+        )
+
+        collector = trigger.verticles_collector
+        assert collector is not None
+        expected_edge_types = {
+            "child_process",
+            "file_access",
+            "network_connection",
+            "process_creation",
+        }
+        assert collector.edge_types == expected_edge_types
 
 
 def test_verticle_collector_collect_verticles_from_graph_ids(verticles_collector):
@@ -1229,29 +1385,3 @@ def test_read_stream_with_verticles_with_alert(trigger):
             pass
 
         assert actual_events == expected_events
-
-
-def test_verticles_collector_with_invalid_credential(symphony_storage):
-    module = CrowdStrikeFalconModule()
-    trigger = EventStreamTrigger(module=module, data_path=symphony_storage)
-    # mock the log function of trigger that requires network access to the api for reporting
-    trigger.log = MagicMock()
-    trigger.module.configuration = {
-        "base_url": "https://my.fake.sekoia",
-        "client_id": "foo",
-        "client_secret": "bar",
-    }
-    trigger.configuration = {
-        "tg_username": "username",
-        "tg_password": "password",
-        "intake_key": "intake_key",
-        "tg_base_url": "https://my.fake.sekoia",
-    }
-    trigger.app_id = "sio-00000"
-    with requests_mock.Mocker() as mock:
-        mock.register_uri(
-            "GET",
-            "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
-            status_code=401,
-        )
-        trigger.verticles_collector
