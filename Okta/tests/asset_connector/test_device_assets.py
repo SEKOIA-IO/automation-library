@@ -1,6 +1,4 @@
-import asyncio
 import pytest
-import datetime
 from unittest.mock import Mock, AsyncMock, MagicMock, patch
 from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceOCSFModel,
@@ -44,11 +42,26 @@ async def test_fetch_next_devices_success(test_okta_device_asset_connector):
     mock_executor = AsyncMock()  # Make this AsyncMock too
     mock_request = MagicMock()
     mock_response = MagicMock()
-    mock_device = {"id": "dev1", "profile": {"displayName": "dev", "platform": "windows", "osVersion": "10"}}
+    mock_device = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-01T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="dev",
+            platform="windows",
+            serialNumber="SN001",
+            sid="SID001",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="BitLocker",
+            osVersion="10",
+        ),
+    )
 
     # Mock the response properly - get_type() returns a function that takes body as parameter
     mock_response.get_type.return_value = lambda body=None: [mock_device]
-    mock_response.get_body.return_value = [mock_device]
+    mock_response.get_body.return_value = [mock_device.model_dump()]
 
     mock_executor.create_request = AsyncMock(return_value=(mock_request, None))
     mock_executor.execute = AsyncMock(return_value=(mock_response, None))
@@ -64,7 +77,7 @@ async def test_fetch_next_devices_success(test_okta_device_asset_connector):
     # Assert
     assert isinstance(devices, list)
     assert len(devices) == 1
-    assert devices[0]["id"] == "dev1"
+    assert devices[0].id == "dev1"
     assert response == mock_response
 
 
@@ -81,10 +94,11 @@ async def test_fetch_next_devices_error_response(test_okta_device_asset_connecto
     test_okta_device_asset_connector.client = mock_client
 
     # Act
-    result = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
+    devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
     # Assert
-    assert result == []  # When there's an error, it returns just []
+    assert devices == []  # When there's an error, it returns empty list
+    assert response is None
 
 
 @pytest.mark.asyncio
@@ -103,10 +117,11 @@ async def test_fetch_next_devices_no_devices(test_okta_device_asset_connector):
     test_okta_device_asset_connector.client = mock_client
 
     # Act
-    result = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
+    devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
     # Assert
-    assert result == []  # When devices is empty, it returns just []
+    assert devices == []  # When devices is empty, it returns empty list
+    assert response is None
 
 
 @pytest.mark.asyncio
@@ -131,8 +146,38 @@ async def test_fetch_next_devices_exception(test_okta_device_asset_connector):
 @pytest.mark.asyncio
 async def test_next_list_devices_success(test_okta_device_asset_connector):
     # Arrange
-    mock_device1 = {"id": "dev1", "profile": {"displayName": "Device 1"}}
-    mock_device2 = {"id": "dev2", "profile": {"displayName": "Device 2"}}
+    mock_device1 = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-01T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Device 1",
+            platform="windows",
+            serialNumber="SN001",
+            sid="SID001",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="BitLocker",
+            osVersion="10.0.19041",
+        ),
+    )
+    mock_device2 = OktaDevice(
+        id="dev2",
+        status="ACTIVE",
+        created="2023-01-02T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Device 2",
+            platform="macos",
+            serialNumber="SN002",
+            sid="SID002",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="FileVault",
+            osVersion="13.0",
+        ),
+    )
 
     mock_response = MagicMock()
     mock_response.has_next.return_value = False
@@ -145,8 +190,8 @@ async def test_next_list_devices_success(test_okta_device_asset_connector):
 
         # Assert
         assert len(devices) == 2
-        assert devices[0]["id"] == "dev1"
-        assert devices[1]["id"] == "dev2"
+        assert devices[0].id == "dev1"
+        assert devices[1].id == "dev2"
         mock_fetch.assert_called_once_with("/api/v1/devices")
 
 
@@ -235,23 +280,23 @@ def test_get_device_os_case_insensitive(test_okta_device_asset_connector):
 @pytest.mark.asyncio
 async def test_map_fields_success(test_okta_device_asset_connector):
     # Arrange
-    # Create a mock device that supports .get() method
-    okta_device = {
-        "id": "dev1",
-        "status": "ACTIVE",
-        "created": "2023-01-01T00:00:00Z",
-        "lastUpdated": "2023-01-01T00:00:00Z",
-        "profile": {
-            "displayName": "Test Device",
-            "platform": "windows",
-            "serialNumber": "SN001",
-            "sid": "SID001",
-            "registered": True,
-            "secureHardwarePresent": True,
-            "diskEncryptionType": "BitLocker",
-            "osVersion": "10.0.19041",
-        },
-    }
+    # Create a proper OktaDevice object
+    okta_device = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-01T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Test Device",
+            platform="windows",
+            serialNumber="SN001",
+            sid="SID001",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="BitLocker",
+            osVersion="10.0.19041",
+        ),
+    )
 
     # Act
     result = await test_okta_device_asset_connector.map_fields(okta_device)
@@ -277,45 +322,45 @@ async def test_map_fields_failure_invalid_device(test_okta_device_asset_connecto
     invalid_device = {"invalid": "data"}
 
     # Act & Assert
-    with pytest.raises(AttributeError):  # .get() returns None, then .get() on None raises AttributeError
+    with pytest.raises(AttributeError):  # dict object has no attribute 'profile'
         await test_okta_device_asset_connector.map_fields(invalid_device)
 
 
 # Tests for get_assets method
 def test_get_assets_success(test_okta_device_asset_connector):
     # Arrange
-    mock_device1 = {
-        "id": "dev1",
-        "status": "ACTIVE",
-        "created": "2023-01-01T00:00:00Z",
-        "lastUpdated": "2023-01-02T00:00:00Z",
-        "profile": {
-            "displayName": "Device 1",
-            "platform": "windows",
-            "serialNumber": "SN001",
-            "sid": "SID001",
-            "registered": True,
-            "secureHardwarePresent": True,
-            "diskEncryptionType": "BitLocker",
-            "osVersion": "10.0.19041",
-        },
-    }
-    mock_device2 = {
-        "id": "dev2",
-        "status": "ACTIVE",
-        "created": "2023-01-02T00:00:00Z",
-        "lastUpdated": "2023-01-02T00:00:00Z",
-        "profile": {
-            "displayName": "Device 2",
-            "platform": "macos",
-            "serialNumber": "SN002",
-            "sid": "SID002",
-            "registered": True,
-            "secureHardwarePresent": True,
-            "diskEncryptionType": "FileVault",
-            "osVersion": "13.0",
-        },
-    }
+    mock_device1 = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Device 1",
+            platform="windows",
+            serialNumber="SN001",
+            sid="SID001",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="BitLocker",
+            osVersion="10.0.19041",
+        ),
+    )
+    mock_device2 = OktaDevice(
+        id="dev2",
+        status="ACTIVE",
+        created="2023-01-02T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Device 2",
+            platform="macos",
+            serialNumber="SN002",
+            sid="SID002",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="FileVault",
+            osVersion="13.0",
+        ),
+    )
 
     # Mock the _data_path to have an absolute method
     test_okta_device_asset_connector._data_path = MagicMock()
@@ -386,22 +431,22 @@ def test_get_assets_success(test_okta_device_asset_connector):
 
 def test_get_assets_failure_mapping_error(test_okta_device_asset_connector):
     # Arrange
-    mock_device = {
-        "id": "dev1",
-        "status": "ACTIVE",
-        "created": "2023-01-01T00:00:00Z",
-        "lastUpdated": "2023-01-01T00:00:00Z",
-        "profile": {
-            "displayName": "Device 1",
-            "platform": "windows",
-            "serialNumber": "SN001",
-            "sid": "SID001",
-            "registered": True,
-            "secureHardwarePresent": True,
-            "diskEncryptionType": "BitLocker",
-            "osVersion": "10.0.19041",
-        },
-    }
+    mock_device = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-01T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Device 1",
+            platform="windows",
+            serialNumber="SN001",
+            sid="SID001",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="BitLocker",
+            osVersion="10.0.19041",
+        ),
+    )
 
     # Mock the _data_path to have an absolute method
     test_okta_device_asset_connector._data_path = MagicMock()
@@ -447,25 +492,25 @@ async def test_fetch_next_devices_success_with_response(test_okta_device_asset_c
     mock_executor = AsyncMock()
     mock_request = MagicMock()
     mock_response = MagicMock()
-    mock_device = {
-        "id": "dev1",
-        "status": "ACTIVE",
-        "created": "2023-01-01T00:00:00Z",
-        "lastUpdated": "2023-01-01T00:00:00Z",
-        "profile": {
-            "displayName": "Test Device",
-            "platform": "windows",
-            "serialNumber": "SN001",
-            "sid": "SID001",
-            "registered": True,
-            "secureHardwarePresent": True,
-            "diskEncryptionType": "BitLocker",
-            "osVersion": "10.0.19041",
-        },
-    }
+    mock_device = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-01T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Test Device",
+            platform="windows",
+            serialNumber="SN001",
+            sid="SID001",
+            registered=True,
+            secureHardwarePresent=True,
+            diskEncryptionType="BitLocker",
+            osVersion="10.0.19041",
+        ),
+    )
     # Mock the response properly - get_type() returns a function that takes body as parameter
     mock_response.get_type.return_value = lambda body=None: [mock_device]
-    mock_response.get_body.return_value = [mock_device]
+    mock_response.get_body.return_value = [mock_device.model_dump()]
     mock_executor.create_request = AsyncMock(return_value=(mock_request, None))
     mock_executor.execute = AsyncMock(return_value=(mock_response, None))
     # Mock the client to return the executor directly (not as a coroutine)
@@ -479,7 +524,7 @@ async def test_fetch_next_devices_success_with_response(test_okta_device_asset_c
     # Assert
     assert isinstance(devices, list)
     assert len(devices) == 1
-    assert devices[0]["id"] == "dev1"
+    assert devices[0].id == "dev1"
     assert response == mock_response
 
 
@@ -499,7 +544,8 @@ async def test_fetch_next_devices_success_empty_list(test_okta_device_asset_conn
     test_okta_device_asset_connector.client = mock_client
 
     # Act
-    result = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
+    devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
     # Assert
-    assert result == []  # When devices is empty, it returns just []
+    assert devices == []  # When devices is empty, it returns empty list
+    assert response is None

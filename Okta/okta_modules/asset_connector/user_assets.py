@@ -7,10 +7,11 @@ and format them according to OCSF standards.
 import asyncio
 from collections.abc import Generator
 from functools import cached_property
-from typing import Any, Dict
+from typing import Any
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
+from okta.models.user import User as OktaUser
 
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import (
@@ -133,7 +134,7 @@ class OktaUserAssetConnector(AssetConnector):
 
         return True
 
-    async def next_list_users(self) -> list[Dict[str, Any]]:
+    async def next_list_users(self) -> list[OktaUser]:
         """Fetch all users from Okta.
 
         Returns:
@@ -165,7 +166,7 @@ class OktaUserAssetConnector(AssetConnector):
 
         return all_users
 
-    async def map_fields(self, okta_user: Dict[str, Any]) -> UserOCSFModel:
+    async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
 
         Args:
@@ -225,7 +226,6 @@ class OktaUserAssetConnector(AssetConnector):
 
         loop = asyncio.get_event_loop()
         users = loop.run_until_complete(self.next_list_users())
-
         for user in users:
             try:
                 yield loop.run_until_complete(self.map_fields(user))
