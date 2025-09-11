@@ -567,7 +567,7 @@ class EventStreamTrigger(Connector):
             return verticles_collector
         except HTTPError as error:
             if error.response.status_code == 403:
-                self.log(message="Not enough permissions to use Edge Types API", level="error")
+                self.log(message="Not enough permissions to use ThreatGraph API", level="error")
                 return None
             self.log_exception(error, message="Failed to create verticles collector")
             return None
