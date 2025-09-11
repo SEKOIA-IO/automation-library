@@ -570,6 +570,7 @@ class EventStreamTrigger(Connector):
                 self.log(message="Not enough permissions to use Edge Types API", level="error")
                 return None
             self.log_exception(error, message="Failed to create verticles collector")
+            return None
         except Exception as error:
             self.log_exception(error, message="Failed to create verticles collector")
             return None
