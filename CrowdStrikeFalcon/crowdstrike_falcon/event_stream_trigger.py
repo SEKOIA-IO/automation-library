@@ -560,8 +560,19 @@ class EventStreamTrigger(Connector):
         )
 
     @cached_property
-    def verticles_collector(self) -> VerticlesCollector:
-        return VerticlesCollector(self, self.client)
+    def verticles_collector(self) -> VerticlesCollector | None:
+        verticles_collector = VerticlesCollector(self, self.client)
+        try:
+            verticles_collector.falcon_client.get_edge_types()
+            return verticles_collector
+        except HTTPError as error:
+            if error.response.status_code == 403:
+                self.log(message="Not enough permissions to use Edge Types API", level="error")
+                return None
+            self.log_exception(error, message="Failed to create verticles collector")
+        except Exception as error:
+            self.log_exception(error, message="Failed to create verticles collector")
+            return None
 
     def get_streams(self, app_id: str) -> dict[str, dict]:
         """
