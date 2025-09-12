@@ -9,18 +9,19 @@ from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
-from sekoia_automation.storage import PersistentJSON
 
 from tehtris_modules import TehtrisModule
 from tehtris_modules.client import ApiClient
 from tehtris_modules.constants import EVENTS_ENDPOINT
+from tehtris_modules.logging import get_logger
 from tehtris_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class TehtrisEventConnectorConfiguration(DefaultConnectorConfiguration):
     frequency: int = 60
     filter_id: int | str | None = None
-    chunk_size: int = 10000
 
 
 class TehtrisEventConnector(Connector):
@@ -62,15 +63,27 @@ class TehtrisEventConnector(Connector):
 
         if not response.ok:
             # Exit trigger if we can't authenticate against the server
-            level = "critical" if response.status_code in [401, 403] else "error"
+            level = "critical" if response.status_code in (401, 403) else "error"
+            message = (
+                f"Request on Tehtris API to fetch events of tenant {self.module.configuration.tenant_id} "
+                f"failed with status {response.status_code} - {response.reason}: {response.text}"
+            )
+
             self.log(
-                message=(
-                    f"Request on Tehtris API to fetch events of tenant {self.module.configuration.tenant_id}"
-                    f"failed with status {response.status_code} - {response.reason}: {response.text}"
-                ),
+                message=message,
                 level=level,
             )
+
+            logger.error(
+                message,
+                from_date=params.get("fromDate"),
+                limit=params.get("limit"),
+                offset=params.get("offset"),
+                filter_id=params.get("filterID"),
+            )
+
             return []
+
         else:
             events = response.json()
             self.log(
@@ -153,37 +166,29 @@ class TehtrisEventConnector(Connector):
         batch_start_time = time.time()
 
         # Fetch next batch
-        batch_of_events = []
         for events in self.fetch_events():
             # for each fetched event
-            for event in events:
-                # add to the batch as json-serialized object
-                batch_of_events.append(orjson.dumps(event).decode("utf-8"))
+            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events]
 
-                # if the batch is full, push it
-                if len(batch_of_events) >= self.configuration.chunk_size:
-                    self.log(
-                        message=f"Forward {len(batch_of_events)} events to the intake",
-                        level="info",
-                    )
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-                    self.push_events_to_intakes(events=batch_of_events)
-                    batch_of_events = []
+            if len(batch_of_events) > 0:
+                self.log(
+                    message=f"Forward {len(batch_of_events)} events to the intake",
+                    level="info",
+                )
+                OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+                self.push_events_to_intakes(events=batch_of_events)
 
-        # if the last batch is not empty, push it
-        if len(batch_of_events) > 0:
-            self.log(
-                message=f"Forward {len(batch_of_events)} events to the intake",
-                level="info",
-            )
-            OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
-            self.push_events_to_intakes(events=batch_of_events)
+            else:
+                self.log(
+                    message="No events to forward",
+                    level="info",
+                )
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
         batch_duration = int(batch_end_time - batch_start_time)
         self.log(
-            message=f"Fetch and forward {len(batch_of_events)} events in {batch_duration} seconds",
+            message=f"Fetch and forward events in {batch_duration} seconds",
             level="info",
         )
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)

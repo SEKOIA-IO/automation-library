@@ -25,11 +25,11 @@
       "apikey"
     ]
   },
-  "description": "TEHTRIS is a cybersecurity company offering products designed to protect endpoints against knwon and unknown threats",
+  "description": "TEHTRIS is a cybersecurity company offering products designed to protect endpoints against known and unknown threats",
   "name": "TEHTRIS",
   "uuid": "1528d749-d353-4e38-ab1b-6e01d7595569",
   "slug": "tehtris",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "categories": [
     "Endpoint"
   ]
