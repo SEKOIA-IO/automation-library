@@ -1,0 +1,51 @@
+name: get_entities_entity_id_notes
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/entities/{{inputs.entity_id}}/notes'
+      auth:
+        oauth2:
+          token_url: https://{{inputs.vectra_portal_url}}/oauth2/token
+          client_credentials:
+            client_id: '{{inputs.client_id}}'
+            client_secret: '{{inputs.client_secret}}'
+          scopes: []
+      params:
+        type: '{{inputs.type}}'
+    asserts:
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+inputs:
+  entity_id:
+    type: integer
+  client_secret:
+    type: string
+    description: The client secret for OAuth2 client credentials flow
+    default: '{{client_secret}}'
+  vectra_portal_url:
+    type: string
+    default: platform.vectra.ai
+  type:
+    type: string
+    description: Specifies the type of entities to retrieve (e.g., "account" or "host")
+  client_id:
+    type: string
+    description: The client ID for OAuth2 client credentials flow
+    default: '{{client_id}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://{{inputs.vectra_portal_url}}/api/v3.3
