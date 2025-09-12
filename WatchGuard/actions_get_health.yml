@@ -1,0 +1,39 @@
+name: get_health
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/health'
+      auth:
+        bearer:
+          token: '{{inputs.token}}'
+          scheme: Bearer
+      headers:
+        WatchGuard-API-Key: '{{apikey}}'
+    asserts:
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: HealthCheck URL
+inputs:
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://api.usa.cloud.watchguard.com/rest/endpoint-security/management
+    - https://api.deu.cloud.watchguard.com/rest/endpoint-security/management
+    - https://api.jpn.cloud.watchguard.com/rest/endpoint-security/management
+  token:
+    type: string
+    description: The bearer token for authentication
+    default: '{{token}}'
