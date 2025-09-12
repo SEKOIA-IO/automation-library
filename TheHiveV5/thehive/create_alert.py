@@ -21,7 +21,9 @@ class TheHiveCreateAlertV5(Action):
         alert_type = f"{arg_alert['alert_type']['category']}/{arg_alert['alert_type']['value']}"
         if len(alert_type) > 32:
             alert_type = arg_alert["alert_type"]["category"][:32]  # limit to 32 char, max of thehive api
+
         link = urljoin(arg_sekoia_server.rstrip("/"), f"/operations/alerts/{arg_alert['short_id']}")
+
         alert: InputAlert = InputAlert(
             severity=arg_alert["urgency"]["severity"] // 25 + 1,  # from 0-100 to 1-4
             date=arg_alert["created_at"] * 1000,  # date in ms for TheHive instead of sec in Sekoia
@@ -34,6 +36,12 @@ class TheHiveCreateAlertV5(Action):
             # add full alert type in description, add link in description
             description=f"type: {alert_type}\r\nlink: {link}\r\ndetails: {arg_alert['details']}",
         )
+
+        if arguments.get("tlp") is not None:
+            alert["tlp"] = int(arguments["tlp"])
+
+        if arguments.get("pap") is not None:
+            alert["pap"] = int(arguments["pap"])
 
         try:
             response = api.alert.create(alert=alert)
