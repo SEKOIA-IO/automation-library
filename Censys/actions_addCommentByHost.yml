@@ -1,0 +1,47 @@
+name: addCommentByHost
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: POST
+      url: '{{inputs.base_url}}/v2/hosts/{{inputs.ip}}/comments'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+    asserts:
+      error_422:
+        predicate: '{{response.status_code != 422}}'
+        fail: Unprocessable Entity
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Adds a comment on the given host.
+
+  '
+inputs:
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  ip:
+    type: string
+    description: The IP Address of the requested host.
