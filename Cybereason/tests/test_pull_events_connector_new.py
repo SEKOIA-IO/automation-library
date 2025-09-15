@@ -1,8 +1,7 @@
 import copy
-import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
@@ -23,6 +22,15 @@ def patch_time(fake_time):
     with patch("cybereason_modules.connector_pull_events.time") as mock_time:
         mock_time.time.return_value = fake_time
         yield mock_time
+
+
+@pytest.fixture
+def patch_datetime(fake_time):
+    with patch("sekoia_automation.checkpoint.datetime") as mock_datetime:
+        mock_datetime.now.return_value = datetime.fromtimestamp(fake_time, tz=timezone.utc)
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.fromtimestamp = lambda ts: datetime.fromtimestamp(ts)
+        yield mock_datetime
 
 
 @pytest.fixture
@@ -174,7 +182,7 @@ def edr_suspicions():
 
 
 @pytest.fixture
-def trigger(symphony_storage, patch_time):
+def trigger(symphony_storage, patch_time, patch_datetime):
     module = CybereasonModule()
     trigger = CybereasonEventConnectorNew(module=module, data_path=symphony_storage)
     trigger.log = MagicMock()
