@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2025-09-16 - 2.8.6
 
+### Fixed
+
 - Add asset connectors
 
 ## 2024-10-15 - 2.8.5
