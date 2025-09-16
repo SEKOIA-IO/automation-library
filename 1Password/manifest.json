@@ -7,7 +7,7 @@
       "base_url": {
         "description": "1Password base URL",
         "type": "string",
-	"format": "uri"
+        "format": "uri"
       },
       "api_token": {
         "description": "API token",
