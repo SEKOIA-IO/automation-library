@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 2025-09-16 - 1.28.9
 
-### Updated
+### Changed
 
 - Update sekoia-automation-sdk
 - Update Asset connector
