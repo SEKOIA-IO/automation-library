@@ -35,12 +35,26 @@ class AwsUsersAssetConnector(AssetConnector):
     def __init__(self, *args: object, **kwargs: object):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self.new_most_recent_date: Optional[str] = None
 
     @property
     def most_recent_date_seen(self) -> Optional[str]:
         with self.context as cache:
             value = cache.get("most_recent_date_seen")
             return value if value is None or isinstance(value, str) else str(value)
+
+    def update_checkpoint(self) -> None:
+        if self.new_most_recent_date is None:
+            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
+            return
+
+        try:
+            with self.context as cache:
+                cache["most_recent_date_seen"] = self.new_most_recent_date
+                self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
+        except Exception as e:
+            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
+            self.log_exception(e)
 
     def client(self) -> boto3.client:
         session = boto3.Session(
@@ -123,5 +137,4 @@ class AwsUsersAssetConnector(AssetConnector):
                     user=aws_user.user,
                 )
                 yield user_ocsf
-        with self.context as cache:
-            cache["most_recent_date_seen"] = new_most_recent_date
+        self.new_most_recent_date = new_most_recent_date

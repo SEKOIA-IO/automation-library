@@ -10,8 +10,8 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.19.3"
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.20.1"
 boto3 = ">=1.39.9"
 botocore = ">=1.39.9"
 aiobotocore = ">=2.24.0"
@@ -49,7 +49,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 119
-target-version = ['py310']
+target-version = ['py311']
 include = '\.pyi?$'
 
 [tool.isort]
