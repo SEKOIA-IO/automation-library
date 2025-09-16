@@ -1,3 +1,4 @@
+from azure_ad.account_validator import AzureADAccountValidator
 from azure_ad.asset_connector.user_assets import EntraIDAssetConnector
 from azure_ad.base import AzureADModule
 from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
@@ -7,6 +8,7 @@ from azure_ad.delete_app import DeleteApplicationAction
 
 if __name__ == "__main__":
     module = AzureADModule()
+    module.register_account_validator(AzureADAccountValidator)
     module.register(EntraIDAssetConnector, "entra_id_asset_connector")
     module.register(GetSignInsAction, "GetSignInsAction")
     module.register(EnableUserAction, "EnableUserAction")
