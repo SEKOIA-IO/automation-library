@@ -66,6 +66,8 @@ class EntraIDAssetConnector(AssetConnector):
         return self._client
 
     def update_checkpoint(self) -> None:
+        if self.next_most_recent_date_seen is None:
+            return
         with self.context as cache:
             cache["most_recent_date_seen"] = (
                 datetime.fromtimestamp(self.next_most_recent_date_seen, timezone.utc)
@@ -204,7 +206,7 @@ class EntraIDAssetConnector(AssetConnector):
 
         ## Save the most recent date seen
         if len(new_users) > 0:
-            self.next_most_recent_date_seen: float = max(user.time for user in new_users)
+            self.next_most_recent_date_seen = max(user.time for user in new_users)
         return new_users
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
