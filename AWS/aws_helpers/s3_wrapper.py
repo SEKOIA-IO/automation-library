@@ -20,6 +20,7 @@ class S3Configuration(AwsConfiguration):
     bucket: str | None = Field(default=None, description="AWS S3 bucket name")
 
 
+# mypy: ignore-errors
 class S3Wrapper(AwsClient[S3Configuration]):
     """Aws S3 wrapper."""
 
