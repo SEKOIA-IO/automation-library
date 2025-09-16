@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-16 - 1.0.2
+
+### Fixed
+
+- Force the URI validation on the `base_url` parameter in the configuration
+
 ## 2025-01-07 - 1.0.1
 
 ### Fixed

@@ -6,7 +6,8 @@
     "properties": {
       "base_url": {
         "description": "1Password base URL",
-        "type": "string"
+        "type": "string",
+        "format": "uri"
       },
       "api_token": {
         "description": "API token",
@@ -25,7 +26,7 @@
   "name": "1Password",
   "uuid": "56f9e1f6-95ba-45ed-867b-44fb3183934d",
   "slug": "one-password",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "categories": [
     "Applicative"
   ]
