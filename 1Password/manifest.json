@@ -6,7 +6,8 @@
     "properties": {
       "base_url": {
         "description": "1Password base URL",
-        "type": "string"
+        "type": "string",
+	"format": "uri"
       },
       "api_token": {
         "description": "API token",
