@@ -264,3 +264,33 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
     assert test_entra_id_asset_connector.fetch_user.await_count == 2
     assert result[0] is mock_user_ocsf_model_1
     assert result[1] is mock_user_ocsf_model_2
+
+
+def test_update_checkpoint(test_entra_id_asset_connector):
+    """Test that update_checkpoint correctly updates the most_recent_date_seen in context."""
+    # Arrange
+    test_timestamp = 1640995200.0  # 2022-01-01 00:00:00 UTC
+    test_entra_id_asset_connector.next_most_recent_date_seen = test_timestamp
+
+    # Act
+    test_entra_id_asset_connector.update_checkpoint()
+
+    # Assert
+    most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
+    assert most_recent_date is not None
+    assert most_recent_date == "2022-01-01T00:00:00+00:00"
+
+
+def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connector):
+    """Test that update_checkpoint works with different timestamps."""
+    # Arrange
+    test_timestamp = 1672531200.0  # 2023-01-01 00:00:00 UTC
+    test_entra_id_asset_connector.next_most_recent_date_seen = test_timestamp
+
+    # Act
+    test_entra_id_asset_connector.update_checkpoint()
+
+    # Assert
+    most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
+    assert most_recent_date is not None
+    assert most_recent_date == "2023-01-01T00:00:00+00:00"
