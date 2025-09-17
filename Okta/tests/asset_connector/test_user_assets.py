@@ -374,10 +374,12 @@ class TestOktaUserAssetConnector:
         # Setup
         mock_connector.next_list_users = AsyncMock(return_value=sample_users_data)
 
-        # Mock the event loop
+        # Mock the event loop to simulate an error during mapping
         with patch("asyncio.get_event_loop") as mock_loop:
             mock_loop_instance = MagicMock()
             mock_loop.return_value = mock_loop_instance
+            
+            # First call returns users, second call raises exception, third call returns mock
             mock_loop_instance.run_until_complete.side_effect = [
                 sample_users_data,  # First call for next_list_users
                 Exception("Mapping error"),  # First call for map_fields
@@ -389,10 +391,116 @@ class TestOktaUserAssetConnector:
 
             # Verify
             assert len(assets) == 1  # Only one successful mapping
-            # Check that an error was logged (the exact message may vary due to mock behavior)
+            # Check that an error was logged
             error_calls = [
                 call
                 for call in mock_connector.log.call_args_list
                 if call[0][0].startswith("Error while mapping user") and "Mapping error" in call[0][0]
             ]
             assert len(error_calls) > 0
+
+    def test_get_last_created_date(self, mock_connector, sample_users_data):
+        """Test getting the last created date from users."""
+        # Execute
+        result = mock_connector.get_last_created_date(sample_users_data)
+
+        # Verify
+        assert result == "2023-01-02T00:00:00.000Z"  # Latest date from sample data
+
+    def test_get_last_created_date_empty_list(self, mock_connector):
+        """Test getting the last created date from empty user list."""
+        # Execute and verify it raises ValueError for empty list
+        with pytest.raises(ValueError):
+            mock_connector.get_last_created_date([])
+
+    def test_most_recent_date_seen_property(self, mock_connector):
+        """Test the most_recent_date_seen property."""
+        # Setup
+        mock_connector.context.__enter__.return_value = {"most_recent_date_seen": "2023-01-01T00:00:00.000Z"}
+        
+        # Execute
+        result = mock_connector.most_recent_date_seen
+
+        # Verify
+        assert result == "2023-01-01T00:00:00.000Z"
+
+    def test_most_recent_date_seen_none(self, mock_connector):
+        """Test the most_recent_date_seen property when no date is set."""
+        # Setup
+        mock_connector.context.__enter__.return_value = {}
+        
+        # Execute
+        result = mock_connector.most_recent_date_seen
+
+        # Verify
+        assert result is None
+
+    def test_update_checkpoint_success(self, mock_connector):
+        """Test successful checkpoint update."""
+        # Setup
+        mock_connector.new_most_recent_date = "2023-01-01T00:00:00.000Z"
+        mock_cache = {}
+        mock_connector.context.__enter__.return_value = mock_cache
+        
+        # Execute
+        mock_connector.update_checkpoint()
+
+        # Verify
+        assert mock_cache["most_recent_date_seen"] == "2023-01-01T00:00:00.000Z"
+        mock_connector.log.assert_called_with("Checkpoint updated with date: 2023-01-01T00:00:00.000Z", level="info")
+
+    def test_update_checkpoint_none_date(self, mock_connector):
+        """Test checkpoint update when new_most_recent_date is None."""
+        # Setup
+        mock_connector.new_most_recent_date = None
+        
+        # Execute
+        mock_connector.update_checkpoint()
+
+        # Verify
+        mock_connector.log.assert_called_with("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
+
+    def test_update_checkpoint_error(self, mock_connector):
+        """Test checkpoint update with error."""
+        # Setup
+        mock_connector.new_most_recent_date = "2023-01-01T00:00:00.000Z"
+        mock_connector.context.__enter__.side_effect = Exception("Cache error")
+        mock_connector._logger = MagicMock()  # Add missing _logger attribute
+        mock_connector.log_exception = MagicMock()  # Mock log_exception method
+        
+        # Execute
+        mock_connector.update_checkpoint()
+
+        # Verify
+        # Check that log was called with the error message
+        error_calls = [
+            call for call in mock_connector.log.call_args_list
+            if call[0][0].startswith("Failed to update checkpoint: Cache error")
+        ]
+        assert len(error_calls) > 0
+        mock_connector.log_exception.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_map_fields_with_none_values(self, mock_connector):
+        """Test field mapping with None values in user profile."""
+        # Setup
+        user = MagicMock()
+        user.id = "user123"
+        user.created = "2023-01-01T00:00:00.000Z"
+        user.profile.login = "test.user@example.com"
+        user.profile.firstName = None
+        user.profile.lastName = None
+        user.profile.email = "test.user@example.com"
+        
+        mock_connector.get_user_groups = AsyncMock(return_value=[])
+        mock_connector.get_user_mfa = AsyncMock(return_value=False)
+
+        # Execute
+        result = await mock_connector.map_fields(user)
+
+        # Verify
+        assert isinstance(result, UserOCSFModel)
+        assert result.user.uid == "user123"
+        assert result.user.full_name == "None None"  # None values converted to string
+        assert result.user.email_addr == "test.user@example.com"
+        assert result.user.name == "test.user@example.com"
