@@ -1,0 +1,17 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+    },
+    "required": [
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "",
+  "docker_parameters": "list_endpoints",
+  "name": "Comment alerts",
+  "results": {},
+  "uuid": "4188b131-4ab5-4f0e-8a81-077e1d4c2242",
+  "slug": "list_endpoints"
+}
