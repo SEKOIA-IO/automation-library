@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## 2025-09-15 - 1.2.0
+
+### Updated
+
+- Delete harfanglab asset connector
+- Update automation sdk version to 1.20.0
+- Delete the base asset connector
+- Add account validator to the asset connector
+
 ## 2025-07-01 - 1.1.0
 
 ### Added
