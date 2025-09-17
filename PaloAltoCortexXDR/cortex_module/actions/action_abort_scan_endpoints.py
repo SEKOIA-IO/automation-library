@@ -58,7 +58,7 @@ class AbortScanEndpointsAction(PaloAltoCortexXDRAction):
     def request_payload(self, arguments: dict[str, Any]) -> dict[str, Any]:
         model = AbortScanEndpointsArguments(**arguments)
 
-        result = {"request_data": {}}
+        result: dict[str, Any] = {"request_data": {}}
 
         if model.incident_id:
             result["request_data"]["incident_id"] = model.incident_id
