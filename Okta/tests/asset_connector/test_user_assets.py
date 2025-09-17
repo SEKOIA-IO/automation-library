@@ -1,9 +1,7 @@
 """Unit tests for OktaUserAssetConnector."""
 
-import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
 from okta_modules.asset_connector.user_assets import OktaUserAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.user import Group, UserOCSFModel
@@ -378,7 +376,7 @@ class TestOktaUserAssetConnector:
         with patch("asyncio.get_event_loop") as mock_loop:
             mock_loop_instance = MagicMock()
             mock_loop.return_value = mock_loop_instance
-            
+
             # First call returns users, second call raises exception, third call returns mock
             mock_loop_instance.run_until_complete.side_effect = [
                 sample_users_data,  # First call for next_list_users
@@ -417,7 +415,7 @@ class TestOktaUserAssetConnector:
         """Test the most_recent_date_seen property."""
         # Setup
         mock_connector.context.__enter__.return_value = {"most_recent_date_seen": "2023-01-01T00:00:00.000Z"}
-        
+
         # Execute
         result = mock_connector.most_recent_date_seen
 
@@ -428,7 +426,7 @@ class TestOktaUserAssetConnector:
         """Test the most_recent_date_seen property when no date is set."""
         # Setup
         mock_connector.context.__enter__.return_value = {}
-        
+
         # Execute
         result = mock_connector.most_recent_date_seen
 
@@ -439,9 +437,9 @@ class TestOktaUserAssetConnector:
         """Test successful checkpoint update."""
         # Setup
         mock_connector.new_most_recent_date = "2023-01-01T00:00:00.000Z"
-        mock_cache = {}
+        mock_cache: dict[str, str] = {}
         mock_connector.context.__enter__.return_value = mock_cache
-        
+
         # Execute
         mock_connector.update_checkpoint()
 
@@ -453,12 +451,14 @@ class TestOktaUserAssetConnector:
         """Test checkpoint update when new_most_recent_date is None."""
         # Setup
         mock_connector.new_most_recent_date = None
-        
+
         # Execute
         mock_connector.update_checkpoint()
 
         # Verify
-        mock_connector.log.assert_called_with("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
+        mock_connector.log.assert_called_with(
+            "Warning: new_most_recent_date is None, skipping checkpoint update", level="warning"
+        )
 
     def test_update_checkpoint_error(self, mock_connector):
         """Test checkpoint update with error."""
@@ -467,14 +467,15 @@ class TestOktaUserAssetConnector:
         mock_connector.context.__enter__.side_effect = Exception("Cache error")
         mock_connector._logger = MagicMock()  # Add missing _logger attribute
         mock_connector.log_exception = MagicMock()  # Mock log_exception method
-        
+
         # Execute
         mock_connector.update_checkpoint()
 
         # Verify
         # Check that log was called with the error message
         error_calls = [
-            call for call in mock_connector.log.call_args_list
+            call
+            for call in mock_connector.log.call_args_list
             if call[0][0].startswith("Failed to update checkpoint: Cache error")
         ]
         assert len(error_calls) > 0
@@ -491,7 +492,7 @@ class TestOktaUserAssetConnector:
         user.profile.firstName = None
         user.profile.lastName = None
         user.profile.email = "test.user@example.com"
-        
+
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=False)
 

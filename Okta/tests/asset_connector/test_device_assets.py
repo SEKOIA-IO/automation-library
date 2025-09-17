@@ -509,24 +509,24 @@ async def test_fetch_next_devices_with_query_params(test_okta_device_asset_conne
             osVersion="10.0.19041",
         ),
     )
-    
+
     # Mock the response
     mock_response.get_type.return_value = lambda body=None: [mock_device]
     mock_response.get_body.return_value = [mock_device.model_dump()]
     mock_executor.create_request = AsyncMock(return_value=(mock_request, None))
     mock_executor.execute = AsyncMock(return_value=(mock_response, None))
-    
+
     # Mock the client
     mock_client = MagicMock()
     mock_client.get_request_executor.return_value = mock_executor
     test_okta_device_asset_connector.client = mock_client
-    
+
     # Mock the context to return a most recent date
     mock_context = MagicMock()
     mock_context.__enter__.return_value = {"most_recent_date_seen": "2023-01-01T00:00:00Z"}
     mock_context.__exit__.return_value = None
-    
-    with patch.object(test_okta_device_asset_connector, 'context', mock_context):
+
+    with patch.object(test_okta_device_asset_connector, "context", mock_context):
         # Act
         devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
@@ -581,7 +581,7 @@ async def test_next_list_devices_with_pagination(test_okta_device_asset_connecto
     mock_response1 = MagicMock()
     mock_response1.has_next.return_value = True
     mock_response1._next = "/api/v1/devices?next=page2"
-    
+
     mock_response2 = MagicMock()
     mock_response2.has_next.return_value = False
 
