@@ -158,7 +158,7 @@ class OktaUserAssetConnector(AssetConnector):
         try:
             query_params = {}
             if self.most_recent_date_seen:
-                query_params = {'search': f'created gt "{self.most_recent_date_seen}"'}
+                query_params = {"search": f'created gt "{self.most_recent_date_seen}"'}
             users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
@@ -183,7 +183,7 @@ class OktaUserAssetConnector(AssetConnector):
             return []
 
         return all_users
-    
+
     def get_last_created_date(self, users: list[OktaUser]) -> str:
         """Get the last created date from the list of users.
 

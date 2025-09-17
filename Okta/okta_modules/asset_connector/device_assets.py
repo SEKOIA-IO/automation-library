@@ -59,7 +59,7 @@ class OktaDeviceAssetConnector(AssetConnector):
     def client(self):
         config = {"orgUrl": self.module.configuration["base_url"], "token": self.module.configuration["apikey"]}
         return OktaClient(config)
-    
+
     @property
     def most_recent_date_seen(self) -> Optional[str]:
         with self.context as cache:
@@ -79,7 +79,6 @@ class OktaDeviceAssetConnector(AssetConnector):
             self.log(f"Failed to update checkpoint: {str(e)}", level="error")
             self.log_exception(e)
 
-
     def get_last_created_date(self, devices: list[OktaDevice]) -> str:
         """Get the last created date from the list of devices.
 
@@ -96,7 +95,7 @@ class OktaDeviceAssetConnector(AssetConnector):
         try:
             query_params = {}
             if self.most_recent_date_seen:
-                query_params = {'search': f'created gt "{self.most_recent_date_seen}"'}
+                query_params = {"search": f'created gt "{self.most_recent_date_seen}"'}
             if query_params:
                 encoded_query_params = urlencode(query_params)
                 url += f"/?{encoded_query_params}"

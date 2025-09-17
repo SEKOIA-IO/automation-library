@@ -3,6 +3,7 @@ from okta.client import Client as OktaClient
 from functools import cached_property
 import asyncio
 
+
 class OktaAccountValidator(AccountValidator):
 
     @cached_property
