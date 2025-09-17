@@ -1,6 +1,7 @@
 import asyncio
+from urllib.parse import urlencode
 from functools import cached_property
-from typing import Any, List
+from typing import Any, List, Optional
 from dateutil.parser import isoparse
 from collections.abc import Generator
 from sekoia_automation.asset_connector import AssetConnector
@@ -21,7 +22,6 @@ from sekoia_automation.storage import PersistentJSON
 
 from okta.client import Client as OktaClient
 from pydantic import BaseModel
-from urllib.parse import urlencode
 
 
 class OktaDeviceProfile(BaseModel):
@@ -32,6 +32,9 @@ class OktaDeviceProfile(BaseModel):
     registered: bool
     secureHardwarePresent: bool
     osVersion: str
+    serialNumber: Optional[str] = None
+    sid: Optional[str] = None
+    diskEncryptionType: Optional[str] = None
 
 
 class OktaDevice(BaseModel):
@@ -50,15 +53,53 @@ class OktaDeviceAssetConnector(AssetConnector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self.new_most_recent_date: Optional[str] = None
 
     @cached_property
     def client(self):
         config = {"orgUrl": self.module.configuration["base_url"], "token": self.module.configuration["apikey"]}
         return OktaClient(config)
+    
+    @property
+    def most_recent_date_seen(self) -> Optional[str]:
+        with self.context as cache:
+            value = cache.get("most_recent_date_seen")
+            return value if value is None or isinstance(value, str) else str(value)
+
+    def update_checkpoint(self) -> None:
+        if self.new_most_recent_date is None:
+            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
+            return
+
+        try:
+            with self.context as cache:
+                cache["most_recent_date_seen"] = self.new_most_recent_date
+                self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
+        except Exception as e:
+            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
+            self.log_exception(e)
+
+
+    def get_last_created_date(self, devices: list[OktaDevice]) -> str:
+        """Get the last created date from the list of devices.
+
+        Args:
+            users: List of Okta devices.
+
+        Returns:
+            The last created date as a string.
+        """
+        return max(device.created for device in devices)
 
     async def fetch_next_devices(self, url: str) -> tuple[List[OktaDevice], Any]:
         all_devices = []
         try:
+            query_params = {}
+            if self.most_recent_date_seen:
+                query_params = {'search': f'created gt "{self.most_recent_date_seen}"'}
+            if query_params:
+                encoded_query_params = urlencode(query_params)
+                url += f"/?{encoded_query_params}"
             request, error = await self.client.get_request_executor().create_request(
                 method="GET", url=url, body={}, headers={}, oauth=False
             )
@@ -71,6 +112,7 @@ class OktaDeviceAssetConnector(AssetConnector):
             if not all_devices:
                 self.log(f"No devices found at {url}", level="warning")
                 return [], None
+            self.new_most_recent_date = self.get_last_created_date(all_devices)
             return all_devices, response
         except Exception as e:
             self.log(f"Exception while fetching devices from {url}: {e}", level="error")

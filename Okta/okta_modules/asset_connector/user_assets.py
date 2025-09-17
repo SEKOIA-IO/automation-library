@@ -7,7 +7,7 @@ and format them according to OCSF standards.
 import asyncio
 from collections.abc import Generator
 from functools import cached_property
-from typing import Any
+from typing import Any, Optional
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
@@ -45,6 +45,7 @@ class OktaUserAssetConnector(AssetConnector):
         """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self.new_most_recent_date: Optional[str] = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -55,6 +56,19 @@ class OktaUserAssetConnector(AssetConnector):
         """
         with self.context as cache:
             return cache.get("most_recent_date_seen", None)
+
+    def update_checkpoint(self) -> None:
+        if self.new_most_recent_date is None:
+            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
+            return
+
+        try:
+            with self.context as cache:
+                cache["most_recent_date_seen"] = self.new_most_recent_date
+                self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
+        except Exception as e:
+            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
+            self.log_exception(e)
 
     @cached_property
     def client(self) -> OktaClient:
@@ -142,7 +156,10 @@ class OktaUserAssetConnector(AssetConnector):
         """
         all_users = []
         try:
-            users, resp, err = await self.client.list_users()
+            query_params = {}
+            if self.most_recent_date_seen:
+                query_params = {'search': f'created gt "{self.most_recent_date_seen}"'}
+            users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
                 return []
@@ -160,11 +177,23 @@ class OktaUserAssetConnector(AssetConnector):
                     return all_users
                 all_users.extend(users)
 
+            self.new_most_recent_date = self.get_last_created_date(all_users)
         except Exception as e:
             self.log(f"Exception while listing users: {e}", level="error")
             return []
 
         return all_users
+    
+    def get_last_created_date(self, users: list[OktaUser]) -> str:
+        """Get the last created date from the list of users.
+
+        Args:
+            users: List of Okta users.
+
+        Returns:
+            The last created date as a string.
+        """
+        return max(user.created for user in users)
 
     async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
