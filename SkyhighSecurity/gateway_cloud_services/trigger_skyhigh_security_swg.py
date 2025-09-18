@@ -148,23 +148,39 @@ class EventCollector(Thread):
 
         return content
 
+    def next_batch(self):
+        """
+        Fetch the next batch of events and put them in the queue
+
+        1. Query the API
+        2. If we have a response, put it in the queue
+        3. Update the time range
+        4. Sleep until the next batch
+        """
+        try:
+            # 1. Query the API
+            response = self.query_api()
+
+            if response:
+                # 2. If we have a response, put it in the queue
+                self.events_queue.put(response)
+            else:
+                self.log(message="No messages to forward", level="info")
+        except Exception as ex:
+            self.log_exception(ex, message="Failed to fetch events")
+
+        # 3. Update the time range
+        self._update_time_range()
+
+        # 4. Sleep until the next batch
+        self._sleep_until_next_batch()
+
     def run(self):  # pragma: no cover
         self.log(message="The Event Collector has started", level="info")
         self._init_time_range()
 
         while not self._stop_event.is_set():
-            try:
-                response = self.query_api()
-
-                if response:
-                    self.events_queue.put(response)
-                else:
-                    self.log(message="No messages to forward", level="info")
-            except Exception as ex:
-                self.log_exception(ex, message="Failed to fetch events")
-
-            self._update_time_range()
-            self._sleep_until_next_batch()
+            self.next_batch()
 
         self.log(message="The Event Collector has stopped", level="info")
 

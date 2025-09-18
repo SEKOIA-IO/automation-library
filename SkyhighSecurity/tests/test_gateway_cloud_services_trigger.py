@@ -92,6 +92,25 @@ def test_query_api(event_collector, requests_mock):
     assert response == csv.decode("utf-8")
 
 
+def test_next_batch(event_collector, requests_mock):
+    url = (
+        "https://msg.mcafeesaas.com/mwg/api/reporting/forensic/1234567890"
+        "?filter.requestTimestampFrom=1661251791&filter.requestTimestampTo=1661287731"
+    )
+    csv = b'"user_id","username"\r\n"-1","foo"'
+    event_collector.start_date = datetime.fromtimestamp(1661251791, timezone.utc)
+    event_collector.end_date = datetime.fromtimestamp(1661287731, timezone.utc)
+
+    requests_mock.get(
+        url,
+        content=csv,
+    )
+    event_collector.next_batch()
+    assert event_collector.events_queue.qsize() == 1
+    assert event_collector.start_date.timestamp() == 1661287731
+    assert event_collector.end_date.timestamp() == 1661287791
+
+
 def test_tranformer_with_event(trigger, events_queue):
     input_queue = queue.Queue()
     transformer = Transformer(trigger, input_queue, events_queue)
