@@ -36,7 +36,7 @@ def test_pull_activities(activity_consumer, activity_1, activity_2):
     activity_consumer.pull_events(most_recent_datetime_seen)
 
     assert activity_consumer.management_client.activities.get.call_count == 2
-    assert activity_consumer.connector.push_events_to_intakes.call_args_list == [
+    assert activity_consumer.entraid_connector.push_events_to_intakes.call_args_list == [
         call(activity_consumer._serialize_events([activity_1])),
         call(activity_consumer._serialize_events([activity_2])),
     ]
@@ -67,7 +67,7 @@ def test_pull_activities_donot_collect_activity_twice(activity_consumer, activit
     activity_consumer.pull_events(most_recent_datetime_seen)
     activity_consumer.pull_events(most_recent_datetime_seen)
 
-    assert activity_consumer.connector.push_events_to_intakes.call_args_list == [
+    assert activity_consumer.entraid_connector.push_events_to_intakes.call_args_list == [
         call(activity_consumer._serialize_events([activity_1])),
     ]
 
@@ -84,7 +84,7 @@ def test_pull_threats(threat_consumer, threat_1, threat_2):
     threat_consumer.pull_events(most_recent_datetime_seen)
 
     assert threat_consumer.management_client.client.get.call_count == 2
-    assert threat_consumer.connector.push_events_to_intakes.call_args_list == [
+    assert threat_consumer.entraid_connector.push_events_to_intakes.call_args_list == [
         call(threat_consumer._serialize_events([threat_1])),
         call(threat_consumer._serialize_events([threat_2])),
     ]
@@ -117,7 +117,7 @@ def test_pull_threats_donot_collect_threats_twice(threat_consumer, threat_1, thr
     threat_consumer.pull_events(most_recent_datetime_seen)
     threat_consumer.pull_events(most_recent_datetime_seen)
 
-    assert threat_consumer.connector.push_events_to_intakes.call_args_list == [
+    assert threat_consumer.entraid_connector.push_events_to_intakes.call_args_list == [
         call(threat_consumer._serialize_events([threat_1])),
     ]
 
