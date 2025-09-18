@@ -147,7 +147,7 @@ def test_sleep_until_next_batch(event_collector):
 
 
 def test_saving_checkpoint(event_collector, requests_mock):
-    with event_collector.entraid_connector.context as cache:
+    with event_collector.connector.context as cache:
         cache["most_recent_date_seen"] = None
     event_collector.trigger_activation = isoparse("2024-08-15 10:26:26.172059+00:00")
     event_collector._init_time_range()
@@ -156,7 +156,7 @@ def test_saving_checkpoint(event_collector, requests_mock):
     assert event_collector.start_date.isoformat() == "2024-08-15T09:25:26.172059+00:00"
     assert event_collector.end_date.isoformat() == "2024-08-15T09:26:26.172059+00:00"
 
-    with event_collector.entraid_connector.context as cache:
+    with event_collector.connector.context as cache:
         cache["most_recent_date_seen"] = "2024-08-15 10:26:26.172059+00:00"
     event_collector._init_time_range()
 

@@ -563,7 +563,7 @@ def test_verticles_collector_property_success(trigger):
         collector = trigger.verticles_collector
         assert collector is not None
         assert isinstance(collector, VerticlesCollector)
-        assert collector.entraid_connector == trigger
+        assert collector.connector == trigger
         assert collector.falcon_client == trigger.client
         assert collector.edge_types == {"child_process"}
 
