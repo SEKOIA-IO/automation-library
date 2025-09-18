@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-18 - 1.2.2
+
+### Added
+
+- Add an header agent for vectra
+
 ## 2025-07-17 - 1.2.1
 
 ### Added
