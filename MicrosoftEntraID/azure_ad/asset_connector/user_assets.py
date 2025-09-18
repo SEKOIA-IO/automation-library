@@ -42,7 +42,7 @@ class EntraIDAssetConnector(AssetConnector):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._client: GraphServiceClient | None = None
-        self.next_most_recent_date_seen: float | None = None
+        self._latest_time: float | None = None
 
     @property
     def most_recent_date_seen(self) -> str | None:
@@ -66,13 +66,11 @@ class EntraIDAssetConnector(AssetConnector):
         return self._client
 
     def update_checkpoint(self) -> None:
-        if self.next_most_recent_date_seen is None:
+        if self._latest_time is None:
             return
         with self.context as cache:
             cache["most_recent_date_seen"] = (
-                datetime.fromtimestamp(self.next_most_recent_date_seen, timezone.utc)
-                .replace(microsecond=0)
-                .isoformat()
+                datetime.fromtimestamp(self._latest_time, timezone.utc).replace(microsecond=0).isoformat()
             )
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup]) -> UserOCSFModel:
@@ -206,7 +204,7 @@ class EntraIDAssetConnector(AssetConnector):
 
         ## Save the most recent date seen
         if len(new_users) > 0:
-            self.next_most_recent_date_seen = max(user.time for user in new_users)
+            self._latest_time = max(user.time for user in new_users)
         return new_users
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:

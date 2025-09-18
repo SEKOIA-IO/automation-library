@@ -1,7 +1,7 @@
   {
   "name": "Entra ID asset connector",
   "description": "Fetch Entra ID user asset",
-  "uuid": "",
+  "uuid": "b6e2e2e2-4c3a-4b7a-9e2a-1f2c3d4e5f6a",
   "docker_parameters": "entra_id_asset_connector",
   "type": "asset",
   "arguments": {

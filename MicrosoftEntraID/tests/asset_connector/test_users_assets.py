@@ -270,7 +270,7 @@ def test_update_checkpoint(test_entra_id_asset_connector):
     """Test that update_checkpoint correctly updates the most_recent_date_seen in context."""
     # Arrange
     test_timestamp = 1640995200.0  # 2022-01-01 00:00:00 UTC
-    test_entra_id_asset_connector.next_most_recent_date_seen = test_timestamp
+    test_entra_id_asset_connector._latest_time = test_timestamp
 
     # Act
     test_entra_id_asset_connector.update_checkpoint()
@@ -285,7 +285,7 @@ def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connecto
     """Test that update_checkpoint works with different timestamps."""
     # Arrange
     test_timestamp = 1672531200.0  # 2023-01-01 00:00:00 UTC
-    test_entra_id_asset_connector.next_most_recent_date_seen = test_timestamp
+    test_entra_id_asset_connector._latest_time = test_timestamp
 
     # Act
     test_entra_id_asset_connector.update_checkpoint()
