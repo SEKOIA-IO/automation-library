@@ -132,12 +132,13 @@ class EventCollector(Thread):
         )
 
         if not response.ok:
+            level = "critical" if response.status_code in [401, 403] else "error"
             self.log(
                 message=(
                     f"Request to SkyhighSWG API to fetch {response.url} "
                     f"failed with status {response.status_code} - {response.text}"
                 ),
-                level="error",
+                level=level,
             )
 
         # Raise an exception for HTTP errors
