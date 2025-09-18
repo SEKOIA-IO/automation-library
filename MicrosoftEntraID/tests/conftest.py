@@ -1,3 +1,4 @@
+from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -6,11 +7,11 @@ from sekoia_automation import constants
 
 
 @pytest.fixture
-def data_storage():
+def symphony_storage():
     original_storage = constants.DATA_STORAGE
     constants.DATA_STORAGE = mkdtemp()
 
-    yield constants.DATA_STORAGE
+    yield Path(constants.DATA_STORAGE)
 
     rmtree(constants.DATA_STORAGE)
     constants.DATA_STORAGE = original_storage
