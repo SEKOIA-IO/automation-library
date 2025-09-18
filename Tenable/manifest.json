@@ -17,7 +17,7 @@
       }
     },
     "required": [
-      "url",
+      "base_url",
       "access_key",
       "secret_key"
     ],
