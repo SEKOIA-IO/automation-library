@@ -139,7 +139,9 @@ class EventCollector(Thread):
                 ),
                 level="error",
             )
-            return None
+
+        # Raise an exception for HTTP errors
+        response.raise_for_status()
 
         content = response.content.decode("utf-8")
 
@@ -166,14 +168,17 @@ class EventCollector(Thread):
                 self.events_queue.put(response)
             else:
                 self.log(message="No messages to forward", level="info")
+
+            # 3. Update the time range
+            self._update_time_range()
+
+            # 4. Sleep until the next batch
+            self._sleep_until_next_batch()
         except Exception as ex:
             self.log_exception(ex, message="Failed to fetch events")
 
-        # 3. Update the time range
-        self._update_time_range()
-
-        # 4. Sleep until the next batch
-        self._sleep_until_next_batch()
+            # In case of error, wait the frequency before retrying
+            sleep(self.configuration.frequency)
 
     def run(self):  # pragma: no cover
         self.log(message="The Event Collector has started", level="info")
