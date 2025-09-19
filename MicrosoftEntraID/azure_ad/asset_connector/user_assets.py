@@ -123,41 +123,47 @@ class EntraIDAssetConnector(AssetConnector):
         Fetch user groups from Microsoft Entra ID.
         """
         groups: list[UserOCSFGroup] = []
-        user_groups = await self.client.users.by_user_id(user_id).member_of.get()
+        try:
+            user_groups = await self.client.users.by_user_id(user_id).member_of.get()
 
-        if user_groups and user_groups.value:
-            for group in user_groups.value:
-                if isinstance(group, Group):
-                    groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
-
-        ## Implement if there is more than one page of results
-        while user_groups is not None and user_groups.odata_next_link is not None:
-            user_groups = (
-                await self.client.users.by_user_id(user_id).member_of.with_url(user_groups.odata_next_link).get()
-            )
             if user_groups and user_groups.value:
                 for group in user_groups.value:
                     if isinstance(group, Group):
                         groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
 
-        return groups
+            ## Implement if there is more than one page of results
+            while user_groups is not None and user_groups.odata_next_link is not None:
+                user_groups = (
+                    await self.client.users.by_user_id(user_id).member_of.with_url(user_groups.odata_next_link).get()
+                )
+                if user_groups and user_groups.value:
+                    for group in user_groups.value:
+                        if isinstance(group, Group):
+                            groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
+
+            return groups
+        except Exception as e:
+            raise ValueError("Error fetching user groups: {e}")
 
     async def fetch_user_mfa(self, user_id: str) -> bool:
         """
         Fetch MFA status of the user.
         """
-        user_mfa = await self.client.users.by_user_id(user_id).authentication.methods.get()
-        has_mfa = False
-        if user_mfa and user_mfa.value:
-            for method in user_mfa.value:
-                if (
-                    isinstance(method, MicrosoftAuthenticatorAuthenticationMethod)
-                    or isinstance(method, SoftwareOathAuthenticationMethod)
-                    or isinstance(method, PhoneAuthenticationMethod)
-                ):
-                    has_mfa = True
-                    break
-        return has_mfa
+        try:
+            user_mfa = await self.client.users.by_user_id(user_id).authentication.methods.get()
+            has_mfa = False
+            if user_mfa and user_mfa.value:
+                for method in user_mfa.value:
+                    if (
+                        isinstance(method, MicrosoftAuthenticatorAuthenticationMethod)
+                        or isinstance(method, SoftwareOathAuthenticationMethod)
+                        or isinstance(method, PhoneAuthenticationMethod)
+                    ):
+                        has_mfa = True
+                        break
+            return has_mfa
+        except Exception as e:
+            raise ValueError("Error fetching user MFA: {e}")
 
     async def fetch_user(self, user: User) -> UserOCSFModel:
         """
@@ -184,23 +190,26 @@ class EntraIDAssetConnector(AssetConnector):
         )
         request_configuration.headers.add("ConsistencyLevel", "eventual")
 
-        users = await self.client.users.get(request_configuration=request_configuration)
+        try:
+            users = await self.client.users.get(request_configuration=request_configuration)
 
-        if users and users.value:
-            for user in users.value:
-                ## Fetch MFA status of the user
-                new_user = await self.fetch_user(user)
-                new_users.append(new_user)
-
-        ## Implement if there is more than one page of results
-        while users is not None and users.odata_next_link is not None:
-            users = await self.client.users.with_url(users.odata_next_link).get(
-                request_configuration=request_configuration
-            )
             if users and users.value:
                 for user in users.value:
+                    ## Fetch MFA status of the user
                     new_user = await self.fetch_user(user)
                     new_users.append(new_user)
+
+            ## Implement if there is more than one page of results
+            while users is not None and users.odata_next_link is not None:
+                users = await self.client.users.with_url(users.odata_next_link).get(
+                    request_configuration=request_configuration
+                )
+                if users and users.value:
+                    for user in users.value:
+                        new_user = await self.fetch_user(user)
+                        new_users.append(new_user)
+        except Exception as e:
+            raise ValueError("Error fetching users: {e}")
 
         ## Save the most recent date seen
         if len(new_users) > 0:
