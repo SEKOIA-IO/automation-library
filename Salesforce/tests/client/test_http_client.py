@@ -42,12 +42,9 @@ async def test_salesforce_http_client_log_files_query():
     """Test SalesforceHttpClient._log_files_query."""
     query = SalesforceHttpClient._log_files_query(None)
 
-    expected_query = """
-        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
-                FROM EventLogFile WHERE Interval = \'Hourly\'
-    """.strip()
+    expected_query = "SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength " "FROM EventLogFile"
 
-    assert query.strip() == expected_query
+    assert query == expected_query
 
 
 @pytest.mark.asyncio
@@ -57,12 +54,12 @@ async def test_salesforce_http_client_log_files_query_1():
         start_from=datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
     )
 
-    expected_query = """
-        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
-                FROM EventLogFile WHERE Interval = \'Hourly\' AND CreatedDate > 2023-01-01T00:00:00Z
-    """.strip()
+    expected_query = (
+        "SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength "
+        "FROM EventLogFile WHERE CreatedDate > 2023-01-01T00:00:00Z"
+    )
 
-    assert query.strip() == expected_query
+    assert query == expected_query
 
 
 @pytest.mark.asyncio
@@ -73,12 +70,12 @@ async def test_salesforce_http_client_log_files_query_2():
         log_type=LogType.DAILY,
     )
 
-    expected_query = """
-        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
-                FROM EventLogFile WHERE Interval = \'Daily\' AND CreatedDate > 2023-01-01T00:00:00Z
-    """.strip()
+    expected_query = (
+        "SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength "
+        "FROM EventLogFile WHERE Interval = 'Daily' AND CreatedDate > 2023-01-01T00:00:00Z"
+    )
 
-    assert query.strip() == expected_query
+    assert query == expected_query
 
 
 @pytest.mark.asyncio
@@ -89,12 +86,12 @@ async def test_salesforce_http_client_log_files_query_2():
         log_type=LogType.HOURLY,
     )
 
-    expected_query = """
-        SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
-                FROM EventLogFile WHERE Interval = \'Hourly\' AND CreatedDate > 2023-01-01T00:00:00Z
-    """.strip()
+    expected_query = (
+        "SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength "
+        "FROM EventLogFile WHERE Interval = 'Hourly' AND CreatedDate > 2023-01-01T00:00:00Z"
+    )
 
-    assert query.strip() == expected_query
+    assert query == expected_query
 
 
 @pytest.mark.asyncio

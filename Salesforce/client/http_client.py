@@ -128,15 +128,22 @@ class SalesforceHttpClient(object):
         Returns:
             str:
         """
-        date_filter = "AND CreatedDate > {0}".format(start_from.strftime("%Y-%m-%dT%H:%M:%SZ")) if start_from else ""
-        result_log_type = log_type if log_type else LogType.HOURLY
+        # base query
+        query = "SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength FROM EventLogFile"
 
-        return """
-            SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength
-                FROM EventLogFile WHERE Interval = \'{0}\' {1}
-        """.format(
-            result_log_type.value, date_filter
-        )
+        # filters for the query
+        filters = []
+
+        if log_type:
+            filters.append("Interval = '{0}'".format(log_type.value))
+
+        if start_from:
+            filters.append("CreatedDate > {0}".format(start_from.strftime("%Y-%m-%dT%H:%M:%SZ")))
+
+        if filters:
+            query = "{0} WHERE {1}".format(query, " AND ".join(filters))
+
+        return query
 
     def _request_url_with_query(self, query: str) -> URL:
         """

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-18 - 1.7.1
+
+### Changed
+
+- Change the way to compute the filters for the query
+
+### Fixed
+
+- Change the way to define the log type
+
 ## 2024-10-30 - 1.7.0
 
 ### Changed
