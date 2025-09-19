@@ -222,6 +222,7 @@ class EntraIDAssetConnector(AssetConnector):
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         ### Fetch users from Microsoft Graph API
         last_run_date: str | None = self.most_recent_date_seen if self.most_recent_date_seen else None
-        new_users = asyncio.run(self.fetch_new_users(last_run_date=last_run_date))
+        loop = asyncio.get_event_loop()
+        new_users = loop.run_until_complete(self.fetch_new_users(last_run_date=last_run_date))
         for user in new_users:
             yield user
