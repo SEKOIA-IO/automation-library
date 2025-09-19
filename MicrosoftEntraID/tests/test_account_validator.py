@@ -34,11 +34,11 @@ def test_validate_success(mock_get_event_loop, test_azure_ad_account_validator):
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method
+    # Mock the client and me.get() method
     mock_client = Mock()
-    mock_users = Mock()
-    mock_users.get = AsyncMock()
-    mock_client.users = mock_users
+    mock_me = Mock()
+    mock_me.get = AsyncMock()
+    mock_client.me = mock_me
     test_azure_ad_account_validator._client = mock_client
 
     # Act
@@ -57,11 +57,11 @@ def test_validate_failure_connection_error(mock_get_event_loop, test_azure_ad_ac
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method to raise an exception
+    # Mock the client and me.get() method to raise an exception
     mock_client = Mock()
-    mock_users = Mock()
-    mock_users.get = AsyncMock(side_effect=Exception("Connection failed"))
-    mock_client.users = mock_users
+    mock_me = Mock()
+    mock_me.get = AsyncMock(side_effect=Exception("Connection failed"))
+    mock_client.me = mock_me
     test_azure_ad_account_validator._client = mock_client
 
     # Configure run_until_complete to raise the exception
@@ -84,11 +84,11 @@ def test_validate_failure_authentication_error(mock_get_event_loop, test_azure_a
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method to raise an authentication exception
+    # Mock the client and me.get() method to raise an authentication exception
     mock_client = Mock()
-    mock_users = Mock()
-    mock_users.get = AsyncMock(side_effect=Exception("Invalid credentials"))
-    mock_client.users = mock_users
+    mock_me = Mock()
+    mock_me.get = AsyncMock(side_effect=Exception("Invalid credentials"))
+    mock_client.me = mock_me
     test_azure_ad_account_validator._client = mock_client
 
     # Configure run_until_complete to raise the exception
@@ -111,11 +111,11 @@ def test_validate_failure_network_error(mock_get_event_loop, test_azure_ad_accou
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method to raise a network exception
+    # Mock the client and me.get() method to raise a network exception
     mock_client = Mock()
-    mock_users = Mock()
-    mock_users.get = AsyncMock(side_effect=Exception("Network timeout"))
-    mock_client.users = mock_users
+    mock_me = Mock()
+    mock_me.get = AsyncMock(side_effect=Exception("Network timeout"))
+    mock_client.me = mock_me
     test_azure_ad_account_validator._client = mock_client
 
     # Configure run_until_complete to raise the exception
@@ -140,9 +140,9 @@ def test_validate_uses_cached_client(mock_get_event_loop, test_azure_ad_account_
 
     # Mock the client property
     mock_client = Mock()
-    mock_users = Mock()
-    mock_users.get = AsyncMock()
-    mock_client.users = mock_users
+    mock_me = Mock()
+    mock_me.get = AsyncMock()
+    mock_client.me = mock_me
 
     # Set the cached client directly
     test_azure_ad_account_validator._client = mock_client
@@ -152,5 +152,5 @@ def test_validate_uses_cached_client(mock_get_event_loop, test_azure_ad_account_
 
     # Assert
     assert result is True
-    mock_users.get.assert_called_once()
+    mock_me.get.assert_called_once()
     test_azure_ad_account_validator.error.assert_not_called()

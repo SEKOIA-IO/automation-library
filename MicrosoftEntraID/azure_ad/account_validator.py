@@ -26,7 +26,7 @@ class AzureADAccountValidator(AccountValidator):
     def validate(self) -> bool:
         try:
             loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.client.users.get())
+            loop.run_until_complete(self.client.me.get())
         except Exception as e:
             self.error(f"Impossible to connect to the Azure AD tenant: {e}")
             return False
