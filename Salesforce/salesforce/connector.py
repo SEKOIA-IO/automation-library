@@ -27,7 +27,7 @@ class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     @property
     def log_type(self) -> LogType | None:
         """Get log type."""
-        return LogType.HOURLY if not self.fetch_daily_logs else None
+        return None if self.fetch_daily_logs else LogType.HOURLY
 
 
 class SalesforceConnector(AsyncConnector):
