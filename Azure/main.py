@@ -3,6 +3,7 @@
 from sekoia_automation.loguru.config import init_logging
 from sekoia_automation.module import Module
 
+from connectors.azure_entraid_graph_api import AzureEntraIdGraphApiConnector
 from connectors.azure_eventhub import AzureEventsHubTrigger
 from connectors.blob.azure_blob import AzureBlobConnector
 from connectors.blob.azure_flow_logs import AzureFlowLogsConnector
@@ -18,4 +19,5 @@ if __name__ == "__main__":
     module.register(AzureNetworkWatcherConnector, "azure_network_watcher")
     module.register(AzureFlowLogsConnector, "azure_flow_logs")
     module.register(AzureKeyVaultConnector, "azure_key_vault")
+    module.register(AzureEntraIdGraphApiConnector, "azure_entraid_graph_api")
     module.run()
