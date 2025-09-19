@@ -570,12 +570,8 @@ def test_verticles_collector_property_success(trigger):
 
 def test_verticles_collector_property_403_error(trigger):
     """Test verticles_collector property returns None on 403 error"""
-    with patch("crowdstrike_falcon.event_stream_trigger.VerticlesCollector") as mock_collector_class:
-        mock_collector = MagicMock()
-        mock_collector.falcon_client.get_edge_types.side_effect = HTTPError(
-            "403 Client Error: Forbidden", response=MagicMock(status_code=403)
-        )
-        mock_collector_class.return_value = mock_collector
+    with patch.object(trigger.client, "get_edge_types") as mock_get_edge_types:
+        mock_get_edge_types.side_effect = HTTPError("403 Client Error: Forbidden", response=MagicMock(status_code=403))
 
         collector = trigger.verticles_collector
         assert collector is None
@@ -586,12 +582,10 @@ def test_verticles_collector_property_other_http_error(trigger):
     """Test verticles_collector property handles other HTTP errors"""
     trigger.log_exception = MagicMock()
 
-    with patch("crowdstrike_falcon.event_stream_trigger.VerticlesCollector") as mock_collector_class:
-        mock_collector = MagicMock()
-        mock_collector.falcon_client.get_edge_types.side_effect = HTTPError(
+    with patch.object(trigger.client, "get_edge_types") as mock_get_edge_types:
+        mock_get_edge_types.side_effect = HTTPError(
             "500 Server Error: Internal Server Error", response=MagicMock(status_code=500)
         )
-        mock_collector_class.return_value = mock_collector
 
         collector = trigger.verticles_collector
         assert collector is None
@@ -602,10 +596,8 @@ def test_verticles_collector_property_general_exception(trigger):
     """Test verticles_collector property handles general exceptions"""
     trigger.log_exception = MagicMock()
 
-    with patch("crowdstrike_falcon.event_stream_trigger.VerticlesCollector") as mock_collector_class:
-        mock_collector = MagicMock()
-        mock_collector.falcon_client.get_edge_types.side_effect = ValueError("Some error")
-        mock_collector_class.return_value = mock_collector
+    with patch.object(trigger.client, "get_edge_types") as mock_get_edge_types:
+        mock_get_edge_types.side_effect = ValueError("Some error")
 
         collector = trigger.verticles_collector
         assert collector is None
