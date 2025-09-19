@@ -15,8 +15,8 @@ import asyncio
 
 class AzureADConfiguration(BaseModel):
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
-    username: str = Field(..., description="")
-    password: str = Field(secret=True, description="")
+    username: str | None = Field(None, description="")
+    password: str | None = Field(None, secret=True, description="")
     client_id: str = Field(
         ...,
         description="Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",  # noqa: E501
