@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update asset connector name
+- Add module run method
 
 ## 2025-08-15 - 1.0.0
 
