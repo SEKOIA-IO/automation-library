@@ -16,14 +16,14 @@
 
 1. Go to `Manage` > `Certificates & secrets`
 2. Click `+ New client secret`
-3. Type a description and select the desirated expiration period
+3. Type a description and select the desired expiration period
 4. Click `Add`
 5. Copy the `Value` of the client secret
 
 #### Add permissions
 
 1. Go to `Manage` > `API permissions`
-2. Click `Add a permissions`
+2. Click `Add a permission`
 3. On the right panel, Select `Microsoft APIs` tab
 4. Click `Microsoft Graph`
 5. Click `Application permissions`
