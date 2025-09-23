@@ -12,6 +12,7 @@ orjson = "^3.9.10"
 async-lru = "^2.0.4"
 loguru = "^0.7.2"
 aiohttp = "*"
+cachetools = "^6.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "<8"
