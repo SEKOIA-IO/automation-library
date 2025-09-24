@@ -1,13 +1,11 @@
 from typing import Any
 
+import requests
+
 from .action_base import MicrosoftGraphActionBase
 
 
 class SendMessageAction(MicrosoftGraphActionBase):
-    @staticmethod
-    def fill_non_empty(d: dict[str, Any]) -> dict[str, Any]:
-        return {k: v for k, v in d.items() if v is not None}
-
     @staticmethod
     def generate_recipient(email: str) -> dict[str, Any]:
         return {"emailAddress": {"name": email, "address": email}}
@@ -24,21 +22,26 @@ class SendMessageAction(MicrosoftGraphActionBase):
         subject = arguments.get("subject")
         recipients: list[str] | None = arguments.get("recipients")
         importance = arguments.get("importance")
-        payload: dict[str, Any] = {
-            "message": self.fill_non_empty(
-                {
-                    "body": {"content": content, "contentType": "text"} if content else None,  # plain text
-                    "toRecipients": [self.generate_recipient(item) for item in recipients] if recipients else None,
-                    "bccRecipients": [self.generate_recipient(item) for item in bcc] if bcc else None,
-                    "ccRecipients": [self.generate_recipient(item) for item in cc] if cc else None,
-                    "sender": self.generate_recipient(sender) if sender else None,
-                    "from": self.generate_recipient(mailbox_owner) if mailbox_owner else None,
-                    "subject": subject,
-                    "importance": importance,
-                }
-            ),
-            "saveToSentItems": save_to_sent_items,
-        }
+
+        message: dict[str, Any] = {}
+        if content:
+            message["body"] = {"content": content, "contentType": "text"}
+        if recipients:
+            message["toRecipients"] = [self.generate_recipient(r) for r in recipients]
+        if cc:
+            message["ccRecipients"] = [self.generate_recipient(c) for c in cc]
+        if bcc:
+            message["bccRecipients"] = [self.generate_recipient(b) for b in bcc]
+        if sender:
+            message["sender"] = self.generate_recipient(sender)
+        if mailbox_owner:
+            message["from"] = self.generate_recipient(mailbox_owner)
+        if subject:
+            message["subject"] = subject
+        if importance:
+            message["importance"] = importance
+
+        payload = {"message": message, "saveToSentItems": save_to_sent_items}
 
         response = self.client.post(
             f"https://graph.microsoft.com/v1.0/users/{user_id_or_principal_name}/sendMail",
@@ -47,4 +50,8 @@ class SendMessageAction(MicrosoftGraphActionBase):
         )
         self.handle_response(response)
 
-        return response.json()
+        try:
+            return response.json()
+
+        except requests.exceptions.JSONDecodeError:
+            return {}
