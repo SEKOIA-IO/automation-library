@@ -76,3 +76,9 @@ class TheHiveConnector:
     def comment_add_in_alert(self, alert_id: str, comment: str):
         """Add a text comment to an alert."""
         return self._safe_call(self.api.comment.create_in_alert, alert_id=alert_id, comment=comment)
+    
+    def alert_add_attachment(self, alert_id: str, attachment_paths: List[str], can_rename: bool = True):
+        return self._safe_call(
+            self.api.alert.add_attachment,
+            alert_id=alert_id, attachment_paths=attachment_paths, can_rename=can_rename
+        )

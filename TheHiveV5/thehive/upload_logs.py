@@ -16,10 +16,7 @@ class TheHiveUploadLogsV5(Action):
             organisation=self.module.configuration["organisation"],
         )
 
-        #arg_sekoia_server = arguments.get("sekoia_base_url", "https://app.sekoia.io")
         arg_alert_id = arguments["alert_id"]
-        arg_message = arguments["message"]
-        arg_tlp = arguments["tlp"]
         arg_file = arguments["file"]
 
         try:

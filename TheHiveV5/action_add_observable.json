@@ -1,0 +1,104 @@
+{
+  "uuid": "02ce6ef0-ad6d-4b2d-9d50-1cc4aa18e619",
+  "name": "Add observables in The Hive v5",
+  "description": "",
+  "docker_parameters": "thehive_add_observable",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "alert_id": {
+        "description": "The id of the alert you want to add observables to",
+        "default": "~4231176",
+        "type": "string"
+      },
+      "observables": {
+        "description": "The observables to be added to the alert",
+        "type": "object"
+      }
+    },
+    "required": [
+      "alert_id"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "outputObservables": {
+        "type": "array",
+        "items": {
+          "_id": {
+            "type": "string"
+          },
+          "_type": {
+            "type": "string"
+          },
+          "_createdBy": {
+            "type": "string"
+          },
+          "_createdAt": {
+            "type": "integer"
+          },
+          "_updatedAt": {
+            "type": "integer"
+          },
+          "dataType": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "integer"
+          },
+          "attachment": {
+            "type": "object"
+          },
+          "tlp": {
+            "type": "integer"
+          },
+          "tlpLabel": {
+            "type": "string"
+          },
+          "pap": {
+            "type": "integer"
+          },
+          "papLabel": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ioc": {
+            "type": "boolean"
+          },
+          "sighted": {
+            "type": "boolean"
+          },
+          "sightedAt": {
+            "type": "integer"
+          },
+          "reports": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          },
+          "extraData": {
+            "type": "object"
+          },
+          "ignoreSimilarity": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "add_an_observable_in_the_hive_v5"
+}
