@@ -1,7 +1,7 @@
 from typing import Any, Optional, List
 
 from sekoia_automation.action import Action
-from thehive4py.types.observable import InputComment, OutputComment
+from thehive4py.types.comment import InputComment, OutputComment
 
 from .thehiveconnector import TheHiveConnector
 
