@@ -1,6 +1,6 @@
 from sekoia_automation.action import Action
 from datetime import datetime, timedelta
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from typing import Literal
 
 
