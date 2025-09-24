@@ -82,6 +82,7 @@ def connector(
     connector.configuration = {
         "intake_server": session_faker.uri(),
         "intake_key": session_faker.word(),
+        "timedelta": 1,
     }
 
     return connector
@@ -215,44 +216,38 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
     Test PullFindingsConnector.next_batch with findings.
 
     It is complex test for entire workflow.
-    We will work with 2 companies, each company will have 2 pages of findings.
+    We will work with 2 companies, first company will start from scratch and will have 1 page,
+    second company will use offset and will have 2 pages of findings.
     Each finding will have 2 assets and 3 vulnerabilities.
 
     Args:
         connector: PullFindingsConnector
         session_faker: Faker
     """
-    now = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
+    now = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0) - timedelta(
+        days=connector.configuration.timedelta
+    )
 
-    now_minus_1_day = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    date_1 = now.strftime("%Y-%m-%d")
 
-    date_1 = (now - timedelta(days=1)).isoformat()
     findings_1 = [new_finding(date_1, session_faker) for _ in range(3)]
-
-    date_2 = (now - timedelta(minutes=5)).isoformat()
-    findings_2 = [new_finding(date_2, session_faker) for _ in range(4)]
+    findings_2 = [new_finding(date_1, session_faker) for _ in range(4)]
 
     with aioresponses() as mocked_responses:
-        # Mock requests to company #1
-        company_id_1: str = session_faker.word()
+        # Mock requests to company #1 - without saved offset, starting from scratch
+        company_id_1: str = "company1"
         next_url_1 = session_faker.uri()
 
+        # 2 pages with 6 events each
         mocked_responses.get(
-            f"https://api.bitsighttech.com/ratings/v1/companies/{company_id_1}/findings?last_seen={now_minus_1_day}",
+            f"https://api.bitsighttech.com/ratings/v1/companies/{company_id_1}/findings?last_seen={date_1}",
             payload={"links": {"next": next_url_1}, "results": findings_1},
             repeat=True,
         )
-
         mocked_responses.get(next_url_1, payload={"results": findings_2}, repeat=True)
 
-        mocked_responses.get(
-            f"https://api.bitsighttech.com/ratings/v1/companies/{company_id_1}/findings?last_seen={now.isoformat()}",
-            payload={"links": {"next": next_url_1}, "results": []},
-            repeat=True,
-        )
-
-        # Mock requests to company #2
-        company_id_2: str = session_faker.word()
+        # Mock requests to company #2 - starting from a "saved" offset
+        company_id_2: str = "company2"
         next_url_2 = session_faker.uri()
         offset_company_2 = 123
 
@@ -277,7 +272,6 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
         )
 
         connector.save_checkpoint(start_checkpoint)
-
         result, finish_checkpoint = await connector.next_batch()
 
         one_company_events = (len(findings_1) + len(findings_2)) * 2 * 3
@@ -286,9 +280,10 @@ async def test_pull_findings_connector_next_batch(connector: PullFindingsConnect
             finish_checkpoint
             == Checkpoint(
                 values=[
-                    CompanyCheckpoint(company_uuid=company_id_1, last_seen=now.strftime("%Y-%m-%d"), offset=1),
-                    CompanyCheckpoint(company_uuid=company_id_2, last_seen=now.strftime("%Y-%m-%d"), offset=1),
-                ]
+                    CompanyCheckpoint(company_uuid=company_id_1, last_seen=now.strftime("%Y-%m-%d"), offset=7),
+                    CompanyCheckpoint(company_uuid=company_id_2, last_seen=now.strftime("%Y-%m-%d"), offset=130),
+                ],
+                time_delta=1,
             ).dict()
         )
 

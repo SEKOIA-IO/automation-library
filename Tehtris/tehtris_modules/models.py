@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 from tehtris_modules.constants import API_BASE_URL_FORMAT
 

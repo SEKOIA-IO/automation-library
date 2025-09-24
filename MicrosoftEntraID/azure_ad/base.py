@@ -4,7 +4,7 @@ from azure.identity.aio import ClientSecretCredential  # async credentials only
 from azure.identity import UsernamePasswordCredential
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
-from pydantic import BaseModel, Field, root_validator
+from pydantic.v1 import BaseModel, Field, root_validator
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
@@ -15,8 +15,8 @@ import asyncio
 
 class AzureADConfiguration(BaseModel):
     tenant_id: str = Field(..., description="ID of the Azure AD tenant")
-    username: str = Field(..., description="")
-    password: str = Field(secret=True, description="")
+    username: str | None = Field(None, description="")
+    password: str | None = Field(None, secret=True, description="")
     client_id: str = Field(
         ...,
         description="Client ID. An application needs to be created in the Azure Portal and assigned relevent permissions. Its Client ID should then be used in this configuration.",  # noqa: E501

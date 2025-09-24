@@ -194,8 +194,11 @@ class HarfanglabAssetConnector(AssetConnector):
                 f"Finished fetching devices from Harfanglab API and found a new most recent date: {max_date.isoformat()}",
                 level="info",
             )
-            with self.context as cache:
-                cache["most_recent_date_seen"] = max_date.isoformat()
+            self._latest_time = max_date.isoformat()
+
+    def update_checkpoint(self) -> None:
+        with self.context as cache:
+            cache["most_recent_date_seen"] = self._latest_time
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
         self.log("Start the getting assets generator !!", level="info")

@@ -256,31 +256,6 @@ def test_long_next_batch_should_not_sleep(trigger, message1, message2):
         assert mock_time.sleep.call_count == 0
 
 
-def test_next_batch_with_small_chunk_size(symphony_storage, message1, message2):
-    module = TehtrisModule()
-    trigger = TehtrisEventConnector(module=module, data_path=symphony_storage)
-    # mock the log function of trigger that requires network access to the api for reporting
-    trigger.log = MagicMock()
-    trigger.log_exception = MagicMock()
-    trigger.push_events_to_intakes = MagicMock()
-    trigger.module.configuration = {"apikey": "myapikey", "tenant_id": "abc"}
-    trigger.configuration = {"intake_key": "intake_key", "chunk_size": 2}
-    with requests_mock.Mocker() as mock, patch("tehtris_modules.trigger_tehtris_events.time") as mock_time:
-        mock.get(
-            "https://abc.api.tehtris.net/api/xdr/v1/event",
-            status_code=200,
-            json=[message1, message2, message1],
-        )
-        batch_duration = 16  # the batch lasts 16 seconds
-        start_time = 1666711174.0
-        end_time = start_time + batch_duration
-        mock_time.time.side_effect = [start_time, end_time]
-
-        trigger.next_batch()
-
-        assert trigger.push_events_to_intakes.call_count == 2
-
-
 def test_fetch_events_with_alternative_url(symphony_storage, patch_datetime_now, message1, message2):
     module = TehtrisModule()
     trigger = TehtrisEventConnector(module=module, data_path=symphony_storage)

@@ -13,7 +13,7 @@ from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.timer import RepeatedTimer
 
 from crowdstrike_falcon import CrowdStrikeFalconModule
-from crowdstrike_falcon.client import CrowdstrikeFalconClient, CrowdstrikeThreatGraphClient
+from crowdstrike_falcon.client import CrowdstrikeFalconClient
 from crowdstrike_falcon.exceptions import StreamNotAvailable
 from crowdstrike_falcon.helpers import (
     compute_refresh_interval,
@@ -23,7 +23,6 @@ from crowdstrike_falcon.helpers import (
 )
 from crowdstrike_falcon.logging import get_logger
 from crowdstrike_falcon.metrics import EVENTS_LAG, INCOMING_DETECTIONS, INCOMING_VERTICLES, OUTCOMING_EVENTS
-from crowdstrike_falcon.models import CrowdStrikeFalconEventStreamConfiguration
 
 logger = get_logger()
 
@@ -34,13 +33,11 @@ class VerticlesCollector:
     def __init__(
         self,
         connector: "EventStreamTrigger",
-        tg_client: CrowdstrikeThreatGraphClient,
         falcon_client: CrowdstrikeFalconClient | None = None,
     ):
         self.connector = connector
         self.falcon_client = falcon_client or connector.client
-        self.tg_client = tg_client
-        self.edge_types = set(self.tg_client.get_edge_types()) - {
+        self.edge_types = set(self.falcon_client.get_edge_types()) - {
             "device",
             "hunting_lead",
         }
@@ -111,13 +108,13 @@ class VerticlesCollector:
             for edge_type in self.edge_types:
                 try:
                     # get edges starting from a graph id
-                    edges = self.tg_client.list_edges(graph_id, edge_type)
+                    edges = self.falcon_client.list_edges(graph_id, edge_type)
                     groups = group_edges_by_verticle_type(edges)
 
                     # for each group, get the verticles
                     for verticle_type, list_of_edges in groups:
                         verticles_links = {edge["id"]: edge["source_vertex_id"] for edge in list_of_edges}
-                        for vertex in self.tg_client.get_verticles_details(
+                        for vertex in self.falcon_client.get_verticles_details(
                             list(verticles_links.keys()), verticle_type
                         ):
                             INCOMING_VERTICLES.labels(intake_key=self.connector.configuration.intake_key).inc()
@@ -178,7 +175,9 @@ class VerticlesCollector:
             if error.response.status_code == 403:
                 # we don't have proper permissions - roll back to the old API
                 self.connector.use_alert_api = False
-                self.log(level="error", message="Not enough permissions to use Alert API - rollback to Detection API")
+                self.log(
+                    level="warning", message="Not enough permissions to use Alert API - rollback to Detection API"
+                )
 
             self.log_exception(
                 error,
@@ -518,7 +517,6 @@ class EventStreamTrigger(Connector):
     """
 
     module: CrowdStrikeFalconModule
-    configuration: CrowdStrikeFalconEventStreamConfiguration
 
     seconds_without_events = 3600 * 24  # Time to wait without events before restarting the pod
 
@@ -565,28 +563,17 @@ class EventStreamTrigger(Connector):
 
     @cached_property
     def verticles_collector(self) -> VerticlesCollector | None:
-        if (
-            self.configuration.tg_base_url is None
-            or self.configuration.tg_username is None
-            or self.configuration.tg_password is None
-        ):
-            self.log(
-                message="ThreatGraphAPI client disable: no credentials supplied",
-                level="info",
-            )
-            return None
-
         try:
-            tg_client = CrowdstrikeThreatGraphClient(
-                self.configuration.tg_base_url,
-                self.configuration.tg_username,
-                self.configuration.tg_password,
-                default_headers=self._http_default_headers,
-            )
-
-            return VerticlesCollector(self, tg_client, self.client)
+            verticles_collector = VerticlesCollector(self, self.client)
+            return verticles_collector
+        except HTTPError as error:
+            if error.response.status_code == 403:
+                self.log(message="Not enough permissions to use ThreatGraph API", level="warning")
+                return None
+            self.log_exception(error, message="Failed to create verticles collector")
+            return None
         except Exception as error:
-            self.log_exception(error, message="Failed to start the verticles collector")
+            self.log_exception(error, message="Failed to create verticles collector")
             return None
 
     def get_streams(self, app_id: str) -> dict[str, dict]:

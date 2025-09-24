@@ -86,4 +86,4 @@ async def async_gzip_open(
         newline=newline,
     )
     f = await loop.run_in_executor(executor, cb)
-    return AsyncBufferedReader(f, loop=loop, executor=executor)
+    return AsyncBufferedReader(f, loop=loop, executor=executor)  # type: ignore[arg-type]

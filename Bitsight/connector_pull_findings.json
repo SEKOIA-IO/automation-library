@@ -19,10 +19,15 @@
         "description": "Intake key to use when sending events",
         "type": "string"
       },
+      "timedelta": {
+        "type": "integer",
+        "description": "The temporal shift, in the past, in days, the connector applies when fetching the events (default to 2 days ago)",
+        "default": 2
+      },
       "batch_limit": {
         "type": "integer",
         "description": "Maximum number of events to send in a single batch",
-        "default": 10000
+        "default": 1000
       }
     },
     "required": [
