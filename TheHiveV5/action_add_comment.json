@@ -1,7 +1,7 @@
 {
   "uuid": "6593cd86-b9ca-4fe7-8ceb-551246bbe109",
   "name": "Add a comment in The Hive v5",
-  "description": "",
+  "description": "Action to add a comment in The Hive v5",
   "docker_parameters": "thehive_add_comment",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -38,7 +38,7 @@
         "type": "integer"
       },
       "updatedAt": {
-        "type": "int"
+        "type": "integer"
       },
       "updatedBy": {
         "type": "string"

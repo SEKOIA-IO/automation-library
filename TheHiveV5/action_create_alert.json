@@ -1,7 +1,7 @@
 {
-  "uuid": "366a9bed-e124-4ad2-9498-acc54a285eba",
+  "uuid": "2404eec6-1fab-4927-9575-353fd375d956",
   "name": "Create an alert in The Hive v5",
-  "description": "",
+  "description": "Action to create an alert in The Hive v5",
   "docker_parameters": "thehive_create_alert",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
