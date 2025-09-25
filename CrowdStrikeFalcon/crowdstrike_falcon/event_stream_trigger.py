@@ -563,9 +563,8 @@ class EventStreamTrigger(Connector):
 
     @cached_property
     def verticles_collector(self) -> VerticlesCollector | None:
-        verticles_collector = VerticlesCollector(self, self.client)
         try:
-            verticles_collector.falcon_client.get_edge_types()
+            verticles_collector = VerticlesCollector(self, self.client)
             return verticles_collector
         except HTTPError as error:
             if error.response.status_code == 403:

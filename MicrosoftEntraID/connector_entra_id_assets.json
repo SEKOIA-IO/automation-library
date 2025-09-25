@@ -23,7 +23,7 @@
           "type": "string"
       }
     },
-    "required": ["sekoia_api_key", "tenant_id", "client_id","client_secret"],
-    "secrets": ["sekoia_api_key", "client_secret"]
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
   }
 }

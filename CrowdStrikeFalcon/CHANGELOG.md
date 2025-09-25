@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-19 - 1.23.1
+
+### Fixed
+
+- Fix Verticles client
+
 ## 2025-09-04 - 1.23.0
 
 ### Changed
