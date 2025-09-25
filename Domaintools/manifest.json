@@ -1,0 +1,15 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Domaintools",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "DomainTools offers SOC teams advanced domain risk analytics, integrating fresh DNS, Whois data, and x.509 certificates for proactive defensive strategies.",
+  "name": "Domaintools",
+  "slug": "domaintools",
+  "categories": [],
+  "uuid": "5c5d30cc-164a-459d-9694-58ba4665320d",
+  "version": "0.1.0"
+}
