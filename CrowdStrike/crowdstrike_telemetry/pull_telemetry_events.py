@@ -45,8 +45,8 @@ EXCLUDED_EVENT_ACTIONS = [
 
 class CrowdStrikeTelemetryConfig(DefaultConnectorConfiguration):
     queue_name: str
+    chunk_size: int
     queue_url: str | None = None
-    chunk_size: int | None = None
     frequency: int | None = None
     delete_consumed_messages: bool | None = None
     is_fifo: bool | None = None
@@ -64,7 +64,6 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
 
         super().__init__(*args, **kwargs)
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
-        self.chunk_size = self.configuration.chunk_size or 1000
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
@@ -175,7 +174,7 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
 
                         result.append(event)
 
-                        if len(result) >= self.chunk_size:
+                        if len(result) >= self.configuration.chunk_size:
                             total_events += len(await self.push_data_to_intakes(result))
                             result = []
 
