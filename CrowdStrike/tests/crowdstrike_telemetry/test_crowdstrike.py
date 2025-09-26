@@ -25,14 +25,14 @@ def pushed_ids(session_faker) -> list[str]:
 
 
 @pytest.fixture
-def crowdstrike_connector(session_faker, symphony_storage, pushed_ids) -> CrowdStrikeTelemetryConnector:
+def crowdstrike_connector(session_faker, symphony_storage, mock_push_data_to_intakes) -> CrowdStrikeTelemetryConnector:
     """
     Create CrowdStrikeTelemetryConnector instance.
 
     Args:
         session_faker: Faker
         symphony_storage: str
-        pushed_ids: list[str]
+        mock_push_data_to_intakes: AsyncMock
 
     Returns:
         CrowdStrikeTelemetryConnector:
@@ -59,7 +59,7 @@ def crowdstrike_connector(session_faker, symphony_storage, pushed_ids) -> CrowdS
         is_fifo=False,
     )
     connector.push_events_to_intakes = MagicMock()
-    connector.push_data_to_intakes = AsyncMock(return_value=pushed_ids)
+    connector.push_data_to_intakes = mock_push_data_to_intakes
     connector.log = MagicMock()
     connector.log_exception = MagicMock()
 
@@ -89,7 +89,7 @@ async def test_process_s3_file(crowdstrike_connector, session_faker):
 
         result = await crowdstrike_connector.process_s3_file(key)
 
-        assert result == expected
+        assert result == len(expected)
         mock_read_key.assert_called_once_with(key, None)
 
 
@@ -116,7 +116,7 @@ async def test_process_gzipped_s3_file(crowdstrike_connector, session_faker):
 
         result = await crowdstrike_connector.process_s3_file(key)
 
-        assert result == expected
+        assert result == len(expected)
         mock_read_key.assert_called_once_with(key, None)
 
 
@@ -138,19 +138,18 @@ async def test_process_s3_file_one_line(crowdstrike_connector, session_faker):
 
         result = await crowdstrike_connector.process_s3_file(key)
 
-        assert result == expected
+        assert result == len(expected)
         mock_read_key.assert_called_once_with(key, None)
 
 
 @pytest.mark.asyncio
-async def test_get_crowdstrike_events(crowdstrike_connector, session_faker, pushed_ids):
+async def test_get_crowdstrike_events(crowdstrike_connector, session_faker):
     """
     Test get_crowdstrike_events method.
 
     Args:
         crowdstrike_connector: CrowdStrikeTelemetryConnector
         session_faker: Faker
-        pushed_ids: list[str]
     """
     receipt_handle_1 = session_faker.word()
     receipt_handle_2 = session_faker.word()
@@ -168,8 +167,8 @@ async def test_get_crowdstrike_events(crowdstrike_connector, session_faker, push
     }
 
     expected = [
-        {"data": session_faker.sentence()},
-        {"data": session_faker.sentence()},
+        {"data": session_faker.sentence(), "event_simpleName": "EndOfProcess"},
+        {"data": session_faker.sentence(), "event_simpleName": "EndOfProcess"},
     ]
 
     with (
@@ -195,7 +194,7 @@ async def test_get_crowdstrike_events(crowdstrike_connector, session_faker, push
 
         result = await crowdstrike_connector.get_crowdstrike_events()
 
-        assert result == pushed_ids
+        assert result == 2 * 3  # 3 files, 2 events in each file
 
 
 @pytest.mark.asyncio

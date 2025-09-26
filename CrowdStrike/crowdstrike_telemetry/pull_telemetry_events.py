@@ -1,10 +1,13 @@
 """Contains connector, configuration and module."""
 
-import json
 import asyncio
+import json
+import os
 import time
+from asyncio import BoundedSemaphore
 from functools import cached_property
 from gzip import decompress
+from typing import Any, Optional
 
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
@@ -14,7 +17,7 @@ from aws.s3 import S3Configuration, S3Wrapper
 from aws.sqs import SqsConfiguration, SqsWrapper
 
 from . import CrowdStrikeTelemetryModule
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, DISCARDED_EVENTS
+from .metrics import DISCARDED_EVENTS, EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from .schemas import CrowdStrikeNotificationSchema
 
 EXCLUDED_EVENT_ACTIONS = [
@@ -56,6 +59,15 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
     module: CrowdStrikeTelemetryModule
     configuration: CrowdStrikeTelemetryConfig
 
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        """Init AbstractAwsS3QueuedConnector."""
+
+        super().__init__(*args, **kwargs)
+        self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
+        self.chunk_size = self.configuration.chunk_size or 1000
+        self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
+        self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
+
     @cached_property
     def sqs_wrapper(self) -> SqsWrapper:
         """
@@ -83,16 +95,18 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
 
         return S3Wrapper(config)
 
-    async def get_crowdstrike_events(self) -> list[str]:
+    async def get_crowdstrike_events(self) -> int:
         """
         Run CrowdStrikeTelemetry.
 
         Returns:
             list[str]:
         """
-        result: list[str] = []
+        total_events = 0
 
-        async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True, max_messages=10) as messages:
+        async with self.sqs_wrapper.receive_messages(
+            delete_consumed_messages=True, max_messages=self.sqs_max_messages
+        ) as messages:
             validated_sqs_messages = []
             for message in messages:
                 try:
@@ -103,7 +117,7 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
             if validated_sqs_messages:  # pragma: no cover
                 logger.info("Found {sqs_messages} entries in sqs", sqs_messages=len(validated_sqs_messages))
 
-                s3_data_list = await asyncio.gather(
+                s3_processed_events: list[int] = await asyncio.gather(
                     *[
                         self.process_s3_file(file.path, record.bucket)
                         for record in validated_sqs_messages
@@ -111,19 +125,14 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
                     ]
                 )
 
-                # We have list of lists her, so we should flatten it
-                for records in s3_data_list:
-                    result.extend(records)
+                total_events += sum(s3_processed_events)
+
             else:  # pragma: no cover
                 logger.info("No messages in sqs")
 
-            self.log(level="INFO", message=f"Found {len(result)} records to process")
+            return total_events
 
-            pushed_ids: list[str] = await self.push_data_to_intakes(result)
-
-            return pushed_ids
-
-    async def process_s3_file(self, key: str, bucket: str | None = None) -> list[str]:
+    async def process_s3_file(self, key: str, bucket: str | None = None) -> int:
         """
         Process S3 objects.
 
@@ -141,31 +150,49 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
         """
         logger.info(f"Reading file {key}")
 
-        async with self.s3_wrapper.read_key(key, bucket) as content:
+        async with (
+            self.s3_fetch_concurrency_sem,
+            self.s3_wrapper.read_key(key, bucket) as content,
+        ):
             result_content = content
             if content[0:2] == b"\x1f\x8b":
                 logger.info(f"Decompressing file by key {key}")
                 result_content = decompress(content)
-        result = []
-        for line in result_content.decode("utf-8").split("\n"):
-            if len(line.strip()) > 0:
-                try:
-                    event = json.loads(line)
-                    if (
-                        event.get("event_simpleName") is None
-                        or event.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
-                    ):
-                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
-                        continue
-                    result.append(line)
-                except Exception as any_exception:
-                    logger.error(
-                        "failed to read line from event stream",
-                        line=line,
-                        stream_root_url=self.stream_root_url,
-                    )
-                    self.log_exception(any_exception)
-        return result
+
+            result = []
+            total_events = 0
+
+            for line in result_content.decode("utf-8").split("\n"):
+                if len(line.strip()) > 0:
+                    try:
+                        event = json.loads(line)
+                        if (
+                            event.get("event_simpleName") is None
+                            or event.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
+                        ):
+                            DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                            continue
+
+                        result.append(event)
+
+                        if len(result) >= self.chunk_size:
+                            total_events += len(await self.push_data_to_intakes(result))
+                            result = []
+
+                    except Exception as any_exception:
+                        logger.error(
+                            "failed to read line from event stream",
+                            line=line,
+                            stream_root_url=self.stream_root_url,
+                        )
+                        self.log_exception(any_exception)
+
+            if result:
+                total_events += len(await self.push_data_to_intakes(result))
+
+        logger.info(f"Processed {total_events} events from file {key}")
+
+        return total_events
 
     def run(self) -> None:  # pragma: no cover
         """Runs Crowdstrike Telemetry."""
@@ -182,13 +209,13 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
                             processing_start - previous_processing_end
                         )
 
-                    message_ids: list[str] = loop.run_until_complete(self.get_crowdstrike_events())
+                    events: int = loop.run_until_complete(self.get_crowdstrike_events())
                     processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
+                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(events)
 
                     log_message = "No records to forward"
-                    if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
+                    if events > 0:
+                        log_message = "Pushed {0} records".format(events)
 
                     logger.info(log_message)
                     self.log(message=log_message, level="info")
