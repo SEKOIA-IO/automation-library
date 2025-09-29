@@ -66,6 +66,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         user_full_name = user.get("first_name", "") + " " + user.get("last_name", "")
         user_name = user.get("first_name", "").lower() + "." + user.get("last_name", "").lower()
         user_uuid = user.get("uuid", "Unknown")
+        user_created_at: str = user.get("created_at", "")
         user_object = UserEnrichmentObject(
             name="login ",
             value="infos",
@@ -98,7 +99,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             type_uid=500302,
             severity="Informational",
             severity_id=1,
-            time=datetime.timestamp(user.get("created_at")) if user.get("created_at") is not None else 0,
+            time=int(datetime.fromisoformat(user_created_at).timestamp()) if user_created_at else 0,
             metadata=metadata,
             user=user_data,
             enrichments=enrichments_data,
