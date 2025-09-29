@@ -1,6 +1,6 @@
 from functools import cached_property
 from collections.abc import Generator
-from typing import Any
+from typing import Any, cast
 from datetime import datetime
 
 from sekoia_automation.asset_connector import AssetConnector
@@ -66,7 +66,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         user_full_name = user.get("first_name", "") + " " + user.get("last_name", "")
         user_name = user.get("first_name", "").lower() + "." + user.get("last_name", "").lower()
         user_uuid = user.get("uuid", "Unknown")
-        user_created_at: str = user.get("created_at", "")
+        user_created_at: str = cast(str, user.get("created_at", ""))
         user_object = UserEnrichmentObject(
             name="login ",
             value="infos",
