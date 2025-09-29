@@ -24,7 +24,7 @@ def connector():
         manifest = {
             "client_id": "fake_client_id",
             "client_secret": "fake_client_secret",
-            "base_url": "https://api.fake"
+            "base_url": "https://api.fake",
         }
 
     c = CrowdstrikeUserAssetConnector(module=FakeCrowdStrikeUserModule())
