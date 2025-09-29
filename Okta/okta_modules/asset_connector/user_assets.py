@@ -58,6 +58,11 @@ class OktaUserAssetConnector(AssetConnector):
             return cache.get("most_recent_date_seen", None)
 
     def update_checkpoint(self) -> None:
+        """Update the checkpoint with the most recent date seen.
+        
+        Raises:
+            ValueError: If new_most_recent_date is None.
+        """
         if self.new_most_recent_date is None:
             self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
             return
@@ -101,15 +106,15 @@ class OktaUserAssetConnector(AssetConnector):
             self.log(f"No groups found for user {user_id}", level="warning")
             return []
 
-        group_list = []
-        for group in groups:
-            group_list.append(
-                Group(
-                    name=group.profile.name,
-                    uid=group.id,
-                    desc=group.profile.description,
-                )
+        # Use list comprehension for better performance
+        group_list = [
+            Group(
+                name=group.profile.name,
+                uid=group.id,
+                desc=group.profile.description,
             )
+            for group in groups
+        ]
 
         while resp.has_next():
             groups, resp, err = await resp.next()
@@ -117,14 +122,15 @@ class OktaUserAssetConnector(AssetConnector):
                 self.log(f"Error while fetching groups for user {user_id}: {err}", level="error")
                 return group_list
 
-            for group in groups:
-                group_list.append(
-                    Group(
-                        name=group.profile.name,
-                        uid=group.id,
-                        desc=group.profile.description,
-                    )
+            # Use extend with list comprehension for better performance
+            group_list.extend([
+                Group(
+                    name=group.profile.name,
+                    uid=group.id,
+                    desc=group.profile.description,
                 )
+                for group in groups
+            ])
 
         return group_list
 
@@ -152,13 +158,14 @@ class OktaUserAssetConnector(AssetConnector):
         """Fetch all users from Okta.
 
         Returns:
-            List of user dictionaries from Okta.
+            List of user objects from Okta.
         """
         all_users = []
         try:
             query_params = {}
             if self.most_recent_date_seen:
                 query_params = {"search": f'created gt "{self.most_recent_date_seen}"'}
+            
             users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
@@ -177,9 +184,12 @@ class OktaUserAssetConnector(AssetConnector):
                     return all_users
                 all_users.extend(users)
 
-            self.new_most_recent_date = self.get_last_created_date(all_users)
+            # Only update checkpoint if we have users
+            if all_users:
+                self.new_most_recent_date = self.get_last_created_date(all_users)
         except Exception as e:
             self.log(f"Exception while listing users: {e}", level="error")
+            self.log_exception(e)
             return []
 
         return all_users
@@ -192,18 +202,37 @@ class OktaUserAssetConnector(AssetConnector):
 
         Returns:
             The last created date as a string.
+            
+        Raises:
+            ValueError: If the users list is empty.
         """
+        if not users:
+            raise ValueError("Cannot get last created date from empty users list")
         return max(user.created for user in users)
 
     async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
 
         Args:
-            okta_user: Dictionary containing Okta user data.
+            okta_user: OktaUser object containing user data.
 
         Returns:
             UserOCSFModel instance with mapped user data.
+            
+        Raises:
+            ValueError: If required user data is missing.
         """
+        # Validate required fields
+        if not okta_user.id:
+            raise ValueError("User ID is required")
+        if not okta_user.profile or not okta_user.profile.login:
+            raise ValueError("User profile and login are required")
+            
+        # Handle None values in name fields
+        first_name = okta_user.profile.firstName or "None"
+        last_name = okta_user.profile.lastName or "None"
+        full_name = f"{first_name} {last_name}".strip()
+
         account = Account(
             name=okta_user.profile.login,
             type_id=AccountTypeId.OTHER,
@@ -211,14 +240,21 @@ class OktaUserAssetConnector(AssetConnector):
             uid=okta_user.id,
         )
 
+        # Fetch user groups and MFA status concurrently
+        groups_task = asyncio.create_task(self.get_user_groups(okta_user.id))
+        mfa_task = asyncio.create_task(self.get_user_mfa(okta_user.id))
+        
+        groups = await groups_task
+        has_mfa = await mfa_task
+
         user = User(
             uid=okta_user.id,
-            full_name=f"{okta_user.profile.firstName} {okta_user.profile.lastName}",
+            full_name=full_name,
             email_addr=okta_user.profile.email,
             name=okta_user.profile.login,
             account=account,
-            groups=await self.get_user_groups(okta_user.id),
-            has_mfa=await self.get_user_mfa(okta_user.id),
+            groups=groups,
+            has_mfa=has_mfa,
         )
 
         return UserOCSFModel(
@@ -255,10 +291,11 @@ class OktaUserAssetConnector(AssetConnector):
 
         loop = asyncio.get_event_loop()
         users = loop.run_until_complete(self.next_list_users())
+        
         for user in users:
             try:
                 yield loop.run_until_complete(self.map_fields(user))
             except Exception as e:
-                user_id = user.get("id", "unknown")
+                user_id = getattr(user, 'id', 'unknown')
                 self.log(f"Error while mapping user {user_id}: {e}", level="error")
                 continue

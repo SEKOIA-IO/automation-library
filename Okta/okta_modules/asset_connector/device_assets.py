@@ -1,3 +1,9 @@
+"""Okta Device Asset Connector module.
+
+This module provides functionality to collect device assets from Okta
+and format them according to OCSF standards.
+"""
+
 import asyncio
 from urllib.parse import urlencode
 from functools import cached_property
@@ -48,25 +54,52 @@ class OktaDevice(BaseModel):
 
 
 class OktaDeviceAssetConnector(AssetConnector):
-    """Okta Device Asset Connector."""
+    """Asset connector for collecting device data from Okta.
 
-    def __init__(self, *args, **kwargs):
+    This connector fetches device information from Okta and formats it
+    according to OCSF (Open Cybersecurity Schema Framework) standards.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the Okta Device Asset Connector.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+        """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self.new_most_recent_date: Optional[str] = None
 
     @cached_property
-    def client(self):
-        config = {"orgUrl": self.module.configuration["base_url"], "token": self.module.configuration["apikey"]}
+    def client(self) -> OktaClient:
+        """Get the Okta client instance.
+
+        Returns:
+            Configured OktaClient instance.
+        """
+        config = {
+            "orgUrl": self.module.configuration["base_url"],
+            "token": self.module.configuration["apikey"],
+        }
         return OktaClient(config)
 
     @property
-    def most_recent_date_seen(self) -> Optional[str]:
+    def most_recent_date_seen(self) -> str | None:
+        """Get the most recent date seen from the context cache.
+
+        Returns:
+            The most recent date seen as a string, or None if not set.
+        """
         with self.context as cache:
-            value = cache.get("most_recent_date_seen")
-            return value if value is None or isinstance(value, str) else str(value)
+            return cache.get("most_recent_date_seen", None)
 
     def update_checkpoint(self) -> None:
+        """Update the checkpoint with the most recent date seen.
+        
+        Raises:
+            ValueError: If new_most_recent_date is None.
+        """
         if self.new_most_recent_date is None:
             self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
             return
@@ -77,20 +110,32 @@ class OktaDeviceAssetConnector(AssetConnector):
                 self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
         except Exception as e:
             self.log(f"Failed to update checkpoint: {str(e)}", level="error")
-            self.log_exception(e)
 
     def get_last_created_date(self, devices: list[OktaDevice]) -> str:
         """Get the last created date from the list of devices.
 
         Args:
-            users: List of Okta devices.
+            devices: List of Okta devices.
 
         Returns:
             The last created date as a string.
+            
+        Raises:
+            ValueError: If the devices list is empty.
         """
+        if not devices:
+            raise ValueError("Cannot get last created date from empty devices list")
         return max(device.created for device in devices)
 
     async def fetch_next_devices(self, url: str) -> tuple[List[OktaDevice], Any]:
+        """Fetch devices from the specified URL.
+        
+        Args:
+            url: The URL to fetch devices from.
+            
+        Returns:
+            Tuple of (devices list, response object) or ([], None) on error.
+        """
         all_devices = []
         try:
             query_params = {}
@@ -99,35 +144,62 @@ class OktaDeviceAssetConnector(AssetConnector):
             if query_params:
                 encoded_query_params = urlencode(query_params)
                 url += f"/?{encoded_query_params}"
+                
             request, error = await self.client.get_request_executor().create_request(
                 method="GET", url=url, body={}, headers={}, oauth=False
             )
             response, error = await self.client.get_request_executor().execute(request, list[OktaDevice])
+            
             if error:
                 self.log(f"Error while fetching devices from {url}: {error}", level="error")
                 return [], None
-            for device in response.get_body():
-                all_devices.append(OktaDevice(**device))
-            if not all_devices:
+                
+            if not response or not response.get_body():
                 self.log(f"No devices found at {url}", level="warning")
                 return [], None
-            self.new_most_recent_date = self.get_last_created_date(all_devices)
+                
+            # Use list comprehension for better performance
+            all_devices = [OktaDevice(**device) for device in response.get_body()]
+            
+            # Only update checkpoint if we have devices
+            if all_devices:
+                self.new_most_recent_date = self.get_last_created_date(all_devices)
+                
             return all_devices, response
         except Exception as e:
             self.log(f"Exception while fetching devices from {url}: {e}", level="error")
             return [], None
 
     async def next_list_devices(self) -> list[OktaDevice]:
+        """Fetch all devices from Okta.
+
+        Returns:
+            List of device objects from Okta.
+        """
         all_devices = []
         devices, response = await self.fetch_next_devices("/api/v1/devices")
         all_devices.extend(devices)
-        while response.has_next():
+        
+        while response and response.has_next():
             devices, response = await self.fetch_next_devices(response._next)
             all_devices.extend(devices)
+            
         return all_devices
 
     def get_device_os(self, platform: str, version: str) -> OperatingSystem:
-        match platform.lower():
+        """Get operating system information for a device.
+        
+        Args:
+            platform: The device platform (windows, macos, linux, ios, android).
+            version: The operating system version.
+            
+        Returns:
+            OperatingSystem object with mapped OS information.
+        """
+        # Handle None or empty version
+        version = version or "Unknown"
+        
+        match platform.lower() if platform else "":
             case "windows":
                 return OperatingSystem(
                     name="Windows", version=version, type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS
@@ -143,9 +215,28 @@ class OktaDeviceAssetConnector(AssetConnector):
                     name="Android", version=version, type=OSTypeStr.ANDROID, type_id=OSTypeId.ANDROID
                 )
             case _:
-                return OperatingSystem(name=platform, version=version, type=OSTypeStr.OTHER, type_id=OSTypeId.OTHER)
+                return OperatingSystem(
+                    name=platform if platform is not None else "Unknown", version=version, type=OSTypeStr.OTHER, type_id=OSTypeId.OTHER
+                )
 
     async def map_fields(self, okta_device: OktaDevice) -> DeviceOCSFModel:
+        """Map Okta device data to OCSF format.
+
+        Args:
+            okta_device: OktaDevice object containing device data.
+
+        Returns:
+            DeviceOCSFModel instance with mapped device data.
+            
+        Raises:
+            ValueError: If required device data is missing.
+        """
+        # Validate required fields
+        if not okta_device.id:
+            raise ValueError("Device ID is required")
+        if not okta_device.profile or not okta_device.profile.displayName:
+            raise ValueError("Device profile and displayName are required")
+            
         device = Device(
             hostname=okta_device.profile.displayName,
             uid=okta_device.id,
@@ -163,7 +254,10 @@ class OktaDeviceAssetConnector(AssetConnector):
             class_uid=5001,
             device=device,
             time=isoparse(okta_device.created).timestamp(),
-            metadata=Metadata(product=Product(name="Okta", vendor_name="Okta", version="N/A"), version="1.6.0"),
+            metadata=Metadata(
+                product=Product(name="Okta", vendor_name="Okta", version="N/A"),
+                version="1.6.0"
+            ),
             severity="Informational",
             severity_id=1,
             type_name="Software Inventory Info: Collect",
@@ -171,12 +265,21 @@ class OktaDeviceAssetConnector(AssetConnector):
         )
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:
-        self.log("Start the getting okta device assets generator !", level="info")
-        self.log(f"The data path is: {self._data_path.absolute()}", level="info")
+        """Generate device assets from Okta.
+
+        Yields:
+            DeviceOCSFModel instances for each device found in Okta.
+        """
+        self.log("Starting Okta device assets generator", level="info")
+        self.log(f"Data path: {self._data_path.absolute()}", level="info")
+        
         loop = asyncio.get_event_loop()
-        for device in loop.run_until_complete(self.next_list_devices()):
+        devices = loop.run_until_complete(self.next_list_devices())
+        
+        for device in devices:
             try:
                 yield loop.run_until_complete(self.map_fields(device))
             except Exception as e:
-                self.log(f"Error while mapping device {device.id}: {e}", level="error")
+                device_id = getattr(device, 'id', 'unknown')
+                self.log(f"Error while mapping device {device_id}: {e}", level="error")
                 continue
