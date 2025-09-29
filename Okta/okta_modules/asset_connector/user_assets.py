@@ -59,7 +59,7 @@ class OktaUserAssetConnector(AssetConnector):
 
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
-        
+
         Raises:
             ValueError: If new_most_recent_date is None.
         """
@@ -123,14 +123,16 @@ class OktaUserAssetConnector(AssetConnector):
                 return group_list
 
             # Use extend with list comprehension for better performance
-            group_list.extend([
-                Group(
-                    name=group.profile.name,
-                    uid=group.id,
-                    desc=group.profile.description,
-                )
-                for group in groups
-            ])
+            group_list.extend(
+                [
+                    Group(
+                        name=group.profile.name,
+                        uid=group.id,
+                        desc=group.profile.description,
+                    )
+                    for group in groups
+                ]
+            )
 
         return group_list
 
@@ -165,7 +167,7 @@ class OktaUserAssetConnector(AssetConnector):
             query_params = {}
             if self.most_recent_date_seen:
                 query_params = {"search": f'created gt "{self.most_recent_date_seen}"'}
-            
+
             users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
@@ -202,7 +204,7 @@ class OktaUserAssetConnector(AssetConnector):
 
         Returns:
             The last created date as a string.
-            
+
         Raises:
             ValueError: If the users list is empty.
         """
@@ -218,7 +220,7 @@ class OktaUserAssetConnector(AssetConnector):
 
         Returns:
             UserOCSFModel instance with mapped user data.
-            
+
         Raises:
             ValueError: If required user data is missing.
         """
@@ -227,7 +229,7 @@ class OktaUserAssetConnector(AssetConnector):
             raise ValueError("User ID is required")
         if not okta_user.profile or not okta_user.profile.login:
             raise ValueError("User profile and login are required")
-            
+
         # Handle None values in name fields
         first_name = okta_user.profile.firstName or "None"
         last_name = okta_user.profile.lastName or "None"
@@ -243,7 +245,7 @@ class OktaUserAssetConnector(AssetConnector):
         # Fetch user groups and MFA status concurrently
         groups_task = asyncio.create_task(self.get_user_groups(okta_user.id))
         mfa_task = asyncio.create_task(self.get_user_mfa(okta_user.id))
-        
+
         groups = await groups_task
         has_mfa = await mfa_task
 
@@ -291,11 +293,11 @@ class OktaUserAssetConnector(AssetConnector):
 
         loop = asyncio.get_event_loop()
         users = loop.run_until_complete(self.next_list_users())
-        
+
         for user in users:
             try:
                 yield loop.run_until_complete(self.map_fields(user))
             except Exception as e:
-                user_id = getattr(user, 'id', 'unknown')
+                user_id = getattr(user, "id", "unknown")
                 self.log(f"Error while mapping user {user_id}: {e}", level="error")
                 continue
