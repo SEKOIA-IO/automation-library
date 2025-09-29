@@ -14,7 +14,8 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
     AccountTypeId,
     AccountTypeStr,
-    UserEnrichmentObject, UserDataObject,
+    UserEnrichmentObject,
+    UserDataObject,
 )
 from sekoia_automation.storage import PersistentJSON
 
@@ -69,9 +70,8 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             name="login ",
             value="infos",
             data=UserDataObject(
-                is_enabled=True if user.get("status") == 'active' else False,
-                last_logon=user.get("last_login_at")
-            )
+                is_enabled=True if user.get("status") == "active" else False, last_logon=user.get("last_login_at")
+            ),
         )
         enrichments_data = [user_object]
         account = Account(
@@ -116,9 +116,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         last_first_uuid = self.most_recent_user_id
         uuids_batch: list[str] = []
 
-        for idx, user_uuid in enumerate(
-                self.client.list_users_uuids(limit=self.LIMIT, sort="created_at.desc")
-        ):
+        for idx, user_uuid in enumerate(self.client.list_users_uuids(limit=self.LIMIT, sort="created_at.desc")):
             if idx == 0:
                 if user_uuid == last_first_uuid:
                     self.log("No user has been added !!", level="info")
@@ -139,7 +137,6 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         if uuids_batch:
             for user_info in self.client.get_users_infos(uuids_batch):
                 yield user_info
-
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         self.log("Start the getting assets generator !!", level="info")
