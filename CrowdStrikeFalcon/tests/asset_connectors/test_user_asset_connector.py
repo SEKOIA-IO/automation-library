@@ -42,15 +42,15 @@ def test_map_user_fields_happy_path(connector):
         "uid": "alice@example.com",
         "status": "active",
         "factors": ["totp"],
-        "created_at": now,
-        "last_login_at": now.isoformat(),
+        "created_at": "2025-01-01T12:00:00Z",
+        "last_login_at": "2025-06-01T08:30:00Z",
     }
     result = connector.map_user_fields(user)
     assert result.user.full_name == "Alice Smith"
     assert result.user.uid == "uuid-123"
     assert result.user.email_addr == "alice@example.com"
     assert result.user.has_mfa is True
-    assert result.time == pytest.approx(now.timestamp(), rel=1e-3)
+    assert result.time == datetime.fromisoformat("2025-01-01T12:00:00Z").timestamp()
     assert result.enrichments[0].data.is_enabled is True
 
 
