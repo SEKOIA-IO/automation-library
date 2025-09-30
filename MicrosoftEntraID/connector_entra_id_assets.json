@@ -16,7 +16,7 @@
           "type": "integer",
           "description": "Batch frequency in seconds",
           "minimum": 1,
-          "default": 60
+          "default": 1200
       },
       "sekoia_api_key": {
           "description": "API key to use from sekoia.io",
