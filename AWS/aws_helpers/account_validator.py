@@ -27,11 +27,11 @@ class AwsAccountValidator(AccountValidator):
             return True
         except Exception as e:
             # Check if it's a specific AWS exception by examining the exception type
-            if hasattr(e, '__class__') and 'NoSuchEntity' in e.__class__.__name__:
+            if hasattr(e, "__class__") and "NoSuchEntity" in e.__class__.__name__:
                 raise AwsCredentialsError(
                     f"The AWS credentials are invalid or do not have the required permissions. Reason: {str(e)}"
                 )
-            elif hasattr(e, '__class__') and 'ServiceFailure' in e.__class__.__name__:
+            elif hasattr(e, "__class__") and "ServiceFailure" in e.__class__.__name__:
                 raise AwsCredentialsError(f"AWS service failure occurred during validation. Reason: {str(e)}")
             else:
                 raise AwsCredentialsError(f"An error occurred during AWS account validation: {str(e)}")
