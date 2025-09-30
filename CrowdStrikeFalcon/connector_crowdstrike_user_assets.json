@@ -14,13 +14,15 @@
       },
       "frequency": {
           "type": "integer",
-          "description": "Batch frequency in seconds",
-          "minimum": 1,
-          "default": 60
+          "description": "Batch frequency in seconds"
       },
       "sekoia_api_key": {
           "description": "API key to use from sekoia.io",
           "type": "string"
+      },
+      "batch_size": {
+          "description": "Batch size for each request",
+          "type": "integer"
       }
     },
     "required": ["sekoia_api_key"],

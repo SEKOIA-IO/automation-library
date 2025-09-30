@@ -25,7 +25,7 @@ from crowdstrike_falcon.client import CrowdstrikeFalconClient
 class CrowdstrikeUserAssetConnector(AssetConnector):
 
     PRODUCT_NAME: str = "Crowdstrike Falcon"
-    PRODUCT_VERSION = "1.0"
+    PRODUCT_VERSION = "N/A"
     LIMIT: int = 100
 
     def __init__(self, *args, **kwargs):
@@ -36,9 +36,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
     @property
     def most_recent_user_id(self) -> str | None:
         with self.context as cache:
-            most_recent_id = cache.get("most_recent_user_id", None)
-
-            return most_recent_id
+            return cache.get("most_recent_user_id", None)
 
     @cached_property
     def _http_default_headers(self) -> dict[str, str]:

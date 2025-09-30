@@ -20,6 +20,7 @@ def connector():
             "sekoia_base_url": "https://api.fake.sekoia.io/",
             "frequency": 60,
             "sekoia_api_key": "fake_api_key",
+            "batch_size": 100,
         }
         manifest = {
             "client_id": "fake_client_id",
