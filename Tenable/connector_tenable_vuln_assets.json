@@ -1,5 +1,5 @@
   {
-  "name": "Tenable vulnerability asset connector",
+  "name": "Tenable vulnerability management",
   "description": "Fetch tenable vulnerability asset",
   "uuid": "8e200af8-9e2b-4255-8487-786849ae6309",
   "docker_parameters": "tenable_vuln_asset_connector",

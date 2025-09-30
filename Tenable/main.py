@@ -7,3 +7,5 @@ if __name__ == "__main__":
     module = TenableModule()
     module.register_account_validator(TenableAccountValidator)
     module.register(TenableAssetConnector, "tenable_vuln_asset_connector")
+
+    module.run()
