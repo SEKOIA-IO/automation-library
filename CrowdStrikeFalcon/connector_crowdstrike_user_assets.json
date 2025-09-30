@@ -1,5 +1,5 @@
 {
-  "name": "Get Crowdstrike Falcon device assets",
+  "name": "Get Crowdstrike Falcon devices",
   "description": "Fetch Crowdstrike Falcon device assets",
   "uuid": "27117d09-4e1d-4667-9735-ac35024a79f9",
   "docker_parameters": "crowdstrike_falcon_user_asset_connector",
