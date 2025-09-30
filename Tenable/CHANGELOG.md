@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-08-15 - 1.0.1
+
+### Changed
+
+- Update the sdk version to 1.21.0
+- Add batch size configuration to the connector settings
+
 ## 2025-08-15 - 1.0.0
 
 ### Added
