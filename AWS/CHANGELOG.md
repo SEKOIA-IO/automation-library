@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-05 - 1.33.3
+
+### Fixed
+
+- Add device and user assets connectors
+
 ## 2025-09-05 - 1.33.2
 
 ### Fixed
