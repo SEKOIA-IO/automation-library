@@ -24,6 +24,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
+from aws_helpers.base import AWSModule
 
 
 class AwsDevice:
@@ -51,6 +52,8 @@ class AwsDeviceAssetConnector(AssetConnector):
     This connector fetches EC2 instance data from AWS and converts it to OCSF
     Device Inventory format for asset management and security monitoring.
     """
+
+    module: AWSModule
 
     PRODUCT_NAME: str = "AWS EC2"
     OCSF_VERSION: str = "1.6.0"
@@ -113,9 +116,9 @@ class AwsDeviceAssetConnector(AssetConnector):
         """
         try:
             session = boto3.Session(
-                aws_access_key_id=self.module.configuration["aws_access_key"],
-                aws_secret_access_key=self.module.configuration["aws_secret_access_key"],
-                region_name=self.module.configuration["aws_region_name"],
+                aws_access_key_id=self.module.configuration.aws_access_key,
+                aws_secret_access_key=self.module.configuration.aws_secret_access_key,
+                region_name=self.module.configuration.aws_region_name,
             )
             return session.client("ec2")
         except NoCredentialsError as e:

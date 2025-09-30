@@ -1,5 +1,6 @@
 import boto3
 from sekoia_automation.account_validator import AccountValidator
+from aws_helpers.base import AWSModule
 
 
 class AwsCredentialsError(Exception):
@@ -9,12 +10,13 @@ class AwsCredentialsError(Exception):
 
 
 class AwsAccountValidator(AccountValidator):
+    module: AWSModule
 
     def client(self) -> boto3.client:
         session = boto3.Session(
-            aws_access_key_id=self.module.configuration["aws_access_key"],
-            aws_secret_access_key=self.module.configuration["aws_secret_access_key"],
-            region_name=self.module.configuration["aws_region_name"],
+            aws_access_key_id=self.module.configuration.aws_access_key,
+            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
+            region_name=self.module.configuration.aws_region_name,
         )
         return session.client("iam")
 
