@@ -21,6 +21,12 @@
       "sekoia_api_key": {
           "description": "API key to use from sekoia.io",
           "type": "string"
+      },
+      "batch_size": {
+          "type": "integer",
+          "description": "Number of assets to process in one batch",
+          "minimum": 1,
+          "default": 100
       }
     },
     "required": ["sekoia_api_key"],
