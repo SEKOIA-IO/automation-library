@@ -14,8 +14,8 @@ class OktaAccountValidator(AccountValidator):
             Configured OktaClient instance.
         """
         config = {
-            "orgUrl": self.module.configuration["base_url"],
-            "token": self.module.configuration["apikey"],
+            "orgUrl": self.module.configuration.base_url,
+            "token": self.module.configuration.apikey,
         }
         return OktaClient(config)
 
