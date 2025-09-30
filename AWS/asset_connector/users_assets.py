@@ -23,6 +23,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
 )
 from sekoia_automation.storage import PersistentJSON
+from aws_helpers.base import AWSModule
 
 
 class AwsUser:
@@ -51,6 +52,7 @@ class AwsUsersAssetConnector(AssetConnector):
     User Inventory format for asset management and security monitoring.
     """
 
+    module: AWSModule
     PRODUCT_NAME: str = "AWS IAM"
     OCSF_VERSION: str = "1.6.0"
     PRODUCT_VERSION: str = "N/A"
@@ -112,9 +114,9 @@ class AwsUsersAssetConnector(AssetConnector):
         """
         try:
             session = boto3.Session(
-                aws_access_key_id=self.module.configuration["aws_access_key"],
-                aws_secret_access_key=self.module.configuration["aws_secret_access_key"],
-                region_name=self.module.configuration["aws_region_name"],
+                aws_access_key_id=self.module.configuration.aws_access_key,
+                aws_secret_access_key=self.module.configuration.aws_secret_access_key,
+                region_name=self.module.configuration.aws_region_name,
             )
             return session.client("iam")
         except NoCredentialsError as e:

@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from aws_helpers.account_validator import AwsAccountValidator, AwsCredentialsError
+from aws_helpers.base import AWSModule, AWSConfiguration
 
 
 class TestAwsAccountValidator:
@@ -8,12 +9,12 @@ class TestAwsAccountValidator:
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
-        self.mock_module = Mock()
-        self.mock_module.configuration = {
-            "aws_access_key": "test_access_key",
-            "aws_secret_access_key": "test_secret_key",
-            "aws_region_name": "us-east-1",
-        }
+        self.mock_module = AWSModule()
+        self.mock_module.configuration = AWSConfiguration(
+            aws_access_key="test_access_key",
+            aws_secret_access_key="test_secret_key",
+            aws_region_name="us-east-1",
+        )
         self.validator = AwsAccountValidator()
         self.validator.module = self.mock_module
 
@@ -41,11 +42,10 @@ class TestAwsAccountValidator:
         # Arrange
         mock_client = Mock()
 
-        # Create a mock exception class
+        # Create a mock exception class with NoSuchEntity in the name
         class MockNoSuchEntityException(Exception):
             pass
 
-        mock_client.exceptions.NoSuchEntityException = MockNoSuchEntityException
         mock_client.get_login_profile.side_effect = MockNoSuchEntityException("NoSuchEntity error")
         mock_session.return_value.client.return_value = mock_client
 
@@ -62,16 +62,10 @@ class TestAwsAccountValidator:
         # Arrange
         mock_client = Mock()
 
-        # Create a mock exception class
+        # Create a mock exception class with ServiceFailure in the name
         class MockServiceFailureException(Exception):
             pass
 
-        # Set up the exceptions namespace properly - make sure they're different classes
-        class MockNoSuchEntityException(Exception):
-            pass
-
-        mock_client.exceptions.NoSuchEntityException = MockNoSuchEntityException
-        mock_client.exceptions.ServiceFailureException = MockServiceFailureException
         mock_client.get_login_profile.side_effect = MockServiceFailureException("ServiceFailure error")
         mock_session.return_value.client.return_value = mock_client
 
@@ -88,12 +82,7 @@ class TestAwsAccountValidator:
         # Arrange
         mock_client = Mock()
 
-        # Create a mock exception class that doesn't match the specific AWS exceptions
-        class MockGenericException(Exception):
-            pass
-
-        mock_client.exceptions.NoSuchEntityException = MockGenericException
-        mock_client.exceptions.ServiceFailureException = MockGenericException
+        # Create a generic exception that doesn't match the specific AWS exception patterns
         mock_client.get_login_profile.side_effect = Exception("Generic error")
         mock_session.return_value.client.return_value = mock_client
 

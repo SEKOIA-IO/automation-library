@@ -5,17 +5,18 @@ from sekoia_automation.module import Module
 from dateutil.parser import isoparse
 from botocore.exceptions import NoCredentialsError, ClientError, BotoCoreError
 
+from connectors import AwsModule, AwsModuleConfiguration
 from asset_connector.users_assets import AwsUsersAssetConnector, AwsUser
 
 
 @pytest.fixture
 def test_aws_users_asset_connector(symphony_storage):
-    module = Module()
-    module.configuration = {
-        "aws_access_key": "fakeKey",
-        "aws_secret_access_key": "fakeSecret",
-        "aws_region_name": "eu-north-1",
-    }
+    module = AwsModule()
+    module.configuration = AwsModuleConfiguration(
+        aws_access_key="fakeKey",
+        aws_secret_access_key="fakeSecret",
+        aws_region_name="eu-north-1",
+    )
     aws_users_connector = AwsUsersAssetConnector(module=module, data_path=symphony_storage)
     aws_users_connector.configuration = {
         "sekoia_base_url": "https://test.sekoia.io",
