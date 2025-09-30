@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-19 - 2.9.1
+
+### Fixed
+
+- Update Sekoia SDK and Asset configuration
+
+## 2025-09-19 - 2.9.0
+
+### Fixed
+
+- Fix async loop
+
+## 2025-09-19 - 2.8.9
+
+### Fixed
+
+- Fix json configuration
+
+## 2025-09-19 - 2.8.8
+
+### Fixed
+
+- Fix log error and add module AzureADConfiguration
+
 ## 2025-09-19 - 2.8.7
 
 ### Fixed

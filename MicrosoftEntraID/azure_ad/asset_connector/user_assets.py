@@ -32,8 +32,11 @@ from msgraph.generated.models.phone_authentication_method import PhoneAuthentica
 from msgraph.generated.models.group import Group
 from msgraph.generated.models.user import User
 
+from azure_ad.base import AzureADModule
+
 
 class EntraIDAssetConnector(AssetConnector):
+    module: AzureADModule
 
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
@@ -55,9 +58,9 @@ class EntraIDAssetConnector(AssetConnector):
     def client(self) -> GraphServiceClient:
         if self._client is None:
             credentials = ClientSecretCredential(
-                tenant_id=self.module.configuration["tenant_id"],
-                client_id=self.module.configuration["client_id"],
-                client_secret=self.module.configuration["client_secret"],
+                tenant_id=self.module.configuration.tenant_id,
+                client_id=self.module.configuration.client_id,
+                client_secret=self.module.configuration.client_secret,
             )
             auth_provider = AzureIdentityAuthenticationProvider(credentials)
             adapter = GraphRequestAdapter(auth_provider)
@@ -143,7 +146,7 @@ class EntraIDAssetConnector(AssetConnector):
 
             return groups
         except Exception as e:
-            raise ValueError("Error fetching user groups: {e}")
+            raise ValueError(f"Error fetching user groups: {e}")
 
     async def fetch_user_mfa(self, user_id: str) -> bool:
         """
@@ -163,7 +166,7 @@ class EntraIDAssetConnector(AssetConnector):
                         break
             return has_mfa
         except Exception as e:
-            raise ValueError("Error fetching user MFA: {e}")
+            raise ValueError(f"Error fetching user MFA: {e}")
 
     async def fetch_user(self, user: User) -> UserOCSFModel:
         """
@@ -209,7 +212,7 @@ class EntraIDAssetConnector(AssetConnector):
                         new_user = await self.fetch_user(user)
                         new_users.append(new_user)
         except Exception as e:
-            raise ValueError("Error fetching users: {e}")
+            raise ValueError(f"Error fetching users: {e}")
 
         ## Save the most recent date seen
         if len(new_users) > 0:
@@ -219,6 +222,7 @@ class EntraIDAssetConnector(AssetConnector):
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
         ### Fetch users from Microsoft Graph API
         last_run_date: str | None = self.most_recent_date_seen if self.most_recent_date_seen else None
-        new_users = asyncio.run(self.fetch_new_users(last_run_date=last_run_date))
+        loop = asyncio.get_event_loop()
+        new_users = loop.run_until_complete(self.fetch_new_users(last_run_date=last_run_date))
         for user in new_users:
             yield user
