@@ -1,5 +1,5 @@
   {
-  "name": "AWS device asset connector",
+  "name": "AWS devices",
   "description": "Fetch AWS device asset",
   "uuid": "e2a7c6b4-9f1d-4b8a-8c3e-2d5f7a1e4b9c",
   "docker_parameters": "aws_device_asset_connector",
@@ -21,6 +21,12 @@
       "sekoia_api_key": {
           "description": "API key to use from sekoia.io",
           "type": "string"
+      },
+      "batch_size": {
+          "type": "integer",
+          "description": "Batch size",
+          "minimum": 1,
+          "default": 100
       }
     },
     "required": ["sekoia_api_key"],

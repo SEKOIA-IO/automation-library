@@ -1,5 +1,5 @@
   {
-  "name": "AWS users asset connector",
+  "name": "AWS users",
   "description": "Fetch AWS users asset",
   "uuid": "e2a7c1b4-5d8f-4e3a-9c2b-7f1e6d8a3b2c",
   "docker_parameters": "aws_users_asset_connector",
@@ -21,6 +21,12 @@
       "sekoia_api_key": {
           "description": "API key to use from sekoia.io",
           "type": "string"
+      },
+      "batch_size": {
+          "type": "integer",
+          "description": "Batch size",
+          "minimum": 1,
+          "default": 100
       }
     },
     "required": ["sekoia_api_key"],
