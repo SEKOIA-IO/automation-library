@@ -1,10 +1,13 @@
-from sekoia_automation.action import Action
 from datetime import datetime, timedelta
-from pydantic import BaseModel
 from typing import Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from pydantic.v1 import BaseModel
+from sekoia_automation.action import Action
 
 
 class Arguments(BaseModel):
+    # this will remain for the backward compatibility
     selectedTimezone: Literal[
         "UTC -12",
         "UTC -11",
@@ -31,7 +34,9 @@ class Arguments(BaseModel):
         "UTC +10",
         "UTC +11",
         "UTC +12",
-    ]
+    ] | None = None
+
+    selectedNamedTimezone: str | None = None
 
 
 class GetCurrentTimeAction(Action):
@@ -49,10 +54,27 @@ class GetCurrentTimeAction(Action):
         return result_time
 
     def run(self, ra: Arguments) -> dict:
-        self.log(message=f"Retrieving current time for {ra.selectedTimezone}", level="info")
-        dateToReturn = self._utc_to_gmt(ra.selectedTimezone)
+        if not ra.selectedNamedTimezone and not ra.selectedTimezone:
+            self.log(message="You should set a timezone", level="error")
+            return {}
+
+        # new field has a higher priority
+        if ra.selectedNamedTimezone:
+            self.log(message=f"Retrieving current time for {ra.selectedNamedTimezone}", level="info")
+            try:
+                tz = ZoneInfo(ra.selectedNamedTimezone)
+
+            except ZoneInfoNotFoundError as err:
+                self.log_exception(err)
+                return {}
+
+            date_to_return = datetime.now(tz)
+
+        else:
+            self.log(message=f"Retrieving current time for {ra.selectedTimezone}", level="info")
+            date_to_return = self._utc_to_gmt(ra.selectedTimezone)
 
         return {
-            "epoch": int(dateToReturn.timestamp()),
-            "iso8601": dateToReturn.isoformat(),
+            "epoch": int(date_to_return.timestamp()),
+            "iso8601": date_to_return.isoformat(),
         }
