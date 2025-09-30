@@ -25,11 +25,13 @@ class AwsAccountValidator(AccountValidator):
             client = self.client()
             client.get_login_profile()
             return True
-        except client.exceptions.NoSuchEntityException as e:
-            raise AwsCredentialsError(
-                f"The AWS credentials are invalid or do not have the required permissions. Reason: {str(e)}"
-            )
-        except client.exceptions.ServiceFailureException as e:
-            raise AwsCredentialsError(f"AWS service failure occurred during validation. Reason: {str(e)}")
         except Exception as e:
-            raise AwsCredentialsError(f"An error occurred during AWS account validation: {str(e)}")
+            # Check if it's a specific AWS exception by examining the exception type
+            if hasattr(e, '__class__') and 'NoSuchEntity' in e.__class__.__name__:
+                raise AwsCredentialsError(
+                    f"The AWS credentials are invalid or do not have the required permissions. Reason: {str(e)}"
+                )
+            elif hasattr(e, '__class__') and 'ServiceFailure' in e.__class__.__name__:
+                raise AwsCredentialsError(f"AWS service failure occurred during validation. Reason: {str(e)}")
+            else:
+                raise AwsCredentialsError(f"An error occurred during AWS account validation: {str(e)}")
