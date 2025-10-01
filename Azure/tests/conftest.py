@@ -7,6 +7,7 @@ from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
 from typing import List
+from unittest.mock import AsyncMock
 
 import orjson
 import pytest
@@ -274,3 +275,17 @@ def event_loop():
     yield loop
 
     loop.close()
+
+
+@pytest.fixture
+def audit_credentials():
+    return {
+        "client_id": "test_client_id",
+        "client_secret": "test_client_secret",
+        "tenant_id": "test_tenant_id",
+    }
+
+
+@pytest.fixture
+def graph_api_token_url(audit_credentials):
+    return f"https://login.microsoftonline.com/{audit_credentials['tenant_id']}/oauth2/v2.0/token"
