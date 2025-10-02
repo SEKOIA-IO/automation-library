@@ -1,0 +1,35 @@
+{
+  "uuid": "4d1dea81-0edd-46f3-b921-894d38139379",
+  "name": "Perform a reverse email lookup on Domaintools API returning a JSON dump",
+  "description": "A wrapper to reverse an email on Iris Investigate API v1",
+  "docker_parameters": "domaintools_get_reverse_email",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "email": {
+        "description": "The email to look for",
+        "default": "admin@example.com",
+        "type": "string"
+      }
+    },
+    "required": [
+      "email"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "results": {
+        "type": "string"
+      },
+      "extraData": {
+        "type": "object"
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "get_reverse_email_in_domaintools"
+}
