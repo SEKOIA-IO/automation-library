@@ -1,15 +1,11 @@
-from utils.action_get_current_time import (
-    GetCurrentTimeAction,
-    Arguments,
-)
 from re import match
 from shutil import rmtree
 from tempfile import mkdtemp
 
-
 import pytest
-
 from sekoia_automation import constants
+
+from utils.action_get_current_time import Arguments, GetCurrentTimeAction
 
 
 @pytest.fixture
