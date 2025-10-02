@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Any
 
-from pydantic.main import BaseModel
+from pydantic.v1.main import BaseModel
 
-from PaloAltoCortexXDR.cortex_module.actions import PaloAltoCortexXDRAction
+from cortex_module.actions import PaloAltoCortexXDRAction
 
 
 class PlatformEnum(Enum):
@@ -46,6 +46,7 @@ class ScanEndpointsArguments(BaseModel):
     filter_platform: list[PlatformEnum] | None = None
     filter_isolate: list[IsolateEnum] | None = None
     filter_scan_status: list[ScanStatusEnum] | None = None
+    filter_username: list[str] | None = None
 
 
 class ScanEndpointsAction(PaloAltoCortexXDRAction):
@@ -82,6 +83,9 @@ class ScanEndpointsAction(PaloAltoCortexXDRAction):
         if model.filter_hostname:
             filters.append({"field": "hostname", "operator": "in", "value": model.filter_hostname})
 
+        if model.filter_username:
+            filters.append({"field": "username", "operator": "in", "value": model.filter_username})
+
         if model.filter_platform:
             filters.append(
                 {"field": "platform", "operator": "in", "value": [item.value for item in model.filter_platform]}
@@ -97,10 +101,5 @@ class ScanEndpointsAction(PaloAltoCortexXDRAction):
                 {"field": "scan_status", "operator": "in", "value": [item.value for item in model.filter_scan_status]}
             )
 
-        if len(filters) > 0:
-            result["request_data"]["filters"] = filters
-
-        else:
-            result["request_data"]["filters"] = "all"
-
+        result["request_data"]["filters"] = filters if filters else "all"
         return result

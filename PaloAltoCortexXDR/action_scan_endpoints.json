@@ -1,73 +1,80 @@
 {
-  "arguments": {
+"arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "incident_id": {
         "type": "string",
-        "description": "Incident ID. When included in the request, the Scan Endpoints action will appear in the Cortex XDR Incident View Timeline tab."
+        "description": "Incident ID. When included in the request, the Cancel Scan Endpoints action will appear in the Cortex XDR Incident View Timeline tab"
       },
       "filter_endpoint_id_list": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "List of endpoint IDs."
+        "description": "List of endpoint IDs"
       },
       "filter_dist_name": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "Name of the distribution list."
+        "description": "List of the distribution list"
       },
       "filter_group_name": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "Name of endpoint group."
+        "description": "List of endpoint groups"
       },
       "filter_ip_list": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "List of IP addresses."
+        "description": "List of IP addresses"
       },
       "filter_alias": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "Endpoint alias name."
+        "description": "List of endpoint aliases to select"
       },
       "filter_hostname": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "Filter - Name of host."
+        "description": "List of hostnames to select"
+      },
+      "filter_username": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of usernames to select"
       },
       "filter_platform": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "List of endpoint IDs (Permitted values: windows, linux, macos, android)."
+        "description": "List of platforms to select (Permitted values: windows, linux, macos, android)."
       },
       "filter_isolate": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "If an endpoint has been isolated (Permitted values: isolated, unisolated)"
+        "description": "List of isolation states to select (Permitted values: isolated, unisolated)"
       },
       "filter_scan_status": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "List of endpoint IDs (Permitted values: none, pending, in_progress, canceled, aborted, pending_cancellation, success, or error)"
+        "description": "List of scan statuses to select (Permitted values: none, pending, in_progress, canceled, aborted, pending_cancellation, success, or error)"
       }
     },
     "required": [],
@@ -76,7 +83,7 @@
   },
   "description": "",
   "docker_parameters": "scan_endpoints",
-  "name": "Scan endpoints",
+  "name": "[BETA] Scan endpoints",
   "results": {},
   "uuid": "6b58cce2-0185-4594-90a2-23b1d99aec16",
   "slug": "scan_endpoints"
