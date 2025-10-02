@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-18 - 1.15.2
+
+### Fixed
+
+- Stop the increase of the timestepper when facing API errors
+
+### Changed
+
+- Log a critical error when the connector is misconfigured (Authentication errors)
+
 ## 2025-09-09 - 1.15.1
 
 ### Changed
