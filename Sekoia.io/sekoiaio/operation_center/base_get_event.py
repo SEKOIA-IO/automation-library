@@ -29,7 +29,7 @@ class BaseGetEvents(Action):
         retry_strategy = Retry(
             total=10,  # Total number of retries for all types of errors
             status=10,  # Number of retries specifically for responses with status codes in status_forcelist
-            status_forcelist=[429, 500, 502, 503, 504],
+            status_forcelist=[400, 404, 408, 429, 500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
             backoff_factor=1,
             backoff_max=120,
