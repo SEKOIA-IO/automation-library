@@ -71,7 +71,8 @@ class GetCurrentTimeAction(Action):
                 self.log_exception(err)
                 return {}
 
-            date_to_return = datetime.now(tz)
+            # we need to get time in correct timezone, but we don't need the timezone itself
+            date_to_return = datetime.now(tz).replace(tzinfo=None)
 
         else:
             self.log(message=f"Retrieving current time for {ra.selectedTimezone}", level="info")

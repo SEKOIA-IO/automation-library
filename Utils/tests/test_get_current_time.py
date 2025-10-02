@@ -39,3 +39,15 @@ def test_get_current_time_2():
         r"^[0-9]{4}\-[0-9]{2}\-[0-9]{2}T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{6}$",
         reponse["iso8601"],
     )
+
+
+def test_incorrect_inputs():
+    action = GetCurrentTimeAction()
+    request = Arguments(selectedTimezone=None, selectedNamedTimezone=None)
+    response = action.run(request)
+    assert response == {}
+
+    action = GetCurrentTimeAction()
+    request = Arguments(selectedNamedTimezone="SomethingNotExisting")
+    response = action.run(request)
+    assert response == {}
