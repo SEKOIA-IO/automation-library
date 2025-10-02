@@ -29,7 +29,7 @@ class BaseGetEvents(Action):
         retry_strategy = Retry(
             total=10,  # Total number of retries for all types of errors
             status=10,  # Number of retries specifically for responses with status codes in status_forcelist
-            status_forcelist=[400, 404, 408, 429, 500, 502, 503, 504],
+            status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
             backoff_factor=1,
             backoff_max=120,
@@ -62,7 +62,14 @@ class BaseGetEvents(Action):
             json=data,
             timeout=20,
         )
-        response_start.raise_for_status()
+        try:
+            response_start.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            self.log(
+                f"HTTP error when triggering event search job: {e}. Response status: {response_start.status_code}, Response text: {response_start.text}",
+                level="error",
+            )
+            raise
 
         return response_start.json()["uuid"]
 
@@ -81,7 +88,14 @@ class BaseGetEvents(Action):
 
         # Initial status check
         response_get = self.http_session.get(f"{self.events_api_path}/search/jobs/{event_search_job_uuid}", timeout=20)
-        response_get.raise_for_status()
+        try:
+            response_get.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            self.log(
+                f"HTTP error during initial status check for job {event_search_job_uuid}: {e}. Response status: {response_get.status_code}, Response text: {response_get.text}",
+                level="error",
+            )
+            raise
 
         # Wait for the condition to be met
         while should_we_wait(response_get.json()["status"]):
@@ -92,7 +106,14 @@ class BaseGetEvents(Action):
             response_get = self.http_session.get(
                 f"{self.events_api_path}/search/jobs/{event_search_job_uuid}", timeout=20
             )
-            response_get.raise_for_status()
+            try:
+                response_get.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                self.log(
+                    f"HTTP error during job status polling for job {event_search_job_uuid}: {e}. Response status: {response_get.status_code}, Response text: {response_get.text}",
+                    level="error",
+                )
+                raise
 
             # If we exceed the timeout, raise an error
             if time.time() - start_wait > timeout:
