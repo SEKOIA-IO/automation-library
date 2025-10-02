@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 from sekoia_automation.connector import Connector
 from sekoia_automation.module import Module
 
