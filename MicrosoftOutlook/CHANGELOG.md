@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2025-09-22 - 0.1.2
+
+### Added
+
+- Added action to send emails
+
 ## 2025-02-07 - 0.1.1
 
 ### Changed
