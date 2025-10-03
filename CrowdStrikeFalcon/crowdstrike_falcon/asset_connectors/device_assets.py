@@ -1,8 +1,9 @@
 from functools import cached_property
 from collections.abc import Generator
-from typing import Any, cast
+from typing import Any
 from datetime import datetime
 
+from dateutil.parser import isoparse
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import (
     Metadata,
@@ -37,7 +38,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         self._latest_id = None
 
     @property
-    def most_recent_user_id(self) -> str | None:
+    def most_recent_device_id(self) -> str | None:
         with self.context as cache:
             return cache.get("most_recent_device_id", None)
 
@@ -50,7 +51,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         }
 
     @cached_property
-    def client(self):
+    def client(self) -> CrowdstrikeFalconClient:
         return CrowdstrikeFalconClient(
             self.module.configuration.base_url,
             self.module.configuration.client_id,
@@ -59,6 +60,9 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         )
 
     def get_device_os(self, platform_details: str) -> OperatingSystem:
+        """
+        Determine the operating system from platform details string.
+        """
         if not platform_details:
             return OperatingSystem(name="Unknown", type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN)
 
@@ -74,6 +78,9 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             return OperatingSystem(name=platform_details, type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN)
 
     def get_device_type(self, device_type: str) -> tuple[DeviceTypeId, DeviceTypeStr]:
+        """
+        Determine the device type from device type description string.
+        """
         device_type = device_type.lower() if device_type else ""
         if device_type in ["desktop", "laptop", "workstation"]:
             return DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP
@@ -84,17 +91,25 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         else:
             return DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN
 
+    def get_firewall_status(self, device: dict[str, Any]) -> str | None:
+        firewall_applied = device.get("device_policies", {}).get("Firewall", {}).get("applied")
+        if firewall_applied:
+            return "Enabled"
+        return "Disabled"
+
     def map_device_fields(self, device: dict[str, Any]) -> DeviceOCSFModel:
+        """
+        Map Crowdstrike device fields to OCSF device model.
+        """
         product = Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION)
         metadata = Metadata(product=product, version=self.OCSF_VERSION)
         device_os = self.get_device_os(device.get("platform_name"))
         type_id, type_str = self.get_device_type(device.get("product_type_desc"))
-        firewall_bool = device.get("device_policies", {}).get("Firewall", {}).get("applied", False)
-        enrichement_object = DeviceEnrichmentObject(
+        enrichment_object = DeviceEnrichmentObject(
             name="compliance",
             value="hygiene",
             data=DeviceDataObject(
-                Firewall_status="Enabled" if firewall_bool else "Disabled",
+                Firewall_status=self.get_firewall_status(device),
             ),
         )
         crowdstrike_device = Device(
@@ -113,22 +128,28 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             severity="Informational",
             severity_id=1,
             type_uid=500102,
-            time=1,
+            time=(
+                isoparse(device.get("first_seen")).timestamp()
+                if device.get("first_seen")
+                else datetime.now().timestamp()
+            ),
             metadata=metadata,
             device=crowdstrike_device,
-            enrichments=[enrichement_object],
+            enrichments=[enrichment_object],
         )
 
         return device_ocsf
 
     def update_checkpoint(self) -> None:
+        self.log("Updating the device id !!", level="info")
         if self._latest_id is None:
             return
         with self.context as cache:
-            cache["most_recent_user_id"] = self._latest_id
+            cache["most_recent_device_id"] = self._latest_id
+            self.log(f"Device id was updated to {self._latest_id}", level="info")
 
     def next_devices(self) -> Generator[dict[str, Any], None, None]:
-        last_first_uuid = self.most_recent_user_id
+        last_first_uuid = self.most_recent_device_id
         uuids_batch: list[str] = []
 
         for idx, device_uuid in enumerate(self.client.list_devices_uuids(limit=self.LIMIT, sort="first_seen.desc")):
@@ -145,11 +166,13 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             uuids_batch.append(device_uuid)
 
             if len(uuids_batch) >= self.LIMIT:
+                self.log(f"Found {len(uuids_batch)} devices !!", level="info")
                 for device_info in self.client.get_devices_infos(uuids_batch):
                     yield device_info
                 uuids_batch = []
 
         if uuids_batch:
+            self.log(f"Found {len(uuids_batch)} devices in the last batch!!", level="info")
             for device_info in self.client.get_devices_infos(uuids_batch):
                 yield device_info
 

@@ -9,8 +9,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeStr,
 )
 
-from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
-
 
 class _DummyContext:
     def __init__(self, initial=None):
@@ -73,12 +71,27 @@ def test_device_os_detection(input_value, expected_name, expected_type, expected
         (None, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
     ],
 )
-def device_type_mapping(input_value, expected_type_id, expected_type_str, connector):
+def test_device_type_mapping(input_value, expected_type_id, expected_type_str, connector):
     type_id, type_str = connector.get_device_type(input_value)
     assert type_id == expected_type_id
     assert type_str == expected_type_str
 
-def map_device_fields_firewall_enabled(connector):
+def test_get_firwall_status_enabled(connector):
+    device = {"device_policies": {"Firewall": {"applied": True}}}
+    status = connector.get_firewall_status(device)
+    assert status == "Enabled"
+
+def test_get_firewall_status_disabled(connector):
+    device = {"device_policies": {"Firewall": {"applied": False}}}
+    status = connector.get_firewall_status(device)
+    assert status == "Disabled"
+
+def test_get_firewall_status_missing(connector):
+    device = {"device_policies": {}}
+    status = connector.get_firewall_status(device)
+    assert status == "Disabled"
+
+def test_map_device_fields_firewall_enabled(connector):
     device = {
         "device_id": "dev1",
         "hostname": "host1",
@@ -92,7 +105,7 @@ def map_device_fields_firewall_enabled(connector):
     assert model.device.type_id == DeviceTypeId.DESKTOP
     assert model.enrichments[0].data.Firewall_status == "Enabled"
 
-def map_device_fields_firewall_disabled_and_unknown_type(connector):
+def test_map_device_fields_firewall_disabled_and_unknown_type(connector):
     device = {
         "device_id": "dev2",
         "hostname": "host2",
@@ -105,17 +118,17 @@ def map_device_fields_firewall_disabled_and_unknown_type(connector):
     assert model.device.type_id == DeviceTypeId.UNKNOWN
     assert model.enrichments[0].data.Firewall_status == "Disabled"
 
-def update_checkpoint_no_latest_id_no_write(connector):
+def test_update_checkpoint_no_latest_id_no_write(connector):
     connector.update_checkpoint()
-    assert "most_recent_user_id" not in c.context.store
+    assert "most_recent_device_id" not in connector.context.store
 
-def update_checkpoint_writes_key_but_property_reads_other_key(connector):
+def test_update_checkpoint_writes_key_but_property_reads_other_key(connector):
     connector._latest_id = "abc123"
     connector.update_checkpoint()
-    assert connector.context.store["most_recent_user_id"] == "abc123"
-    assert connector.most_recent_user_id is None  # property looks for another key
+    assert connector.context.store["most_recent_device_id"] == "abc123"
+    assert connector.most_recent_device_id == "abc123"
 
-def next_devices_no_new_device_returns_empty_and_logs(connector):
+def test_next_devices_no_new_device_returns_empty_and_logs(connector):
     first_uuid = "u1"
     connector.context.store["most_recent_device_id"] = first_uuid
     client = Mock()
@@ -126,7 +139,7 @@ def next_devices_no_new_device_returns_empty_and_logs(connector):
     connector.log.assert_called_once()
     assert connector._latest_id is None
 
-def next_devices_batches_and_stops_on_checkpoint(connector):
+def test_next_devices_batches_and_stops_on_checkpoint(connector):
     connector.LIMIT = 2
     connector.context.store["most_recent_device_id"] = "u3"
     client = Mock()
@@ -140,7 +153,7 @@ def next_devices_batches_and_stops_on_checkpoint(connector):
     client.get_devices_infos.assert_called_once_with(["u5", "u4"])
     assert connector._latest_id == "u5"
 
-def next_devices_multiple_batches_and_flush_last(connector):
+def test_next_devices_multiple_batches_and_flush_last(connector):
     connector.LIMIT = 2
     # No checkpoint -> all consumed
     client = Mock()
@@ -156,7 +169,7 @@ def next_devices_multiple_batches_and_flush_last(connector):
     client.get_devices_infos.assert_any_call(["u3"])
     assert connector._latest_id == "u5"
 
-def get_assets_yields_mapped_models(monkeypatch, connector):
+def test_get_assets_yields_mapped_models(monkeypatch, connector):
     sample_devices = [
         {
             "device_id": "d1",

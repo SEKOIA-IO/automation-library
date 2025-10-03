@@ -1,4 +1,3 @@
-import enum
 from collections.abc import Generator
 from posixpath import join as urljoin
 from typing import Any
