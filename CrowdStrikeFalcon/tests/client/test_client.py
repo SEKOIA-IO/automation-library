@@ -44,8 +44,7 @@ def test_list_streams():
 
         mock.register_uri(
             "GET",
-            "https://my.fake.sekoia/sensors/entities/datafeed/v2"
-            "?appId=sio-00000&offset=1",
+            "https://my.fake.sekoia/sensors/entities/datafeed/v2" "?appId=sio-00000&offset=1",
             json={
                 "errors": [],
                 "meta": {
