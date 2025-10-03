@@ -14,7 +14,7 @@ if __name__ == "__main__":
     module.register(DomaintoolsLookupDomain, "domaintools_get_lookup_domain")
     module.register(DomaintoolsPivotAction, "domaintools_get_pivot_action")
     module.register(DomaintoolsReverseDomain, "domaintools_get_reverse_domain")
-    module.register(DomaintoolsReverseEmail, "thehive_create_alert")
-    module.register(DomaintoolsReverseIP, "domaintools_get_reverse_email")
+    module.register(DomaintoolsReverseEmail, "domaintools_get_reverse_email")
+    module.register(DomaintoolsReverseIP, "domaintools_get_reverse_ip")
 
     module.run()
