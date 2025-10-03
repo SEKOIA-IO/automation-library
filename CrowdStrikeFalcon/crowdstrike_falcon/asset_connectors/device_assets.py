@@ -1,6 +1,6 @@
 from functools import cached_property
 from collections.abc import Generator
-from typing import Any
+from typing import Any, Literal
 from datetime import datetime
 
 from dateutil.parser import isoparse
@@ -59,7 +59,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             default_headers=self._http_default_headers,
         )
 
-    def get_device_os(self, platform_details: str) -> OperatingSystem:
+    def get_device_os(self, platform_details: str | None) -> OperatingSystem:
         """
         Determine the operating system from platform details string.
         """
@@ -77,7 +77,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         else:
             return OperatingSystem(name=platform_details, type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN)
 
-    def get_device_type(self, device_type: str) -> tuple[DeviceTypeId, DeviceTypeStr]:
+    def get_device_type(self, device_type: str | None) -> tuple[DeviceTypeId, DeviceTypeStr]:
         """
         Determine the device type from device type description string.
         """
@@ -91,7 +91,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         else:
             return DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN
 
-    def get_firewall_status(self, device: dict[str, Any]) -> str | None:
+    def get_firewall_status(self, device: dict[str, Any]) -> Literal["Disabled", "Enabled"]:
         firewall_applied = device.get("device_policies", {}).get("Firewall", {}).get("applied")
         if firewall_applied:
             return "Enabled"
@@ -105,6 +105,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         metadata = Metadata(product=product, version=self.OCSF_VERSION)
         device_os = self.get_device_os(device.get("platform_name"))
         type_id, type_str = self.get_device_type(device.get("product_type_desc"))
+        first_seen: str = device.get("first_seen", "")
         enrichment_object = DeviceEnrichmentObject(
             name="compliance",
             value="hygiene",
@@ -128,11 +129,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             severity="Informational",
             severity_id=1,
             type_uid=500102,
-            time=(
-                isoparse(device.get("first_seen")).timestamp()
-                if device.get("first_seen")
-                else datetime.now().timestamp()
-            ),
+            time=(isoparse(first_seen).timestamp() if first_seen else datetime.now().timestamp()),
             metadata=metadata,
             device=crowdstrike_device,
             enrichments=[enrichment_object],
