@@ -1,0 +1,31 @@
+{
+  "name": "Get Crowdstrike Falcon devices",
+  "description": "Fetch Crowdstrike Falcon device assets",
+  "uuid": "adcd0095-0f3d-4699-8621-158977b6c2c3",
+  "docker_parameters": "crowdstrike_falcon_device_asset_connector",
+  "type": "asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds"
+      },
+      "sekoia_api_key": {
+          "description": "API key to use from sekoia.io",
+          "type": "string"
+      },
+      "batch_size": {
+          "description": "Batch size for each request",
+          "type": "integer"
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
+  }
+}

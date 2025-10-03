@@ -1,4 +1,3 @@
-import enum
 from collections.abc import Generator
 from posixpath import join as urljoin
 from typing import Any
@@ -80,9 +79,21 @@ class ApiClient(requests.Session):
             yield from content.get("resources") or []
 
             pagination = content.get("meta", {}).get("pagination")
-            still_fetching_items = pagination is not None and (
-                bool(pagination.get("offset")) or bool(pagination.get("after"))
-            )
+            if pagination:
+                if pagination.get("after"):
+                    still_fetching_items = True
+                else:
+                    offset = pagination.get("offset")
+                    limit = pagination.get("limit")
+                    total = pagination.get("total")
+                    still_fetching_items = (
+                        isinstance(offset, int)
+                        and isinstance(limit, int)
+                        and isinstance(total, int)
+                        and offset < total
+                    )
+            else:
+                still_fetching_items = False
 
 
 class CrowdstrikeFalconClient(ApiClient):
@@ -201,6 +212,22 @@ class CrowdstrikeFalconClient(ApiClient):
         yield from self.request_endpoint(
             "POST",
             "/user-management/entities/users/GET/v1",
+            json={"ids": ids},
+            **kwargs,
+        )
+
+    def list_devices_uuids(self, limit: int, sort: str, **kwargs) -> Generator[str, None, None]:
+        yield from self.request_endpoint(
+            "GET",
+            "/devices/queries/devices/v1",
+            params={"limit": limit, "sort": sort},
+            **kwargs,
+        )
+
+    def get_devices_infos(self, ids: list[str], **kwargs) -> Generator[dict[str, Any], None, None]:
+        yield from self.request_endpoint(
+            "POST",
+            "/devices/entities/devices/v2",
             json={"ids": ids},
             **kwargs,
         )

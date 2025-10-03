@@ -33,8 +33,9 @@ def test_list_streams():
                     "query_time": 0.008346086,
                     "trace_id": "13787250-fc0f-49a6-9191-d809e30afdfb",
                     "pagination": {
-                        "limit": 100,
-                        "offset": "1658342945857000000:3867296750",
+                        "limit": 1,
+                        "offset": 1,
+                        "total": 2,
                     },
                 },
                 "resources": [{"dataFeedURL": "stream?q=1"}],
@@ -43,8 +44,7 @@ def test_list_streams():
 
         mock.register_uri(
             "GET",
-            "https://my.fake.sekoia/sensors/entities/datafeed/v2"
-            "?appId=sio-00000&offset=1658342945857000000:3867296750",
+            "https://my.fake.sekoia/sensors/entities/datafeed/v2" "?appId=sio-00000&offset=1",
             json={
                 "errors": [],
                 "meta": {
