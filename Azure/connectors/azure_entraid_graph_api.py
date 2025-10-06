@@ -3,10 +3,10 @@ import time
 from datetime import timedelta
 from typing import Any, Optional
 
-import orjson
 from cachetools import Cache, LRUCache
-from dateutil.parser import isoparse
 from loguru import logger
+from msgraph.generated.models.directory_audit import DirectoryAudit
+from msgraph.generated.models.sign_in import SignIn
 from pydantic import Field
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.checkpoint import CheckpointDatetime
@@ -14,7 +14,7 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.module import Module
 
 from connectors.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
-from graph_api.client import GraphAPIError, GraphAuditClient
+from graph_api.client import GraphApi
 
 
 class AzureEntraIdGraphApiConnectorConfig(DefaultConnectorConfiguration):
@@ -31,7 +31,7 @@ class AzureEntraIdGraphApiConnector(AsyncConnector):
     module: Module
     configuration: AzureEntraIdGraphApiConnectorConfig
 
-    _client: GraphAuditClient | None = None
+    _client: GraphApi | None = None
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
@@ -50,11 +50,13 @@ class AzureEntraIdGraphApiConnector(AsyncConnector):
         )
 
         self.signin_cache = self.load_cache("signin", maxsize=500)
-        self.directory_alers = self.load_cache("directory", maxsize=500)
+        self.directory_alerts_cache = self.load_cache("directory", maxsize=500)
 
-    def load_cache(self, key: str, maxsize: int) -> Cache[str, bool]:
+    def load_cache(self, key: str, maxsize: int) -> Cache[str | None, bool]:
         context = self.last_event_date_signin._context if key == "signin" else self.last_event_date_directory._context
-        result: LRUCache[str, bool] = LRUCache(maxsize=maxsize)
+
+        # Optional only because stubs in graph api are bad
+        result: LRUCache[str | None, bool] = LRUCache(maxsize=maxsize)
 
         with context as cache:
             events_ids = cache.get(key, [])
@@ -66,15 +68,15 @@ class AzureEntraIdGraphApiConnector(AsyncConnector):
 
     def persist_cache(self, key: str) -> None:
         context = self.last_event_date_signin._context if key == "signin" else self.last_event_date_directory._context
-        cache = self.signin_cache if key == "signin" else self.directory_alers
+        cache = self.signin_cache if key == "signin" else self.directory_alerts_cache
 
         with context as ctx:
             ctx[key] = list(cache.keys())
 
     @property
-    def client(self) -> GraphAuditClient:
+    def client(self) -> GraphApi:  # pragma: no cover
         if not self._client:
-            self._client = GraphAuditClient(
+            self._client = GraphApi(
                 tenant_id=self.configuration.tenant_id,
                 client_id=self.configuration.client_id,
                 client_secret=self.configuration.client_secret,
@@ -82,7 +84,7 @@ class AzureEntraIdGraphApiConnector(AsyncConnector):
 
         return self._client
 
-    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:
+    def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
         """
         Stop the connector.
 
@@ -91,66 +93,70 @@ class AzureEntraIdGraphApiConnector(AsyncConnector):
         super(Connector, self).stop(*args, **kwargs)
 
     async def run_directory(self) -> int:
-        events = []
+        events: list[DirectoryAudit] = []
         total_events = 0
         new_offset = self.last_event_date_directory.offset
-        async for event in self.client.list_directory_audits(start=self.last_event_date_directory.offset):
-            if not self.running:
+        async for event in self.client.get_directory_audit_logs(start_date=self.last_event_date_directory.offset):
+            if not self.running:  # pragma: no cover
                 break
 
-            if event["id"] in self.directory_alers:
+            if event.id in self.directory_alerts_cache:
                 continue
 
             events.append(event)
             if len(events) >= self.configuration.chunk_size:
-                total_events += len(
-                    await self.push_data_to_intakes([orjson.dumps(event).decode() for event in events])
-                )
+                total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+
                 for data in events:
-                    new_offset = max(new_offset, isoparse(data["activityDateTime"]))
-                    self.directory_alers[data["id"]] = True
+                    new_offset = max(new_offset, data.activity_date_time)
+                    self.directory_alerts_cache[data.id] = True
+
                 self.last_event_date_directory.offset = new_offset
                 self.persist_cache("directory")
                 events = []
 
         if events:
-            total_events += len(await self.push_data_to_intakes([orjson.dumps(event).decode() for event in events]))
+            total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+
             for data in events:
-                new_offset = max(new_offset, isoparse(data["activityDateTime"]))
-                self.directory_alers[data["id"]] = True
+                new_offset = max(new_offset, data.activity_date_time)
+                self.directory_alerts_cache[data.id] = True
+
             self.last_event_date_directory.offset = new_offset
             self.persist_cache("directory")
 
         return total_events
 
     async def run_signin(self) -> int:
-        events = []
+        events: list[SignIn] = []
         total_events = 0
         new_offset = self.last_event_date_directory.offset
-        async for event in self.client.list_signins(start=self.last_event_date_directory.offset):
-            if not self.running:
+        async for event in self.client.get_signin_logs(start_date=self.last_event_date_directory.offset):
+            if not self.running:  # pragma: no cover
                 break
 
-            if event["id"] in self.directory_alers:
+            if event.id in self.signin_cache:
                 continue
 
             events.append(event)
             if len(events) >= self.configuration.chunk_size:
-                total_events += len(
-                    await self.push_data_to_intakes([orjson.dumps(event).decode() for event in events])
-                )
+                total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+
                 for data in events:
-                    new_offset = max(new_offset, isoparse(data["createdDateTime"]))
-                    self.directory_alers[data["id"]] = True
+                    new_offset = max(new_offset, data.created_date_time)
+                    self.signin_cache[data.id] = True
+
                 self.last_event_date_directory.offset = new_offset
                 self.persist_cache("signin")
                 events = []
 
         if events:
-            total_events += len(await self.push_data_to_intakes([orjson.dumps(event).decode() for event in events]))
+            total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+
             for data in events:
-                new_offset = max(new_offset, isoparse(data["createdDateTime"]))
-                self.directory_alers[data["id"]] = True
+                new_offset = max(new_offset, data.created_date_time)
+                self.signin_cache[data.id] = True
+
             self.last_event_date_directory.offset = new_offset
             self.persist_cache("signin")
 
@@ -192,12 +198,6 @@ class AzureEntraIdGraphApiConnector(AsyncConnector):
 
                 if result == 0:
                     await asyncio.sleep(self.configuration.frequency)
-
-            except GraphAPIError as error:
-                # In case if we handle the server custom error we should raise critical message and then sleep.
-                # This will help to stop the connector in case if credentials are invalid or permissions denied.
-                self.log(message=str(error), level="critical")
-                await asyncio.sleep(self.configuration.frequency)
 
             except TimeoutError:
                 self.log(message="A timeout was raised by the client", level="warning")
