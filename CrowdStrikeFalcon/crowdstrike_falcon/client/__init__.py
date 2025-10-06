@@ -188,3 +188,19 @@ class CrowdstrikeFalconClient(ApiClient):
             params={"ids": verticle_ids, "scope": scope},
             **kwargs,
         )
+
+    def list_users_uuids(self, limit: int, sort: str, **kwargs) -> Generator[str, None, None]:
+        yield from self.request_endpoint(
+            "GET",
+            "/user-management/queries/users/v1",
+            params={"limit": limit, "sort": sort},
+            **kwargs,
+        )
+
+    def get_users_infos(self, ids: list[str], **kwargs) -> Generator[dict[str, Any], None, None]:
+        yield from self.request_endpoint(
+            "POST",
+            "/user-management/entities/users/GET/v1",
+            json={"ids": ids},
+            **kwargs,
+        )

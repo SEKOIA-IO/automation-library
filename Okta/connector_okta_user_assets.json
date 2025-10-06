@@ -1,0 +1,35 @@
+  {
+  "name": "Okta User",
+  "description": "Fetch Okta user assets",
+  "uuid": "b2e2e2c7-1a3e-4b7a-9c2d-8e4f3a6b7c9d",
+  "docker_parameters": "user_okta_asset_connector",
+  "type": "asset",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "minimum": 1,
+          "default": 1200
+      },
+      "sekoia_api_key": {
+          "description": "API key to use from sekoia.io",
+          "type": "string"
+      },
+      "batch_size": {
+        "type": "integer",
+        "description": "Batch size",
+        "minimum": 1,
+        "default": 100
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
+  }
+}
