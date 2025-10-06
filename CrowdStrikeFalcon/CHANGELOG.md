@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-30 - 1.24.1
+
+### Changed
+
+- Update user asset connector title
+
+## 2025-09-29 - 1.24.0
+
+### Added
+
+- Add for the first time the user asset connector
+
+## 2025-09-19 - 1.23.1
+
+### Fixed
+
+- Fix Verticles client
+
 ## 2025-09-04 - 1.23.0
 
 ### Changed

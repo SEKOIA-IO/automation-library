@@ -62,6 +62,7 @@ class AsyncReader(Protocol):
         return NotImplemented
 
 
+# mypy: ignore-errors
 async def async_gzip_open(
     file: BinaryIO,
     mode: str = "r",

@@ -1,6 +1,6 @@
 {
   "uuid": "03af92ec-7129-4e01-8ace-40c2d66095f5",
-  "name": "list_case_comments",
+  "name": "List comments of a case",
   "docker_parameters": "list_case_comments",
   "description": "List all comments of a case",
   "arguments": {

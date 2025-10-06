@@ -1,5 +1,5 @@
   {
-  "name": "Entra ID asset connector",
+  "name": "Entra ID",
   "description": "Fetch Entra ID user asset",
   "uuid": "b6e2e2e2-4c3a-4b7a-9e2a-1f2c3d4e5f6a",
   "docker_parameters": "entra_id_asset_connector",
@@ -16,14 +16,20 @@
           "type": "integer",
           "description": "Batch frequency in seconds",
           "minimum": 1,
-          "default": 60
+          "default": 1200
       },
       "sekoia_api_key": {
           "description": "API key to use from sekoia.io",
           "type": "string"
+      },
+      "batch_size": {
+          "type": "integer",
+          "description": "Batch size",
+          "minimum": 1,
+          "default": 100
       }
     },
-    "required": ["sekoia_api_key", "tenant_id", "client_id","client_secret"],
-    "secrets": ["sekoia_api_key", "client_secret"]
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
   }
 }
