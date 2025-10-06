@@ -18,6 +18,11 @@ class PushEventToIntake(Action):
         super().__init__(*args, **kwargs)
         self._executor = ThreadPoolExecutor(max_workers=5)
 
+    def __del__(self):
+        # Ensure the ThreadPoolExecutor is properly shut down
+        executor = getattr(self, "_executor", None)
+        if executor is not None:
+            executor.shutdown(wait=True)
     def _delete_file(self, arguments: dict):
         event_path = arguments.get("event_path") or arguments.get("events_path")
         if event_path:
