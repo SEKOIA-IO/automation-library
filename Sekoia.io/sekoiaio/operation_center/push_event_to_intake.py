@@ -6,7 +6,7 @@ import requests
 from requests import Response
 from sekoia_automation.action import Action
 from sekoia_automation.constants import CHUNK_BYTES_MAX_SIZE, EVENT_BYTES_MAX_SIZE
-from tenacity import Retrying, stop_after_delay, wait_exponential
+from tenacity import Retrying, stop_after_delay, wait_exponential, retry_if_exception
 
 from sekoiaio.utils import user_agent
 
@@ -20,9 +20,20 @@ class PushEventToIntake(Action):
                 filepath.unlink()
 
     def _retry(self):
+        retry_on_status = {429, 500, 502, 503, 504}
+
+        def retry_on_statuses(exception: Exception) -> bool:
+            if isinstance(exception, requests.exceptions.RequestException):
+                response = getattr(exception, "response", None)
+                # Retry on connection errors and 5xx responses
+                if response is None or response.status_code in retry_on_status:
+                    return True
+            return False
+
         return Retrying(
             stop=stop_after_delay(3600),  # 1 hour without being able to send events
             wait=wait_exponential(multiplier=1, min=1, max=10),
+            retry=retry_if_exception(retry_on_statuses),
             reraise=True,
         )
 
