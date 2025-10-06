@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-06 - 2.68.8
+
+### Changed
+
+- Add events chunking to `Push events to Intake` action
+
 ## 2025-10-06 - 2.68.7
 
 ### Added
