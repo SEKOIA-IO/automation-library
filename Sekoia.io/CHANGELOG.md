@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-06 - 2.68.9
+
+### Changed
+
+- Push chunks of events in parallel to Intake
+
+### Fixed
+
+- Only retry on certain status codes when pushing events to Intake
+
 ## 2025-10-06 - 2.68.8
 
 ### Changed
