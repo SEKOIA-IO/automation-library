@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-06 - 2.68.9
+
+### Changed
+
+- Deprecate old `Get Asset V2` action in favor of a new `Get Asset V2` action.
+
 ## 2025-10-06 - 2.68.8
 
 ### Changed
