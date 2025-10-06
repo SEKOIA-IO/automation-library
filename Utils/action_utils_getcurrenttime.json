@@ -7,6 +7,12 @@
     "title": "Arguments",
     "type": "object",
     "properties": {
+      "selectedNamedTimezone": {
+        "title": "Named timezone",
+        "description": "Named timezone (e.g. Europe/Paris)",
+        "type": "string",
+        "default": "Europe/Paris"
+      },
       "selectedTimezone": {
         "title": "Selectedtimezone",
         "enum": [
@@ -40,9 +46,7 @@
         "default": "UTC 0"
       }
     },
-    "required": [
-      "selectedTimezone"
-    ]
+    "required": []
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
