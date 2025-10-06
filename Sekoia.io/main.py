@@ -46,6 +46,7 @@ from sekoiaio.operation_center import (
     PredictStateOfAlert,
     RemoveEventFromCase,
     ReturnsAsset,
+    ReturnsAssetV2,
     TriggerActionOnAlertWorkflow,
     UpdateCase,
     UpdateRule,
@@ -108,6 +109,7 @@ if __name__ == "__main__":
     module.register(DeletesAssetV2, "delete-assets-v2/{uuid}")
     module.register(GetAsset, "get-asset-v2-legacy")
     module.register(ReturnsAsset, "get-assets/{uuid}")
+    module.register(ReturnsAssetV2, "get-assets-v2/{uuid}")
     module.register(UpdateRule, "put-rules/{uuid}")
     module.register(GetAggregationQuery, "get-aggregation-query")
     module.register(AddIOCtoIOCCollectionAction, "add_ioc_to_ioc_collection")
