@@ -10,15 +10,18 @@
     "properties": {
       "user": {
         "description": "The identifier or the principal name of the user",
-        "type": "string"
+        "type": "string",
+        "format": "email"
       },
       "sender": {
         "description": "The sender of the message. Usually the same as mailbox owner",
-        "type": "string"
+        "type": "string",
+        "format": "email"
       },
       "from": {
         "description": "The mailbox owner of the message (from header). Usually the same as sender",
-        "type": "string"
+        "type": "string",
+        "format": "email"
       },
       "subject": {
         "description": "The subject of the message",
@@ -27,6 +30,12 @@
       "content": {
         "description": "The content of the message",
         "type": "string"
+      },
+      "content_type": {
+        "description": "The type of the content",
+        "type": "string",
+        "default": "text",
+        "enum": ["text", "html"]
       },
       "save_to_sent_items": {
         "description": "Indicates whether to save the message in Sent Items",
@@ -37,21 +46,24 @@
         "description": "The list of recipients",
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "format": "email"
         }
       },
       "bcc": {
         "description": "The list of BCC recipients",
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "format": "email"
         }
       },
       "cc": {
         "description": "The list of CC recipients",
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "format": "email"
         }
       },
       "importance": {

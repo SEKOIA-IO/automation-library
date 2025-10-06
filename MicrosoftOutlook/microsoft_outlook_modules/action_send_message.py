@@ -15,6 +15,7 @@ class SendMessageAction(MicrosoftGraphActionBase):
         save_to_sent_items = arguments.get("save_to_sent_items", True)
 
         content = arguments.get("content")
+        content_type = arguments.get("content_type", "text")
         bcc: list[str] | None = arguments.get("bcc")
         cc: list[str] | None = arguments.get("cc")
         sender = arguments.get("sender")
@@ -25,7 +26,7 @@ class SendMessageAction(MicrosoftGraphActionBase):
 
         message: dict[str, Any] = {}
         if content:
-            message["body"] = {"content": content, "contentType": "text"}
+            message["body"] = {"content": content, "contentType": content_type}
         if recipients:
             message["toRecipients"] = [self.generate_recipient(r) for r in recipients]
         if cc:
