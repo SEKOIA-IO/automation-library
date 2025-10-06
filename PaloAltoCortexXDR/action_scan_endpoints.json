@@ -1,5 +1,5 @@
 {
-"arguments": {
+  "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "incident_id": {
@@ -58,23 +58,35 @@
       "filter_platform": {
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "enum": ["windows", "linux", "macos", "android"]
         },
-        "description": "List of platforms to select (Permitted values: windows, linux, macos, android)."
+        "description": "List of platforms to select"
       },
       "filter_isolate": {
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "enum": ["isolated", "unisolated"]
         },
-        "description": "List of isolation states to select (Permitted values: isolated, unisolated)"
+        "description": "List of isolation states to select"
       },
       "filter_scan_status": {
         "type": "array",
         "items": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "none",
+            "pending",
+            "in_progress",
+            "canceled",
+            "aborted",
+            "pending_cancellation",
+            "success",
+            "error"
+          ]
         },
-        "description": "List of scan statuses to select (Permitted values: none, pending, in_progress, canceled, aborted, pending_cancellation, success, or error)"
+        "description": "List of scan statuses to select"
       }
     },
     "required": [],
