@@ -3,7 +3,7 @@ import os
 import queue
 import time
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
 
 import pytest
 from dateutil.parser import isoparse
@@ -68,10 +68,42 @@ def test_query_api_wrong_creds(trigger, event_collector, requests_mock):
         json=api_response,
         status_code=401,
     )
-    assert event_collector.query_api() is None
+    with pytest.raises(Exception) as excinfo:
+        event_collector.query_api()
+
     assert (
-        f"Request to SkyhighSWG API to fetch {url} failed with status 401"
-        ' - "{\\"message\\": \\"Unauthorized\\",\\"status\\": 401}"' in trigger.log.call_args_list[2][1]["message"]
+        call(
+            message=f"Request to SkyhighSWG API to fetch {url} failed with status 401"
+            ' - "{\\"message\\": \\"Unauthorized\\",\\"status\\": 401}"',
+            level="critical",
+        )
+        in trigger.log.call_args_list
+    )
+
+
+def test_query_api_bad_request(trigger, event_collector, requests_mock):
+    api_response: str = '{"message": "Bad request","status": 400}'
+    event_collector.start_date = datetime.fromtimestamp(1661251791)
+    event_collector.end_date = datetime.fromtimestamp(1661287731)
+    url = (
+        "https://msg.mcafeesaas.com/mwg/api/reporting/forensic/1234567890"
+        "?filter.requestTimestampFrom=1661251791&filter.requestTimestampTo=1661287731"
+    )
+    requests_mock.get(
+        url,
+        json=api_response,
+        status_code=400,
+    )
+    with pytest.raises(Exception) as excinfo:
+        event_collector.query_api()
+
+    assert (
+        call(
+            message=f"Request to SkyhighSWG API to fetch {url} failed with status 400"
+            ' - "{\\"message\\": \\"Bad request\\",\\"status\\": 400}"',
+            level="error",
+        )
+        in trigger.log.call_args_list
     )
 
 
@@ -90,6 +122,46 @@ def test_query_api(event_collector, requests_mock):
     )
     response = event_collector.query_api()
     assert response == csv.decode("utf-8")
+
+
+def test_next_batch(event_collector, requests_mock):
+    url = (
+        "https://msg.mcafeesaas.com/mwg/api/reporting/forensic/1234567890"
+        "?filter.requestTimestampFrom=1661251791&filter.requestTimestampTo=1661287731"
+    )
+    csv = b'"user_id","username"\r\n"-1","foo"'
+    event_collector.start_date = datetime.fromtimestamp(1661251791, timezone.utc)
+    event_collector.end_date = datetime.fromtimestamp(1661287731, timezone.utc)
+
+    requests_mock.get(
+        url,
+        content=csv,
+    )
+    event_collector.next_batch()
+    assert event_collector.events_queue.qsize() == 1
+    assert event_collector.start_date.timestamp() == 1661287731
+    assert event_collector.end_date.timestamp() == 1661287791
+
+
+def test_next_batch_error_should_wait(event_collector, requests_mock):
+    url = (
+        "https://msg.mcafeesaas.com/mwg/api/reporting/forensic/1234567890"
+        "?filter.requestTimestampFrom=1661251791&filter.requestTimestampTo=1661287731"
+    )
+    csv = b'"user_id","username"\r\n"-1","foo"'
+    event_collector.start_date = datetime.fromtimestamp(1661251791, timezone.utc)
+    event_collector.end_date = datetime.fromtimestamp(1661287731, timezone.utc)
+
+    requests_mock.get(
+        url,
+        status_code=500,
+    )
+    with patch("gateway_cloud_services.trigger_skyhigh_security_swg.sleep", return_value=None) as mock_sleep:
+        event_collector.next_batch()
+        assert event_collector.events_queue.qsize() == 0
+        assert event_collector.start_date.timestamp() == 1661251791
+        assert event_collector.end_date.timestamp() == 1661287731
+        assert mock_sleep.call_count == 1
 
 
 def test_tranformer_with_event(trigger, events_queue):
