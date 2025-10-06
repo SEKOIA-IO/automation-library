@@ -8,6 +8,7 @@ from microsoft_outlook_modules.action_base import MicrosoftGraphActionBase
 from microsoft_outlook_modules.action_delete_message import DeleteMessageAction
 from microsoft_outlook_modules.action_forward_message import ForwardMessageAction
 from microsoft_outlook_modules.action_get_message import GetMessageAction
+from microsoft_outlook_modules.action_send_message import SendMessageAction
 from microsoft_outlook_modules.action_update_message import UpdateMessageAction
 
 
@@ -176,3 +177,30 @@ def test_update_message(message_2):
 
         action = configured_action(UpdateMessageAction)
         action.run(arguments={"user": "1111", "message_id": "2222", "subject": "Changed Subject"})
+
+
+def test_send_message(message_2):
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "GET",
+            "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri("POST", "https://graph.microsoft.com/v1.0/users/1111/sendMail", status_code=202)
+
+        action = configured_action(SendMessageAction)
+        action.run(
+            arguments={
+                "user": "1111",
+                "subject": "Subject",
+                "content": "Hello there",
+                "sender": "john.doe@example.com",
+                "from": "john.doe@example.com",
+                "recipients": ["jane.doe@example.com"],
+            }
+        )
