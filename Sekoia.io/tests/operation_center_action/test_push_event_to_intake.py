@@ -5,6 +5,7 @@ from shutil import rmtree
 from tempfile import mkdtemp
 
 import pytest
+import requests
 import requests_mock
 
 from sekoiaio.operation_center.push_event_to_intake import PushEventToIntake
@@ -126,3 +127,27 @@ def test_push_events_to_intake_from_file_should_keep_file_after_push(symphony_st
         )
         assert len(results["event_ids"]) == 2
         assert file_path.exists()
+
+
+def test_push_event_to_intake_with_retries():
+    action = PushEventToIntake()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    with requests_mock.Mocker() as mock:
+        mock.post(
+            "https://intake.sekoia.fake/batch",
+            [
+                {"exc": requests.exceptions.ConnectTimeout},
+                {"status_code": 500},
+                {"json": {"event_ids": ["001"]}},
+            ],
+        )
+
+        results: dict = action.run(
+            {
+                "intake_server": "https://intake.sekoia.fake",
+                "intake_key": "my_intake_key",
+                "event": "my fake event",
+            }
+        )
+        assert len(results["event_ids"]) == 1
