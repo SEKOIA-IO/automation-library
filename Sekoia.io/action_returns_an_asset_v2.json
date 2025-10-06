@@ -16,7 +16,7 @@
       "with_telemetry": {
         "type": "boolean",
         "in": "query",
-        "description": "Flag to return telemetry information (first_seen, last_seen, occurences) of the asset"
+        "description": "Flag to return telemetry information (first_seen, last_seen, occurrences) of the asset"
       },
       "with_compliance": {
         "type": "boolean",
