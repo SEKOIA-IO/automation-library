@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Update user asset connector title
+- Update device asset connector title
+- Deactivate user asset connector temporary
 
 ## 2025-09-30 - 1.24.1
 
