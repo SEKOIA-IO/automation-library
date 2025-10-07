@@ -23,6 +23,7 @@ class PushEventToIntake(Action):
         executor = getattr(self, "_executor", None)
         if executor is not None:
             executor.shutdown(wait=True)
+
     def _delete_file(self, arguments: dict):
         event_path = arguments.get("event_path") or arguments.get("events_path")
         if event_path:
