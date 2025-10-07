@@ -3,7 +3,7 @@
     "title": "CrowdStrike",
     "type": "object",
     "properties": {
-      "aws_access_key_id": {
+      "aws_access_key": {
         "description": "The identifier of the access key",
         "type": "string"
       },
@@ -11,15 +11,15 @@
         "description": "The secret associated to the access key",
         "type": "string"
       },
-      "aws_region": {
+      "aws_region_name": {
         "description": "The area hosting the AWS resources",
         "type": "string"
       }
     },
     "required": [
-      "aws_access_key_id",
+      "aws_access_key",
       "aws_secret_access_key",
-      "aws_region"
+      "aws_region_name"
     ],
     "secrets": [
       "aws_secret_access_key"
