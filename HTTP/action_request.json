@@ -33,14 +33,14 @@
       },
       "params": {
         "description": "Query string parameters to append to the URL",
-	"anyOf": [
-	  {
-	    "type": "object"
-	  },
-	  {
-	    "type": "string"
-	  }
-	]
+        "anyOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "string"
+          }
+        ]
       },
       "fail_on_http_error": {
         "description": "Fail when the HTTP query returns in error. Default to true.",
