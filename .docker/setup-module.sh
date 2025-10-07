@@ -310,7 +310,20 @@ try:
     with open(manifest_file, 'r') as f:
         manifest = json.load(f)
 
+    # Validate manifest structure
+    if not isinstance(manifest, dict):
+        print('{}', file=sys.stderr)
+        print(f"Warning: manifest.json is not a valid JSON object", file=sys.stderr)
+        sys.exit(0)
+
     configuration = manifest.get('configuration', {})
+
+    # Validate configuration structure
+    if configuration and not isinstance(configuration, dict):
+        print('{}', file=sys.stderr)
+        print(f"Warning: 'configuration' in manifest.json is not a valid object", file=sys.stderr)
+        sys.exit(0)
+
     properties = configuration.get('properties', {})
     required = configuration.get('required', [])
     secrets = configuration.get('secrets', [])
@@ -458,11 +471,16 @@ PYTHON_EOF
 print_info "Detecting available actions..."
 cd "$MODULE_PATH"
 
-if ! ls action_*.json 1> /dev/null 2>&1; then
+# Enable nullglob to handle case where no action files exist
+shopt -s nullglob
+action_files=(action_*.json)
+shopt -u nullglob
+
+if [ ${#action_files[@]} -eq 0 ]; then
     print_warning "No actions detected (action_*.json files)"
 else
     print_success "Actions detected:"
-    for action_file in action_*.json; do
+    for action_file in "${action_files[@]}"; do
         if [ -f "$action_file" ]; then
             # Extract docker_parameters from JSON (actual command name)
             docker_cmd=$(grep -o '"docker_parameters"[[:space:]]*:[[:space:]]*"[^"]*"' "$action_file" | head -1 | sed 's/.*: *"\(.*\)".*/\1/')

@@ -81,6 +81,12 @@ case "$COMMAND" in
         fi
         echo -e "${BLUE}🔨 Building Docker image for $MODULE${NC}"
         cd "$MODULE_PATH" && make build
+        BUILD_STATUS=$?
+        if [ $BUILD_STATUS -ne 0 ]; then
+            echo -e "${RED}❌ Error: Build failed for $MODULE${NC}"
+            exit $BUILD_STATUS
+        fi
+        echo -e "${GREEN}✅ Build succeeded for $MODULE${NC}"
         ;;
 
     run)
