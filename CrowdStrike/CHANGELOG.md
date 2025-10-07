@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Fix OOM when work with amount of data
+- Fix OOM when working with large amounts of data
 
 ## 1.11.0 - 2024-10-30
 
