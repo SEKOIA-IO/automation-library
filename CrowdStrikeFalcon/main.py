@@ -9,6 +9,7 @@ from crowdstrike_falcon.custom_iocs import (
 )
 from crowdstrike_falcon.event_stream_trigger import EventStreamTrigger
 from crowdstrike_falcon.host_actions import CrowdstrikeActionDeIsolateHosts, CrowdstrikeActionIsolateHosts
+
 # from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
 from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
 
