@@ -1,6 +1,6 @@
 import requests
 from requests_ratelimiter import LimiterAdapter
-from urllib3 import Retry
+from urllib3.util import Retry
 from requests.auth import HTTPBasicAuth
 
 
