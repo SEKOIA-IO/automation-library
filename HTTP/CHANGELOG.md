@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-07 - 1.119.6
+
+### Fixed
+
+- Convert dictionary representation provided in the params argument into actual dict
+
 ## 2025-10-03 - 1.119.5
 
 ### Changed
