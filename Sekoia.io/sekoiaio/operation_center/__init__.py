@@ -492,6 +492,16 @@ ReturnsAsset = type(
     },
 )
 
+ReturnsAssetV2 = type(
+    "ReturnsAssetV2",
+    (GenericAPIAction,),
+    {
+        "verb": "get",
+        "endpoint": assets_v2_base_url + "assets/{uuid}",
+        "query_parameters": ["with_telemetry", "with_compliance"],
+    },
+)
+
 ListsAttributesOfAssets = type(
     "ListsAttributesOfAssets",
     (GenericAPIAction,),
