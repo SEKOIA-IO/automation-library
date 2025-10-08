@@ -14,13 +14,12 @@ class ApiClient(requests.Session):
     ):
         super().__init__()
         self.auth = HTTPBasicAuth(account_name, account_password)
-        self.mount(
-            "https://",
-            LimiterAdapter(
-                per_second=ratelimit_per_second,
-                max_retries=Retry(
-                    total=nb_retries,
-                    backoff_factor=1,
-                ),
+        adapter = LimiterAdapter(
+            per_second=ratelimit_per_second,
+            max_retries=Retry(
+                total=nb_retries,
+                backoff_factor=1,
             ),
         )
+        self.mount("https://", adapter)
+        self.mount("http://", adapter)
