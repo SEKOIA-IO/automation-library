@@ -7,8 +7,8 @@ Simple TheHive Alert Connector
 """
 
 import logging
-from typing import Optional, Dict, List
-
+from typing import Optional, Dict, List, Any
+import json
 from thehive4py import TheHiveApi
 from thehive4py.errors import TheHiveError
 from thehive4py.types.comment import InputComment, InputUpdateComment, OutputComment
@@ -32,6 +32,129 @@ logging.basicConfig(
 )
 logger = logging.getLogger("hive.alert.connector")
 
+# ---------- CONFIG ----------
+
+# List of Sekoia fields to attempt to extract (order doesn't matter)
+SEKOIA_FIELDS = [
+    "url.domain",
+    "user.domain",
+    "group.domain",
+    "host.domain",
+    "destination.domain",
+    "destination.user.domain",
+    "destination.user.group.domain",
+    "client.domain",
+    "client.user.domain",
+    "client.user.group.domain",
+    "source.domain",
+    "source.user.domain",
+    "source.user.group.domain",
+    "file.name",
+    "dll.hash.md5",
+    "dll.hash.sha1",
+    "dll.hash.sha256",
+    "email.attachments.file.hash.md5",
+    "email.attachments.file.hash.sha1",
+    "email.attachments.file.hash.sha256",
+    "file.hash.md5",
+    "file.hash.sha1",
+    "file.hash.sha256",
+    "process.hash.md5",
+    "process.hash.sha1",
+    "process.hash.sha256",
+    "process.parent.hash.md5",
+    "process.parent.hash.sha1",
+    "process.parent.hash.sha256",
+    "host.hostname",
+    "host.name",
+    "source.ip",
+    "destination.ip",
+    "destination.nat.ip",
+    "host.ip",
+    "client.ip",
+    "client.nat.ip",
+    "email.sender.address",
+    "email.to.address",
+    "email.from.address",
+    "email.to",
+    "email.from",
+    "client.user.email",
+    "destination.user.email",
+    "server.user.email",
+    "source.user.email",
+    "user.changes.email",
+    "user.effective.email",
+    "url.path",
+    "url.full",
+    "url.original",
+    "user_agent.original",
+    # suggestions:
+    "file.path",
+    "user.name",
+]
+
+# Mapping CSV provided -> dict
+SEKOIA_TO_THEHIVE = {
+    "url.domain": "domain",
+    "user.domain": "domain",
+    "group.domain": "domain",
+    "host.domain": "domain",
+    "destination.domain": "domain",
+    "destination.user.domain": "domain",
+    "destination.user.group.domain": "domain",
+    "client.domain": "domain",
+    "client.user.domain": "domain",
+    "client.user.group.domain": "domain",
+    "source.domain": "domain",
+    "source.user.domain": "domain",
+    "source.user.group.domain": "domain",
+    "file.name": "filename",
+    "dll.hash.md5": "hash",
+    "dll.hash.sha1": "hash",
+    "dll.hash.sha256": "hash",
+    "email.attachments.file.hash.md5": "hash",
+    "email.attachments.file.hash.sha1": "hash",
+    "email.attachments.file.hash.sha256": "hash",
+    "file.hash.md5": "hash",
+    "file.hash.sha1": "hash",
+    "file.hash.sha256": "hash",
+    "process.hash.md5": "hash",
+    "process.hash.sha1": "hash",
+    "process.hash.sha256": "hash",
+    "process.parent.hash.md5": "hash",
+    "process.parent.hash.sha1": "hash",
+    "process.parent.hash.sha256": "hash",
+    "url.path": "uri_path",
+    "url.full": "url",
+    "url.original": "url",
+    "user_agent.original": "user-agent",
+    "host.hostname": "hostname",
+    "host.name": "hostname",
+    "source.ip": "ip",
+    "destination.ip": "ip",
+    "destination.nat.ip": "ip",
+    "host.ip": "ip",
+    "client.ip": "ip",
+    "client.nat.ip": "ip",
+    "email.sender.address": "mail",
+    "email.to.address": "mail",
+    "email.from.address": "mail",
+    "email.to": "mail",
+    "email.from": "mail",
+    "client.user.email": "mail",
+    "destination.user.email": "mail",
+    "server.user.email": "mail",
+    "source.user.email": "mail",
+    "user.changes.email": "mail",
+    "user.effective.email": "mail",
+}
+
+def key_exists(mapping: dict, key_to_check: str) -> bool:
+    # ensure type safety with isinstance
+    if not isinstance(key_to_check, str):
+        raise TypeError("key_to_check must be a string")
+
+    return key_to_check in mapping
 
 class TheHiveConnector:
     """
@@ -59,6 +182,29 @@ class TheHiveConnector:
 
     # ---------------------- Alert actions ----------------------
 
+    def sekoia_to_thehive(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+                out: List[Dict[str, Any]] = []
+                observables: List[Dict[str, Any]] = []
+                #observables = [
+                #    {"dataType": "ip", "data": "192.168.1.100"},
+                #    {"dataType": "domain", "data": "phishing-site.com"},
+                #    {"dataType": "url", "data": "http://malicious.example/path"}
+                #]
+                for idx, ev in enumerate(data):
+                    #print("idx", idx)
+                    if not isinstance(ev, dict):
+                        logging.warning("Skipping non-dict event at index %d", idx)
+                        continue
+                    for k, v in ev.items():
+                        if key_exists(SEKOIA_FIELDS, k):
+                            #print(k, "exists in SEKOIA_FIELDS, with value:", v)
+                            thehive_field=SEKOIA_TO_THEHIVE.get(k, "<unknown>")
+                            #print("-> Associated TheHive field is", thehive_field)
+                            out.append({thehive_field: v})
+                            observables.append({"dataType": thehive_field, "data": v})
+
+                return observables
+    
     def alert_find(self, filters=None, sortby=None, paginate=None):
         return self._safe_call(self.api.alert.find, filters=filters, sortby=sortby, paginate=paginate)
     

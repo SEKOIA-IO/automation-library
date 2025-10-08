@@ -11,13 +11,14 @@
         "default": "~4231176",
         "type": "string"
       },
-      "observables": {
-        "description": "The observables to be added to the alert",
+      "events": {
+        "description": "The JSON Sekoia event from which to extract the observables to be added to the alert",
         "type": "object"
       }
     },
     "required": [
-      "alert_id"
+      "alert_id",
+      "events"
     ],
     "title": "Arguments",
     "type": "object"
