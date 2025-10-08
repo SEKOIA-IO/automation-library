@@ -2,10 +2,10 @@ import csv
 import os
 import queue
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from threading import Thread, Lock
 from time import sleep
 
-import requests
 from dateutil.parser import isoparse
 from requests import Response
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -13,6 +13,7 @@ from sekoia_automation.connector.workers import Worker, Workers
 from sekoia_automation.storage import PersistentJSON
 
 from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
+from gateway_cloud_services.client import ApiClient
 
 
 class SkyhighSWGConfig(DefaultConnectorConfiguration):
@@ -44,6 +45,14 @@ class EventCollector(Thread):
 
     def log_exception(self, *args, **kwargs):
         self.connector.log_exception(*args, **kwargs)
+
+    @cached_property
+    def client(self):
+        return ApiClient(
+            account_name=self.configuration.account_name,
+            account_password=self.configuration.account_password,
+            nb_retries=10,
+        )
 
     def save_most_recent_date_seen(self, dt: datetime) -> None:
         self.connector.context_lock.acquire()
@@ -118,9 +127,8 @@ class EventCollector(Thread):
             "filter.requestTimestampFrom": int(self.start_date.timestamp()),
             "filter.requestTimestampTo": int(self.end_date.timestamp()),
         }
-        auth = requests.auth.HTTPBasicAuth(self.configuration.account_name, self.configuration.account_password)
         request_start_time = datetime.now(timezone.utc)
-        response: Response = requests.get(url=self.url, headers=self.headers, auth=auth, params=params, timeout=30)
+        response: Response = self.client.get(url=self.url, headers=self.headers, params=params, timeout=30)
 
         time_elapsed = datetime.now(timezone.utc) - request_start_time
         self.log(
