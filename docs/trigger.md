@@ -2,7 +2,7 @@
 
 A trigger monitors events and launches a playbook when a new event is detected (see [definition](https://docs.sekoia.io/xdr/features/automate/triggers/)).
 
-- A manifest file in the root directory of the module. The manifest of an action is prefixed with the string `trigger_`.
+- A manifest file in the root directory of the module. The manifest of an connector is prefixed with the string `trigger_`.
   This document contains:
   	- The unique identifier of the trigger (field `uuid`)
 	- The name of the trigger (field `name`)
@@ -18,16 +18,6 @@ A trigger monitors events and launches a playbook when a new event is detected (
 A trigger is a class based on [`Trigger`](https://github.com/SEKOIA-IO/sekoia-automation-sdk/blob/main/sekoia_automation/trigger.py) from [sekoia-automation-sdk](https://github.com/SEKOIA-IO/sekoia-automation-sdk/).
 
 It must implement the method `run` and call the method `send_event` to launch a new playbook run.
-
-## Connector
-
-A Connector is a specialized trigger that collect raw event logs and forward them to Sekoia.io.
-
-A Connector is a class based on [`Connector`](https://github.com/SEKOIA-IO/sekoia-automation-sdk/blob/main/sekoia_automation/connector.py) from [sekoia-automation-sdk](https://github.com/SEKOIA-IO/sekoia-automation-sdk/).
-
-It must implement the method `run` and call the method `publish_events_to_intake` to forward events.
-
-(See [OKTA system log connector](../Okta/okta_modules/system_log_trigger.py))
 
 ## Entrypoint
 
