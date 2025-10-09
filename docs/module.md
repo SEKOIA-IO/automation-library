@@ -1,52 +1,116 @@
 # Module
 
-A [module](glossary.md#Module) groups a set of [triggers](trigger.md) and [actions](action.md) sharing a same interest. Most of the time, a module is associated to a product vendor.
+## Overview
 
-A module contains the following items:
+A module is a logical grouping of related triggers, actions, and connectors. Modules typically correspond to a specific product vendor or service (e.g., Azure Active Directory, Okta, AWS).
 
-- a manifest `manifest.json` holding all the metadata about the module
-- a logo `logo.png` to illustrate the module. Most of the time, this logo is the logo of the product vendor.
-- a changelog `CHANGELOG.md` that describes the changes made to the module
+## Module Structure
 
-The module may also contain:
+### Required Files
 
-- a `pyproject.toml` file that describes the dependencies for the triggers, the connectors and the actions of the module.
-- a `<module_name>_module` subdirectory holding the python code for triggers, connectors and actions.
-- a list of json files that contains metadata about the triggers, the connectors and actions of the module. These files are named `trigger_<trigger_name>.json`, `connectors_<connector_name>.json` or `action_<action_name>.json`
-- an entrypoint `main.py`
+Every module MUST contain:
 
-## The Manifest
+1. **`manifest.json`** - Module metadata and configuration schema
+2. **`logo.png`** - Visual identifier for the module (typically vendor logo)
+3. **`CHANGELOG.md`** - Version history and change documentation
 
-The manifest holds the information about the module. It defines:
+### Optional Files
 
-- The unique identifier of the module (field `uuid`)
-- The name of the module (field `name`)
-- A slug for the module (field `slug`). The value of this field should match the following regex `[a-z-]\+`)
-- A little description of the module (field `description`)
-- The version number of the module (field `version`). This field should be updated each time a change is made in the module. This field follows the [Semantic versioning](https://semver.org/).
-- A description of the configuration of the module with a [JSON schema model](https://json-schema.org/)
+A module MAY contain:
 
+4. **`pyproject.toml`** - Python dependencies specification
+5. **`main.py`** - Module entrypoint that registers actions, triggers, and connectors
+6. **`<module_name>_module/`** - Directory containing Python implementation code
+7. **Component manifest files**:
+   - `action_<name>.json` - Action metadata
+   - `trigger_<name>.json` - Trigger metadata  
+   - `connector_<name>.json` - Connector metadata
 
-## The pyproject file
+## Manifest Specification
 
-A module always hosts a pyproject.toml file. This file describes the dependencies for the triggers and actions of the modules.
+The `manifest.json` file defines module metadata using the following schema:
 
+### Required Fields
 
-## The actions, connectors and triggers
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `uuid` | string (UUID) | Unique identifier for the module | `"d82f8e7c-..."` |
+| `name` | string | Human-readable module name | `"Azure Active Directory"` |
+| `slug` | string | URL-safe identifier (regex: `[a-z-]+`) | `"azure-ad"` |
+| `description` | string | Brief module description | `"Manage Azure AD users and groups"` |
+| `version` | string | Semantic version number | `"1.2.3"` |
+| `configuration` | object | JSON Schema for module configuration | See below |
 
-Actions, connectors and triggers are splitted in two parts:
+### Configuration Schema
 
-- a code hosted in the subdirectory `<module_name>_module`
-- a json file that describes the action, the connector or the trigger.
+The `configuration` field is a JSON Schema object that defines the module-level configuration parameters (e.g., API keys, base URLs, account credentials).
 
-See [action.md](action.md), [connector.md](connector.md) and [trigger.md](trigger.md) for more information.
+### Versioning
 
-## The entrypoint
+**IMPORTANT**: The `version` field MUST follow [Semantic Versioning](https://semver.org/):
+- **MAJOR** version for incompatible API changes
+- **MINOR** version for backward-compatible functionality additions
+- **PATCH** version for backward-compatible bug fixes
 
-The entrypoint of the module is the file `main.py`. This file declares the actions and the triggers to use for the module and associate the actions and the triggers with the description file
+The version MUST be incremented with every change to the module.
 
-## Python code
+## Python Implementation
 
-A module must be represented as a Python class, based on ['Module'](https://github.com/SEKOIA-IO/sekoia-automation-sdk/blob/main/sekoia_automation/module.py) from [sekoia-automation-sdk](https://github.com/SEKOIA-IO/sekoia-automation-sdk/), with its configuration as a [pydantic model](https://docs.pydantic.dev/).
+### Module Class
 
-See [Azure Active Directory module code](https://github.com/SEKOIA-IO/automation-library/tree/main/Azure)
+A module MUST be implemented as a Python class that:
+- Inherits from [`Module`](https://github.com/SEKOIA-IO/sekoia-automation-sdk/blob/main/sekoia_automation/module.py) from the `sekoia-automation-sdk`
+- Defines its configuration as a [Pydantic model](https://docs.pydantic.dev/)
+
+**Example**:
+```python
+from sekoia_automation import Module
+from pydantic import BaseModel
+
+class AzureADConfiguration(BaseModel):
+    tenant_id: str
+    client_id: str
+    client_secret: str
+
+class AzureADModule(Module):
+    configuration: AzureADConfiguration
+```
+
+### Entrypoint (`main.py`)
+
+The `main.py` file:
+- Instantiates the module class
+- Registers actions, triggers, and connectors with their corresponding manifest files
+- Associates each component with its unique command name (`docker_parameter`)
+
+**Example**:
+```python
+from azure_ad_module import AzureADModule
+from azure_ad_module.actions import EnableUserAction
+from azure_ad_module.triggers import UserEventTrigger
+
+if __name__ == "__main__":
+    module = AzureADModule()
+    module.register(EnableUserAction, "enable_user")
+    module.register(UserEventTrigger, "user_events")
+    module.run()
+```
+
+## Component Organization
+
+Actions, connectors, and triggers each consist of:
+1. **Python implementation** - Located in `<module_name>_module/` directory
+2. **JSON manifest** - Located in module root directory
+
+See component-specific documentation:
+- [Action Documentation](action.md)
+- [Trigger Documentation](trigger.md)
+- [Connector Documentation](connector.md)
+
+## Dependencies
+
+The `pyproject.toml` file specifies Python dependencies using Poetry format. This file defines all packages required by the module's actions, triggers, and connectors.
+
+## Example Module
+
+Reference implementation: [Azure Active Directory module](https://github.com/SEKOIA-IO/automation-library/tree/main/Azure)
