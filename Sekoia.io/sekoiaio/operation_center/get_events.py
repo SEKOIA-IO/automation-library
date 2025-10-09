@@ -1,5 +1,6 @@
 from typing import Any
 
+import requests
 from .base_get_event import BaseGetEvents
 
 
@@ -27,7 +28,14 @@ class GetEvents(BaseGetEvents):
                 params={"limit": limit, "offset": offset},
                 timeout=20,
             )
-            response_events.raise_for_status()
+            try:
+                response_events.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                self.log(
+                    f"HTTP error when retrieving events for job {event_search_job_uuid}: {e}. Response status: {response_events.status_code}, Response text: {response_events.text}",
+                    level="error",
+                )
+                raise
 
             response_content = response_events.json()
             if not response_content["items"]:
