@@ -17,6 +17,8 @@ async-lru = "^2.0.4"
 aiofiles = "^23.2.1"
 loguru = "^0.7.2"
 uamqp = "^1.6.6"
+cachetools = "^6.2.0"
+msgraph-sdk = "^1.45.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "<8"
@@ -82,7 +84,7 @@ addopts = '''
   --tb=short
   --cov=connectors
   --cov=azure_helpers
-  --cov=helpers
+  --cov=graph_api
   --cov-branch
   --cache-clear
   --cov-report=html

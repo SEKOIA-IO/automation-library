@@ -1,9 +1,10 @@
 {
-  "name": "Get Crowdstrike Falcon users",
-  "description": "Fetch Crowdstrike Falcon user assets",
-  "uuid": "27117d09-4e1d-4667-9735-ac35024a79f9",
-  "docker_parameters": "crowdstrike_falcon_user_asset_connector",
+  "name": "Crowdstrike Falcon devices",
+  "description": "Fetch Crowdstrike Falcon device assets",
+  "uuid": "adcd0095-0f3d-4699-8621-158977b6c2c3",
+  "docker_parameters": "crowdstrike_falcon_device_asset_connector",
   "type": "asset",
+  "capability": "device",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",

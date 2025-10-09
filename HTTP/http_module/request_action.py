@@ -3,6 +3,8 @@ from sekoia_automation.action import Action
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 from requests.exceptions import JSONDecodeError
 
+from http_module.helpers import params_as_dict
+
 
 class RequestAction(Action):
     """
@@ -20,7 +22,7 @@ class RequestAction(Action):
         method = arguments.get("method")
         data = arguments.get("data")
         json = arguments.get("json")
-        params = arguments.get("params")
+        params = params_as_dict(arguments.get("params"))
         url = arguments.get("url")
         headers = arguments.get("headers")
         verify = arguments.get("verify_ssl", True)
