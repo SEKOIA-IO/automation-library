@@ -4,10 +4,15 @@ A [module](glossary.md#Module) groups a set of [triggers](trigger.md) and [actio
 
 A module contains the following items:
 
-- a manifest `manifest.json`
-- a pyproject file
-- a `<module_name>_module` subdirectory holding the python code for triggers and actions.
-- a list of json file
+- a manifest `manifest.json` holding all the metadata about the module
+- a logo `logo.png` to illustrate the module. Most of the time, this logo is the logo of the product vendor.
+- a changelog `CHANGELOG.md` that describes the changes made to the module
+
+The module may also contain:
+
+- a `pyproject.toml` file that describes the dependencies for the triggers, the connectors and the actions of the module.
+- a `<module_name>_module` subdirectory holding the python code for triggers, connectors and actions.
+- a list of json files that contains metadata about the triggers, the connectors and actions of the module. These files are named `trigger_<trigger_name>.json`, `connectors_<connector_name>.json` or `action_<action_name>.json`
 - an entrypoint `main.py`
 
 ## The Manifest
@@ -24,17 +29,17 @@ The manifest holds the information about the module. It defines:
 
 ## The pyproject file
 
-A module always hosts a pyproject file. This file describes the dependencies for the triggers and actions of the modules.
+A module always hosts a pyproject.toml file. This file describes the dependencies for the triggers and actions of the modules.
 
 
-## The actions and triggers
+## The actions, connectors and triggers
 
-Actions and triggers are splitted in two parts:
+Actions, connectors and triggers are splitted in two parts:
 
 - a code hosted in the subdirectory `<module_name>_module`
-- a json file that describes the action or the trigger.
+- a json file that describes the action, the connector or the trigger.
 
-See [action.md](action.md) and [trigger.md](trigger.md) for more information.
+See [action.md](action.md), [connector.md](connector.md) and [trigger.md](trigger.md) for more information.
 
 ## The entrypoint
 
