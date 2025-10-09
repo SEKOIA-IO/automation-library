@@ -1,4 +1,6 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import wait as wait_futures
 from posixpath import join as urljoin
 from typing import Any, Generator, Sequence
 
@@ -6,12 +8,22 @@ import requests
 from requests import Response
 from sekoia_automation.action import Action
 from sekoia_automation.constants import CHUNK_BYTES_MAX_SIZE, EVENT_BYTES_MAX_SIZE
-from tenacity import Retrying, stop_after_delay, wait_exponential
+from tenacity import Retrying, stop_after_delay, wait_exponential, retry_if_exception
 
 from sekoiaio.utils import user_agent
 
 
 class PushEventToIntake(Action):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._executor = ThreadPoolExecutor(max_workers=5)
+
+    def __del__(self):
+        # Ensure the ThreadPoolExecutor is properly shut down
+        executor = getattr(self, "_executor", None)
+        if executor is not None:
+            executor.shutdown(wait=True)
+
     def _delete_file(self, arguments: dict):
         event_path = arguments.get("event_path") or arguments.get("events_path")
         if event_path:
@@ -20,9 +32,20 @@ class PushEventToIntake(Action):
                 filepath.unlink()
 
     def _retry(self):
+        retry_on_status = {429, 500, 502, 503, 504}
+
+        def retry_on_statuses(exception: Exception) -> bool:
+            if isinstance(exception, requests.exceptions.RequestException):
+                response = getattr(exception, "response", None)
+                # Retry on connection errors and 5xx responses
+                if response is None or response.status_code in retry_on_status:
+                    return True
+            return False
+
         return Retrying(
             stop=stop_after_delay(3600),  # 1 hour without being able to send events
             wait=wait_exponential(multiplier=1, min=1, max=10),
+            retry=retry_if_exception(retry_on_statuses),
             reraise=True,
         )
 
@@ -124,8 +147,12 @@ class PushEventToIntake(Action):
         collect_ids: dict[int, list] = {}
 
         chunks = self._chunk_events(events)
-        for chunk_index, chunk in enumerate(chunks):
-            self._send_chunk(intake_key, batch_api, chunk_index, chunk, collect_ids)
+        # Forward chunks in parallel
+        futures = [
+            self._executor.submit(self._send_chunk, intake_key, batch_api, chunk_index, chunk, collect_ids)
+            for chunk_index, chunk in enumerate(chunks)
+        ]
+        wait_futures(futures)
 
         event_ids = [event_id for chunk_index in sorted(collect_ids.keys()) for event_id in collect_ids[chunk_index]]
 
