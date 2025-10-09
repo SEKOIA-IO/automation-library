@@ -11,13 +11,14 @@
         "default": "~4231176",
         "type": "string"
       },
-      "file": {
+      "filepath": {
         "description": "The file to be added to the alert as attachment",
-        "type": "object"
+        "type": "string"
       }
     },
     "required": [
-      "alert_id"
+      "alert_id",
+      "filepath"
     ],
     "title": "Arguments",
     "type": "object"

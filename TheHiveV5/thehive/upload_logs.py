@@ -26,11 +26,11 @@ class TheHiveUploadLogsV5(Action):
         )
 
         arg_alert_id = arguments["alert_id"]
-        arg_file = arguments["file"]
+        arg_filepath = arguments["filepath"]
 
         try:
-            result = api.alert_add_attachment(arg_alert_id, [arg_file])
-            #print("Attachment uploaded:", result)
+            result = api.alert_add_attachment(arg_alert_id, [arg_filepath])
+            print("Attachment uploaded:", result)
             return result
         except Exception as e:
             print("Error:", e)

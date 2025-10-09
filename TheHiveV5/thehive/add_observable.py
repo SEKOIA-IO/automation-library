@@ -23,27 +23,12 @@ class TheHiveCreateObservableV5(Action):
         #arg_observables = arguments["observables"]
         #Input arguments are NOT observables but a list of dicts with sekoia fields
         arg_events = arguments["events"]
-        arg_tlp = arguments["tlp"]
-        arg_pap = arguments["pap"]
-        arg_ioc = arguments["areioc"]
+        arg_tlp = arguments.get("tlp", "AMBER")
+        arg_pap = arguments.get("pap", "AMBER")
+        arg_ioc = arguments.get("areioc", True)
 
         try:
             data = json.loads(arg_events)
-            """
-            "tlp": {
-                "type": "integer"
-            },
-            "tlpLabel": {
-                "type": "string"
-            },
-            "pap": {
-                "type": "integer"
-            },
-            ...
-            "ioc": {
-                "type": "boolean"
-            },
-            """
             observables = TheHiveConnector.sekoia_to_thehive(data)
             deduplicated = []
             for o in observables:
