@@ -13,10 +13,12 @@ import aiofiles
 import orjson
 import pytest
 from aiofiles.threadpool.binary import AsyncBufferedReader
-from connectors.s3 import AwsS3QueuedConfiguration
 
 from crowdstrike_telemetry import CrowdStrikeTelemetryModule
-from crowdstrike_telemetry.pull_telemetry_events import CrowdStrikeTelemetryConnector
+from crowdstrike_telemetry.pull_telemetry_events import (
+    CrowdStrikeTelemetryConnector,
+    CrowdStrikeTelemetryConnectorConfig,
+)
 
 
 async def async_bytesIO(
@@ -79,7 +81,7 @@ def connector(session_faker, symphony_storage, mock_push_data_to_intakes) -> Cro
         data_path=symphony_storage,
     )
 
-    connector.configuration = AwsS3QueuedConfiguration(
+    connector.configuration = CrowdStrikeTelemetryConnectorConfig(
         intake_server=session_faker.url(),
         queue_name=session_faker.word(),
         intake_key=session_faker.word(),
