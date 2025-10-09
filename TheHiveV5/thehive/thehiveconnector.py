@@ -8,22 +8,15 @@ Simple TheHive Alert Connector
 
 import logging
 from typing import Optional, Dict, List, Any
-import json
+
 from thehive4py import TheHiveApi
 from thehive4py.errors import TheHiveError
-from thehive4py.types.comment import InputComment, InputUpdateComment, OutputComment
 
 # Optional imports for typed input objects (fallback to dict if missing)
 try:
-    from thehive4py.types.alert import InputAlert, InputUpdateAlert, InputPromoteAlert
     from thehive4py.types.observable import InputObservable
-    from thehive4py.types.procedure import InputProcedure
 except ImportError:
-    InputAlert = dict
-    InputUpdateAlert = dict
-    InputPromoteAlert = dict
     InputObservable = dict
-    InputProcedure = dict
 
 
 logging.basicConfig(
