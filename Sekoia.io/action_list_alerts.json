@@ -60,7 +60,7 @@
         "in": "query",
         "type": "string"
       },
-      "match[short_id]": {
+      "match[detection_type]": {
         "in": "query",
         "type": "string"
       },
@@ -69,6 +69,34 @@
         "type": "string"
       },
       "match[title]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[asset_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[urgency_display]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[case_short_id]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[assignee]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[custom_status_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[verdict_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "match[short_id]": {
         "in": "query",
         "type": "string"
       },
@@ -88,9 +116,73 @@
         "in": "query",
         "type": "string"
       },
+      "nomatch[asset_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[entity_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[rule_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[rule_name]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[detection_type]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[source]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[target]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[status_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[stix_object]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[type_value]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[urgency_display]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[assignee]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[custom_status_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
+      "nomatch[verdict_uuid]": {
+        "in": "query",
+        "type": "string"
+      },
       "visible": {
         "in": "query",
         "type": "boolean"
+      },
+      "is_assigned_to_case": {
+        "in": "query",
+        "type": "boolean"
+      },
+      "similar_to": {
+        "in": "query",
+        "type": "string"
       },
       "limit": {
         "in": "query",
@@ -104,6 +196,10 @@
         "type": "integer"
       },
       "stix": {
+        "in": "query",
+        "type": "boolean"
+      },
+      "cases": {
         "in": "query",
         "type": "boolean"
       },

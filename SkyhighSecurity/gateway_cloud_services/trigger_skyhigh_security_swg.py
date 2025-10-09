@@ -2,10 +2,10 @@ import csv
 import os
 import queue
 from datetime import datetime, timedelta, timezone
+from functools import cached_property
 from threading import Thread, Lock
 from time import sleep
 
-import requests
 from dateutil.parser import isoparse
 from requests import Response
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -13,6 +13,7 @@ from sekoia_automation.connector.workers import Worker, Workers
 from sekoia_automation.storage import PersistentJSON
 
 from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
+from gateway_cloud_services.client import ApiClient
 
 
 class SkyhighSWGConfig(DefaultConnectorConfiguration):
@@ -44,6 +45,14 @@ class EventCollector(Thread):
 
     def log_exception(self, *args, **kwargs):
         self.connector.log_exception(*args, **kwargs)
+
+    @cached_property
+    def client(self):
+        return ApiClient(
+            account_name=self.configuration.account_name,
+            account_password=self.configuration.account_password,
+            nb_retries=10,
+        )
 
     def save_most_recent_date_seen(self, dt: datetime) -> None:
         self.connector.context_lock.acquire()
@@ -118,9 +127,8 @@ class EventCollector(Thread):
             "filter.requestTimestampFrom": int(self.start_date.timestamp()),
             "filter.requestTimestampTo": int(self.end_date.timestamp()),
         }
-        auth = requests.auth.HTTPBasicAuth(self.configuration.account_name, self.configuration.account_password)
         request_start_time = datetime.now(timezone.utc)
-        response: Response = requests.get(url=self.url, headers=self.headers, auth=auth, params=params, timeout=30)
+        response: Response = self.client.get(url=self.url, headers=self.headers, params=params, timeout=30)
 
         time_elapsed = datetime.now(timezone.utc) - request_start_time
         self.log(
@@ -132,14 +140,17 @@ class EventCollector(Thread):
         )
 
         if not response.ok:
+            level = "critical" if response.status_code in [401, 403] else "error"
             self.log(
                 message=(
                     f"Request to SkyhighSWG API to fetch {response.url} "
                     f"failed with status {response.status_code} - {response.text}"
                 ),
-                level="error",
+                level=level,
             )
-            return None
+
+        # Raise an exception for HTTP errors
+        response.raise_for_status()
 
         content = response.content.decode("utf-8")
 
@@ -148,23 +159,42 @@ class EventCollector(Thread):
 
         return content
 
+    def next_batch(self):
+        """
+        Fetch the next batch of events and put them in the queue
+
+        1. Query the API
+        2. If we have a response, put it in the queue
+        3. Update the time range
+        4. Sleep until the next batch
+        """
+        try:
+            # 1. Query the API
+            response = self.query_api()
+
+            if response:
+                # 2. If we have a response, put it in the queue
+                self.events_queue.put(response)
+            else:
+                self.log(message="No messages to forward", level="info")
+
+            # 3. Update the time range
+            self._update_time_range()
+
+            # 4. Sleep until the next batch
+            self._sleep_until_next_batch()
+        except Exception as ex:
+            self.log_exception(ex, message="Failed to fetch events")
+
+            # In case of error, wait the frequency before retrying
+            sleep(self.configuration.frequency)
+
     def run(self):  # pragma: no cover
         self.log(message="The Event Collector has started", level="info")
         self._init_time_range()
 
         while not self._stop_event.is_set():
-            try:
-                response = self.query_api()
-
-                if response:
-                    self.events_queue.put(response)
-                else:
-                    self.log(message="No messages to forward", level="info")
-            except Exception as ex:
-                self.log_exception(ex, message="Failed to fetch events")
-
-            self._update_time_range()
-            self._sleep_until_next_batch()
+            self.next_batch()
 
         self.log(message="The Event Collector has stopped", level="info")
 

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-06 - 2.68.9
+
+### Changed
+
+- Push chunks of events in parallel to Intake
+
+### Fixed
+
+- Only retry on certain status codes when pushing events to Intake
+
+## 2025-10-06 - 2.68.8
+
+### Changed
+
+- Add events chunking to `Push events to Intake` action
+
+## 2025-10-06 - 2.68.7
+
+### Added
+
+- Added action to list comments for a case
+
+## 2025-10-03 - 2.68.6
+
+### Fixed
+
+- Add missing arguments to the `List Alerts` action.
+
 ## 2025-09-08 - 2.68.5
 
 ### Changed
