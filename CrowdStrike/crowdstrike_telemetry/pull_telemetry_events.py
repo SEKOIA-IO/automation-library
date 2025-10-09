@@ -1,4 +1,5 @@
 """Contains connector, configuration and module."""
+
 import os
 from asyncio import BoundedSemaphore
 from typing import Any, AsyncGenerator, Generator, Optional
