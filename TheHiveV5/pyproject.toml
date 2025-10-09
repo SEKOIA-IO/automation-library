@@ -6,11 +6,11 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<3.12"  # Changed to match sekoia-automation-sdk constraint
 sekoia-automation-sdk = "1.13.0"
 thehive4py = "^2.0.2"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]  # Changed from poetry.dev-dependencies
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
