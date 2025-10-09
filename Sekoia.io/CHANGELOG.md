@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-08 - 2.69.0
+
+### Fixed
+
+- Fix `delete case action`
+
 ## 2025-10-06 - 2.68.9
 
 ### Changed
