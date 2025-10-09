@@ -8,16 +8,8 @@ from thehive4py.types.observable import OutputObservable
 
 from .thehiveconnector import TheHiveConnector
 
-from importlib.metadata import version, PackageNotFoundError
-
-
 class TheHiveUploadLogsV5(Action):
     def run(self, arguments: dict[str, Any]) -> Optional[OutputObservable]:
-        try:
-            pkg_version = version("thehive4py")
-            print(f"thehive4py version: {pkg_version}")
-        except PackageNotFoundError:
-            print("thehive4py is not installed.")
 
         api = TheHiveConnector(
             self.module.configuration["base_url"],
