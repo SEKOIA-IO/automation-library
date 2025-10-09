@@ -19,18 +19,37 @@ class TheHiveCreateObservableV5(Action):
             organisation=self.module.configuration["organisation"],
         )
 
-        #arg_sekoia_server = arguments.get("sekoia_base_url", "https://app.sekoia.io")
         arg_alert_id = arguments["alert_id"]
         #arg_observables = arguments["observables"]
         #Input arguments are NOT observables but a list of dicts with sekoia fields
         arg_events = arguments["events"]
+        arg_tlp = arguments["tlp"]
+        arg_pap = arguments["pap"]
+        arg_ioc = arguments["areioc"]
 
         try:
             data = json.loads(arg_events)
-            #print(data)
+            """
+            "tlp": {
+                "type": "integer"
+            },
+            "tlpLabel": {
+                "type": "string"
+            },
+            "pap": {
+                "type": "integer"
+            },
+            ...
+            "ioc": {
+                "type": "boolean"
+            },
+            """
             observables = TheHiveConnector.sekoia_to_thehive(data)
-            #print(json.dumps(out, indent=2))
-            result = api.alert_add_observables(arg_alert_id, observables)
+            deduplicated = []
+            for o in observables:
+                if o not in deduplicated:
+                    deduplicated.append(o)
+            result = api.alert_add_observables(arg_alert_id, deduplicated, tlp=arg_tlp, pap=arg_pap, ioc=arg_ioc)
             #print("Observables added:", result)
             return result
         except json.JSONDecodeError as e:

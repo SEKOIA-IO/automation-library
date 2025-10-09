@@ -14,6 +14,18 @@
       "events": {
         "description": "The JSON Sekoia event from which to extract the observables to be added to the alert",
         "type": "object"
+      },
+      "tlp": {
+        "description": "The TLP for the observables - defaults to AMBER",
+        "type": "integer"
+      },
+      "pap": {
+        "description": "The PAP for the observables - defaults to AMBER",
+        "type": "integer"
+      },
+      "areioc": {
+        "description": "Indicates whether observables should be considered IOCs in TheHive - default to true",
+        "type": "boolean"
       }
     },
     "required": [
