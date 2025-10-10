@@ -8,7 +8,7 @@ SEKOIA_BASE_URL: str = "https://app.sekoia.io"
 
 ALERT_ID: str = "~40964304"
 
-ATTACHMENT_PATHS: List[str] = ["test.log"]
+FILEPATH: str = "test.log"
 
 HIVE_OUTPUT: List[OutputAttachment] = [
     {
@@ -42,7 +42,7 @@ def test_upload_logs_action_success():
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(url="https://thehive-project.org/api/v1/attachment", status_code=200, json=HIVE_OUTPUT)
 
-        result = action.run({"alert_id": ALERT_ID, "filepath": ATTACHMENT_PATHS})
+        result = action.run({"alert_id": ALERT_ID, "filepath": [FILEPATH]})
         assert result is not None
         assert result["name"] is not None
         assert result["id"] is not None
@@ -59,7 +59,7 @@ def test_upload_logs_action_api_error(requests_mock):
         "organisation": "SEKOIA",
     }
 
-    result = action.run({"alert_id": ALERT_ID, "filepath": ATTACHMENT_PATHS})
+    result = action.run({"alert_id": ALERT_ID, "filepath": [FILEPATH]})
 
     assert not result
     assert mock_alert.call_count == 1
