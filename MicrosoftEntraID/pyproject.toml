@@ -11,6 +11,7 @@ azure-identity = "^1.23.1"
 pydantic = "2.10"
 sekoia-automation-sdk = "^1.21.0"
 msgraph-sdk = "^1.45.0"
+cachetools = "^6.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
