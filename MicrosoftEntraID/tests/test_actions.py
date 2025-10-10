@@ -29,7 +29,7 @@ def configured_action(action: Type[MicrosoftGraphAction]):
     return a
 
 
-class TestRequestAdapter(RequestAdapter):
+class CustomRequestAdapter(RequestAdapter):
     def __init__(self, send_async: Optional[requests.Response] = None):
         self._send_async = send_async
 
@@ -131,7 +131,7 @@ async def test_get_user_1():
     response._content = json.dumps(expected_user).encode("utf-8")
     response.status_code = 200
 
-    mocked_adapter = TestRequestAdapter(send_async=response)
+    mocked_adapter = CustomRequestAdapter(send_async=response)
     graph_client = GraphServiceClient(request_adapter=mocked_adapter)
     action._client = graph_client
 

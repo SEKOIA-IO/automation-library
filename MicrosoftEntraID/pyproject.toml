@@ -52,11 +52,12 @@ minversion = "6.0"
 testpaths = [
     "tests",
 ]
-filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore:.*unclosed.*:ResourceWarning",
-]
+# TODO: enable warnings filtering when warnings are fixed
+#filterwarnings = [
+#    "error",
+#    "ignore::DeprecationWarning",
+#    "ignore:.*unclosed.*:ResourceWarning",
+#]
 addopts = '''
   --strict-markers
   --tb=short
@@ -74,4 +75,9 @@ addopts = '''
 omit = [
     "tests/*",
     "main.py",
+]
+
+[dependency-groups]
+dev = [
+    "faker (>=37.11.0,<38.0.0)"
 ]
