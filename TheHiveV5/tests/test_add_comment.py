@@ -1,4 +1,3 @@
-from typing import Any
 import requests_mock
 
 from thehive.add_commment import TheHiveCreateCommentV5
@@ -29,7 +28,10 @@ def test_add_comment_action_success():
     }
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment", status_code=200, json=HIVE_OUTPUT)
+        #mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment", status_code=200, json=HIVE_OUTPUT)
+        # NOTE: use f-string to put the actual ALERT_ID in the mocked URL
+        url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment"
+        mock_requests.post(url=url, status_code=200, json=HIVE_OUTPUT)
 
         result = action.run({"alert_id": ALERT_ID, "message": MESSAGE})
         assert result is not None
@@ -37,7 +39,10 @@ def test_add_comment_action_success():
 
 
 def test_add_comment_action_api_error(requests_mock):
-    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment", status_code=500)
+    #mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment", status_code=500)
+    # use the pytest fixture here — again build the real URL with ALERT_ID
+    url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment"
+    mock_alert = requests_mock.post(url=url, status_code=500)
 
     action = TheHiveCreateCommentV5()
     action.module.configuration = {

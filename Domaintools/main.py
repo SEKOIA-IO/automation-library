@@ -1,11 +1,11 @@
 from sekoia_automation.module import Module
 
-from domaintools_modules.get_domain_reputation import DomaintoolsDomainReputation
-from domaintools_modules.get_lookup_domain import DomaintoolsLookupDomain
-from domaintools_modules.get_pivot_action import DomaintoolsPivotAction
-from domaintools_modules.get_reverse_domain import DomaintoolsReverseDomain
-from domaintools_modules.get_reverse_email import DomaintoolsReverseEmail
-from domaintools_modules.get_reverse_ip import DomaintoolsReverseIP
+from domaintools.get_domain_reputation import DomaintoolsDomainReputation
+from domaintools.get_lookup_domain import DomaintoolsLookupDomain
+from domaintools.get_pivot_action import DomaintoolsPivotAction
+from domaintools.get_reverse_domain import DomaintoolsReverseDomain
+from domaintools.get_reverse_email import DomaintoolsReverseEmail
+from domaintools.get_reverse_ip import DomaintoolsReverseIP
 
 if __name__ == "__main__":
     module = Module()

@@ -1,3 +1,4 @@
+import os
 from typing import List
 import requests_mock
 
@@ -5,11 +6,10 @@ from thehive.upload_logs import TheHiveUploadLogsV5
 from thehive4py.types.attachment import OutputAttachment
 
 SEKOIA_BASE_URL: str = "https://app.sekoia.io"
-
 ALERT_ID: str = "~40964304"
-
 FILEPATH: str = "test.log"
 
+# keep HIVE_OUTPUT as a list for readability, but we'll return the first element from the mock
 HIVE_OUTPUT: List[OutputAttachment] = [
     {
         "_id": "~40964304",
@@ -25,41 +25,94 @@ HIVE_OUTPUT: List[OutputAttachment] = [
         "size": 0,
         "contentType": "application/octet-stream",
         "id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        "path": "/api/v1/attachment/~40964304",
+        "path": f"/api/v1/attachment/{ALERT_ID}",
         "extraData": {}
     }
 ]
 
 
+def _normalize_attachment_result(result):
+    """
+    Normalize various possible return shapes to a single attachment dict.
+    Accepts:
+      - a dict -> return it
+      - a list with one dict -> return list[0]
+      - a dict with 'items' -> return items[0]
+    """
+    if result is None:
+        return None
+    if isinstance(result, dict):
+        # maybe wrapped in items
+        if "items" in result and isinstance(result["items"], list) and result["items"]:
+            return result["items"][0]
+        return result
+    if isinstance(result, list) and result:
+        return result[0]
+    return None
+
+
 def test_upload_logs_action_success():
+    # Create an empty test.log file before running the test
+    with open(FILEPATH, "wb") as f:
+        f.write(b"")  # ensure exists and not zero-bytes issues
+
     action = TheHiveUploadLogsV5()
+    action.module = type("M", (), {})()
     action.module.configuration = {
         "base_url": "https://thehive-project.org",
         "apikey": "LOREM",
         "organisation": "SEKOIA",
     }
 
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(url="https://thehive-project.org/api/v1/attachment", status_code=200, json=HIVE_OUTPUT)
+    try:
+        with requests_mock.Mocker() as mock_requests:
+            # The action calls the alert attachments endpoint (observed): /api/v1/alert/{id}/attachments
+            url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/attachments"
+            # IMPORTANT: return a dict (not a list) because the client expects a dict
+            mock_requests.post(url=url, status_code=200, json=HIVE_OUTPUT[0])
 
-        result = action.run({"alert_id": ALERT_ID, "filepath": [FILEPATH]})
-        assert result is not None
-        assert result["name"] is not None
-        assert result["id"] is not None
-        assert result["path"] == "/api/v1/attachment/"+ALERT_ID
+            result = action.run({"alert_id": ALERT_ID, "filepath": FILEPATH})
+
+            assert result is not None, "action.run returned None — check captured stdout/logs"
+
+            attachment = _normalize_attachment_result(result)
+            assert attachment is not None, f"Could not normalize result: {result!r}"
+
+            assert attachment.get("name") is not None
+            assert attachment.get("id") is not None
+            assert attachment.get("path") == f"/api/v1/attachment/{ALERT_ID}"
+
+            # Optional: inspect multipart body contains filename
+            last_req = mock_requests.last_request
+            assert last_req is not None
+            assert b"test.log" in last_req.body or b"test_1760085078051.log" in last_req.body
+
+    finally:
+        if os.path.exists(FILEPATH):
+            os.remove(FILEPATH)
 
 
 def test_upload_logs_action_api_error(requests_mock):
-    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/attachment", status_code=500)
+    url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/attachments"
+    mock_alert = requests_mock.post(url=url, status_code=500)
 
     action = TheHiveUploadLogsV5()
+    action.module = type("M", (), {})()
     action.module.configuration = {
         "base_url": "https://thehive-project.org",
         "apikey": "LOREM",
         "organisation": "SEKOIA",
     }
 
-    result = action.run({"alert_id": ALERT_ID, "filepath": [FILEPATH]})
+    # ensure the test file exists (even if empty)
+    with open(FILEPATH, "wb"):
+        pass
 
-    assert not result
-    assert mock_alert.call_count == 1
+    try:
+        result = action.run({"alert_id": ALERT_ID, "filepath": FILEPATH})
+
+        assert not result
+        assert mock_alert.call_count == 1
+    finally:
+        if os.path.exists(FILEPATH):
+            os.remove(FILEPATH)

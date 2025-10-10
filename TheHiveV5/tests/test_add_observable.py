@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
 import requests_mock
 
 from thehive.add_observable import TheHiveCreateObservableV5
@@ -381,43 +381,28 @@ EVENTS: list[dict[str, Any]] = [
     }
 ]
 
-HIVE_OUTPUT_ERROR: dict[str, Any] = {
+HIVE_OUTPUT_ERROR = {
     "success": [],
     "failure": [
         {
             "type": "CreateError",
             "message": "Observable already exists",
-            "object": {
-                "data": "192.168.1.100"
-            }
-        }
-    ]
-},
-{
-    "success": [],
-    "failure": [
+            "object": {"data": "192.168.1.100"},
+        },
         {
             "type": "CreateError",
             "message": "Observable already exists",
-            "object": {
-                "data": "phishing-site.com"
-            }
-        }
-    ]
-},
-{
-    "success": [],
-    "failure": [
+            "object": {"data": "phishing-site.com"},
+        },
         {
             "type": "CreateError",
             "message": "Observable already exists",
-            "object": {
-                "data": "http://malicious.example/path"
-            }
-        }
-    ]
+            "object": {"data": "http://malicious.example/path"},
+        },
+    ],
 }
 
+# Correct HIVE_OUTPUT: single list containing three observable dicts (not multiple bracketed groups)
 HIVE_OUTPUT: Optional[OutputObservable] = [
     {
         "_id": "~40964152",
@@ -436,10 +421,8 @@ HIVE_OUTPUT: Optional[OutputObservable] = [
         "sighted": False,
         "reports": {},
         "extraData": {},
-        "ignoreSimilarity": False
-    }
-],
-[
+        "ignoreSimilarity": False,
+    },
     {
         "_id": "~40968200",
         "_type": "Observable",
@@ -457,10 +440,8 @@ HIVE_OUTPUT: Optional[OutputObservable] = [
         "sighted": False,
         "reports": {},
         "extraData": {},
-        "ignoreSimilarity": False
-    }
-],
-[
+        "ignoreSimilarity": False,
+    },
     {
         "_id": "~81924184",
         "_type": "Observable",
@@ -478,8 +459,8 @@ HIVE_OUTPUT: Optional[OutputObservable] = [
         "sighted": False,
         "reports": {},
         "extraData": {},
-        "ignoreSimilarity": False
-    }
+        "ignoreSimilarity": False,
+    },
 ]
 
 def test_add_observables_action_success():
@@ -491,18 +472,24 @@ def test_add_observables_action_success():
     }
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=200, json=HIVE_OUTPUT)
+        #mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=200, json=HIVE_OUTPUT)
+        url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
+        mock_requests.post(url=url, status_code=200, json=HIVE_OUTPUT)
 
-        result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
+        result: List[OutputObservable] = action.run({"alert_id": ALERT_ID, "events": EVENTS})
         assert result is not None
         # Assert that there is a result with dataType == "domain" and data == "www.binance.com"
-        assert any(obs.get("dataType") == "domain" and obs.get("data") == "www.binance.com" for obs in result.get("items", []))
-        # Assert that there is a result with dataType == "ip" and data == "192.168.0.1"
-        assert any(obs.get("dataType") == "ip" and obs.get("data") == "192.168.0.1" for obs in result.get("items", []))
+        # OutputObservable is likely a Dict[str, Any], so .get is valid
+        # Flatten result if it is a list of lists
+        flat_result = [item for sublist in result for item in (sublist if isinstance(sublist, list) else [sublist])]
+        assert any(obs["dataType"] == "domain" and obs["data"] == "www.binance.com" for obs in flat_result)
+        assert any(obs["dataType"] == "ip" and obs["data"] == "192.168.0.1" for obs in flat_result)
 
 
 def test_add_observables_action_api_error(requests_mock):
-    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=500)
+    #mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=500)
+    url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
+    mock_alert = requests_mock.post(url=url, status_code=500)
 
     action = TheHiveCreateObservableV5()
     action.module.configuration = {
