@@ -29,7 +29,7 @@ def test_add_comment_action_success():
     }
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(url="https://thehive-project.org/api/v1/alert/{alert_id}/comment", status_code=200, json=HIVE_OUTPUT)
+        mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment", status_code=200, json=HIVE_OUTPUT)
 
         result = action.run({"alert_id": ALERT_ID, "message": MESSAGE})
         assert result is not None
@@ -37,7 +37,7 @@ def test_add_comment_action_success():
 
 
 def test_add_comment_action_api_error(requests_mock):
-    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{alert_id}/comment", status_code=500)
+    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/comment", status_code=500)
 
     action = TheHiveCreateCommentV5()
     action.module.configuration = {

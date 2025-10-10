@@ -13,7 +13,7 @@
       },
       "message": {
         "description": "A message to be added as an alert's comment",
-        "type": "object"
+        "type": "string"
       }
     },
     "required": [

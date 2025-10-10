@@ -491,7 +491,7 @@ def test_add_observables_action_success():
     }
 
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(url="https://thehive-project.org/api/v1/alert/{alert_id}/observable", status_code=200, json=HIVE_OUTPUT)
+        mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=200, json=HIVE_OUTPUT)
 
         result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
         assert result is not None
@@ -502,7 +502,7 @@ def test_add_observables_action_success():
 
 
 def test_add_observables_action_api_error(requests_mock):
-    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{alert_id}/observable", status_code=500)
+    mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=500)
 
     action = TheHiveCreateObservableV5()
     action.module.configuration = {
