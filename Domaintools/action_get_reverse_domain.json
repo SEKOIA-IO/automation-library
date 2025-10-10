@@ -2,7 +2,7 @@
   "uuid": "6b93ba2c-5813-41c9-8494-c6dac9cc210d",
   "name": "Perform a reverse Domain lookup on Domaintools API returning a JSON dump",
   "description": "A wrapper to reverse a domain on Iris Investigate API v1",
-  "docker_parameters": "domaintools_get_reverse_domain",
+  "docker_parameters": "get_reverse_domain",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {

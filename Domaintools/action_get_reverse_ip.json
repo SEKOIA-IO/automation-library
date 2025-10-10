@@ -2,7 +2,7 @@
   "uuid": "bc2d54d3-16b0-4326-a82a-321765ff8bf4",
   "name": "Perform a reverse ip lookup on Domaintools API returning a JSON dump",
   "description": "A wrapper to reverse an ip on Iris Investigate API v1",
-  "docker_parameters": "domaintools_get_reverse_ip",
+  "docker_parameters": "get_reverse_ip",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {

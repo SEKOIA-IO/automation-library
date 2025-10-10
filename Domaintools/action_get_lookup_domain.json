@@ -2,7 +2,7 @@
   "uuid": "d3959678-9f40-49a1-8b3f-8a051ecb2dee",
   "name": "Lookup Domain on Domaintools API returning a JSON dump",
   "description": "A wrapper to lookup domain on Iris Investigate API v1",
-  "docker_parameters": "domaintools_get_lookup_domain",
+  "docker_parameters": "get_lookup_domain",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {

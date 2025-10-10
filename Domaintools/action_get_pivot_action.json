@@ -2,7 +2,7 @@
   "uuid": "e9522106-9886-40d0-80c6-16f5cafe46a8",
   "name": "Get a pivot request on Domaintools API returning a JSON dump",
   "description": "A wrapper to pivot on a field (url, domain, ip, email) given a query value on Iris Investigate API v1",
-  "docker_parameters": "domaintools_get_pivot_action",
+  "docker_parameters": "get_pivot_action",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
