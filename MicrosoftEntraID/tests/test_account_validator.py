@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
-from azure_ad.account_validator import AzureADAccountValidator
 from sekoia_automation.module import Module
+
+from azure_ad.account_validator import AzureADAccountValidator
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 import json
-from typing import Type, Any, Optional
+from typing import Any, Optional, Type
 from unittest.mock import AsyncMock, patch
 
 import pytest

@@ -1,9 +1,10 @@
-import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock
 import datetime
+from unittest.mock import AsyncMock, MagicMock, Mock
 
+import pytest
 import requests_mock
 from sekoia_automation.module import Module
+
 from azure_ad.asset_connector.user_assets import EntraIDAssetConnector
 
 
@@ -83,8 +84,8 @@ def test_configuration(test_entra_id_asset_connector):
 
 def test_map_fields(test_entra_id_asset_connector):
     # Mocking the UserOCSFModel and UserOCSF for testing
-    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
     from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 
     # Mocking the user and groups
     asset_user = User(
@@ -134,8 +135,8 @@ async def test_fetch_user_mfa(test_entra_id_asset_connector):
     from msgraph.generated.models.microsoft_authenticator_authentication_method import (
         MicrosoftAuthenticatorAuthenticationMethod,
     )
-    from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
     from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
+    from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 
     # Case 1: User has Microsoft Authenticator (should return True)
     mock_method = MicrosoftAuthenticatorAuthenticationMethod()
@@ -439,8 +440,8 @@ def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
 
 def test_map_fields_with_none_values(test_entra_id_asset_connector):
     """Test that map_fields handles None values correctly."""
-    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
     from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 
     # Create user with None values (but keep id as a string since it's required)
     asset_user = User(
@@ -467,8 +468,8 @@ def test_map_fields_with_none_values(test_entra_id_asset_connector):
 
 def test_map_fields_with_groups(test_entra_id_asset_connector):
     """Test that map_fields correctly handles user groups."""
-    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
     from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 
     # Create user
     asset_user = User(

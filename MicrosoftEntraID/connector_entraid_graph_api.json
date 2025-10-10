@@ -1,0 +1,40 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Trigger Microsoft EntraId Graph API configuration",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      }
+    },
+    "required": [
+      "intake_key"
+    ],
+  },
+  "description": "Trigger playbook to get Azure EntraId events using Graph API",
+  "docker_parameters": "entraid_graph_api_connector",
+  "name": "Fetch new events from Microsoft EntraId Graph API",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "The records"
+  },
+  "uuid": "0a6d2b2a-3b4d-4651-813e-441b80531642"
+}
