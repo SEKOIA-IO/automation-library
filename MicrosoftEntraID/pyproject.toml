@@ -21,6 +21,7 @@ black = { version = "^22.6.0", allow-prereleases = true }
 flake8 = "^4.0.1"
 mypy = "^1.11.2"
 pytest-clarity = "^1.0.1"
+Faker = "^13.12.0"
 
 [build-system]
 requires = [ "poetry-core>=1.0.0",]
@@ -75,9 +76,4 @@ addopts = '''
 omit = [
     "tests/*",
     "main.py",
-]
-
-[dependency-groups]
-dev = [
-    "faker (>=37.11.0,<38.0.0)"
 ]
