@@ -19,9 +19,7 @@ class TheHiveCreateCommentV5(Action):
 
         try:
             comment = InputComment(message=arg_message)
-            result = api.comment_add_in_alert(arg_alert_id, comment)
-            #print("Comment added:", result)
-            return result
+            return api.comment_add_in_alert(arg_alert_id, comment)
         except Exception as e:
             print("Error:", e)
 
