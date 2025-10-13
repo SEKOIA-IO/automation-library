@@ -135,58 +135,40 @@ class DomainToolsClient:
     
     def _make_request(self, uri: str, params: Optional[Dict] = None) -> Dict:
         """Make authenticated API request"""
-        try:
-            time.sleep(self.config.rate_limit_delay)
-            
-            timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-            signature = self._sign_request(uri, timestamp)
-            
-            request_params = {
-                "api_username": self.config.api_username,
-                "signature": signature,
-                "timestamp": timestamp,
-            }
-            
-            if params:
-                request_params.update(params)
-            
-            url = urllib.parse.urljoin(self.config.host, uri)
-            logger.debug(f"Making request to: {url}")
-            logger.debug(f"Request params: {request_params}")
-            
-            response = self.session.get(
-                url,
-                params=request_params,
-                timeout=self.config.timeout
+        # Rate limiting
+        time.sleep(self.config.rate_limit_delay)
+        
+        # Generate authentication parameters
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        signature = self._sign_request(uri, timestamp)
+        
+        # Build request parameters
+        request_params = {
+            "api_username": self.config.api_username,
+            "signature": signature,
+            "timestamp": timestamp,
+        }
+        if params:
+            request_params.update(params)
+        
+        # Make the request
+        url = urllib.parse.urljoin(self.config.host, uri)
+        response = self.session.get(url, params=request_params, timeout=self.config.timeout)
+        
+        # Handle rate limiting
+        if response.status_code == 429:
+            retry_after = int(response.headers.get('Retry-After', 60))
+            time.sleep(retry_after)
+            return self._make_request(uri, params)
+        
+        # Check for errors
+        if not response.ok:
+            raise DomainToolsError(
+                f"API request failed with status {response.status_code}",
+                status_code=response.status_code
             )
-            
-            if response.status_code == 429:
-                retry_after = int(response.headers.get('Retry-After', 60))
-                logger.warning(f"Rate limited. Waiting {retry_after} seconds...")
-                time.sleep(retry_after)
-                return self._make_request(uri, params)
-            
-            if not response.ok:
-                error_msg = f"API request failed with status {response.status_code}"
-                try:
-                    error_data = response.json()
-                    if 'error' in error_data:
-                        error_msg += f": {error_data['error'].get('message', error_data['error'])}"
-                except:
-                    error_msg += f": {response.text}"
-                
-                raise DomainToolsError(
-                    error_msg,
-                    status_code=response.status_code,
-                    response_data=error_data if 'error_data' in locals() else None
-                )
-            
-            return response.json()
-            
-        except requests.RequestException as e:
-            raise DomainToolsError(f"Network error: {str(e)}")
-        except json.JSONDecodeError as e:
-            raise DomainToolsError(f"Invalid JSON response: {str(e)}")
+        
+        return response.json()
     
     def domain_reputation(self, domain: str) -> Dict:
         """
