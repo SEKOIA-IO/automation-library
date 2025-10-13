@@ -31,9 +31,7 @@ class TheHiveCreateObservableV5(Action):
             data = json.loads(arg_events)
             observables = TheHiveConnector.sekoia_to_thehive(data, arg_tlp, arg_pap, arg_ioc)
 
-            result = api.alert_add_observables(arg_alert_id, observables)
-            #print("Observables added:", result)
-            return result
+            return api.alert_add_observables(arg_alert_id, observables)
         except json.JSONDecodeError as e:
             print("JSON decode error: %s", e)
             raise
