@@ -184,31 +184,31 @@ class TheHiveConnector:
 
     # ---------------------- Alert actions ----------------------
 
-    def sekoia_to_thehive(data: List[Dict[str, Any]], tlp, pap, ioc) -> List[OutputObservable]:
-                observables: List[OutputObservable] = []
-                for idx, ev in enumerate(data):
-                    #print("idx", idx)
-                    if not isinstance(ev, dict):
-                        logging.warning("Skipping non-dict event at index %d", idx)
-                        continue
-                    for k, v in ev.items():
-                        if key_exists(SEKOIA_FIELDS, k):
-                            #print(k, "exists in SEKOIA_FIELDS, with value:", v)
-                            thehive_field=SEKOIA_TO_THEHIVE.get(k, "<unknown>")
-                            #print("-> Associated TheHive field is", thehive_field)
-                            observable = {
-                                "dataType": thehive_field,      # or another valid dataType
-                                "data": v,     # your observable value
-                                "tlp": tlp,
-                                "pap": pap,
-                                "ioc": ioc
-                            }
-                            observables.append(observable)
-                deduplicated: List[OutputObservable] = []
-                for o in observables:
-                    if o not in deduplicated:
-                        deduplicated.append(o)
-                return deduplicated
+    def sekoia_to_thehive(self, tlp, pap, ioc) -> List[OutputObservable]:
+        observables: List[OutputObservable] = []
+        for idx, ev in enumerate(self):
+            #print("idx", idx)
+            if not isinstance(ev, dict):
+                logging.warning("Skipping non-dict event at index %d", idx)
+                continue
+            for k, v in ev.items():
+                if key_exists(SEKOIA_FIELDS, k):
+                    #print(k, "exists in SEKOIA_FIELDS, with value:", v)
+                    thehive_field=SEKOIA_TO_THEHIVE.get(k, "<unknown>")
+                    #print("-> Associated TheHive field is", thehive_field)
+                    observable = {
+                        "dataType": thehive_field,      # or another valid dataType
+                        "data": v,     # your observable value
+                        "tlp": tlp,
+                        "pap": pap,
+                        "ioc": ioc
+                    }
+                    observables.append(observable)
+        deduplicated: List[OutputObservable] = []
+        for o in observables:
+            if o not in deduplicated:
+                deduplicated.append(o)
+        return deduplicated
     """
     def sekoia_to_thehive(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 out: List[Dict[str, Any]] = []
