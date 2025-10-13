@@ -28,13 +28,23 @@ signature = sign(API_USERNAME, API_KEY, TIMESTAMP, URI)
 ACTION = "domain_reputation"
 
 DT_OUTPUT: dict[str, Any] = {
-  "results": [
-    {
-      "domain": "google.com",
-      "whois_url": "https://whois.domaintools.com/google.com",
-      # ... rest of your data (keeping it short for clarity)
+    "response": {
+        "limit_exceeded": False,
+        "has_more_results": False,
+        "message": "Enjoy your data.",
+        "results_count": 1,
+        "total_count": 1,
+        "results": [
+            {
+                "domain": "google.com",
+                "whois_url": "https://whois.domaintools.com/google.com",
+                "adsense": {
+                    "value": "",
+                    "count": 0
+                },
+            }
+        ]
     }
-  ]
 }
 
 

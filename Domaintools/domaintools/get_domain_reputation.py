@@ -14,12 +14,14 @@ class DomaintoolsDomainReputation(Action):
 
             parsed_args: dict[str, Any] = {
                 "domain": arguments.get("domain"),
-                "ip": arguments.get("ip"),
-                "email": arguments.get("email"),
+                "ip": arguments.get("ip", "192.168.0.1"),
+                "email": arguments.get("email", "admin@example.com"),
                 "domaintools_action": "domain_reputation",
             }
+            print(f"Parsed arguments: {parsed_args}")  # Debugging line
 
             result = DomaintoolsrunAction(config, parsed_args)
+            print(f"API call result: {result}")  # Debugging line
             return result
 
         except DomainToolsError as e:

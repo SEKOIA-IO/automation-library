@@ -182,6 +182,7 @@ class DomainToolsClient:
         """
         logger.info(f"Getting domain reputation for: {domain}")
         domain = self._validate_domain(domain)
+        #print(f"Validated domain: {domain}")
         
         # Use Iris Investigate endpoint with domain search
         uri = "/v1/iris-investigate/"
@@ -190,6 +191,7 @@ class DomainToolsClient:
         }
         
         result = self._make_request(uri, params)
+        #print("Result from _make_request: ", result)
         logger.info(f"Successfully retrieved reputation for {domain}")
         return result
     
@@ -447,12 +449,15 @@ def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -
             
             method_name, args_fn, kwargs, label = dispatch[arg_action]
             args = args_fn()
+            #print("Calling method:", method_name, "with args:", args, "and kwargs:", kwargs)
             ok, payload = call_method(method_name, args, kwargs)
             
             if ok:
                 # Safely extract response -> results from the payload
                 try:
+                    #print("Raw payload:", payload)
                     results = payload.get('response', {}).get('results', None)
+                    #print("Extracted results:", results)
                     return json.dumps({"results": results}, indent=2)
                 except Exception as e:
                     return json.dumps({label: {"error": f"Failed to extract results: {e}"}}, indent=2)
