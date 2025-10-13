@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-10 - 2.9.0
+
+### Fixed
+
+- Cleanup Azure EntraId Connector
+
+## 2025-09-16 - 2.8.0
+
+### Added
+
+- Azure EntraId Connector
+
 ## 2025-08-12 - 2.7.0
 
 ### Added

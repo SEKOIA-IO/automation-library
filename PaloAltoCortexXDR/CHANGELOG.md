@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-17 - 1.3.9
+
+### Added
+
+- Add actions to List endpoint, Scan endpoint and Abort endpoint scanning
+
 ## 2025-08-07 - 1.3.8
 
 ### Fixed

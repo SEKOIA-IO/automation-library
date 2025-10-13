@@ -36,6 +36,7 @@ from sekoiaio.operation_center import (
     GetCustomVerdict,
     GetEntity,
     GetIntake,
+    GetListOfCommentsOfCase,
     GetRule,
     ListAlerts,
     ListAssets,
@@ -120,7 +121,8 @@ if __name__ == "__main__":
     module.register(UpdateCase, "update_case")
     module.register(GetCase, "get_case")
     module.register(PostCommentOnCase, "post_comment_to_a_case")
-    module.register(DeleteCase, "delete-case/{uuid}")
+    module.register(GetListOfCommentsOfCase, "list_case_comments")
+    module.register(DeleteCase, "delete-case/{case_uuid}")
     module.register(RemoveEventFromCase, "remove_event_from_case")
     module.register(GetCustomStatus, "get-custom-status")
     module.register(GetCustomPriority, "get-custom-priority")

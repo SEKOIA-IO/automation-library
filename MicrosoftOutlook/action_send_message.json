@@ -1,0 +1,78 @@
+{
+  "name": "Send a message",
+  "description": "Send a message from the user's mailbox",
+  "uuid": "9d5aec62-4a48-48c2-8cb7-06cb61db1c09",
+  "docker_parameters": "action_send_message",
+  "arguments": {
+    "title": "ApplicationArguments",
+    "type": "object",
+    "required": ["user", "content", "sender", "from", "recipients", "subject"],
+    "properties": {
+      "user": {
+        "description": "The identifier or the principal name of the user",
+        "type": "string",
+        "format": "email"
+      },
+      "sender": {
+        "description": "The sender of the message. Usually the same as mailbox owner",
+        "type": "string",
+        "format": "email"
+      },
+      "from": {
+        "description": "The mailbox owner of the message (from header). Usually the same as sender",
+        "type": "string",
+        "format": "email"
+      },
+      "subject": {
+        "description": "The subject of the message",
+        "type": "string"
+      },
+      "content": {
+        "description": "The content of the message",
+        "type": "string"
+      },
+      "content_type": {
+        "description": "The type of the content",
+        "type": "string",
+        "default": "text",
+        "enum": ["text", "html"]
+      },
+      "save_to_sent_items": {
+        "description": "Indicates whether to save the message in Sent Items",
+        "type": "boolean",
+        "default": true
+      },
+      "recipients": {
+        "description": "The list of recipients",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "bcc": {
+        "description": "The list of BCC recipients",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "cc": {
+        "description": "The list of CC recipients",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "importance": {
+        "description": "The importance of the message",
+        "type": "string",
+        "enum": ["Low", "Normal", "High"]
+      }
+    }
+  },
+  "results": {},
+  "slug": "send_message"
+}

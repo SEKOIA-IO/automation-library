@@ -1,9 +1,10 @@
+import asyncio
+from functools import cached_property
+
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
-from functools import cached_property
 from sekoia_automation.account_validator import AccountValidator
-import asyncio
 
 
 class AzureADAccountValidator(AccountValidator):

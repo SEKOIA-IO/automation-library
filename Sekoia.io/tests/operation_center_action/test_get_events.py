@@ -1,3 +1,5 @@
+import pytest
+import requests
 from sekoiaio.operation_center.get_events import GetEvents
 
 module_base_url = "https://fake.url/"
@@ -339,3 +341,155 @@ def test_get_events_with_retries(requests_mock):
     results: dict = action.run(arguments)
     assert results["events"] == events
     assert status_mock.call_count == 3
+
+
+def test_trigger_event_search_job_http_error(requests_mock):
+    """Test that HTTP errors during job triggering are properly logged"""
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+    }
+
+    # Mock a 400 Bad Request response
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs",
+        status_code=400,
+        text="Bad Request: Invalid query format",
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        action.run(arguments)
+
+    # Check that an error was logged
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert "HTTP error when triggering event search job" in action._logs[0]["message"]
+    assert "Response status: 400" in action._logs[0]["message"]
+    assert "Bad Request: Invalid query format" in action._logs[0]["message"]
+
+
+def test_wait_for_search_job_initial_status_error(requests_mock):
+    """Test that HTTP errors during initial status check are properly logged"""
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+    }
+
+    # Mock successful job creation
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs",
+        json={"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"},
+    )
+
+    # Mock 500 error on initial status check
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        status_code=500,
+        text="Internal Server Error",
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        action.run(arguments)
+
+    # Check that an error was logged
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert (
+        "HTTP error during initial status check for job 483d36a5-8538-49c4-be19-49b669f90bf8"
+        in action._logs[0]["message"]
+    )
+    assert "Response status: 500" in action._logs[0]["message"]
+    assert "Internal Server Error" in action._logs[0]["message"]
+
+
+def test_wait_for_search_job_polling_error(requests_mock):
+    """Test that HTTP errors during job status polling are properly logged"""
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+    }
+
+    # Mock successful job creation
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs",
+        json={"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"},
+    )
+
+    # Mock multiple status checks - first one succeeds, second one fails
+    status_mock = requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        [
+            # Initial status check (job not started yet)
+            {"json": {"status": 0, "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"}, "status_code": 200},
+            # Polling fails with 502 error
+            {"text": "Bad Gateway", "status_code": 502},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        action.run(arguments)
+
+    # Check that an error was logged
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert (
+        "HTTP error during job status polling for job 483d36a5-8538-49c4-be19-49b669f90bf8"
+        in action._logs[0]["message"]
+    )
+    assert "Response status: 502" in action._logs[0]["message"]
+    assert "Bad Gateway" in action._logs[0]["message"]
+
+
+def test_get_events_http_error(requests_mock):
+    """Test that HTTP errors during event retrieval are properly logged"""
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+    }
+
+    # Mock successful job creation
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs",
+        json={"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"},
+    )
+
+    # Mock successful job completion
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        json={"status": 2, "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"},
+    )
+
+    # Mock 403 error on event retrieval
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=100&offset=0",
+        status_code=403,
+        text="Forbidden: Insufficient permissions",
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        action.run(arguments)
+
+    # Check that an error was logged
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert (
+        "HTTP error when retrieving events for job 483d36a5-8538-49c4-be19-49b669f90bf8" in action._logs[0]["message"]
+    )
+    assert "Response status: 403" in action._logs[0]["message"]
+    assert "Forbidden: Insufficient permissions" in action._logs[0]["message"]

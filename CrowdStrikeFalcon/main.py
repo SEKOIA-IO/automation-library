@@ -1,3 +1,4 @@
+from crowdstrike_falcon.account_validator import CrowdstrikeFalconAccountValidator
 from crowdstrike_falcon import CrowdStrikeFalconModule
 from crowdstrike_falcon.alert_actions import CrowdstrikeActionCommentAlert, CrowdstrikeActionUpdateAlertStatus
 from crowdstrike_falcon.custom_iocs import (
@@ -9,8 +10,14 @@ from crowdstrike_falcon.custom_iocs import (
 from crowdstrike_falcon.event_stream_trigger import EventStreamTrigger
 from crowdstrike_falcon.host_actions import CrowdstrikeActionDeIsolateHosts, CrowdstrikeActionIsolateHosts
 
+# from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
+from crowdstrike_falcon.asset_connectors.device_assets import CrowdstrikeDeviceAssetConnector
+
 if __name__ == "__main__":
     module = CrowdStrikeFalconModule()
+    module.register_account_validator(CrowdstrikeFalconAccountValidator)
+    # module.register(CrowdstrikeUserAssetConnector, "crowdstrike_falcon_user_asset_connector")
+    module.register(CrowdstrikeDeviceAssetConnector, "crowdstrike_falcon_device_asset_connector")
     module.register(EventStreamTrigger, "event_stream_trigger")
     module.register(CrowdstrikeActionPushIOCsBlock, "push_iocs_block")
     module.register(CrowdstrikeActionPushIOCsDetect, "push_iocs_detect")

@@ -1,7 +1,7 @@
 from typing import Any, Generator
 
 import six
-from pydantic.main import BaseModel
+from pydantic.v1.main import BaseModel
 from stix2patterns.pattern import Pattern
 
 from cortex_module.actions import PaloAltoCortexXDRAction
