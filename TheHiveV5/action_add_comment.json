@@ -1,5 +1,5 @@
 {
-  "uuid": "6593cd86-b9ca-4fe7-8ceb-551246bbe109",
+  "uuid": "f936765f-4b37-46c8-9801-701fc11385ea",
   "name": "Add a comment in The Hive v5",
   "description": "Action to add a comment in The Hive v5",
   "docker_parameters": "thehive_add_comment",
