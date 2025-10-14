@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import Generator
 from datetime import datetime, timezone
 from functools import cached_property
+from typing import Any, Optional
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_abstractions.base_request_configuration import RequestConfiguration
@@ -32,7 +33,7 @@ class EntraIDAssetConnector(AssetConnector):
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._client: GraphServiceClient | None = None

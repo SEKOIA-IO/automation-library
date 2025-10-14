@@ -102,7 +102,9 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
             events.append(event)
             if len(events) >= self.configuration.chunk_size:
-                total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+                total_events += len(
+                    await self.push_data_to_intakes([GraphApi.encode_value(event) for event in events])
+                )
 
                 for data in events:
                     new_offset = max(new_offset, data.activity_date_time)
@@ -113,7 +115,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 events = []
 
         if events:
-            total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+            total_events += len(await self.push_data_to_intakes([GraphApi.encode_value(event) for event in events]))
 
             for data in events:
                 new_offset = max(new_offset, data.activity_date_time)
@@ -137,7 +139,9 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
             events.append(event)
             if len(events) >= self.configuration.chunk_size:
-                total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+                total_events += len(
+                    await self.push_data_to_intakes([GraphApi.encode_value(event) for event in events])
+                )
 
                 for data in events:
                     new_offset = max(new_offset, data.created_date_time)
@@ -148,7 +152,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
                 events = []
 
         if events:
-            total_events += len(await self.push_data_to_intakes([GraphApi.encode_log(event) for event in events]))
+            total_events += len(await self.push_data_to_intakes([GraphApi.encode_value(event) for event in events]))
 
             for data in events:
                 new_offset = max(new_offset, data.created_date_time)

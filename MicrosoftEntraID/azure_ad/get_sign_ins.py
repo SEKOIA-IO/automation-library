@@ -1,9 +1,17 @@
-import asyncio
+from typing import Any
 
+from kiota_abstractions.base_request_configuration import RequestConfiguration
+from kiota_abstractions.default_query_parameters import QueryParameters
 from kiota_abstractions.native_response_handler import NativeResponseHandler
 from kiota_http.middleware.options import ResponseHandlerOption
-from msgraph.generated.users.item.messages.messages_request_builder import MessagesRequestBuilder
+from msgraph.generated.audit_logs.sign_ins.sign_ins_request_builder import SignInsRequestBuilder
+from msgraph.generated.models.sign_in_collection_response import SignInCollectionResponse
+from msgraph.generated.users.item.revoke_sign_in_sessions.revoke_sign_in_sessions_post_response import (
+    RevokeSignInSessionsPostResponse,
+)
 from pydantic.v1 import BaseModel
+
+from graph_api.client import GraphApi
 
 from .base import IdArguments, MicrosoftGraphAction, SingleUserArguments
 
@@ -40,14 +48,14 @@ class SignInStatus(BaseModel):
 class SignIn(BaseModel):
     appDisplayName: str | None
     appId: str | None
-    appliedConditionalAccessPolicies: list
-    authenticationContextClassReferences: list
-    authenticationDetails: list
+    appliedConditionalAccessPolicies: list[Any]
+    authenticationContextClassReferences: list[Any]
+    authenticationDetails: list[Any]
     authenticationMethodsUsed: list[str]
-    authenticationProcessingDetails: list
+    authenticationProcessingDetails: list[Any]
     authenticationProtocol: str | None
     authenticationRequirement: str | None
-    authenticationRequirementPolicies: list
+    authenticationRequirementPolicies: list[Any]
     autonomousSystemNumber: int
     clientAppUsed: str | None
     clientCredentialType: str | None
@@ -67,16 +75,16 @@ class SignIn(BaseModel):
     isInteractive: bool
     isTenantRestricted: bool
     location: SignInLocation
-    networkLocationDetails: list
+    networkLocationDetails: list[Any]
     originalRequestId: str | None
-    privateLinkDetails: dict
+    privateLinkDetails: dict[str, Any]
     processingTimeInMilliseconds: int
     resourceDisplayName: str | None
     resourceId: str | None
     resourceServicePrincipalId: str | None
     resourceTenantId: str | None
     riskDetail: str | None
-    riskEventTypes_v2: list
+    riskEventTypes_v2: list[Any]
     riskLevelAggregated: str | None
     riskLevelDuringSignIn: str | None
     riskState: str | None
@@ -84,7 +92,7 @@ class SignIn(BaseModel):
     servicePrincipalCredentialThumbprint: str | None
     servicePrincipalId: str | None
     servicePrincipalName: str | None
-    sessionLifetimePolicies: list
+    sessionLifetimePolicies: list[Any]
     signInEventTypes: list[str]
     signInIdentifier: str | None
     signInIdentifierType: str | None
@@ -109,39 +117,42 @@ class GetSignInsAction(MicrosoftGraphAction):
     # results_model doesn't support async model
     # results_model = GetSignInsResults
 
-    async def query_get_user_signin(self, req_conf):
+    async def query_get_user_signin(
+        self, req_conf: RequestConfiguration[SignInsRequestBuilder.SignInsRequestBuilderGetQueryParameters]
+    ) -> SignInCollectionResponse | None:  # pragma: no cover
         return await self.client.audit_logs.sign_ins.get(request_configuration=req_conf)
 
-    async def run(self, arguments: IdArguments):
-        query_params = MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters(
+    async def run(self, arguments: IdArguments) -> dict[str, Any]:
+        query_params = SignInsRequestBuilder.SignInsRequestBuilderGetQueryParameters(
             filter=f"userId eq '{arguments.id}'"
         )
-        request_configuration = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration(
+
+        request_configuration = RequestConfiguration(
             options=[ResponseHandlerOption(NativeResponseHandler())], query_parameters=query_params
         )
 
         response = await self.query_get_user_signin(request_configuration)
 
-        response.raise_for_status()
+        if response is None:
+            raise ValueError("No response received from the server for Get SignIns action.")
 
-        return {"signIns": response.json()["value"]}
+        return GraphApi.encode_values_as_dict("signIns", response.value or [])
 
 
 class RevokeSignInsSessionsAction(MicrosoftGraphAction):
     name = "Revoke SignIns Sessions"
     description = "Invalidates all the refresh tokens issued to applications for a user. Requires the User.ReadWrite.All or Directory.ReadWrite.All permissions."  # noqa: E501
 
-    async def query_revoke_signin(self, signIn_param, req_conf):
-        return await self.client.users.by_user_id(signIn_param).revoke_sign_in_sessions.post(
-            request_configuration=req_conf
-        )
+    async def query_revoke_signin(
+        self, user_id: str, req_conf: RequestConfiguration[QueryParameters]
+    ) -> RevokeSignInSessionsPostResponse | None:  # pragma: no cover
+        return await self.client.users.by_user_id(user_id).revoke_sign_in_sessions.post(request_configuration=req_conf)
 
-    async def run(self, arguments: SingleUserArguments):
-        request_configuration = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration(
+    async def run(self, arguments: SingleUserArguments) -> None:
+        request_configuration: RequestConfiguration[QueryParameters] = RequestConfiguration(
             options=[ResponseHandlerOption(NativeResponseHandler())],
         )
-        signIn_param = arguments.id or arguments.userPrincipalName
 
-        response = await self.query_revoke_signin(signIn_param, request_configuration)
-
-        response.raise_for_status()
+        response = await self.query_revoke_signin(arguments.get_user_id(), request_configuration)
+        if response is None:
+            raise ValueError("No response received from the server for Revoke SignIns Sessions action.")
