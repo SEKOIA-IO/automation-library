@@ -22,9 +22,9 @@ class DeleteApplicationAction(MicrosoftGraphAction):
             options=[ResponseHandlerOption(NativeResponseHandler())]
         )
 
-        application_id = arguments.objectId
+        application_id = arguments.id
         if not application_id:
-            raise ValueError("The objectId is required.")
+            raise ValueError("The id is required for this action.")
 
         # Returns None based on docs, but raises if error
         await self.query_delete_app(application_id, request_configuration)

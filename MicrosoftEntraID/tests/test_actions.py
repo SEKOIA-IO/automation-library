@@ -481,6 +481,6 @@ async def test_delete_app():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.delete_app.DeleteApplicationAction.query_delete_app", side_effect=async_mock):
-        results = await action.run({"objectId": "1986123896DGAZ12938"})
+        results = await action.run({"id": "1986123896DGAZ12938"})
 
         assert results is None

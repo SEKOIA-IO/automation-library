@@ -85,7 +85,7 @@ class MicrosoftGraphAction(AsyncAction):
 
 
 class ApplicationArguments(BaseModel):
-    objectId: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
+    id: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
 
 
 class IdArguments(BaseModel):
