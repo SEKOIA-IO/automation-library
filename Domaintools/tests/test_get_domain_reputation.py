@@ -3,7 +3,6 @@ import requests_mock
 import json
 
 from domaintools.get_domain_reputation import DomaintoolsDomainReputation
-from domaintools.models import DomainToolsClient
 
 import datetime
 import urllib.parse
@@ -82,12 +81,12 @@ def test_get_domain_reputation_action_success():
                 "domain": DOMAIN  # Add the domain parameter
             })
         )
-        result = action.run({"domain": DOMAIN})
+        response = action.run({"domain": DOMAIN})
 
-        assert result is not None
+        assert response is not None
         
-        # Parse the result - it might be nested in a wrapper
-        data = json.loads(result)
+        # Parse the response - it might be nested in a wrapper
+        data = json.loads(response)
         
         # Debug: print the actual structure
         print("Result structure:", json.dumps(data, indent=2))
@@ -120,18 +119,18 @@ def test_get_domain_reputation_action_api_error():
                 "domain": DOMAIN  # Add the domain parameter
             })
         )
-        result = action.run({"domain": DOMAIN})
+        response = action.run({"domain": DOMAIN})
         
         # Debug: print the actual result
-        print("Error result:", result)
+        print("Error response:", response)
         
         # Parse and check for error
-        if result:
-            data = json.loads(result)
+        if response:
+            data = json.loads(response)
             # Check if there's an error in the response
             assert "error" in data or "Error" in str(data)
         else:
             # If your action returns None/False on error
-            assert not result
+            assert not response
             
         assert mock_requests.call_count == 1

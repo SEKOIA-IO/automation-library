@@ -2,8 +2,7 @@ from typing import Any, Dict
 import requests_mock
 import json
 
-from domaintools.get_domain_reputation import DomaintoolsDomainReputation
-from domaintools.models import DomainToolsClient
+from domaintools.get_reverse_domain import DomaintoolsReverseDomain
 
 import datetime
 import urllib.parse
@@ -12,7 +11,8 @@ import hashlib
 
 DOMAIN: str = "google.com"
 HOST = "https://api.domaintools.com/"
-URI = f"v1/iris-investigate/"  # Base URI without domain
+#URI = f"v1/iris-investigate/"  # Base URI without domain
+URI = f"/v1/{DOMAIN}/hosting-history/"
 API_KEY = "LOREM"
 API_USERNAME = "IPSUM"
 TIMESTAMP = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -25,45 +25,35 @@ def sign(api_username, api_key, timestamp, uri):
 
 signature = sign(API_USERNAME, API_KEY, TIMESTAMP, URI)
 
-ACTION = "domain_reputation"
+ACTION = "reverse_domain"
 
 DT_OUTPUT: dict[str, Any] = {
     "response": {
-        "limit_exceeded": False,
-        "has_more_results": False,
-        "message": "Enjoy your data.",
-        "results_count": 1,
-        "total_count": 1,
-        "results": [
+        "domain_name": "google.com",
+        "ip_history": [
             {
-                "domain": "google.com",
-                "whois_url": "https://whois.domaintools.com/google.com",
-                "adsense": {
-                    "value": "",
-                    "count": 0
-                },
+            "domain": "GOOGLE.COM",
+            "post_ip": "216.239.57.99",
+            "pre_ip": None,
+            "action": "N",
+            "actiondate": "2004-04-24",
+            "action_in_words": "New"
+            },
+            {
+            "domain": "GOOGLE.COM",
+            "post_ip": "66.102.7.99",
+            "pre_ip": "216.239.57.99",
+            "action": "C",
+            "actiondate": "2004-05-08",
+            "action_in_words": "Change"
             }
         ]
     }
 }
 
 
-def _qs_matcher(expected_params: Dict[str, Any]):
-    """
-    returns a requests_mock additional_matcher that checks specific params in request.qs
-    """
-    def matcher(request):
-        actual = {k: v[0] if isinstance(v, list) else v for k, v in request.qs.items()}
-        # Check that all expected params are present with correct values
-        for key, value in expected_params.items():
-            if key not in actual or actual[key] != str(value):
-                return False
-        return True
-    return matcher
-
-
-def test_get_domain_reputation_action_success():
-    action = DomaintoolsDomainReputation()
+def test_get_reverse_domain_action_success():
+    action = DomaintoolsReverseDomain()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,
@@ -74,13 +64,7 @@ def test_get_domain_reputation_action_success():
         # Mock the actual URL that will be called (including domain parameter)
         mock_requests.get(
             urllib.parse.urljoin(HOST, URI),
-            json=DT_OUTPUT,  # Return the expected response
-            additional_matcher=_qs_matcher({
-                #"api_username": API_USERNAME,
-                #"signature": signature,
-                #"timestamp": TIMESTAMP,
-                "domain": DOMAIN  # Add the domain parameter
-            })
+            json=DT_OUTPUT  # Return the expected response
         )
         result = action.run({"domain": DOMAIN})
 
@@ -96,12 +80,12 @@ def test_get_domain_reputation_action_success():
         # If your action wraps the response, you might need something like:
         # assert data["Domain Reputation"]["results"][0]["domain"] == DOMAIN
         # Or if it returns the raw API response:
-        assert data["results"][0]["domain"] == DOMAIN
+        assert data["ip_history"] is not None
         assert mock_requests.call_count == 1
 
 
-def test_get_domain_reputation_action_api_error():
-    action = DomaintoolsDomainReputation()
+def test_get_reverse_domain_action_api_error():
+    action = DomaintoolsReverseDomain()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,
@@ -112,13 +96,7 @@ def test_get_domain_reputation_action_api_error():
         mock_requests.get(
             urllib.parse.urljoin(HOST, URI),
             status_code=500,  # Return an error status
-            json={"error": {"message": "Internal Server Error"}},
-            additional_matcher=_qs_matcher({
-                #"api_username": API_USERNAME,
-                #"signature": signature,
-                #"timestamp": TIMESTAMP,
-                "domain": DOMAIN  # Add the domain parameter
-            })
+            json={"error": {"message": "Internal Server Error"}}
         )
         result = action.run({"domain": DOMAIN})
         

@@ -2,15 +2,14 @@ from typing import Any, Dict
 import requests_mock
 import json
 
-from domaintools.get_domain_reputation import DomaintoolsDomainReputation
-from domaintools.models import DomainToolsClient
+from domaintools.get_reverse_email import DomaintoolsReverseEmail
 
 import datetime
 import urllib.parse
 import hmac
 import hashlib
 
-DOMAIN: str = "google.com"
+EMAIL: str = "admin@google.com"
 HOST = "https://api.domaintools.com/"
 URI = f"v1/iris-investigate/"  # Base URI without domain
 API_KEY = "LOREM"
@@ -25,23 +24,21 @@ def sign(api_username, api_key, timestamp, uri):
 
 signature = sign(API_USERNAME, API_KEY, TIMESTAMP, URI)
 
-ACTION = "domain_reputation"
-
 DT_OUTPUT: dict[str, Any] = {
     "response": {
         "limit_exceeded": False,
         "has_more_results": False,
         "message": "Enjoy your data.",
-        "results_count": 1,
-        "total_count": 1,
+        "results_count": 545,
+        "total_count": 545,
         "results": [
             {
-                "domain": "google.com",
-                "whois_url": "https://whois.domaintools.com/google.com",
-                "adsense": {
-                    "value": "",
-                    "count": 0
-                },
+            "domain": "softwaredealsdls.com",
+            "whois_url": "https://whois.domaintools.com/softwaredealsdls.com",
+            "adsense": {
+                "value": "",
+                "count": 0
+            }
             }
         ]
     }
@@ -62,8 +59,8 @@ def _qs_matcher(expected_params: Dict[str, Any]):
     return matcher
 
 
-def test_get_domain_reputation_action_success():
-    action = DomaintoolsDomainReputation()
+def test_get_reverse_email_action_success():
+    action = DomaintoolsReverseEmail()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,
@@ -72,17 +69,15 @@ def test_get_domain_reputation_action_success():
 
     with requests_mock.Mocker() as mock_requests:
         # Mock the actual URL that will be called (including domain parameter)
+        # The mock will only match requests where the query string contains an email parameter with the value of EMAIL
         mock_requests.get(
             urllib.parse.urljoin(HOST, URI),
             json=DT_OUTPUT,  # Return the expected response
             additional_matcher=_qs_matcher({
-                #"api_username": API_USERNAME,
-                #"signature": signature,
-                #"timestamp": TIMESTAMP,
-                "domain": DOMAIN  # Add the domain parameter
+                "email": EMAIL 
             })
         )
-        result = action.run({"domain": DOMAIN})
+        result = action.run({"email": EMAIL})
 
         assert result is not None
         
@@ -91,17 +86,13 @@ def test_get_domain_reputation_action_success():
         
         # Debug: print the actual structure
         print("Result structure:", json.dumps(data, indent=2))
-        
-        # Adjust assertion based on your actual return structure
-        # If your action wraps the response, you might need something like:
-        # assert data["Domain Reputation"]["results"][0]["domain"] == DOMAIN
-        # Or if it returns the raw API response:
-        assert data["results"][0]["domain"] == DOMAIN
+
+        assert data["results"][0]["domain"] is not None
         assert mock_requests.call_count == 1
 
 
-def test_get_domain_reputation_action_api_error():
-    action = DomaintoolsDomainReputation()
+def test_get_reverse_email_action_api_error():
+    action = DomaintoolsReverseEmail()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,
@@ -114,13 +105,10 @@ def test_get_domain_reputation_action_api_error():
             status_code=500,  # Return an error status
             json={"error": {"message": "Internal Server Error"}},
             additional_matcher=_qs_matcher({
-                #"api_username": API_USERNAME,
-                #"signature": signature,
-                #"timestamp": TIMESTAMP,
-                "domain": DOMAIN  # Add the domain parameter
+                "email": EMAIL 
             })
         )
-        result = action.run({"domain": DOMAIN})
+        result = action.run({"email": EMAIL})
         
         # Debug: print the actual result
         print("Error result:", result)

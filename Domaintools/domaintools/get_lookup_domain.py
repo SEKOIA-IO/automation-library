@@ -20,6 +20,7 @@ class DomaintoolsLookupDomain(Action):
             }
 
             result = DomaintoolsrunAction(config, parsed_args)
+            print(f"API call response: {result}")  # Debugging line
             return result
 
         except DomainToolsError as e:

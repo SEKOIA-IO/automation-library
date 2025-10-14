@@ -2,8 +2,7 @@ from typing import Any, Dict
 import requests_mock
 import json
 
-from domaintools.get_domain_reputation import DomaintoolsDomainReputation
-from domaintools.models import DomainToolsClient
+from domaintools.get_lookup_domain import DomaintoolsLookupDomain
 
 import datetime
 import urllib.parse
@@ -25,7 +24,7 @@ def sign(api_username, api_key, timestamp, uri):
 
 signature = sign(API_USERNAME, API_KEY, TIMESTAMP, URI)
 
-ACTION = "domain_reputation"
+ACTION = "lookup_domain"
 
 DT_OUTPUT: dict[str, Any] = {
     "response": {
@@ -62,8 +61,8 @@ def _qs_matcher(expected_params: Dict[str, Any]):
     return matcher
 
 
-def test_get_domain_reputation_action_success():
-    action = DomaintoolsDomainReputation()
+def test_get_lookup_domain_action_success():
+    action = DomaintoolsLookupDomain()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,
@@ -100,8 +99,8 @@ def test_get_domain_reputation_action_success():
         assert mock_requests.call_count == 1
 
 
-def test_get_domain_reputation_action_api_error():
-    action = DomaintoolsDomainReputation()
+def test_get_lookup_domain_action_api_error():
+    action = DomaintoolsLookupDomain()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,

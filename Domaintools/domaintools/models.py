@@ -263,30 +263,39 @@ class DomainToolsClient:
         logger.info(f"Successfully retrieved reverse domain data for {domain}")
         return result
     
-    def reverse_ip(self, ip: str, limit: int = 100) -> Dict:
+    def reverse_ip(self, domain: str) -> Dict[str, Any]:
         """
-        Find domains hosted on an IP address using Iris Investigate
-        
+        Query DomainTools Reverse IP API to find domains on the same IP.
+
         Args:
-            ip: IP address to search
-            limit: Maximum number of results to return (100-10000)
-            
+            domain: The domain name to look up
+
         Returns:
-            Domains hosted on the IP
+            Dictionary containing the API response with domain list
+
+        Example:
+            results = client.reverse_ip('example.com')
+            print(f"Found {results['response']['ip_addresses']['domain_count']} domains")
         """
-        logger.info(f"Getting reverse IP data for: {ip}")
-        ip = self._validate_ip(ip)
+
+        domain = self._validate_domain(domain)
+        #url = f"{self.config.host}/v1/{domain}/reverse-ip/"
+        uri = f"v1/{domain}/reverse-ip/"
+        url = urllib.parse.urljoin(self.config.host, uri)
+        print("Request URL:", url)
+        logger.info(f"Getting reverse IP data for: {domain}")
+
+        print(self.config.api_username, self.config.api_key)
+
+        try:
+            response = self.session.get(url, auth=(self.config.api_username, self.config.api_key), timeout=self.config.timeout)
+            print("Response Content:", response.text)
+        except requests.RequestException as e:
+            raise DomainToolsError(f"Request error: {e}")
         
-        # Use Iris Investigate with ip parameter
-        uri = "/v1/iris-investigate/"
-        params = {
-            'ip': ip,
-            'limit': max(100, min(limit, 10000))
-        }
-        
-        result = self._make_request(uri, params)
-        logger.info(f"Successfully retrieved reverse IP data for {ip}")
-        return result
+        logger.info(f"Successfully retrieved reverse IP data for {domain}")
+
+        return response.json()
     
     def reverse_email(self, email: str, limit: int = 100) -> Dict:
         """
@@ -410,21 +419,22 @@ def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -
     try:
         
         client = DomainToolsClient(config)
-        
-        #arg_domain = "google.com"
-        #arg_ip = "1.1.1.1"
-        #arg_email = "admin@google.com"
+
         arg_domain = arguments.get("domain")
-        arg_ip = arguments.get("ip")
+        #arg_ip = arguments.get("ip") # Not used in current actions BECAUSE REVERSE IP TAKES DOMAIN
         arg_email = arguments.get("email")
+
         # Name of the client method to call, see below
         arg_action = arguments.get("domaintools_action")
         
+        client = DomainToolsClient(config)
+
+
         dispatch = {
             "domain_reputation": ("domain_reputation", lambda: [arg_domain], {}, "Domain Reputation"),
             "pivot_action": ("pivot_action", lambda: [arg_domain, "domain"], {"limit": 100}, "Pivot Action"),
             "reverse_domain": ("reverse_domain", lambda: [arg_domain], {}, "Reverse Domain"),
-            "reverse_ip": ("reverse_ip", lambda: [arg_ip], {"limit": 100}, "Reverse IP"),
+            "reverse_ip": ("reverse_ip", lambda: [arg_domain], {}, "Reverse IP"),
             "reverse_email": ("reverse_email", lambda: [arg_email], {"limit": 100}, "Reverse Email"),
             "lookup_domain": ("lookup_domain", lambda: [arg_domain], {}, "Lookup Domain"),
         }
@@ -451,18 +461,54 @@ def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -
             args = args_fn()
             #print("Calling method:", method_name, "with args:", args, "and kwargs:", kwargs)
             ok, payload = call_method(method_name, args, kwargs)
-            
+            """      
             if ok:
-                # Safely extract response -> results from the payload
+                # Safely extract response from the payload
                 try:
-                    #print("Raw payload:", payload)
-                    results = payload.get('response', {}).get('results', None)
-                    #print("Extracted results:", results)
-                    return json.dumps({"results": results}, indent=2)
+                    print("Raw payload:", payload)
+                    response = payload.get('response', None)
+                    return json.dumps(response, indent=2)
                 except Exception as e:
-                    return json.dumps({label: {"error": f"Failed to extract results: {e}"}}, indent=2)
+                    return json.dumps({label: {"error": f"Failed to extract response: {e}"}}, indent=2)
             else:
                 return json.dumps({label: {"error": payload}}, indent=2)
+            """
+            if ok:
+                # Payload returned by the client method
+                # It may be:
+                #  - a dict with a 'response' key -> return that
+                #  - a dict with an 'error' key -> return top-level error
+                #  - some other dict / value -> return it directly or wrap as error if None
+                try:
+                    logger.debug("Raw payload: %s", payload)
+                    # If payload is a dict, check common shapes
+                    if isinstance(payload, dict):
+                        # If the client already wrapped an error, preserve it as top-level "error"
+                        if "error" in payload:
+                            # payload["error"] may be string or dict; normalize
+                            return json.dumps({"error": payload["error"]}, indent=2)
+                        # If there is a nested 'response' key, return it (most normal case)
+                        if "response" in payload:
+                            return json.dumps(payload["response"], indent=2)
+                        # Some endpoints return the full response at top-level (no 'response' key)
+                        # return the payload as-is
+                        return json.dumps(payload, indent=2)
+                    else:
+                        # Non-dict payload (string, list, None, etc.)
+                        if payload is None:
+                            return json.dumps({"error": f"No response returned for action {label}."}, indent=2)
+                        # For strings (e.g. error messages returned by call_method on exceptions), wrap in error
+                        if isinstance(payload, str):
+                            # If payload already looks like 'DomainToolsError: ...' or similar, preserve it
+                            return json.dumps({"error": payload}, indent=2)
+                        # otherwise serialize the payload
+                        return json.dumps(payload, indent=2)
+                except Exception as e:
+                    return json.dumps({"error": f"Failed to extract response: {e}"}, indent=2)
+            else:
+                # call_method already returned False; payload may be an error string or exception info
+                return json.dumps({"error": payload}, indent=2)
+
         
     except DomainToolsError as e:
         return json.dumps({"error": f"DomainTools client initialization error: {e}"}, indent=2)

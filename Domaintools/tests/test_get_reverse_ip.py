@@ -2,8 +2,7 @@ from typing import Any, Dict
 import requests_mock
 import json
 
-from domaintools.get_domain_reputation import DomaintoolsDomainReputation
-from domaintools.models import DomainToolsClient
+from domaintools.get_reverse_ip import DomaintoolsReverseIP
 
 import datetime
 import urllib.parse
@@ -12,7 +11,8 @@ import hashlib
 
 DOMAIN: str = "google.com"
 HOST = "https://api.domaintools.com/"
-URI = f"v1/iris-investigate/"  # Base URI without domain
+#URI = f"v1/iris-investigate/"  # Base URI without domain
+URI = f"v1/{DOMAIN}/reverse-ip/"
 API_KEY = "LOREM"
 API_USERNAME = "IPSUM"
 TIMESTAMP = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -25,33 +25,37 @@ def sign(api_username, api_key, timestamp, uri):
 
 signature = sign(API_USERNAME, API_KEY, TIMESTAMP, URI)
 
-ACTION = "domain_reputation"
-
 DT_OUTPUT: dict[str, Any] = {
-    "response": {
-        "limit_exceeded": False,
-        "has_more_results": False,
-        "message": "Enjoy your data.",
-        "results_count": 1,
-        "total_count": 1,
-        "results": [
-            {
-                "domain": "google.com",
-                "whois_url": "https://whois.domaintools.com/google.com",
-                "adsense": {
-                    "value": "",
-                    "count": 0
-                },
-            }
-        ]
+  "response": {
+    "ip_addresses": [
+        {
+        "ip_address": "23.192.228.80",
+        "domain_count": 162,
+        "domain_names": [
+            "0x1bf52.top",
+            "axxxxu.com",
+            "peterboroughthunder.com",
+            "getinsurtech.com",
+            "wp1clickqa20-01also-a.one",
+            "tim.monster",
+            "reportly.io",
+            "ourspacenz.com",
+            "janikbruell.com",
+            "skansk.com",
+            "codeninjascerritos.com",
+            "brianyao.com",
+            "cnnvm.com",
+            "framina.at",
+            "mowuzzuf.com",
+            "deadhand.games",
+            "abcai.eu"]
+        }]
     }
 }
 
-
+""" 
 def _qs_matcher(expected_params: Dict[str, Any]):
-    """
-    returns a requests_mock additional_matcher that checks specific params in request.qs
-    """
+
     def matcher(request):
         actual = {k: v[0] if isinstance(v, list) else v for k, v in request.qs.items()}
         # Check that all expected params are present with correct values
@@ -60,10 +64,10 @@ def _qs_matcher(expected_params: Dict[str, Any]):
                 return False
         return True
     return matcher
+ """
 
-
-def test_get_domain_reputation_action_success():
-    action = DomaintoolsDomainReputation()
+def test_get_reverse_ip_action_success():
+    action = DomaintoolsReverseIP()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,
@@ -72,15 +76,10 @@ def test_get_domain_reputation_action_success():
 
     with requests_mock.Mocker() as mock_requests:
         # Mock the actual URL that will be called (including domain parameter)
+        # /!\ DOMAIN is not sent in params but in the URL path /!\
         mock_requests.get(
             urllib.parse.urljoin(HOST, URI),
             json=DT_OUTPUT,  # Return the expected response
-            additional_matcher=_qs_matcher({
-                #"api_username": API_USERNAME,
-                #"signature": signature,
-                #"timestamp": TIMESTAMP,
-                "domain": DOMAIN  # Add the domain parameter
-            })
         )
         result = action.run({"domain": DOMAIN})
 
@@ -92,16 +91,12 @@ def test_get_domain_reputation_action_success():
         # Debug: print the actual structure
         print("Result structure:", json.dumps(data, indent=2))
         
-        # Adjust assertion based on your actual return structure
-        # If your action wraps the response, you might need something like:
-        # assert data["Domain Reputation"]["results"][0]["domain"] == DOMAIN
-        # Or if it returns the raw API response:
-        assert data["results"][0]["domain"] == DOMAIN
+        assert data["ip_addresses"] is not None
         assert mock_requests.call_count == 1
 
 
-def test_get_domain_reputation_action_api_error():
-    action = DomaintoolsDomainReputation()
+def test_get_reverse_ip_action_api_error():
+    action = DomaintoolsReverseIP()
     action.module.configuration = {
         "api_key": API_KEY,
         "api_username": API_USERNAME,
@@ -112,13 +107,7 @@ def test_get_domain_reputation_action_api_error():
         mock_requests.get(
             urllib.parse.urljoin(HOST, URI),
             status_code=500,  # Return an error status
-            json={"error": {"message": "Internal Server Error"}},
-            additional_matcher=_qs_matcher({
-                #"api_username": API_USERNAME,
-                #"signature": signature,
-                #"timestamp": TIMESTAMP,
-                "domain": DOMAIN  # Add the domain parameter
-            })
+            json={"error": {"message": "Internal Server Error"}}
         )
         result = action.run({"domain": DOMAIN})
         

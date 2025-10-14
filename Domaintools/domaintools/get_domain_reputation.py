@@ -18,11 +18,11 @@ class DomaintoolsDomainReputation(Action):
                 "email": arguments.get("email", "admin@example.com"),
                 "domaintools_action": "domain_reputation",
             }
-            print(f"Parsed arguments: {parsed_args}")  # Debugging line
+            #print(f"Parsed arguments: {parsed_args}")  # Debugging line
 
-            result = DomaintoolsrunAction(config, parsed_args)
-            print(f"API call result: {result}")  # Debugging line
-            return result
+            response = DomaintoolsrunAction(config, parsed_args)
+            print(f"API call response: {response}")  # Debugging line
+            return response
 
         except DomainToolsError as e:
             print(json.dumps({"error": f"DomainTools client initialization error: {e}"}, indent=2))

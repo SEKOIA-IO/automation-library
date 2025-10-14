@@ -19,6 +19,7 @@ class DomaintoolsReverseIP(Action):
                 "domaintools_action": "reverse_ip",
             }
 
+            print("Parsed arguments:", parsed_args)
             result = DomaintoolsrunAction(config, parsed_args)
             return result
 
