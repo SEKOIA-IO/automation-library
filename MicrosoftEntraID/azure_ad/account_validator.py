@@ -11,7 +11,7 @@ class AzureADAccountValidator(AccountValidator):
     _client: GraphServiceClient | None = None
 
     @cached_property
-    def client(self) -> GraphServiceClient:
+    def client(self) -> GraphServiceClient:  # pragma: no cover
         if self._client is None:
             credentials = ClientSecretCredential(
                 tenant_id=self.module.configuration["tenant_id"],

@@ -1,6 +1,7 @@
 import asyncio
 from functools import cached_property
 from traceback import format_exc
+from typing import Any
 
 import sentry_sdk
 from azure.identity import UsernamePasswordCredential
@@ -31,7 +32,7 @@ class AzureADModule(Module):
 
 
 class AsyncAction(Action):
-    def execute(self) -> None:
+    def execute(self) -> None:  # pragma: no cover
         try:
             self._ensure_data_path_set()
             self.set_task_as_running()
@@ -63,16 +64,21 @@ class MicrosoftGraphAction(AsyncAction):
         return self._client
 
     @cached_property
-    def delegated_client(self):
+    def delegated_client(self) -> GraphServiceClient:  # pragma: no cover
         """
         Used for password reset action
         It's a not a good practice to use. but we app permission
         not supported for this action
         """
+        username = self.module.configuration.username
+        password = self.module.configuration.password
+        if not username or not password:
+            raise ValueError("Username and password must be set in the configuration for delegated client.")
+
         credentials = UsernamePasswordCredential(
             client_id=self.module.configuration.client_id,
-            username=self.module.configuration.username,
-            password=self.module.configuration.password,
+            username=username,
+            password=password,
         )
 
         return GraphServiceClient(credentials=credentials)
@@ -93,10 +99,17 @@ class SingleUserArguments(BaseModel):
         description="Principal Name of the user. id or userPrincipalName should be specified.",
     )
 
+    def get_user_id(self) -> str:
+        user_id = self.id or self.userPrincipalName
+        if not user_id:
+            raise ValueError("The id or userPrincipalName is required for this operation.")
+
+        return user_id
+
 
 class RequiredSingleUserArguments(SingleUserArguments):
     @root_validator
-    def validate_id_or_userPrincipalName(cls, values):
+    def validate_id_or_userPrincipalName(cls, values: dict[str, Any]) -> dict[str, Any]:
         if not (values.get("id") or values.get("userPrincipalName")):
             raise ValueError("'id' or 'userPrincipalName' should be specified")
 
@@ -110,7 +123,7 @@ class RequiredTwoUserArguments(SingleUserArguments):
     )
 
     @root_validator
-    def validate_two_arguments(cls, values):
+    def validate_two_arguments(cls, values: dict[str, Any]) -> dict[str, Any]:
         if not ((values.get("id") or values.get("userPrincipalName")) and values.get("userNewPassword")):
             raise ValueError("'userPrincipalName' and ('id' or 'userPrincipalName') should be specified")
 

@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from functools import cached_property
-from typing import AsyncGenerator, Iterable
+from typing import Any, AsyncGenerator, Iterable, TypeVar
 
+import orjson
 from azure.identity.aio import ClientSecretCredential
 from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_abstractions.serialization import Parsable
@@ -15,6 +16,8 @@ from msgraph.generated.models.directory_audit import DirectoryAudit
 from msgraph.generated.models.sign_in import SignIn
 
 _factory = JsonSerializationWriterFactory()
+
+ParsableT = TypeVar("ParsableT", bound=Parsable)
 
 
 class GraphApi(object):
@@ -120,11 +123,27 @@ class GraphApi(object):
                 yield item
 
     @staticmethod
-    def encode_log(value: Parsable) -> str:
+    def encode_value(value: Parsable) -> str:
         writer = _factory.get_serialization_writer("application/json")
         writer.write_object_value(None, value)
 
         return writer.get_serialized_content().decode("utf-8")
+
+    @staticmethod
+    def encode_value_as_dict(value: Parsable) -> dict[str, Any]:
+        writer = _factory.get_serialization_writer("application/json")
+        writer.write_object_value(None, value)
+
+        result: dict[str, Any] = orjson.loads(writer.get_serialized_content())
+        return result
+
+    @staticmethod
+    def encode_values_as_dict(key: str | None, values: list[ParsableT]) -> dict[str, Any]:
+        writer = _factory.get_serialization_writer("application/json")
+        writer.write_collection_of_object_values(key, values)
+        result: dict[str, Any] = orjson.loads(writer.get_serialized_content())
+
+        return result
 
     async def close(self) -> None:  # pragma: no cover
         if self._credentials:

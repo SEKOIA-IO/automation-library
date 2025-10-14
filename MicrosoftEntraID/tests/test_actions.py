@@ -2,16 +2,30 @@ import json
 from typing import Any, Optional, Type
 from unittest.mock import AsyncMock, patch
 
+import orjson
 import pytest
 import requests
 from kiota_abstractions.request_adapter import RequestAdapter
+from kiota_serialization_json.json_parse_node_factory import JsonParseNodeFactory
+from kiota_serialization_json.json_serialization_writer_factory import JsonSerializationWriterFactory
 from msgraph import GraphServiceClient
+from msgraph.generated.models.password_authentication_method_collection_response import (
+    PasswordAuthenticationMethodCollectionResponse,
+)
+from msgraph.generated.models.password_reset_response import PasswordResetResponse
+from msgraph.generated.models.sign_in_collection_response import SignInCollectionResponse
+from msgraph.generated.models.user import User
+from msgraph.generated.models.user_registration_details_collection_response import (
+    UserRegistrationDetailsCollectionResponse,
+)
 
 from azure_ad.base import AzureADModule, MicrosoftGraphAction
 from azure_ad.delete_app import DeleteApplicationAction
 from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
 from azure_ad.get_user_authentication_methods import GetUserAuthenticationMethodsAction
 from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction, ResetUserPasswordAction
+
+_factory = JsonParseNodeFactory()
 
 
 def configured_action(action: Type[MicrosoftGraphAction]):
@@ -64,18 +78,9 @@ async def test_get_user():
     expected_user = {
         "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
         "accountEnabled": True,
-        "city": None,
-        "companyName": None,
-        "country": None,
-        "createdDateTime": "2022-02-01T15:44:02Z",
-        "creationType": None,
-        "deletedDateTime": None,
-        "department": None,
+        "createdDateTime": "2022-02-01T15:44:02+00:00",
         "displayName": "Jean Test",
-        "jobTitle": None,
-        "lastPasswordChangeDateTime": "2022-02-04T14:08:49Z",
-        "mail": None,
-        "mobilePhone": None,
+        "lastPasswordChangeDateTime": "2022-02-04T14:08:49+00:00",
         "assignedLicenses": [{"disabledPlans": [], "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968"}],
         "identities": [
             {
@@ -87,15 +92,18 @@ async def test_get_user():
         "userPrincipalName": "jean.test@test.onmicrosoft.com",
     }
 
-    response = requests.Response()
-    response._content = json.dumps(expected_user).encode("utf-8")
-    response.status_code = 200
+    expected_result = {
+        "@odata.type": "#microsoft.graph.user",
+        **expected_user,
+    }
+
+    response = _factory.get_root_parse_node("application/json", orjson.dumps(expected_user)).get_object_value(User)
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.user.GetUserAction.query_get_user", side_effect=async_mock):
         results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
 
-        assert results == expected_user
+        assert results == expected_result
 
 
 @pytest.mark.asyncio
@@ -104,18 +112,9 @@ async def test_get_user_1():
     expected_user = {
         "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
         "accountEnabled": True,
-        "city": None,
-        "companyName": None,
-        "country": None,
-        "createdDateTime": "2022-02-01T15:44:02Z",
-        "creationType": None,
-        "deletedDateTime": None,
-        "department": None,
+        "createdDateTime": "2022-02-01T15:44:02+00:00",
         "displayName": "Jean Test",
-        "jobTitle": None,
-        "lastPasswordChangeDateTime": "2022-02-04T14:08:49Z",
-        "mail": None,
-        "mobilePhone": None,
+        "lastPasswordChangeDateTime": "2022-02-04T14:08:49+00:00",
         "assignedLicenses": [{"disabledPlans": [], "skuId": "b05e124f-c7cc-45a0-a6aa-8cf78c946968"}],
         "identities": [
             {
@@ -127,16 +126,19 @@ async def test_get_user_1():
         "userPrincipalName": "jean.test@test.onmicrosoft.com",
     }
 
-    response = requests.Response()
-    response._content = json.dumps(expected_user).encode("utf-8")
-    response.status_code = 200
+    expected_result = {
+        "@odata.type": "#microsoft.graph.user",
+        **expected_user,
+    }
+
+    response = _factory.get_root_parse_node("application/json", orjson.dumps(expected_user)).get_object_value(User)
 
     mocked_adapter = CustomRequestAdapter(send_async=response)
     graph_client = GraphServiceClient(request_adapter=mocked_adapter)
     action._client = graph_client
 
     results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
-    assert results == expected_user
+    assert results == expected_result
 
 
 @pytest.mark.asyncio
@@ -173,17 +175,18 @@ async def test_enable_user():
 async def test_reset_user_password():
     action = configured_action(ResetUserPasswordAction)
 
-    methods_response, reset_response = requests.Response(), requests.Response()
     expected_methods_response = {
         "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('')/authentication/passwordMethods",
         "value": [{"id": "28c10230-6103-485e-b985-444c60001490", "password": "", "createdDateTime": ""}],
     }
-    methods_response._content = json.dumps(expected_methods_response).encode("utf-8")
-    methods_response.status_code = 200
+
+    methods_response = _factory.get_root_parse_node(
+        "application/json", orjson.dumps(expected_methods_response)
+    ).get_object_value(PasswordAuthenticationMethodCollectionResponse)
+
     methods_async_mock = AsyncMock(return_value=methods_response)
 
-    reset_response._content = b"{}"
-    reset_response.status_code = 202
+    reset_response = PasswordResetResponse()
 
     reset_async_mock = AsyncMock(return_value=reset_response)
     with patch("azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock):
@@ -217,6 +220,7 @@ async def test_get_user_authentication_methods():
             }
         ],
     }
+
     value_expected = [
         {
             "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
@@ -235,9 +239,9 @@ async def test_get_user_authentication_methods():
 
     final_value_expected = {"authenticationResults": value_expected}
 
-    response = requests.Response()
-    response._content = json.dumps(expected).encode("utf-8")
-    response.status_code = 200
+    response = _factory.get_root_parse_node("application/json", orjson.dumps(expected)).get_object_value(
+        UserRegistrationDetailsCollectionResponse
+    )
 
     async_mock = AsyncMock(return_value=response)
     with patch(
@@ -252,14 +256,13 @@ async def test_get_user_authentication_methods():
 SIGN_INS: list[dict] = [
     {
         "id": "1c60ed7c-be49-4e52-b7ff-20ec6df96800",
-        "createdDateTime": "2022-07-05T10:26:13Z",
+        "createdDateTime": "2022-07-05T10:26:13+00:00",
         "userDisplayName": "John Doe",
         "userPrincipalName": "test@gmail.com",
         "userId": "b7873f1b-547b-4605-ad9e-abc76e92f902",
         "appId": "747b0e83-6618-41b8-9062-e7d1783f1223",
         "appDisplayName": "Azure Portal",
         "ipAddress": "1.2.3.4",
-        "ipAddressFromResourceProvider": None,
         "clientAppUsed": "Browser",
         "userAgent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:101.0) Gecko/20100101 Firefox/101.0",
         "correlationId": "2bf6255a-33a8-4869-9ad4-0d135f7c2739",
@@ -283,17 +286,13 @@ SIGN_INS: list[dict] = [
         "authenticationMethodsUsed": [],
         "authenticationRequirement": "singleFactorAuthentication",
         "signInIdentifier": "",
-        "signInIdentifierType": None,
-        "servicePrincipalName": None,
         "signInEventTypes": ["interactiveUser"],
         "servicePrincipalId": "",
-        "federatedCredentialId": None,
         "userType": "member",
         "flaggedForReview": False,
         "isTenantRestricted": False,
         "autonomousSystemNumber": 207215,
         "crossTenantAccessType": "b2bCollaboration",
-        "servicePrincipalCredentialKeyId": None,
         "servicePrincipalCredentialThumbprint": "",
         "uniqueTokenIdentifier": "MWM2MGVkN2MtYmU0OS00ZTUyLWI3ZmYtMjBlYzZkZjk2ODAw",
         "incomingTokenType": "none",
@@ -302,7 +301,6 @@ SIGN_INS: list[dict] = [
         "status": {
             "errorCode": 0,
             "failureReason": "Other.",
-            "additionalDetails": None,
         },
         "deviceDetail": {
             "deviceId": "",
@@ -318,7 +316,6 @@ SIGN_INS: list[dict] = [
             "state": "Paris",
             "countryOrRegion": "FR",
             "geoCoordinates": {
-                "altitude": None,
                 "latitude": 48.86023,
                 "longitude": 2.34107,
             },
@@ -329,9 +326,8 @@ SIGN_INS: list[dict] = [
         "networkLocationDetails": [],
         "authenticationDetails": [
             {
-                "authenticationStepDateTime": "2022-07-05T10:26:13Z",
+                "authenticationStepDateTime": "2022-07-05T10:26:13+00:00",
                 "authenticationMethod": "Previously satisfied",
-                "authenticationMethodDetail": None,
                 "succeeded": True,
                 "authenticationStepResultDetail": "First factor requirement satisfied by claim in the token",
                 "authenticationStepRequirement": "",
@@ -348,14 +344,13 @@ SIGN_INS: list[dict] = [
     },
     {
         "id": "fb013d56-f4a7-4df2-93a4-83869bfb4d00",
-        "createdDateTime": "2022-07-04T15:44:18Z",
+        "createdDateTime": "2022-07-04T15:44:18+00:00",
         "userDisplayName": "John Doe",
         "userPrincipalName": "test@gmail.com",
         "userId": "b7873f1b-547b-4605-ad9e-abc76e92f902",
         "appId": "747b0e83-6618-41b8-9062-e7d1783f1223",
         "appDisplayName": "Azure Portal",
         "ipAddress": "5.6.7.8",
-        "ipAddressFromResourceProvider": None,
         "clientAppUsed": "Browser",
         "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",  # noqa: E501
         "correlationId": "b93a3a34-31ae-4c00-a757-e59b5d2adc54",
@@ -379,17 +374,13 @@ SIGN_INS: list[dict] = [
         "authenticationMethodsUsed": [],
         "authenticationRequirement": "singleFactorAuthentication",
         "signInIdentifier": "",
-        "signInIdentifierType": None,
-        "servicePrincipalName": None,
         "signInEventTypes": ["interactiveUser"],
         "servicePrincipalId": "",
-        "federatedCredentialId": None,
         "userType": "member",
         "flaggedForReview": False,
         "isTenantRestricted": False,
         "autonomousSystemNumber": 15557,
         "crossTenantAccessType": "b2bCollaboration",
-        "servicePrincipalCredentialKeyId": None,
         "servicePrincipalCredentialThumbprint": "",
         "uniqueTokenIdentifier": "ZmIwMTNkNTYtZjRhNy00ZGYyLTkzYTQtODM4NjliZmI0ZDAw",
         "incomingTokenType": "none",
@@ -398,7 +389,6 @@ SIGN_INS: list[dict] = [
         "status": {
             "errorCode": 0,
             "failureReason": "Other.",
-            "additionalDetails": None,
         },
         "deviceDetail": {
             "deviceId": "",
@@ -414,7 +404,6 @@ SIGN_INS: list[dict] = [
             "state": "Paris",
             "countryOrRegion": "FR",
             "geoCoordinates": {
-                "altitude": None,
                 "latitude": 48.86023,
                 "longitude": 2.34107,
             },
@@ -428,9 +417,8 @@ SIGN_INS: list[dict] = [
         "networkLocationDetails": [],
         "authenticationDetails": [
             {
-                "authenticationStepDateTime": "2022-07-04T15:44:18Z",
+                "authenticationStepDateTime": "2022-07-04T15:44:18+00:00",
                 "authenticationMethod": "Previously satisfied",
-                "authenticationMethodDetail": None,
                 "succeeded": True,
                 "authenticationStepResultDetail": "First factor requirement satisfied by claim in the token",
                 "authenticationStepRequirement": "",
@@ -454,7 +442,9 @@ async def test_get_signins():
 
     expected = {"value": SIGN_INS}
     value_expected = {"signIns": SIGN_INS}
-    response = requests.Response()
+    response = _factory.get_root_parse_node("application/json", orjson.dumps(expected)).get_object_value(
+        SignInCollectionResponse
+    )
     response._content = json.dumps(expected).encode("utf-8")
     response.status_code = 200
 
@@ -491,6 +481,6 @@ async def test_delete_app():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.delete_app.DeleteApplicationAction.query_delete_app", side_effect=async_mock):
-        results = await action.run({"id": "1986123896DGAZ12938"})
+        results = await action.run({"objectId": "1986123896DGAZ12938"})
 
         assert results is None
