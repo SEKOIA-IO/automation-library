@@ -20,7 +20,7 @@ pytest = "*"
 pytest-cov = "*"
 pytest-asyncio = "*"
 requests-mock = "*"
-black = { version = "^22.6.0", allow-prereleases = true }
+black = { version = "^24.3.0", extras = ["colorama"] }
 flake8 = "^4.0.1"
 mypy = "^1.11.2"
 pytest-clarity = "^1.0.1"

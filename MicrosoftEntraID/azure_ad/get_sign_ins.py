@@ -145,7 +145,7 @@ class RevokeSignInsSessionsAction(MicrosoftGraphAction):
 
     async def query_revoke_signin(
         self, user_id: str, req_conf: RequestConfiguration[QueryParameters]
-    ) -> RevokeSignInSessionsPostResponse | None: # pragma: no cover
+    ) -> RevokeSignInSessionsPostResponse | None:  # pragma: no cover
         return await self.client.users.by_user_id(user_id).revoke_sign_in_sessions.post(request_configuration=req_conf)
 
     async def run(self, arguments: SingleUserArguments) -> None:

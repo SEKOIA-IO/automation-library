@@ -53,7 +53,7 @@ class GetUserAction(MicrosoftGraphAction):
         self,
         user_id: str,
         req_conf: RequestConfiguration[UserItemRequestBuilder.UserItemRequestBuilderGetQueryParameters],
-    ) -> User | None: # pragma: no cover
+    ) -> User | None:  # pragma: no cover
         return await self.client.users.by_user_id(user_id).get(request_configuration=req_conf)
 
     async def run(self, arguments: RequiredSingleUserArguments) -> dict[str, Any]:
@@ -82,7 +82,7 @@ class DisableUserAction(MicrosoftGraphAction):
 
     async def query_disable_user(
         self, user_id: str, req_body: User, req_conf: RequestConfiguration[QueryParameters]
-    ) -> User | None: # pragma: no cover
+    ) -> User | None:  # pragma: no cover
         return await self.client.users.by_user_id(user_id).patch(body=req_body, request_configuration=req_conf)
 
     async def run(self, arguments: RequiredSingleUserArguments) -> None:
@@ -105,7 +105,7 @@ class EnableUserAction(MicrosoftGraphAction):
 
     async def query_enable_user(
         self, user_id: str, req_body: User, req_conf: RequestConfiguration[QueryParameters]
-    ) -> User | None: # pragma: no cover
+    ) -> User | None:  # pragma: no cover
         return await self.client.users.by_user_id(user_id).patch(body=req_body, request_configuration=req_conf)
 
     async def run(self, arguments: RequiredSingleUserArguments) -> None:
@@ -127,7 +127,7 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         self,
         user_id: str,
         req_conf: RequestConfiguration[PasswordMethodsRequestBuilder.PasswordMethodsRequestBuilderGetQueryParameters],
-    ) -> PasswordAuthenticationMethodCollectionResponse | None: # pragma: no cover
+    ) -> PasswordAuthenticationMethodCollectionResponse | None:  # pragma: no cover
         return await self.client.users.by_user_id(user_id).authentication.password_methods.get(
             request_configuration=req_conf
         )
@@ -138,7 +138,7 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         authentication_method_id: str,
         req_body: ResetPasswordPostRequestBody,
         req_conf: RequestConfiguration[QueryParameters],
-    ) -> PasswordResetResponse | None: # pragma: no cover
+    ) -> PasswordResetResponse | None:  # pragma: no cover
         return (
             await self.delegated_client.users.by_user_id(user_id)
             .authentication.methods.by_authentication_method_id(authentication_method_id)

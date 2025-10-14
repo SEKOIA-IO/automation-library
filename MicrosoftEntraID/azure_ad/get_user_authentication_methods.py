@@ -24,7 +24,7 @@ class GetUserAuthenticationMethodsAction(MicrosoftGraphAction):
         req_conf: RequestConfiguration[
             UserRegistrationDetailsRequestBuilder.UserRegistrationDetailsRequestBuilderGetQueryParameters
         ],
-    ) -> UserRegistrationDetailsCollectionResponse | None: # pragma: no cover
+    ) -> UserRegistrationDetailsCollectionResponse | None:  # pragma: no cover
         return await self.client.reports.authentication_methods.user_registration_details.get(
             request_configuration=req_conf
         )
