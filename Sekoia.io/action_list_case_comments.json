@@ -102,5 +102,6 @@
         "type": "integer"
       }
     }
-  }
+  },
+  "slug": "list_case_comments"
 }
