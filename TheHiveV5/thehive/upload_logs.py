@@ -1,5 +1,4 @@
 from typing import Any, Optional
-from os
 from sekoia_automation.action import Action
 from thehive4py.types.observable import OutputObservable
 
@@ -19,13 +18,6 @@ class TheHiveUploadLogsV5(Action):
 
         arg_alert_id = arguments["alert_id"]
         arg_filepath = self._data_path.joinpath(arguments["filepath"])
-
-        # Debug: log the constructed path
-        print(f"DEBUG: _data_path = {self._data_path}")
-        print(f"DEBUG: filepath argument = {arguments['filepath']}")
-        print(f"DEBUG: Full constructed path = {arg_filepath}")
-        print(f"DEBUG: File exists? {arg_filepath.exists()}")
-        print(f"DEBUG: OS Listdir = {os.listdir(self.datapath)}")
         
         # Verify file exists before attempting upload
         if not arg_filepath.exists():
