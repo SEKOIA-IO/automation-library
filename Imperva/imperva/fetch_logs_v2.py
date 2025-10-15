@@ -13,11 +13,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from pydantic.v1 import BaseModel
+from sekoia_automation.checkpoint import CheckpointCursor
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from . import ImpervaModule
 from .client import ApiClient
-from .cursor import LastFileIdCursor
 from .helpers import LogFileId, extract_last_timestamp, is_compressed, validate_checksum
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -45,11 +45,11 @@ class ImpervaLogsConnector(Connector):
         super().__init__(*args, **kwargs)
 
         # Last known downloaded file id
-        self.cursor = LastFileIdCursor(path=self.data_path)
+        self.cursor = CheckpointCursor(path=self.data_path)
         self.last_seen_log = LogFileId.from_filename(self.cursor.offset) if self.cursor.offset else None
 
         if self.last_seen_log:
-            self.log("Last seen log is %s" % self.last_seen_log, level="info")
+            self.log(f"Last seen log is {self.last_seen_log}", level="info")
 
         self.in_progress: deque[LogFileId] = deque(maxlen=100)  # logs that we are downloading right now
         self.processed: deque[LogFileId] = deque(

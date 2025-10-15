@@ -5,4 +5,4 @@ class ImpervaModuleConfiguration(BaseModel):
     base_url: str = Field(..., description="Imperva API base URL")
     api_id: str = Field(..., description="Imperva API ID")
     api_key: str = Field(..., description="Imperva API key")
-    keys: dict = Field({}, description="Encryption keys")
+    keys: dict = Field(description="Encryption keys", default_factory=dict)
