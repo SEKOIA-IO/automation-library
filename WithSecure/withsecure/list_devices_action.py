@@ -48,7 +48,8 @@ class ListDevicesAction(Action):
         response.raise_for_status()
         payload = response.json()
         for device in payload["items"]:
-            devices.append(self.build_device_details(device))
+            if device:
+                devices.append(self.build_device_details(device))
 
         while payload.get("nextAnchor"):
             params["anchor"] = payload["nextAnchor"]
@@ -57,7 +58,8 @@ class ListDevicesAction(Action):
             payload = response.json()
 
             for device in payload["items"]:
-                devices.append(self.build_device_details(device))
+                if device:
+                    devices.append(self.build_device_details(device))
 
         return ActionResults(devices=devices)
 
