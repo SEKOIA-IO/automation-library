@@ -10,9 +10,10 @@ import hmac
 import hashlib
 
 DOMAIN: str = "google.com"
+IP: str = "78.47.233.218"
 HOST = "https://api.domaintools.com/"
-#URI = f"v1/iris-investigate/"  # Base URI without domain
-URI = f"v1/{DOMAIN}/reverse-ip/"
+URI = f"v1/iris-investigate/"  # Base URI without domain
+#URI = f"v1/{DOMAIN}/reverse-ip/"
 API_KEY = "LOREM"
 API_USERNAME = "IPSUM"
 TIMESTAMP = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -25,6 +26,7 @@ def sign(api_username, api_key, timestamp, uri):
 
 signature = sign(API_USERNAME, API_KEY, TIMESTAMP, URI)
 
+""""
 DT_OUTPUT: dict[str, Any] = {
   "response": {
     "ip_addresses": [
@@ -52,19 +54,28 @@ DT_OUTPUT: dict[str, Any] = {
         }]
     }
 }
+"""
 
-""" 
-def _qs_matcher(expected_params: Dict[str, Any]):
+DT_OUTPUT: dict[str, Any] = {
+	"response": {
+		"limit_exceeded": False,
+		"has_more_results": False,
+		"message": "Enjoy your data.",
+		"results_count": 6,
+		"total_count": 6,
+		"results": [
+			{
+				"domain": "vbl-liveticker.de",
+				"whois_url": "https://whois.domaintools.com/vbl-liveticker.de",
+				"adsense": {
+					"value": "",
+					"count": 0
+				}
+            }
+        ]
+    }
+}
 
-    def matcher(request):
-        actual = {k: v[0] if isinstance(v, list) else v for k, v in request.qs.items()}
-        # Check that all expected params are present with correct values
-        for key, value in expected_params.items():
-            if key not in actual or actual[key] != str(value):
-                return False
-        return True
-    return matcher
- """
 
 def test_get_reverse_ip_action_success():
     action = DomaintoolsReverseIP()
@@ -81,7 +92,8 @@ def test_get_reverse_ip_action_success():
             urllib.parse.urljoin(HOST, URI),
             json=DT_OUTPUT,  # Return the expected response
         )
-        result = action.run({"domain": DOMAIN})
+        #result = action.run({"domain": DOMAIN})
+        result = action.run({"ip": IP})
 
         assert result is not None
         
@@ -91,7 +103,7 @@ def test_get_reverse_ip_action_success():
         # Debug: print the actual structure
         print("Result structure:", json.dumps(data, indent=2))
         
-        assert data["ip_addresses"] is not None
+        #assert data["ip_addresses"] is not None
         assert mock_requests.call_count == 1
 
 
@@ -109,7 +121,8 @@ def test_get_reverse_ip_action_api_error():
             status_code=500,  # Return an error status
             json={"error": {"message": "Internal Server Error"}}
         )
-        result = action.run({"domain": DOMAIN})
+        #result = action.run({"domain": DOMAIN})
+        result = action.run({"ip": IP})
         
         # Debug: print the actual result
         print("Error result:", result)

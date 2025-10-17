@@ -298,6 +298,8 @@ class DomainToolsClient:
         
         logger.info(f"Successfully retrieved reverse IP data for {domain}")
         """
+
+
         uri = "/v1/iris-investigate/"
         logger.info(f"Getting reverse IP data for: {ip}")
         params = {
@@ -305,6 +307,18 @@ class DomainToolsClient:
         }
         
         response = self._make_request(uri, params)
+        """
+        url = "https://api.domaintools.com/v1/iris-investigate/"
+        querystring = {ip}
+        payload = ""
+        headers = {
+            "cookie": "dtsession=v5etam4iitvnt9il5kv1ef3f512pp7gk0q5db6ig77ura3pv5pbg39q4vb970pf4kkbj7cnemmt8rt1tj0puutbpnnm21fov0tb37ll",
+            "X-Api-Key": self.config.api_key
+        }
+        response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
+        print(response.text)
+        """
+
         logger.info(f"Successfully retrieved reverse IP data for {ip}")
         return response.json()
     
@@ -432,7 +446,7 @@ def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -
         client = DomainToolsClient(config)
 
         arg_domain = arguments.get("domain")
-        #arg_ip = arguments.get("ip") # Not used in current actions BECAUSE REVERSE IP TAKES DOMAIN
+        arg_ip = arguments.get("ip")
         arg_email = arguments.get("email")
 
         # Name of the client method to call, see below
@@ -445,7 +459,7 @@ def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -
             "domain_reputation": ("domain_reputation", lambda: [arg_domain], {}, "Domain Reputation"),
             "pivot_action": ("pivot_action", lambda: [arg_domain, "domain"], {"limit": 100}, "Pivot Action"),
             "reverse_domain": ("reverse_domain", lambda: [arg_domain], {}, "Reverse Domain"),
-            "reverse_ip": ("reverse_ip", lambda: [arg_domain], {}, "Reverse IP"),
+            "reverse_ip": ("reverse_ip", lambda: [arg_ip], {}, "Reverse IP"),
             "reverse_email": ("reverse_email", lambda: [arg_email], {"limit": 100}, "Reverse Email"),
             "lookup_domain": ("lookup_domain", lambda: [arg_domain], {}, "Lookup Domain"),
         }
