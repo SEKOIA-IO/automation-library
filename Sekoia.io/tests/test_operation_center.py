@@ -12,6 +12,7 @@ from sekoiaio.operation_center import (
     UpdateCase,
     DeleteCase,
     GetCase,
+    ListsCases,
     PostCommentOnCase,
     GetCustomStatus,
     GetCustomPriority,
@@ -299,6 +300,26 @@ def test_update_case():
         history = mock.request_history
         assert history[0].method == "PATCH"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
+        
+
+def test_list_cases_success():
+    action: ListsCases = ListsCases()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    ressource = "cases"
+    expected_response = {"items": [], "total": 0}
+    arguments = {"match[community_uuid]": "fake_uuid"}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(f"{base_url}{ressource}", json=expected_response)
+
+        results: dict = action.run(arguments)
+
+        assert results == expected_response
+        assert mock.call_count == 1
+        history = mock.request_history
+        assert history[0].method == "GET"
+        assert url_decoder(history[0].url) == f"{base_url}{ressource}?match[community_uuid]=fake_uuid"
 
 
 def test_post_comment_on_case():
