@@ -300,7 +300,7 @@ def test_update_case():
         history = mock.request_history
         assert history[0].method == "PATCH"
         assert url_decoder(history[0].url) == f"{base_url}{ressource}"
-        
+
 
 def test_list_cases_success():
     action: ListsCases = ListsCases()
