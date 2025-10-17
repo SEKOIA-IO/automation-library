@@ -1,5 +1,5 @@
 {
-  "uuid": "366a9bed-e124-4ad2-9498-acc54a285eba",
+  "uuid": "1aa69261-9e2a-4c44-bdbd-09994b8af778",
   "name": "Create an alert in The Hive v5",
   "description": "",
   "docker_parameters": "thehive_create_alert",
