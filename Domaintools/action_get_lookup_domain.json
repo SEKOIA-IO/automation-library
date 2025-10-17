@@ -1,0 +1,41 @@
+{
+  "uuid": "d3959678-9f40-49a1-8b3f-8a051ecb2dee",
+  "name": "Lookup Domain on Domaintools API returning a JSON dump",
+  "description": "A wrapper to lookup domain on Iris Investigate API v1",
+  "docker_parameters": "get_lookup_domain",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "domain": {
+        "description": "The domain to look for",
+        "default": "example.com",
+        "type": "string"
+      }
+    },
+    "required": [
+      "domain"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "limit_exceeded": {"type": "boolean"},
+      "has_more_results": {"type": "boolean"},
+      "message": {"type": "string"},
+      "results_count": {"type": "integer"},
+      "total_count": {"type": "integer"},
+      "results": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+      "missing_domains": { "type": "array" }
+    },
+    "title": "Response",
+    "type": "object"
+  },
+  "slug": "get_lookup_domain_in_domaintools"
+}
