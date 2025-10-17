@@ -2,10 +2,10 @@ from sekoia_automation.module import Module
 
 from utils.action_fileutils_readjsonfile import FileUtilsReadJSONFile
 from utils.action_fileutils_readxmlfile import FileUtilsReadXMLFile
-from utils.action_utils_wait import UtilsWait
 from utils.action_get_current_time import GetCurrentTimeAction
-from utils.password_generator import PasswordGenerator
 from utils.action_groupby import GroupProcessor
+from utils.action_utils_wait import UtilsWait
+from utils.password_generator import PasswordGenerator
 
 if __name__ == "__main__":
     module = Module()
