@@ -18,12 +18,12 @@
       "tlp": {
         "description": "The TLP for the observables - defaults to AMBER",
         "type": "string",
-        "enum": ["CLEAR", "GREEN", "AMBER", "RED"]
+        "enum": ["CLEAR", "GREEN", "AMBER", "AMBER_STRICT", "RED"]
       },
       "pap": {
         "description": "The PAP for the observables - defaults to AMBER",
         "type": "string",
-        "enum": ["CLEAR", "GREEN", "AMBER", "RED"]
+        "enum": ["CLEAR", "GREEN", "AMBER", "AMBER_STRICT", "RED"]
       },
       "areioc": {
         "description": "Indicates whether observables should be considered IOCs in TheHive - default to true",
