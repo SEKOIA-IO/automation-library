@@ -61,7 +61,7 @@
           "type": "string",
           "enum": ["windows", "linux", "macos", "android"]
         },
-        "description": "List of platforms to select"
+        "description": "List of platforms to select (Possible values: windows, linux, macos, android)"
       },
       "filter_isolate": {
         "type": "array",
@@ -69,7 +69,7 @@
           "type": "string",
           "enum": ["isolated", "unisolated"]
         },
-        "description": "List of isolation states to select"
+        "description": "List of isolation states to select (Possible values: isolated, unisolated)"
       },
       "filter_scan_status": {
         "type": "array",
@@ -86,7 +86,7 @@
             "error"
           ]
         },
-        "description": "List of scan statuses to select"
+        "description": "List of scan statuses to select (Possible values: none, pending, in_progress, canceled, aborted, pending_cancellation, success, error)"
       }
     },
     "required": [],
