@@ -1,10 +1,7 @@
-from sekoia_automation.module import Module
-
-from imperva.fetch_logs import LogsDownloader
+from imperva import ImpervaModule
+from imperva.fetch_logs_v2 import ImpervaLogsConnector
 
 if __name__ == "__main__":
-    module = Module()
-
-    module.register(LogsDownloader, name="imperva_logs")
-
+    module = ImpervaModule()
+    module.register(ImpervaLogsConnector, name="imperva_logs")
     module.run()
