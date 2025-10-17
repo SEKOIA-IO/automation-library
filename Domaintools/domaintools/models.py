@@ -320,7 +320,7 @@ class DomainToolsClient:
         """
 
         logger.info(f"Successfully retrieved reverse IP data for {ip}")
-        return response.json()
+        return response
     
     def reverse_email(self, email: str, limit: int = 100) -> Dict:
         """
