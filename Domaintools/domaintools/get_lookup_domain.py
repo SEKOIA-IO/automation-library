@@ -19,9 +19,9 @@ class DomaintoolsLookupDomain(Action):
                 "domaintools_action": "lookup_domain",
             }
 
-            result = DomaintoolsrunAction(config, parsed_args)
-            print(f"API call response: {result}")  # Debugging line
-            return result
+            response = DomaintoolsrunAction(config, parsed_args)
+            print(f"API call response: {response}")  # Debugging line
+            return response
 
         except DomainToolsError as e:
             print(json.dumps({"error": f"DomainTools client initialization error: {e}"}, indent=2))

@@ -23,12 +23,9 @@
     "properties": {
       "results": {
         "type": "string"
-      },
-      "extraData": {
-        "type": "object"
       }
     },
-    "title": "Results",
+    "title": "Response",
     "type": "object"
   },
   "slug": "get_reverse_email_in_domaintools"

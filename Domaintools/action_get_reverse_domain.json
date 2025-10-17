@@ -21,14 +21,17 @@
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "results": {
+      "domain": {
         "type": "string"
       },
-      "extraData": {
-        "type": "object"
+      "ip_history": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
-    "title": "Results",
+    "title": "Response",
     "type": "object"
   },
   "slug": "get_reverse_domain_in_domaintools"

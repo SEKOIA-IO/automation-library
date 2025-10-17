@@ -19,8 +19,8 @@ class DomaintoolsReverseEmail(Action):
                 "domaintools_action": "reverse_email",
             }
 
-            result = DomaintoolsrunAction(config, parsed_args)
-            return result
+            response = DomaintoolsrunAction(config, parsed_args)
+            return response
 
         except DomainToolsError as e:
             print(json.dumps({"error": f"DomainTools client initialization error: {e}"}, indent=2))
