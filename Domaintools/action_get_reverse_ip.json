@@ -6,14 +6,14 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "domain": {
-        "description": "The domain (not ip) to look for",
-        "default": "example.com",
+      "ip": {
+        "description": "The ip (or domain) to look for",
+        "default": "8.8.8.8",
         "type": "string"
       }
     },
     "required": [
-      "domain"
+      "ip"
     ],
     "title": "Arguments",
     "type": "object"

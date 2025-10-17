@@ -263,7 +263,8 @@ class DomainToolsClient:
         logger.info(f"Successfully retrieved reverse domain data for {domain}")
         return result
     
-    def reverse_ip(self, domain: str) -> Dict[str, Any]:
+    #def reverse_ip(self, domain: str) -> Dict[str, Any]:
+    def reverse_ip(self, ip: str) -> Dict[str, Any]:
         """
         Query DomainTools Reverse IP API to find domains on the same IP.
 
@@ -278,8 +279,10 @@ class DomainToolsClient:
             print(f"Found {results['response']['ip_addresses']['domain_count']} domains")
         """
 
-        domain = self._validate_domain(domain)
+        #domain = self._validate_domain(domain)
         #url = f"{self.config.host}/v1/{domain}/reverse-ip/"
+
+        """
         uri = f"v1/{domain}/reverse-ip/"
         url = urllib.parse.urljoin(self.config.host, uri)
         print("Request URL:", url)
@@ -294,7 +297,15 @@ class DomainToolsClient:
             raise DomainToolsError(f"Request error: {e}")
         
         logger.info(f"Successfully retrieved reverse IP data for {domain}")
-
+        """
+        uri = "/v1/iris-investigate/"
+        logger.info(f"Getting reverse IP data for: {ip}")
+        params = {
+            'ip': ip
+        }
+        
+        response = self._make_request(uri, params)
+        logger.info(f"Successfully retrieved reverse IP data for {ip}")
         return response.json()
     
     def reverse_email(self, email: str, limit: int = 100) -> Dict:
