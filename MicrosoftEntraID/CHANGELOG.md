@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-20 - 2.10.1
+
+### Fixed
+
+- Fix incorrect field id for object id in "Delete App" action
+- Fix incorrect description for the id field in "Revoke Sign in" action
+
 ## 2025-10-10 - 2.10.0
 
 ### Added
