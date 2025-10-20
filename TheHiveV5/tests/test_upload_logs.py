@@ -85,11 +85,11 @@ def test_upload_logs_action_success():
         assert False, f"Exception raised during test: {e}"
 
 
-def test_upload_logs_action_api_error(requests_mock):
+def test_upload_logs_action_api_error(requests_mock, module, data_path):
     url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/attachments"
     mock_alert = requests_mock.post(url=url, status_code=500)
 
-    action = TheHiveUploadLogsV5()
+    action = TheHiveUploadLogsV5(module=module, data_path=data_path)
     action.module = type("M", (), {})()
     action.module.configuration = {
         "base_url": "https://thehive-project.org",
@@ -98,8 +98,8 @@ def test_upload_logs_action_api_error(requests_mock):
     }
 
     # ensure the test file exists (even if empty)
-    with open(FILEPATH, "wb"):
-        pass
+    filepath = data_path / FILEPATH
+    filepath.touch()
 
     
     try:
