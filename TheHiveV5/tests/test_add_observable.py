@@ -18,21 +18,12 @@ EVENTS: list[dict[str, Any]] = [
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T10:12:25.368672+00:00",
         "observer.type": "proxy",
-        "related.hosts": [
-            "www.binance.com",
-            "api42-api.example.com",
-            "binance.com"
-        ],
+        "related.hosts": ["www.binance.com", "api42-api.example.com", "binance.com"],
         "server.domain": "api42-api.example.com",
-        "event.category": [
-            "network",
-            "web"
-        ],
+        "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": [
-            "AL8op2E3Dr9d"
-        ],
+        "alert_short_ids": ["AL8op2E3Dr9d"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -41,15 +32,13 @@ EVENTS: list[dict[str, Any]] = [
             "domains_top_10_000",
             "rfc5735",
             "domains_top_1_000_000",
-            "rfc1918"
+            "rfc1918",
         ],
         "sekoiaio.matches": [
             {
-                "paths": [
-                    "destination.registered_domain"
-                ],
+                "paths": ["destination.registered_domain"],
                 "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c"
+                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
             }
         ],
         "network.direction": "egress",
@@ -63,14 +52,8 @@ EVENTS: list[dict[str, Any]] = [
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
-        "sekoiaio.tags.source.ip": [
-            "rfc1918",
-            "rfc5735"
-        ],
-        "sekoiaio.tags.related.ip": [
-            "rfc1918",
-            "rfc5735"
-        ],
+        "sekoiaio.tags.source.ip": ["rfc1918", "rfc5735"],
+        "sekoiaio.tags.related.ip": ["rfc1918", "rfc5735"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
         "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
@@ -80,8 +63,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_100_000",
             "domains_top_10_000",
-            "domains_top_1_000_000"
-        ]
+            "domains_top_1_000_000",
+        ],
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
@@ -92,21 +75,12 @@ EVENTS: list[dict[str, Any]] = [
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T10:12:24.007348+00:00",
         "observer.type": "proxy",
-        "related.hosts": [
-            "www.binance.com",
-            "api42-api.example.com",
-            "binance.com"
-        ],
+        "related.hosts": ["www.binance.com", "api42-api.example.com", "binance.com"],
         "server.domain": "api42-api.example.com",
-        "event.category": [
-            "network",
-            "web"
-        ],
+        "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": [
-            "AL8op2E3Dr9d"
-        ],
+        "alert_short_ids": ["AL8op2E3Dr9d"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -115,15 +89,13 @@ EVENTS: list[dict[str, Any]] = [
             "domains_top_10_000",
             "rfc5735",
             "domains_top_1_000_000",
-            "rfc1918"
+            "rfc1918",
         ],
         "sekoiaio.matches": [
             {
-                "paths": [
-                    "destination.registered_domain"
-                ],
+                "paths": ["destination.registered_domain"],
                 "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c"
+                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
             }
         ],
         "network.direction": "egress",
@@ -137,14 +109,8 @@ EVENTS: list[dict[str, Any]] = [
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
-        "sekoiaio.tags.source.ip": [
-            "rfc1918",
-            "rfc5735"
-        ],
-        "sekoiaio.tags.related.ip": [
-            "rfc1918",
-            "rfc5735"
-        ],
+        "sekoiaio.tags.source.ip": ["rfc1918", "rfc5735"],
+        "sekoiaio.tags.related.ip": ["rfc1918", "rfc5735"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
         "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
@@ -154,8 +120,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_100_000",
             "domains_top_1_000_000",
-            "domains_top_10_000"
-        ]
+            "domains_top_10_000",
+        ],
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
@@ -166,21 +132,12 @@ EVENTS: list[dict[str, Any]] = [
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T16:21:59.043096+00:00",
         "observer.type": "proxy",
-        "related.hosts": [
-            "www.binance.com",
-            "api42-api.example.com",
-            "binance.com"
-        ],
+        "related.hosts": ["www.binance.com", "api42-api.example.com", "binance.com"],
         "server.domain": "api42-api.example.com",
-        "event.category": [
-            "network",
-            "web"
-        ],
+        "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": [
-            "AL8op2E3Dr9d"
-        ],
+        "alert_short_ids": ["AL8op2E3Dr9d"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -189,15 +146,13 @@ EVENTS: list[dict[str, Any]] = [
             "domains_top_10_000",
             "rfc5735",
             "domains_top_1_000_000",
-            "rfc1918"
+            "rfc1918",
         ],
         "sekoiaio.matches": [
             {
-                "paths": [
-                    "destination.registered_domain"
-                ],
+                "paths": ["destination.registered_domain"],
                 "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c"
+                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
             }
         ],
         "network.direction": "egress",
@@ -211,14 +166,8 @@ EVENTS: list[dict[str, Any]] = [
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
-        "sekoiaio.tags.source.ip": [
-            "rfc1918",
-            "rfc5735"
-        ],
-        "sekoiaio.tags.related.ip": [
-            "rfc1918",
-            "rfc5735"
-        ],
+        "sekoiaio.tags.source.ip": ["rfc1918", "rfc5735"],
+        "sekoiaio.tags.related.ip": ["rfc1918", "rfc5735"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
         "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
@@ -228,8 +177,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_10_000",
             "domains_top_1_000_000",
-            "domains_top_100_000"
-        ]
+            "domains_top_100_000",
+        ],
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
@@ -240,21 +189,12 @@ EVENTS: list[dict[str, Any]] = [
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T16:18:32.758885+00:00",
         "observer.type": "proxy",
-        "related.hosts": [
-            "www.binance.com",
-            "api42-api.example.com",
-            "binance.com"
-        ],
+        "related.hosts": ["www.binance.com", "api42-api.example.com", "binance.com"],
         "server.domain": "api42-api.example.com",
-        "event.category": [
-            "network",
-            "web"
-        ],
+        "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": [
-            "AL8op2E3Dr9d"
-        ],
+        "alert_short_ids": ["AL8op2E3Dr9d"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -263,15 +203,13 @@ EVENTS: list[dict[str, Any]] = [
             "domains_top_10_000",
             "rfc5735",
             "domains_top_1_000_000",
-            "rfc1918"
+            "rfc1918",
         ],
         "sekoiaio.matches": [
             {
-                "paths": [
-                    "destination.registered_domain"
-                ],
+                "paths": ["destination.registered_domain"],
                 "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c"
+                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
             }
         ],
         "network.direction": "egress",
@@ -285,14 +223,8 @@ EVENTS: list[dict[str, Any]] = [
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
-        "sekoiaio.tags.source.ip": [
-            "rfc5735",
-            "rfc1918"
-        ],
-        "sekoiaio.tags.related.ip": [
-            "rfc5735",
-            "rfc1918"
-        ],
+        "sekoiaio.tags.source.ip": ["rfc5735", "rfc1918"],
+        "sekoiaio.tags.related.ip": ["rfc5735", "rfc1918"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
         "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
@@ -302,8 +234,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_1_000_000",
             "domains_top_100_000",
-            "domains_top_10_000"
-        ]
+            "domains_top_10_000",
+        ],
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
@@ -314,21 +246,12 @@ EVENTS: list[dict[str, Any]] = [
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T09:38:21.028626+00:00",
         "observer.type": "proxy",
-        "related.hosts": [
-            "www.binance.com",
-            "api42-api.example.com",
-            "binance.com"
-        ],
+        "related.hosts": ["www.binance.com", "api42-api.example.com", "binance.com"],
         "server.domain": "api42-api.example.com",
-        "event.category": [
-            "network",
-            "web"
-        ],
+        "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": [
-            "AL8op2E3Dr9d"
-        ],
+        "alert_short_ids": ["AL8op2E3Dr9d"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -337,15 +260,13 @@ EVENTS: list[dict[str, Any]] = [
             "domains_top_10_000",
             "rfc5735",
             "domains_top_1_000_000",
-            "rfc1918"
+            "rfc1918",
         ],
         "sekoiaio.matches": [
             {
-                "paths": [
-                    "destination.registered_domain"
-                ],
+                "paths": ["destination.registered_domain"],
                 "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c"
+                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
             }
         ],
         "network.direction": "egress",
@@ -359,14 +280,8 @@ EVENTS: list[dict[str, Any]] = [
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
-        "sekoiaio.tags.source.ip": [
-            "rfc5735",
-            "rfc1918"
-        ],
-        "sekoiaio.tags.related.ip": [
-            "rfc5735",
-            "rfc1918"
-        ],
+        "sekoiaio.tags.source.ip": ["rfc5735", "rfc1918"],
+        "sekoiaio.tags.related.ip": ["rfc5735", "rfc1918"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
         "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
@@ -376,9 +291,9 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_1_000_000",
             "domains_top_100_000",
-            "domains_top_10_000"
-        ]
-    }
+            "domains_top_10_000",
+        ],
+    },
 ]
 
 HIVE_OUTPUT_ERROR = {
@@ -463,6 +378,7 @@ HIVE_OUTPUT: Optional[OutputObservable] = [
     },
 ]
 
+
 def test_add_observables_action_success():
     action = TheHiveCreateObservableV5()
     action.module.configuration = {
@@ -472,7 +388,7 @@ def test_add_observables_action_success():
     }
 
     with requests_mock.Mocker() as mock_requests:
-        #mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=200, json=HIVE_OUTPUT)
+        # mock_requests.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=200, json=HIVE_OUTPUT)
         url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
         mock_requests.post(url=url, status_code=200, json=HIVE_OUTPUT)
 
@@ -487,7 +403,7 @@ def test_add_observables_action_success():
 
 
 def test_add_observables_action_api_error(requests_mock):
-    #mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=500)
+    # mock_alert = requests_mock.post(url="https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable", status_code=500)
     url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
     mock_alert = requests_mock.post(url=url, status_code=500)
 

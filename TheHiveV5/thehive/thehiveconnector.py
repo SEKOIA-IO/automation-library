@@ -28,10 +28,7 @@ except ImportError:
     InputProcedure = dict
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s")
 logger = logging.getLogger("hive.alert.connector")
 
 # ---------- CONFIG ----------
@@ -151,12 +148,14 @@ SEKOIA_TO_THEHIVE = {
     "user.effective.email": "mail",
 }
 
+
 def key_exists(mapping: dict, key_to_check: str) -> bool:
     # ensure type safety with isinstance
     if not isinstance(key_to_check, str):
         raise TypeError("key_to_check must be a string")
 
     return key_to_check in mapping
+
 
 class TheHiveConnector:
     """
@@ -187,21 +186,21 @@ class TheHiveConnector:
     def sekoia_to_thehive(self, tlp, pap, ioc) -> List[OutputObservable]:
         observables: List[OutputObservable] = []
         for idx, ev in enumerate(self):
-            #print("idx", idx)
+            # print("idx", idx)
             if not isinstance(ev, dict):
                 logging.warning("Skipping non-dict event at index %d", idx)
                 continue
             for k, v in ev.items():
                 if key_exists(SEKOIA_FIELDS, k):
-                    #print(k, "exists in SEKOIA_FIELDS, with value:", v)
-                    thehive_field=SEKOIA_TO_THEHIVE.get(k, "<unknown>")
-                    #print("-> Associated TheHive field is", thehive_field)
+                    # print(k, "exists in SEKOIA_FIELDS, with value:", v)
+                    thehive_field = SEKOIA_TO_THEHIVE.get(k, "<unknown>")
+                    # print("-> Associated TheHive field is", thehive_field)
                     observable = {
-                        "dataType": thehive_field,      # or another valid dataType
-                        "data": v,     # your observable value
+                        "dataType": thehive_field,  # or another valid dataType
+                        "data": v,  # your observable value
                         "tlp": tlp,
                         "pap": pap,
-                        "ioc": ioc
+                        "ioc": ioc,
                     }
                     observables.append(observable)
         deduplicated: List[OutputObservable] = []
@@ -209,6 +208,7 @@ class TheHiveConnector:
             if o not in deduplicated:
                 deduplicated.append(o)
         return deduplicated
+
     """
     def sekoia_to_thehive(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 out: List[Dict[str, Any]] = []
@@ -236,24 +236,24 @@ class TheHiveConnector:
 
     def alert_find(self, filters=None, sortby=None, paginate=None):
         return self._safe_call(self.api.alert.find, filters=filters, sortby=sortby, paginate=paginate)
-    
-    def alert_create_observable(self, alert_id: str, observable: InputObservable, observable_path: Optional[str] = None):
+
+    def alert_create_observable(
+        self, alert_id: str, observable: InputObservable, observable_path: Optional[str] = None
+    ):
         """Create a single observable on an alert."""
         return self._safe_call(
-            self.api.alert.create_observable,
-            alert_id=alert_id, observable=observable, observable_path=observable_path
+            self.api.alert.create_observable, alert_id=alert_id, observable=observable, observable_path=observable_path
         )
 
     def alert_add_observables(self, alert_id: str, observables: List[InputObservable]):
         """Bulk add multiple observables to an alert."""
         return [self.alert_create_observable(alert_id, obs) for obs in observables]
-    
+
     def comment_add_in_alert(self, alert_id: str, comment: str):
         """Add a text comment to an alert."""
         return self._safe_call(self.api.comment.create_in_alert, alert_id=alert_id, comment=comment)
-    
+
     def alert_add_attachment(self, alert_id: str, attachment_paths: List[str], can_rename: bool = True):
         return self._safe_call(
-            self.api.alert.add_attachment,
-            alert_id=alert_id, attachment_paths=attachment_paths, can_rename=can_rename
+            self.api.alert.add_attachment, alert_id=alert_id, attachment_paths=attachment_paths, can_rename=can_rename
         )

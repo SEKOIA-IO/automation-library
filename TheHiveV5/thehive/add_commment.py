@@ -5,6 +5,7 @@ from thehive4py.types.comment import InputComment, OutputComment
 
 from .thehiveconnector import TheHiveConnector
 
+
 class TheHiveCreateCommentV5(Action):
     def run(self, arguments: dict[str, Any]) -> Optional[OutputComment]:
         api = TheHiveConnector(
@@ -13,7 +14,6 @@ class TheHiveCreateCommentV5(Action):
             organisation=self.module.configuration["organisation"],
         )
 
-        #arg_sekoia_server = arguments.get("sekoia_base_url", "https://app.sekoia.io")
         arg_alert_id = arguments["alert_id"]
         arg_message = arguments["message"]
 

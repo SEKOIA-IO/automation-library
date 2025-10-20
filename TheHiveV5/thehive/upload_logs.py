@@ -2,10 +2,11 @@ from typing import Any, Optional
 from sekoia_automation.action import Action
 from thehive4py.types.observable import OutputObservable
 
- # Upload logs <-> Add an observable as a log file OR add_attachment in alert
- ## See: https://docs.strangebee.com/thehive/api-docs/#tag/Observable/operation/Create%20Observable%20in%20Alert
+# Upload logs <-> Add an observable as a log file OR add_attachment in alert
+## See: https://docs.strangebee.com/thehive/api-docs/#tag/Observable/operation/Create%20Observable%20in%20Alert
 
 from .thehiveconnector import TheHiveConnector
+
 
 class TheHiveUploadLogsV5(Action):
     def run(self, arguments: dict[str, Any]) -> Optional[OutputObservable]:
@@ -18,7 +19,7 @@ class TheHiveUploadLogsV5(Action):
 
         arg_alert_id = arguments["alert_id"]
         arg_filepath = self._data_path.joinpath(arguments["filepath"])
-        
+
         # Verify file exists before attempting upload
         if not arg_filepath.exists():
             error_msg = f"File not found: {arg_filepath}"

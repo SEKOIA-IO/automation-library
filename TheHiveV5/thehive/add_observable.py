@@ -8,11 +8,11 @@ from .thehiveconnector import TheHiveConnector
 
 class TheHiveCreateObservableV5(Action):
     def run(self, arguments: dict[str, Any]) -> Optional[OutputObservable]:
-        """ api = TheHiveApi(
+        """api = TheHiveApi(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
             organisation=self.module.configuration["organisation"],
-        ) """
+        )"""
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
@@ -20,8 +20,8 @@ class TheHiveCreateObservableV5(Action):
         )
 
         arg_alert_id = arguments["alert_id"]
-        #arg_observables = arguments["observables"]
-        #Input arguments are NOT observables but a list of dicts with sekoia fields
+        # arg_observables = arguments["observables"]
+        # Input arguments are NOT observables but a list of dicts with sekoia fields
         arg_events = json.dumps(arguments["events"])
         arg_tlp = arguments.get("tlp", "AMBER")
         arg_pap = arguments.get("pap", "AMBER")

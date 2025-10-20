@@ -20,13 +20,13 @@ HIVE_OUTPUT: List[OutputAttachment] = [
         "hashes": [
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "da39a3ee5e6b4b0d3255bfef95601890afd80709",
-            "d41d8cd98f00b204e9800998ecf8427e"
+            "d41d8cd98f00b204e9800998ecf8427e",
         ],
         "size": 0,
         "contentType": "application/octet-stream",
         "id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "path": f"/api/v1/attachment/{ALERT_ID}",
-        "extraData": {}
+        "extraData": {},
     }
 ]
 
@@ -51,12 +51,12 @@ def _normalize_attachment_result(result):
     return None
 
 
-def test_upload_logs_action_success():
+def test_upload_logs_action_success(module, data_path):
     # Create an empty test.log file before running the test
-    with open(FILEPATH, "wb") as f:
-        f.write(b"")  # ensure exists and not zero-bytes issues
+    filepath = data_path / FILEPATH
+    filepath.touch()
 
-    action = TheHiveUploadLogsV5()
+    action = TheHiveUploadLogsV5(module=module, data_path=data_path)
     action.module.configuration = {
         "base_url": "https://thehive-project.org",
         "apikey": "LOREM",
@@ -75,12 +75,12 @@ def test_upload_logs_action_success():
 
             assert result is not None, "action.run returned None — check captured stdout/logs"
 
-            #attachment = _normalize_attachment_result(result)
-            #assert attachment is not None, f"Could not normalize result: {result!r}"
+            # attachment = _normalize_attachment_result(result)
+            # assert attachment is not None, f"Could not normalize result: {result!r}"
 
-            #assert attachment.get("name") is not None
-            #assert attachment.get("id") is not None
-            #assert attachment.get("path") == f"/api/v1/attachment/{ALERT_ID}"
+            # assert attachment.get("name") is not None
+            # assert attachment.get("id") is not None
+            # assert attachment.get("path") == f"/api/v1/attachment/{ALERT_ID}"
     except Exception as e:
         assert False, f"Exception raised during test: {e}"
 
@@ -101,7 +101,6 @@ def test_upload_logs_action_api_error(requests_mock, module, data_path):
     filepath = data_path / FILEPATH
     filepath.touch()
 
-    
     try:
         result = action.run({"alert_id": ALERT_ID, "filepath": FILEPATH})
 
@@ -109,4 +108,3 @@ def test_upload_logs_action_api_error(requests_mock, module, data_path):
         assert mock_alert.call_count == 1
     except Exception as e:
         assert False, f"Exception raised during test: {e}"
-
