@@ -8,7 +8,6 @@
     "properties": {
       "alert_id": {
         "description": "The id of the alert you want to add observables to",
-        "default": "~4231176",
         "type": "string"
       },
       "events": {
