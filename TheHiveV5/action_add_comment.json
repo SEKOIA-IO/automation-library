@@ -7,7 +7,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "alert_id": {
-        "description": "The id of the alert you want to add a comment to",
+        "description": "The id of the alert you want to add a comment to. For instance: ~12345",
         "type": "string"
       },
       "message": {
