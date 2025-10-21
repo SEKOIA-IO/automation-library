@@ -17,10 +17,7 @@ class TheHiveCreateCommentV5(Action):
         arg_alert_id = arguments["alert_id"]
         arg_message = arguments["message"]
 
-        try:
-            comment = InputComment(message=arg_message)
-            return api.comment_add_in_alert(arg_alert_id, comment)
-        except Exception as e:
-            print("Error:", e)
+        comment = InputComment(message=arg_message)
+        return api.comment_add_in_alert(arg_alert_id, comment)
 
         return None
