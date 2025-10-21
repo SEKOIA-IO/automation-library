@@ -27,15 +27,8 @@ class TheHiveCreateObservableV5(Action):
         arg_pap = arguments.get("pap", "AMBER")
         arg_ioc = arguments.get("areioc", True)
 
-        try:
-            data = json.loads(arg_events)
-            observables = TheHiveConnector.sekoia_to_thehive(data, arg_tlp, arg_pap, arg_ioc)
-
-            return api.alert_add_observables(arg_alert_id, observables)
-        except json.JSONDecodeError as e:
-            print("JSON decode error: %s", e)
-            raise
-        except Exception as e:
-            print("Error:", e)
+        data = json.loads(arg_events)
+        observables = TheHiveConnector.sekoia_to_thehive(data, arg_tlp, arg_pap, arg_ioc)
+        return api.alert_add_observables(arg_alert_id, observables)
 
         return None
