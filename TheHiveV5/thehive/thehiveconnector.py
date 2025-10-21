@@ -209,30 +209,6 @@ class TheHiveConnector:
                 deduplicated.append(o)
         return deduplicated
 
-    """
-    def sekoia_to_thehive(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-                out: List[Dict[str, Any]] = []
-                observables: List[Dict[str, Any]] = []
-                #observables = [
-                #    {"dataType": "ip", "data": "192.168.1.100"},
-                #    {"dataType": "domain", "data": "phishing-site.com"},
-                #    {"dataType": "url", "data": "http://malicious.example/path"}
-                #]
-                for idx, ev in enumerate(data):
-                    #print("idx", idx)
-                    if not isinstance(ev, dict):
-                        logging.warning("Skipping non-dict event at index %d", idx)
-                        continue
-                    for k, v in ev.items():
-                        if key_exists(SEKOIA_FIELDS, k):
-                            #print(k, "exists in SEKOIA_FIELDS, with value:", v)
-                            thehive_field=SEKOIA_TO_THEHIVE.get(k, "<unknown>")
-                            #print("-> Associated TheHive field is", thehive_field)
-                            out.append({thehive_field: v})
-                            observables.append({"dataType": thehive_field, "data": v})
-
-                return observables
-    """
 
     def alert_find(self, filters=None, sortby=None, paginate=None):
         return self._safe_call(self.api.alert.find, filters=filters, sortby=sortby, paginate=paginate)
