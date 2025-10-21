@@ -7,7 +7,7 @@ from thehive4py.types.attachment import OutputAttachment
 
 SEKOIA_BASE_URL: str = "https://app.sekoia.io"
 ALERT_ID: str = "~40964304"
-FILEPATH: str = "test.log"
+FILEPATH: str = "output-b4f756de-7c6a-42ba-acd7-948d4fc4aef3.json"
 
 # keep HIVE_OUTPUT as a list for readability, but we'll return the first element from the mock
 HIVE_OUTPUT: List[OutputAttachment] = [
