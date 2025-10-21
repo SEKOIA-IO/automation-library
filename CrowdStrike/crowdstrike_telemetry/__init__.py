@@ -1,18 +1,17 @@
 """CrowdStrike Telemetry Module."""
 
-from pydantic import BaseModel, Field
-from sekoia_automation.module import Module
+from connectors import AwsModule, AwsModuleConfiguration
+from pydantic.v1 import Field
 
 
-class CrowdStrikeTelemetryModuleConfig(BaseModel):
+class CrowdStrikeTelemetryModuleConfig(AwsModuleConfiguration):
     """Module Configuration."""
 
-    aws_secret_access_key: str = Field(secret=True)
-    aws_access_key_id: str
-    aws_region: str
+    aws_access_key: str = Field(alias="aws_access_key_id", description="The identifier of the access key")
+    aws_region_name: str = Field(alias="aws_region", description="The area hosting the AWS resources")
 
 
-class CrowdStrikeTelemetryModule(Module):
-    """CrowdStrikeTelemetryModule."""
+class CrowdStrikeTelemetryModule(AwsModule):
+    """CrowdStrike Telemetry Module."""
 
     configuration: CrowdStrikeTelemetryModuleConfig

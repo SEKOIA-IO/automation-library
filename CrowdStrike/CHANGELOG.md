@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.12.0 - 2025-09-23
+
+### Changed
+
+- Fix OOM when working with large amounts of data
+
 ## 1.11.0 - 2024-10-30
 
 ### Changed
