@@ -104,7 +104,9 @@ class SecurityEventsConnector(Connector):
         try:
             response = self.__get_events(data=data, headers=headers)
             response.raise_for_status()
-            payload = response.json()
+            payload = orjson.dumps(
+                response.text.encode("utf-8", "surrogatepass").decode("utf-8", "ignore")
+            )
         except Exception as any_exception:
             raise FetchEventsException(human_readable_api_exception(any_exception))
 
