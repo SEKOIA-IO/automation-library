@@ -104,7 +104,14 @@ class SecurityEventsConnector(Connector):
         try:
             response = self.__get_events(data=data, headers=headers)
             response.raise_for_status()
-            payload = orjson.loads(response.text.encode("utf-8", "surrogatepass").decode("utf-8", "ignore"))
+
+            # Remove null bytes if any
+            unnulled_value = response.content.replace(b"\x00", b"")
+
+            # If messages aren’t valid UTF-8 message, replace invalid characters.
+            decoded_value = unnulled_value.decode("utf-8", "replace")
+
+            payload = orjson.loads(decoded_value)
         except Exception as any_exception:
             raise FetchEventsException(human_readable_api_exception(any_exception))
 
