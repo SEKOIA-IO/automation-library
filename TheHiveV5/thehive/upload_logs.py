@@ -26,13 +26,6 @@ class TheHiveUploadLogsV5(Action):
             print(f"ERROR: {error_msg}")
             raise FileNotFoundError(error_msg)
 
-        try:
-            # Convert Path to string for thehive4py compatibility
-            result = api.alert_add_attachment(arg_alert_id, [str(arg_filepath)])
-            print("Attachment uploaded:", result)
-            return result
-        except Exception as e:
-            print("Error:", e)
-            raise
+        return api.alert_add_attachment(arg_alert_id, [str(arg_filepath)])
 
         return None
