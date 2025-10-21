@@ -1,4 +1,6 @@
 from typing import Any, Optional, List
+import json
+import pytest
 import requests_mock
 
 from thehive.add_observable import TheHiveCreateObservableV5
@@ -418,3 +420,22 @@ def test_add_observables_action_api_error(requests_mock):
 
     assert not result
     assert mock_alert.call_count == 1
+
+
+def test_add_observables_action_json_decode_error():
+    """Test that JSONDecodeError is properly caught and re-raised"""
+    action = TheHiveCreateObservableV5()
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    # Mock json.loads to raise JSONDecodeError
+    import unittest.mock as mock
+
+    with mock.patch('thehive.add_observable.json.loads') as mock_loads:
+        mock_loads.side_effect = json.JSONDecodeError("test error", "doc", 0)
+
+        with pytest.raises(json.JSONDecodeError):
+            action.run({"alert_id": ALERT_ID, "events": EVENTS})

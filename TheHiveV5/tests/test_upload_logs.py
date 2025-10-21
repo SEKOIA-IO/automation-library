@@ -1,9 +1,11 @@
 import os
 from typing import List
+import pytest
 import requests_mock
 
 from thehive.upload_logs import TheHiveUploadLogsV5
 from thehive4py.types.attachment import OutputAttachment
+from thehive4py.errors import TheHiveError
 
 SEKOIA_BASE_URL: str = "https://app.sekoia.io"
 ALERT_ID: str = "~40964304"
@@ -101,10 +103,27 @@ def test_upload_logs_action_api_error(requests_mock, module, data_path):
     filepath = data_path / FILEPATH
     filepath.touch()
 
-    try:
-        result = action.run({"alert_id": ALERT_ID, "filepath": FILEPATH})
+    # Verify that a TheHiveError exception is raised when API returns 500
+    with pytest.raises(TheHiveError):
+        action.run({"alert_id": ALERT_ID, "filepath": FILEPATH})
 
-        assert not result
-        assert mock_alert.call_count == 1
-    except Exception as e:
-        assert False, f"Exception raised during test: {e}"
+    assert mock_alert.call_count == 1
+
+
+def test_upload_logs_action_file_not_found(module, data_path):
+    """Test that FileNotFoundError is raised when the file doesn't exist"""
+    action = TheHiveUploadLogsV5(module=module, data_path=data_path)
+    action.module.configuration = {
+        "base_url": "https://thehive-project.org",
+        "apikey": "LOREM",
+        "organisation": "SEKOIA",
+    }
+
+    # Use a non-existent file path
+    non_existent_file = "non_existent_file_12345.json"
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        action.run({"alert_id": ALERT_ID, "filepath": non_existent_file})
+
+    # Verify the error message contains the expected path
+    assert non_existent_file in str(exc_info.value)
