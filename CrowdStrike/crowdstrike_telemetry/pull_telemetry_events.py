@@ -2,9 +2,11 @@
 
 import os
 from asyncio import BoundedSemaphore
+from functools import cached_property
 from typing import Any, AsyncGenerator, Generator, Optional
 
 import orjson
+from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
 from aws_helpers.utils import AsyncReader, normalize_s3_key
 from connectors.metrics import INCOMING_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
@@ -56,7 +58,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
     """Implementation of CrowdStrikeTelemetryConnector."""
 
     name = "CrowdStrikeTelemetryConnector"
-    configuration: AwsS3QueuedConfiguration
+    configuration: CrowdStrikeTelemetryConnectorConfig
     module: CrowdStrikeTelemetryModule
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
@@ -67,6 +69,26 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
+
+    @cached_property
+    def sqs_wrapper(self) -> SqsWrapper:  # pragma: no cover
+        """
+        Get SQS wrapper.
+
+        Returns:
+            SqsWrapper:
+        """
+        config = SqsConfiguration(
+            frequency=self.configuration.sqs_frequency,
+            delete_consumed_messages=self.configuration.delete_consumed_messages,
+            queue_url=self.configuration.queue_url,
+            queue_name=self.configuration.queue_name,
+            aws_access_key_id=self.module.configuration.aws_access_key,
+            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
+            aws_region=self.module.configuration.aws_region_name,
+        )
+
+        return SqsWrapper(config)
 
     # Override function in order to get correct bucket and file path.
     # Schema should look like this:
