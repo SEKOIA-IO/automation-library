@@ -213,6 +213,50 @@ def test_next_batch_with_anchor(trigger, message1, message2):
         assert len(trigger.push_events_to_intakes.mock_calls) == 2
 
 
+def test_next_batch_with_anchor_and_issued_message_1(trigger, message1, message2):
+    message_with_issue = {
+        **message1,
+        **{
+            "organization": {
+                "name": b"Syst\x00meTest".decode("utf-8"),
+            }
+        }
+    }
+    def custom_matcher(request: requests.PreparedRequest):
+        if request.url == API_AUTHENTICATION_URL:
+            resp = requests.Response()
+            resp._content = json.dumps(
+                {
+                    "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                    "token_type": "Bearer",
+                    "expires_in": 1799,
+                }
+            ).encode()
+            resp.status_code = 200
+
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "anchor" not in request.body:
+            resp = requests.Response()
+            resp._content = json.dumps({"items": [message_with_issue], "nextAnchor": "next-anchor1"}).encode()
+            resp.status_code = 200
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor1" in request.body:
+            resp = requests.Response()
+            resp._content = json.dumps({"items": [message2], "nextAnchor": "next-anchor2"}).encode()
+            resp.status_code = 200
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor2" in request.body:
+            resp = requests.Response()
+            resp.status_code = 409
+            return resp
+        return None
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.add_matcher(custom_matcher)
+        trigger.next_batch()
+        assert len(trigger.push_events_to_intakes.mock_calls) == 2
+
+
 def test_fetch_next_events_raises_an_exception(trigger):
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
