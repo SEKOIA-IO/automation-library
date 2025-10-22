@@ -140,7 +140,7 @@ def test_next_batch_with_single_page(trigger, message1, message2):
             API_AUTHENTICATION_URL,
             status_code=200,
             json={
-                "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                "access_token": "dummy-test-token",
                 "token_type": "Bearer",
                 "expires_in": 1799,
             },
@@ -162,7 +162,7 @@ def test_next_batch_is_empty(trigger):
             API_AUTHENTICATION_URL,
             status_code=200,
             json={
-                "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                "access_token": "dummy-test-token",
                 "token_type": "Bearer",
                 "expires_in": 1799,
             },
@@ -183,7 +183,7 @@ def test_next_batch_with_anchor(trigger, message1, message2):
             resp = requests.Response()
             resp._content = json.dumps(
                 {
-                    "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                    "access_token": "dummy-test-token",
                     "token_type": "Bearer",
                     "expires_in": 1799,
                 }
@@ -218,16 +218,25 @@ def test_next_batch_with_anchor_and_issued_message_1(trigger, message1, message2
         **message1,
         **{
             "organization": {
-                "name": b"Syst\x00meTest".decode("utf-8"),
+                "name": b"Syst\x00meTest".decode("latin-1"),
             }
-        }
+        },
     }
+    message_without_issue_2 = {
+        **message2,
+        **{
+            "organization": {
+                "name": b"Syst\xe8Test".decode("latin-1"),
+            }
+        },
+    }
+
     def custom_matcher(request: requests.PreparedRequest):
         if request.url == API_AUTHENTICATION_URL:
             resp = requests.Response()
             resp._content = json.dumps(
                 {
-                    "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                    "access_token": "dummy-test-token",
                     "token_type": "Bearer",
                     "expires_in": 1799,
                 }
@@ -242,7 +251,7 @@ def test_next_batch_with_anchor_and_issued_message_1(trigger, message1, message2
             return resp
         elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor1" in request.body:
             resp = requests.Response()
-            resp._content = json.dumps({"items": [message2], "nextAnchor": "next-anchor2"}).encode()
+            resp._content = json.dumps({"items": [message_without_issue_2], "nextAnchor": "next-anchor2"}).encode()
             resp.status_code = 200
             return resp
         elif request.url.startswith(API_SECURITY_EVENTS_URL) and "next-anchor2" in request.body:
@@ -263,7 +272,7 @@ def test_fetch_next_events_raises_an_exception(trigger):
             API_AUTHENTICATION_URL,
             status_code=200,
             json={
-                "access_token": "eHcMH7mMmrVK2vaTMnqwRk8ono4yVeBMO6/x2L887as",
+                "access_token": "dummy-test-token",
                 "token_type": "Bearer",
                 "expires_in": 1799,
             },
