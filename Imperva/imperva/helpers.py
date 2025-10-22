@@ -66,7 +66,7 @@ def extract_last_timestamp(file_content: bytes) -> int | None:
     file_header_content = file_split_content[0].decode("utf-8")
 
     end_time_idx = file_header_content.find("endTime:")
-    if end_time_idx:
+    if end_time_idx != -1:
         end_time = int(file_header_content.split("endTime:")[1].splitlines()[0])
         return end_time
 

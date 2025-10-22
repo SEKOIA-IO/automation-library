@@ -133,10 +133,9 @@ class ImpervaLogsConnector(Connector):
         if events_list[-1] == "":
             del events_list[-1]
 
-        batch_of_events = [orjson.dumps(event).decode("utf-8") for event in events_list]
-        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(batch_of_events))
+        OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(events_list))
 
-        self.push_events_to_intakes(batch_of_events)
+        self.push_events_to_intakes(events_list)
 
     def decrypt_file(self, file_content: bytes, filename: str) -> bytes:
         # each log file is built from a header section and a content section, the two are divided by a |==| mark
@@ -242,7 +241,7 @@ class ImpervaLogsConnector(Connector):
                         )
                         self.processed.append(log_item)
 
-                    first_run = False
+                first_run = False
 
             additions: list[LogFileId] = [
                 x for x in logs_in_index if x not in self.processed and x not in self.in_progress
