@@ -30,5 +30,6 @@
   "version": "1.20.15",
   "categories": [
     "Endpoint"
-  ]
+  ],
+  "supports_validation": true
 }
