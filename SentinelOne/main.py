@@ -1,5 +1,6 @@
 from sentinelone_module.agents.init_scan import InitiateScanAction
 from sentinelone_module.agents.isolation import DeisolateEndpointAction, IsolateEndpointAction
+from sentinelone_module.asset_connector.device_assets import SentinelOneDeviceAssetConnector
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.deep_visibility.consumer import DeepVisibilityTrigger
 from sentinelone_module.deep_visibility.query import QueryDeepVisibilityAction
@@ -25,4 +26,5 @@ if __name__ == "__main__":
     module.register(DeepVisibilityTrigger, "sentinelone_deep_visibility_consumer")
     module.register(SentinelOneLogsConnector, "sentinelone_log_connector")
     module.register(SingularityIdentityConnector, "sentinelone_identity_connector")
+    module.register(SentinelOneDeviceAssetConnector, "sentinelone_device_assets_connector")
     module.run()
