@@ -25,5 +25,3 @@ class TheHiveCreateObservableV5(Action):
         data = json.loads(arg_events)
         observables = TheHiveConnector.sekoia_to_thehive(data, arg_tlp, arg_pap, arg_ioc)
         return api.alert_add_observables(arg_alert_id, observables)
-
-        return None
