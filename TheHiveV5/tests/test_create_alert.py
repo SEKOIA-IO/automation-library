@@ -6,8 +6,8 @@ from thehive.create_alert import TheHiveCreateAlertV5
 SEKOIA_BASE_URL: str = "https://app.sekoia.io"
 
 ALERT: dict[str, Any] = {
-    "uuid": "4764296a-f8d5-485f-92f1-bf4b28885ef6",
-    "short_id": "AL123456789",
+    "uuid": "00000000-0000-0000-0000-000000000001",
+    "short_id": "ALXXXXXXXXX",
     "urgency": {"severity": 95},
     "created_at": 1643972499,
     "title": "My test alert",
@@ -17,7 +17,7 @@ ALERT: dict[str, Any] = {
 }
 
 HIVE_OUTPUT = {
-    "_id": "~163844320",
+    "_id": "~00000001",
     "_type": "Alert",
     "_createdBy": "user@sekoia.io",
     "_createdAt": 1716817666129,

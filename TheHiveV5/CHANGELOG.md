@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-20 - 1.0.4
+
+### Added
+
+- Added 3 theHive actions to enrich an existing TheHive alert with:
+    * a comment
+    * new observables
+    * logs as attachment
+
+- Added a dedicated connector wrapper to centralize API interactions 
+
 ## 2025-09-08 - 1.0.3
 
 ### Added
