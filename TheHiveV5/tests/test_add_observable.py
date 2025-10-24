@@ -416,7 +416,8 @@ def test_add_observables_action_api_error(requests_mock):
         "organisation": "SEKOIA",
     }
 
-    result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
+    with pytest.raises(thehive4py.errors.TheHiveError)
+        result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
 
     assert not result
     assert mock_alert.call_count == 1
