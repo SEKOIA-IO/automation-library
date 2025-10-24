@@ -8,13 +8,13 @@ from thehive4py.types.attachment import OutputAttachment
 from thehive4py.errors import TheHiveError
 
 SEKOIA_BASE_URL: str = "https://app.sekoia.io"
-ALERT_ID: str = "~40964304"
-FILEPATH: str = "output-b4f756de-7c6a-42ba-acd7-948d4fc4aef3.json"
+ALERT_ID: str = "~00000001"
+FILEPATH: str = "output-test-data.json"
 
 # keep HIVE_OUTPUT as a list for readability, but we'll return the first element from the mock
 HIVE_OUTPUT: List[OutputAttachment] = [
     {
-        "_id": "~40964304",
+        "_id": "~00000301",
         "_type": "Attachment",
         "_createdBy": "testapi@thehive.local",
         "_createdAt": 1760085078802,

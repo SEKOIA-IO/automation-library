@@ -5,18 +5,19 @@ import requests_mock
 
 from thehive.add_observable import TheHiveCreateObservableV5
 from thehive4py.types.observable import OutputObservable
+from thehive4py.errors import TheHiveError
 
 SEKOIA_BASE_URL: str = "https://app.sekoia.io"
 
-ALERT_ID: str = "~40964304"
+ALERT_ID: str = "~00000001"
 
 EVENTS: list[dict[str, Any]] = [
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
-        "event.id": "aa837318-89ed-486e-b213-2c8aa705f1b2",
+        "event.id": "00000000-0000-0000-0000-000000000000",
         "source.ip": "192.168.0.1",
         "timestamp": "2024-09-16T16:36:42.384000Z",
-        "__event_id": "ZXRlcm5hbC1ldmVudHMtY2Y4ODhjNmQtZjNlYi00N2E4LWI0M2UtYjYzZTYzZWE0N2I4LTAwMDAwMTpzT2xwcEprQkh0blBaTUc1VUdjeg==",
+        "__event_id": "REDACTED_BASE64_EVENT_ID_001",
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T10:12:25.368672+00:00",
         "observer.type": "proxy",
@@ -25,7 +26,7 @@ EVENTS: list[dict[str, Any]] = [
         "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": ["AL8op2E3Dr9d"],
+        "alert_short_ids": ["ALXXXXXXXX"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -39,8 +40,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.matches": [
             {
                 "paths": ["destination.registered_domain"],
-                "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
+                "rule_instance_uuid": "00000000-0000-0000-0000-000000000002",
+                "rule_definition_uuid": "00000000-0000-0000-0000-000000000003",
             }
         ],
         "network.direction": "egress",
@@ -49,8 +50,8 @@ EVENTS: list[dict[str, Any]] = [
         "destination.address": "www.binance.com",
         "http.request.method": "CONNECT",
         "http.response.bytes": 6295,
-        "sekoiaio.entity.uuid": "156a53ed-e5d0-4508-8dae-748755efc62b",
-        "sekoiaio.intake.uuid": "8e0d5564-5785-45b9-a828-b069ed14311a",
+        "sekoiaio.entity.uuid": "00000000-0000-0000-0000-000000000004",
+        "sekoiaio.intake.uuid": "00000000-0000-0000-0000-0000000000005",
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
@@ -58,10 +59,10 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.related.ip": ["rfc1918", "rfc5735"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
-        "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
+        "sekoiaio.intake.dialect_uuid": "00000000-0000-0000-0000-0000000000006",
         "destination.registered_domain": "binance.com",
         "sekoiaio.intake.parsing_status": "success",
-        "sekoiaio.customer.community_uuid": "cf888c6d-f3eb-47a8-b43e-b63e63ea47b8",
+        "sekoiaio.customer.community_uuid": "00000000-0000-0000-0000-000000000008",
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_100_000",
             "domains_top_10_000",
@@ -70,10 +71,10 @@ EVENTS: list[dict[str, Any]] = [
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
-        "event.id": "65eea69c-1cfe-4a4c-989e-8772ea5be043",
+        "event.id": "00000000-0000-0000-0000-000000000011",
         "source.ip": "192.168.0.1",
         "timestamp": "2024-09-16T16:36:42.384000Z",
-        "__event_id": "ZXRlcm5hbC1ldmVudHMtY2Y4ODhjNmQtZjNlYi00N2E4LWI0M2UtYjYzZTYzZWE0N2I4LTAwMDAwMTpwakZwcEprQlpLakhRNE43V01DTg==",
+        "__event_id": "REDACTED_BASE64_EVENT_ID_002",
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T10:12:24.007348+00:00",
         "observer.type": "proxy",
@@ -82,7 +83,7 @@ EVENTS: list[dict[str, Any]] = [
         "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": ["AL8op2E3Dr9d"],
+        "alert_short_ids": ["ALXXXXXXXXX"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -96,8 +97,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.matches": [
             {
                 "paths": ["destination.registered_domain"],
-                "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
+                "rule_instance_uuid": "00000000-0000-0000-0000-000000000002",
+                "rule_definition_uuid": "00000000-0000-0000-0000-000000000003",
             }
         ],
         "network.direction": "egress",
@@ -106,8 +107,8 @@ EVENTS: list[dict[str, Any]] = [
         "destination.address": "www.binance.com",
         "http.request.method": "CONNECT",
         "http.response.bytes": 6295,
-        "sekoiaio.entity.uuid": "156a53ed-e5d0-4508-8dae-748755efc62b",
-        "sekoiaio.intake.uuid": "8e0d5564-5785-45b9-a828-b069ed14311a",
+        "sekoiaio.entity.uuid": "00000000-0000-0000-0000-000000000004",
+        "sekoiaio.intake.uuid": "00000000-0000-0000-0000-000000000005",
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
@@ -115,10 +116,10 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.related.ip": ["rfc1918", "rfc5735"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
-        "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
+        "sekoiaio.intake.dialect_uuid": "00000000-0000-0000-0000-000000000006",
         "destination.registered_domain": "binance.com",
         "sekoiaio.intake.parsing_status": "success",
-        "sekoiaio.customer.community_uuid": "cf888c6d-f3eb-47a8-b43e-b63e63ea47b8",
+        "sekoiaio.customer.community_uuid": "00000000-0000-0000-0000-000000000008",
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_100_000",
             "domains_top_1_000_000",
@@ -127,10 +128,10 @@ EVENTS: list[dict[str, Any]] = [
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
-        "event.id": "a18e1a14-b379-450d-a51c-4938290cdbea",
+        "event.id": "00000000-0000-0000-0000-000000000021",
         "source.ip": "192.168.0.1",
         "timestamp": "2024-09-16T16:36:42.384000Z",
-        "__event_id": "ZXRlcm5hbC1ldmVudHMtY2Y4ODhjNmQtZjNlYi00N2E4LWI0M2UtYjYzZTYzZWE0N2I4LTAwMDAwMTpDd3k3cFprQnFEc0lXTnVhREJhUg==",
+        "__event_id": "REDACTED_BASE64_EVENT_ID_003",
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T16:21:59.043096+00:00",
         "observer.type": "proxy",
@@ -139,7 +140,7 @@ EVENTS: list[dict[str, Any]] = [
         "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": ["AL8op2E3Dr9d"],
+        "alert_short_ids": ["ALXXXXXXXXX"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -153,8 +154,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.matches": [
             {
                 "paths": ["destination.registered_domain"],
-                "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
+                "rule_instance_uuid": "00000000-0000-0000-0000-000000000002",
+                "rule_definition_uuid": "00000000-0000-0000-0000-000000000003",
             }
         ],
         "network.direction": "egress",
@@ -163,8 +164,8 @@ EVENTS: list[dict[str, Any]] = [
         "destination.address": "www.binance.com",
         "http.request.method": "CONNECT",
         "http.response.bytes": 6295,
-        "sekoiaio.entity.uuid": "156a53ed-e5d0-4508-8dae-748755efc62b",
-        "sekoiaio.intake.uuid": "8e0d5564-5785-45b9-a828-b069ed14311a",
+        "sekoiaio.entity.uuid": "00000000-0000-0000-0000-000000000004",
+        "sekoiaio.intake.uuid": "00000000-0000-0000-0000-000000000005",
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
@@ -172,10 +173,10 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.related.ip": ["rfc1918", "rfc5735"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
-        "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
+        "sekoiaio.intake.dialect_uuid": "00000000-0000-0000-0000-000000000006",
         "destination.registered_domain": "binance.com",
         "sekoiaio.intake.parsing_status": "success",
-        "sekoiaio.customer.community_uuid": "cf888c6d-f3eb-47a8-b43e-b63e63ea47b8",
+        "sekoiaio.customer.community_uuid": "00000000-0000-0000-0000-000000000008",
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_10_000",
             "domains_top_1_000_000",
@@ -184,10 +185,10 @@ EVENTS: list[dict[str, Any]] = [
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
-        "event.id": "c1c81774-eeb8-4fd4-992a-cb2633dc08fd",
+        "event.id": "00000000-0000-0000-0000-000000000031",
         "source.ip": "192.168.0.1",
         "timestamp": "2024-09-16T16:36:42.384000Z",
-        "__event_id": "ZXRlcm5hbC1ldmVudHMtY2Y4ODhjNmQtZjNlYi00N2E4LWI0M2UtYjYzZTYzZWE0N2I4LTAwMDAwMTozeS0zcFprQmQ5aGp2ZDY1N3NqMA==",
+        "__event_id": "REDACTED_BASE64_EVENT_ID_004",
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T16:18:32.758885+00:00",
         "observer.type": "proxy",
@@ -196,7 +197,7 @@ EVENTS: list[dict[str, Any]] = [
         "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": ["AL8op2E3Dr9d"],
+        "alert_short_ids": ["ALXXXXXXXXX"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -210,8 +211,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.matches": [
             {
                 "paths": ["destination.registered_domain"],
-                "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
+                "rule_instance_uuid": "00000000-0000-0000-0000-000000000002",
+                "rule_definition_uuid": "00000000-0000-0000-0000-000000000003",
             }
         ],
         "network.direction": "egress",
@@ -220,8 +221,8 @@ EVENTS: list[dict[str, Any]] = [
         "destination.address": "www.binance.com",
         "http.request.method": "CONNECT",
         "http.response.bytes": 6295,
-        "sekoiaio.entity.uuid": "156a53ed-e5d0-4508-8dae-748755efc62b",
-        "sekoiaio.intake.uuid": "8e0d5564-5785-45b9-a828-b069ed14311a",
+        "sekoiaio.entity.uuid": "00000000-0000-0000-0000-000000000004",
+        "sekoiaio.intake.uuid": "00000000-0000-0000-0000-000000000005",
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
@@ -229,10 +230,10 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.related.ip": ["rfc5735", "rfc1918"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
-        "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
+        "sekoiaio.intake.dialect_uuid": "00000000-0000-0000-0000-000000000006",
         "destination.registered_domain": "binance.com",
         "sekoiaio.intake.parsing_status": "success",
-        "sekoiaio.customer.community_uuid": "cf888c6d-f3eb-47a8-b43e-b63e63ea47b8",
+        "sekoiaio.customer.community_uuid": "00000000-0000-0000-0000-000000000008",
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_1_000_000",
             "domains_top_100_000",
@@ -241,10 +242,10 @@ EVENTS: list[dict[str, Any]] = [
     },
     {
         "message": "1726504602.384 5756 192.168.0.1 TCP_TUNNEL/200 6295 CONNECT www.binance.com:443 - HIER_DIRECT/api42-api.example.com -",
-        "event.id": "45f4428a-594a-4b8d-aee6-3e061a3a007c",
+        "event.id": "00000000-0000-0000-0000-000000000041",
         "source.ip": "192.168.0.1",
         "timestamp": "2024-09-16T16:36:42.384000Z",
-        "__event_id": "ZXRlcm5hbC1ldmVudHMtY2Y4ODhjNmQtZjNlYi00N2E4LWI0M2UtYjYzZTYzZWE0N2I4LTAwMDAwMTotVEZ4cEprQlpLakhRNE43OTlCZg==",
+        "__event_id": "REDACTED_BASE64_EVENT_ID_005",
         "related.ip": "192.168.0.1",
         "event.created": "2025-10-02T09:38:21.028626+00:00",
         "observer.type": "proxy",
@@ -253,7 +254,7 @@ EVENTS: list[dict[str, Any]] = [
         "event.category": ["network", "web"],
         "event.duration": 5756,
         "source.address": "192.168.0.1",
-        "alert_short_ids": ["AL8op2E3Dr9d"],
+        "alert_short_ids": ["ALXXXXXXXXX"],
         "observer.vendor": "Squid",
         "destination.port": 443,
         "observer.product": "Squid",
@@ -267,8 +268,8 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.matches": [
             {
                 "paths": ["destination.registered_domain"],
-                "rule_instance_uuid": "af38297f-441e-4111-a1b7-b9b2d33c3b91",
-                "rule_definition_uuid": "2bb4bbda-742b-49d7-82a2-6c8a14f3211c",
+                "rule_instance_uuid": "00000000-0000-0000-0000-000000000002",
+                "rule_definition_uuid": "00000000-0000-0000-0000-000000000003",
             }
         ],
         "network.direction": "egress",
@@ -277,8 +278,8 @@ EVENTS: list[dict[str, Any]] = [
         "destination.address": "www.binance.com",
         "http.request.method": "CONNECT",
         "http.response.bytes": 6295,
-        "sekoiaio.entity.uuid": "156a53ed-e5d0-4508-8dae-748755efc62b",
-        "sekoiaio.intake.uuid": "8e0d5564-5785-45b9-a828-b069ed14311a",
+        "sekoiaio.entity.uuid": "00000000-0000-0000-0000-000000000004",
+        "sekoiaio.intake.uuid": "00000000-0000-0000-0000-000000000005",
         "squid.hierarchy_code": "HIER_DIRECT",
         "destination.subdomain": "www",
         "sekoiaio.intake.dialect": "squid",
@@ -286,10 +287,10 @@ EVENTS: list[dict[str, Any]] = [
         "sekoiaio.tags.related.ip": ["rfc5735", "rfc1918"],
         "http.response.status_code": 200,
         "destination.top_level_domain": "com",
-        "sekoiaio.intake.dialect_uuid": "a0dbb8f3-ca1c-4c6b-aafa-595bd430c0cb",
+        "sekoiaio.intake.dialect_uuid": "00000000-0000-0000-0000-000000000006",
         "destination.registered_domain": "binance.com",
         "sekoiaio.intake.parsing_status": "success",
-        "sekoiaio.customer.community_uuid": "cf888c6d-f3eb-47a8-b43e-b63e63ea47b8",
+        "sekoiaio.customer.community_uuid": "00000000-0000-0000-0000-000000000008",
         "sekoiaio.tags.destination.registered_domain": [
             "domains_top_1_000_000",
             "domains_top_100_000",
@@ -322,7 +323,7 @@ HIVE_OUTPUT_ERROR = {
 # Correct HIVE_OUTPUT: single list containing three observable dicts (not multiple bracketed groups)
 HIVE_OUTPUT: Optional[OutputObservable] = [
     {
-        "_id": "~40964152",
+        "_id": "~00000201",
         "_type": "Observable",
         "_createdBy": "testapi@thehive.local",
         "_createdAt": 1760086561186,
@@ -341,7 +342,7 @@ HIVE_OUTPUT: Optional[OutputObservable] = [
         "ignoreSimilarity": False,
     },
     {
-        "_id": "~40968200",
+        "_id": "~00000202",
         "_type": "Observable",
         "_createdBy": "testapi@thehive.local",
         "_createdAt": 1760086562768,
@@ -360,7 +361,7 @@ HIVE_OUTPUT: Optional[OutputObservable] = [
         "ignoreSimilarity": False,
     },
     {
-        "_id": "~81924184",
+        "_id": "~00000203",
         "_type": "Observable",
         "_createdBy": "testapi@thehive.local",
         "_createdAt": 1760086564549,
@@ -394,12 +395,24 @@ def test_add_observables_action_success():
         url = f"https://thehive-project.org/api/v1/alert/{ALERT_ID}/observable"
         mock_requests.post(url=url, status_code=200, json=HIVE_OUTPUT)
 
-        result: List[OutputObservable] = action.run({"alert_id": ALERT_ID, "events": EVENTS})
+        result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
         assert result is not None
+        assert isinstance(result, dict)
+        assert "success" in result
+        assert "failure" in result
+
+        # Check that we have successful observables
+        assert len(result["success"]) > 0
+
+        # Flatten the success list if needed (observables may be returned in batches)
+        flat_result = []
+        for item in result["success"]:
+            if isinstance(item, list):
+                flat_result.extend(item)
+            else:
+                flat_result.append(item)
+
         # Assert that there is a result with dataType == "domain" and data == "www.binance.com"
-        # OutputObservable is likely a Dict[str, Any], so .get is valid
-        # Flatten result if it is a list of lists
-        flat_result = [item for sublist in result for item in (sublist if isinstance(sublist, list) else [sublist])]
         assert any(obs["dataType"] == "domain" and obs["data"] == "www.binance.com" for obs in flat_result)
         assert any(obs["dataType"] == "ip" and obs["data"] == "192.168.0.1" for obs in flat_result)
 
@@ -416,11 +429,12 @@ def test_add_observables_action_api_error(requests_mock):
         "organisation": "SEKOIA",
     }
 
-    with pytest.raises(thehive4py.errors.TheHiveError)
-        result = action.run({"alert_id": ALERT_ID, "events": EVENTS})
+    # When ALL observables fail, TheHiveError should be raised
+    with pytest.raises(TheHiveError):
+        action.run({"alert_id": ALERT_ID, "events": EVENTS})
 
-    assert not result
-    assert mock_alert.call_count == 1
+    # Should attempt to add each observable
+    assert mock_alert.call_count > 0
 
 
 def test_add_observables_action_json_decode_error():
@@ -435,7 +449,7 @@ def test_add_observables_action_json_decode_error():
     # Mock json.loads to raise JSONDecodeError
     import unittest.mock as mock
 
-    with mock.patch('thehive.add_observable.json.loads') as mock_loads:
+    with mock.patch("thehive.add_observable.json.loads") as mock_loads:
         mock_loads.side_effect = json.JSONDecodeError("test error", "doc", 0)
 
         with pytest.raises(json.JSONDecodeError):

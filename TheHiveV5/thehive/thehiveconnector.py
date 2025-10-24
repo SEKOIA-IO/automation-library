@@ -206,21 +206,59 @@ class TheHiveConnector:
                 deduplicated.append(o)
         return deduplicated
 
-
     def alert_find(self, filters=None, sortby=None, paginate=None):
         return self._safe_call(self.api.alert.find, filters=filters, sortby=sortby, paginate=paginate)
 
     def alert_create_observable(
-        self, alert_id: str, observable: InputObservable, observable_path: Optional[str] = None
+        self,
+        alert_id: str,
+        observable: InputObservable,
+        observable_path: Optional[str] = None,
     ):
         """Create a single observable on an alert."""
         return self._safe_call(
-            self.api.alert.create_observable, alert_id=alert_id, observable=observable, observable_path=observable_path
+            self.api.alert.create_observable,
+            alert_id=alert_id,
+            observable=observable,
+            observable_path=observable_path,
         )
 
-    def alert_add_observables(self, alert_id: str, observables: List[InputObservable]):
-        """Bulk add multiple observables to an alert."""
-        return [self.alert_create_observable(alert_id, obs) for obs in observables]
+    def alert_add_observables(self, alert_id: str, observables: List[InputObservable]) -> Dict[str, List]:
+        """
+        Bulk add multiple observables to an alert.
+
+        Args:
+            alert_id: The alert ID to add observables to
+            observables: List of observables to add
+
+        Returns:
+            Dict with 'success' and 'failure' lists:
+            - 'success': List of successfully created observables
+            - 'failure': List of dicts containing failed observable and error message
+
+        Raises:
+            TheHiveError: If ALL observables fail to be added
+        """
+
+        def _bulk_add():
+            results = {"success": [], "failure": []}
+            for obs in observables:
+                try:
+                    result = self.alert_create_observable(alert_id, obs)
+                    results["success"].append(result)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to add observable (type=%s, data=%s): %s", obs.get("dataType"), obs.get("data"), e
+                    )
+                    results["failure"].append({"observable": obs, "error": str(e)})
+
+            # If ALL failed, raise an error
+            if not results["success"] and results["failure"]:
+                raise TheHiveError("Failed to add any observables")
+
+            return results
+
+        return self._safe_call(_bulk_add)
 
     def comment_add_in_alert(self, alert_id: str, comment: str):
         """Add a text comment to an alert."""
@@ -228,5 +266,8 @@ class TheHiveConnector:
 
     def alert_add_attachment(self, alert_id: str, attachment_paths: List[str], can_rename: bool = True):
         return self._safe_call(
-            self.api.alert.add_attachment, alert_id=alert_id, attachment_paths=attachment_paths, can_rename=can_rename
+            self.api.alert.add_attachment,
+            alert_id=alert_id,
+            attachment_paths=attachment_paths,
+            can_rename=can_rename,
         )

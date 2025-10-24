@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Dict, List
 import json
 from sekoia_automation.action import Action
 from thehive4py.types.observable import OutputObservable
@@ -7,7 +7,7 @@ from .thehiveconnector import TheHiveConnector
 
 
 class TheHiveCreateObservableV5(Action):
-    def run(self, arguments: dict[str, Any]) -> Optional[OutputObservable]:
+    def run(self, arguments: dict[str, Any]) -> Optional[Dict[str, List]]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
@@ -24,4 +24,15 @@ class TheHiveCreateObservableV5(Action):
 
         data = json.loads(arg_events)
         observables = TheHiveConnector.sekoia_to_thehive(data, arg_tlp, arg_pap, arg_ioc)
-        return api.alert_add_observables(arg_alert_id, observables)
+        result = api.alert_add_observables(arg_alert_id, observables)
+
+        # Log any failures
+        if result.get("failure"):
+            self.log(
+                f"Added {len(result['success'])} observables successfully, " f"{len(result['failure'])} failed",
+                level="warning",
+            )
+        else:
+            self.log(f"Added {len(result['success'])} observables successfully", level="info")
+
+        return result

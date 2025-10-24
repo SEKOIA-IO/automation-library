@@ -1,15 +1,17 @@
 import requests_mock
+import pytest
 
 from thehive.add_commment import TheHiveCreateCommentV5
 from thehive4py.types.comment import OutputComment
+from thehive4py.errors import TheHiveError
 
 SEKOIA_BASE_URL: str = "https://app.sekoia.io"
 
 MESSAGE: str = "Super comment added by a bot"
-ALERT_ID: str = "~40964304"
+ALERT_ID: str = "~00000001"
 
 HIVE_OUTPUT: OutputComment = {
-    "_id": "~4264",
+    "_id": "~00000101",
     "_type": "Comment",
     "createdBy": "testapi@thehive.local",
     "createdAt": 1760087625263,
@@ -51,7 +53,8 @@ def test_add_comment_action_api_error(requests_mock):
         "organisation": "SEKOIA",
     }
 
-    result = action.run({"alert_id": ALERT_ID, "message": MESSAGE})
+    # When API returns 500, TheHiveError should be raised
+    with pytest.raises(TheHiveError):
+        action.run({"alert_id": ALERT_ID, "message": MESSAGE})
 
-    assert not result
     assert mock_alert.call_count == 1

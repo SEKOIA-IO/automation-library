@@ -17,10 +17,12 @@ def data_storage():
     rmtree(constants.DATA_STORAGE)
     constants.DATA_STORAGE = original_storage
 
+
 @pytest.fixture
 def data_path():
     """Return the path to the test data directory."""
     return Path(__file__).parent / "data"
+
 
 @pytest.fixture
 def module():

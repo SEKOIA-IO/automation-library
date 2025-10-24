@@ -90,7 +90,11 @@ def test_comment_add_in_alert():
         alert_id = "~12345"
         comment_text = "Test comment"
         url = f"http://localhost:9000/api/v1/alert/{alert_id}/comment"
-        mock_requests.post(url=url, status_code=201, json={"_id": "comment123", "message": comment_text})
+        mock_requests.post(
+            url=url,
+            status_code=201,
+            json={"_id": "comment123", "message": comment_text},
+        )
 
         connector = TheHiveConnector("http://localhost:9000", "APIKEY123", "TESTORG")
         result = connector.comment_add_in_alert(alert_id, comment_text)
