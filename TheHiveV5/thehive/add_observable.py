@@ -8,11 +8,6 @@ from .thehiveconnector import TheHiveConnector
 
 class TheHiveCreateObservableV5(Action):
     def run(self, arguments: dict[str, Any]) -> Optional[OutputObservable]:
-        """api = TheHiveApi(
-            self.module.configuration["base_url"],
-            self.module.configuration["apikey"],
-            organisation=self.module.configuration["organisation"],
-        )"""
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
