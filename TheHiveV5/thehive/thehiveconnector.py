@@ -194,7 +194,6 @@ class TheHiveConnector:
                 if key_exists(SEKOIA_FIELDS, k):
                     # print(k, "exists in SEKOIA_FIELDS, with value:", v)
                     thehive_field = SEKOIA_TO_THEHIVE.get(k, "<unknown>")
-                    # print("-> Associated TheHive field is", thehive_field)
                     observable = {
                         "dataType": thehive_field,  # or another valid dataType
                         "data": v,  # your observable value
