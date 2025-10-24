@@ -7,10 +7,10 @@ from datetime import datetime, timezone
 from functools import cached_property
 from posixpath import join as urljoin
 
-import orjson
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import padding as sym_padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from pydantic.v1 import BaseModel
 from sekoia_automation.checkpoint import CheckpointCursor
@@ -193,7 +193,11 @@ class ImpervaLogsConnector(Connector):
                 decryptor = Cipher(
                     algorithms.AES(key=base64.decodebytes(content_decrypted_sym_key)), mode=modes.CBC(iv)
                 ).decryptor()
-                content = decryptor.update(file_log_content) + decryptor.finalize()
+                padded_content = decryptor.update(file_log_content) + decryptor.finalize()
+
+                # remove padding
+                unpadder = sym_padding.PKCS7(128).unpadder()
+                content = unpadder.update(padded_content) + unpadder.finalize()
 
                 if is_compressed(content):
                     uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(content)

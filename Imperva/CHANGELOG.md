@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-24 - 1.21.1
+
+### Fixed
+
+- Remove padding bytes from the decrypted data
+
 ## 2025-10-14 - 1.21.0
 
 ### Changed
