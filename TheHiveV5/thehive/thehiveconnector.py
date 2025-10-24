@@ -192,7 +192,6 @@ class TheHiveConnector:
                 continue
             for k, v in ev.items():
                 if key_exists(SEKOIA_FIELDS, k):
-                    # print(k, "exists in SEKOIA_FIELDS, with value:", v)
                     thehive_field = SEKOIA_TO_THEHIVE.get(k, "<unknown>")
                     observable = {
                         "dataType": thehive_field,  # or another valid dataType
