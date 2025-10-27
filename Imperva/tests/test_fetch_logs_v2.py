@@ -153,7 +153,7 @@ def test_decrypt_file_with_encryption(trigger, encrypted_aes_key, aes_key, publi
     header = (
         b"""accountId:1
 configId:2
-checksum:da098edf678c884ea0249eda571b3f57
+checksum:549c035bf2ffcaa0fe1b7644f8edf61b
 format:CEF
 startTime:1759413560916
 endTime:1759413775485
@@ -166,4 +166,4 @@ key:"""
     encrypted_content = encrypt_with_aes(true_value, aes_key)
     encrypted_without_compression = header + encrypted_content
     result = trigger.decrypt_file(encrypted_without_compression, "1_1.log")
-    assert result.strip() == true_value.strip()
+    assert result == true_value
