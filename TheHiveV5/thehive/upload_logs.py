@@ -26,5 +26,3 @@ class TheHiveUploadLogsV5(Action):
             raise FileNotFoundError(error_msg)
 
         return api.alert_add_attachment(arg_alert_id, [str(arg_filepath)])
-
-        return None

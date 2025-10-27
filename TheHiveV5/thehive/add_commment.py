@@ -19,5 +19,3 @@ class TheHiveCreateCommentV5(Action):
 
         comment = InputComment(message=arg_message)
         return api.comment_add_in_alert(arg_alert_id, comment)
-
-        return None
