@@ -166,4 +166,4 @@ key:"""
     encrypted_content = encrypt_with_aes(true_value, aes_key)
     encrypted_without_compression = header + encrypted_content
     result = trigger.decrypt_file(encrypted_without_compression, "1_1.log")
-    assert result.strip() == true_value.strip()
+    assert result == true_value
