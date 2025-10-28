@@ -265,7 +265,7 @@ class ImpervaLogsConnector(Connector):
                 self.in_progress.extend(additions)
                 last_timestamp = None
                 with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as pool:
-                    for item in pool.map(self.process_file, additions, timeout=30):
+                    for item in pool.map(self.process_file, additions, timeout=3600):
                         if item.last_timestamp is not None and (
                             last_timestamp is None or item.last_timestamp > last_timestamp
                         ):
