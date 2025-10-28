@@ -48,7 +48,7 @@ class PushEventToIntake(Action):
         intake_host = arguments.get("intake_server", "https://intake.sekoia.io")
         batch_api = urljoin(intake_host, "batch")
         content = {"intake_key": arguments["intake_key"], "jsons": events}
-        res = requests.post(batch_api, json=content, headers={"User-Agent": user_agent()})
+        res = requests.post(batch_api, json=content, headers={"User-Agent": user_agent()}, timeout=30)
 
         if res.status_code > 299:
             self.log(f"Intake rejected events: {res.text}", level="error")
