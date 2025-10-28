@@ -15,14 +15,8 @@ from sekoiaio.utils import user_agent
 
 class PushEventToIntake(Action):
     def __init__(self, *args, **kwargs):
+        self.max_workers = kwargs.pop("max_workers", 5)
         super().__init__(*args, **kwargs)
-        self._executor = ThreadPoolExecutor(max_workers=5)
-
-    def __del__(self):
-        # Ensure the ThreadPoolExecutor is properly shut down
-        executor = getattr(self, "_executor", None)
-        if executor is not None:
-            executor.shutdown(wait=True)
 
     def _delete_file(self, arguments: dict):
         event_path = arguments.get("event_path") or arguments.get("events_path")
@@ -147,12 +141,13 @@ class PushEventToIntake(Action):
         collect_ids: dict[int, list] = {}
 
         chunks = self._chunk_events(events)
-        # Forward chunks in parallel
-        futures = [
-            self._executor.submit(self._send_chunk, intake_key, batch_api, chunk_index, chunk, collect_ids)
-            for chunk_index, chunk in enumerate(chunks)
-        ]
-        wait_futures(futures)
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Forward chunks in parallel
+            futures = [
+                executor.submit(self._send_chunk, intake_key, batch_api, chunk_index, chunk, collect_ids)
+                for chunk_index, chunk in enumerate(chunks)
+            ]
+            wait_futures(futures)
 
         event_ids = [event_id for chunk_index in sorted(collect_ids.keys()) for event_id in collect_ids[chunk_index]]
 
