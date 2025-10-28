@@ -21,11 +21,11 @@ try:
     from thehive4py.types.observable import InputObservable
     from thehive4py.types.procedure import InputProcedure
 except ImportError:
-    InputAlert = dict
-    InputUpdateAlert = dict
-    InputPromoteAlert = dict
-    InputObservable = dict
-    InputProcedure = dict
+    InputAlert = dict  # type: ignore[misc,assignment]
+    InputUpdateAlert = dict  # type: ignore[misc,assignment]
+    InputPromoteAlert = dict  # type: ignore[misc,assignment]
+    InputObservable = dict  # type: ignore[misc,assignment]
+    InputProcedure = dict  # type: ignore[misc,assignment]
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s")
@@ -184,14 +184,14 @@ class TheHiveConnector:
     # ---------------------- Alert actions ----------------------
 
     @staticmethod
-    def sekoia_to_thehive(events, tlp, pap, ioc) -> List[OutputObservable]:
-        observables: List[OutputObservable] = []
+    def sekoia_to_thehive(events, tlp, pap, ioc) -> List[Dict[str, Any]]:
+        observables: List[Dict[str, Any]] = []
         for idx, ev in enumerate(events):
             if not isinstance(ev, dict):
                 logging.warning("Skipping non-dict event at index %d", idx)
                 continue
             for k, v in ev.items():
-                if key_exists(SEKOIA_FIELDS, k):
+                if k in SEKOIA_FIELDS:
                     thehive_field = SEKOIA_TO_THEHIVE.get(k, "<unknown>")
                     observable = {
                         "dataType": thehive_field,  # or another valid dataType
@@ -201,7 +201,7 @@ class TheHiveConnector:
                         "ioc": ioc,
                     }
                     observables.append(observable)
-        deduplicated: List[OutputObservable] = []
+        deduplicated: List[Dict[str, Any]] = []
         for o in observables:
             if o not in deduplicated:
                 deduplicated.append(o)
@@ -224,7 +224,7 @@ class TheHiveConnector:
             observable_path=observable_path,
         )
 
-    def alert_add_observables(self, alert_id: str, observables: List[InputObservable]) -> Dict[str, List]:
+    def alert_add_observables(self, alert_id: str, observables: List[Dict[str, Any]]) -> Dict[str, List]:
         """
         Bulk add multiple observables to an alert.
 
@@ -261,7 +261,7 @@ class TheHiveConnector:
 
         return self._safe_call(_bulk_add)
 
-    def comment_add_in_alert(self, alert_id: str, comment: str):
+    def comment_add_in_alert(self, alert_id: str, comment: InputComment):
         """Add a text comment to an alert."""
         return self._safe_call(self.api.comment.create_in_alert, alert_id=alert_id, comment=comment)
 

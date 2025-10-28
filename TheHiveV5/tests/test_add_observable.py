@@ -321,7 +321,7 @@ HIVE_OUTPUT_ERROR = {
 }
 
 # Correct HIVE_OUTPUT: single list containing three observable dicts (not multiple bracketed groups)
-HIVE_OUTPUT: Optional[OutputObservable] = [
+HIVE_OUTPUT: List[dict[str, Any]] = [
     {
         "_id": "~00000201",
         "_type": "Observable",
