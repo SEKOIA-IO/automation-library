@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-28  - 2.68.13
+
+### Changed
+
+- Add more logs to the `Push events to Intake` action
+
+### Fixed
+
+- Change the way to initialize and release the PoolExecutor in the `Push events to Intake` action
+- Compare event length as bytes length instead of string length
 
 ## 2025-09-25  - 2.68.12
 
