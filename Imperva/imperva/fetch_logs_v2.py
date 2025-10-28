@@ -51,9 +51,9 @@ class ImpervaLogsConnector(Connector):
         if self.last_seen_log:
             self.log(f"Last seen log is {self.last_seen_log}", level="info")
 
-        self.in_progress: deque[LogFileId] = deque(maxlen=100)  # logs that we are downloading right now
-        self.processed: deque[LogFileId] = deque(
-            maxlen=100
+        self.in_progress: deque[LogFileId] = deque()  # logs that we are downloading right now
+        self.processed: deque[LogFileId] = (
+            deque()
         )  # all logs that we tried to download and process (both successful and failed)
 
     @cached_property

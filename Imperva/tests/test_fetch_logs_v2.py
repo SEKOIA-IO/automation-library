@@ -167,3 +167,37 @@ key:"""
     encrypted_without_compression = header + encrypted_content
     result = trigger.decrypt_file(encrypted_without_compression, "1_1.log")
     assert result == true_value
+
+
+def test_process_file_with_deque_overflow(trigger, file_1):
+    """Test that process_file fails when the deque's maxlen is exceeded.
+
+    This reproduces the bug where adding more than 100 items to in_progress deque
+    causes the oldest items to be automatically discarded. When process_file tries
+    to remove an item that was already discarded, it raises ValueError.
+
+    The deque was initialized with maxlen=100 at line 54 of fetch_logs_v2.py:
+    self.in_progress: deque[LogFileId] = deque(maxlen=100)
+    """
+    with requests_mock.Mocker() as mock_requests:
+        # Create 101 log files to exceed the deque maxlen
+        log_files = [f"1_{i}.log" for i in range(1, 102)]
+        index_content = "\n".join(log_files)
+
+        mock_requests.get("https://example.com/logs.index", status_code=200, text=index_content)
+
+        # Mock all individual log file requests
+        for log_file in log_files:
+            mock_requests.get(f"https://example.com/{log_file}", status_code=200, content=file_1)
+
+        # Fetch the log index
+        logs = trigger.fetch_logs_index()
+        assert len(logs) == 101
+
+        # Add all 101 logs to in_progress - this will cause the first one to be discarded
+        # because the deque has maxlen=100
+        trigger.in_progress.extend(logs)
+
+        # Try to process the first log - this will raise ValueError
+        # because it's no longer in the in_progress deque
+        trigger.process_file(logs[0])
