@@ -73,6 +73,7 @@ class HarfanglabAccountValidator(AccountValidator):
                     message=f"{status_code} Client Error: {check_cred_response.get('detail', 'No details')} for base url: {self.base_url}",
                     level="error",
                 )
+                self.error(message=f"Failed to validate Harfanglab credentials : {check_cred_response.get('detail', 'No details')}")
                 return False
 
             elif 500 <= status_code < 600:
@@ -80,6 +81,7 @@ class HarfanglabAccountValidator(AccountValidator):
                     message=f"{status_code} Server Error: {check_cred_response.get('detail', 'No details')} for base url: {self.base_url}",
                     level="error",
                 )
+                self.error(message=f"Failed to validate Harfanglab credentials : {check_cred_response.get('detail', 'No details')}")
                 return False
 
             self.log(message="Credentials validated successfully", level="info")
@@ -87,4 +89,5 @@ class HarfanglabAccountValidator(AccountValidator):
 
         except HarfanglabCredentialsError as e:
             self.log(message=str(e), level="error")
+            self.error(message=f"Failed to validate Harfanglab credentials : {e}")
             return False
