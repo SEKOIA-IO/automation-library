@@ -14,7 +14,7 @@ from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
-from .errors import FailedToActivateO365Subscription
+from .errors import FailedToActivateO365Subscription, ApplicationAuthenticationFailed
 from .helpers import split_date_range
 from .office365_client import Office365API
 
@@ -166,6 +166,18 @@ class Office365Connector(AsyncConnector):
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
         loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
-        loop.run_until_complete(self.collect_events())
+
+        try:
+            loop.run_until_complete(self.collect_events())
+
+        except ApplicationAuthenticationFailed as auth_error:
+            message = "Authentication failed. Please check your client ID, client secret and tenant ID."
+
+            if auth_error.response and "error_description" in auth_error.response:
+                message = f"{message} Details: {auth_error.response['error_description']}"
+
+            self.log_exception(exception=auth_error, message=message)
+        except Exception:
+            raise
 
         self.log(message="Office365 Trigger has stopped", level="info")
