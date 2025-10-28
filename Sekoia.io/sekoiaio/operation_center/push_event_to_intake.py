@@ -107,7 +107,10 @@ class PushEventToIntake(Action):
             for attempt in self._retry():
                 with attempt:
                     logger.info(
-                        f"Forwarding chunk {chunk_index} with {len(chunk)} events. attempt #{attempt.retry_state.attempt_number}"
+                        "Forwarding chunk",
+                        chunk_index=chunk_index,
+                        event_count=len(chunk),
+                        attempt_number=attempt.retry_state.attempt_number,
                     )
 
                     res: Response = requests.post(
@@ -115,8 +118,10 @@ class PushEventToIntake(Action):
                     )
                     logger.log(
                         logging.INFO if res.ok else logging.ERROR,
-                        f"Chunk {chunk_index} forwarded with status code {res.status_code} "
-                        f"on attempt #{attempt.retry_state.attempt_number}",
+                        "Chunk forwarded",
+                        chunk_index=chunk_index,
+                        status_code=res.status_code,
+                        attempt_number=attempt.retry_state.attempt_number,
                     )
                     res.raise_for_status()
 
@@ -149,7 +154,7 @@ class PushEventToIntake(Action):
             self.log("No event to push", level="info")
             return {"event_ids": []}
 
-        logger.info(f"Preparing to forward {len(events)} events to the intake")
+        logger.info(f"Preparing to forward events", event_count=len(events))
 
         intake_server = arguments.get("intake_server", "https://intake.sekoia.io")
         batch_api = urljoin(intake_server, "batch")
@@ -165,12 +170,12 @@ class PushEventToIntake(Action):
                 executor.submit(self._send_chunk, intake_key, batch_api, chunk_index, chunk, collect_ids)
                 for chunk_index, chunk in enumerate(chunks)
             ]
-            logger.info(f"Submitting {len(futures)} chunks to the intake")
+            logger.info("Submitting chunks to the intake", chunk_count=len(futures))
             wait_futures(futures)
 
         event_ids = [event_id for chunk_index in sorted(collect_ids.keys()) for event_id in collect_ids[chunk_index]]
 
-        logger.info(f"Successfully forwarded {len(event_ids)} events to the intake")
+        logger.info("Successfully forwarded events to the intake", event_count=len(event_ids))
 
         if not arguments.get("keep_file_after_push", False):
             logger.info("Deleting the event file after push")
