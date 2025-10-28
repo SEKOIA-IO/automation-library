@@ -1,6 +1,4 @@
 import json
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import wait as wait_futures
 from posixpath import join as urljoin
 from typing import Any, Generator, Sequence
 
@@ -14,9 +12,7 @@ from sekoiaio.utils import user_agent
 
 
 class PushEventToIntake(Action):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._executor = ThreadPoolExecutor(max_workers=5)
+    
 
     def __del__(self):
         # Ensure the ThreadPoolExecutor is properly shut down
@@ -147,12 +143,8 @@ class PushEventToIntake(Action):
         collect_ids: dict[int, list] = {}
 
         chunks = self._chunk_events(events)
-        # Forward chunks in parallel
-        futures = [
-            self._executor.submit(self._send_chunk, intake_key, batch_api, chunk_index, chunk, collect_ids)
-            for chunk_index, chunk in enumerate(chunks)
-        ]
-        wait_futures(futures)
+        for chunk_index, chunk in enumerate(chunks):
+            self._send_chunk(intake_key, batch_api, chunk_index, chunk, collect_ids)
 
         event_ids = [event_id for chunk_index in sorted(collect_ids.keys()) for event_id in collect_ids[chunk_index]]
 
