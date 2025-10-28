@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-28 - 1.21.2
+
+### Fixed
+
+- Remove the maximum capacity of deque
+
 ## 2025-10-24 - 1.21.1
 
 ### Fixed
