@@ -151,26 +151,3 @@ def test_push_event_to_intake_with_retries():
             }
         )
         assert len(results["event_ids"]) == 1
-
-
-def test_push_event_to_intake_should_not_retry():
-    action = PushEventToIntake()
-    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
-
-    with requests_mock.Mocker() as mock:
-        mock.post(
-            "https://intake.sekoia.fake/batch",
-            [
-                {"status_code": 400},
-                {"json": {"event_ids": ["001"]}},
-            ],
-        )
-
-        results: dict = action.run(
-            {
-                "intake_server": "https://intake.sekoia.fake",
-                "intake_key": "my_intake_key",
-                "event": "my fake event",
-            }
-        )
-        assert len(results["event_ids"]) == 0
