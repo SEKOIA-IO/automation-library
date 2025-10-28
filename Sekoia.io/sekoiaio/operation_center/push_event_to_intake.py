@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 class PushEventToIntake(Action):
     def __init__(self, *args, **kwargs):
-        self.max_workers = kwargs.pop("max_workers", 5)
+        self.max_workers = int(kwargs.pop("max_workers", 5))
         super().__init__(*args, **kwargs)
 
     def _delete_file(self, arguments: dict):
@@ -124,7 +124,7 @@ class PushEventToIntake(Action):
 
         except Exception as ex:
             message = f"Failed to forward {len(chunk)} events"
-            logger.exception(message, extra={'chunk_index': chunk_index})
+            logger.exception(message, extra={"chunk_index": chunk_index})
             self.log_exception(ex, message=message)
 
     def run(self, arguments) -> dict:
