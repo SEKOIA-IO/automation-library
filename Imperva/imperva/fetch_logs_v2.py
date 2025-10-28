@@ -295,9 +295,9 @@ class ImpervaLogsConnector(Connector):
                 except Exception:
                     # Clear any additions that weren't successfully processed from in_progress
                     # Items that were successfully processed were already removed in process_file
-                    for log_item in additions:
-                        if log_item in self.in_progress:
-                            self.in_progress.remove(log_item)
+                    # Use set for O(1) lookup instead of O(n) for each item
+                    additions_set = set(additions)
+                    self.in_progress = deque(item for item in self.in_progress if item not in additions_set)
                     raise
 
             except Exception as e:
