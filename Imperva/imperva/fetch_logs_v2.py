@@ -226,67 +226,72 @@ class ImpervaLogsConnector(Connector):
         last_seen_log = self.last_seen_log
 
         while self.running:
-            # save the starting time
-            batch_start_time = time.time()
+            try:
+                # save the starting time
+                batch_start_time = time.time()
 
-            # download index
-            logs_in_index = self.fetch_logs_index()
+                # download index
+                logs_in_index = self.fetch_logs_index()
 
-            if last_seen_log and first_run:
-                for log_item in logs_in_index:
-                    if log_item in self.in_progress or log_item in self.processed:
-                        continue
+                if last_seen_log and first_run:
+                    for log_item in logs_in_index:
+                        if log_item in self.in_progress or log_item in self.processed:
+                            continue
 
-                    if log_item <= last_seen_log:
-                        self.log(
-                            "Log %s was before or is %s - ignore it"
-                            % (log_item.get_filename(), last_seen_log.get_filename()),
-                            level="info",
-                        )
-                        self.processed.append(log_item)
+                        if log_item <= last_seen_log:
+                            self.log(
+                                "Log %s was before or is %s - ignore it"
+                                % (log_item.get_filename(), last_seen_log.get_filename()),
+                                level="info",
+                            )
+                            self.processed.append(log_item)
 
-                first_run = False
+                    first_run = False
 
-            additions: list[LogFileId] = [
-                x for x in logs_in_index if x not in self.processed and x not in self.in_progress
-            ]
-            self.log("%d logs in index file, %d new" % (len(logs_in_index), len(additions)), level="info")
-            if len(additions) == 0:
-                self.log("No new logs to download", level="info")
-                EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
+                additions: list[LogFileId] = [
+                    x for x in logs_in_index if x not in self.processed and x not in self.in_progress
+                ]
+                self.log("%d logs in index file, %d new" % (len(logs_in_index), len(additions)), level="info")
+                if len(additions) == 0:
+                    self.log("No new logs to download", level="info")
+                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
 
+                    time.sleep(self.configuration.frequency)
+                    continue
+
+                INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(additions))
+                self.log("%d new logs to download" % len(additions), level="info")
+
+                self.in_progress.extend(additions)
+                last_timestamp = None
+                with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as pool:
+                    for item in pool.map(self.process_file, additions, timeout=30):
+                        if item.last_timestamp is not None and (
+                            last_timestamp is None or item.last_timestamp > last_timestamp
+                        ):
+                            last_timestamp = item.last_timestamp
+
+                if self.processed:
+                    if last_timestamp:
+                        now = datetime.now(tz=timezone.utc).timestamp()
+                        current_lag = now - last_timestamp / 1000.0
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+
+                    self.last_seen_log = max(self.processed)
+                    self.cursor.offset = self.last_seen_log.get_filename()
+
+                # get the ending time and compute the duration to fetch the events
+                batch_end_time = time.time()
+                batch_duration = int(batch_end_time - batch_start_time)
+                self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+
+                # compute the remaining sleeping time. If greater than 0, sleep
+                delta_sleep = self.configuration.frequency - batch_duration
+                if delta_sleep > 0:
+                    self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
+                    time.sleep(delta_sleep)
+
+            except Exception as e:
+                self.log_exception(e)
                 time.sleep(self.configuration.frequency)
-                continue
-
-            INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(additions))
-            self.log("%d new logs to download" % len(additions), level="info")
-
-            self.in_progress.extend(additions)
-            last_timestamp = None
-            with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as pool:
-                for item in pool.map(self.process_file, additions, timeout=30):
-                    if item.last_timestamp is not None and (
-                        last_timestamp is None or item.last_timestamp > last_timestamp
-                    ):
-                        last_timestamp = item.last_timestamp
-
-            if self.processed:
-                if last_timestamp:
-                    now = datetime.now(tz=timezone.utc).timestamp()
-                    current_lag = now - last_timestamp / 1000.0
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
-
-                self.last_seen_log = max(self.processed)
-                self.cursor.offset = self.last_seen_log.get_filename()
-
-            # get the ending time and compute the duration to fetch the events
-            batch_end_time = time.time()
-            batch_duration = int(batch_end_time - batch_start_time)
-            self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
-
-            # compute the remaining sleeping time. If greater than 0, sleep
-            delta_sleep = self.configuration.frequency - batch_duration
-            if delta_sleep > 0:
-                self.log(f"Next batch in the future. Waiting {delta_sleep} seconds", level="info")
-                time.sleep(delta_sleep)
