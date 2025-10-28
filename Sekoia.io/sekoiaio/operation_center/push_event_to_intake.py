@@ -43,7 +43,7 @@ class PushEventToIntake(Action):
             reraise=True,
         )
 
-    def _chunk_events(self, events: Sequence) -> Generator[list[Any], None, None]:
+    def _chunk_events(self, events: Sequence[str]) -> Generator[list[Any], None, None]:
         """
         Group events by chunk.
 
@@ -59,12 +59,14 @@ class PushEventToIntake(Action):
 
         # iter over the events
         for event in events:
-            if len(event) > EVENT_BYTES_MAX_SIZE:
+            len_event = len(event.encode("utf-8"))
+
+            if len_event > EVENT_BYTES_MAX_SIZE:
                 nb_discarded_events += 1
                 continue
 
             # if the chunk is full
-            if chunk_bytes + len(event) > CHUNK_BYTES_MAX_SIZE:
+            if chunk_bytes + len_event > CHUNK_BYTES_MAX_SIZE:
                 # yield the current chunk and create a new one
                 yield chunk
                 chunk = []
@@ -72,7 +74,7 @@ class PushEventToIntake(Action):
 
             # add the event to the current chunk
             chunk.append(event)
-            chunk_bytes += len(event)
+            chunk_bytes += len_event
 
         # if the last chunk is not empty
         if len(chunk) > 0:
