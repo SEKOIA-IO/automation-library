@@ -154,7 +154,7 @@ class PushEventToIntake(Action):
             self.log("No event to push", level="info")
             return {"event_ids": []}
 
-        logger.info(f"Preparing to forward events", event_count=len(events))
+        logger.info("Preparing to forward events", event_count=len(events))
 
         intake_server = arguments.get("intake_server", "https://intake.sekoia.io")
         batch_api = urljoin(intake_server, "batch")
