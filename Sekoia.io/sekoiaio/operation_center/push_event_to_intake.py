@@ -8,7 +8,6 @@ from sekoiaio.utils import user_agent
 
 
 class PushEventToIntake(Action):
-    
 
     def __del__(self):
         # Ensure the ThreadPoolExecutor is properly shut down
