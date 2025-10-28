@@ -1,15 +1,15 @@
-"""Unit tests for SentinelOneAssetClient."""
+"""Unit tests for SentinelOneClient."""
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import requests
-from sentinelone_module.asset_connector.client import SentinelOneAssetClient
+from sentinelone_module.client import SentinelOneClient
 
 
 @pytest.fixture
 def client():
     """Create a test client instance."""
-    return SentinelOneAssetClient(
+    return SentinelOneClient(
         hostname="https://example.sentinelone.net",
         api_token="test_token",
         rate_limit_per_second=10,
@@ -106,19 +106,15 @@ def test_close(client):
 def test_hostname_cleaning():
     """Test that hostname is cleaned properly."""
     # Test with https prefix
-    client1 = SentinelOneAssetClient(
-        hostname="https://test.sentinelone.net", api_token="token", rate_limit_per_second=10
-    )
+    client1 = SentinelOneClient(hostname="https://test.sentinelone.net", api_token="token", rate_limit_per_second=10)
     assert client1.hostname == "test.sentinelone.net"
 
     # Test with http prefix
-    client2 = SentinelOneAssetClient(
-        hostname="http://test.sentinelone.net", api_token="token", rate_limit_per_second=10
-    )
+    client2 = SentinelOneClient(hostname="http://test.sentinelone.net", api_token="token", rate_limit_per_second=10)
     assert client2.hostname == "test.sentinelone.net"
 
     # Test without prefix
-    client3 = SentinelOneAssetClient(hostname="test.sentinelone.net", api_token="token", rate_limit_per_second=10)
+    client3 = SentinelOneClient(hostname="test.sentinelone.net", api_token="token", rate_limit_per_second=10)
     assert client3.hostname == "test.sentinelone.net"
 
 

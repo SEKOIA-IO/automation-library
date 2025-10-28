@@ -17,15 +17,20 @@ from sekoia_automation.asset_connector.models.ocsf.base import (
 )
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
+    DeviceDataObject,
+    DeviceEnrichmentObject,
     DeviceOCSFModel,
     DeviceTypeId,
     DeviceTypeStr,
+    GeoLocation,
+    Group,
+    NetworkInterface,
     OperatingSystem,
     OSTypeId,
     OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
-from sentinelone_module.asset_connector.client import SentinelOneAssetClient
+from sentinelone_module.client import SentinelOneClient
 from sentinelone_module.asset_connector.models import SentinelOneAgent
 
 
@@ -48,17 +53,17 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         self.new_most_recent_date: Optional[str] = None
 
     @cached_property
-    def client(self) -> SentinelOneAssetClient:
+    def client(self) -> SentinelOneClient:
         """Get the SentinelOne HTTP client instance.
 
         Returns:
-            Configured SentinelOneAssetClient instance.
+            Configured SentinelOneClient instance.
         """
         configuration = self.module.configuration
-        return SentinelOneAssetClient(
+        return SentinelOneClient(
             hostname=configuration.hostname,
             api_token=configuration.api_token,
-            rate_limit_per_second=20, #Limit to 25 requests per second in the documentation so we set 20 to be safe
+            rate_limit_per_second=20,  # Limit to 25 requests per second in the documentation so we set 20 to be safe
         )
 
     @property
@@ -263,18 +268,134 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         # Determine device type
         device_type_str, device_type_id = self.get_device_type(agent.machineType)
 
-        # Create the device object
+        # Map network interfaces if available
+        network_interfaces = None
+        if agent.networkInterfaces:
+            network_interfaces = []
+            for iface in agent.networkInterfaces:
+                # Get the first IP address from inet list
+                ip_address = None
+                if iface.inet and len(iface.inet) > 0:
+                    ip_address = iface.inet[0]
+
+                network_interfaces.append(
+                    NetworkInterface(
+                        name=iface.name,
+                        mac=iface.physical,
+                        ip=ip_address,
+                        uid=iface.id,
+                    )
+                )
+
+        # Parse timestamps
+        timestamp = isoparse(agent.createdAt).timestamp()
+        created_time = timestamp
+        first_seen_time = isoparse(agent.registeredAt).timestamp() if agent.registeredAt else None
+        last_seen_time = isoparse(agent.lastActiveDate).timestamp() if agent.lastActiveDate else None
+        boot_time = agent.osStartTime  # Keep as ISO string
+
+        # Build groups list if available
+        groups = None
+        if agent.groupName or agent.groupId:
+            groups = [
+                Group(
+                    name=agent.groupName or "Unknown",
+                    uid=agent.groupId or agent.groupName or "unknown",
+                )
+            ]
+
+        # Build location from locations list if available
+        location = None
+        if agent.locations and len(agent.locations) > 0:
+            # Use the first location's name as city
+            location = GeoLocation(city=agent.locations[0].name)
+
+        # Create the device object with enhanced fields
         device = Device(
             hostname=agent.computerName,
             uid=agent.uuid or agent.id,
+            uid_alt=agent.id if agent.uuid else None,  # Use ID as alternate UID when UUID is primary
             type_id=device_type_id,
             type=device_type_str,
             os=self.get_device_os(agent.osType, agent.osName, agent.osRevision),
-            location=None,
+            location=location,
+            domain=agent.domain,
+            ip=agent.externalIp,
+            subnet=agent.groupIp,  # Network subnet/range (e.g., "31.155.5.x")
+            network_interfaces=network_interfaces,
+            model=agent.modelName,
+            vendor_name="SentinelOne",
+            boot_time=boot_time,
+            created_time=created_time,
+            first_seen_time=first_seen_time,
+            last_seen_time=last_seen_time,
+            is_managed=True,  # SentinelOne agents are managed by definition
+            is_compliant=agent.isUpToDate if agent.isUpToDate is not None else None,
+            region=agent.siteName,  # Using site name as region
+            groups=groups,
         )
 
-        # Parse timestamp
-        timestamp = isoparse(agent.createdAt).timestamp()
+        # Build enrichments for additional device information
+        enrichments = []
+
+        # Add firewall status if available
+        if agent.firewallEnabled is not None:
+            firewall_status = "Enabled" if agent.firewallEnabled else "Disabled"
+            enrichments.append(
+                DeviceEnrichmentObject(
+                    name="Firewall",
+                    value=firewall_status,
+                    data=DeviceDataObject(Firewall_status=firewall_status),
+                )
+            )
+
+        # Add user information if available
+        users = []
+        if agent.lastLoggedInUserName:
+            users.append(agent.lastLoggedInUserName)
+        if agent.osUsername and agent.osUsername not in users:
+            users.append(agent.osUsername)
+
+        if users:
+            enrichments.append(
+                DeviceEnrichmentObject(
+                    name="Users",
+                    value=", ".join(users),
+                    data=DeviceDataObject(Users=users),
+                )
+            )
+
+        # Add update status if available
+        if agent.isUpToDate is not None:
+            update_status = "Up to Date" if agent.isUpToDate else "Update Required"
+            enrichments.append(
+                DeviceEnrichmentObject(
+                    name="Update Status",
+                    value=update_status,
+                    data=DeviceDataObject(),
+                )
+            )
+
+        # Add active threats count if available
+        if agent.activeThreats is not None:
+            enrichments.append(
+                DeviceEnrichmentObject(
+                    name="Active Threats",
+                    value=str(agent.activeThreats),
+                    data=DeviceDataObject(),
+                )
+            )
+
+        # Add infection status if available
+        if agent.infected is not None:
+            infection_status = "Infected" if agent.infected else "Clean"
+            enrichments.append(
+                DeviceEnrichmentObject(
+                    name="Infection Status",
+                    value=infection_status,
+                    data=DeviceDataObject(),
+                )
+            )
 
         return DeviceOCSFModel(
             activity_id=2,
@@ -284,6 +405,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             class_name="Device Inventory Info",
             class_uid=5001,
             device=device,
+            enrichments=enrichments if enrichments else None,
             time=timestamp,
             metadata=Metadata(
                 product=Product(name="SentinelOne", vendor_name="SentinelOne", version=agent.agentVersion or "N/A"),

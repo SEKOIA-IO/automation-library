@@ -13,7 +13,7 @@ from sentinelone_module.helpers import clean_hostname
 logger = logging.getLogger(__name__)
 
 
-class SentinelOneAssetClient:
+class SentinelOneClient:
     """HTTP client for SentinelOne API with rate limiting and retry logic."""
 
     def __init__(self, hostname: str, api_token: str, rate_limit_per_second: int = 10):
