@@ -114,7 +114,7 @@ class PushEventToIntake(Action):
                         batch_api, json=request_body, timeout=30, headers={"User-Agent": user_agent()}
                     )
                     logger.log(
-                        logging.ERROR if not res.ok else logging.INFO,
+                        logging.INFO if res.ok else logging.ERROR,
                         f"Chunk {chunk_index} forwarded with status code {res.status_code} "
                         f"on attempt #{attempt.retry_state.attempt_number}",
                     )
@@ -124,7 +124,7 @@ class PushEventToIntake(Action):
 
         except Exception as ex:
             message = f"Failed to forward {len(chunk)} events"
-            logger.exception(message, chunk_index=chunk_index)
+            logger.exception(message, extra={'chunk_index': chunk_index})
             self.log_exception(ex, message=message)
 
     def run(self, arguments) -> dict:
