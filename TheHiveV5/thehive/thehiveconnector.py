@@ -183,9 +183,10 @@ class TheHiveConnector:
 
     # ---------------------- Alert actions ----------------------
 
-    def sekoia_to_thehive(self, tlp, pap, ioc) -> List[OutputObservable]:
+    @staticmethod
+    def sekoia_to_thehive(events, tlp, pap, ioc) -> List[OutputObservable]:
         observables: List[OutputObservable] = []
-        for idx, ev in enumerate(self):
+        for idx, ev in enumerate(events):
             if not isinstance(ev, dict):
                 logging.warning("Skipping non-dict event at index %d", idx)
                 continue
