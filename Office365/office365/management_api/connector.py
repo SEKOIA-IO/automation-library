@@ -177,5 +177,7 @@ class Office365Connector(AsyncConnector):
                 message = f"{message} Details: {auth_error.response['error_description']}"
 
             self.log_exception(exception=auth_error, message=message)
+        finally:
+            loop.close()
 
         self.log(message="Office365 Trigger has stopped", level="info")
