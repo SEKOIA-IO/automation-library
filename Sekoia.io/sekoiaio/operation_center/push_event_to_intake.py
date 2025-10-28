@@ -1,4 +1,5 @@
 import json
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait as wait_futures
 from posixpath import join as urljoin
@@ -11,6 +12,10 @@ from sekoia_automation.constants import CHUNK_BYTES_MAX_SIZE, EVENT_BYTES_MAX_SI
 from tenacity import Retrying, stop_after_delay, wait_exponential, retry_if_exception
 
 from sekoiaio.utils import user_agent
+from sekoiaio.logging import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class PushEventToIntake(Action):
@@ -101,8 +106,17 @@ class PushEventToIntake(Action):
 
             for attempt in self._retry():
                 with attempt:
+                    logger.info(
+                        f"Forwarding chunk {chunk_index} with {len(chunk)} events. attempt #{attempt.retry_state.attempt_number}"
+                    )
+
                     res: Response = requests.post(
                         batch_api, json=request_body, timeout=30, headers={"User-Agent": user_agent()}
+                    )
+                    logger.log(
+                        logging.ERROR if not res.ok else logging.INFO,
+                        f"Chunk {chunk_index} forwarded with status code {res.status_code} "
+                        f"on attempt #{attempt.retry_state.attempt_number}",
                     )
                     res.raise_for_status()
 
@@ -110,7 +124,7 @@ class PushEventToIntake(Action):
 
         except Exception as ex:
             message = f"Failed to forward {len(chunk)} events"
-            self.log(message=message, level="error")
+            logger.exception(message, chunk_index=chunk_index)
             self.log_exception(ex, message=message)
 
     def run(self, arguments) -> dict:
@@ -135,6 +149,8 @@ class PushEventToIntake(Action):
             self.log("No event to push", level="info")
             return {"event_ids": []}
 
+        logger.info(f"Preparing to forward {len(events)} events to the intake")
+
         intake_server = arguments.get("intake_server", "https://intake.sekoia.io")
         batch_api = urljoin(intake_server, "batch")
         intake_key = arguments["intake_key"]
@@ -149,11 +165,15 @@ class PushEventToIntake(Action):
                 executor.submit(self._send_chunk, intake_key, batch_api, chunk_index, chunk, collect_ids)
                 for chunk_index, chunk in enumerate(chunks)
             ]
+            logger.info(f"Submitting {len(futures)} chunks to the intake")
             wait_futures(futures)
 
         event_ids = [event_id for chunk_index in sorted(collect_ids.keys()) for event_id in collect_ids[chunk_index]]
 
+        logger.info(f"Successfully forwarded {len(event_ids)} events to the intake")
+
         if not arguments.get("keep_file_after_push", False):
+            logger.info("Deleting the event file after push")
             self._delete_file(arguments)
 
         return {"event_ids": event_ids}
