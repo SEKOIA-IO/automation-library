@@ -3,6 +3,8 @@
   "description": "Collect device/agent inventory from SentinelOne and send to Sekoia.io Asset Management",
   "slug": "sentinelone_device_assets_connector",
   "docker_parameters": "sentinelone_device_assets_connector",
+  "type": "asset",
+  "capability": "device",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
