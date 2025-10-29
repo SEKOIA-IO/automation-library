@@ -263,27 +263,34 @@ class ImpervaLogsConnector(Connector):
 
             self.in_progress.extend(additions)
             last_timestamp = None
-            with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as pool:
-                for item in pool.map(self.process_file, additions, timeout=30):
-                    if item.last_timestamp is not None and (
-                        last_timestamp is None or item.last_timestamp > last_timestamp
-                    ):
-                        last_timestamp = item.last_timestamp
+            try:
+                with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as pool:
+                    for item in pool.map(self.process_file, additions, timeout=3600):
+                        if item.last_timestamp is not None and (
+                            last_timestamp is None or item.last_timestamp > last_timestamp
+                        ):
+                            last_timestamp = item.last_timestamp
 
-            if self.processed:
-                if last_timestamp:
-                    now = datetime.now(tz=timezone.utc).timestamp()
-                    current_lag = now - last_timestamp / 1000.0
-                    EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+                if self.processed:
+                    if last_timestamp:
+                        now = datetime.now(tz=timezone.utc).timestamp()
+                        current_lag = now - last_timestamp / 1000.0
+                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
 
-                self.last_seen_log = max(self.processed)
-                self.cursor.offset = self.last_seen_log.get_filename()
+                    self.last_seen_log = max(self.processed)
+                    self.cursor.offset = self.last_seen_log.get_filename()
 
-            # get the ending time and compute the duration to fetch the events
-            batch_end_time = time.time()
-            batch_duration = int(batch_end_time - batch_start_time)
-            self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+                # get the ending time and compute the duration to fetch the events
+                batch_end_time = time.time()
+                batch_duration = int(batch_end_time - batch_start_time)
+                self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
+                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
+            except Exception as e:
+                self.log_exception(e)
+
+                # Clear failed items - successful ones already removed in process_file
+                additions_set = set(additions)
+                self.in_progress = deque(item for item in self.in_progress if item not in additions_set)
 
             # compute the remaining sleeping time. If greater than 0, sleep
             delta_sleep = self.configuration.frequency - batch_duration

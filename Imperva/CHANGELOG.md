@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-28 - 1.21.3
+
+### Changed
+
+- Extend the timeout of a task to 1 hour
+
+### Fixed
+
+- Handle any exception in the main loop
+
 ## 2025-10-28 - 1.21.2
 
 ### Fixed
