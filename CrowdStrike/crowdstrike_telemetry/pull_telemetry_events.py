@@ -10,6 +10,7 @@ from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
 from aws_helpers.utils import AsyncReader, normalize_s3_key
 from connectors.metrics import INCOMING_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from pydantic.v1 import Field
 
 from crowdstrike_telemetry import CrowdStrikeTelemetryModule
 
@@ -39,17 +40,24 @@ EXCLUDED_EVENT_ACTIONS = [
 
 
 class CrowdStrikeTelemetryConnectorConfig(AwsS3QueuedConfiguration):
-    # All commented fields are inherited from AwsS3QueuedConfiguration under the same names
-    # chunk_size: int = 10000
-    # frequency: int = 60
+    ## Initial config fields:
     # queue_name: str
-    # intake_server: str | None = None
-    # intake_key: str
+    # queue_url: str | None = None
+    # chunk_size: int | None = None
+    # frequency: int | None = None
+    # delete_consumed_messages: bool | None = None
+    # is_fifo: bool | None = None
 
-    # this fields are also present in AwsS3QueuedConfiguration but they are not present in the json config
+    ## Current config fields from AwsS3QueuedConfiguration:
     # sqs_frequency: int = 10
+    # chunk_size: int = 10000
     # delete_consumed_messages: bool = True
+    # queue_name: str
+    # frequency: int = 60
 
+    queue_name: str = Field(default="", description="AWS SQS queue name")
+    delete_consumed_messages: bool | None = None
+    chunk_size: int | None = None
     queue_url: str | None = None
     is_fifo: bool | None = None
 
@@ -78,11 +86,21 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
         Returns:
             SqsWrapper:
         """
+        queue_name = self.configuration.queue_name
+        queue_url = self.configuration.queue_url
+
+        if queue_url is None and queue_name == "":
+            raise ValueError("Either queue_name or queue_url must be provided in the configuration.")
+
+        delete_consumed_messages = self.configuration.delete_consumed_messages
+        if delete_consumed_messages is None:
+            delete_consumed_messages = True
+
         config = SqsConfiguration(
             frequency=self.configuration.sqs_frequency,
-            delete_consumed_messages=self.configuration.delete_consumed_messages,
-            queue_url=self.configuration.queue_url,
-            queue_name=self.configuration.queue_name,
+            delete_consumed_messages=delete_consumed_messages,
+            queue_url=queue_url,
+            queue_name=queue_name,
             aws_access_key_id=self.module.configuration.aws_access_key,
             aws_secret_access_key=self.module.configuration.aws_secret_access_key,
             aws_region=self.module.configuration.aws_region_name,
@@ -157,7 +175,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
                     try:
                         # This are custom CrowdStrike messages, we just parse them as it is
                         message_records.append(orjson.loads(message))
-                    except ValueError as e:  # pragma: no cover
+                    except (ValueError, TypeError) as e:  # pragma: no cover
                         self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
 
                 if not message_records:
@@ -212,6 +230,15 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
             if len(record) > 0:  # pragma: no cover
                 try:
                     json_record = orjson.loads(record)
+
+                    # Validate json_record is a dict before calling .get()
+                    if not isinstance(json_record, dict):
+                        self.log(
+                            message=f"Record is not a dict, got {type(json_record).__name__}, skipping", level="error"
+                        )
+                        DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
+                        continue
+
                     if (
                         json_record.get("event_simpleName") is None
                         or json_record.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
