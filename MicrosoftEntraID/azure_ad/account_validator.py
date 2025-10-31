@@ -5,18 +5,21 @@ from kiota_authentication_azure.azure_identity_authentication_provider import Az
 from msgraph import GraphRequestAdapter, GraphServiceClient
 from sekoia_automation.account_validator import AccountValidator
 
+from azure_ad.base import AzureADModule
+
 
 class AzureADAccountValidator(AccountValidator):
+    module: AzureADModule
     _client: GraphServiceClient | None = None
     _credentials: ClientSecretCredential | None = None
 
     @property
     def client(self) -> GraphServiceClient:
-        if self._credentials is None:
-            self._credentials = ClientSecretCredential(
-                tenant_id=self.module.configuration["tenant_id"],
-                client_id=self.module.configuration["client_id"],
-                client_secret=self.module.configuration["client_secret"],
+        if self._client is None:
+            credentials = ClientSecretCredential(
+                tenant_id=self.module.configuration.tenant_id,
+                client_id=self.module.configuration.client_id,
+                client_secret=self.module.configuration.client_secret,
             )
 
             # Reset client to force re-creation with new credentials even if already set
