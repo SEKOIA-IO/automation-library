@@ -81,7 +81,7 @@ class XQLQueryAction(PaloAltoCortexXDRAction):
             data_result: dict[str, Any] = result_query_response.json()
             self.handle_error_result(data_result)
 
-            if data_result.get("reply", {}).get("status").lower() == "pending":
+            if data_result.get("reply", {}).get("status", "").lower() == "pending":
                 # Check if the maximum wait time has been reached
                 if time.time() - start_wait_time > model.max_wait_time:
                     raise ValueError("Query execution timed out.")
