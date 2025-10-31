@@ -28,8 +28,6 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
     module: AzureADModule
     configuration: MicrosoftEntraIdGraphApiConnectorConfig
 
-    _client: GraphApi | None = None
-
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.last_event_date_signin = CheckpointDatetime(
@@ -48,6 +46,7 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
         self.signin_cache = self.load_cache("signin", maxsize=500)
         self.directory_alerts_cache = self.load_cache("directory", maxsize=500)
+        self._client: Optional[GraphApi] = None
 
     def load_cache(self, key: str, maxsize: int) -> Cache[str | None, bool]:
         context = self.last_event_date_signin._context if key == "signin" else self.last_event_date_directory._context
@@ -202,9 +201,19 @@ class MicrosoftEntraIdGraphApiConnector(AsyncConnector):
 
             except Exception as error:
                 self.log_exception(error)
+
+                # Reset client if HTTP transport is closed
+                if "HTTP transport has already been closed" in str(error) or "transport" in str(error).lower():
+                    self.log(message="Looks like http transport closed, resetting client....", level="warning")
+                    if self._client:
+                        await self._client.close()
+                        self._client = None
+
                 await asyncio.sleep(self.configuration.frequency)
 
-        await self.client.close()
+        if self._client:
+            await self._client.close()
+
         if self._session:
             await self._session.close()
 

@@ -1,5 +1,4 @@
 import asyncio
-from functools import cached_property
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
@@ -9,16 +8,22 @@ from sekoia_automation.account_validator import AccountValidator
 
 class AzureADAccountValidator(AccountValidator):
     _client: GraphServiceClient | None = None
+    _credentials: ClientSecretCredential | None = None
 
-    @cached_property
+    @property
     def client(self) -> GraphServiceClient:
-        if self._client is None:
-            credentials = ClientSecretCredential(
+        if self._credentials is None:
+            self._credentials = ClientSecretCredential(
                 tenant_id=self.module.configuration["tenant_id"],
                 client_id=self.module.configuration["client_id"],
                 client_secret=self.module.configuration["client_secret"],
             )
-            auth_provider = AzureIdentityAuthenticationProvider(credentials)
+
+            # Reset client to force re-creation with new credentials even if already set
+            self._client = None
+
+        if self._client is None:
+            auth_provider = AzureIdentityAuthenticationProvider(self._credentials)
             adapter = GraphRequestAdapter(auth_provider)
             self._client = GraphServiceClient(request_adapter=adapter)
 

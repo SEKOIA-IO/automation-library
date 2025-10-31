@@ -41,6 +41,7 @@ def test_validate_success(mock_get_event_loop, test_azure_ad_account_validator):
     mock_users = Mock()
     mock_users.get = AsyncMock()
     mock_client.users = mock_users
+    test_azure_ad_account_validator._credentials = MagicMock()
     test_azure_ad_account_validator._client = mock_client
 
     # Act
@@ -64,6 +65,7 @@ def test_validate_failure_connection_error(mock_get_event_loop, test_azure_ad_ac
     mock_users = Mock()
     mock_users.get = AsyncMock(side_effect=Exception("Connection failed"))
     mock_client.users = mock_users
+    test_azure_ad_account_validator._credentials = MagicMock()
     test_azure_ad_account_validator._client = mock_client
 
     # Configure run_until_complete to raise the exception
@@ -91,6 +93,7 @@ def test_validate_failure_authentication_error(mock_get_event_loop, test_azure_a
     mock_users = Mock()
     mock_users.get = AsyncMock(side_effect=Exception("Invalid credentials"))
     mock_client.users = mock_users
+    test_azure_ad_account_validator._credentials = MagicMock()
     test_azure_ad_account_validator._client = mock_client
 
     # Configure run_until_complete to raise the exception
@@ -118,6 +121,7 @@ def test_validate_failure_network_error(mock_get_event_loop, test_azure_ad_accou
     mock_users = Mock()
     mock_users.get = AsyncMock(side_effect=Exception("Network timeout"))
     mock_client.users = mock_users
+    test_azure_ad_account_validator._credentials = MagicMock()
     test_azure_ad_account_validator._client = mock_client
 
     # Configure run_until_complete to raise the exception
@@ -147,6 +151,7 @@ def test_validate_uses_cached_client(mock_get_event_loop, test_azure_ad_account_
     mock_client.users = mock_users
 
     # Set the cached client directly
+    test_azure_ad_account_validator._credentials = MagicMock()
     test_azure_ad_account_validator._client = mock_client
 
     # Act
