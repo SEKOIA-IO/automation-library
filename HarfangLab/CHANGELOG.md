@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-28 - 1.28.15
+
+### Added
+
+- Add error logging to account validator
+
+## 2025-10-27 - 1.28.14
+
+### Changed
+
+- fix dockerfile SSL issue
+
+## 2025-10-06 - 1.28.13
+
+### Changed
+
+- Update conf asset connector
+
 ## 2025-09-30 - 1.28.12
 
 ### Changed

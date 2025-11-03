@@ -9,7 +9,7 @@
     "properties": {
       "id": {
         "title": "Id",
-        "description": "ID of the app.",
+        "description": "ID of the user. id or userPrincipalName should be specified.",
         "type": "string"
       },
       "userPrincipalName": {
