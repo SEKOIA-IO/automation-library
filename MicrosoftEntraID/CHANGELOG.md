@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-31 - 2.10.4
+
+### Fixed
+
+- Fix account validator configuration access to use typed attributes
+
 ## 2025-10-30 - 2.10.3
 
 ### Fixed

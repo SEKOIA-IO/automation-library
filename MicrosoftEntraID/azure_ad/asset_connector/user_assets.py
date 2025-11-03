@@ -32,7 +32,7 @@ class EntraIDAssetConnector(AssetConnector):
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._client: GraphServiceClient | None = None
