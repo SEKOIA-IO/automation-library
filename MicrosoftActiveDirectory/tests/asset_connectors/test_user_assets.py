@@ -40,7 +40,7 @@ def test_user_ldap_query_without_checkpoint(connector):
 
     query = connector.user_ldap_query
 
-    assert query == '(&(objectCategory=person)(objectClass=user))'
+    assert query == "(&(objectCategory=person)(objectClass=user))"
 
 
 def test_user_ldap_query_with_checkpoint(connector):
@@ -48,7 +48,7 @@ def test_user_ldap_query_with_checkpoint(connector):
 
     query = connector.user_ldap_query
 
-    assert query == '(&(objectCategory=person)(objectClass=user)(whenCreated>=20240101120000.0Z))'
+    assert query == "(&(objectCategory=person)(objectClass=user)(whenCreated>=20240101120000.0Z))"
 
 
 def test_update_checkpoint_with_latest_time(connector):
@@ -56,9 +56,7 @@ def test_update_checkpoint_with_latest_time(connector):
 
     connector.update_checkpoint()
 
-    connector.context.__enter__().__setitem__.assert_called_once_with(
-        "most_recent_datetime", "20240101120000.0Z"
-    )
+    connector.context.__enter__().__setitem__.assert_called_once_with("most_recent_datetime", "20240101120000.0Z")
 
 
 def test_update_checkpoint_without_latest_time(connector):
@@ -94,12 +92,7 @@ def test_compute_enabling_condition_disabled(connector):
 
 
 def test_enrich_metadata(connector):
-    user_attr = {
-        "userAccountControl": 512,
-        "lastLogon": "2024-01-01",
-        "badPwdCount": 0,
-        "logonCount": 10
-    }
+    user_attr = {"userAccountControl": 512, "lastLogon": "2024-01-01", "badPwdCount": 0, "logonCount": 10}
 
     enrichments = connector.enrich_metadata(user_attr)
 
@@ -129,12 +122,7 @@ def test_compute_user_type_regular_user(connector):
 
 
 def test_get_user_groups(connector):
-    user_attr = {
-        "member_of": [
-            "CN=Group1,DC=example,DC=com",
-            "CN=Group2,DC=example,DC=com"
-        ]
-    }
+    user_attr = {"member_of": ["CN=Group1,DC=example,DC=com", "CN=Group2,DC=example,DC=com"]}
 
     groups = connector.get_user_groups(user_attr)
 
@@ -153,7 +141,7 @@ def test_user_oscf_object(connector):
         "displayName": "John Doe",
         "mail": "john.doe@example.com",
         "distinguishedName": "CN=John Doe,DC=example,DC=com",
-        "member_of": ["CN=Users,DC=example,DC=com"]
+        "member_of": ["CN=Users,DC=example,DC=com"],
     }
 
     user_ocsf = connector.user_oscf_object(user_attr)
@@ -181,7 +169,7 @@ def test_map_user_fields(connector):
             "userAccountControl": 512,
             "lastLogon": "2024-01-01",
             "badPwdCount": 0,
-            "logonCount": 5
+            "logonCount": 5,
         }
     }
 
@@ -197,10 +185,7 @@ def test_map_user_fields(connector):
 def test_get_users_generator(connector):
     mock_entry = {
         "dn": "CN=Test User,DC=example,DC=com",
-        "attributes": {
-            "userPrincipalName": "test@example.com",
-            "whenCreated": datetime(2024, 1, 1, 12, 0, 0)
-        }
+        "attributes": {"userPrincipalName": "test@example.com", "whenCreated": datetime(2024, 1, 1, 12, 0, 0)},
     }
 
     connector.ldap_client.extend.standard.paged_search.return_value = iter([mock_entry])
@@ -221,8 +206,8 @@ def test_get_assets(connector):
             "userPrincipalName": "asset@example.com",
             "objectSid": "S-1-5-21-111",
             "whenCreated": datetime(2024, 1, 1, 12, 0, 0),
-            "userAccountControl": 512
-        }
+            "userAccountControl": 512,
+        },
     }
 
     connector.get_users_generator = Mock(return_value=iter([mock_user]))
@@ -234,10 +219,7 @@ def test_get_assets(connector):
 
 
 def test_get_assets_handles_exception(connector):
-    mock_user = {
-        "dn": "CN=Invalid User,DC=example,DC=com",
-        "attributes": {}
-    }
+    mock_user = {"dn": "CN=Invalid User,DC=example,DC=com", "attributes": {}}
 
     connector.get_users_generator = Mock(return_value=iter([mock_user]))
 

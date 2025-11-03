@@ -6,7 +6,6 @@ from microsoft_ad.client.ldap_client import LDAPClient
 
 
 class MicrosoftADAccountValidator(AccountValidator, LDAPClient):
-
     def validate(self) -> bool:
         self.log(message="Start Validation credentials process for Microsoft AD asset connector", level="info")
 

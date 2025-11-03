@@ -19,12 +19,13 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     AccountTypeId,
     AccountTypeStr,
     UserEnrichmentObject,
-    UserDataObject, UserTypeStr, UserTypeId,
+    UserDataObject,
+    UserTypeStr,
+    UserTypeId,
 )
 
 from microsoft_ad.client.ldap_client import LDAPClient
 from microsoft_ad.models.common_models import MicrosoftADModule
-
 
 
 class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
@@ -59,8 +60,8 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     @property
     def user_ldap_query(self) -> str:
         if not self.most_recent_datetime:
-            return '(&(objectCategory=person)(objectClass=user))'
-        return f'(&(objectCategory=person)(objectClass=user)(whenCreated>={self.most_recent_datetime}))'
+            return "(&(objectCategory=person)(objectClass=user))"
+        return f"(&(objectCategory=person)(objectClass=user)(whenCreated>={self.most_recent_datetime}))"
 
     def update_checkpoint(self) -> None:
         if self._latest_time is None:
@@ -106,11 +107,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             bad_password_count=user_attributes.get("badPwdCount"),
             number_of_logons=user_attributes.get("logonCount"),
         )
-        user_object = UserEnrichmentObject(
-            name="login",
-            value="infos",
-            data=data
-        )
+        user_object = UserEnrichmentObject(name="login", value="infos", data=data)
         return [user_object]
 
     def compute_user_type(self, user_attributes: dict[str, Any]) -> tuple[UserTypeStr, UserTypeId]:
@@ -163,7 +160,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         # Build account object
         account = Account(
-            name= user_attributes.get("userPrincipalName", "Unknown"),
+            name=user_attributes.get("userPrincipalName", "Unknown"),
             type_id=AccountTypeId.LDAP_ACCOUNT,
             type=AccountTypeStr.LDAP_ACCOUNT,
             uid=user_attributes.get("objectSid", "Unknown"),
@@ -180,7 +177,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             domain=user_attributes.get("distinguishedName", "Unknown"),
             type_id=user_type_id,
             type=user_type,
-            uid_alt=user_attributes.get("objectGUID", None)
+            uid_alt=user_attributes.get("objectGUID", None),
         )
 
     def map_user_fields(self, user: dict[str, Any]) -> UserOCSFModel:
@@ -252,7 +249,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
                     self._latest_time = user_created_str
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
-        """"
+        """ "
         Generate Microsoft AD user assets in OCSF format.
 
         Yields:
@@ -261,7 +258,6 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
 
         self.log("Start Microsoft AD user assets generator !!", level="info")
         self.log(f"Data path: {self._data_path.absolute()}", level="info")
-
 
         for user in self.get_users_generator():
             try:

@@ -2,7 +2,6 @@ from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.models.action_models import ResetPassUserArguments, UserAccountArguments
 
 
-
 class ResetUserPasswordAction(MicrosoftADAction):
     name = "Reset Password"
     description = "Reset password with an rdp connection with an admin account"

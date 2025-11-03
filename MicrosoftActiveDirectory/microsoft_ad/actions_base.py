@@ -6,7 +6,6 @@ from sekoia_automation.action import Action
 from microsoft_ad.models.common_models import MicrosoftADModule
 
 
-
 class MicrosoftADAction(Action):
     module: MicrosoftADModule
 
