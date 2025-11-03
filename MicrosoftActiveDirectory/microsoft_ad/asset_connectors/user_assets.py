@@ -249,7 +249,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
                     self._latest_time = user_created_str
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
-        """ "
+        """
         Generate Microsoft AD user assets in OCSF format.
 
         Yields:

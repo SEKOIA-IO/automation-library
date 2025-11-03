@@ -8,7 +8,7 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "title": "SentinelOne Device Assets Connector Configuration",
+    "title": "Microsoft Active Directory User Assets Connector Configuration",
     "properties": {
       "sekoia_base_url": {
         "type": "string",
@@ -26,7 +26,7 @@
         "minimum": 60,
         "default": 3600,
         "title": "Frequency (in seconds)",
-        "description": "How often to fetch device assets from SentinelOne (minimum 60 seconds)"
+        "description": "How often to fetch user assets from microsoft AD (minimum 60 seconds)"
       },
       "chunk_size": {
         "type": "integer",

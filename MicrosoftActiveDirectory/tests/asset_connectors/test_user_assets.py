@@ -1,16 +1,13 @@
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
-from pathlib import Path
+from unittest.mock import Mock, MagicMock
 
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
     UserTypeStr,
     UserTypeId,
-    AccountTypeId,
-    AccountTypeStr,
+    AccountTypeId
 )
-from sekoia_automation.asset_connector.models.ocsf.group import Group
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 
