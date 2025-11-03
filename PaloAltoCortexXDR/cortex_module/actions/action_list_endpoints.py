@@ -1,6 +1,6 @@
 from typing import Any
 
-from PaloAltoCortexXDR.cortex_module.actions import PaloAltoCortexXDRAction
+from cortex_module.actions import PaloAltoCortexXDRAction
 
 
 class ListEndpointsAction(PaloAltoCortexXDRAction):
