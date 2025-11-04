@@ -128,6 +128,79 @@ class WatchGuardEpdrConnector(AsyncConnector):
 
         return total_records
 
+    def last_incident_date(self) -> datetime:
+        """
+        Get last incident date for incident fetching.
+        
+        Since incidents are not categorized by security_event type,
+        we use a single cache key for all incidents.
+
+        Returns:
+            datetime: The last incident date to start fetching from.
+        """
+        now = datetime.now(timezone.utc)
+        one_day_ago = (now - timedelta(days=1)).replace(microsecond=0)
+
+        with self.context as cache:
+            last_incident_date_str = cache.get("incidents")
+
+            # If undefined, retrieve incidents from the last day
+            if last_incident_date_str is None:
+                return one_day_ago
+
+            # Parse the most recent date seen
+            last_incident_date = isoparse(last_incident_date_str).replace(microsecond=0)
+
+            # We don't retrieve incidents older than 1 day
+            return max(last_incident_date, one_day_ago)
+
+    async def get_watchguard_incidents(self) -> int:
+        """
+        Fetch incidents from WatchGuard API.
+        
+        Unlike events, incidents are not categorized by security_event type,
+        so we fetch all incidents in a single operation.
+        
+        Returns:
+            int: Total number of incident records processed.
+        """
+        total_records = 0
+        records = []
+        last_incident_date = self.last_incident_date()
+        
+        logger.info(
+            "Fetching incidents since {last_incident_date}",
+            last_incident_date=last_incident_date,
+        )
+        
+        new_last_incident_date = last_incident_date
+        
+        # Note: You'll need to implement fetch_incidents in the WatchGuardClient
+        # For now, this assumes incidents are fetched with a None incident_id to get all incidents
+        async for record in self.watchguard_client.fetch_incidents(None):
+            event_date = _get_event_date(record)
+            if event_date <= last_incident_date:
+                continue
+
+            new_last_incident_date = max(new_last_incident_date, event_date)
+            records.append(record)
+
+        logger.info(
+            "Incident records count to push: {count}",
+            count=len(records),
+        )
+
+        if records:
+            total_records += len(
+                await self.push_data_to_intakes([orjson.dumps(record).decode("utf-8") for record in records])
+            )
+
+        # Update the last incident date in the context
+        with self.context as cache:
+            cache["incidents"] = new_last_incident_date.isoformat()
+
+        return total_records
+
     def run(self) -> None:  # pragma: no cover
         """Runs WatchGuard EPDR."""
         while self.running:
@@ -143,7 +216,7 @@ class WatchGuardEpdrConnector(AsyncConnector):
                             processing_start - previous_processing_end
                         )
 
-                    events_count = loop.run_until_complete(self.get_watchguard_events())
+                    events_count = loop.run_until_complete(self.get_watchguard_events())+loop.run_until_complete(self.get_watchguard_incidents())
                     processing_end = time.time()
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(events_count)
 

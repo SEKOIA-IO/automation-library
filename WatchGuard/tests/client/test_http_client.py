@@ -247,3 +247,138 @@ async def test_fetch_data_2(
             result.append(item)
 
         assert result == expected_data["data"]
+
+@pytest.mark.asyncio
+async def test_fetch_incidents_success(
+    http_client: WatchGuardClient, client_config: WatchGuardClientConfig, session_faker: Faker
+) -> None:
+    """
+    Test fetching incidents from the WatchGuard API successfully.
+
+    Args:
+        http_client: WatchGuardClient
+        client_config: WatchGuardClientConfig
+        session_faker: Faker
+    """
+    incident_id = session_faker.uuid4()
+    expected_data = {
+        "data": [
+            {
+                "id": session_faker.uuid4(),
+                "incident_type": session_faker.word(),
+                "severity": session_faker.word(),
+                "timestamp": session_faker.iso8601(),
+                "details": session_faker.text(),
+            }
+            for _ in range(5)
+        ],
+    }
+
+    with aioresponses() as mocked_responses:
+        auth_token_url = "{}/oauth/token".format(client_config.base_url)
+        expected_token = {
+            "access_token": session_faker.word(),
+        }
+        mocked_responses.post(
+            auth_token_url,
+            callback=aioresponses_callback(
+                expected_token, auth=aiohttp.BasicAuth(client_config.username, client_config.password), status=200
+            ),
+        )
+
+        incidents_url = "{0}/rest/threatsync/management/v1/{1}/incidents/{2}".format(
+            client_config.base_url, client_config.account_id, incident_id
+        )
+
+        mocked_responses.get(
+            incidents_url,
+            callback=aioresponses_callback(
+                expected_data,
+                headers={
+                    "WatchGuard-API-Key": client_config.application_key,
+                    "Authorization": f"Bearer {expected_token['access_token']}",
+                },
+                status=200,
+            ),
+        )
+
+        result = []
+        async for item in http_client.fetch_incidents(incident_id):
+            result.append(item)
+
+        assert result == expected_data["data"]
+
+
+@pytest.mark.asyncio
+async def test_fetch_incidents_with_auth_retry(
+    http_client: WatchGuardClient, client_config: WatchGuardClientConfig, session_faker: Faker
+) -> None:
+    """
+    Test fetching incidents with authentication token retry on failure.
+
+    Args:
+        http_client: WatchGuardClient
+        client_config: WatchGuardClientConfig
+        session_faker: Faker
+    """
+    incident_id = session_faker.uuid4()
+    expected_data = {
+        "data": [
+            {
+                "id": session_faker.uuid4(),
+                "incident_type": session_faker.word(),
+                "severity": session_faker.word(),
+                "timestamp": session_faker.iso8601(),
+            }
+        ],
+    }
+
+    invalid_token = session_faker.word()
+    http_client._auth_token = invalid_token
+
+    with aioresponses() as mocked_responses:
+        incidents_url = "{0}/rest/threatsync/management/v1/{1}/incidents/{2}".format(
+            client_config.base_url, client_config.account_id, incident_id
+        )
+        
+        # First request with invalid token, should return 401
+        mocked_responses.get(
+            incidents_url,
+            callback=aioresponses_callback(
+                headers={
+                    "WatchGuard-API-Key": client_config.application_key,
+                    "Authorization": f"Bearer {invalid_token}",
+                },
+                status=401,
+            ),
+        )
+
+        auth_token_url = "{}/oauth/token".format(client_config.base_url)
+        expected_token = {
+            "access_token": session_faker.word(),
+        }
+        mocked_responses.post(
+            auth_token_url,
+            callback=aioresponses_callback(
+                expected_token, auth=aiohttp.BasicAuth(client_config.username, client_config.password), status=200
+            ),
+        )
+
+        # Second request with valid token, should succeed
+        mocked_responses.get(
+            incidents_url,
+            callback=aioresponses_callback(
+                expected_data,
+                headers={
+                    "WatchGuard-API-Key": client_config.application_key,
+                    "Authorization": f"Bearer {expected_token['access_token']}",
+                },
+                status=200,
+            ),
+        )
+
+        result = []
+        async for item in http_client.fetch_incidents(incident_id):
+            result.append(item)
+
+        assert result == expected_data["data"]

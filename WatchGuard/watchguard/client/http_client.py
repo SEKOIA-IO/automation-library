@@ -107,6 +107,47 @@ class WatchGuardClient(object):
 
             return await func(self._auth_token)
 
+    async def fetch_incidents(self, incident_id: str | None) -> AsyncGenerator[dict[str, Any], None]:
+        """
+        Fetch incidents from the WatchGuard API.
+
+        Args:
+            incident_id: str | None
+
+        Yields:
+            dict[str, Any]: The fetched data.
+        """
+
+        async def fetch_func(auth_token: str) -> dict[str, Any]:
+            headers = {"WatchGuard-API-Key": self.config.application_key, "Authorization": f"Bearer {auth_token}"}
+            async with self.session() as session:
+                response = await session.get(
+                    "{0}/rest/threatsync/management/v1/{1}/incidents/{2}".format(
+                        self.config.base_url, self.config.account_id, incident_id
+                    ),
+                    headers=headers,
+                )
+
+                if response.status != 200:
+                    raise await WatchGuardError.from_response(response)
+
+                result: dict[str, Any] = await response.json()
+
+            return result
+
+        data = await self._call_with_auth(fetch_func)
+
+        if data is None:
+            logger.warning(
+                "No data returned from WatchGuard API for incident {incident_id}.", 
+                incident_id=incident_id
+            )
+
+            return
+
+        for item in data.get("data", []):
+            yield item
+
     async def fetch_data(self, security_event: SecurityEvent, period: int = 1) -> AsyncGenerator[dict[str, Any], None]:
         """
         Fetch data from the WatchGuard API.
