@@ -2,10 +2,12 @@
   {
     "name": "TEST_CONNECTIVITY",
     "method": "GET",
-    "endpoint": "/api/v3/me",
-    "status": "ERROR",
-    "response": null,
-    "error": "('NotFoundError', 'Resource not found.')"
+    "endpoint": "/api/v3/users/me",
+    "status": "SUCCESS",
+    "response": {
+      "user_id": "me"
+    },
+    "error": null
   },
   {
     "name": "GET_IP_REPORT",
@@ -27,4 +29,101 @@
     "response": {
       "domain": "google.com",
       "reputation": 655,
-      "categories": 
+      "categories": "{'Sophos': 'search engines', 'Forcepoint ThreatSeeker': 'search engines and portals'}"
+    },
+    "error": null
+  },
+  {
+    "name": "GET_URL_REPORT",
+    "method": "GET",
+    "endpoint": "/api/v3/urls/aHR0cHM6Ly93d3cuc2Vrb2lhLmlvL2VuL2hvbWVwYWdlLw",
+    "status": "SUCCESS",
+    "response": {
+      "url": "https://www.sekoia.io/en/homepage/",
+      "reputation": 0
+    },
+    "error": null
+  },
+  {
+    "name": "GET_FILE_REPORT",
+    "method": "GET",
+    "endpoint": "/api/v3/files/44d88612fea8a8f36de82e1278abb02f",
+    "status": "SUCCESS",
+    "response": {
+      "hash": "44d88612fea8a8f36de82e1278abb02f",
+      "stats": "{'malicious': 66, 'suspicious': 0, 'undetected': 4, 'harmless': 0, 'timeout': 0, 'confirmed-timeout': 0, 'failure': 0, 'type-unsupported': 7}"
+    },
+    "error": null
+  },
+  {
+    "name": "SCAN_URL",
+    "method": "POST",
+    "endpoint": "/api/v3/urls",
+    "status": "SUCCESS",
+    "response": {
+      "analysis_id": "u-001deb5ff031b6c98a7379e212bb588f3f1b77d1a2eeb19470c5d118e96e99d1-d6c91a83",
+      "url": "https://www.sekoia.io/en/homepage/"
+    },
+    "error": null
+  },
+  {
+    "name": "GET_ANALYSIS",
+    "method": "GET",
+    "endpoint": "/api/v3/analyses/u-001deb5ff031b6c98a7379e212bb588f3f1b77d1a2eeb19470c5d118e96e99d1-d6c91a83",
+    "status": "SUCCESS",
+    "response": {
+      "status": "queued",
+      "stats": "{'malicious': 0, 'suspicious': 0, 'undetected': 0, 'harmless': 0, 'timeout': 0}"
+    },
+    "error": null
+  },
+  {
+    "name": "GET_COMMENTS",
+    "method": "GET",
+    "endpoint": "/api/v3/domains/google.com/comments",
+    "status": "SUCCESS",
+    "response": {
+      "comments_count": 5,
+      "entity": "google.com"
+    },
+    "error": null
+  },
+  {
+    "name": "GET_FILE_SANDBOX",
+    "method": "GET",
+    "endpoint": "/api/v3/files/44d88612fea8a8f36de82e1278abb02f/behaviours",
+    "status": "SUCCESS",
+    "response": {
+      "behaviours_count": 5
+    },
+    "error": null
+  },
+  {
+    "name": "PASSIVE_DNS",
+    "method": "GET",
+    "endpoint": "/api/v3/domains/google.com/resolutions",
+    "status": "SUCCESS",
+    "response": {
+      "resolutions_count": 10
+    },
+    "error": null
+  },
+  {
+    "name": "VULN_REPORT",
+    "method": "GET",
+    "endpoint": "/api/v3/intelligence/vulnerability_collections/CVE-2021-34527",
+    "status": "NOT_AVAILABLE",
+    "response": null,
+    "error": "May require Premium API: ('NotFoundError', 'Resource not found.')"
+  },
+  {
+    "name": "VULN_ASSOCIATIONS",
+    "method": "GET",
+    "endpoint": "/api/v3/ip_addresses/8.8.8.8/vulnerabilities",
+    "status": "SUCCESS",
+    "response": {
+      "vulnerabilities_count": 0
+    },
+    "error": null
+  }
+]

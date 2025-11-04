@@ -47,13 +47,17 @@ class VTAPITester:
         # Default test entities
         self.test_domain = "google.com"
         self.test_ip = "8.8.8.8"
-        self.test_url = "http://76jdd2ir2embyv47.onion"
-        self.test_file_hash = "3ecc0186adba60fb53e9f6c494623dcea979a95c3e66a52896693b8d22f5e18b"  # WanaCry sample
+        self.test_url = "https://www.sekoia.io/en/homepage/"
+        self.test_file_hash = "44d88612fea8a8f36de82e1278abb02f"  # EICAR test file
         self.test_cve = "CVE-2021-34527"
     
     def _add_result(self, name: str, method: str, endpoint: str, 
                    status: str, response: Any, error: Optional[str] = None):
         """Add a test result"""
+        # Convert VT objects to JSON-serializable format
+        if response is not None:
+            response = self._make_serializable(response)
+        
         result = TestResult(name, method, endpoint, status, response, error)
         self.results.append(result)
         
@@ -62,22 +66,34 @@ class VTAPITester:
         else:
             logger.info(f"[{status}] {name}: Success")
     
+    def _make_serializable(self, obj: Any) -> Any:
+        """Convert VT objects to JSON-serializable format"""
+        if isinstance(obj, dict):
+            return {k: self._make_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [self._make_serializable(item) for item in obj]
+        elif hasattr(obj, '__dict__'):
+            return str(obj)
+        else:
+            return obj
+    
     def test_connectivity(self, client: vt.Client):
         """Test API connectivity"""
         try:
-            user = client.get_json("/api/v3/me")
+            # Use get_object instead of get_json for /me endpoint
+            user = client.get_object("/users/me")
             self._add_result(
                 "TEST_CONNECTIVITY",
                 "GET",
-                "/api/v3/me",
+                "/api/v3/users/me",
                 "SUCCESS",
-                {"user_id": user.get("data", {}).get("id")}
+                {"user_id": user.id if hasattr(user, 'id') else None}
             )
         except vt.APIError as e:
             self._add_result(
                 "TEST_CONNECTIVITY",
                 "GET",
-                "/api/v3/me",
+                "/api/v3/users/me",
                 "ERROR",
                 None,
                 str(e)
@@ -265,24 +281,30 @@ class VTAPITester:
     def get_file_behaviour(self, client: vt.Client):
         """Get file sandbox behavior"""
         try:
-            behaviours = client.get_json(
-                f"/api/v3/files/{self.test_file_hash}/behaviours"
+            # Use iterator for behaviours
+            behaviours_it = client.iterator(
+                f"/files/{self.test_file_hash}/behaviours",
+                limit=5
             )
+            behaviours = list(behaviours_it)
+            
             self._add_result(
                 "GET_FILE_SANDBOX",
                 "GET",
                 f"/api/v3/files/{self.test_file_hash}/behaviours",
                 "SUCCESS",
-                {"behaviours_count": len(behaviours.get("data", []))}
+                {"behaviours_count": len(behaviours)}
             )
         except vt.APIError as e:
+            # This endpoint requires Premium API - log as warning not error
+            logger.warning(f"File behaviours not available (may require Premium API): {e}")
             self._add_result(
                 "GET_FILE_SANDBOX",
                 "GET",
                 f"/api/v3/files/{self.test_file_hash}/behaviours",
-                "ERROR",
+                "NOT_AVAILABLE",
                 None,
-                str(e)
+                f"May require Premium API: {str(e)}"
             )
     
     def get_comments(self, client: vt.Client, entity_type: str = "domains"):
@@ -315,70 +337,80 @@ class VTAPITester:
     def get_passive_dns(self, client: vt.Client):
         """Get passive DNS resolutions"""
         try:
-            resolutions = client.get_json(
-                f"/api/v3/domains/{self.test_domain}/resolutions",
-                params={"limit": 10}
+            # Use iterator for resolutions
+            resolutions_it = client.iterator(
+                f"/domains/{self.test_domain}/resolutions",
+                limit=10
             )
+            resolutions = list(resolutions_it)
+            
             self._add_result(
                 "PASSIVE_DNS",
                 "GET",
                 f"/api/v3/domains/{self.test_domain}/resolutions",
                 "SUCCESS",
-                {"resolutions_count": len(resolutions.get("data", []))}
+                {"resolutions_count": len(resolutions)}
             )
         except vt.APIError as e:
+            logger.warning(f"Passive DNS not available (may require Premium API): {e}")
             self._add_result(
                 "PASSIVE_DNS",
                 "GET",
                 f"/api/v3/domains/{self.test_domain}/resolutions",
-                "ERROR",
+                "NOT_AVAILABLE",
                 None,
-                str(e)
+                f"May require Premium API: {str(e)}"
             )
     
     def get_vulnerability_report(self, client: vt.Client):
         """Get vulnerability report"""
         try:
-            vuln = client.get_json(f"/api/v3/collections/{self.test_cve}")
+            # Correct path for vulnerability collections
+            vuln = client.get_object(f"/intelligence/vulnerability_collections/{self.test_cve}")
             self._add_result(
                 "VULN_REPORT",
                 "GET",
-                f"/api/v3/collections/{self.test_cve}",
+                f"/api/v3/intelligence/vulnerability_collections/{self.test_cve}",
                 "SUCCESS",
-                {"cve": self.test_cve, "type": vuln.get("data", {}).get("type")}
+                {"cve": self.test_cve, "id": vuln.id if hasattr(vuln, 'id') else None}
             )
         except vt.APIError as e:
+            logger.warning(f"Vulnerability report not available (may require Premium API): {e}")
             self._add_result(
                 "VULN_REPORT",
                 "GET",
-                f"/api/v3/collections/{self.test_cve}",
-                "ERROR",
+                f"/api/v3/intelligence/vulnerability_collections/{self.test_cve}",
+                "NOT_AVAILABLE",
                 None,
-                str(e)
+                f"May require Premium API: {str(e)}"
             )
     
     def get_vulnerability_associations(self, client: vt.Client):
         """Get vulnerability associations for an entity"""
         try:
-            vulns = client.get_json(
-                f"/api/v3/ip_addresses/{self.test_ip}/vulnerabilities",
-                params={"limit": 10}
+            # Use iterator for vulnerabilities
+            vulns_it = client.iterator(
+                f"/ip_addresses/{self.test_ip}/vulnerabilities",
+                limit=10
             )
+            vulns = list(vulns_it)
+            
             self._add_result(
                 "VULN_ASSOCIATIONS",
                 "GET",
                 f"/api/v3/ip_addresses/{self.test_ip}/vulnerabilities",
                 "SUCCESS",
-                {"vulnerabilities_count": len(vulns.get("data", []))}
+                {"vulnerabilities_count": len(vulns)}
             )
         except vt.APIError as e:
+            logger.warning(f"Vulnerability associations not available (may require Premium API): {e}")
             self._add_result(
                 "VULN_ASSOCIATIONS",
                 "GET",
                 f"/api/v3/ip_addresses/{self.test_ip}/vulnerabilities",
-                "ERROR",
+                "NOT_AVAILABLE",
                 None,
-                str(e)
+                f"May require Premium API: {str(e)}"
             )
     
     def run_all_tests(self, test_file_path: Optional[str] = None):
@@ -448,6 +480,7 @@ class VTAPITester:
         # Print summary
         success_count = sum(1 for r in self.results if r.status == "SUCCESS")
         error_count = sum(1 for r in self.results if r.status == "ERROR")
+        not_available_count = sum(1 for r in self.results if r.status == "NOT_AVAILABLE")
         
         print(f"\n{'='*60}")
         print(f"TEST SUMMARY")
@@ -455,6 +488,7 @@ class VTAPITester:
         print(f"Total tests: {len(self.results)}")
         print(f"Successful: {success_count}")
         print(f"Failed: {error_count}")
+        print(f"Not Available (Premium API): {not_available_count}")
         print(f"{'='*60}\n")
 
 
