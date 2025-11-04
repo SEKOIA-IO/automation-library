@@ -14,7 +14,7 @@ def time_to_sleep(duration: float) -> float:
     # For 5 minutes to 20 seconds, sleep for a quarter of the duration
     elif duration > 20:
         return duration / 4
-    # For 20 seconds to 1 second, sleep for a tenth of the duration, capped at 1 second
+    # For 20 seconds to 1 second, sleep for a tenth of the duration, ceiled at 1 second
     elif duration > 1:
         return max(duration / 10, 1)
     # For durations less than or equal to 1 second, sleep for the full duration

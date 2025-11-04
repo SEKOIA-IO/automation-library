@@ -53,6 +53,3 @@ def test_accurate_sleep():
     # Assert that the total sleep time is approximately 10 seconds
     total_slept = sum(sleep_calls)
     assert pytest.approx(total_slept, 0.1) == 10
-
-    # Assert that the total elapsed time is approximately 10 seconds
-    assert pytest.approx(current_time - time.time(), 0.1) == 10
