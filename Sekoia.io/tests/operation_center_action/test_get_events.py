@@ -1,5 +1,8 @@
+from unittest.mock import patch, Mock
+
 import pytest
 import requests
+import urllib3
 from sekoiaio.operation_center.get_events import GetEvents
 
 module_base_url = "https://fake.url/"
@@ -493,3 +496,233 @@ def test_get_events_http_error(requests_mock):
     )
     assert "Response status: 403" in action._logs[0]["message"]
     assert "Forbidden: Insufficient permissions" in action._logs[0]["message"]
+
+
+def test_trigger_job_with_retries_on_connection_timeout(requests_mock):
+    """
+    Test that connection timeouts during job creation
+    """
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1" OR destination.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+        "fields": "event.dialect,action.outcome,action.id",
+        "limit": 6,
+    }
+
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs",
+        [
+            {"exc": requests.exceptions.ConnectTimeout},
+            {
+                "exc": urllib3.exceptions.ReadTimeoutError(
+                    Mock(spec=urllib3.connectionpool.ConnectionPool), "test.sekoia.io", "Read timed out."
+                )
+            },
+            {"json": {"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"}, "status_code": 200},
+        ],
+    )
+
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        json={
+            "canceled_by_type": None,
+            "view_uuid": None,
+            "term": arguments["query"],
+            "expired": False,
+            "earliest_time": arguments["earliest_time"],
+            "results_ttl": 600,
+            "created_by": "99671aa8-857f-49be-85b4-bcf1bc4df398",
+            "started_at": "2021-05-26T09:19:58.469271+00:00",
+            "total": 3,
+            "canceled_by": None,
+            "created_at": "2021-05-26T09:19:57.469271+00:00",
+            "created_by_type": "avatar",
+            "canceled_at": None,
+            "ended_at": "2021-05-26T09:19:59.469271+00:00",
+            "latest_time": arguments["latest_time"],
+            "status": 2,
+            "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8",
+            "term_lang": "dork",
+        },
+    )
+    events = [
+        {
+            "name": "action.id",
+            "value_type": "number",
+            "description": "Identifier of the action",
+            "display_name": "action.id",
+            "most_common_values": [],
+        },
+    ]
+    requests_mock.get(
+        (
+            "https://fake.url/api/v1/sic/conf/events/search/jobs/"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=6&offset=0"
+        ),
+        json={
+            "items": events,
+            "total": 6,
+        },
+    )
+
+    with patch("tenacity.nap.time"):
+        results: dict = action.run(arguments)
+        assert results["events"] == events
+
+
+def test_wait_for_job_with_retries_on_connection_timeout(requests_mock):
+    """
+    Test that connection timeouts when waiting for job completion
+    """
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1" OR destination.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+        "fields": "event.dialect,action.outcome,action.id",
+        "limit": 6,
+    }
+
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs", json={"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"}
+    )
+
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        [
+            {"exc": requests.exceptions.ConnectTimeout},
+            {
+                "exc": urllib3.exceptions.ReadTimeoutError(
+                    Mock(spec=urllib3.connectionpool.ConnectionPool), "test.sekoia.io", "Read timed out."
+                )
+            },
+            {
+                "json": {
+                    "canceled_by_type": None,
+                    "view_uuid": None,
+                    "term": arguments["query"],
+                    "expired": False,
+                    "earliest_time": arguments["earliest_time"],
+                    "results_ttl": 600,
+                    "created_by": "99671aa8-857f-49be-85b4-bcf1bc4df398",
+                    "started_at": "2021-05-26T09:19:58.469271+00:00",
+                    "total": 3,
+                    "canceled_by": None,
+                    "created_at": "2021-05-26T09:19:57.469271+00:00",
+                    "created_by_type": "avatar",
+                    "canceled_at": None,
+                    "ended_at": "2021-05-26T09:19:59.469271+00:00",
+                    "latest_time": arguments["latest_time"],
+                    "status": 2,
+                    "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8",
+                    "term_lang": "dork",
+                }
+            },
+        ],
+    )
+    events = [
+        {
+            "name": "action.id",
+            "value_type": "number",
+            "description": "Identifier of the action",
+            "display_name": "action.id",
+            "most_common_values": [],
+        },
+    ]
+    requests_mock.get(
+        (
+            "https://fake.url/api/v1/sic/conf/events/search/jobs/"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=6&offset=0"
+        ),
+        json={
+            "items": events,
+            "total": 6,
+        },
+    )
+
+    with patch("tenacity.nap.time"):
+        results: dict = action.run(arguments)
+        assert results["events"] == events
+
+
+def test_get_job_result_with_retries_on_connection_timeout(requests_mock):
+    """
+    Test that connection timeouts during job result retrieval
+    """
+    action = GetEvents()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+
+    arguments = {
+        "query": 'source.ip:"127.0.0.1" OR destination.ip:"127.0.0.1"',
+        "earliest_time": "-1d",
+        "latest_time": "now",
+        "fields": "event.dialect,action.outcome,action.id",
+        "limit": 6,
+    }
+
+    requests_mock.post(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs", json={"uuid": "483d36a5-8538-49c4-be19-49b669f90bf8"}
+    )
+
+    requests_mock.get(
+        "https://fake.url/api/v1/sic/conf/events/search/jobs/483d36a5-8538-49c4-be19-49b669f90bf8",
+        json={
+            "canceled_by_type": None,
+            "view_uuid": None,
+            "term": arguments["query"],
+            "expired": False,
+            "earliest_time": arguments["earliest_time"],
+            "results_ttl": 600,
+            "created_by": "99671aa8-857f-49be-85b4-bcf1bc4df398",
+            "started_at": "2021-05-26T09:19:58.469271+00:00",
+            "total": 3,
+            "canceled_by": None,
+            "created_at": "2021-05-26T09:19:57.469271+00:00",
+            "created_by_type": "avatar",
+            "canceled_at": None,
+            "ended_at": "2021-05-26T09:19:59.469271+00:00",
+            "latest_time": arguments["latest_time"],
+            "status": 2,
+            "uuid": "483d36a5-8538-49c4-be19-49b669f90bf8",
+            "term_lang": "dork",
+        },
+    )
+    events = [
+        {
+            "name": "action.id",
+            "value_type": "number",
+            "description": "Identifier of the action",
+            "display_name": "action.id",
+            "most_common_values": [],
+        },
+    ]
+    requests_mock.get(
+        (
+            "https://fake.url/api/v1/sic/conf/events/search/jobs/"
+            "483d36a5-8538-49c4-be19-49b669f90bf8/events?limit=6&offset=0"
+        ),
+        [
+            {"exc": requests.exceptions.ConnectTimeout},
+            {
+                "exc": urllib3.exceptions.ReadTimeoutError(
+                    Mock(spec=urllib3.connectionpool.ConnectionPool), "test.sekoia.io", "Read timed out."
+                )
+            },
+            {
+                "json": {
+                    "items": events,
+                    "total": 6,
+                }
+            },
+        ],
+    )
+
+    with patch("tenacity.nap.time"):
+        results: dict = action.run(arguments)
+        assert results["events"] == events

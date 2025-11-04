@@ -3,12 +3,14 @@ from typing import Callable
 from posixpath import join as urljoin
 
 import requests
+import urllib3
 from requests import Session
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from requests.structures import CaseInsensitiveDict
-from sekoia_automation.action import Action
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from urllib3.util.retry import Retry
 
+from sekoia_automation.action import Action
 from sekoiaio.utils import user_agent
 
 
@@ -46,6 +48,13 @@ class BaseGetEvents(Action):
             }
         )
 
+    @retry(
+        reraise=True,
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(10),
+        retry=retry_if_exception_type(requests.exceptions.Timeout)
+        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+    )
     def trigger_event_search_job(
         self, query: str, earliest_time: str, latest_time: str, limit: int | None = None
     ) -> str:
@@ -73,6 +82,13 @@ class BaseGetEvents(Action):
 
         return response_start.json()["uuid"]
 
+    @retry(
+        reraise=True,
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(10),
+        retry=retry_if_exception_type(requests.exceptions.Timeout)
+        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+    )
     def _wait_for_search_job_step(
         self, event_search_job_uuid: str, should_we_wait: Callable[[int], bool], action: str, timeout: int = 300
     ) -> None:

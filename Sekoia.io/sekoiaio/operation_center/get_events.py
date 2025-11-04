@@ -1,10 +1,21 @@
 from typing import Any
 
 import requests
+import urllib3
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
 from .base_get_event import BaseGetEvents
 
 
 class GetEvents(BaseGetEvents):
+
+    @retry(
+        reraise=True,
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(10),
+        retry=retry_if_exception_type(requests.exceptions.Timeout)
+        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+    )
     def _get_results(self, event_search_job_uuid: str, limit: int) -> list[dict[str, Any]]:
         """
         Retrieve the results of the event search job
