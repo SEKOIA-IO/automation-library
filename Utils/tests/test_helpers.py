@@ -17,6 +17,7 @@ from utils.helpers import time_to_sleep, accurate_sleep
         (5, 1.0),
         (1, 1.0),
         (0.5, 0.5),
+        (-1, 0.0),
     ],
 )
 def test_time_to_sleep(duration, expected_sleep):

@@ -19,7 +19,7 @@ def time_to_sleep(duration: float) -> float:
         return max(duration / 10, 1)
     # For durations less than or equal to 1 second, sleep for the full duration
     else:
-        return duration
+        return max(duration, 0)
 
 
 def accurate_sleep(seconds: int) -> None:
