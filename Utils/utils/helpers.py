@@ -34,6 +34,9 @@ def accurate_sleep(seconds: int) -> None:
 
     This function ensures that we sleep for at least the specified time.
     """
+    if seconds <= 0:
+        return
+
     # Calculate the target end time
     target_time = time.time() + float(seconds)
 
@@ -44,7 +47,7 @@ def accurate_sleep(seconds: int) -> None:
         remaining_sleep = target_time - time.time()
 
         # Sleep for a calculated time chunk
-        if remaining_sleep > 0.3:
+        if remaining_sleep > 0.1:
             time.sleep(time_to_sleep(remaining_sleep))
         else:
-            time.sleep(0)
+            return
