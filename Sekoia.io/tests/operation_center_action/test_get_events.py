@@ -500,7 +500,7 @@ def test_get_events_http_error(requests_mock):
 
 def test_trigger_job_with_retries_on_connection_timeout(requests_mock):
     """
-    Test that connection timeouts during job creation
+    Test that connection timeouts during job creation are retried successfully.
     """
     action = GetEvents()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
@@ -576,7 +576,7 @@ def test_trigger_job_with_retries_on_connection_timeout(requests_mock):
 
 def test_wait_for_job_with_retries_on_connection_timeout(requests_mock):
     """
-    Test that connection timeouts when waiting for job completion
+    Test that connection timeouts when waiting for job completion are retried successfully.
     """
     action = GetEvents()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
@@ -653,7 +653,7 @@ def test_wait_for_job_with_retries_on_connection_timeout(requests_mock):
 
 def test_get_job_result_with_retries_on_connection_timeout(requests_mock):
     """
-    Test that connection timeouts during job result retrieval
+    Test that connection timeouts during job result retrieval are retried successfully.
     """
     action = GetEvents()
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
