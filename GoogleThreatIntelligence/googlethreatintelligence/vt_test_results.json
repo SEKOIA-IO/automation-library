@@ -1,0 +1,30 @@
+[
+  {
+    "name": "TEST_CONNECTIVITY",
+    "method": "GET",
+    "endpoint": "/api/v3/me",
+    "status": "ERROR",
+    "response": null,
+    "error": "('NotFoundError', 'Resource not found.')"
+  },
+  {
+    "name": "GET_IP_REPORT",
+    "method": "GET",
+    "endpoint": "/api/v3/ip_addresses/8.8.8.8",
+    "status": "SUCCESS",
+    "response": {
+      "ip": "8.8.8.8",
+      "country": "US",
+      "reputation": 528
+    },
+    "error": null
+  },
+  {
+    "name": "GET_DOMAIN_REPORT",
+    "method": "GET",
+    "endpoint": "/api/v3/domains/google.com",
+    "status": "SUCCESS",
+    "response": {
+      "domain": "google.com",
+      "reputation": 655,
+      "categories": 
