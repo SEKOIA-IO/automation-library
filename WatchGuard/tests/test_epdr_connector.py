@@ -14,7 +14,9 @@ from .helpers import aioresponses_callback
 
 
 @pytest.fixture
-def epdr_connector(module: WatchGuardModule, mock_push_data_to_intakes: AsyncMock, symphony_storage: Path) -> WatchGuardEpdrConnector:
+def epdr_connector(
+    module: WatchGuardModule, mock_push_data_to_intakes: AsyncMock, symphony_storage: Path
+) -> WatchGuardEpdrConnector:
     """
     Create an instance of the WatchGuardEpdrConnector with the provided module.
 
@@ -95,7 +97,7 @@ async def test_epdr_connector(epdr_connector: WatchGuardEpdrConnector, session_f
 async def test_epdr_connector_incidents(epdr_connector: WatchGuardEpdrConnector, session_faker) -> None:
     """
     Test the incident fetching functionality of the WatchGuardEpdrConnector.
-    
+
     Args:
         epdr_connector: The WatchGuardEpdrConnector instance
         session_faker: Faker instance for generating test data
@@ -112,7 +114,7 @@ async def test_epdr_connector_incidents(epdr_connector: WatchGuardEpdrConnector,
 
     auth_token = session_faker.word()
     module_config = epdr_connector.module.configuration
-    
+
     with aioresponses() as mocked_responses:
         # Mock auth token endpoint
         auth_token_url = "{}/oauth/token".format(module_config.base_url)
@@ -146,7 +148,7 @@ async def test_epdr_connector_incidents(epdr_connector: WatchGuardEpdrConnector,
 
         # Test the incident fetching
         result = await epdr_connector.get_watchguard_incidents()
-        
+
     assert result == len(incident_data)
     await epdr_connector.watchguard_client.close()
 
@@ -155,20 +157,21 @@ async def test_epdr_connector_incidents(epdr_connector: WatchGuardEpdrConnector,
 async def test_last_incident_date_no_cache(epdr_connector: WatchGuardEpdrConnector) -> None:
     """
     Test last_incident_date when no cached date exists.
-    
+
     Args:
         epdr_connector: The WatchGuardEpdrConnector instance
     """
     # Clear any existing cache
     with epdr_connector.context as cache:
         cache.clear()
-    
+
     last_date = epdr_connector.last_incident_date()
-    
+
     # Should return one day ago when no cache exists
     from datetime import datetime, timedelta, timezone
+
     expected_date = (datetime.now(timezone.utc) - timedelta(days=1)).replace(microsecond=0)
-    
+
     # Allow for small time differences (within 1 minute)
     assert abs((last_date - expected_date).total_seconds()) < 60
 
@@ -177,20 +180,20 @@ async def test_last_incident_date_no_cache(epdr_connector: WatchGuardEpdrConnect
 async def test_last_incident_date_with_cache(epdr_connector: WatchGuardEpdrConnector) -> None:
     """
     Test last_incident_date when cached date exists and is recent.
-    
+
     Args:
         epdr_connector: The WatchGuardEpdrConnector instance
     """
     from datetime import datetime, timedelta, timezone
-    
+
     # Set a cached date from 2 hours ago
     cached_date = datetime.now(timezone.utc) - timedelta(hours=2)
-    
+
     with epdr_connector.context as cache:
         cache["incidents"] = cached_date.isoformat()
-    
+
     last_date = epdr_connector.last_incident_date()
-    
+
     # Should return the cached date since it's within the last day
     expected_date = cached_date.replace(microsecond=0)
     assert last_date == expected_date
@@ -200,23 +203,23 @@ async def test_last_incident_date_with_cache(epdr_connector: WatchGuardEpdrConne
 async def test_last_incident_date_old_cache(epdr_connector: WatchGuardEpdrConnector) -> None:
     """
     Test last_incident_date when cached date is older than 1 day (fallback behavior).
-    
+
     Args:
         epdr_connector: The WatchGuardEpdrConnector instance
     """
     from datetime import datetime, timedelta, timezone
-    
+
     # Set a cached date from 5 days ago (older than the 1-day limit)
     old_cached_date = datetime.now(timezone.utc) - timedelta(days=5)
-    
+
     with epdr_connector.context as cache:
         cache["incidents"] = old_cached_date.isoformat()
-    
+
     last_date = epdr_connector.last_incident_date()
-    
+
     # Should return one day ago (not the old cached date) due to max() logic
     expected_date = (datetime.now(timezone.utc) - timedelta(days=1)).replace(microsecond=0)
-    
+
     # Allow for small time differences (within 1 minute)
     assert abs((last_date - expected_date).total_seconds()) < 60
 
@@ -225,14 +228,14 @@ async def test_last_incident_date_old_cache(epdr_connector: WatchGuardEpdrConnec
 async def test_epdr_connector_incidents_empty_response(epdr_connector: WatchGuardEpdrConnector, session_faker) -> None:
     """
     Test incident fetching when API returns empty data.
-    
+
     Args:
         epdr_connector: The WatchGuardEpdrConnector instance
         session_faker: Faker instance for generating test data
     """
     auth_token = session_faker.word()
     module_config = epdr_connector.module.configuration
-    
+
     with aioresponses() as mocked_responses:
         # Mock auth token endpoint
         auth_token_url = "{}/oauth/token".format(module_config.base_url)
@@ -266,6 +269,6 @@ async def test_epdr_connector_incidents_empty_response(epdr_connector: WatchGuar
 
         # Test the incident fetching
         result = await epdr_connector.get_watchguard_incidents()
-        
+
     assert result == 0  # Should return 0 for empty data
     await epdr_connector.watchguard_client.close()

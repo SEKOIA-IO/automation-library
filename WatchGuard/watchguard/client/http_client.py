@@ -138,10 +138,7 @@ class WatchGuardClient(object):
         data = await self._call_with_auth(fetch_func)
 
         if data is None:
-            logger.warning(
-                "No data returned from WatchGuard API for incident {incident_id}.", 
-                incident_id=incident_id
-            )
+            logger.warning("No data returned from WatchGuard API for incident {incident_id}.", incident_id=incident_id)
 
             return
 

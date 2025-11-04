@@ -248,6 +248,7 @@ async def test_fetch_data_2(
 
         assert result == expected_data["data"]
 
+
 @pytest.mark.asyncio
 async def test_fetch_incidents_success(
     http_client: WatchGuardClient, client_config: WatchGuardClientConfig, session_faker: Faker
@@ -340,7 +341,7 @@ async def test_fetch_incidents_with_auth_retry(
         incidents_url = "{0}/rest/threatsync/management/v1/{1}/incidents/{2}".format(
             client_config.base_url, client_config.account_id, incident_id
         )
-        
+
         # First request with invalid token, should return 401
         mocked_responses.get(
             incidents_url,
