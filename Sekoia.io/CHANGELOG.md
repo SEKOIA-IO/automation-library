@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-04  - 2.68.14
+
+### Fixed
+
+- Ddd retries on Connection Timeouts when getting events from a search job
+
 ## 2025-10-28  - 2.68.13
 
 ### Changed
