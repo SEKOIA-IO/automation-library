@@ -1,0 +1,28 @@
+{
+  "uuid": "6ac3766d-92ee-40ab-80f4-af3a2a73d44d",
+  "name": "Scan File",
+  "description": "Upload a file for scanning to Google Threat Intelligence (VirusTotal)",
+  "docker_parameters": "GTIScanFile",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "description": "Local path to the file to scan"
+      }
+    },
+    "required": ["file_path"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Scan File Results",
+    "properties": {
+      "success": { "type": "boolean" },
+      "analysis_id": { "type": "string" },
+      "file_path": { "type": "string" }
+    }
+  },
+  "slug": "scan_file_in_gti"
+}

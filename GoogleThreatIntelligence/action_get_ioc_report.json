@@ -1,11 +1,12 @@
 {
+  "uuid": "6ac3766d-92ee-40ab-80f4-af3a2a73d44d",
   "name": "Get IoC Report",
   "description": "Get threat intelligence report for an IP address, domain, URL, or file hash from Google Threat Intelligence (VirusTotal)",
   "docker_parameters": "GTIIoCReport",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "title": "IoC Report Arguments",
+    "title": "Arguments",
     "properties": {
       "ip": {
         "type": "string",
@@ -38,7 +39,7 @@
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "title": "IoC Report Results",
+    "title": "Results",
     "properties": {
       "success": {
         "type": "boolean",
@@ -121,12 +122,8 @@
             "description": "File type description (for files)"
           }
         }
-      },
-      "error": {
-        "type": "string",
-        "description": "Error message if operation failed"
       }
-    },
-    "required": ["success"]
-  }
+    }
+  },
+  "slug": "get_ioc_report_in_gti"
 }

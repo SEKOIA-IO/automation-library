@@ -3,8 +3,22 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "GoogleThreatIntelligence",
     "type": "object",
-    "properties": {},
-    "required": []
+    "properties": {
+      "api_username": {
+        "description": "Client username",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "API key",
+        "type": "string"
+      }
+    },
+    "required": [
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
   },
   "description": "Google Threat Intelligence provides unmatched visibility into threats enabling us to deliver detailed and timely threat intelligence to security teams",
   "name": "GoogleThreatIntelligence",

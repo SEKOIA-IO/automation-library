@@ -1,0 +1,28 @@
+{
+  "uuid": "d4b8a1e4-9c7f-44c1-9a53-2f0b8a3d99c3",
+  "name": "Get File Behaviour",
+  "description": "Retrieve sandbox behaviour for a file hash from Google Threat Intelligence",
+  "docker_parameters": "GTIGetFileBehaviour",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "file_hash": {
+        "type": "string",
+        "description": "File hash to query (MD5, SHA1, or SHA256)",
+        "pattern": "^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$"
+      }
+    },
+    "required": ["file_hash"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get File Behaviour Results",
+    "properties": {
+      "success": { "type": "boolean" },
+      "data": { "type": "object" }
+    }
+  },
+  "slug": "get_file_behaviour_in_gti"
+}

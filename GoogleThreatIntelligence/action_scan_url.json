@@ -1,0 +1,27 @@
+{
+  "uuid": "f1b2c3d4-e5f6-4789-9a1b-0c2d3e4f5a66",
+  "name": "Scan URL",
+  "description": "Submit a URL for scanning to Google Threat Intelligence (VirusTotal)",
+  "docker_parameters": "GTIScanURL",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "URL to scan"
+      }
+    },
+    "required": ["url"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Scan URL Results",
+    "properties": {
+      "success": { "type": "boolean" },
+      "analysis_id": { "type": "string" }
+    }
+  },
+  "slug": "scan_url_in_gti"
+}

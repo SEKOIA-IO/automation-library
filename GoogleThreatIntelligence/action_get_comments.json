@@ -1,0 +1,28 @@
+{
+  "uuid": "a8e3b5f1-3f4a-4b2d-8f7e-1b2f6c9d5e11",
+  "name": "Get Comments",
+  "description": "Retrieve recent comments associated with a domain or IP from Google Threat Intelligence",
+  "docker_parameters": "GTIGetComments",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "entity_type": {
+        "type": "string",
+        "enum": ["domains", "ip_addresses"],
+        "default": "domains",
+        "description": "Type of entity (domains or ip_addresses)"
+      }
+    }
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get Comments Results",
+    "properties": {
+      "success": { "type": "boolean" },
+      "data": { "type": "object" }
+    }
+  },
+  "slug": "get_comments_in_gti"
+}

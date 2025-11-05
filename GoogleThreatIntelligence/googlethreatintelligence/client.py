@@ -59,22 +59,21 @@ class TestResult:
 
 
 class VTAPIConnector:
-    """VirusTotal API Testing Class using vt-py"""
+    """VirusTotal API Class using vt-py"""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, domain: str, ip: str, url: str, file_hash: str, cve: str):
         self.api_key = api_key
         self.results: List[TestResult] = []
         
-        # Default test entities
-        self.test_domain = "google.com"
-        self.test_ip = "8.8.8.8"
-        self.test_url = "https://www.sekoia.io/en/homepage/"
-        self.test_file_hash = "44d88612fea8a8f36de82e1278abb02f"  # EICAR test file
-        self.test_cve = "CVE-2021-34527"
+        self.domain = "google.com"
+        self.ip = "8.8.8.8"
+        self.url = "https://www.sekoia.io/en/homepage/"
+        self.file_hash = "44d88612fea8a8f36de82e1278abb02f"
+        self.cve = "CVE-2021-34527"
     
     def _add_result(self, name: str, method: str, endpoint: str, 
                    status: str, response: Any, error: Optional[str] = None):
-        """Add a test result"""
+        """Add a result"""
         # Convert VT objects to JSON-serializable format
         if response is not None:
             response = self._make_serializable(response)
@@ -123,13 +122,13 @@ class VTAPIConnector:
     def scan_url(self, client: vt.Client):
         """Scan a URL"""
         try:
-            analysis = client.scan_url(self.test_url)
+            analysis = client.scan_url(self.url)
             self._add_result(
                 "SCAN_URL",
                 "POST",
                 "/api/v3/urls",
                 "SUCCESS",
-                {"analysis_id": analysis.id, "url": self.test_url}
+                {"analysis_id": analysis.id, "url": self.url}
             )
             return analysis.id
         except vt.APIError as e:
@@ -242,26 +241,26 @@ class VTAPIConnector:
     
     def get_ip_report(self, client: vt.Client):
         """Get IP address report"""
-        self.get_ioc_report(client, "ip_addresses", self.test_ip)
+        self.get_ioc_report(client, "ip_addresses", self.ip)
     
     def get_domain_report(self, client: vt.Client):
         """Get domain report"""
-        self.get_ioc_report(client, "domains", self.test_domain)
+        self.get_ioc_report(client, "domains", self.domain)
     
     def get_url_report(self, client: vt.Client):
         """Get URL report"""
-        self.get_ioc_report(client, "urls", self.test_url)
+        self.get_ioc_report(client, "urls", self.url)
     
     def get_file_report(self, client: vt.Client):
         """Get file report"""
-        self.get_ioc_report(client, "files", self.test_file_hash)
+        self.get_ioc_report(client, "files", self.file_hash)
     
     def get_file_behaviour(self, client: vt.Client):
         """Get file sandbox behavior"""
         try:
             # Use iterator for behaviours
             behaviours_it = client.iterator(
-                f"/files/{self.test_file_hash}/behaviours",
+                f"/files/{self.file_hash}/behaviours",
                 limit=5
             )
             behaviours = list(behaviours_it)
@@ -269,7 +268,7 @@ class VTAPIConnector:
             self._add_result(
                 "GET_FILE_SANDBOX",
                 "GET",
-                f"/api/v3/files/{self.test_file_hash}/behaviours",
+                f"/api/v3/files/{self.file_hash}/behaviours",
                 "SUCCESS",
                 {"behaviours_count": len(behaviours)}
             )
@@ -279,7 +278,7 @@ class VTAPIConnector:
             self._add_result(
                 "GET_FILE_SANDBOX",
                 "GET",
-                f"/api/v3/files/{self.test_file_hash}/behaviours",
+                f"/api/v3/files/{self.file_hash}/behaviours",
                 "NOT_AVAILABLE",
                 None,
                 f"May require Premium API: {str(e)}"
@@ -288,7 +287,7 @@ class VTAPIConnector:
     def get_comments(self, client: vt.Client, entity_type: str = "domains"):
         """Get comments for an entity"""
         try:
-            entity = self.test_domain if entity_type == "domains" else self.test_ip
+            entity = self.domain if entity_type == "domains" else self.ip
             comments_it = client.iterator(
                 f"/{entity_type}/{entity}/comments",
                 limit=5
@@ -317,7 +316,7 @@ class VTAPIConnector:
         try:
             # Use iterator for resolutions
             resolutions_it = client.iterator(
-                f"/domains/{self.test_domain}/resolutions",
+                f"/domains/{self.domain}/resolutions",
                 limit=10
             )
             resolutions = list(resolutions_it)
@@ -325,7 +324,7 @@ class VTAPIConnector:
             self._add_result(
                 "PASSIVE_DNS",
                 "GET",
-                f"/api/v3/domains/{self.test_domain}/resolutions",
+                f"/api/v3/domains/{self.domain}/resolutions",
                 "SUCCESS",
                 {"resolutions_count": len(resolutions)}
             )
@@ -334,7 +333,7 @@ class VTAPIConnector:
             self._add_result(
                 "PASSIVE_DNS",
                 "GET",
-                f"/api/v3/domains/{self.test_domain}/resolutions",
+                f"/api/v3/domains/{self.domain}/resolutions",
                 "NOT_AVAILABLE",
                 None,
                 f"May require Premium API: {str(e)}"
@@ -344,20 +343,20 @@ class VTAPIConnector:
         """Get vulnerability report"""
         try:
             # Correct path for vulnerability collections
-            vuln = client.get_object(f"/intelligence/vulnerability_collections/{self.test_cve}")
+            vuln = client.get_object(f"/intelligence/vulnerability_collections/{self.cve}")
             self._add_result(
                 "VULN_REPORT",
                 "GET",
-                f"/api/v3/intelligence/vulnerability_collections/{self.test_cve}",
+                f"/api/v3/intelligence/vulnerability_collections/{self.cve}",
                 "SUCCESS",
-                {"cve": self.test_cve, "id": vuln.id if hasattr(vuln, 'id') else None}
+                {"cve": self.cve, "id": vuln.id if hasattr(vuln, 'id') else None}
             )
         except vt.APIError as e:
             logger.warning(f"Vulnerability report not available (may require Premium API): {e}")
             self._add_result(
                 "VULN_REPORT",
                 "GET",
-                f"/api/v3/intelligence/vulnerability_collections/{self.test_cve}",
+                f"/api/v3/intelligence/vulnerability_collections/{self.cve}",
                 "NOT_AVAILABLE",
                 None,
                 f"May require Premium API: {str(e)}"
@@ -368,7 +367,7 @@ class VTAPIConnector:
         try:
             # Use iterator for vulnerabilities
             vulns_it = client.iterator(
-                f"/ip_addresses/{self.test_ip}/vulnerabilities",
+                f"/ip_addresses/{self.ip}/vulnerabilities",
                 limit=10
             )
             vulns = list(vulns_it)
@@ -376,7 +375,7 @@ class VTAPIConnector:
             self._add_result(
                 "VULN_ASSOCIATIONS",
                 "GET",
-                f"/api/v3/ip_addresses/{self.test_ip}/vulnerabilities",
+                f"/api/v3/ip_addresses/{self.ip}/vulnerabilities",
                 "SUCCESS",
                 {"vulnerabilities_count": len(vulns)}
             )
@@ -385,7 +384,7 @@ class VTAPIConnector:
             self._add_result(
                 "VULN_ASSOCIATIONS",
                 "GET",
-                f"/api/v3/ip_addresses/{self.test_ip}/vulnerabilities",
+                f"/api/v3/ip_addresses/{self.ip}/vulnerabilities",
                 "NOT_AVAILABLE",
                 None,
                 f"May require Premium API: {str(e)}"

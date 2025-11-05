@@ -1,0 +1,48 @@
+{
+  "uuid": "e3a9b7c5-2d4f-4b1e-a6f8-8f0d9b7c6a88",
+  "name": "Get Passive DNS",
+  "description": "Retrieve passive DNS data for a domain from Google Threat Intelligence",
+  "docker_parameters": "GTIGetPassiveDNS",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ip": {
+        "type": "string",
+        "description": "IP address to query (e.g., 8.8.8.8)",
+        "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+      },
+      "domain": {
+        "type": "string",
+        "description": "Domain name to query (e.g., google.com)",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$"
+      },
+      "url": {
+        "type": "string",
+        "description": "URL to query (e.g., https://example.com/path)",
+        "format": "uri"
+      },
+      "file_hash": {
+        "type": "string",
+        "description": "File hash to query (MD5, SHA1, or SHA256)",
+        "pattern": "^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$"
+      }
+    },
+    "oneOf": [
+      {"required": ["ip"]},
+      {"required": ["domain"]},
+      {"required": ["url"]},
+      {"required": ["file_hash"]}
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Passive DNS Results",
+    "properties": {
+      "success": { "type": "boolean" },
+      "data": { "type": "object" }
+    }
+  },
+  "slug": "get_passive_dns_in_gti"
+}
