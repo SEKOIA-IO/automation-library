@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-06 - 2.8.3
+
+### Changed
+
+- Update conf asset connector
+
+## 2025-09-30 - 2.8.2
+
+### Fixed
+
+- Fix account validator
+
+## 2025-09-16 - 2.8.1
+
+### Changed
+
+- Add user and device asset connectors
+
 ## 2024-05-28 - 2.8.0
 
 ### Changed

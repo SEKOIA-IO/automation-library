@@ -4,7 +4,8 @@
     "properties": {
       "frequency": {
         "type": "integer",
-        "description": "Batch frequency in seconds, default 2s"
+        "description": "Batch frequency in seconds, default 60s",
+        "default": 60
       },
       "chunk_size": {
         "type": "integer",

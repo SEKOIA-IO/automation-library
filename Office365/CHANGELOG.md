@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-28 - 2.18.9
+
+### Changed
+
+- Improve the logging when an authentication error occurs in the Management API connector
+
 ## 2024-01-13 - 2.18.8
 
 ### Fixed

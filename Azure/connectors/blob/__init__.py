@@ -46,7 +46,7 @@ class AbstractAzureBlobConnector(AsyncConnector, metaclass=ABCMeta):
 
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.limit_of_events_to_push = int(os.getenv("AZURE_BATCH_SIZE", 10000))
+        self.limit_of_events_to_push = int(os.getenv("AZURE_BATCH_SIZE", 1000))
 
     def azure_blob_wrapper(self) -> AzureBlobStorageWrapper:
         """

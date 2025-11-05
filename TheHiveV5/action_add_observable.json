@@ -1,0 +1,118 @@
+{
+  "uuid": "3b3ab2df-8b4f-49ce-ae69-560722b1b14a",
+  "name": "Add observables in The Hive v5",
+  "description": "Action to add a list of observables in The Hive v5",
+  "docker_parameters": "thehive_add_observable",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "alert_id": {
+        "description": "The id of the alert you want to add observables to. For instance: ~12345",
+        "type": "string"
+      },
+      "events": {
+        "description": "The JSON Sekoia event from which to extract the observables to be added to the alert",
+        "type": "object"
+      },
+      "tlp": {
+        "description": "The TLP for the observables - defaults to AMBER",
+        "type": "string",
+        "enum": ["CLEAR", "GREEN", "AMBER", "AMBER_STRICT", "RED"]
+      },
+      "pap": {
+        "description": "The PAP for the observables - defaults to AMBER",
+        "type": "string",
+        "enum": ["CLEAR", "GREEN", "AMBER", "AMBER_STRICT", "RED"]
+      },
+      "areioc": {
+        "description": "Indicates whether observables should be considered IOCs in TheHive - default to true",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "alert_id",
+      "events"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "outputObservables": {
+        "type": "array",
+        "items": {
+          "_id": {
+            "type": "string"
+          },
+          "_type": {
+            "type": "string"
+          },
+          "_createdBy": {
+            "type": "string"
+          },
+          "_createdAt": {
+            "type": "integer"
+          },
+          "_updatedAt": {
+            "type": "integer"
+          },
+          "dataType": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "integer"
+          },
+          "attachment": {
+            "type": "object"
+          },
+          "tlp": {
+            "type": "integer"
+          },
+          "tlpLabel": {
+            "type": "string"
+          },
+          "pap": {
+            "type": "integer"
+          },
+          "papLabel": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ioc": {
+            "type": "boolean"
+          },
+          "sighted": {
+            "type": "boolean"
+          },
+          "sightedAt": {
+            "type": "integer"
+          },
+          "reports": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          },
+          "extraData": {
+            "type": "object"
+          },
+          "ignoreSimilarity": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "add_an_observable_in_the_hive_v5"
+}

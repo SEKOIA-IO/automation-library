@@ -1,10 +1,10 @@
 import asyncio
 
-from .base import MicrosoftGraphAction, ApplicationArguments
-
 from kiota_abstractions.native_response_handler import NativeResponseHandler
 from kiota_http.middleware.options import ResponseHandlerOption
 from msgraph.generated.users.item.messages.messages_request_builder import MessagesRequestBuilder
+
+from .base import ApplicationArguments, MicrosoftGraphAction
 
 
 class DeleteApplicationAction(MicrosoftGraphAction):

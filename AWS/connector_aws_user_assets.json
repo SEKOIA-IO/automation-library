@@ -1,0 +1,36 @@
+  {
+  "name": "AWS users",
+  "description": "Fetch AWS users asset",
+  "uuid": "e2a7c1b4-5d8f-4e3a-9c2b-7f1e6d8a3b2c",
+  "docker_parameters": "aws_users_asset_connector",
+  "type": "asset",
+  "capability": "user",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "sekoia_base_url": {
+        "description": "Sekoia base URL",
+        "type": "string"
+      },
+      "frequency": {
+          "type": "integer",
+          "description": "Batch frequency in seconds",
+          "minimum": 1,
+          "default": 1200
+      },
+      "sekoia_api_key": {
+          "description": "API key to use from sekoia.io",
+          "type": "string"
+      },
+      "batch_size": {
+          "type": "integer",
+          "description": "Batch size",
+          "minimum": 1,
+          "default": 100
+      }
+    },
+    "required": ["sekoia_api_key"],
+    "secrets": ["sekoia_api_key"]
+  }
+}
