@@ -34,10 +34,7 @@
             },
             "match[assignees]": {
                 "in": "query",
-                "type": "array",
-                "items": {
-                    "type": "string" 
-                }
+                "type": "string"
             },
             "limit": {
                 "in": "query",
