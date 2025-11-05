@@ -44,10 +44,10 @@ def test_get_current_time_2():
 def test_incorrect_inputs():
     action = GetCurrentTimeAction()
     request = Arguments(selectedTimezone=None, selectedNamedTimezone=None)
-    response = action.run(request)
-    assert response == {}
+    with pytest.raises(ValueError):
+        action.run(request)
 
     action = GetCurrentTimeAction()
     request = Arguments(selectedNamedTimezone="SomethingNotExisting")
-    response = action.run(request)
-    assert response == {}
+    with pytest.raises(ValueError):
+        action.run(request)
