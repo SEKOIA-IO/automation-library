@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-02 - 1.4.5
+
+### Changed
+
+- Add field for named timezones to Get Current Time action
+- Upgrade sekoia-automation-sdk
+
 ## 2024-11-04 - 1.4.4
 
 ### Added
