@@ -59,7 +59,7 @@ class GetCurrentTimeAction(Action):
     def run(self, ra: Arguments) -> dict:
         if not ra.selectedNamedTimezone and not ra.selectedTimezone:
             self.log(message="You should set a timezone", level="error")
-            return {}
+            raise ValueError("No timezone defined in the configuration")
 
         # new field has a higher priority
         if ra.selectedNamedTimezone:
@@ -69,7 +69,7 @@ class GetCurrentTimeAction(Action):
 
             except ZoneInfoNotFoundError as err:
                 self.log_exception(err)
-                return {}
+                raise ValueError(f"Invalid timezone: {ra.selectedNamedTimezone}")
 
             # we need to get time in correct timezone, but we don't need the timezone itself
             date_to_return = datetime.now(tz).replace(tzinfo=None)
