@@ -1,0 +1,107 @@
+{
+  "uuid": "03af92ec-7129-4e01-8ace-40c2d66095f5",
+  "name": "List comments of a case",
+  "docker_parameters": "list_case_comments",
+  "description": "List all comments of a case",
+  "arguments": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "title": "list_all_comments_of_a_case",
+    "properties": {
+      "case_uuid": {
+        "name": "case_uuid",
+        "in": "path",
+        "type": "string"
+      },
+      "limit": {
+        "in": "query",
+        "name": "limit",
+        "type": "integer",
+        "default": 20,
+        "minimum": 1,
+        "maximum": 100,
+        "description": "limit a number of items (allowed range is 1-100), default is 20."
+      },
+      "offset": {
+        "in": "query",
+        "name": "offset",
+        "type": "integer",
+        "default": 0,
+        "minimum": 0,
+        "description": "a number of items to skip, default is 0."
+      },
+      "date[created_at]": {
+        "in": "query",
+        "name": "date[created_at]",
+        "type": "string",
+        "description": "Filter cases by their creation date (see rfc3339)."
+      },
+      "match[created_by]": {
+        "in": "query",
+        "name": "match[created_by]",
+        "type": "string",
+        "description": "Match cases by their creators"
+      },
+      "sort": {
+        "in": "query",
+        "name": "sort",
+        "type": "string",
+        "description": "Sort returned comments (accepted values: 'created_at', 'created_by', 'updated_at')."
+      },
+      "direction": {
+        "in": "query",
+        "name": "direction",
+        "type": "string",
+        "description": "Direction of the sort (accepted values: 'asc', 'desc')."
+      }
+    },
+    "required": ["case_uuid"]
+  },
+  "results": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "content": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "created_by": {
+              "type": "string"
+            },
+            "created_by_type": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "content",
+            "created_at",
+            "created_by",
+            "created_by_type",
+            "uuid"
+          ]
+        },
+        "expanded": false
+      },
+      "total": {
+        "type": "integer"
+      }
+    }
+  },
+  "slug": "list_case_comments"
+}

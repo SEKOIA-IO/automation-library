@@ -40,7 +40,7 @@ class GetAsset(Action):
 
     def perform_request(self, asset_uuid):
 
-        result = requests.get(self.url(asset_uuid), headers=self.headers)
+        result = requests.get(self.url(asset_uuid), headers=self.headers, timeout=60)
 
         if not result.ok:
             self.error(f"Could not fetch asset {asset_uuid}, status code: {result.status_code}")

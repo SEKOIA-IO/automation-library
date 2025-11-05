@@ -1,6 +1,6 @@
-from time import sleep
-
 from sekoia_automation.action import Action
+
+from utils.helpers import accurate_sleep
 
 
 class UtilsWait(Action):
@@ -16,4 +16,4 @@ class UtilsWait(Action):
         time_to_wait = max(time_to_wait, 0)  # can't be less than 0
         time_to_wait = min(time_to_wait, self.MAX_TIME_TO_WAIT)  # can't be more than MAX_TIME_TO_WAIT
 
-        sleep(time_to_wait)
+        accurate_sleep(time_to_wait)

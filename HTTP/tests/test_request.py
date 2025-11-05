@@ -187,3 +187,27 @@ def test_get_request_error(symphony_storage, requests_mock):
 
     action.run({"method": "get", "url": "https://api.sekoia.io"})
     assert action._error is not None
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        "param1=value1&param2=value2",
+        {"param1": "value1", "param2": "value2"},
+        '{"param1": "value1", "param2": "value2"}',
+    ],
+)
+def test_request_with_params(symphony_storage, params):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            status_code=200,
+        )
+
+        result = action.run({"method": "get", "url": "https://api.sekoia.io", "params": params})
+        del result["elapsed"]
+        json.dumps(result)
+        assert result["url"] == "https://api.sekoia.io/?param1=value1&param2=value2"

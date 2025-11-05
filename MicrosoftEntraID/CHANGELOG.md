@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-31 - 2.10.4
+
+### Fixed
+
+- Fix account validator configuration access to use typed attributes
+
+## 2025-10-30 - 2.10.3
+
+### Fixed
+
+- Fix the problem of early closed async loop
+
+## 2025-10-20 - 2.10.2
+
+### Fixed
+
+- Fix asset connector
+
+## 2025-10-20 - 2.10.1
+
+### Fixed
+
+- Fix incorrect field id for object id in "Delete App" action
+- Fix incorrect description for the id field in "Revoke Sign in" action
+
+## 2025-10-10 - 2.10.0
+
+### Added
+
+- Microsoft Entra ID Graph Api Connector
+## 2025-10-06 - 2.9.2
+
+### Changed
+
+- Update conf asset connector
+
+## 2025-09-19 - 2.9.1
+
+### Fixed
+
+- Update Sekoia SDK and Asset configuration
+
 ## 2025-09-19 - 2.9.0
 
 ### Fixed

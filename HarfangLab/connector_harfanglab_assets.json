@@ -4,6 +4,7 @@
   "uuid": "f7da3627-6016-415d-9885-231e1455a7a5",
   "docker_parameters": "harfanglab_asset_connector",
   "type": "asset",
+  "capability": "device",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -21,6 +22,12 @@
       "sekoia_api_key": {
           "description": "API key to use from sekoia.io",
           "type": "string"
+      },
+      "batch_size": {
+          "type": "integer",
+          "description": "Number of assets to process in one batch",
+          "minimum": 1,
+          "default": 100
       }
     },
     "required": ["sekoia_api_key"],

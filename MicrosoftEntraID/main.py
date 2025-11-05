@@ -1,10 +1,11 @@
 from azure_ad.account_validator import AzureADAccountValidator
 from azure_ad.asset_connector.user_assets import EntraIDAssetConnector
 from azure_ad.base import AzureADModule
+from azure_ad.connector_entraid_graph_api import MicrosoftEntraIdGraphApiConnector
+from azure_ad.delete_app import DeleteApplicationAction
 from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
 from azure_ad.get_user_authentication_methods import GetUserAuthenticationMethodsAction
 from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction, ResetUserPasswordAction
-from azure_ad.delete_app import DeleteApplicationAction
 
 if __name__ == "__main__":
     module = AzureADModule()
@@ -18,4 +19,5 @@ if __name__ == "__main__":
     module.register(ResetUserPasswordAction, "ResetUserPasswordAction")
     module.register(DeleteApplicationAction, "DeleteApplicationAction")
     module.register(RevokeSignInsSessionsAction, "RevokeSignInsSessionsAction")
+    module.register(MicrosoftEntraIdGraphApiConnector, "entraid_graph_api_connector")
     module.run()

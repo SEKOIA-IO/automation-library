@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any
 
-from pydantic.main import BaseModel
+from pydantic.v1.main import BaseModel
 
 from cortex_module.actions import PaloAltoCortexXDRAction
 

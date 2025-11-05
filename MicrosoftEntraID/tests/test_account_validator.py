@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
-from azure_ad.account_validator import AzureADAccountValidator
 from sekoia_automation.module import Module
+
+from azure_ad.account_validator import AzureADAccountValidator
 
 
 @pytest.fixture
@@ -34,12 +36,14 @@ def test_validate_success(mock_get_event_loop, test_azure_ad_account_validator):
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method
-    mock_client = Mock()
+    # Mock the GraphApi client and its client property
+    mock_graph_api = Mock()
+    mock_graph_service_client = Mock()
     mock_users = Mock()
     mock_users.get = AsyncMock()
-    mock_client.users = mock_users
-    test_azure_ad_account_validator._client = mock_client
+    mock_graph_service_client.users = mock_users
+    mock_graph_api.client = mock_graph_service_client
+    test_azure_ad_account_validator._client = mock_graph_api
 
     # Act
     result = test_azure_ad_account_validator.validate()
@@ -57,12 +61,14 @@ def test_validate_failure_connection_error(mock_get_event_loop, test_azure_ad_ac
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method to raise an exception
-    mock_client = Mock()
+    # Mock the GraphApi client and its client property
+    mock_graph_api = Mock()
+    mock_graph_service_client = Mock()
     mock_users = Mock()
     mock_users.get = AsyncMock(side_effect=Exception("Connection failed"))
-    mock_client.users = mock_users
-    test_azure_ad_account_validator._client = mock_client
+    mock_graph_service_client.users = mock_users
+    mock_graph_api.client = mock_graph_service_client
+    test_azure_ad_account_validator._client = mock_graph_api
 
     # Configure run_until_complete to raise the exception
     mock_loop.run_until_complete.side_effect = Exception("Connection failed")
@@ -84,12 +90,14 @@ def test_validate_failure_authentication_error(mock_get_event_loop, test_azure_a
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method to raise an authentication exception
-    mock_client = Mock()
+    # Mock the GraphApi client and its client property
+    mock_graph_api = Mock()
+    mock_graph_service_client = Mock()
     mock_users = Mock()
     mock_users.get = AsyncMock(side_effect=Exception("Invalid credentials"))
-    mock_client.users = mock_users
-    test_azure_ad_account_validator._client = mock_client
+    mock_graph_service_client.users = mock_users
+    mock_graph_api.client = mock_graph_service_client
+    test_azure_ad_account_validator._client = mock_graph_api
 
     # Configure run_until_complete to raise the exception
     mock_loop.run_until_complete.side_effect = Exception("Invalid credentials")
@@ -111,12 +119,14 @@ def test_validate_failure_network_error(mock_get_event_loop, test_azure_ad_accou
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client and users.get() method to raise a network exception
-    mock_client = Mock()
+    # Mock the GraphApi client and its client property
+    mock_graph_api = Mock()
+    mock_graph_service_client = Mock()
     mock_users = Mock()
     mock_users.get = AsyncMock(side_effect=Exception("Network timeout"))
-    mock_client.users = mock_users
-    test_azure_ad_account_validator._client = mock_client
+    mock_graph_service_client.users = mock_users
+    mock_graph_api.client = mock_graph_service_client
+    test_azure_ad_account_validator._client = mock_graph_api
 
     # Configure run_until_complete to raise the exception
     mock_loop.run_until_complete.side_effect = Exception("Network timeout")
@@ -138,14 +148,16 @@ def test_validate_uses_cached_client(mock_get_event_loop, test_azure_ad_account_
     mock_loop = Mock()
     mock_get_event_loop.return_value = mock_loop
 
-    # Mock the client property
-    mock_client = Mock()
+    # Mock the GraphApi client and its client property
+    mock_graph_api = Mock()
+    mock_graph_service_client = Mock()
     mock_users = Mock()
     mock_users.get = AsyncMock()
-    mock_client.users = mock_users
+    mock_graph_service_client.users = mock_users
+    mock_graph_api.client = mock_graph_service_client
 
     # Set the cached client directly
-    test_azure_ad_account_validator._client = mock_client
+    test_azure_ad_account_validator._client = mock_graph_api
 
     # Act
     result = test_azure_ad_account_validator.validate()

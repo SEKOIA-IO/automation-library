@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-04  - 2.68.14
+
+### Fixed
+
+- Add retries on Connection Timeouts when getting events from a search job
+
+## 2025-10-28  - 2.68.13
+
+### Changed
+
+- Add more logs to the `Push events to Intake` action
+
+### Fixed
+
+- Change the way to initialize and release the PoolExecutor in the `Push events to Intake` action
+- Compare event length as bytes length instead of string length
+
+## 2025-09-25  - 2.68.12
+
+### Added
+
+- Added action to update an asset
+
+## 2025-10-09 - 2.68.11
+
+### Added
+
+- Add some logs error
+- Add tests to tests the logs
+
+## 2025-10-08 - 2.68.10
+
+### Fixed
+
+- Fix `delete case action`
+
+## 2025-10-06 - 2.68.9
+
+### Changed
+
+- Push chunks of events in parallel to Intake
+
+### Fixed
+
+- Only retry on certain status codes when pushing events to Intake
+
+## 2025-10-06 - 2.68.8
+
+### Changed
+
+- Add events chunking to `Push events to Intake` action
+
+## 2025-10-06 - 2.68.7
+
+### Added
+
+- Added action to list comments for a case
+
+## 2025-10-03 - 2.68.6
+
+### Fixed
+
+- Add missing arguments to the `List Alerts` action.
+
 ## 2025-09-08 - 2.68.5
 
 ### Changed

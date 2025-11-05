@@ -1,36 +1,27 @@
 import asyncio
+from collections.abc import Generator
 from datetime import datetime, timezone
 from functools import cached_property
-from collections.abc import Generator
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
+from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_authentication_azure.azure_identity_authentication_provider import AzureIdentityAuthenticationProvider
 from msgraph import GraphRequestAdapter, GraphServiceClient
-
-from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.ocsf.user import (
-    UserOCSFModel,
-    User as UserOCSF,
-    Group as UserOCSFGroup,
-    Account,
-    AccountTypeId,
-    AccountTypeStr,
-)
-from sekoia_automation.asset_connector.models.ocsf.base import (
-    Metadata,
-    Product,
-)
-from sekoia_automation.storage import PersistentJSON
-
-from kiota_abstractions.base_request_configuration import RequestConfiguration
-from msgraph.generated.users.users_request_builder import UsersRequestBuilder
-from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
+from msgraph.generated.models.group import Group
 from msgraph.generated.models.microsoft_authenticator_authentication_method import (
     MicrosoftAuthenticatorAuthenticationMethod,
 )
 from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
-from msgraph.generated.models.group import Group
+from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 from msgraph.generated.models.user import User
+from msgraph.generated.users.users_request_builder import UsersRequestBuilder
+from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
+from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
+from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
+from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
+from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
+from sekoia_automation.storage import PersistentJSON
 
 from azure_ad.base import AzureADModule
 
@@ -41,7 +32,7 @@ class EntraIDAssetConnector(AssetConnector):
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._client: GraphServiceClient | None = None
@@ -50,7 +41,7 @@ class EntraIDAssetConnector(AssetConnector):
     @property
     def most_recent_date_seen(self) -> str | None:
         with self.context as cache:
-            most_recent_date_seen = cache.get("most_recent_date_seen", None)
+            most_recent_date_seen: str | None = cache.get("most_recent_date_seen", None)
 
             return most_recent_date_seen
 
