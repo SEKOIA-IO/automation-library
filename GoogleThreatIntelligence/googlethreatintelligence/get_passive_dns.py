@@ -2,7 +2,7 @@
 Sekoia Automation Action for Google Threat Intelligence: Get Passive DNS
 """
 from sekoia_automation.action import Action
-from client import VTAPIConnector
+from .client import VTAPIConnector
 import vt
 
 

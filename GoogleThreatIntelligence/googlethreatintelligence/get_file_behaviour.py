@@ -2,7 +2,7 @@
 Sekoia Automation Action: Get File Behaviour from Google Threat Intelligence
 """
 from sekoia_automation.action import Action
-from client import VTAPIConnector
+from .client import VTAPIConnector
 import vt
 
 
