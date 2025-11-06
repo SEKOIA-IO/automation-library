@@ -19,6 +19,7 @@ class AsyncGithubClient(object):
 
     def __init__(
         self,
+        base_url: str,
         organization: str,
         api_key: str | None = None,
         pem_file: str | None = None,
@@ -26,8 +27,8 @@ class AsyncGithubClient(object):
         rate_limiter: AsyncLimiter | None = None,
     ):
         """
-
         Args:
+            base_url: str
             organization: str
             api_key: str | None
             pem_file: str | None
@@ -40,11 +41,14 @@ class AsyncGithubClient(object):
         self.api_key = api_key
 
         self.pem_file = pem_file
+        self.base_url = "https://%s" % base_url.removeprefix("http://").removeprefix("https://")
         self.organization = organization
         self.app_id = app_id
 
         if rate_limiter:
             self.set_rate_limiter(rate_limiter)
+
+    _rate_limiter: AsyncLimiter | None = None
 
     @classmethod
     def set_rate_limiter(cls, rate_limiter: AsyncLimiter) -> None:
@@ -118,7 +122,7 @@ class AsyncGithubClient(object):
         Returns:
             str:
         """
-        return "https://api.github.com/orgs/{0}/audit-log".format(self.organization)
+        return f"{self.base_url}/orgs/{self.organization}/audit-log"
 
     async def _get_audit_logs(
         self, start_from: int, url: str | None = None

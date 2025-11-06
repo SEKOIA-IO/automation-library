@@ -66,6 +66,7 @@ class AuditLogConnector(AsyncConnector):
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         self._github_client = AsyncGithubClient(
+            base_url=self.module.configuration.base_url,
             organization=self.module.configuration.org_name,
             api_key=self.module.configuration.apikey,
             pem_file=self.module.configuration.pem_file,
