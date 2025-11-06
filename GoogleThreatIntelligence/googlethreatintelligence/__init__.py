@@ -1,6 +1,0 @@
-from sekoia_automation.module import Module
-from googlethreatintelligence_modules.models import GooglethreatintelligenceModuleConfiguration
-
-
-class GooglethreatintelligenceModule(Module):
-    configuration: GooglethreatintelligenceModuleConfiguration

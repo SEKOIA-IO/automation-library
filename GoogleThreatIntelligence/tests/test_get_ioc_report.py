@@ -3,8 +3,7 @@ import requests_mock
 import json
 import urllib.parse
 
-from googlethreatintelligence.actions.get_ioc_report.action_get_ioc_report import GetIoCReport
-from googlethreatintelligence.client import GTIClient
+from googlethreatintelligence.get_ioc_report import GTIIoCReport
 
 # === Test constants ===
 HOST = "https://threatintelligence.googleapis.com/"
@@ -35,8 +34,8 @@ def _qs_matcher(expected_params: Dict[str, Any]):
 
 
 def test_get_ioc_report_action_success():
-    """Test successful GetIoCReport action."""
-    action = GetIoCReport()
+    """Test successful GTIIoCReport action."""
+    action = GTIIoCReport()
     action.module.configuration = {
         "api_key": API_KEY,
         "host": HOST.rstrip("/")
@@ -68,8 +67,8 @@ def test_get_ioc_report_action_success():
 
 
 def test_get_ioc_report_action_not_found():
-    """Test GetIoCReport action when resource not found (404)."""
-    action = GetIoCReport()
+    """Test GTIIoCReport action when resource not found (404)."""
+    action = GTIIoCReport()
     action.module.configuration = {
         "api_key": API_KEY,
         "host": HOST.rstrip("/")
@@ -95,8 +94,8 @@ def test_get_ioc_report_action_not_found():
 
 
 def test_get_ioc_report_action_api_error():
-    """Test GetIoCReport action on API internal server error."""
-    action = GetIoCReport()
+    """Test GTIIoCReport action on API internal server error."""
+    action = GTIIoCReport()
     action.module.configuration = {
         "api_key": API_KEY,
         "host": HOST.rstrip("/")
