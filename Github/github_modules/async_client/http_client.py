@@ -48,8 +48,6 @@ class AsyncGithubClient(object):
         if rate_limiter:
             self.set_rate_limiter(rate_limiter)
 
-    _rate_limiter: AsyncLimiter | None = None
-
     @classmethod
     def set_rate_limiter(cls, rate_limiter: AsyncLimiter) -> None:
         """
@@ -136,8 +134,10 @@ class AsyncGithubClient(object):
         Returns:
             list[dict[str, Any]]:
         """
-        params = {} if url else {"phrase": "created:>{0}".format(start_from), "order": "asc", "per_page": 100}
-        request_url = url or self.audit_logs_url
+        params: dict[str, Any] = (
+            {} if url else {"phrase": "created:>{0}".format(start_from), "order": "asc", "per_page": 100}
+        )
+        request_url: str = url or self.audit_logs_url
 
         result: list[dict[str, Any]] = []
         links: Union[MultiDictProxy[Union[str, URL]], dict[Any, Any]] = {}
