@@ -1,8 +1,8 @@
 {
-  "uuid": "6ac3766d-92ee-40ab-80f4-af3a2a73d44d",
+  "uuid": "4b6ebd76-076f-4f35-9cd1-36953f14df88",
   "name": "Get IoC Report",
   "description": "Get threat intelligence report for an IP address, domain, URL, or file hash from Google Threat Intelligence (VirusTotal)",
-  "docker_parameters": "GTIIoCReport",
+  "docker_parameters": "get_ioc_report",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",

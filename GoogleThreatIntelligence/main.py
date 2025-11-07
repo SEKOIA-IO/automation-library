@@ -12,10 +12,8 @@ from googlethreatintelligence.scan_url import GTIScanURL
 if __name__ == "__main__":
     module = Module()
 
-    #DONE
     module.register(GTIIoCReport, "get_ioc_report")
     module.register(GTIScanFile, "scan_file")
-    #TODO
     module.register(GTIGetComments, "get_comments")
     module.register(GTIGetVulnerabilityAssociations, "get_vulnerability_assocations")
     module.register(GTIGetFileBehaviour, "get_file_behaviour")

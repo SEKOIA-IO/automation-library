@@ -32,7 +32,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 import logging
+import requests
+import urllib.parse
+import validators
 
+
+logger = logging.getLogger(__name__)
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -70,7 +75,126 @@ class VTAPIConnector:
         self.url = "https://www.sekoia.io/en/homepage/"
         self.file_hash = "44d88612fea8a8f36de82e1278abb02f"
         self.cve = "CVE-2021-34527"
+
+    # ---- Helpers ----
+
+    def _request(self, path: str, params: dict = None):
+        """Perform a GET request and handle common errors."""
+        url = urllib.parse.urljoin(self.host + "/", path.lstrip("/"))
+        logger.debug(f"Requesting URL: {url}")
+
+        try:
+            resp = requests.get(url, headers=self.headers, params=params)
+            if resp.status_code == 404:
+                logger.warning("Resource not found: %s", path)
+                return None
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error for {path}: {e}")
+            return {"error": {"message": str(e), "status_code": resp.status_code}}
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request exception for {path}: {e}")
+            return {"error": {"message": str(e)}}
+
+
+    @staticmethod
+    def _entity_endpoint(entity_type: str):
+        mapping = {
+            "ip": "ip_addresses",
+            "domain": "domains",
+            "url": "urls",
+            "file_hash": "files"
+        }
+        return mapping.get(entity_type, entity_type)
+
+    def _get_entity_type_and_value(self, arguments: dict[str, Any]) -> tuple[Optional[str], Optional[str]]:
+        """
+        Determine entity type and value from arguments
+        Priority: ip > domain > url > file_hash
+        """
+        if arguments.get("ip"):
+            return "ip_addresses", arguments["ip"]
+        elif arguments.get("domain"):
+            return "domains", arguments["domain"]
+        elif arguments.get("url"):
+            return "urls", arguments["url"]
+        elif arguments.get("file_hash") or arguments.get("hash"):
+            hash_value = arguments.get("file_hash") or arguments.get("hash")
+            return "files", hash_value
+        
+        return None, None
     
+    def _encode_url_id(self, url: str) -> str:
+        """Encode URL to base64 format required by VT API"""
+        return base64.urlsafe_b64encode(url.encode()).decode().strip("=")
+    
+    def _extract_ioc_data(self, ioc_obj: Any, entity_type: str, entity: str) -> dict[str, Any]:
+        """Extract relevant data from VT IoC object"""
+        data = {
+            "entity_type": entity_type,
+            "entity": entity,
+            "id": ioc_obj.id if hasattr(ioc_obj, 'id') else None,
+        }
+        
+        # Common attributes
+        if hasattr(ioc_obj, 'reputation'):
+            data["reputation"] = ioc_obj.reputation
+        
+        if hasattr(ioc_obj, 'last_analysis_stats'):
+            data["last_analysis_stats"] = dict(ioc_obj.last_analysis_stats)
+        
+        if hasattr(ioc_obj, 'last_analysis_results'):
+            # Summarize analysis results
+            results = ioc_obj.last_analysis_results
+            data["detections"] = {
+                "malicious": sum(1 for r in results.values() if r.get("category") == "malicious"),
+                "suspicious": sum(1 for r in results.values() if r.get("category") == "suspicious"),
+                "undetected": sum(1 for r in results.values() if r.get("category") == "undetected"),
+                "harmless": sum(1 for r in results.values() if r.get("category") == "harmless"),
+            }
+        
+        # IP-specific attributes
+        if entity_type == "ip_addresses":
+            if hasattr(ioc_obj, 'country'):
+                data["country"] = ioc_obj.country
+            if hasattr(ioc_obj, 'asn'):
+                data["asn"] = ioc_obj.asn
+            if hasattr(ioc_obj, 'as_owner'):
+                data["as_owner"] = ioc_obj.as_owner
+        
+        # Domain-specific attributes
+        elif entity_type == "domains":
+            if hasattr(ioc_obj, 'categories'):
+                data["categories"] = dict(ioc_obj.categories) if ioc_obj.categories else None
+            if hasattr(ioc_obj, 'last_dns_records'):
+                data["dns_records_count"] = len(ioc_obj.last_dns_records)
+        
+        # URL-specific attributes
+        elif entity_type == "urls":
+            if hasattr(ioc_obj, 'url'):
+                data["url"] = ioc_obj.url
+            if hasattr(ioc_obj, 'title'):
+                data["title"] = ioc_obj.title
+        
+        # File-specific attributes
+        elif entity_type == "files":
+            if hasattr(ioc_obj, 'sha256'):
+                data["sha256"] = ioc_obj.sha256
+            if hasattr(ioc_obj, 'md5'):
+                data["md5"] = ioc_obj.md5
+            if hasattr(ioc_obj, 'sha1'):
+                data["sha1"] = ioc_obj.sha1
+            if hasattr(ioc_obj, 'size'):
+                data["size"] = ioc_obj.size
+            if hasattr(ioc_obj, 'type_description'):
+                data["type_description"] = ioc_obj.type_description
+            if hasattr(ioc_obj, 'meaningful_name'):
+                data["meaningful_name"] = ioc_obj.meaningful_name
+        
+        return data
+    
+
     def _add_result(self, name: str, method: str, endpoint: str, 
                    status: str, response: Any, error: Optional[str] = None):
         """Add a result"""
@@ -118,7 +242,27 @@ class VTAPIConnector:
                 None,
                 str(e)
             )
-    
+
+    # ---- Core API methods ----
+
+    def get_comments(self, arguments: dict):
+        """Get comments for an entity"""
+        entity_type, entity = self._get_entity_type_and_value(arguments)
+        path = f"/v1/{self._entity_endpoint(entity_type)}/{entity}/comments"
+        return self._request(path)
+
+    def get_passive_dns(self, arguments: dict):
+        """Get passive DNS resolutions"""
+        entity_type, entity = self._get_entity_type_and_value(arguments)
+        path = f"/v1/{self._entity_endpoint(entity_type)}/{entity}/resolutions"
+        return self._request(path)
+
+    def get_vulnerability_associations(self, arguments: dict):
+        """Get vulnerability associations for an entity"""
+        entity_type, entity = self._get_entity_type_and_value(arguments)
+        path = f"/v1/{self._entity_endpoint(entity_type)}/{entity}/vulnerabilities"
+        return self._request(path)
+ 
     def scan_url(self, client: vt.Client):
         """Scan a URL"""
         try:
@@ -283,9 +427,8 @@ class VTAPIConnector:
                 None,
                 f"May require Premium API: {str(e)}"
             )
-    
+    """
     def get_comments(self, client: vt.Client, entity_type: str = "domains"):
-        """Get comments for an entity"""
         try:
             entity = self.domain if entity_type == "domains" else self.ip
             comments_it = client.iterator(
@@ -310,9 +453,7 @@ class VTAPIConnector:
                 None,
                 str(e)
             )
-    
     def get_passive_dns(self, client: vt.Client):
-        """Get passive DNS resolutions"""
         try:
             # Use iterator for resolutions
             resolutions_it = client.iterator(
@@ -338,7 +479,7 @@ class VTAPIConnector:
                 None,
                 f"May require Premium API: {str(e)}"
             )
-    
+     """
     def get_vulnerability_report(self, client: vt.Client):
         """Get vulnerability report"""
         try:
@@ -361,9 +502,8 @@ class VTAPIConnector:
                 None,
                 f"May require Premium API: {str(e)}"
             )
-    
+    """ 
     def get_vulnerability_associations(self, client: vt.Client):
-        """Get vulnerability associations for an entity"""
         try:
             # Use iterator for vulnerabilities
             vulns_it = client.iterator(
@@ -389,7 +529,7 @@ class VTAPIConnector:
                 None,
                 f"May require Premium API: {str(e)}"
             )
-    
+    """
     def run_all_tests(self, test_file_path: Optional[str] = None):
         """Run all API tests"""
         logger.info("Starting VirusTotal API tests...")

@@ -2,7 +2,7 @@
   "uuid": "e3a9b7c5-2d4f-4b1e-a6f8-8f0d9b7c6a88",
   "name": "Get Passive DNS",
   "description": "Retrieve passive DNS data for a domain from Google Threat Intelligence",
-  "docker_parameters": "GTIGetPassiveDNS",
+  "docker_parameters": "get_passive_dns",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",

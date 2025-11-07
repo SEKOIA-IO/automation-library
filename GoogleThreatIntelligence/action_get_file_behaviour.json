@@ -2,7 +2,7 @@
   "uuid": "d4b8a1e4-9c7f-44c1-9a53-2f0b8a3d99c3",
   "name": "Get File Behaviour",
   "description": "Retrieve sandbox behaviour for a file hash from Google Threat Intelligence",
-  "docker_parameters": "GTIGetFileBehaviour",
+  "docker_parameters": "get_file_behaviour",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",

@@ -2,18 +2,38 @@
   "uuid": "a8e3b5f1-3f4a-4b2d-8f7e-1b2f6c9d5e11",
   "name": "Get Comments",
   "description": "Retrieve recent comments associated with a domain or IP from Google Threat Intelligence",
-  "docker_parameters": "GTIGetComments",
+  "docker_parameters": "get_comments",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-      "entity_type": {
+      "ip": {
         "type": "string",
-        "enum": ["domains", "ip_addresses"],
-        "default": "domains",
-        "description": "Type of entity (domains or ip_addresses)"
+        "description": "IP address to query (e.g., 8.8.8.8)",
+        "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+      },
+      "domain": {
+        "type": "string",
+        "description": "Domain name to query (e.g., google.com)",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$"
+      },
+      "url": {
+        "type": "string",
+        "description": "URL to query (e.g., https://example.com/path)",
+        "format": "uri"
+      },
+      "file_hash": {
+        "type": "string",
+        "description": "File hash to query (MD5, SHA1, or SHA256)",
+        "pattern": "^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$"
       }
-    }
+    },
+    "oneOf": [
+      {"required": ["ip"]},
+      {"required": ["domain"]},
+      {"required": ["url"]},
+      {"required": ["file_hash"]}
+    ]
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
