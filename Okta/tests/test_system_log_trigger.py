@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from threading import Thread
 from unittest.mock import MagicMock, patch
@@ -247,6 +248,32 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
         assert trigger.from_date.isoformat() == "2022-11-15T08:04:23+00:00"
 
 
+def test_fetch_events_with_pagination_2(trigger, message1, message2):
+    first_response = [{**message1, "uuid": str(uuid.uuid4())} for _ in range(10)]
+
+    second_response = [{**message2, "uuid": str(uuid.uuid4())} for _ in range(5)]
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.get(
+            "https://tenant_id.okta.com/api/v1/logs",
+            status_code=200,
+            json=first_response + [message1],
+            headers={"Link": "https://tenant_id.okta.com/api/v1/logs?after=1111111; rel=next"},
+        )
+
+        mock_requests.get(
+            "https://tenant_id.okta.com/api/v1/logs?after=1111111", status_code=200, json=second_response + [message2]
+        )
+
+        for event in first_response + second_response:
+            trigger.events_cache[event["uuid"]] = True
+
+        events = trigger.fetch_events()
+
+        assert list(events) == [[message1], [message2]]
+        assert trigger.from_date.isoformat() == "2022-11-15T08:04:23+00:00"
+
+
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
     with patch("okta_modules.system_log_trigger.time") as mock_time, requests_mock.Mocker() as mock_requests:
         mock_requests.get(
@@ -281,6 +308,13 @@ def test_long_next_batch_should_not_sleep(trigger, message1, message2):
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
+
+        events_cache = trigger.events_cache
+        loaded_cache = trigger.load_events_cache()
+
+        assert events_cache == loaded_cache
+        assert events_cache[message1["uuid"]] == True
+        assert events_cache[message2["uuid"]] == True
 
 
 @pytest.mark.skipif("{'OKTA_BASE_URL', 'OKTA_API_TOKEN'}" ".issubset(os.environ.keys()) == False")
