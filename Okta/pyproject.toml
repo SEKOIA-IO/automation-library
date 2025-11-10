@@ -19,10 +19,7 @@ cachetools = "^6.2.1"
 [poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
-pytest-xdist = "*"
 pytest-asyncio = "*"
-pytest-env = "*"
-pytest-flake8 = "*"
 requests = "*"
 requests-mock = "*"
 isort = "^5.10.1"
@@ -69,7 +66,6 @@ addopts = '''
   --cov-report=html
   --cov-report=term-missing:skip-covered
   --cov-fail-under=87
-  --numprocesses=auto
   --asyncio-mode=auto
 '''
 
