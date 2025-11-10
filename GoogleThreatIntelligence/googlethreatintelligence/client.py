@@ -34,8 +34,7 @@ from dataclasses import dataclass, asdict
 import logging
 import requests
 import urllib.parse
-import validators
-
+#import validators
 
 logger = logging.getLogger(__name__)
 # Configure logging
@@ -80,7 +79,7 @@ class VTAPIConnector:
 
     def _request(self, path: str, params: dict = None):
         """Perform a GET request and handle common errors."""
-        url = urllib.parse.urljoin(self.host + "/", path.lstrip("/"))
+        url = urllib.parse.urljoin("https://www.virustotal.com/api/v3/", path.lstrip("/"))
         logger.debug(f"Requesting URL: {url}")
 
         try:
@@ -248,19 +247,19 @@ class VTAPIConnector:
     def get_comments(self, arguments: dict):
         """Get comments for an entity"""
         entity_type, entity = self._get_entity_type_and_value(arguments)
-        path = f"/v1/{self._entity_endpoint(entity_type)}/{entity}/comments"
+        path = f"/v3/{self._entity_endpoint(entity_type)}/{entity}/comments"
         return self._request(path)
 
     def get_passive_dns(self, arguments: dict):
         """Get passive DNS resolutions"""
         entity_type, entity = self._get_entity_type_and_value(arguments)
-        path = f"/v1/{self._entity_endpoint(entity_type)}/{entity}/resolutions"
+        path = f"/v3/{self._entity_endpoint(entity_type)}/{entity}/resolutions"
         return self._request(path)
 
     def get_vulnerability_associations(self, arguments: dict):
         """Get vulnerability associations for an entity"""
         entity_type, entity = self._get_entity_type_and_value(arguments)
-        path = f"/v1/{self._entity_endpoint(entity_type)}/{entity}/vulnerabilities"
+        path = f"/v3/{self._entity_endpoint(entity_type)}/{entity}/vulnerabilities"
         return self._request(path)
  
     def scan_url(self, client: vt.Client):
@@ -402,20 +401,19 @@ class VTAPIConnector:
     def get_file_behaviour(self, client: vt.Client):
         """Get file sandbox behavior"""
         try:
-            # Use iterator for behaviours
-            behaviours_it = client.iterator(
-                f"/files/{self.file_hash}/behaviours",
-                limit=5
-            )
-            behaviours = list(behaviours_it)
+            #self.get_ioc_report(client, "files", self.file_hash)
+
+            #url = "https://www.virustotal.com/api/v3/files/id/behaviour_summary"
+            path = f"files/{self.file_hash}/behaviour_summary"
             
             self._add_result(
                 "GET_FILE_SANDBOX",
                 "GET",
-                f"/api/v3/files/{self.file_hash}/behaviours",
-                "SUCCESS",
-                {"behaviours_count": len(behaviours)}
+                f"/api/v3/files/{self.file_hash}/behaviour_summary",
+                "SUCCESS"
             )
+            return self._request(path)
+
         except vt.APIError as e:
             # This endpoint requires Premium API - log as warning not error
             logger.warning(f"File behaviours not available (may require Premium API): {e}")

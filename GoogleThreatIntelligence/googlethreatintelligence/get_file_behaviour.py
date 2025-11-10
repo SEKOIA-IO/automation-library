@@ -9,6 +9,9 @@ import vt
 class GTIGetFileBehaviour(Action):
     """
     Retrieve sandbox (dynamic analysis) behaviour for a file hash
+    This action uses is a particular use case of get_ioc_reports from VTAPIConnector with entity_type = files and entity = file_hash, like:
+    file = client.get_object("/files/44d88612fea8a8f36de82e1278abb02f")
+    Reference: https://virustotal.github.io/vt-py/quickstart.html#get-information-about-a-file
     """
 
     def run(self, arguments: dict):
