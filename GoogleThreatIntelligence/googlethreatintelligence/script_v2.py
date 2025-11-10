@@ -1,33 +1,15 @@
 """
-Google Threat Intelligence (VirusTotal) API Testing Script
-Uses vt-py official library with comprehensive error handling
-
-ACTIONS MAPPING (from requirements):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Action                          | API Endpoint                              | Method(s)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Scan File                       | POST /api/v3/files                        | scan_file()
-                                | POST /api/v3/private/files                |
-Get IOC Report                  | GET /api/v3/{entity_type}/{entity}        | get_ioc_report()
-  - IP address                  | GET /api/v3/ip_addresses/{ip}             | get_ip_report()
-  - URL                         | GET /api/v3/urls/{url_id}                 | get_url_report()
-  - Domain                      | GET /api/v3/domains/{domain}              | get_domain_report()
-  - File                        | GET /api/v3/files/{hash}                  | get_file_report()
-Get Comments                    | GET /api/v3/{entity_type}/{entity}/comments | get_comments()
-Get Vulnerability Associations  | GET /api/v3/{entity_type}/{entity}/vulnerabilities | get_vulnerability_associations()
-Get File Sandbox Report         | GET /api/v3/files/{hash}/behaviours       | get_file_behaviour()
-Scan URL                        | POST /api/v3/urls                         | scan_url()
-                                | POST /api/v3/private/urls                 |
-Get Curated Associations        | GET /api/v3/{entity_type}/{entity}        | get_ioc_report()
-Get Passive DNS Data            | GET /api/v3/{entity_type}/{entity}/resolutions | get_passive_dns()
-Get Vulnerability Report        | GET /api/v3/collections/{vuln_id}         | get_vulnerability_report()
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Google Threat Intelligence (VirusTotal) API Connector
+Production-ready connector using vt-py official library
 """
+
 import vt
+import json
+import time
 import base64
 from pathlib import Path
-from typing import List, Optional, Any
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass, asdict
 import logging
 
 # Configure logging
@@ -517,3 +499,114 @@ class VTAPIConnector:
                 None,
                 f"May require Premium API: {str(e)}"
             )
+    
+    def run_all_tests(self, test_file_path: Optional[str] = None):
+        """Run all API tests"""
+        logger.info("Starting VirusTotal API tests...")
+        logger.info(f"Using: domain={self.domain}, ip={self.ip}, url={self.url}, file_hash={self.file_hash}, cve={self.cve}")
+        
+        with vt.Client(self.api_key) as client:
+            # Basic connectivity
+            self.test_connectivity(client)
+            time.sleep(0.5)
+            
+            # IOC Reports
+            self.get_ip_report(client)
+            time.sleep(0.5)
+            
+            self.get_domain_report(client)
+            time.sleep(0.5)
+            
+            self.get_url_report(client)
+            time.sleep(0.5)
+            
+            self.get_file_report(client)
+            time.sleep(0.5)
+            
+            # Scans
+            analysis_id = self.scan_url(client)
+            time.sleep(1)
+            
+            if analysis_id:
+                self.get_analysis(client, analysis_id)
+                time.sleep(0.5)
+            
+            # File scan (optional)
+            if test_file_path:
+                file_analysis_id = self.scan_file(client, test_file_path)
+                time.sleep(1)
+                if file_analysis_id:
+                    self.get_analysis(client, file_analysis_id)
+                    time.sleep(0.5)
+            
+            # Additional data - FULLY test iterators
+            logger.info("Testing iterators (comments, passive DNS, vulnerability associations)...")
+            
+            self.get_comments(client)
+            time.sleep(0.5)
+            
+            self.get_file_behaviour(client)
+            time.sleep(0.5)
+            
+            self.get_passive_dns(client)
+            time.sleep(0.5)
+            
+            self.get_vulnerability_report(client)
+            time.sleep(0.5)
+            
+            self.get_vulnerability_associations(client)
+        
+        logger.info("All tests completed!")
+    
+    def save_results(self, output_file: str = "vt_test_results.json"):
+        """Save test results to JSON file"""
+        results_dict = [asdict(r) for r in self.results]
+        
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(results_dict, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Results saved to {output_file}")
+        
+        # Print summary
+        success_count = sum(1 for r in self.results if r.status == "SUCCESS")
+        error_count = sum(1 for r in self.results if r.status == "ERROR")
+        not_available_count = sum(1 for r in self.results if r.status == "NOT_AVAILABLE")
+        
+        print(f"\n{'='*60}")
+        print(f"TEST SUMMARY")
+        print(f"{'='*60}")
+        print(f"Total tests: {len(self.results)}")
+        print(f"Successful: {success_count}")
+        print(f"Failed: {error_count}")
+        print(f"Not Available (Premium API): {not_available_count}")
+        print(f"{'='*60}\n")
+
+
+def main():
+    """Main execution function"""
+    # Security check
+    if API_KEY == "REDACTED":
+        print("ERROR: Please set VT_API_KEY environment variable")
+        print("Example: export VT_API_KEY='your_api_key_here'")
+        return
+    
+    # Initialize connector with custom values (or use defaults)
+    connector = VTAPIConnector(
+        api_key=API_KEY,
+        domain="google.com",      # Optional: override default
+        ip="8.8.8.8",             # Optional: override default
+        url="https://www.sekoia.io/en/homepage/",  # Optional: override default
+        file_hash="44d88612fea8a8f36de82e1278abb02f",  # Optional: override default
+        cve="CVE-2021-34527"      # Optional: override default
+    )
+    
+    # Run tests (optionally provide a test file path)
+    # connector.run_all_tests(test_file_path="upload.png")
+    connector.run_all_tests()
+    
+    # Save results
+    connector.save_results()
+
+
+if __name__ == "__main__":
+    main()
