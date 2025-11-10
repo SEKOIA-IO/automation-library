@@ -4,7 +4,7 @@ Sekoia Automation Action: Get Comments from Google Threat Intelligence
 from sekoia_automation.action import Action
 from .client import VTAPIConnector
 import vt
-
+from typing import Any
 
 class GTIIoCReport(Action):
     """

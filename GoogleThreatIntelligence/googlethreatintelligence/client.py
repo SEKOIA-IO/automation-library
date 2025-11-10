@@ -88,7 +88,7 @@ class VTAPIConnector:
     
     def _add_result(self, name: str, method: str, endpoint: str, 
                    status: str, response: Any, error: Optional[str] = None):
-        """Add a test result"""
+        """Add a result"""
         # Convert VT objects to JSON-serializable format
         if response is not None:
             response = self._make_serializable(response)
