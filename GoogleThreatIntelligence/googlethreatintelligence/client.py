@@ -205,7 +205,7 @@ class VTAPIConnector:
                 "SUCCESS",
                 {"analysis_id": analysis.id, "url": self.url}
             )
-            return analysis.id
+            return analysis
         except vt.APIError as e:
             self._add_result(
                 "SCAN_URL",
@@ -234,7 +234,8 @@ class VTAPIConnector:
                 "SUCCESS",
                 {"analysis_id": analysis.id, "file": file_path}
             )
-            return analysis.id
+            return analysis
+        
         except (vt.APIError, FileNotFoundError, IOError) as e:
             self._add_result(
                 "SCAN_FILE",

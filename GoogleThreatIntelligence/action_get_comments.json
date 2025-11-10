@@ -41,7 +41,69 @@
     "title": "Get Comments Results",
     "properties": {
       "success": { "type": "boolean" },
-      "data": { "type": "object" }
+ 
+      "data": {
+        "type": "object",
+        "description": "Container for the comments data",
+        "properties": {
+          "comments_count": {
+            "type": "integer",
+            "description": "Total number of comments retrieved"
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity (domain, IP, URL, or file hash) that was queried"
+          },
+          "comments": {
+            "type": "array",
+            "description": "Array of comment objects",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Type of the object (always 'comment')",
+                  "enum": ["comment"]
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier for the comment"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The comment text content"
+                },
+                "date": {
+                  "type": ["integer", "string"],
+                  "description": "Comment timestamp (Unix timestamp or ISO 8601 string)"
+                },
+                "votes": {
+                  "type": "object",
+                  "description": "Vote statistics for the comment",
+                  "properties": {
+                    "positive": {
+                      "type": "integer",
+                      "description": "Number of positive votes"
+                    },
+                    "negative": {
+                      "type": "integer",
+                      "description": "Number of negative votes"
+                    }
+                  },
+                  "required": ["positive", "negative"]
+                },
+                "author": {
+                  "type": ["string", "null"],
+                  "description": "Username of the comment author (may be null for anonymous)"
+                }
+              },
+              "required": ["text", "date", "votes"]
+            }
+          }
+        },
+        "required": ["comments_count", "entity", "comments"]
+      }
+
     }
   },
   "slug": "get_comments_in_gti"

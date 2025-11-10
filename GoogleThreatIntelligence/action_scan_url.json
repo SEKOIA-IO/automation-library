@@ -20,7 +20,69 @@
     "title": "Scan URL Results",
     "properties": {
       "success": { "type": "boolean" },
-      "analysis_id": { "type": "string" }
+      "data": {
+        "type": "object",
+        "properties": {
+          "url_id": {
+            "type": "string",
+            "description": "Unique identifier of the URL entry"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The URL under investigation"
+          },
+          "submitted_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the URL was first submitted or recorded"
+          },
+          "last_scanned": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the last scan or check for this URL"
+          },
+          "threat_score": {
+            "type": "number",
+            "description": "Numeric score representing the threat level of the URL (higher = more dangerous)"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current status of the URL (e.g. safe, malicious, unknown)"
+          },
+          "categories": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of categories/tags assigned to the URL (e.g. phishing, malware, spam)"
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Name of the data source or feed for the URL data"
+              },
+              "notes": {
+                "type": "string",
+                "description": "Any additional notes or contextual information"
+              }
+            }
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": { "type": "string", "format": "uri" },
+                "description": { "type": "string" }
+              },
+              "required": ["url"]
+            },
+            "description": "External references related to the URL (e.g. vendor report, blocklist entry)"
+          }
+        },
+        "required": ["url_id","url","submitted_date","status"]
+      }
     }
   },
   "slug": "scan_url_in_gti"
