@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-28 - 1.20.16
+
+### Changed
+
+- Add asset connector for SentinelOne device and Account validator
+
 ## 2025-09-19 - 1.20.15
 
 ### Changed
