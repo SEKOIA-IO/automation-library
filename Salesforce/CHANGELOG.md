@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-09-18 - 1.7.2
+
+### Fixed
+
+- Add retry on auth error
+
 ## 2025-09-18 - 1.7.1
 
 ### Changed
