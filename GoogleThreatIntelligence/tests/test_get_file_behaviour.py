@@ -1,85 +1,113 @@
-import json
-import urllib.parse
-import requests_mock
+from unittest.mock import patch, MagicMock
+import vt
 from googlethreatintelligence.get_file_behaviour import GTIGetFileBehaviour
 
-HOST = "https://threatintelligence.googleapis.com/"
+# === Test constants ===
 API_KEY = "FAKE_API_KEY"
 FILE_HASH = "44d88612fea8a8f36de82e1278abb02f"
 
-GTI_OUTPUT = {
-    "behaviours": {
-        "network": ["dns_query", "http_post"],
-        "file": ["create_temp", "write_disk"]
-    }
-}
 
+@patch('googlethreatintelligence.get_file_behaviour.vt.Client')
+def test_get_file_behaviour_success(mock_vt_client):
+    """Test successful retrieval of file behaviour via iterator"""
+    # Create a mock behaviour object that VT iterator would return
+    mock_behaviour = MagicMock()
+    mock_behaviour.sandbox_name = "Windows10"
+    mock_behaviour.processes_created = ["cmd.exe", "calc.exe"]
+    mock_behaviour.files_written = ["C:\\temp\\file1.tmp"]
+    mock_behaviour.files_deleted = []
+    mock_behaviour.registry_keys_set = ["HKCU\\Software\\Test"]
+    mock_behaviour.dns_lookups = ["example.com"]
+    mock_behaviour.ip_traffic = ["8.8.8.8"]
 
-def _qs_matcher(expected_params):
-    def matcher(request):
-        actual = {k: v[0] if isinstance(v, list) else v for k, v in request.qs.items()}
-        for key, value in expected_params.items():
-            if key not in actual or actual[key] != str(value):
-                return False
-        return True
-    return matcher
+    # Mock the vt.Client context manager
+    mock_client_instance = MagicMock()
+    mock_vt_client.return_value.__enter__.return_value = mock_client_instance
 
+    # Make iterator return our fake behaviour
+    mock_client_instance.iterator.return_value = iter([mock_behaviour])
 
-def test_get_file_behaviour_success():
+    # Setup action
     action = GTIGetFileBehaviour()
-    action.module.configuration = {"api_key": API_KEY, "host": HOST.rstrip("/")}
+    action.module.configuration = {"api_key": API_KEY}
 
-    uri = f"/v1/files/{FILE_HASH}/behaviours"
+    # Run the action
+    response = action.run({
+        "entity_type": "files",
+        "entity": FILE_HASH
+    })
 
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            urllib.parse.urljoin(HOST, uri),
-            json=GTI_OUTPUT,
-            status_code=200,
-            additional_matcher=_qs_matcher({"key": API_KEY})
-        )
+    # Verify response
+    assert response is not None
+    assert isinstance(response, dict)
+    assert response.get("success") is True
+    assert "data" in response
 
-        response = action.run({})
-        data = json.loads(response) if isinstance(response, str) else response
-        assert "behaviours" in data or (data.get("data") and "behaviours" in data.get("data"))
-        assert mock_requests.call_count == 1
+    # Verify the data contains behaviour information
+    assert response["data"]["behaviours_count"] == 1
+    assert isinstance(response["data"]["behaviours"], list)
+    assert response["data"]["behaviours"][0]["sandbox_name"] == "Windows10"
+
+    # Verify vt.Client was called with the correct API key
+    mock_vt_client.assert_called_once_with(API_KEY)
+
+    # Verify iterator was called with the correct endpoint and limit
+    mock_client_instance.iterator.assert_called_once_with(
+        f"/files/{FILE_HASH}/behaviours",
+        limit=5
+    )
 
 
-def test_get_file_behaviour_not_found():
+@patch('googlethreatintelligence.get_file_behaviour.vt.Client')
+def test_get_file_behaviour_fail_api_error(mock_vt_client):
+    """Test error handling when VT API raises vt.APIError from iterator"""
+    # Mock the vt.Client context manager
+    mock_client_instance = MagicMock()
+    mock_vt_client.return_value.__enter__.return_value = mock_client_instance
+
+    # Simulate an API error when calling iterator
+    mock_client_instance.iterator.side_effect = vt.APIError("SomeAPIError", "Internal Server Error")
+
+    # Setup action
     action = GTIGetFileBehaviour()
-    action.module.configuration = {"api_key": API_KEY, "host": HOST.rstrip("/")}
+    action.module.configuration = {"api_key": API_KEY}
 
-    uri = f"/v1/files/{FILE_HASH}/behaviours"
+    # Run the action
+    response = action.run({
+        "entity_type": "files",
+        "entity": FILE_HASH
+    })
 
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            urllib.parse.urljoin(HOST, uri),
-            status_code=404,
-            json={"error": {"message": "Not Found"}},
-            additional_matcher=_qs_matcher({"key": API_KEY})
-        )
+    # Verify error response
+    assert response is not None
+    assert isinstance(response, dict)
+    assert response.get("success") is False
+    assert "data" in response or "error" in response
 
-        response = action.run({})
-        data = json.loads(response) if isinstance(response, str) else response
-        assert "error" in data or data.get("success") is False
-        assert mock_requests.call_count == 1
+    # Verify vt.Client was called
+    mock_vt_client.assert_called_once_with(API_KEY)
+
+    # Ensure iterator was attempted
+    mock_client_instance.iterator.assert_called_once_with(
+        f"/files/{FILE_HASH}/behaviours",
+        limit=5
+    )
 
 
-def test_get_file_behaviour_api_error():
+def test_get_file_behaviour_no_api_key():
+    """Test handling of missing API key"""
     action = GTIGetFileBehaviour()
-    action.module.configuration = {"api_key": API_KEY, "host": HOST.rstrip("/")}
 
-    uri = f"/v1/files/{FILE_HASH}/behaviours"
+    # No API key configured
+    with patch.object(type(action.module), 'configuration', new_callable=MagicMock) as mock_config:
+        mock_config.return_value = {}
 
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.get(
-            urllib.parse.urljoin(HOST, uri),
-            status_code=500,
-            json={"error": {"message": "Internal Server Error"}},
-            additional_matcher=_qs_matcher({"key": API_KEY})
-        )
+        response = action.run({
+            "entity_type": "files",
+            "entity": FILE_HASH
+        })
 
-        response = action.run({})
-        data = json.loads(response) if isinstance(response, str) else response
-        assert "error" in data or data.get("success") is False
-        assert mock_requests.call_count == 1
+        assert response is not None
+        assert isinstance(response, dict)
+        assert response.get("success") is False
+        assert "API key" in response.get("error", "")
