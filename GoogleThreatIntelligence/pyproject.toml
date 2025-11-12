@@ -1,15 +1,16 @@
 [tool.poetry]
 name = "Automation module for Googlethreatintelligence"
-version = "0.0"
+version = "0.1"
 description = ""
-authors = []
+authors = ["AKONIS"]
 package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
 sekoia-automation-sdk = "^1.21.1"
+vt-py = "^0.22.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests = "*"

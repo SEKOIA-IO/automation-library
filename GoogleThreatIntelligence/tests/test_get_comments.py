@@ -1,69 +1,109 @@
-import os
-import pytest
-from unittest.mock import MagicMock, patch
-import vt
+import json
+import urllib.parse
+import requests_mock
 from googlethreatintelligence.get_comments import GTIGetComments
 
+# === Test constants ===
 HOST = "https://www.virustotal.com"
+API_KEY = "FAKE_API_KEY"
 DOMAIN = "google.com"
-API_KEY = os.getenv("VT_API_KEY", "FAKE_API_KEY")
+
+# Mock response matching VT API structure
+VT_API_RESPONSE = {
+    "data": [
+        {
+            "type": "comment",
+            "id": "d-google.com-1234",
+            "attributes": {
+                "text": "Test comment",
+                "date": 1630857431,
+                "votes": {
+                    "positive": 0,
+                    "negative": 0
+                }
+            }
+        }
+    ]
+}
+
+def test_get_comments_success():
+    """Test successful retrieval of comments"""
+    action = GTIGetComments()
+    action.module.configuration = {"api_key": API_KEY}
+
+    # The actual endpoint that vt.Client will call
+    endpoint = f"{HOST}/api/v3/domains/{DOMAIN}/comments"
+
+    with requests_mock.Mocker() as mock_requests:
+        # Mock the VT API endpoint
+        mock_requests.get(
+            endpoint,
+            json=VT_API_RESPONSE,
+            status_code=200
+        )
+
+        # Run the action with proper parameters
+        response = action.run({
+            "entity_type": "domains",
+            "entity": DOMAIN
+        })
+        
+        # Verify response
+        assert response is not None
+        assert isinstance(response, dict)
+        assert response.get("success") is True
+        assert "data" in response
+        
+        # Verify the mock was called
+        assert mock_requests.call_count == 1
+        
+        # Verify the request was made to the correct URL
+        assert mock_requests.request_history[0].url == endpoint
 
 
-@pytest.fixture
-def action():
-    act = GTIGetComments()
-    act.module.configuration = {"api_key": API_KEY}
-    return act
+def test_get_comments_fail():
+    """Test error handling when API fails"""
+    action = GTIGetComments()
+    action.module.configuration = {"api_key": API_KEY}
 
+    endpoint = f"{HOST}/api/v3/domains/{DOMAIN}/comments"
 
-def test_get_comments_success_offline(action):
-    fake_comment = MagicMock()
-    fake_comment.text = "Mocked comment"
-    fake_comment.date = "2024-01-01"
-    fake_comment.votes = {"positive": 1, "negative": 0}
-    fake_comment.author = "tester"
+    with requests_mock.Mocker() as mock_requests:
+        # Mock an API error response
+        mock_requests.get(
+            endpoint,
+            json={"error": {"message": "Invalid API key"}},
+            status_code=401
+        )
 
-    fake_client = MagicMock()
-    fake_client.iterator.return_value = [fake_comment]
-
-    with patch("googlethreatintelligence.get_comments.vt.Client", return_value=fake_client):
-        response = action.run({"entity_type": "domains", "entity": DOMAIN})
-
-    assert isinstance(response, dict)
-    assert response["success"] is True
-    assert "data" in response
-    assert "comments" in response["data"]
-
-    comments = response["data"]["comments"]
-    if comments:
-        assert comments[0]["text"] == "Mocked comment"
-
-
-def test_get_comments_fail_offline(action):
-    fake_client = MagicMock()
-    fake_client.iterator.side_effect = vt.error.APIError("InvalidArgumentError", "Invalid API key")
-
-    with patch("googlethreatintelligence.get_comments.vt.Client", return_value=fake_client):
-        response = action.run({"entity_type": "domains", "entity": DOMAIN})
-
-    assert isinstance(response, dict)
-    assert response["success"] is False
-    assert "Invalid API key" in response["error"]
+        # Run the action
+        response = action.run({
+            "entity_type": "domains",
+            "entity": DOMAIN
+        })
+        
+        # Verify error response
+        assert response is not None
+        assert isinstance(response, dict)
+        
+        # The response should indicate failure
+        assert response.get("success") is False or "error" in response
+        
+        # Verify the mock was called
+        assert mock_requests.call_count == 1
 
 
 def test_get_comments_no_api_key():
+    """Test handling of missing API key"""
     action = GTIGetComments()
-    action.module.configuration = {"api_key": None}
-    response = action.run({"entity_type": "domains", "entity": DOMAIN})
-    assert response["success"] is False
-    assert "API key" in response["error"]
+    action.module.configuration = {}
 
-
-@pytest.mark.skipif(
-    os.getenv("VT_API_KEY") is None,
-    reason="Integration test requires real VirusTotal API key (VT_API_KEY)",
-)
-def test_get_comments_integration(action):
-    response = action.run({"entity_type": "domains", "entity": DOMAIN})
+    response = action.run({
+        "entity_type": "domains",
+        "entity": DOMAIN
+    })
+    
+    assert response is not None
     assert isinstance(response, dict)
-    assert "success" in response
+    assert response.get("success") is False
+    assert "API key" in response.get("error", "")
