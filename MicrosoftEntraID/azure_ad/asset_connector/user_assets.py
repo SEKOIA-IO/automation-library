@@ -63,8 +63,9 @@ class EntraIDAssetConnector(AssetConnector):
         if self._latest_time is None:
             return
         with self.context as cache:
+            # We add 1 second to avoid fetching the same user again in the next run
             cache["most_recent_date_seen"] = (
-                datetime.fromtimestamp(self._latest_time, timezone.utc).replace(microsecond=0).isoformat()
+                datetime.fromtimestamp(self._latest_time + 1, timezone.utc).replace(microsecond=0).isoformat()
             )
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup]) -> UserOCSFModel:
