@@ -8,7 +8,7 @@ package-mode = false
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 sekoia-automation-sdk = "^1.21.1"
-requests-ratelimiter = ">=0.7.0,<0.8.0"
+requests-ratelimiter = "^0.7.0"
 structlog = "^23.1.0"
 requests = "*"
 
