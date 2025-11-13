@@ -8,6 +8,7 @@ from connectors.blob.azure_blob import AzureBlobConnector
 from connectors.blob.azure_flow_logs import AzureFlowLogsConnector
 from connectors.blob.azure_key_vault import AzureKeyVaultConnector
 from connectors.blob.azure_network_watcher import AzureNetworkWatcherConnector
+from connectors.azure_activity_logs import AzureActivityLogsConnector
 
 if __name__ == "__main__":
     init_logging()
@@ -18,4 +19,5 @@ if __name__ == "__main__":
     module.register(AzureNetworkWatcherConnector, "azure_network_watcher")
     module.register(AzureFlowLogsConnector, "azure_flow_logs")
     module.register(AzureKeyVaultConnector, "azure_key_vault")
+    module.register(AzureActivityLogsConnector, "azure_activity_logs")
     module.run()
