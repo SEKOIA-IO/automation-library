@@ -30,12 +30,12 @@ def retry_strategy(max_retries: int = 10) -> Retrying:
     )
 
 
-def retry(max_retries: int = 10) -> Callable:
+def retry(max_retries: int = 10) -> Callable[[Callable], Callable]:  # type: ignore[type-arg]
     """
     Decorator to apply retry strategy to a function
     """
 
-    def wrapper(func) -> Callable:
+    def wrapper(func: Callable) -> Callable:  # type: ignore[type-arg]
         strategy = retry_strategy(max_retries=max_retries)
         return strategy.wraps(func)
 
