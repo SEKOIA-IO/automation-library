@@ -31,7 +31,7 @@ def test_get_credentials():
             f"{api_host_url}/whoami/v1",
             status_code=200,
             json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "id": "00000000-0000-0000-0000-000000000000",
                 "idType": "tenant",
                 "apiHosts": {
                     "global": "https://api.central.sophos.com",
@@ -48,8 +48,8 @@ def test_get_credentials():
         assert credentials.expires_at < (current_dt + timedelta(seconds=1850))
         assert credentials.authorization == "Bearer foo-token"
         assert credentials.tenancy_type == "tenant"
-        assert credentials.tenancy_id == "ea106f70-96b1-4851-bd31-e4395ea407d2"
-        assert credentials.tenancy_header == {"X-Tenant-ID": "ea106f70-96b1-4851-bd31-e4395ea407d2"}
+        assert credentials.tenancy_id == "00000000-0000-0000-0000-000000000000"
+        assert credentials.tenancy_header == {"X-Tenant-ID": "00000000-0000-0000-0000-000000000000"}
 
 
 def test_get_credentials_request_new_token_only_when_needed():
@@ -74,7 +74,7 @@ def test_get_credentials_request_new_token_only_when_needed():
             f"{api_host_url}/whoami/v1",
             status_code=200,
             json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "id": "00000000-0000-0000-0000-000000000000",
                 "idType": "tenant",
                 "apiHosts": {
                     "global": "https://api.central.sophos.com",
@@ -138,7 +138,7 @@ def test_failing_authentication():
             f"{api_host_url}/whoami/v1",
             status_code=200,
             json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "id": "00000000-0000-0000-0000-000000000000",
                 "idType": "tenant",
                 "apiHosts": {
                     "global": "https://api.central.sophos.com",
@@ -213,7 +213,7 @@ def test_get_credentials_with_temporary_failing_whoami():
                 {
                     "status_code": 200,
                     "json": {
-                        "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                        "id": "00000000-0000-0000-0000-000000000000",
                         "idType": "tenant",
                         "apiHosts": {
                             "global": "https://api.central.sophos.com",
@@ -232,8 +232,8 @@ def test_get_credentials_with_temporary_failing_whoami():
         assert credentials.expires_at < (current_dt + timedelta(seconds=1850))
         assert credentials.authorization == "Bearer foo-token"
         assert credentials.tenancy_type == "tenant"
-        assert credentials.tenancy_id == "ea106f70-96b1-4851-bd31-e4395ea407d2"
-        assert credentials.tenancy_header == {"X-Tenant-ID": "ea106f70-96b1-4851-bd31-e4395ea407d2"}
+        assert credentials.tenancy_id == "00000000-0000-0000-0000-000000000000"
+        assert credentials.tenancy_header == {"X-Tenant-ID": "00000000-0000-0000-0000-000000000000"}
 
 
 @pytest.mark.skipif("{'SOPHOS_CLIENT_ID', 'SOPHOS_CLIENT_SECRET'}.issubset(os.environ.keys()) == False")
