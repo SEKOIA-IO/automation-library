@@ -1,3 +1,5 @@
+from typing import Callable
+
 import requests
 import urllib3
 from tenacity import Retrying, retry_if_exception_type, retry_if_exception, stop_after_attempt, wait_exponential
@@ -9,7 +11,7 @@ def retry_strategy(max_retries: int = 10) -> Retrying:
     """
     retry_on_status = {429, 500, 502, 503, 504}
 
-    def retry_on_statuses(exception: Exception) -> bool:
+    def retry_on_statuses(exception: BaseException) -> bool:
         if isinstance(exception, requests.exceptions.RequestException):
             response = getattr(exception, "response", None)
             # Retry on connection errors and 5xx responses
@@ -28,12 +30,12 @@ def retry_strategy(max_retries: int = 10) -> Retrying:
     )
 
 
-def retry(max_retries: int = 10):
+def retry(max_retries: int = 10) -> Callable:
     """
     Decorator to apply retry strategy to a function
     """
 
-    def wrapper(func):
+    def wrapper(func) -> Callable:
         strategy = retry_strategy(max_retries=max_retries)
         return strategy.wraps(func)
 

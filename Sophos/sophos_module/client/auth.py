@@ -49,7 +49,7 @@ class SophosApiAuthentication(AuthBase):
         )
 
     @retry()
-    def __get_token(self) -> dict[str, Any]:
+    def __get_token(self) -> Any:
         """
         Get OAuth2 token from Sophos API
         """
@@ -82,7 +82,7 @@ class SophosApiAuthentication(AuthBase):
         return response.json()
 
     @retry()
-    def __whoami(self, credentials: SophosApiCredentials) -> dict[str, Any]:
+    def __whoami(self, credentials: SophosApiCredentials) -> Any:
         """
         Call the Whoami endpoint to get tenancy information
         """
