@@ -33,21 +33,19 @@ def connector_with_api_key(symphony_storage, session_faker, intake_response):
         intake_response: list[str]
     """
     module = GithubModule()
+    module.configuration = {
+        "base_url": "https://api.github.com",
+        "apikey": session_faker.word(),
+        "org_name": session_faker.word(),
+    }
+
     trigger = AuditLogConnector(module=module, data_path=symphony_storage)
-
-    trigger.log = MagicMock()
-    trigger.log_exception = MagicMock()
-    trigger.module.configuration = GithubModuleConfiguration(
-        **{
-            "apikey": session_faker.word(),
-            "org_name": session_faker.word(),
-        }
-    )
-
     trigger.configuration = {
         "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
     }
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
 
     yield trigger
 
@@ -64,18 +62,16 @@ def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake
         intake_response: list[str]
     """
     module = GithubModule()
-    trigger = AuditLogConnector(module=module, data_path=symphony_storage)
+    module.configuration = {
+        "base_url": "https://api.github.com",
+        "org_name": session_faker.word(),
+        "pem_file": pem_content,
+        "app_id": session_faker.pyint(),
+    }
 
+    trigger = AuditLogConnector(module=module, data_path=symphony_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
-    trigger.module.configuration = GithubModuleConfiguration(
-        **{
-            "org_name": session_faker.word(),
-            "pem_file": pem_content,
-            "app_id": session_faker.pyint(),
-        }
-    )
-
     trigger.configuration = {
         "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
