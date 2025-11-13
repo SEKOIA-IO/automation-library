@@ -46,6 +46,59 @@ class SophosApiAuthentication(AuthBase):
             ),
         )
 
+    def __get_token(self) -> dict[str, Any]:
+        """
+        Get OAuth2 token from Sophos API
+        """
+        # Make the POST request to get the token
+        response = self.__http_session.post(
+            url=self.__authorization_url,
+            data={
+                "grant_type": "client_credentials",
+                "scope": "token",
+                "client_id": self.__client_id,
+                "client_secret": self.__client_secret,
+            },
+        )
+
+        # Log the response status
+        logger.info(
+            "OAuth2 server responded",
+            status_code=response.status_code,
+            reason=response.reason,
+        )
+
+        # Handle authentication errors
+        if response.status_code in {400, 401, 403}:
+            raise SophosApiAuthenticationError("Authentication failed. Check your client_id and client_secret.")
+
+        # Return the successful response
+        return response.json()
+
+    def __whoami(self, credentials: SophosApiCredentials) -> dict[str, Any]:
+        """
+        Call the Whoami endpoint to get tenancy information
+        """
+        # Get the whoami
+        response = self.__http_session.get(
+            url=f"{self.__api_host}/whoami/v1",
+            headers={"Authorization": credentials.authorization},
+        )
+
+        # Log the response status
+        logger.info(
+            "Whoami endpoint responded",
+            status_code=response.status_code,
+            reason=response.reason,
+        )
+
+        # Handle authentication errors
+        if response.status_code in {400, 401, 403}:
+            raise SophosApiAuthenticationError("The Whoami call failed. Check your client_id and client_secret.")
+
+        # Return the successful response
+        return response.json()
+
     def get_credentials(self) -> SophosApiCredentials:
         """
         Return Sophos Credentials for the API
@@ -53,47 +106,16 @@ class SophosApiAuthentication(AuthBase):
         current_dt = datetime.utcnow()
 
         if self.api_credentials is None or current_dt + timedelta(seconds=300) >= self.api_credentials.expires_at:
-            response = self.__http_session.post(
-                url=self.__authorization_url,
-                data={
-                    "grant_type": "client_credentials",
-                    "scope": "token",
-                    "client_id": self.__client_id,
-                    "client_secret": self.__client_secret,
-                },
-            )
-
-            logger.info(
-                "OAuth2 server responded",
-                status_code=response.status_code,
-                reason=response.reason,
-            )
-
-            if response.status_code > 399:
-                raise SophosApiAuthenticationError("Authentication failed. Check your client_id and client_secret.")
-
+            # Initialize credentials
             credentials: SophosApiCredentials = SophosApiCredentials()
 
-            api_credentials: dict[str, Any] = response.json()
+            # Get OAuth2 token
+            api_credentials: dict[str, Any] = self.__get_token()
             credentials.token_type = api_credentials["token_type"]
             credentials.access_token = api_credentials["access_token"]
             credentials.expires_at = current_dt + timedelta(seconds=api_credentials["expires_in"])
 
-            response = self.__http_session.get(
-                url=f"{self.__api_host}/whoami/v1",
-                headers={"Authorization": credentials.authorization},
-            )
-
-            logger.info(
-                "Whoami endpoint responded",
-                status_code=response.status_code,
-                reason=response.reason,
-            )
-
-            if response.status_code > 399:
-                raise SophosApiAuthenticationError("The Whoami call failed. Check your client_id and client_secret.")
-
-            whoami: dict[str, Any] = response.json()
+            whoami: dict[str, Any] = self.__whoami(credentials)
             credentials.tenancy_type = whoami["idType"]
             credentials.tenancy_id = whoami["id"]
             credentials.api_url = whoami["apiHosts"].get("dataRegion") or whoami["apiHosts"]["global"]
