@@ -11,6 +11,7 @@ sekoia-automation-sdk = "^1.13.0"
 requests-ratelimiter = "^0.4.0"
 structlog = "^23.1.0"
 requests = "*"
+tenacity = "^9.1.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
