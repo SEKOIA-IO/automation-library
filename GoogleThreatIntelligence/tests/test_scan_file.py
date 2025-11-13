@@ -1,87 +1,110 @@
-import json
-import urllib.parse
-import requests_mock
+from unittest.mock import patch, MagicMock, PropertyMock
 from googlethreatintelligence.scan_file import GTIScanFile
+import vt
+import tempfile
+import os
 
-HOST = "https://threatintelligence.googleapis.com/"
 API_KEY = "FAKE_API_KEY"
-FILE_PATH = "/tmp/testfile.bin"
-FILE_HASH = "44d88612fea8a8f36de82e1278abb02f"
 
-GTI_OUTPUT = {
-    "analysis_id": "file-analysis-123",
-    "status": "completed"
-}
+# === SUCCESS CASE ===
+@patch("googlethreatintelligence.scan_file.vt.Client")
+@patch("googlethreatintelligence.scan_file.VTAPIConnector")
+def test_scan_file_success(mock_connector_class, mock_vt_client):
+    """Test successful file scan"""
 
+    # Create a temporary file to simulate a real file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_path = tmp_file.name
+        tmp_file.write(b"dummy content")
 
-def _qs_matcher(expected_params):
-    def matcher(request):
-        actual = {k: v[0] if isinstance(v, list) else v for k, v in request.qs.items()}
-        for key, value in expected_params.items():
-            if key not in actual or actual[key] != str(value):
-                return False
-        return True
-    return matcher
+    try:
+        # Mock VTAPIConnector instance
+        mock_connector_instance = MagicMock()
+        mock_connector_class.return_value = mock_connector_instance
+        mock_connector_instance.scan_file.return_value = "analysis_1234"
 
+        # Mock vt.Client context manager
+        mock_client_instance = MagicMock()
+        mock_vt_client.return_value.__enter__.return_value = mock_client_instance
 
-def test_scan_file_success(tmp_path, monkeypatch):
-    action = GTIScanFile()
-    action.module.configuration = {"api_key": API_KEY, "host": HOST.rstrip("/")}
+        # Initialize action and mock configuration
+        action = GTIScanFile()
+        action.module.configuration = {"api_key": API_KEY}
 
-    # create a dummy file to satisfy path check
-    file_local = tmp_path / "testfile.bin"
-    file_local.write_bytes(b"dummy")
-    uri = "/v1/files:scan"
+        # Run the action
+        response = action.run({"file_path": tmp_path})
 
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(
-            urllib.parse.urljoin(HOST, uri),
-            json=GTI_OUTPUT,
-            status_code=200,
-            additional_matcher=_qs_matcher({"key": API_KEY})
-        )
-
-        response = action.run({"file_path": str(file_local)})
+        # === Assertions ===
         assert response is not None
+        assert response["success"] is True
+        assert response["analysis_id"] == "analysis_1234"
+        assert response["file_path"] == tmp_path
 
-        data = json.loads(response) if isinstance(response, str) else response
-        assert data.get("analysis_id") == "file-analysis-123"
-        assert mock_requests.call_count == 1
+        mock_connector_class.assert_called_once_with(API_KEY)
+        mock_connector_instance.scan_file.assert_called_once_with(mock_client_instance, tmp_path)
+        mock_vt_client.assert_called_once_with(API_KEY)
+    finally:
+        os.unlink(tmp_path)
 
 
-def test_scan_file_not_found(tmp_path):
+# === MISSING API KEY ===
+def test_scan_file_no_api_key():
+    """Test behavior when API key is missing"""
     action = GTIScanFile()
-    action.module.configuration = {"api_key": API_KEY, "host": HOST.rstrip("/")}
 
-    # path does not exist
-    missing = tmp_path / "does_not_exist.bin"
-    response = action.run({"file_path": str(missing)})
+    # Correctly mock the module.configuration PropertyMock
+    with patch.object(type(action.module), "configuration", new_callable=PropertyMock) as mock_config:
+        mock_config.return_value = {}
+
+        response = action.run({"file_path": "dummy_path"})
+
+        assert response is not None
+        assert response["success"] is False
+        assert "API key" in response["error"]
+
+
+# === FILE NOT FOUND ===
+def test_scan_file_file_not_found():
+    """Test behavior when the file does not exist"""
+    action = GTIScanFile()
+    action.module.configuration = {"api_key": API_KEY}
+
+    response = action.run({"file_path": "/nonexistent/file.txt"})
 
     assert response is not None
-    data = json.loads(response) if isinstance(response, str) else response
-    assert data.get("success") is False
-    assert "File not found" in data.get("error", "") or "not found" in str(data.get("error", "")).lower()
+    assert response["success"] is False
+    assert "File not found" in response["error"]
 
 
-def test_scan_file_api_error(tmp_path):
-    action = GTIScanFile()
-    action.module.configuration = {"api_key": API_KEY, "host": HOST.rstrip("/")}
+# === API ERROR HANDLING ===
+@patch("googlethreatintelligence.scan_file.vt.Client")
+@patch("googlethreatintelligence.scan_file.VTAPIConnector")
+def test_scan_file_api_error(mock_connector_class, mock_vt_client):
+    """Test behavior when the VirusTotal API fails"""
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_path = tmp_file.name
+        tmp_file.write(b"dummy content")
 
-    # create dummy file
-    file_local = tmp_path / "testfile.bin"
-    file_local.write_bytes(b"dummy")
-    uri = "/v1/files:scan"
+    try:
+        # Mock connector that raises an APIError
+        mock_connector_instance = MagicMock()
+        mock_connector_instance.scan_file.side_effect = vt.APIError("QuotaExceededError", "API quota exceeded")
+        mock_connector_class.return_value = mock_connector_instance
 
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(
-            urllib.parse.urljoin(HOST, uri),
-            status_code=500,
-            json={"error": {"message": "Internal Server Error"}},
-            additional_matcher=_qs_matcher({"key": API_KEY})
-        )
+        # Mock vt.Client context
+        mock_client_instance = MagicMock()
+        mock_vt_client.return_value.__enter__.return_value = mock_client_instance
 
-        response = action.run({"file_path": str(file_local)})
+        action = GTIScanFile()
+        action.module.configuration = {"api_key": API_KEY}
+
+        response = action.run({"file_path": tmp_path})
+
         assert response is not None
-        data = json.loads(response) if isinstance(response, str) else response
-        assert "error" in data or data.get("success") is False
-        assert mock_requests.call_count == 1
+        assert response["success"] is False
+        assert "API quota exceeded" in response["error"]
+
+        mock_connector_instance.scan_file.assert_called_once()
+        mock_vt_client.assert_called_once_with(API_KEY)
+    finally:
+        os.unlink(tmp_path)

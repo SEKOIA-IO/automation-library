@@ -1,7 +1,6 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 import vt
 from googlethreatintelligence.get_ioc_report import GTIIoCReport
-
 
 API_KEY = "FAKE_API_KEY"
 DOMAIN = "example.com"
@@ -23,7 +22,6 @@ def test_get_ioc_report_success(mock_vt_client, mock_connector):
     mock_result.status = "SUCCESS"
     mock_result.response = {"indicator": DOMAIN, "malicious": True}
     mock_result.error = None
-
     mock_connector_instance.results = [mock_result]
 
     # Mock vt.Client context manager
@@ -92,7 +90,20 @@ def test_get_ioc_report_fail_api_error(mock_vt_client, mock_connector):
     mock_connector.assert_called_once()
 
 
-def test_get_ioc_report_no_api_key():
+@patch("googlethreatintelligence.get_ioc_report.vt.Client")
+def test_get_ioc_report_no_api_key(mock_vt_client):
     """Test error handling when API key is missing"""
     action = GTIIoCReport()
-    action.module.configuration = {}
+
+    # Mock configuration property to return empty dict (simulate missing key)
+    with patch.object(type(action.module), "configuration", new_callable=PropertyMock) as mock_config:
+        mock_config.return_value = {}
+
+        response = action.run({"domain": DOMAIN})
+
+        assert response is not None
+        assert isinstance(response, dict)
+        assert response.get("success") is False
+        assert "API key" in response.get("error", "")
+
+        mock_vt_client.assert_not_called()
