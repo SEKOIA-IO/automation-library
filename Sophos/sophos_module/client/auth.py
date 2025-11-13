@@ -7,6 +7,7 @@ from requests.auth import AuthBase
 
 from sophos_module.logging import get_logger
 from sophos_module.client.exceptions import SophosApiAuthenticationError
+from sophos_module.client.helpers import retry
 
 logger = get_logger()
 
@@ -42,10 +43,12 @@ class SophosApiAuthentication(AuthBase):
                 max_retries=Retry(
                     total=5,
                     backoff_factor=1,
+                    status_forcelist=[429, 500, 502, 503, 504],
                 )
             ),
         )
 
+    @retry()
     def __get_token(self) -> dict[str, Any]:
         """
         Get OAuth2 token from Sophos API
@@ -72,9 +75,13 @@ class SophosApiAuthentication(AuthBase):
         if response.status_code in {400, 401, 403}:
             raise SophosApiAuthenticationError("Authentication failed. Check your client_id and client_secret.")
 
+        # Raise for other HTTP errors
+        response.raise_for_status()
+
         # Return the successful response
         return response.json()
 
+    @retry()
     def __whoami(self, credentials: SophosApiCredentials) -> dict[str, Any]:
         """
         Call the Whoami endpoint to get tenancy information
@@ -95,6 +102,9 @@ class SophosApiAuthentication(AuthBase):
         # Handle authentication errors
         if response.status_code in {400, 401, 403}:
             raise SophosApiAuthenticationError("The Whoami call failed. Check your client_id and client_secret.")
+
+        # Raise for other HTTP errors
+        response.raise_for_status()
 
         # Return the successful response
         return response.json()
