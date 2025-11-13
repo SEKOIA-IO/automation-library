@@ -6,6 +6,7 @@ from requests.auth import AuthBase
 from requests_ratelimiter import LimiterAdapter
 
 from sophos_module.client.auth import SophosApiAuthentication
+from sophos_module.client.helpers import retry
 
 
 class ApiClient(requests.Session):
@@ -52,20 +53,24 @@ class SophosApiClient(ApiClient):
             ratelimit_per_day=ratelimit_per_day,
         )
 
+    @retry()
     def list_siem_events(self, parameters: dict[str, Any] | None = None) -> requests.Response:
         return self.get(
             url=f"{self.auth.get_credentials().api_url}/siem/v1/events",
             params=parameters,
         )
 
+    @retry()
     def run_query(self, json_query: dict[str, Any]) -> requests.Response:
         return self.post(url=f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs", json=json_query)
 
+    @retry()
     def get_query_status(self, run_id: str) -> requests.Response:
         return self.get(
             url=f"{self.auth.get_credentials().api_url}/xdr-query/v1/queries/runs/{run_id}",
         )
 
+    @retry()
     def get_query_results(self, run_id: str | None, page_size: int, from_key: str | None = None) -> requests.Response:
         if run_id is None:
             raise ValueError("run_id is required")
