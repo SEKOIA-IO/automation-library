@@ -1,5 +1,10 @@
 import time
 
+from utils.logging import get_logger
+
+
+logger = get_logger(__name__)
+
 
 def time_to_sleep(duration: float) -> float:
     """
@@ -36,10 +41,16 @@ def accurate_sleep(seconds: int, accuracy: float = 0.1) -> None:
     This function ensures that we sleep for at least the specified time.
     """
     if seconds <= 0:
+        logger.info("Requested sleep time is non-positive, returning immediately.")
         return
 
     # Calculate the target end time
     target_time = time.time() + float(seconds)
+
+    # Log the start of the accurate sleep
+    logger.info(
+        f"Starting accurate sleep for {seconds} seconds with accurancy of {accuracy} seconds. Target time: {target_time}"
+    )
 
     # Loop until the current time reaches the target time
     while time.time() < target_time:
@@ -49,6 +60,15 @@ def accurate_sleep(seconds: int, accuracy: float = 0.1) -> None:
 
         # Sleep for a calculated time chunk
         if remaining_sleep > accuracy:
-            time.sleep(time_to_sleep(remaining_sleep))
+            # Determine the next sleep duration
+            next_pause = time_to_sleep(remaining_sleep)
+
+            # Log the sleep action
+            logger.info(f"Sleeping for {next_pause:.2f} seconds...")
+
+            # Perform the sleep
+            time.sleep(next_pause)
         else:
+            # Log that we are within the accuracy threshold
+            logger.info(f"Remaining sleep time is less than {accuracy} seconds, finishing up.")
             return
