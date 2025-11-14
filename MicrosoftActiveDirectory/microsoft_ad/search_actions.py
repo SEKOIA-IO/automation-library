@@ -1,4 +1,4 @@
-from .base import MicrosoftADAction
+from .actions_base import MicrosoftADAction
 from pydantic.v1 import BaseModel
 from typing import List
 from ldap3 import ALL_ATTRIBUTES

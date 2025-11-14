@@ -35,5 +35,6 @@
   "version": "1.3.9",
   "categories": [
     "IAM"
-  ]
+  ],
+  "supports_validation": true
 }

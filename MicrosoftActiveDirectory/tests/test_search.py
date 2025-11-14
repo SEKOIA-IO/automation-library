@@ -1,5 +1,5 @@
-from microsoft_ad.base import MicrosoftADModule, MicrosoftADAction
-from microsoft_ad.search import SearchAction
+from microsoft_ad.actions_base import MicrosoftADModule, MicrosoftADAction
+from microsoft_ad.search_actions import SearchAction
 from unittest.mock import patch
 import pytest
 import json
@@ -35,10 +35,10 @@ def test_search_no_attributes():
     response = True
 
     with patch(
-        "microsoft_ad.search.SearchAction.run",
+        "microsoft_ad.search_actions.SearchAction.run",
         return_value=one_user_dn,
     ):
-        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
             mock_client.result.get.return_value = "success"
 
@@ -57,10 +57,10 @@ def test_search_with_attributes():
     response = True
 
     with patch(
-        "microsoft_ad.search.SearchAction.run",
+        "microsoft_ad.search_actions.SearchAction.run",
         return_value=one_user_dn,
     ):
-        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+        with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
             mock_client.result.get.return_value = "success"
 
@@ -77,7 +77,7 @@ def test_search_in_base_exception():
     attributes = ["name"]
     action = configured_action(SearchAction)
 
-    with patch("microsoft_ad.search.SearchAction.run", side_effect=Exception("mocked error")):
+    with patch("microsoft_ad.search_actions.SearchAction.run", side_effect=Exception("mocked error")):
         with pytest.raises(Exception) as exc_info:
             action.run({"search_filter": search, "basedn": basedn, "attributes": attributes})
 
@@ -126,10 +126,10 @@ def test_search_to_file(data_storage):
     response = True
 
     with patch(
-        "microsoft_ad.search.SearchAction.run",
+        "microsoft_ad.search_actions.SearchAction.run",
         return_value=one_user_dn,
     ):
-        with patch("microsoft_ad.base.MicrosoftADAction.client") as mock_client:
+        with patch("microsoft_ad.search_actions.MicrosoftADAction.client") as mock_client:
             mock_client.modify.return_value = response
             mock_client.result.get.return_value = "success"
 
