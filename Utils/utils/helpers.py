@@ -44,6 +44,10 @@ def accurate_sleep(seconds: int, accuracy: float = 0.1) -> None:
         logger.info("Requested sleep time is non-positive, returning immediately.")
         return
 
+    if accuracy <= 0:
+        logger.warning("Accuracy must be positive. Setting accuracy to 0.1 seconds.")
+        accuracy = 0.1
+
     # Calculate the target end time
     target_time = time.time() + float(seconds)
 
