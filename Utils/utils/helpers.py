@@ -1,5 +1,10 @@
 import time
 
+from utils.logging import get_logger
+
+
+logger = get_logger(__name__)
+
 
 def time_to_sleep(duration: float) -> float:
     """
@@ -22,11 +27,12 @@ def time_to_sleep(duration: float) -> float:
         return max(duration, 0)
 
 
-def accurate_sleep(seconds: int) -> None:
+def accurate_sleep(seconds: int, accuracy: float = 0.1) -> None:
     """
     A more accurate sleep function for long breaks.
 
     :param seconds: Number of seconds to sleep.
+    :param accuracy: The acceptable margin of error in seconds. When the remaining sleep time is less than this value, the function returns early to avoid oversleeping.
 
     According to Python documentation, time.sleep() may sleep for longer
     than the specified time due to OS scheduling
@@ -35,10 +41,20 @@ def accurate_sleep(seconds: int) -> None:
     This function ensures that we sleep for at least the specified time.
     """
     if seconds <= 0:
+        logger.info("Requested sleep time is non-positive, returning immediately.")
         return
+
+    if accuracy <= 0:
+        logger.warning("Accuracy must be positive. Setting accuracy to 0.1 seconds.")
+        accuracy = 0.1
 
     # Calculate the target end time
     target_time = time.time() + float(seconds)
+
+    # Log the start of the accurate sleep
+    logger.info(
+        f"Starting accurate sleep for {seconds} seconds with accuracy of {accuracy} seconds. Target time: {target_time}"
+    )
 
     # Loop until the current time reaches the target time
     while time.time() < target_time:
@@ -47,7 +63,16 @@ def accurate_sleep(seconds: int) -> None:
         remaining_sleep = target_time - time.time()
 
         # Sleep for a calculated time chunk
-        if remaining_sleep > 0.1:
-            time.sleep(time_to_sleep(remaining_sleep))
+        if remaining_sleep > accuracy:
+            # Determine the next sleep duration
+            next_pause = time_to_sleep(remaining_sleep)
+
+            # Log the sleep action
+            logger.info(f"Sleeping for {next_pause:.2f} seconds...")
+
+            # Perform the sleep
+            time.sleep(next_pause)
         else:
+            # Log that we are within the accuracy threshold
+            logger.info(f"Remaining sleep time is less than {accuracy} seconds, finishing up.")
             return
