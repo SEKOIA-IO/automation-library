@@ -13,4 +13,6 @@ COPY . .
 RUN useradd -ms /bin/bash sekoiaio-runtime
 USER sekoiaio-runtime
 
+ENV ACTIVATE_VERTICLES_COLLECTION=false
+
 ENTRYPOINT [ "python", "./main.py" ]
