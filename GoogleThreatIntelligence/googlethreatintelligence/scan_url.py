@@ -1,6 +1,7 @@
 """
 Sekoia Automation Action for Google Threat Intelligence: Scan URL
 """
+
 from sekoia_automation.action import Action
 from .client import VTAPIConnector
 import vt

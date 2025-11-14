@@ -1,6 +1,7 @@
 """
 Sekoia Automation Action: Get Comments from Google Threat Intelligence
 """
+
 from sekoia_automation.action import Action
 from .client import VTAPIConnector
 import vt
@@ -26,20 +27,15 @@ class GTIGetComments(Action):
             connector = VTAPIConnector(
                 api_key=api_key,
                 domain=entity if entity_type == "domains" else None,
-                ip=entity if entity_type == "ip_addresses" else None
+                ip=entity if entity_type == "ip_addresses" else None,
             )
-            
+
             with vt.Client(api_key) as client:
                 connector.get_comments(client, entity_type)
                 # Get the last result from the connector
                 result = connector.results[-1]
 
-            return {
-                "success": result.status == "SUCCESS",
-                "data": result.response
-            }
+            return {"success": result.status == "SUCCESS", "data": result.response}
 
         except Exception as e:
             return {"success": False, "error": str(e)}
-        
-        

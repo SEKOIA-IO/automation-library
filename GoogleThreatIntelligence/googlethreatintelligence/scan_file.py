@@ -1,10 +1,12 @@
 """
 Sekoia Automation Action for Google Threat Intelligence: Scan File
 """
+
 from sekoia_automation.action import Action
 from .client import VTAPIConnector
 import vt
 from pathlib import Path
+
 
 class GTIScanFile(Action):
     """
