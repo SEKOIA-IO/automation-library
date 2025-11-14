@@ -32,7 +32,7 @@ def accurate_sleep(seconds: int, accuracy: float = 0.1) -> None:
     A more accurate sleep function for long breaks.
 
     :param seconds: Number of seconds to sleep.
-    :param accuracy: The acceptable margin of error in seconds.
+    :param accuracy: The acceptable margin of error in seconds. When the remaining sleep time is less than this value, the function returns early to avoid oversleeping.
 
     According to Python documentation, time.sleep() may sleep for longer
     than the specified time due to OS scheduling
@@ -49,7 +49,7 @@ def accurate_sleep(seconds: int, accuracy: float = 0.1) -> None:
 
     # Log the start of the accurate sleep
     logger.info(
-        f"Starting accurate sleep for {seconds} seconds with accurancy of {accuracy} seconds. Target time: {target_time}"
+        f"Starting accurate sleep for {seconds} seconds with accuracy of {accuracy} seconds. Target time: {target_time}"
     )
 
     # Loop until the current time reaches the target time
