@@ -1,0 +1,44 @@
+name: getTagsByCert
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/v2/certificates/{{inputs.fingerprint}}/tags'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+    asserts:
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Returns a list of tags on the given certificate.
+
+  '
+inputs:
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
+  fingerprint:
+    type: string
+    description: The SHA-256 fingerprint of the requested certificate.
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
