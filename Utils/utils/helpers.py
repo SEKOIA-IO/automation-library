@@ -22,11 +22,12 @@ def time_to_sleep(duration: float) -> float:
         return max(duration, 0)
 
 
-def accurate_sleep(seconds: int) -> None:
+def accurate_sleep(seconds: int, accuracy: float = 0.1) -> None:
     """
     A more accurate sleep function for long breaks.
 
     :param seconds: Number of seconds to sleep.
+    :param accuracy: The acceptable margin of error in seconds.
 
     According to Python documentation, time.sleep() may sleep for longer
     than the specified time due to OS scheduling
@@ -47,7 +48,7 @@ def accurate_sleep(seconds: int) -> None:
         remaining_sleep = target_time - time.time()
 
         # Sleep for a calculated time chunk
-        if remaining_sleep > 0.1:
+        if remaining_sleep > accuracy:
             time.sleep(time_to_sleep(remaining_sleep))
         else:
             return
