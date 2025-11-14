@@ -30,7 +30,9 @@ class MicrosoftADAccountValidator(AccountValidator, LDAPClient):
         # Handle lDAP Timeout Error
         except LDAPSocketOpenError as ldap_socket_timeout_err:
             self.log(message=f"LDAP socket timeout error : {ldap_socket_timeout_err}", level="error")
-            self.error(message=f"Failed to validate Microsoft AD credentials due to LDAP timeout error: {ldap_socket_timeout_err}")
+            self.error(
+                message=f"Failed to validate Microsoft AD credentials due to LDAP timeout error: {ldap_socket_timeout_err}"
+            )
             return False
         # Handle LDAP Bind Error
         except LDAPBindError as bind_err:
