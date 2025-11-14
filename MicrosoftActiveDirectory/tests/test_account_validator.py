@@ -1,4 +1,4 @@
-import requests
+from ldap3.core.exceptions import LDAPSocketOpenError, LDAPBindError
 from microsoft_ad.account_validator import MicrosoftADAccountValidator
 
 
@@ -17,12 +17,12 @@ def test_validates_credentials_when_bind_succeeds():
     assert validator.validate() is True
 
 
-def test_returns_false_on_http_error():
+def test_returns_false_on_timeout_error():
     validator = object.__new__(MicrosoftADAccountValidator)
 
     class LdapClient:
         def bind(self):
-            raise requests.HTTPError("http problem")
+            raise LDAPSocketOpenError("Timeout occurred !!")
 
     validator.ldap_client = LdapClient()
     validator.log = lambda **kwargs: None
@@ -32,12 +32,12 @@ def test_returns_false_on_http_error():
     assert validator.validate() is False
 
 
-def test_returns_false_on_network_error():
+def test_returns_false_on_bind_error():
     validator = object.__new__(MicrosoftADAccountValidator)
 
     class LdapClient:
         def bind(self):
-            raise requests.RequestException("network problem")
+            raise LDAPBindError("LDAP bind failed")
 
     validator.ldap_client = LdapClient()
     validator.log = lambda **kwargs: None
