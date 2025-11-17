@@ -279,7 +279,7 @@ def test_update_checkpoint(test_entra_id_asset_connector):
     # Assert
     most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
     assert most_recent_date is not None
-    assert most_recent_date == "2022-01-01T00:00:00+00:00"
+    assert most_recent_date == "2022-01-01T00:00:01+00:00"
 
 
 def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connector):
@@ -294,7 +294,7 @@ def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connecto
     # Assert
     most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
     assert most_recent_date is not None
-    assert most_recent_date == "2023-01-01T00:00:00+00:00"
+    assert most_recent_date == "2023-01-01T00:00:01+00:00"
 
 
 def test_update_checkpoint_with_none_timestamp(test_entra_id_asset_connector):
