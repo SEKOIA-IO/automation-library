@@ -1,32 +1,71 @@
 # Glossary
 
-
 ## Action
 
-An action helps to execute specific tasks (see [definition](https://docs.sekoia.io/xdr/features/automate/actions/)). A [playbooks](#Playbook) is compound of one or more actions.
+**Definition**: A component that executes a specific task within a playbook.
 
+**Characteristics**:
+- Performs discrete operations (e.g., create user, send email, query API)
+- Can accept input parameters defined by a JSON schema
+- May return output data for use by subsequent actions
+- Multiple actions can be chained together in a playbook
+
+**Reference**: See [Action documentation](action.md) for implementation details and [official definition](https://docs.sekoia.io/xdr/features/automate/actions/).
 
 ## Connector
 
-A connector is a specialized [trigger](#Trigger) that fetch events and forward them to Sekoia.io. A connector never launches [playbook runs](#Run).
+**Definition**: A specialized trigger that collects events from external sources and forwards them to Sekoia.io.
 
+**Characteristics**:
+- Fetches events from external systems (APIs, logs, webhooks)
+- Continuously forwards collected events to Sekoia.io intake
+- Does NOT launch playbook runs (unlike standard triggers)
+- Runs in an infinite loop with configurable polling intervals
+
+**Reference**: See [Connector documentation](connector.md) for implementation details.
 
 ## Module
 
-A module groups a set of [triggers](#Trigger) and [actions](#Actions) sharing a same interest. Most of the time, a module is associated to a product vendor.
+**Definition**: A logical grouping of related triggers, actions, and connectors.
 
+**Characteristics**:
+- Contains triggers, actions, and/or connectors sharing a common purpose
+- Typically associated with a specific product vendor or service
+- Has its own manifest file, logo, and configuration schema
+- Self-contained with its own Python dependencies
+
+**Reference**: See [Module documentation](module.md) for structure and implementation.
 
 ## Playbook
 
-A playbook is a recipe aiming to automate recurrent task. It's compound of steps defining a workflow of [actions](#Action).
-A playbook always starts with a [trigger](#Trigger).
+**Definition**: An automated workflow composed of sequential or parallel steps.
 
+**Characteristics**:
+- Designed to automate recurring tasks
+- Consists of one or more actions arranged in a workflow
+- Always begins with a trigger that initiates execution
+- Each execution creates a run instance
+
+**Reference**: See [official definition](https://docs.sekoia.io/xdr/features/automate/playbooks/).
 
 ## Run
 
-A playbook run represents an execution of the [playbook](#Playbook). A run is started by a [trigger](#Trigger), after the detection of a new event.
+**Definition**: A single execution instance of a playbook.
 
+**Characteristics**:
+- Created when a trigger detects a new event
+- Executes the playbook's workflow from start to finish
+- Has its own execution context and data
+- Can succeed, fail, or be cancelled
 
 ## Trigger
 
-A trigger is the first step of a [playbook](#Playbook). The trigger monitors new events and start a new run of the playbook (see [definition](https://docs.sekoia.io/xdr/features/automate/triggers/))
+**Definition**: The initiating component of a playbook that monitors for events.
+
+**Characteristics**:
+- Monitors external systems or events
+- Starts a new playbook run when an event is detected
+- Provides initial data/context to the playbook run
+- Can be scheduled (polling) or event-driven (webhook)
+
+**Reference**: See [Trigger documentation](trigger.md) for implementation details and [official definition](https://docs.sekoia.io/xdr/features/automate/triggers/).

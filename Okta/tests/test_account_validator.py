@@ -1,4 +1,5 @@
-from unittest.mock import Mock, patch, PropertyMock
+from unittest.mock import Mock, PropertyMock, patch
+
 from okta_modules.account_validator import OktaAccountValidator
 
 

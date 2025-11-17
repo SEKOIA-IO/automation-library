@@ -1,0 +1,102 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "incident_id": {
+        "type": "string",
+        "description": "Incident ID. When included in the request, the Cancel Scan Endpoints action will appear in the Cortex XDR Incident View Timeline tab"
+      },
+      "filter_endpoint_id_list": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of endpoint IDs"
+      },
+      "filter_dist_name": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of the distribution list"
+      },
+      "filter_group_name": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of endpoint groups"
+      },
+      "filter_ip_list": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of IP addresses"
+      },
+      "filter_alias": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of endpoint aliases to select"
+      },
+      "filter_hostname": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of hostnames to select"
+      },
+      "filter_username": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of usernames to select"
+      },
+      "filter_platform": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["windows", "linux", "macos", "android"]
+        },
+        "description": "List of platforms to select (Possible values: windows, linux, macos, android)"
+      },
+      "filter_isolate": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["isolated", "unisolated"]
+        },
+        "description": "List of isolation states to select (Possible values: isolated, unisolated)"
+      },
+      "filter_scan_status": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "none",
+            "pending",
+            "in_progress",
+            "canceled",
+            "aborted",
+            "pending_cancellation",
+            "success",
+            "error"
+          ]
+        },
+        "description": "List of scan statuses to select (Possible values: none, pending, in_progress, canceled, aborted, pending_cancellation, success, error)"
+      }
+    },
+    "required": [],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "",
+  "docker_parameters": "abort_scan_endpoints",
+  "name": "[BETA] Abort Scan endpoints",
+  "results": {},
+  "uuid": "3c73c2c2-a1bd-417b-bc0c-7b905120c4bf",
+  "slug": "abort_scan_endpoints"
+}

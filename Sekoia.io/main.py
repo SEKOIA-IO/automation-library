@@ -59,6 +59,7 @@ from sekoiaio.operation_center.get_events import GetEvents
 from sekoiaio.operation_center.push_event_to_intake import PushEventToIntake
 from sekoiaio.operation_center.synchronize_assets_with_ad import SynchronizeAssetsWithAD
 from sekoiaio.operation_center.update_alert_status import UpdateAlertStatus
+from sekoiaio.operation_center.update_asset import UpdateAsset
 from sekoiaio.triggers.alerts import (
     AlertCommentCreatedTrigger,
     AlertCreatedTrigger,
@@ -118,11 +119,12 @@ if __name__ == "__main__":
     module.register(GetCommunity, "get-communities/{uuid}")
     module.register(AddEventsToACase, "add_events_to_a_case")
     module.register(CreateCase, "create_case")
+    module.register(UpdateAsset, "update-asset")
     module.register(UpdateCase, "update_case")
     module.register(GetCase, "get_case")
     module.register(PostCommentOnCase, "post_comment_to_a_case")
     module.register(GetListOfCommentsOfCase, "list_case_comments")
-    module.register(DeleteCase, "delete-case/{uuid}")
+    module.register(DeleteCase, "delete-case/{case_uuid}")
     module.register(RemoveEventFromCase, "remove_event_from_case")
     module.register(GetCustomStatus, "get-custom-status")
     module.register(GetCustomPriority, "get-custom-priority")

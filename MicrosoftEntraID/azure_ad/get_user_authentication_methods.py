@@ -1,8 +1,8 @@
-from azure_ad.base import MicrosoftGraphAction
-
 from kiota_abstractions.native_response_handler import NativeResponseHandler
 from kiota_http.middleware.options import ResponseHandlerOption
 from msgraph.generated.users.item.messages.messages_request_builder import MessagesRequestBuilder
+
+from azure_ad.base import MicrosoftGraphAction
 
 
 class GetUserAuthenticationMethodsAction(MicrosoftGraphAction):
