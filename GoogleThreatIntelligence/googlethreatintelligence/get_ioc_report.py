@@ -31,15 +31,14 @@ class GTIIoCReport(Action):
             api_key = self.module.configuration.get("api_key")
             if not api_key:
                 return {"success": False, "error": "API key not configured"}
-            domain = arguments.get("domain", "")
-            ip = arguments.get("ip", "")
-            url = arguments.get("url", "")
-            file_hash = arguments.get("file_hash", "")
+            domains = arguments.get("domain", "")
+            ip_adresses = arguments.get("ip", "")
+            urls = arguments.get("url", "")
+            files = arguments.get("file_hash", "")
 
-            entity_map = {"domain": domain, "ip": ip, "url": url, "file_hash": file_hash}
+            entity_map = {"domains": domains, "ip_adresses": ip_adresses, "urls": urls, "files": files}
             entity_type = next((et for et, value in entity_map.items() if value), "")
-
-            connector = VTAPIConnector(api_key, domain=domain, ip=ip, url=url, file_hash=file_hash)
+            connector = VTAPIConnector(api_key, domain=domains, ip=ip_adresses, url=urls, file_hash=files)
             with vt.Client(api_key) as client:
                 connector.get_ioc_report(client, entity_type, entity_map[entity_type])
                 result = connector.results[-1]

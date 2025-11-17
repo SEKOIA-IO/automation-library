@@ -23,12 +23,12 @@ class GTIScanURL(Action):
 
             connector = VTAPIConnector(api_key, url=url, domain="", ip="", file_hash="", cve="")
             with vt.Client(api_key) as client:
-                analysis_id = connector.scan_url(client)
+                analysis = connector.scan_url(client)
 
-            if not analysis_id:
+            if not analysis:
                 return {"success": False, "error": "URL scan failed"}
 
-            return {"success": True, "analysis_id": analysis_id}
+            return {"success": True, "data": analysis}
 
         except Exception as e:
             return {"success": False, "error": str(e)}
