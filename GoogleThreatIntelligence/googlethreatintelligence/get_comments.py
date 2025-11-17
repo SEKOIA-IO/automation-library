@@ -18,34 +18,27 @@ class GTIGetComments(Action):
             if not api_key:
                 return {"success": False, "error": "API key not configured"}
             
-            # Support both old parameter style and new entity/entity_type style
+            # Get entity and entity_type from arguments
             entity = arguments.get("entity", "")
             entity_type = arguments.get("entity_type", "")
             
-            if entity and entity_type:
-                # New style: entity and entity_type provided directly
-                # Map entity_type to the parameter name expected by VTAPIConnector
-                type_map = {
-                    "domains": "domain",
-                    "ip_addresses": "ip",
-                    "urls": "url",
-                    "files": "file_hash"
-                }
-                
-                # Create kwargs dict with the appropriate parameter
-                connector_kwargs = {type_map.get(entity_type, entity_type): entity}
-            else:
-                # Old style: domain, ip, url, file_hash as separate parameters
-                domain = arguments.get("domain", "")
-                ip = arguments.get("ip", "")
-                url = arguments.get("url", "")
-                file_hash = arguments.get("file_hash", "")
-                
-                entity_map = {"domain": domain, "ip": ip, "url": url, "file_hash": file_hash}
-                entity_type = next((et for et, value in entity_map.items() if value), "")
-                entity = entity_map.get(entity_type, "")
-                
-                connector_kwargs = {"domain": domain, "ip": ip, "url": url, "file_hash": file_hash}
+            if not entity or not entity_type:
+                return {"success": False, "error": "Both entity and entity_type are required"}
+            
+            # Map entity_type to the parameter name expected by VTAPIConnector
+            type_map = {
+                "domains": "domain",
+                "ip_addresses": "ip",
+                "urls": "url",
+                "files": "file_hash"
+            }
+            
+            param_name = type_map.get(entity_type)
+            if not param_name:
+                return {"success": False, "error": f"Invalid entity_type: {entity_type}"}
+            
+            # Create kwargs dict with the appropriate parameter
+            connector_kwargs = {param_name: entity}
             
             connector = VTAPIConnector(api_key, **connector_kwargs)
             

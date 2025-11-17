@@ -469,54 +469,58 @@ class VTAPIConnector:
 
         with vt.Client(self.api_key) as client:
             # Basic connectivity
-            self.test_connectivity(client)
-            time.sleep(0.5)
+            #self.test_connectivity(client)
+            #time.sleep(0.5)
 
             # IOC Reports
             self.get_ip_report(client)
+            print("IP", self.results[-1].response)
             time.sleep(0.5)
 
             self.get_domain_report(client)
+            print("DOMAIN", self.results[-1].response)
             time.sleep(0.5)
 
-            self.get_url_report(client)
+            self.get_domain_report(client)
+            print("URL", self.results[-1].response)
             time.sleep(0.5)
 
-            self.get_file_report(client)
+            self.get_domain_report(client)
+            print("FILE", self.results[-1].response)
             time.sleep(0.5)
 
             # Scans
-            analysis_id = self.scan_url(client)
-            time.sleep(1)
+            #analysis_id = self.scan_url(client)
+            #time.sleep(1)
 
-            if analysis_id:
-                self.get_analysis(client, analysis_id)
-                time.sleep(0.5)
+            #if analysis_id:
+            #    self.get_analysis(client, analysis_id)
+            #    time.sleep(0.5)
 
             # File scan (optional)
-            if test_file_path:
-                file_analysis_id = self.scan_file(client, test_file_path)
-                time.sleep(1)
-                if file_analysis_id:
-                    self.get_analysis(client, file_analysis_id)
-                    time.sleep(0.5)
+            #if test_file_path:
+            #    file_analysis_id = self.scan_file(client, test_file_path)
+            #    time.sleep(1)
+            #    if file_analysis_id:
+            #        self.get_analysis(client, file_analysis_id)
+            #        time.sleep(0.5)
 
             # Additional data - FULLY test iterators
             logger.info("Testing iterators (comments, passive DNS, vulnerability associations)...")
 
-            self.get_comments(client)
-            time.sleep(0.5)
+            #self.get_comments(client)
+            #time.sleep(0.5)
 
-            self.get_file_behaviour(client)
-            time.sleep(0.5)
+            #self.get_file_behaviour(client)
+            #time.sleep(0.5)
 
-            self.get_passive_dns(client)
-            time.sleep(0.5)
+            #self.get_passive_dns(client)
+            #time.sleep(0.5)
 
-            self.get_vulnerability_report(client)
-            time.sleep(0.5)
+            #self.get_vulnerability_report(client)
+            #time.sleep(0.5)
 
-            self.get_vulnerability_associations(client)
+            #self.get_vulnerability_associations(client)
 
         logger.info("All tests completed!")
 

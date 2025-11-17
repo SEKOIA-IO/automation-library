@@ -31,16 +31,24 @@ class GTIIoCReport(Action):
             api_key = self.module.configuration.get("api_key")
             if not api_key:
                 return {"success": False, "error": "API key not configured"}
-            domains = arguments.get("domain", "")
-            ip_adresses = arguments.get("ip", "")
-            urls = arguments.get("url", "")
-            files = arguments.get("file_hash", "")
+            domain = arguments.get("domain", "")
+            ip = arguments.get("ip", "")
+            url = arguments.get("url", "")
+            file_hash = arguments.get("file_hash", "")
 
-            entity_map = {"domains": domains, "ip_adresses": ip_adresses, "urls": urls, "files": files}
-            entity_type = next((et for et, value in entity_map.items() if value), "")
-            connector = VTAPIConnector(api_key, domain=domains, ip=ip_adresses, url=urls, file_hash=files)
+            connector = VTAPIConnector(api_key, domain=domain, ip=ip, url=url, file_hash=file_hash)
             with vt.Client(api_key) as client:
-                connector.get_ioc_report(client, entity_type, entity_map[entity_type])
+                if domain != "":
+                    connector.get_domain_report(client)
+                elif ip != "":
+                    connector.get_ip_report(client)
+                elif url != "":
+                    connector.get_url_report(client)
+                elif file_hash != "":
+                    connector.get_file_report(client)
+                else:
+                    return {"success": False, "error": "At least one of domain, ip, url, or file_hash must be provided"}
+
                 result = connector.results[-1]
 
             return {"success": result.status == "SUCCESS", "data": result.response, "error": result.error}

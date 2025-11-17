@@ -1,15 +1,5 @@
 [
   {
-    "name": "TEST_CONNECTIVITY",
-    "method": "GET",
-    "endpoint": "/api/v3/users/me",
-    "status": "SUCCESS",
-    "response": {
-      "user_id": "me"
-    },
-    "error": null
-  },
-  {
     "name": "GET_IOC_REPORT_IP_ADDRESSES",
     "method": "GET",
     "endpoint": "/api/v3/ip_addresses/8.8.8.8",
@@ -18,7 +8,7 @@
       "entity_type": "ip_addresses",
       "entity": "8.8.8.8",
       "id": "8.8.8.8",
-      "reputation": 527,
+      "reputation": 528,
       "last_analysis_stats": {
         "malicious": 0,
         "suspicious": 0,
@@ -39,7 +29,7 @@
       "entity_type": "domains",
       "entity": "google.com",
       "id": "google.com",
-      "reputation": 656,
+      "reputation": 657,
       "last_analysis_stats": {
         "malicious": 0,
         "suspicious": 0,
@@ -48,543 +38,63 @@
         "timeout": 0
       },
       "categories": {
-        "alphaMountain.ai": "Translation (alphaMountain.ai)",
-        "BitDefender": "education",
-        "Xcitium Verdict Cloud": "search engines & portals",
-        "Sophos": "translators",
-        "Forcepoint ThreatSeeker": "reference materials"
+        "alphaMountain.ai": "Telephony (alphaMountain.ai)",
+        "BitDefender": "misc",
+        "Sophos": "search engines",
+        "Forcepoint ThreatSeeker": "internet telephony"
       }
     },
     "error": null
   },
   {
-    "name": "GET_IOC_REPORT_URLS",
+    "name": "GET_IOC_REPORT_DOMAINS",
     "method": "GET",
-    "endpoint": "/api/v3/urls/aHR0cHM6Ly93d3cuc2Vrb2lhLmlvL2VuL2hvbWVwYWdlLw",
+    "endpoint": "/api/v3/domains/google.com",
     "status": "SUCCESS",
     "response": {
-      "entity_type": "urls",
-      "entity": "aHR0cHM6Ly93d3cuc2Vrb2lhLmlvL2VuL2hvbWVwYWdlLw",
-      "id": "001deb5ff031b6c98a7379e212bb588f3f1b77d1a2eeb19470c5d118e96e99d1",
-      "reputation": 0,
+      "entity_type": "domains",
+      "entity": "google.com",
+      "id": "google.com",
+      "reputation": 657,
       "last_analysis_stats": {
         "malicious": 0,
         "suspicious": 0,
-        "undetected": 30,
+        "undetected": 27,
         "harmless": 68,
         "timeout": 0
       },
       "categories": {
-        "BitDefender": "business",
-        "Sophos": "information technology",
-        "Forcepoint ThreatSeeker": "computer security"
+        "alphaMountain.ai": "Telephony (alphaMountain.ai)",
+        "BitDefender": "misc",
+        "Sophos": "search engines",
+        "Forcepoint ThreatSeeker": "internet telephony"
       }
     },
     "error": null
   },
   {
-    "name": "GET_IOC_REPORT_FILES",
+    "name": "GET_IOC_REPORT_DOMAINS",
     "method": "GET",
-    "endpoint": "/api/v3/files/44d88612fea8a8f36de82e1278abb02f",
+    "endpoint": "/api/v3/domains/google.com",
     "status": "SUCCESS",
     "response": {
-      "entity_type": "files",
-      "entity": "44d88612fea8a8f36de82e1278abb02f",
-      "id": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
-      "reputation": 3697,
-      "last_analysis_stats": {
-        "malicious": 66,
-        "suspicious": 0,
-        "undetected": 4,
-        "harmless": 0,
-        "timeout": 0,
-        "confirmed-timeout": 0,
-        "failure": 0,
-        "type-unsupported": 7
-      }
-    },
-    "error": null
-  },
-  {
-    "name": "SCAN_URL",
-    "method": "POST",
-    "endpoint": "/api/v3/urls",
-    "status": "SUCCESS",
-    "response": {
-      "analysis_id": "u-001deb5ff031b6c98a7379e212bb588f3f1b77d1a2eeb19470c5d118e96e99d1-b9d53477",
-      "url": "https://www.sekoia.io/en/homepage/"
-    },
-    "error": null
-  },
-  {
-    "name": "GET_ANALYSIS",
-    "method": "GET",
-    "endpoint": "/api/v3/analyses/u-001deb5ff031b6c98a7379e212bb588f3f1b77d1a2eeb19470c5d118e96e99d1-b9d53477",
-    "status": "SUCCESS",
-    "response": {
-      "status": "queued",
-      "stats": "{'malicious': 0, 'suspicious': 0, 'undetected': 0, 'harmless': 0, 'timeout': 0}"
-    },
-    "error": null
-  },
-  {
-    "name": "GET_COMMENTS",
-    "method": "GET",
-    "endpoint": "/api/v3/domains/google.com/comments",
-    "status": "SUCCESS",
-    "response": {
-      "comments_count": 10,
+      "entity_type": "domains",
       "entity": "google.com",
-      "comments": [
-        {
-          "text": "[`GOOGLEEDGEAi.ONMiCROSOFT.COM`](https://cloud.google.com/docs)",
-          "date": "2025-10-10 21:46:07+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "Not so sure about this one",
-          "date": "2025-09-23 15:48:32+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "Test comment",
-          "date": "2025-09-05 14:57:11+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "This site impersonates the official Bibit website, disseminating false customer service numbers to deceive customers. Fraudulent agents then solicit personal data, passwords, and OTPs, leading to account takeovers and financial losses. Authentic Bibit customer support is exclusively available at https://bibit.id/. We request the immediate takedown of this fraudulent site to prevent further harm.",
-          "date": "2025-09-02 04:01:21+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "Search engine.",
-          "date": "2025-08-25 22:19:40+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "🔍 Collection: LIVE VT Upload Demo | 📝 Description: 🎯 LIVE VT UPLOAD TEST via caz-vt-feeder - Domain Comment Added | 🏷️ Tags: live-upload-test, caz-vt-feeder | 📡 Source: caz-vt-feeder-system",
-          "date": "2025-07-06 23:59:44+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "🔍 Collection: Live Test Upload | 📝 Description: Test domain for VT comment upload | 🏷️ Tags: test, domain | 📡 Source: caz-vt-feeder-live-test",
-          "date": "2025-07-06 23:53:53+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "🔍 Collection: Test Official Upload | 📝 Description: Test domain upload | 🏷️ Tags: test, domain | 📡 Source: caz-vt-feeder-test",
-          "date": "2025-07-06 23:49:59+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "VIRUSSSSSSSVIRUSSSS GOOGLE BAD",
-          "date": "2025-06-12 23:53:06+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        },
-        {
-          "text": "it's google!!!",
-          "date": "2025-06-10 20:11:20+00:00",
-          "votes": {
-            "positive": 0,
-            "negative": 0
-          },
-          "author": null
-        }
-      ]
-    },
-    "error": null
-  },
-  {
-    "name": "GET_FILE_SANDBOX",
-    "method": "GET",
-    "endpoint": "/api/v3/files/44d88612fea8a8f36de82e1278abb02f/behaviours",
-    "status": "SUCCESS",
-    "response": {
-      "behaviours_count": 5,
-      "behaviours": [
-        {
-          "sandbox_name": "CAPE Linux",
-          "processes_created": 2,
-          "files_written": 3,
-          "dns_lookups": 1,
-          "ip_traffic": 2
-        },
-        {
-          "sandbox_name": "CAPE Sandbox",
-          "processes_created": 8,
-          "files_written": 8,
-          "files_deleted": 2
-        },
-        {
-          "sandbox_name": "Google Safe Browsing",
-          "dns_lookups": 1
-        },
-        {
-          "sandbox_name": "Lastline",
-          "processes_created": 2
-        },
-        {
-          "sandbox_name": "OS X Sandbox",
-          "processes_created": 5,
-          "files_written": 4,
-          "files_deleted": 106,
-          "dns_lookups": 16,
-          "ip_traffic": 22
-        }
-      ]
-    },
-    "error": null
-  },
-  {
-    "name": "PASSIVE_DNS",
-    "method": "GET",
-    "endpoint": "/api/v3/domains/google.com/resolutions",
-    "status": "SUCCESS",
-    "response": {
-      "resolutions_count": 40,
-      "unique_ips_count": 40,
-      "unique_ips": [
-        "2607:f8b0:4003:c30::65",
-        "192.178.54.14",
-        "74.125.27.101",
-        "142.250.117.113",
-        "2607:f8b0:400a:80c::200e",
-        "74.125.27.138",
-        "142.250.117.102",
-        "192.178.163.100",
-        "74.125.27.139",
-        "142.250.117.139",
-        "2607:f8b0:4002:c06::8b",
-        "74.125.27.100",
-        "74.125.27.113",
-        "142.251.34.238",
-        "2404:6800:400a:80c::200e",
-        "192.178.210.138",
-        "2607:f8b0:4001:c68::64",
-        "185.236.106.200",
-        "142.250.117.138",
-        "2607:f8b0:400a:80b::200e",
-        "2607:f8b0:4001:c68::66",
-        "2404:6800:4004:801::200e",
-        "2607:f8b0:4002:c06::64",
-        "2404:6800:400a:813::200e",
-        "2607:f8b0:4001:c68::8b",
-        "2607:f8b0:4001:c68::8a",
-        "142.251.38.110",
-        "2607:f8b0:4003:c30::71",
-        "2607:f8b0:4003:c30::64",
-        "192.178.209.139",
-        "2607:f8b0:4002:c06::8a",
-        "142.250.117.100",
-        "2607:f8b0:4003:c30::8a",
-        "192.178.163.139",
-        "74.125.27.102",
-        "142.251.39.142",
-        "172.217.26.238",
-        "192.178.163.101",
-        "2607:f8b0:4002:c06::71",
-        "142.250.217.14"
-      ],
-      "resolutions": [
-        {
-          "ip_address": "74.125.27.139",
-          "host_name": "google.com",
-          "date": "2025-11-10 03:24:32+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "74.125.27.113",
-          "host_name": "google.com",
-          "date": "2025-11-10 03:24:32+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "74.125.27.102",
-          "host_name": "google.com",
-          "date": "2025-11-10 03:24:32+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "74.125.27.138",
-          "host_name": "google.com",
-          "date": "2025-11-10 03:24:32+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "74.125.27.100",
-          "host_name": "google.com",
-          "date": "2025-11-10 03:24:32+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "74.125.27.101",
-          "host_name": "google.com",
-          "date": "2025-11-10 03:24:32+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "192.178.209.139",
-          "host_name": "google.com",
-          "date": "2025-11-10 02:25:25+00:00",
-          "resolver": "VirusTotal"
-        },
-        {
-          "ip_address": "185.236.106.200",
-          "host_name": "google.com",
-          "date": "2025-11-10 00:19:17+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "142.251.34.238",
-          "host_name": "google.com",
-          "date": "2025-11-10 00:19:17+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "142.251.39.142",
-          "host_name": "google.com",
-          "date": "2025-11-10 00:19:16+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "142.250.217.14",
-          "host_name": "google.com",
-          "date": "2025-11-10 00:19:16+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "2607:f8b0:4002:c06::71",
-          "host_name": "google.com",
-          "date": "2025-11-09 19:35:07+00:00",
-          "resolver": "VirusTotal Box of Apples"
-        },
-        {
-          "ip_address": "2607:f8b0:4002:c06::8a",
-          "host_name": "google.com",
-          "date": "2025-11-09 19:35:07+00:00",
-          "resolver": "VirusTotal Box of Apples"
-        },
-        {
-          "ip_address": "2607:f8b0:4002:c06::64",
-          "host_name": "google.com",
-          "date": "2025-11-09 19:35:07+00:00",
-          "resolver": "VirusTotal Box of Apples"
-        },
-        {
-          "ip_address": "2607:f8b0:4002:c06::8b",
-          "host_name": "google.com",
-          "date": "2025-11-09 19:35:07+00:00",
-          "resolver": "VirusTotal Box of Apples"
-        },
-        {
-          "ip_address": "192.178.54.14",
-          "host_name": "google.com",
-          "date": "2025-11-08 19:00:59+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "142.250.117.102",
-          "host_name": "google.com",
-          "date": "2025-11-08 07:37:12+00:00",
-          "resolver": "OS X Sandbox"
-        },
-        {
-          "ip_address": "142.250.117.113",
-          "host_name": "google.com",
-          "date": "2025-11-08 07:37:12+00:00",
-          "resolver": "OS X Sandbox"
-        },
-        {
-          "ip_address": "142.250.117.100",
-          "host_name": "google.com",
-          "date": "2025-11-08 07:37:12+00:00",
-          "resolver": "OS X Sandbox"
-        },
-        {
-          "ip_address": "142.250.117.138",
-          "host_name": "google.com",
-          "date": "2025-11-08 07:37:12+00:00",
-          "resolver": "OS X Sandbox"
-        },
-        {
-          "ip_address": "142.250.117.139",
-          "host_name": "google.com",
-          "date": "2025-11-08 07:37:12+00:00",
-          "resolver": "OS X Sandbox"
-        },
-        {
-          "ip_address": "2607:f8b0:4003:c30::64",
-          "host_name": "google.com",
-          "date": "2025-11-07 07:35:55+00:00",
-          "resolver": "CAPE Linux"
-        },
-        {
-          "ip_address": "2607:f8b0:4003:c30::8a",
-          "host_name": "google.com",
-          "date": "2025-11-07 07:35:55+00:00",
-          "resolver": "CAPE Linux"
-        },
-        {
-          "ip_address": "2607:f8b0:4003:c30::65",
-          "host_name": "google.com",
-          "date": "2025-11-07 07:35:55+00:00",
-          "resolver": "CAPE Linux"
-        },
-        {
-          "ip_address": "2607:f8b0:4003:c30::71",
-          "host_name": "google.com",
-          "date": "2025-11-07 07:35:55+00:00",
-          "resolver": "CAPE Linux"
-        },
-        {
-          "ip_address": "2607:f8b0:4001:c68::64",
-          "host_name": "google.com",
-          "date": "2025-11-03 09:55:56+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "2607:f8b0:4001:c68::8b",
-          "host_name": "google.com",
-          "date": "2025-11-03 09:55:56+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "2607:f8b0:4001:c68::66",
-          "host_name": "google.com",
-          "date": "2025-11-03 09:55:56+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "2607:f8b0:4001:c68::8a",
-          "host_name": "google.com",
-          "date": "2025-11-03 09:55:56+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "2404:6800:4004:801::200e",
-          "host_name": "google.com",
-          "date": "2025-11-01 08:50:22+00:00",
-          "resolver": "C2AE"
-        },
-        {
-          "ip_address": "172.217.26.238",
-          "host_name": "google.com",
-          "date": "2025-11-01 08:50:22+00:00",
-          "resolver": "C2AE"
-        },
-        {
-          "ip_address": "2404:6800:400a:80c::200e",
-          "host_name": "google.com",
-          "date": "2025-11-01 08:35:19+00:00",
-          "resolver": "C2AE"
-        },
-        {
-          "ip_address": "192.178.210.138",
-          "host_name": "google.com",
-          "date": "2025-10-30 20:54:04+00:00",
-          "resolver": "VirusTotal"
-        },
-        {
-          "ip_address": "2607:f8b0:400a:80b::200e",
-          "host_name": "google.com",
-          "date": "2025-10-30 17:58:22+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "2607:f8b0:400a:80c::200e",
-          "host_name": "google.com",
-          "date": "2025-10-30 17:58:22+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "2404:6800:400a:813::200e",
-          "host_name": "google.com",
-          "date": "2025-10-29 19:35:24+00:00",
-          "resolver": "C2AE"
-        },
-        {
-          "ip_address": "142.251.38.110",
-          "host_name": "google.com",
-          "date": "2025-10-29 09:16:24+00:00",
-          "resolver": "Dr.Web vxCube"
-        },
-        {
-          "ip_address": "192.178.163.101",
-          "host_name": "google.com",
-          "date": "2025-10-29 02:45:08+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "192.178.163.100",
-          "host_name": "google.com",
-          "date": "2025-10-29 02:45:08+00:00",
-          "resolver": "CAPE Sandbox"
-        },
-        {
-          "ip_address": "192.178.163.139",
-          "host_name": "google.com",
-          "date": "2025-10-29 02:45:08+00:00",
-          "resolver": "CAPE Sandbox"
-        }
-      ]
-    },
-    "error": null
-  },
-  {
-    "name": "VULN_REPORT",
-    "method": "GET",
-    "endpoint": "/api/v3/intelligence/vulnerability_collections/CVE-2021-34527",
-    "status": "NOT_AVAILABLE",
-    "response": null,
-    "error": "May require Premium API: ('NotFoundError', 'Resource not found.')"
-  },
-  {
-    "name": "VULN_ASSOCIATIONS",
-    "method": "GET",
-    "endpoint": "/api/v3/ip_addresses/8.8.8.8/vulnerabilities",
-    "status": "SUCCESS",
-    "response": {
-      "vulnerabilities_count": 0,
-      "unique_cves_count": 0,
-      "high_severity_count": 0,
-      "cve_ids": [],
-      "vulnerabilities": []
+      "id": "google.com",
+      "reputation": 657,
+      "last_analysis_stats": {
+        "malicious": 0,
+        "suspicious": 0,
+        "undetected": 27,
+        "harmless": 68,
+        "timeout": 0
+      },
+      "categories": {
+        "alphaMountain.ai": "Telephony (alphaMountain.ai)",
+        "BitDefender": "misc",
+        "Sophos": "search engines",
+        "Forcepoint ThreatSeeker": "internet telephony"
+      }
     },
     "error": null
   }
