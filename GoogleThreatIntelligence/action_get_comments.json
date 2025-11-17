@@ -41,7 +41,6 @@
     "title": "Get Comments Results",
     "properties": {
       "success": { "type": "boolean" },
- 
       "data": {
         "type": "object",
         "description": "Container for the comments data",
