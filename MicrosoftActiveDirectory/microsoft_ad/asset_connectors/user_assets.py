@@ -184,7 +184,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             user_name = "Unknown"
 
         # Parse alternative UID
-        if uid_alt := user_attributes.get("objectGUID") :
+        if uid_alt := user_attributes.get("objectGUID"):
             uid_alt = uid_alt.strip("{}")
         else:
             uid_alt = None

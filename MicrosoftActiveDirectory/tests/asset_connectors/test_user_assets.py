@@ -89,7 +89,9 @@ def test_convert_last_logon_to_timestamp(connector):
 
     timestamp = connector.convert_last_logon_to_timestamp(last_logon)
 
-    expected_timestamp = str(int(datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC")).timestamp()))
+    expected_timestamp = str(
+        int(datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC")).timestamp())
+    )
     assert timestamp == expected_timestamp
 
 
