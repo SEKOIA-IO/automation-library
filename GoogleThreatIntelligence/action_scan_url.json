@@ -35,14 +35,14 @@
           "attributes": {
             "type": "object",
             "properties": {
-              "date": {
-                "type": "integer",
-                "description": "Unix timestamp of when the analysis was performed"
-              },
               "status": {
                 "type": "string",
                 "enum": ["queued", "completed"],
                 "description": "Analysis status"
+              },
+              "date": {
+                "type": "integer",
+                "description": "Unix timestamp when the analysis was performed"
               },
               "stats": {
                 "type": "object",
@@ -61,27 +61,28 @@
                   "type": "object",
                   "properties": {
                     "category": { "type": "string" },
-                    "result": { "type": "string" },
+                    "engine_name": { "type": "string" },
                     "method": { "type": "string" },
-                    "engine_name": { "type": "string" }
+                    "result": { "type": "string" }
                   }
                 },
                 "description": "Detailed results from each security vendor"
               }
             },
-            "required": ["date", "status", "stats"]
+            "required": ["status", "date", "stats"]
           },
           "links": {
             "type": "object",
             "properties": {
-              "self": { "type": "string", "format": "uri" },
-              "item": { "type": "string", "format": "uri" }
-            }
+              "self": { "type": "string", "format": "uri" }
+            },
+            "required": ["self"]
           }
         },
         "required": ["id", "type", "attributes"]
       }
-    }
+    },
+    "required": ["success", "data"]
   },
   "slug": "scan_url_in_gti"
 }

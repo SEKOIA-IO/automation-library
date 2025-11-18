@@ -28,7 +28,21 @@ class GTIScanURL(Action):
             if not analysis:
                 return {"success": False, "error": "URL scan failed"}
 
-            return {"success": True, "data": analysis}
+            # Convert to JSON-serializable dictionary
+            serializable_analysis = connector._make_serializable({
+                "id": analysis.id,
+                "type": "analysis",
+                "attributes": {
+                    "status": analysis.status,
+                    "date": getattr(analysis, "date", None),
+                    "stats": getattr(analysis, "stats", None)
+                },
+                "links": {
+                    "self": f"/analyses/{analysis.id}"
+                }
+            })
+
+            return {"success": True, "data": serializable_analysis}
 
         except Exception as e:
             return {"success": False, "error": str(e)}
