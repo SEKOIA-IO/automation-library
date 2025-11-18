@@ -227,7 +227,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             self.log("No user attributes found for user", level="error")
             raise Exception("No user attributes found for user")
 
-        user_created_at: datetime = user_attributes_data.get("whenCreated")
+        user_created_at = user_attributes_data.get("whenCreated")
         user_ocsf_model = UserOCSFModel(
             activity_id=self.OCSF_ACTIVITY_ID,
             activity_name=self.OCSF_ACTIVITY_NAME,
@@ -240,7 +240,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             severity_id=self.OCSF_SEVERITY_ID,
             time=int(user_created_at.timestamp()) if user_created_at else 0,
             metadata=self.user_metadata_object(),
-            user=self.user_oscf_object(user_attributes_data),
+            user=self.user_ocsf_object(user_attributes_data),
             enrichments=self.enrich_metadata(user_attributes_data),
             type_name=self.OCSF_TYPE_NAME,
         )
@@ -270,7 +270,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             self.log(f"User with DN {entry.get('dn')} retrieved.", level="debug")
             yield entry
 
-            user_created_at: datetime = user_attributes.get("whenCreated")
+            user_created_at = user_attributes.get("whenCreated")
             self.log(f"Start updating checkpoint with the new date {user_created_at}", level="debug")
 
             # Update latest time for checkpointing
