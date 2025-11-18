@@ -1,6 +1,5 @@
 from unittest.mock import patch, MagicMock, PropertyMock
 import pytest
-import vt
 from googlethreatintelligence.scan_url import GTIScanURL
 
 # === Test constants ===
@@ -12,7 +11,6 @@ TEST_URL = "https://example.com/malware-test"
 @patch("googlethreatintelligence.scan_url.VTAPIConnector")
 def test_scan_url_success(mock_connector_class, mock_vt_client):
     """Test successful URL scan"""
-    # --- Mock connector and vt.Client context ---
     mock_connector_instance = MagicMock()
     mock_connector_class.return_value = mock_connector_instance
     mock_connector_instance.scan_url.return_value = "analysis_1234"
@@ -20,20 +18,16 @@ def test_scan_url_success(mock_connector_class, mock_vt_client):
     mock_client_instance = MagicMock()
     mock_vt_client.return_value.__enter__.return_value = mock_client_instance
 
-    # --- Setup action ---
     action = GTIScanURL()
     action.module.configuration = {"api_key": API_KEY}
 
-    # --- Run action ---
     response = action.run({"url": TEST_URL})
 
-    # --- Assertions ---
     assert response is not None
     assert isinstance(response, dict)
     assert response["success"] is True
-    assert response["analysis_id"] == "analysis_1234"
+    assert response["data"] == "analysis_1234"
 
-    # Verify connector initialized with correct parameters
     mock_connector_class.assert_called_once_with(
         API_KEY,
         url=TEST_URL,
@@ -42,8 +36,6 @@ def test_scan_url_success(mock_connector_class, mock_vt_client):
         file_hash="",
         cve=""
     )
-
-    # Verify vt.Client was called correctly
     mock_vt_client.assert_called_once_with(API_KEY)
     mock_connector_instance.scan_url.assert_called_once_with(mock_client_instance)
 
@@ -51,7 +43,7 @@ def test_scan_url_success(mock_connector_class, mock_vt_client):
 @patch("googlethreatintelligence.scan_url.vt.Client")
 @patch("googlethreatintelligence.scan_url.VTAPIConnector")
 def test_scan_url_failure(mock_connector_class, mock_vt_client):
-    """Test URL scan failure (no analysis ID returned)"""
+    """Test URL scan failure (no analysis returned)"""
     mock_connector_instance = MagicMock()
     mock_connector_class.return_value = mock_connector_instance
     mock_connector_instance.scan_url.return_value = None
@@ -64,8 +56,6 @@ def test_scan_url_failure(mock_connector_class, mock_vt_client):
 
     response = action.run({"url": TEST_URL})
 
-    assert response is not None
-    assert isinstance(response, dict)
     assert response["success"] is False
     assert "URL scan failed" in response["error"]
 
@@ -82,22 +72,17 @@ def test_scan_url_failure(mock_connector_class, mock_vt_client):
 
 @patch("googlethreatintelligence.scan_url.vt.Client")
 def test_scan_url_no_api_key(mock_vt_client):
-    """Test handling of missing API key"""
+    """Test missing API key"""
     action = GTIScanURL()
-
-    # Mock configuration property to return empty dict
     with patch.object(type(action.module), "configuration", new_callable=PropertyMock) as mock_config:
         mock_config.return_value = {}
 
         response = action.run({"url": TEST_URL})
 
-        assert response is not None
-        assert isinstance(response, dict)
-        assert response.get("success") is False
-        assert "API key" in response.get("error", "")
+        assert response["success"] is False
+        assert "API key" in response["error"]
 
         mock_vt_client.assert_not_called()
-
 
 
 @patch("googlethreatintelligence.scan_url.vt.Client")
@@ -108,8 +93,6 @@ def test_scan_url_no_url_provided(mock_vt_client):
 
     response = action.run({})
 
-    assert response is not None
-    assert isinstance(response, dict)
     assert response["success"] is False
     assert "No URL provided" in response["error"]
 
@@ -119,7 +102,7 @@ def test_scan_url_no_url_provided(mock_vt_client):
 @patch("googlethreatintelligence.scan_url.vt.Client")
 @patch("googlethreatintelligence.scan_url.VTAPIConnector")
 def test_scan_url_exception(mock_connector_class, mock_vt_client):
-    """Test exception handling (unexpected error)"""
+    """Test exception handling"""
     mock_connector_instance = MagicMock()
     mock_connector_class.return_value = mock_connector_instance
     mock_connector_instance.scan_url.side_effect = Exception("Unexpected Error")
@@ -132,8 +115,6 @@ def test_scan_url_exception(mock_connector_class, mock_vt_client):
 
     response = action.run({"url": TEST_URL})
 
-    assert response is not None
-    assert isinstance(response, dict)
     assert response["success"] is False
     assert "Unexpected Error" in response["error"]
 
