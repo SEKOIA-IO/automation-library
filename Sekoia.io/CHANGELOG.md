@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-11-12  - 2.68.15
+## 2025-11-18  - 2.68.16
 
 ### Changed
 
 - Upgrade dependencies: Sekoia-automation-SDK 1.21.1
+
+## 2025-11-17 - 2.68.15
+
+### Changed
+
+- Deprecate old `Get Asset V2` action in favor of a new `Get Asset V2` action.
 
 ## 2025-11-04  - 2.68.14
 
