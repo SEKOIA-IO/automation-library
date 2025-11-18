@@ -197,9 +197,9 @@ class VTAPIConnector:
     def scan_url(self, client: vt.Client):
         """Scan a URL"""
         try:
-            analysis = client.scan_url(self.url)
+            analysis = client.scan_url(self.url, wait_for_completion=True)
             self._add_result(
-                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis_id": analysis.id, "url": self.url}
+                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis": analysis, "url": self.url}
             )
             return analysis
         except vt.APIError as e:
@@ -379,7 +379,8 @@ class VTAPIConnector:
         """Get vulnerability report"""
         try:
             # Correct path for vulnerability collections
-            vuln = client.get_object(f"/intelligence/vulnerability_collections/{self.cve}")
+            #`https://www.virustotal.com/api/v3/collections/vulnerability--cve-2010-3765`
+            vuln = client.get_object(f"/collections/vulnerability--{self.cve}")
 
             vuln_data = {
                 "cve": self.cve,
@@ -404,7 +405,7 @@ class VTAPIConnector:
                 vuln_data,
             )
         except vt.APIError as e:
-            logger.warning(f"Vulnerability report not available (may require Premium API): {e}")
+            logger.warning(f"OUCH! Vulnerability report not available (may require Premium API): {e}")
             self._add_result(
                 "VULN_REPORT",
                 "GET",

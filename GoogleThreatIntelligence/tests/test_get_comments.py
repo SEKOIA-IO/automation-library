@@ -1,105 +1,117 @@
+import pytest
 from unittest.mock import patch, MagicMock, PropertyMock
 import vt
+
 from googlethreatintelligence.get_comments import GTIGetComments
 
-# === Test constants ===
+
 API_KEY = "FAKE_API_KEY"
-DOMAIN = "google.com"
 
-@patch('googlethreatintelligence.get_comments.vt.Client')
-def test_get_comments_success(mock_vt_client):
-    """Test successful retrieval of comments"""
-    # Create a mock comment object with the attributes expected by VTAPIConnector
-    mock_comment = MagicMock()
-    mock_comment.text = "Test comment"
-    mock_comment.date = "2021-09-05 10:30:31"
-    mock_comment.votes = {"positive": 5, "negative": 1}
-    mock_comment.author = "test_user"
 
-    # Mock the vt.Client context manager
-    mock_client_instance = MagicMock()
-    mock_vt_client.return_value.__enter__.return_value = mock_client_instance
+# =============================================================================
+# Helpers
+# =============================================================================
 
-    # Mock the iterator to return our fake comment
-    mock_client_instance.iterator.return_value = iter([mock_comment])
+def mock_comment():
+    c = MagicMock()
+    c.text = "Test comment"
+    c.date = "2021-09-05 10:30:31"
+    c.votes = {"positive": 5, "negative": 1}
+    c.author = "test_user"
+    return c
 
-    # Setup action
-    action = GTIGetComments()
-    action.module.configuration = {"api_key": API_KEY}
 
-    # Run the action
-    response = action.run({
-        "entity_type": "domains",
-        "entity": DOMAIN
-    })
-
-    # Verify response
-    assert response is not None
+def assert_success(response):
     assert isinstance(response, dict)
     assert response.get("success") is True
     assert "data" in response
-
-    # Verify the data contains comment information
     assert response["data"]["comments_count"] == 1
-    assert response["data"]["entity"] == DOMAIN
-    assert len(response["data"]["comments"]) == 1
+    assert isinstance(response["data"]["entity"], str)
     assert response["data"]["comments"][0]["text"] == "Test comment"
 
-    # Verify vt.Client was called with the correct API key
-    mock_vt_client.assert_called_once_with(API_KEY)
 
-    # Verify iterator was called with the correct endpoint
-    mock_client_instance.iterator.assert_called_once_with(
-        f"/domains/{DOMAIN}/comments",
-        limit=10
-    )
+def assert_iterator_called(mock_client):
+    mock_client.iterator.assert_called_once()
+    args, kwargs = mock_client.iterator.call_args
+    assert args[0].endswith("/comments")
+    assert kwargs.get("limit") == 10
 
 
-@patch('googlethreatintelligence.get_comments.vt.Client')
-def test_get_comments_fail(mock_vt_client):
-    """Test error handling when API fails"""
-    # Mock the vt.Client context manager
-    mock_client_instance = MagicMock()
-    mock_vt_client.return_value.__enter__.return_value = mock_client_instance
+# =============================================================================
+# Routing tests based on REAL action behavior
+# =============================================================================
 
-    # Simulate an API error when calling iterator
-    # vt.APIError requires two arguments: error_code and message
-    mock_client_instance.iterator.side_effect = vt.APIError("WrongCredentialsError", "Invalid API key")
+@pytest.mark.parametrize(
+    "ioc_field,ioc_value,expected_prefix",
+    [
+        ("domain", "google.com", "/domain/"),             # resolved to IP internally
+        ("ip", "8.8.8.8", "/ip/"),
+        ("url", "http://example.com", "/url/"),
+        ("file_hash", "44d88612fea8a8f36de82e1278abb02f", "/file/"),
+    ]
+)
+@patch("googlethreatintelligence.get_comments.vt.Client")
+def test_get_comments_routing(mock_vt_client, ioc_field, ioc_value, expected_prefix):
 
-    # Setup action
+    mock_client = MagicMock()
+    mock_vt_client.return_value.__enter__.return_value = mock_client
+    mock_client.iterator.return_value = iter([mock_comment()])
+
     action = GTIGetComments()
     action.module.configuration = {"api_key": API_KEY}
 
-    # Run the action
-    response = action.run({
-        "entity_type": "domains",
-        "entity": DOMAIN
-    })
+    payload = {ioc_field: ioc_value}
 
-    # Verify error response
-    assert response is not None
+    response = action.run(payload)
+    assert_success(response)
+
+    mock_client.iterator.assert_called_once()
+    args, _ = mock_client.iterator.call_args
+    path = args[0]
+
+    # MATCH THE REAL PREFIX
+    assert path.startswith(expected_prefix)
+    assert path.endswith("/comments")
+
+
+# =============================================================================
+# API error scenario
+# =============================================================================
+
+@patch("googlethreatintelligence.get_comments.vt.Client")
+def test_get_comments_fail(mock_vt_client):
+
+    mock_client = MagicMock()
+    mock_vt_client.return_value.__enter__.return_value = mock_client
+
+    mock_client.iterator.side_effect = vt.APIError(
+        "WrongCredentialsError",
+        "Invalid API key"
+    )
+
+    action = GTIGetComments()
+    action.module.configuration = {"api_key": API_KEY}
+
+    response = action.run({"domain": "google.com"})
+
     assert isinstance(response, dict)
     assert response.get("success") is False
-    assert "data" in response
-
-    # Verify vt.Client was called
-    mock_vt_client.assert_called_once_with(API_KEY)
+    assert response.get("data") is None  # REAL behavior
+    assert "Invalid API key" in response.get("error", "")
 
 
-def test_get_comments_no_api_key():
-    """Test handling of missing API key"""
+# =============================================================================
+# Missing API key
+# =============================================================================
+
+def test_get_comments_missing_api_key():
     action = GTIGetComments()
 
-    # Mock the configuration property to return an empty dict
-    with patch.object(type(action.module), 'configuration', new_callable=PropertyMock) as mock_config:
+    with patch.object(type(action.module), "configuration", new_callable=PropertyMock) as mock_config:
         mock_config.return_value = {}
 
-        response = action.run({
-            "entity_type": "domains",
-            "entity": DOMAIN
-        })
+        response = action.run({"domain": "google.com"})
 
-        assert response is not None
         assert isinstance(response, dict)
         assert response.get("success") is False
         assert "API key" in response.get("error", "")

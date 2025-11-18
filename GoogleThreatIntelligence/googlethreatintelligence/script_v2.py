@@ -176,13 +176,25 @@ class VTAPIConnector:
         self.get_ioc_report(client, "files", self.file_hash)
 
     def scan_url(self, client: vt.Client):
-        """Scan a URL"""
+        """Scan a URL
+        This returns an Analysis ID. The analysis can be retrieved by using the Analysis endpoint.
+        -> https://docs.virustotal.com/reference/analysis
+        
+        """
         try:
-            analysis = client.scan_url(self.url)
+            analysis = client.scan_url(self.url, wait_for_completion=True)
+            while True:
+                get_analysis = client.get_object("/analyses/{}", analysis.id)
+                print(get_analysis.status)
+                if get_analysis.status == "completed":
+                    print("Analysis completed")
+                    print(get_analysis.stats)
+                    print(get_analysis.results)
+                    break
+                time.sleep(30)
             self._add_result(
-                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis_id": analysis.id, "url": self.url}
+                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis": analysis, "url": self.url}
             )
-            return analysis.id
         except vt.APIError as e:
             self._add_result("SCAN_URL", "POST", "/api/v3/urls", "ERROR", None, str(e))
             return None
@@ -359,7 +371,10 @@ class VTAPIConnector:
         """Get vulnerability report"""
         try:
             # Correct path for vulnerability collections
-            vuln = client.get_object(f"/intelligence/vulnerability_collections/{self.cve}")
+            print("Getting vuln", self.cve)
+            #`https://www.virustotal.com/api/v3/collections/vulnerability--cve-2010-3765`
+            vuln = client.get_object(f"/collections/vulnerability--{self.cve}")
+            print("VULN is:", vuln)
 
             vuln_data = {
                 "cve": self.cve,
@@ -384,7 +399,7 @@ class VTAPIConnector:
                 vuln_data,
             )
         except vt.APIError as e:
-            logger.warning(f"Vulnerability report not available (may require Premium API): {e}")
+            logger.warning(f"OUCH! Vulnerability report not available (may require Premium API): {e}")
             self._add_result(
                 "VULN_REPORT",
                 "GET",
@@ -473,25 +488,26 @@ class VTAPIConnector:
             #time.sleep(0.5)
 
             # IOC Reports
-            self.get_ip_report(client)
-            print("IP", self.results[-1].response)
-            time.sleep(0.5)
+            #self.get_ip_report(client)
+            #print("IP", self.results[-1].response)
+            #time.sleep(0.5)
 
-            self.get_domain_report(client)
-            print("DOMAIN", self.results[-1].response)
-            time.sleep(0.5)
+            #self.get_domain_report(client)
+            #print("DOMAIN", self.results[-1].response)
+            #time.sleep(0.5)
 
-            self.get_domain_report(client)
-            print("URL", self.results[-1].response)
-            time.sleep(0.5)
+            #self.get_domain_report(client)
+            #print("URL", self.results[-1].response)
+            #time.sleep(0.5)
 
-            self.get_domain_report(client)
-            print("FILE", self.results[-1].response)
-            time.sleep(0.5)
+            #self.get_domain_report(client)
+            #print("FILE", self.results[-1].response)
+            #time.sleep(0.5)
 
             # Scans
-            #analysis_id = self.scan_url(client)
-            #time.sleep(1)
+            self.scan_url(client)
+            print("URL SCAN", self.results[-1].response)
+            time.sleep(1)
 
             #if analysis_id:
             #    self.get_analysis(client, analysis_id)
@@ -509,6 +525,7 @@ class VTAPIConnector:
             logger.info("Testing iterators (comments, passive DNS, vulnerability associations)...")
 
             #self.get_comments(client)
+            #print("Comment", self.results[-1].response)
             #time.sleep(0.5)
 
             #self.get_file_behaviour(client)
@@ -517,8 +534,9 @@ class VTAPIConnector:
             #self.get_passive_dns(client)
             #time.sleep(0.5)
 
-            #self.get_vulnerability_report(client)
-            #time.sleep(0.5)
+            self.get_vulnerability_report(client)
+            print("VULN REPORT", self.results[-1].response)
+            time.sleep(0.5)
 
             #self.get_vulnerability_associations(client)
 

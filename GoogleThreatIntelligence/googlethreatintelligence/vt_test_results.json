@@ -1,100 +1,25 @@
 [
   {
-    "name": "GET_IOC_REPORT_IP_ADDRESSES",
-    "method": "GET",
-    "endpoint": "/api/v3/ip_addresses/8.8.8.8",
+    "name": "SCAN_URL",
+    "method": "POST",
+    "endpoint": "/api/v3/urls",
     "status": "SUCCESS",
     "response": {
-      "entity_type": "ip_addresses",
-      "entity": "8.8.8.8",
-      "id": "8.8.8.8",
-      "reputation": 528,
-      "last_analysis_stats": {
-        "malicious": 0,
-        "suspicious": 0,
-        "undetected": 33,
-        "harmless": 62,
-        "timeout": 0
-      },
-      "country": "US"
+      "analysis": "analysis u-001deb5ff031b6c98a7379e212bb588f3f1b77d1a2eeb19470c5d118e96e99d1-5a48ae8f",
+      "url": "https://www.sekoia.io/en/homepage/"
     },
     "error": null
   },
   {
-    "name": "GET_IOC_REPORT_DOMAINS",
+    "name": "VULN_REPORT",
     "method": "GET",
-    "endpoint": "/api/v3/domains/google.com",
+    "endpoint": "/api/v3/intelligence/vulnerability_collections/CVE-2021-34527",
     "status": "SUCCESS",
     "response": {
-      "entity_type": "domains",
-      "entity": "google.com",
-      "id": "google.com",
-      "reputation": 657,
-      "last_analysis_stats": {
-        "malicious": 0,
-        "suspicious": 0,
-        "undetected": 27,
-        "harmless": 68,
-        "timeout": 0
-      },
-      "categories": {
-        "alphaMountain.ai": "Telephony (alphaMountain.ai)",
-        "BitDefender": "misc",
-        "Sophos": "search engines",
-        "Forcepoint ThreatSeeker": "internet telephony"
-      }
-    },
-    "error": null
-  },
-  {
-    "name": "GET_IOC_REPORT_DOMAINS",
-    "method": "GET",
-    "endpoint": "/api/v3/domains/google.com",
-    "status": "SUCCESS",
-    "response": {
-      "entity_type": "domains",
-      "entity": "google.com",
-      "id": "google.com",
-      "reputation": 657,
-      "last_analysis_stats": {
-        "malicious": 0,
-        "suspicious": 0,
-        "undetected": 27,
-        "harmless": 68,
-        "timeout": 0
-      },
-      "categories": {
-        "alphaMountain.ai": "Telephony (alphaMountain.ai)",
-        "BitDefender": "misc",
-        "Sophos": "search engines",
-        "Forcepoint ThreatSeeker": "internet telephony"
-      }
-    },
-    "error": null
-  },
-  {
-    "name": "GET_IOC_REPORT_DOMAINS",
-    "method": "GET",
-    "endpoint": "/api/v3/domains/google.com",
-    "status": "SUCCESS",
-    "response": {
-      "entity_type": "domains",
-      "entity": "google.com",
-      "id": "google.com",
-      "reputation": 657,
-      "last_analysis_stats": {
-        "malicious": 0,
-        "suspicious": 0,
-        "undetected": 27,
-        "harmless": 68,
-        "timeout": 0
-      },
-      "categories": {
-        "alphaMountain.ai": "Telephony (alphaMountain.ai)",
-        "BitDefender": "misc",
-        "Sophos": "search engines",
-        "Forcepoint ThreatSeeker": "internet telephony"
-      }
+      "cve": "CVE-2021-34527",
+      "id": "vulnerability--cve-2021-34527",
+      "description": "A vulnerability exists within the Print Spooler in Windows Server 2019 because of an improperly implemented check for the SeLoadDriverPrivilege privilege. This improper check allows a normal user to b...",
+      "cvss": "{'cvssv2_0': {'base_score': 9.0, 'temporal_score': 7.4, 'vector': 'AV:N/AC:L/Au:S/C:C/I:C/A:C/E:F/RL:OF/RC:C'}, 'cvssv3_x': {'base_score': 8.8, 'temporal_score': 8.2, 'vector': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H/E:F/RL:O/RC:C'}}"
     },
     "error": null
   }

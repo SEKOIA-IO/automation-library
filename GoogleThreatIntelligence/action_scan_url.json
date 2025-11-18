@@ -23,65 +23,63 @@
       "data": {
         "type": "object",
         "properties": {
-          "url_id": {
+          "id": {
             "type": "string",
-            "description": "Unique identifier of the URL entry"
+            "description": "Analysis ID"
           },
-          "url": {
+          "type": {
             "type": "string",
-            "format": "uri",
-            "description": "The URL under investigation"
+            "enum": ["analysis"],
+            "description": "Object type"
           },
-          "submitted_date": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp when the URL was first submitted or recorded"
-          },
-          "last_scanned": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of the last scan or check for this URL"
-          },
-          "threat_score": {
-            "type": "number",
-            "description": "Numeric score representing the threat level of the URL (higher = more dangerous)"
-          },
-          "status": {
-            "type": "string",
-            "description": "Current status of the URL (e.g. safe, malicious, unknown)"
-          },
-          "categories": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "List of categories/tags assigned to the URL (e.g. phishing, malware, spam)"
-          },
-          "metadata": {
+          "attributes": {
             "type": "object",
             "properties": {
-              "source": {
-                "type": "string",
-                "description": "Name of the data source or feed for the URL data"
+              "date": {
+                "type": "integer",
+                "description": "Unix timestamp of when the analysis was performed"
               },
-              "notes": {
+              "status": {
                 "type": "string",
-                "description": "Any additional notes or contextual information"
+                "enum": ["queued", "completed"],
+                "description": "Analysis status"
+              },
+              "stats": {
+                "type": "object",
+                "properties": {
+                  "malicious": { "type": "integer" },
+                  "suspicious": { "type": "integer" },
+                  "undetected": { "type": "integer" },
+                  "harmless": { "type": "integer" },
+                  "timeout": { "type": "integer" }
+                },
+                "description": "Detection statistics from security vendors"
+              },
+              "results": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "category": { "type": "string" },
+                    "result": { "type": "string" },
+                    "method": { "type": "string" },
+                    "engine_name": { "type": "string" }
+                  }
+                },
+                "description": "Detailed results from each security vendor"
               }
-            }
-          },
-          "references": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "url": { "type": "string", "format": "uri" },
-                "description": { "type": "string" }
-              },
-              "required": ["url"]
             },
-            "description": "External references related to the URL (e.g. vendor report, blocklist entry)"
+            "required": ["date", "status", "stats"]
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "self": { "type": "string", "format": "uri" },
+              "item": { "type": "string", "format": "uri" }
+            }
           }
         },
-        "required": ["url_id","url","submitted_date","status"]
+        "required": ["id", "type", "attributes"]
       }
     }
   },
