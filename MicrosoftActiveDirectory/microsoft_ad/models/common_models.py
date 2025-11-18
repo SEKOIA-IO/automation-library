@@ -1,6 +1,7 @@
 from pydantic.v1 import BaseModel, Field
 
 from sekoia_automation.module import Module
+from sekoia_automation.asset_connector.models.connector import DefaultAssetConnectorConfiguration
 
 
 class MicrosoftADConfiguration(BaseModel):
@@ -11,3 +12,7 @@ class MicrosoftADConfiguration(BaseModel):
 
 class MicrosoftADModule(Module):
     configuration: MicrosoftADConfiguration
+
+
+class MicrosoftADConnectorConfiguration(DefaultAssetConnectorConfiguration):
+    basedn: str | None = Field(None, description="Active directory basedn")

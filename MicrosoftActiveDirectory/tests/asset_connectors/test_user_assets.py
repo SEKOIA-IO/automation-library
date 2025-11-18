@@ -2,6 +2,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock, MagicMock
 
+from ldap3.core.timezone import OffsetTzInfo
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel, UserTypeStr, UserTypeId, AccountTypeId
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
@@ -81,6 +82,15 @@ def test_compute_enabling_condition_disabled(connector):
     result = connector.compute_enabling_condition(user_attr)
 
     assert result is False
+
+
+def test_convert_last_logon_to_timestamp(connector):
+    last_logon = datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC"))
+
+    timestamp = connector.convert_last_logon_to_timestamp(last_logon)
+
+    expected_timestamp = str(int(datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC")).timestamp()))
+    assert timestamp == expected_timestamp
 
 
 def test_enrich_metadata(connector):

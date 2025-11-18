@@ -25,13 +25,15 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 )
 
 from microsoft_ad.client.ldap_client import LDAPClient
-from microsoft_ad.models.common_models import MicrosoftADModule
+from microsoft_ad.models.common_models import MicrosoftADModule, MicrosoftADConnectorConfiguration
 
 
 class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     module: MicrosoftADModule
+    configuration: MicrosoftADConnectorConfiguration
 
     PRODUCT_NAME: str = "Microsoft Active Directory"
+    VENDOR_NAME: str = "Microsoft"
     PRODUCT_VERSION = "N/A"
     LIMIT: int = 100
     QUERY_ATTRIBUTES: list[str] = [ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES]
@@ -77,12 +79,13 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         """
         product = Product(
             name=self.PRODUCT_NAME,
+            vendor_name=self.VENDOR_NAME,
             version=self.PRODUCT_VERSION,
         )
         metadata = Metadata(product=product, version="1.6.0")
         return metadata
 
-    def compute_enabling_condition(self, user_attribute: dict[str, Any]) -> bool:
+    def compute_enabling_condition(self, user_attributes: dict[str, Any]) -> bool:
         """
         Compute if the user account is enabled based on userAccountControl attribute.
         :param
@@ -90,8 +93,22 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         :return:
             bool: True if the account is enabled, False otherwise.
         """
-        user_account_control = user_attribute.get("userAccountControl", 0)
+        user_account_control = user_attributes.get("userAccountControl", 0)
         return not bool(user_account_control & 2)
+
+    def convert_last_logon_to_timestamp(self, last_logon: datetime.datetime | None) -> str | None:
+        """
+        Convert lastLogon datetime to timestamp.
+        :param
+            last_logon: datetime.datetime | None: Last logon datetime from AD.
+        :return:
+            int | None: Timestamp in seconds or None if invalid.
+        """
+        # Check for invalid or unset lastLogon
+        # In AD, a lastLogon value of 0 or a date before 1601 indicates no logon
+        if not last_logon or last_logon.year <= 1601:
+            return None
+        return str(int(last_logon.timestamp()))
 
     def enrich_metadata(self, user_attributes: dict[str, Any]) -> list[UserEnrichmentObject]:
         """
@@ -103,7 +120,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         """
         data = UserDataObject(
             is_enabled=self.compute_enabling_condition(user_attributes),
-            last_logon=user_attributes.get("lastLogon"),
+            last_logon=self.convert_last_logon_to_timestamp(user_attributes.get("lastLogon")),
             bad_password_count=user_attributes.get("badPwdCount"),
             number_of_logons=user_attributes.get("logonCount"),
         )
@@ -118,9 +135,9 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         :return:
             tuple[UserTypeStr, UserTypeId]: User type string and ID.
         """
-        user_type = user_attributes.get("member_of", [])
-        for scope in user_type:
-            if "admin" in scope.lower():
+        group_memberships = user_attributes.get("member_of", [])
+        for group_dn in group_memberships:
+            if "admin" in group_dn.lower():
                 return UserTypeStr.ADMIN, UserTypeId.ADMIN
         return UserTypeStr.USER, UserTypeId.USER
 
@@ -132,16 +149,16 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         :return:
             list[Group]: List of user groups.
         """
-        scopes_list = user_attributes.get("member_of", [])
+        group_memberships = user_attributes.get("member_of", [])
         user_groups: list[Group] = []
-        for scope in scopes_list:
+        for group_dn in group_memberships:
             group_object = Group(
-                name=scope,
+                name=group_dn,
             )
             user_groups.append(group_object)
         return user_groups
 
-    def user_oscf_object(self, user_attributes: dict[str, Any]) -> UserOCSF:
+    def user_ocsf_object(self, user_attributes: dict[str, Any]) -> UserOCSF:
         """
         Build OCSF User object from LDAP user attributes.
         :param
@@ -154,9 +171,23 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         user_type, user_type_id = self.compute_user_type(user_attributes)
 
         # Build user name
-        first_name = user_attributes.get("firstName")
-        last_name = user_attributes.get("lastName")
-        user_name = f"{first_name} {last_name}".strip() or "Unknown"
+        first_name = user_attributes.get("givenName")
+        last_name = user_attributes.get("sn")
+
+        if first_name and last_name:
+            user_name = f"{first_name} {last_name}".strip()
+        elif first_name:
+            user_name = first_name.strip()
+        elif last_name:
+            user_name = last_name.strip()
+        else:
+            user_name = "Unknown"
+
+        # Parse alternative UID
+        if uid_alt := user_attributes.get("objectGUID") :
+            uid_alt = uid_alt.strip("{}")
+        else:
+            uid_alt = None
 
         # Build account object
         account = Account(
@@ -177,7 +208,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             domain=user_attributes.get("distinguishedName", "Unknown"),
             type_id=user_type_id,
             type=user_type,
-            uid_alt=user_attributes.get("objectGUID", None),
+            uid_alt=uid_alt,
         )
 
     def map_user_fields(self, user: dict[str, Any]) -> UserOCSFModel:
@@ -223,7 +254,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
         # Create paged search generator
         # pagination is handled internally by ldap3
         paged_search = self.ldap_client.extend.standard.paged_search(
-            search_base=self.module.configuration.basedn,
+            search_base=self.configuration.basedn,
             search_filter=self.user_ldap_query,
             attributes=self.QUERY_ATTRIBUTES,
             paged_size=self.LIMIT,
