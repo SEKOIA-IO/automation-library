@@ -31,6 +31,7 @@ from microsoft_ad.models.common_models import MicrosoftADModule, MicrosoftADConn
 class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     module: MicrosoftADModule
     configuration: MicrosoftADConnectorConfiguration
+    _latest_time: str | None
 
     PRODUCT_NAME: str = "Microsoft Active Directory"
     VENDOR_NAME: str = "Microsoft"

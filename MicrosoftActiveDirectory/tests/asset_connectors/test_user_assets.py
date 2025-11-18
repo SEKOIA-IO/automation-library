@@ -11,7 +11,6 @@ from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnec
 @pytest.fixture
 def mock_module():
     module = Mock()
-    module.configuration.basedn = "DC=example,DC=com"
     return module
 
 
@@ -19,6 +18,7 @@ def mock_module():
 def connector(tmp_path, mock_module):
     connector = object.__new__(MicrosoftADUserAssetConnector)
     connector.module = mock_module
+    connector._configuration = mock_module.configuration
     connector._data_path = tmp_path
     connector.log = Mock()
     connector.error = Mock()
@@ -96,7 +96,8 @@ def test_convert_last_logon_to_timestamp(connector):
 
 
 def test_enrich_metadata(connector):
-    user_attr = {"userAccountControl": 512, "lastLogon": "2024-01-01", "badPwdCount": 0, "logonCount": 10}
+    last_logon = datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC"))
+    user_attr = {"userAccountControl": 512, "lastLogon": last_logon, "badPwdCount": 0, "logonCount": 10}
 
     enrichments = connector.enrich_metadata(user_attr)
 
@@ -135,10 +136,10 @@ def test_get_user_groups(connector):
     assert groups[1].name == "CN=Group2,DC=example,DC=com"
 
 
-def test_user_oscf_object(connector):
+def test_user_ocsf_object(connector):
     user_attr = {
-        "firstName": "John",
-        "lastName": "Doe",
+        "givenName": "John",
+        "sn": "Doe",
         "userPrincipalName": "john.doe@example.com",
         "objectSid": "S-1-5-21-123456",
         "objectGUID": "guid-123",
@@ -148,7 +149,7 @@ def test_user_oscf_object(connector):
         "member_of": ["CN=Users,DC=example,DC=com"],
     }
 
-    user_ocsf = connector.user_oscf_object(user_attr)
+    user_ocsf = connector.user_ocsf_object(user_attr)
 
     assert user_ocsf.name == "John Doe"
     assert user_ocsf.uid == "S-1-5-21-123456"
@@ -160,8 +161,8 @@ def test_user_oscf_object(connector):
 def test_map_user_fields(connector):
     user = {
         "attributes": {
-            "firstName": "Jane",
-            "lastName": "Smith",
+            "givenName": "Jane",
+            "sn": "Smith",
             "userPrincipalName": "jane.smith@example.com",
             "objectSid": "S-1-5-21-654321",
             "objectGUID": "guid-456",
@@ -171,7 +172,7 @@ def test_map_user_fields(connector):
             "member_of": [],
             "whenCreated": datetime(2024, 1, 1, 12, 0, 0),
             "userAccountControl": 512,
-            "lastLogon": "2024-01-01",
+            "lastLogon": datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC")),
             "badPwdCount": 0,
             "logonCount": 5,
         }
