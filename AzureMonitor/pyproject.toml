@@ -12,6 +12,7 @@ azure-mgmt-monitor = "^7.0.0"
 azure-monitor-query = "^1.4.1"
 azure-identity = "^1.20.0"
 orjson = "^3.10.15"
+cachetools = "^6.2.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
