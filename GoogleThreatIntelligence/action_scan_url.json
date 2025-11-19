@@ -23,66 +23,23 @@
       "data": {
         "type": "object",
         "properties": {
-          "id": {
+          "analysis_stats": {
             "type": "string",
-            "description": "Analysis ID"
+            "description": "String representation of detection statistics (malicious, suspicious, undetected, harmless, timeout counts)"
           },
-          "type": {
+          "analysis_results": {
             "type": "string",
-            "enum": ["analysis"],
-            "description": "Object type"
+            "description": "String representation of detailed results from each security vendor"
           },
-          "attributes": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "enum": ["queued", "completed"],
-                "description": "Analysis status"
-              },
-              "date": {
-                "type": "integer",
-                "description": "Unix timestamp when the analysis was performed"
-              },
-              "stats": {
-                "type": "object",
-                "properties": {
-                  "malicious": { "type": "integer" },
-                  "suspicious": { "type": "integer" },
-                  "undetected": { "type": "integer" },
-                  "harmless": { "type": "integer" },
-                  "timeout": { "type": "integer" }
-                },
-                "description": "Detection statistics from security vendors"
-              },
-              "results": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "category": { "type": "string" },
-                    "engine_name": { "type": "string" },
-                    "method": { "type": "string" },
-                    "result": { "type": "string" }
-                  }
-                },
-                "description": "Detailed results from each security vendor"
-              }
-            },
-            "required": ["status", "date", "stats"]
-          },
-          "links": {
-            "type": "object",
-            "properties": {
-              "self": { "type": "string", "format": "uri" }
-            },
-            "required": ["self"]
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The URL that was scanned"
           }
         },
-        "required": ["id", "type", "attributes"]
+        "required": ["analysis_stats", "analysis_results", "url"]
       }
-    },
-    "required": ["success", "data"]
+    }
   },
   "slug": "scan_url_in_gti"
 }
