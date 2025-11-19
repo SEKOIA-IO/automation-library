@@ -28,22 +28,22 @@ class GTIGetComments(Action):
                 entity_type = None
                 entity_name = None
                 
-                if self.domain:
+                if domain!="":
                     entity_type = "domains"
-                    entity_name = self.domain
-                elif self.ip:
+                    entity_name = domain
+                elif ip!="":
                     entity_type = "ip_addresses"
-                    entity_name = self.ip
-                elif self.url:
+                    entity_name = ip
+                elif url!="":
                     entity_type = "urls"
-                    entity_name = self.url
-                elif self.file_hash:
+                    entity_name = url
+                elif file_hash!="":
                     entity_type = "files"
-                    entity_name = self.file_hash
+                    entity_name = file_hash
                 else:
                     # Use default domain
                     entity_type = "domains"
-                    entity_name = self.domain
+                    entity_name = domain
 
                 print(f"Getting comments for {entity_type}: {entity_name}")
                 connector.get_comments(client, entity_type)
