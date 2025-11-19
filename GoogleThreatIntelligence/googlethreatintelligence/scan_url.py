@@ -23,26 +23,33 @@ class GTIScanURL(Action):
 
             connector = VTAPIConnector(api_key, url=url, domain="", ip="", file_hash="", cve="")
             with vt.Client(api_key) as client:
-                analysis = connector.scan_url(client)
 
-            if not analysis:
-                return {"success": False, "error": "URL scan failed"}
+                connector.scan_url(client)
+                analysis = connector.results[-1].response
+                print("SCAN URL:", analysis)
 
-            # Convert to JSON-serializable dictionary
-            serializable_analysis = connector._make_serializable({
-                "id": analysis.id,
-                "type": "analysis",
-                "attributes": {
-                    "status": analysis.status,
-                    "date": getattr(analysis, "date", None),
-                    "stats": getattr(analysis, "stats", None)
-                },
-                "links": {
-                    "self": f"/analyses/{analysis.id}"
-                }
-            })
+                # Convert to JSON-serializable dictionary
+                # Convert to JSON-serializable dictionary
+                serializable_analysis = connector._make_serializable({
+                    "id": analysis.id,
+                    "type": "analysis",
+                    "links": {
+                        "self": f"/analyses/{analysis.id}"
+                    },
+                    "attributes": {
+                        "status": analysis.status,
+                        "date": getattr(analysis, "date", None),
+                        "stats": {
+                            "harmless": analysis.stats.get("harmless", 0) if analysis.stats else 0,
+                            "malicious": analysis.stats.get("malicious", 0) if analysis.stats else 0,
+                            "suspicious": analysis.stats.get("suspicious", 0) if analysis.stats else 0,
+                            "undetected": analysis.stats.get("undetected", 0) if analysis.stats else 0,
+                            "timeout": analysis.stats.get("timeout", 0) if analysis.stats else 0
+                        }
+                    }
+                })
 
-            return {"success": True, "data": serializable_analysis}
+                return {"success": True, "data": serializable_analysis}
 
         except Exception as e:
             return {"success": False, "error": str(e)}
