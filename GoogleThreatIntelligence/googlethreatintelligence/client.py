@@ -208,6 +208,7 @@ class VTAPIConnector:
             self._add_result(
                 "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "url": self.url}
             )
+            return analysis 
         except vt.APIError as e:
             self._add_result("SCAN_URL", "POST", "/api/v3/urls", "ERROR", None, str(e))
             return None

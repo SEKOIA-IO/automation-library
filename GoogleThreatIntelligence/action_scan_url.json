@@ -22,22 +22,58 @@
       "success": { "type": "boolean" },
       "data": {
         "type": "object",
+        "description": "VirusTotal Analysis object",
         "properties": {
-          "analysis_stats": {
+          "id": {
             "type": "string",
-            "description": "String representation of detection statistics (malicious, suspicious, undetected, harmless, timeout counts)"
+            "description": "Unique ID of the analysis"
           },
-          "analysis_results": {
+          "type": {
             "type": "string",
-            "description": "String representation of detailed results from each security vendor"
+            "enum": ["analysis"],
+            "description": "Object type"
           },
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "description": "The URL that was scanned"
+          "links": {
+            "type": "object",
+            "properties": {
+              "self": {
+                "type": "string",
+                "description": "API path to retrieve this analysis"
+              }
+            },
+            "required": ["self"]
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Analysis status"
+              },
+              "date": {
+                "type": ["integer", "null"],
+                "description": "Timestamp of the analysis"
+              },
+              "stats": {
+                "type": ["object", "null"],
+                "properties": {
+                  "harmless": { "type": "integer" },
+                  "malicious": { "type": "integer" },
+                  "suspicious": { "type": "integer" },
+                  "undetected": { "type": "integer" },
+                  "timeout": { "type": "integer" }
+                },
+                "required": ["harmless", "malicious", "suspicious", "undetected", "timeout"]
+              },
+              "results": {
+                "type": ["object", "null"],
+                "description": "Per-engine scanning results"
+              }
+            },
+            "required": ["status"]
           }
         },
-        "required": ["analysis_stats", "analysis_results", "url"]
+        "required": ["id", "type", "attributes"]
       }
     }
   },
