@@ -183,17 +183,11 @@ class VTAPIConnector:
         """
         try:
             analysis = client.scan_url(self.url, wait_for_completion=True)
-            while True:
-                get_analysis = client.get_object("/analyses/{}", analysis.id)
-                print(get_analysis.status)
-                if get_analysis.status == "completed":
-                    print("Analysis completed")
-                    print(get_analysis.stats)
-                    print(get_analysis.results)
-                    break
-                time.sleep(30)
+            print("Analysis completed")
+            #print(analysis.stats)
+            #print(analysis.results)
             self._add_result(
-                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis": analysis, "url": self.url}
+                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "url": self.url}
             )
         except vt.APIError as e:
             self._add_result("SCAN_URL", "POST", "/api/v3/urls", "ERROR", None, str(e))
@@ -207,10 +201,10 @@ class VTAPIConnector:
                 raise FileNotFoundError(f"File not found: {file_path}")
 
             with open(file_path, "rb") as f:
-                analysis = client.scan_file(f)
+                analysis = client.scan_file(f, wait_for_completion=True)
 
             self._add_result(
-                "SCAN_FILE", "POST", "/api/v3/files", "SUCCESS", {"analysis_id": analysis.id, "file": file_path}
+                "SCAN_FILE", "POST", "/api/v3/files", "SUCCESS", {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "file": file_path}
             )
             return analysis.id
         except (vt.APIError, FileNotFoundError, IOError) as e:
@@ -510,6 +504,14 @@ class VTAPIConnector:
         with vt.Client(self.api_key) as client:
             logger.info("Testing iterators (comments, passive DNS, vulnerability associations)...")
 
+            self.scan_url(client)
+            print("SCAN URL:", self.results[-1].response)
+            time.sleep(0.5)
+
+            self.scan_file(client)
+            print("SCAN FILE:", self.results[-1].response)
+            time.sleep(0.5)
+
             # Determine which entity to query for comments
             # Priority: domain > ip > url > file_hash
             entity_type = None
@@ -588,7 +590,7 @@ def main():
     # Run tests (optionally provide a test file path)
     # connector.run_all_tests(test_file_path="upload.png")
     #connector.run_all_tests()
-    connector.run_all_tests_smart()
+    connector.run_all_tests_smart("./sample.exe")
 
     # Save results
     connector.save_results()

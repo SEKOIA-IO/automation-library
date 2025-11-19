@@ -195,13 +195,19 @@ class VTAPIConnector:
         self.get_ioc_report(client, "files", self.file_hash)
 
     def scan_url(self, client: vt.Client):
-        """Scan a URL"""
+        """Scan a URL
+        This returns an Analysis ID. The analysis can be retrieved by using the Analysis endpoint.
+        -> https://docs.virustotal.com/reference/analysis
+        
+        """
         try:
             analysis = client.scan_url(self.url, wait_for_completion=True)
+            print("Analysis completed")
+            #print(analysis.stats)
+            #print(analysis.results)
             self._add_result(
-                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis": analysis, "url": self.url}
+                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "url": self.url}
             )
-            return analysis
         except vt.APIError as e:
             self._add_result("SCAN_URL", "POST", "/api/v3/urls", "ERROR", None, str(e))
             return None
