@@ -166,7 +166,7 @@ class AzureActivityLogsConnector(Connector):
             self.configuration.filter_resource_group,
             self.configuration.filter_resource,
             self.configuration.filter_resource_provider,
-            self.configuration.filter_correlation_id
+            self.configuration.filter_correlation_id,
         ]
         num_filters_used = sum(map(bool, filters))
         if num_filters_used > 1:
