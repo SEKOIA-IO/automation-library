@@ -22,18 +22,34 @@ class GTIGetComments(Action):
 
             connector = VTAPIConnector(api_key, domain=domain, ip=ip, url=url, file_hash=file_hash)
             with vt.Client(api_key) as client:
-                if domain != "":
-                    connector.get_comments(client, "domain")
-                elif ip != "":
-                    connector.get_comments(client, "ip")
-                elif url != "":
-                    connector.get_comments(client, "url")
-                elif file_hash != "":
-                    connector.get_comments(client, "file")
+                # Determine which entity to query for comments
+                # Priority: domain > ip > url > file_hash
+                # Only one can be provided at a time because of input constraints
+                entity_type = None
+                entity_name = None
+                
+                if self.domain:
+                    entity_type = "domains"
+                    entity_name = self.domain
+                elif self.ip:
+                    entity_type = "ip_addresses"
+                    entity_name = self.ip
+                elif self.url:
+                    entity_type = "urls"
+                    entity_name = self.url
+                elif self.file_hash:
+                    entity_type = "files"
+                    entity_name = self.file_hash
                 else:
-                    return {"success": False, "error": "At least one of domain, ip, url, or file_hash must be provided"}
+                    # Use default domain
+                    entity_type = "domains"
+                    entity_name = self.domain
+
+                print(f"Getting comments for {entity_type}: {entity_name}")
+                connector.get_comments(client, entity_type)
 
                 result = connector.results[-1]
+                print("Comments:", result.response)
 
             return {"success": result.status == "SUCCESS", "data": result.response, "error": result.error}
 

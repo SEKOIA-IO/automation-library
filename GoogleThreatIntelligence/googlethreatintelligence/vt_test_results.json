@@ -1,25 +1,104 @@
 [
   {
-    "name": "SCAN_URL",
-    "method": "POST",
-    "endpoint": "/api/v3/urls",
-    "status": "SUCCESS",
-    "response": {
-      "analysis": "analysis u-001deb5ff031b6c98a7379e212bb588f3f1b77d1a2eeb19470c5d118e96e99d1-5a48ae8f",
-      "url": "https://www.sekoia.io/en/homepage/"
-    },
-    "error": null
-  },
-  {
-    "name": "VULN_REPORT",
+    "name": "GET_COMMENTS",
     "method": "GET",
-    "endpoint": "/api/v3/intelligence/vulnerability_collections/CVE-2021-34527",
+    "endpoint": "/api/v3/domains/google.com/comments",
     "status": "SUCCESS",
     "response": {
-      "cve": "CVE-2021-34527",
-      "id": "vulnerability--cve-2021-34527",
-      "description": "A vulnerability exists within the Print Spooler in Windows Server 2019 because of an improperly implemented check for the SeLoadDriverPrivilege privilege. This improper check allows a normal user to b...",
-      "cvss": "{'cvssv2_0': {'base_score': 9.0, 'temporal_score': 7.4, 'vector': 'AV:N/AC:L/Au:S/C:C/I:C/A:C/E:F/RL:OF/RC:C'}, 'cvssv3_x': {'base_score': 8.8, 'temporal_score': 8.2, 'vector': 'CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H/E:F/RL:O/RC:C'}}"
+      "comments_count": 10,
+      "entity": "google.com",
+      "comments": [
+        {
+          "text": "[`GOOGLEEDGEAi.ONMiCROSOFT.COM`](https://cloud.google.com/docs)",
+          "date": "2025-10-10 21:46:07+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "Not so sure about this one",
+          "date": "2025-09-23 15:48:32+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "Test comment",
+          "date": "2025-09-05 14:57:11+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "This site impersonates the official Bibit website, disseminating false customer service numbers to deceive customers. Fraudulent agents then solicit personal data, passwords, and OTPs, leading to account takeovers and financial losses. Authentic Bibit customer support is exclusively available at https://bibit.id/. We request the immediate takedown of this fraudulent site to prevent further harm.",
+          "date": "2025-09-02 04:01:21+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "Search engine.",
+          "date": "2025-08-25 22:19:40+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "🔍 Collection: LIVE VT Upload Demo | 📝 Description: 🎯 LIVE VT UPLOAD TEST via caz-vt-feeder - Domain Comment Added | 🏷️ Tags: live-upload-test, caz-vt-feeder | 📡 Source: caz-vt-feeder-system",
+          "date": "2025-07-06 23:59:44+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "🔍 Collection: Live Test Upload | 📝 Description: Test domain for VT comment upload | 🏷️ Tags: test, domain | 📡 Source: caz-vt-feeder-live-test",
+          "date": "2025-07-06 23:53:53+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "🔍 Collection: Test Official Upload | 📝 Description: Test domain upload | 🏷️ Tags: test, domain | 📡 Source: caz-vt-feeder-test",
+          "date": "2025-07-06 23:49:59+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "VIRUSSSSSSSVIRUSSSS GOOGLE BAD",
+          "date": "2025-06-12 23:53:06+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        },
+        {
+          "text": "it's google!!!",
+          "date": "2025-06-10 20:11:20+00:00",
+          "votes": {
+            "positive": 0,
+            "negative": 0
+          },
+          "author": null
+        }
+      ]
     },
     "error": null
   }

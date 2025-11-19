@@ -483,64 +483,65 @@ class VTAPIConnector:
         )
 
         with vt.Client(self.api_key) as client:
-            # Basic connectivity
-            #self.test_connectivity(client)
-            #time.sleep(0.5)
-
-            # IOC Reports
-            #self.get_ip_report(client)
-            #print("IP", self.results[-1].response)
-            #time.sleep(0.5)
-
-            #self.get_domain_report(client)
-            #print("DOMAIN", self.results[-1].response)
-            #time.sleep(0.5)
-
-            #self.get_domain_report(client)
-            #print("URL", self.results[-1].response)
-            #time.sleep(0.5)
-
-            #self.get_domain_report(client)
-            #print("FILE", self.results[-1].response)
-            #time.sleep(0.5)
-
-            # Scans
-            self.scan_url(client)
-            print("URL SCAN", self.results[-1].response)
-            time.sleep(1)
-
-            #if analysis_id:
-            #    self.get_analysis(client, analysis_id)
-            #    time.sleep(0.5)
-
-            # File scan (optional)
-            #if test_file_path:
-            #    file_analysis_id = self.scan_file(client, test_file_path)
-            #    time.sleep(1)
-            #    if file_analysis_id:
-            #        self.get_analysis(client, file_analysis_id)
-            #        time.sleep(0.5)
-
             # Additional data - FULLY test iterators
             logger.info("Testing iterators (comments, passive DNS, vulnerability associations)...")
 
-            #self.get_comments(client)
-            #print("Comment", self.results[-1].response)
-            #time.sleep(0.5)
-
-            #self.get_file_behaviour(client)
-            #time.sleep(0.5)
-
-            #self.get_passive_dns(client)
-            #time.sleep(0.5)
-
-            self.get_vulnerability_report(client)
-            print("VULN REPORT", self.results[-1].response)
+            # Get comments - default to domain
+            self.get_comments(client, "domains")  # Use plural "domains"
+            print("Comment (domain):", self.results[-1].response)
             time.sleep(0.5)
 
-            #self.get_vulnerability_associations(client)
+            # Get vulnerability report
+            self.get_vulnerability_report(client)
+            print("VULN REPORT:", self.results[-1].response)
+            time.sleep(0.5)
 
         logger.info("All tests completed!")
+
+
+    # Alternative version that queries based on what's provided:
+    def run_all_tests_smart(self, test_file_path: Optional[str] = None):
+        """Run all API tests - intelligently choose entity type"""
+        logger.info("Starting VirusTotal API tests...")
+        logger.info(
+            f"Using: domain={self.domain}, ip={self.ip}, url={self.url}, file_hash={self.file_hash}, cve={self.cve}"
+        )
+
+        with vt.Client(self.api_key) as client:
+            logger.info("Testing iterators (comments, passive DNS, vulnerability associations)...")
+
+            # Determine which entity to query for comments
+            # Priority: domain > ip > url > file_hash
+            entity_type = None
+            entity_name = None
+            
+            if self.domain:
+                entity_type = "domains"
+                entity_name = self.domain
+            elif self.ip:
+                entity_type = "ip_addresses"
+                entity_name = self.ip
+            elif self.url:
+                entity_type = "urls"
+                entity_name = self.url
+            elif self.file_hash:
+                entity_type = "files"
+                entity_name = self.file_hash
+            else:
+                # Use default domain
+                entity_type = "domains"
+                entity_name = self.domain
+
+            print(f"Getting comments for {entity_type}: {entity_name}")
+            self.get_comments(client, entity_type)
+            print("Comments:", self.results[-1].response)
+            time.sleep(0.5)
+
+            # Get vulnerability report
+            #self.get_vulnerability_report(client)
+            #print("VULN REPORT:", self.results[-1].response)
+            #time.sleep(0.5)
+            #logger.info("All tests completed!")
 
     def save_results(self, output_file: str = "vt_test_results.json"):
         """Save test results to JSON file"""
@@ -586,7 +587,8 @@ def main():
 
     # Run tests (optionally provide a test file path)
     # connector.run_all_tests(test_file_path="upload.png")
-    connector.run_all_tests()
+    #connector.run_all_tests()
+    connector.run_all_tests_smart()
 
     # Save results
     connector.save_results()
