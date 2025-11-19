@@ -538,7 +538,7 @@ def test_verticle_collector_get_alert_details_wo_permissions(trigger, verticles_
 
 def test_verticles_collector_property_success(trigger):
     """Test successful creation of verticles_collector property"""
-    with requests_mock.Mocker() as mock:
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
             "https://my.fake.sekoia/oauth2/token",
@@ -570,7 +570,9 @@ def test_verticles_collector_property_success(trigger):
 
 def test_verticles_collector_property_403_error(trigger):
     """Test verticles_collector property returns None on 403 error"""
-    with patch.object(trigger.client, "get_edge_types") as mock_get_edge_types:
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), patch.object(
+        trigger.client, "get_edge_types"
+    ) as mock_get_edge_types:
         mock_get_edge_types.side_effect = HTTPError("403 Client Error: Forbidden", response=MagicMock(status_code=403))
 
         collector = trigger.verticles_collector
@@ -582,7 +584,9 @@ def test_verticles_collector_property_other_http_error(trigger):
     """Test verticles_collector property handles other HTTP errors"""
     trigger.log_exception = MagicMock()
 
-    with patch.object(trigger.client, "get_edge_types") as mock_get_edge_types:
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), patch.object(
+        trigger.client, "get_edge_types"
+    ) as mock_get_edge_types:
         mock_get_edge_types.side_effect = HTTPError(
             "500 Server Error: Internal Server Error", response=MagicMock(status_code=500)
         )
@@ -596,7 +600,9 @@ def test_verticles_collector_property_general_exception(trigger):
     """Test verticles_collector property handles general exceptions"""
     trigger.log_exception = MagicMock()
 
-    with patch.object(trigger.client, "get_edge_types") as mock_get_edge_types:
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), patch.object(
+        trigger.client, "get_edge_types"
+    ) as mock_get_edge_types:
         mock_get_edge_types.side_effect = ValueError("Some error")
 
         collector = trigger.verticles_collector
@@ -606,7 +612,7 @@ def test_verticles_collector_property_general_exception(trigger):
 
 def test_verticles_collector_property_cached(trigger):
     """Test that verticles_collector property is cached"""
-    with requests_mock.Mocker() as mock:
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
             "https://my.fake.sekoia/oauth2/token",
@@ -642,7 +648,7 @@ def test_verticles_collector_property_cached(trigger):
 
 def test_verticles_collector_property_with_different_edge_types(trigger):
     """Test verticles_collector property with various edge types"""
-    with requests_mock.Mocker() as mock:
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), requests_mock.Mocker() as mock:
         mock.register_uri(
             "POST",
             "https://my.fake.sekoia/oauth2/token",
@@ -676,6 +682,58 @@ def test_verticles_collector_property_with_different_edge_types(trigger):
             "process_creation",
         }
         assert collector.edge_types == expected_edge_types
+
+
+def test_verticles_collector_property_disabled_by_env_var(trigger):
+    """Test verticles_collector property returns None when disabled by environment variable"""
+    trigger.log = MagicMock()
+
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "false"}):
+        # Clear the cached property if it exists
+        if hasattr(trigger, "_verticles_collector"):
+            del trigger._verticles_collector
+
+        # Access the property
+        result = trigger.verticles_collector
+
+        # Verify it returns None
+        assert result is None
+
+        # Verify the log message was called
+        trigger.log.assert_called_once_with(message="Verticles collection is disabled by configuration", level="info")
+
+
+def test_verticles_collector_property_enabled_by_env_var(trigger):
+    """Test verticles_collector property creates collector when enabled by environment variable"""
+    with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), requests_mock.Mocker() as mock:
+
+        mock.register_uri(
+            "POST",
+            "https://my.fake.sekoia/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.register_uri(
+            "GET",
+            "https://my.fake.sekoia/threatgraph/queries/edge-types/v1",
+            json={"resources": ["child_process", "device", "hunting_lead", "network_connection"]},
+        )
+
+        # Clear the cached property if it exists
+        if hasattr(trigger, "_verticles_collector"):
+            del trigger._verticles_collector
+
+        # Access the property
+        result = trigger.verticles_collector
+
+        # Verify it returns a VerticlesCollector instance
+        assert result is not None
+        assert isinstance(result, VerticlesCollector)
+        assert result.edge_types == {"child_process", "network_connection"}
 
 
 def test_verticle_collector_collect_verticles_from_graph_ids(verticles_collector):
@@ -784,6 +842,7 @@ def test_verticle_collector_collect_verticles_from_graph_ids(verticles_collector
         assert vertex_ids == {vertex["id"] for vertex in verticles}
 
 
+@patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"})
 def test_read_stream_with_verticles(trigger):
     detection_id = "ldt:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:11111111111"
 
@@ -1079,6 +1138,7 @@ def test_read_stream_with_verticles(trigger):
         assert actual_events == expected_events
 
 
+@patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"})
 def test_read_stream_with_verticles_with_alert(trigger):
     trigger.use_alert_api = True
     detection_id = "ldt:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:11111111111"
