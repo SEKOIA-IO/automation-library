@@ -1,0 +1,64 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Azure Activity Logs configuration",
+    "type": "object",
+    "properties": {
+      "subscription_id": {
+        "title": "Subscription ID",
+        "description": "Subscription ID",
+        "type": "string"
+      },
+      "filter_resource": {
+        "title": "Filter - Resource URI",
+        "description": "Filter by resource ID",
+        "type": "string"
+      },
+      "filter_resource_group": {
+        "title": "Filter - Resource Group",
+        "description": "Filter by resource group",
+        "type": "string"
+      },
+      "filter_resource_provider": {
+        "title": "Filter - Resource Provider",
+        "description": "Filter by resource provider",
+        "type": "string"
+      },
+      "filter_correlation_id": {
+        "title": "Filter - Correlation ID",
+        "description": "Filter by correlation ID",
+        "type": "string"
+      },
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      }
+    },
+    "required": [
+      "intake_key",
+      "subscription_id"
+    ],
+    "secrets": [
+    ]
+  },
+  "results": {},
+  "description": "connector playbook to get Azure Activity Logs information",
+  "docker_parameters": "azure_activity_logs",
+  "name": "Collect Azure Activity Logs events",
+  "uuid": "66627aa0-6800-4f54-9550-85463cb622cc"
+}

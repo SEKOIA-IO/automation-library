@@ -6,8 +6,9 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.18.3"
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = {extras = ["all"], version = "^1.21.1"}
+azure-mgmt-monitor = "^7.0.0"
 azure-monitor-query = "^1.4.1"
 azure-identity = "^1.20.0"
 orjson = "^3.10.15"
