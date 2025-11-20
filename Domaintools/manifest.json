@@ -31,7 +31,9 @@
   "description": "DomainTools offers SOC teams advanced domain risk analytics, integrating fresh DNS, Whois data, and x.509 certificates for proactive defensive strategies.",
   "name": "Domaintools",
   "slug": "domaintools",
-  "categories": [],
+  "categories": [
+    "Threat Intelligence"
+  ],
   "uuid": "5c5d30cc-164a-459d-9694-58ba4665320d",
   "version": "0.2.4"
 }
