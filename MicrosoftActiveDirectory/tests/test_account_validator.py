@@ -7,6 +7,7 @@ def test_validates_credentials_when_bind_succeeds():
 
     class LdapClient:
         bound = False
+
         def bind(self):
             self.bound = True
             return True
