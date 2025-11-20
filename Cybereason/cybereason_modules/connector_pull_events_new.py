@@ -5,6 +5,7 @@ import requests
 
 from cybereason_modules.connector_pull_events import CybereasonEventConnector
 from cybereason_modules.constants import MALOP_GET_ALL_ENDPOINT
+from cybereason_modules.helpers import retry_strategy
 from cybereason_modules.logging import get_logger
 from cybereason_modules.exceptions import InvalidResponse
 
@@ -44,39 +45,41 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
         url = urljoin(self.module.configuration.base_url, MALOP_GET_ALL_ENDPOINT)
 
         try:
-            response = self.client.post(url, json=params, timeout=60)
+            for attempt in self.retry:
+                with attempt:
+                    response = self.client.post(url, json=params, timeout=60)
 
-            if not response.ok:
-                logger.error(
-                    "Failed to fetch events from the Cybereason API",
-                    status_code=response.status_code,
-                    reason=response.reason,
-                    error=response.content,
-                )
-                self.log(
-                    message=(
-                        f"Request on Cybereason API to fetch events failed with status {response.status_code}"
-                        f" - {response.reason}"
-                    ),
-                    level="error",
-                )
-                return []
+                    if not response.ok:
+                        logger.error(
+                            "Failed to fetch events from the Cybereason API",
+                            status_code=response.status_code,
+                            reason=response.reason,
+                            error=response.content,
+                        )
+                        self.log(
+                            message=(
+                                f"Request on Cybereason API to fetch events failed with status {response.status_code}"
+                                f" - {response.reason}"
+                            ),
+                            level="error",
+                        )
+                        return []
 
-            else:
-                content = self.parse_response_content(response)
-                malops = content.get("data", {}).get("data")
+                    else:
+                        content = self.parse_response_content(response)
+                        malops = content.get("data", {}).get("data")
 
-                if malops is None:
-                    raise InvalidResponse(response)
+                        if malops is None:
+                            raise InvalidResponse(response)
 
-                # Change back fields names to use the same code
-                malops = adapt_malops_to_legacy(malops)
+                        # Change back fields names to use the same code
+                        malops = adapt_malops_to_legacy(malops)
 
-                self.log(
-                    message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
-                    level="debug",
-                )
-                return malops
+                        self.log(
+                            message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
+                            level="debug",
+                        )
+                        return malops
 
         except requests.Timeout as error:
             raise TimeoutError(url) from error
