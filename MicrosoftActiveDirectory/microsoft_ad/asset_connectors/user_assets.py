@@ -89,8 +89,7 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             vendor_name=self.VENDOR_NAME,
             version=self.PRODUCT_VERSION,
         )
-        metadata = Metadata(product=product, version="1.6.0")
-        return metadata
+        return Metadata(product=product, version="1.6.0")
 
     def compute_enabling_condition(self, user_attributes: dict[str, Any]) -> bool:
         """
