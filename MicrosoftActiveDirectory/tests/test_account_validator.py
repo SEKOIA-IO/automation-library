@@ -6,7 +6,9 @@ def test_validates_credentials_when_bind_succeeds():
     validator = object.__new__(MicrosoftADAccountValidator)
 
     class LdapClient:
+        bound = False
         def bind(self):
+            self.bound = True
             return True
 
     validator.ldap_client = LdapClient()
