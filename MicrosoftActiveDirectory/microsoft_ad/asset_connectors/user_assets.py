@@ -69,8 +69,14 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
     def update_checkpoint(self) -> None:
         if self._latest_time is None:
             return
+
+        # Increment latest_time by 1 millisecond to avoid duplicates
+        to_datetime = datetime.datetime.strptime(self._latest_time, "%Y%m%d%H%M%S.0Z")
+        to_datetime += datetime.timedelta(milliseconds=1)
+        updated_time = to_datetime.strftime("%Y%m%d%H%M%S.0Z")
+
         with self.context as cache:
-            cache["most_recent_datetime"] = self._latest_time
+            cache["most_recent_datetime"] = updated_time
 
     def user_metadata_object(self) -> Metadata:
         """
