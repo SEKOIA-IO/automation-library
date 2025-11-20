@@ -21,7 +21,9 @@ class MicrosoftADAccountValidator(AccountValidator, LDAPClient):
         self.log(message="Start Validation credentials process for Microsoft AD asset connector", level="info")
 
         try:
-            self.ldap_client.bind()
+            # Only bind if not already bound
+            if not self.ldap_client.bound:
+                self.ldap_client.bind()
             self.log(
                 message="Successfully validated credentials for Microsoft AD asset connector",
                 level="info",
