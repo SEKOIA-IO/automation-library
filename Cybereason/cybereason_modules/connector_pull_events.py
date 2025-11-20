@@ -21,7 +21,13 @@ from cybereason_modules.constants import (
     MALOP_INBOX_ENDPOINT,
 )
 from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
-from cybereason_modules.helpers import extract_models_from_malop, merge_suspicions, validate_response_not_login_failure
+from cybereason_modules.helpers import (
+    extract_models_from_malop,
+    merge_suspicions,
+    validate_response_not_login_failure,
+    retry,
+    retry_strategy,
+)
 from cybereason_modules.logging import get_logger
 from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS
 
@@ -47,6 +53,7 @@ class CybereasonEventConnector(Connector):
         super().__init__(*args, **kwargs)
         self.from_date: int = (int(time.time()) - 60) * 1000  # milliseconds
         self._stop_event = Event()  # Event to notify we must stop the thread
+        self.retry = retry_strategy()
 
         # Register signal to terminate thread
         signal.signal(signal.SIGINT, self.exit)
@@ -95,32 +102,35 @@ class CybereasonEventConnector(Connector):
         url = urljoin(self.module.configuration.base_url, MALOP_INBOX_ENDPOINT)
         try:
             logger.debug("Fetching malops", url=url, params=params)
-            response = self.client.post(url, json=params, timeout=60)
+            for attempt in self.retry:
+                with attempt:
+                    response = self.client.post(url, json=params, timeout=60)
 
-            if not response.ok:
-                self.log(
-                    message=(
-                        f"Request on Cybereason API to fetch events failed with status {response.status_code}"
-                        f" - {response.reason}"
-                    ),
-                    level="error",
-                )
-                return []
-            else:
-                content = self.parse_response_content(response)
-                malops = content.get("malops")
+                    if not response.ok:
+                        self.log(
+                            message=(
+                                f"Request on Cybereason API to fetch events failed with status {response.status_code}"
+                                f" - {response.reason}"
+                            ),
+                            level="error",
+                        )
+                        return []
+                    else:
+                        content = self.parse_response_content(response)
+                        malops = content.get("malops")
 
-                if malops is None:
-                    raise InvalidResponse(response)
+                        if malops is None:
+                            raise InvalidResponse(response)
 
-                self.log(
-                    message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
-                    level="debug",
-                )
-                return malops
+                        self.log(
+                            message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
+                            level="debug",
+                        )
+                        return malops
         except requests.Timeout as error:
             raise TimeoutError(url) from error
 
+    @retry()
     def get_malop_detail(self, malop_uuid: str) -> dict[str, Any] | None:
         """
         Retrieve the detail of a malop
@@ -150,6 +160,7 @@ class CybereasonEventConnector(Connector):
             )
             return malop
 
+    @retry()
     def get_edr_malop_suspicions(
         self, malop_uuid: str, requested_type: str
     ) -> dict[tuple[str, str], dict[str, Any]] | None:
