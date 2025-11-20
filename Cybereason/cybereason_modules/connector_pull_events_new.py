@@ -82,3 +82,5 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
 
         except requests.Timeout as error:
             raise TimeoutError(url) from error
+
+        return []

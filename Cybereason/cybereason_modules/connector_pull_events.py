@@ -130,6 +130,8 @@ class CybereasonEventConnector(Connector):
         except requests.Timeout as error:
             raise TimeoutError(url) from error
 
+        return []
+
     @retry()
     def get_malop_detail(self, malop_uuid: str) -> dict[str, Any] | None:
         """
