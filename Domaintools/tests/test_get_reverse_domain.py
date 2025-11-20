@@ -11,17 +11,17 @@ import hashlib
 
 DOMAIN: str = "google.com"
 HOST = "https://api.domaintools.com/"
-#URI = f"v1/iris-investigate/"  # Base URI without domain
+# URI = f"v1/iris-investigate/"  # Base URI without domain
 URI = f"/v1/{DOMAIN}/hosting-history/"
 API_KEY = "LOREM"
 API_USERNAME = "IPSUM"
 TIMESTAMP = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+
 def sign(api_username, api_key, timestamp, uri):
     params = "".join([api_username, timestamp, uri])
-    return hmac.new(
-        api_key.encode("utf-8"), params.encode("utf-8"), hashlib.sha1
-    ).hexdigest()
+    return hmac.new(api_key.encode("utf-8"), params.encode("utf-8"), hashlib.sha1).hexdigest()
+
 
 signature = sign(API_USERNAME, API_KEY, TIMESTAMP, URI)
 
@@ -32,50 +32,43 @@ DT_OUTPUT: dict[str, Any] = {
         "domain_name": "google.com",
         "ip_history": [
             {
-            "domain": "GOOGLE.COM",
-            "post_ip": "216.239.57.99",
-            "pre_ip": None,
-            "action": "N",
-            "actiondate": "2004-04-24",
-            "action_in_words": "New"
+                "domain": "GOOGLE.COM",
+                "post_ip": "216.239.57.99",
+                "pre_ip": None,
+                "action": "N",
+                "actiondate": "2004-04-24",
+                "action_in_words": "New",
             },
             {
-            "domain": "GOOGLE.COM",
-            "post_ip": "66.102.7.99",
-            "pre_ip": "216.239.57.99",
-            "action": "C",
-            "actiondate": "2004-05-08",
-            "action_in_words": "Change"
-            }
-        ]
+                "domain": "GOOGLE.COM",
+                "post_ip": "66.102.7.99",
+                "pre_ip": "216.239.57.99",
+                "action": "C",
+                "actiondate": "2004-05-08",
+                "action_in_words": "Change",
+            },
+        ],
     }
 }
 
 
 def test_get_reverse_domain_action_success():
     action = DomaintoolsReverseDomain()
-    action.module.configuration = {
-        "api_key": API_KEY,
-        "api_username": API_USERNAME,
-        "host": HOST
-    }
+    action.module.configuration = {"api_key": API_KEY, "api_username": API_USERNAME, "host": HOST}
 
     with requests_mock.Mocker() as mock_requests:
         # Mock the actual URL that will be called (including domain parameter)
-        mock_requests.get(
-            urllib.parse.urljoin(HOST, URI),
-            json=DT_OUTPUT  # Return the expected response
-        )
+        mock_requests.get(urllib.parse.urljoin(HOST, URI), json=DT_OUTPUT)  # Return the expected response
         result = action.run({"domain": DOMAIN})
 
         assert result is not None
-        
+
         # Parse the result - it might be nested in a wrapper
         data = json.loads(result)
-        
+
         # Debug: print the actual structure
         print("Result structure:", json.dumps(data, indent=2))
-        
+
         # Adjust assertion based on your actual return structure
         # If your action wraps the response, you might need something like:
         # assert data["Domain Reputation"]["results"][0]["domain"] == DOMAIN
@@ -86,23 +79,19 @@ def test_get_reverse_domain_action_success():
 
 def test_get_reverse_domain_action_api_error():
     action = DomaintoolsReverseDomain()
-    action.module.configuration = {
-        "api_key": API_KEY,
-        "api_username": API_USERNAME,
-        "host": HOST
-    }
+    action.module.configuration = {"api_key": API_KEY, "api_username": API_USERNAME, "host": HOST}
 
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             urllib.parse.urljoin(HOST, URI),
             status_code=500,  # Return an error status
-            json={"error": {"message": "Internal Server Error"}}
+            json={"error": {"message": "Internal Server Error"}},
         )
         result = action.run({"domain": DOMAIN})
-        
+
         # Debug: print the actual result
         print("Error result:", result)
-        
+
         # Parse and check for error
         if result:
             data = json.loads(result)
@@ -111,5 +100,5 @@ def test_get_reverse_domain_action_api_error():
         else:
             # If your action returns None/False on error
             assert not result
-            
+
         assert mock_requests.call_count == 1
