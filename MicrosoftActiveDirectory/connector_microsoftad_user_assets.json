@@ -35,6 +35,11 @@
         "default": 1000,
         "title": "Chunk Size",
         "description": "Number of assets to send in each batch to Sekoia.io"
+      },
+      "basedn": {
+        "type": "string",
+        "title": "Base DN",
+        "description": "The base distinguished name (DN) to use for LDAP queries"
       }
     },
     "required": [
