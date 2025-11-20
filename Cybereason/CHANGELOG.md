@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-06-06 - 1.13.3
+
+### Fixed
+
+- Add retries on transient HTTP errors
+
+### Changed
+
+- Update sekoia sdk to 1.21.1
+
 ## 2024-06-06 - 1.13.2
 
 ### Fixed
