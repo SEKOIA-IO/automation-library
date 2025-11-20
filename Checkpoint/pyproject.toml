@@ -10,7 +10,7 @@ python = ">=3.10,<3.12"
 orjson = "^3.10.18"
 python-dateutil = "^2.9.0.post0"
 sekoia-automation-sdk = {extras = ["all"], version = "^1.18.3"}
-aiohttp = "^3.12.8"
+aiohttp = "^3.12.14"
 loguru = "^0.7.3"
 async-lru = "^2.0.2"
 aiolimiter = "^1.2.1"
