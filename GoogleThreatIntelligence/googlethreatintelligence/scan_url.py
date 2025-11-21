@@ -29,22 +29,21 @@ class GTIScanURL(Action):
                 print("SCAN URL:", analysis)
 
                 # Convert to JSON-serializable dictionary
-                # Convert to JSON-serializable dictionary
                 serializable_analysis = connector._make_serializable({
-                    "id": analysis.id,
+                    "id": analysis.get("id"),
                     "type": "analysis",
                     "links": {
-                        "self": f"/analyses/{analysis.id}"
+                        "self": f"/analyses/{analysis.get('id')}"
                     },
                     "attributes": {
-                        "status": analysis.status,
-                        "date": getattr(analysis, "date", None),
+                        "status": analysis.get("status"),
+                        "date": analysis.get("date"),
                         "stats": {
-                            "harmless": analysis.stats.get("harmless", 0) if analysis.stats else 0,
-                            "malicious": analysis.stats.get("malicious", 0) if analysis.stats else 0,
-                            "suspicious": analysis.stats.get("suspicious", 0) if analysis.stats else 0,
-                            "undetected": analysis.stats.get("undetected", 0) if analysis.stats else 0,
-                            "timeout": analysis.stats.get("timeout", 0) if analysis.stats else 0
+                            "harmless": analysis.get("stats", {}).get("harmless", 0),
+                            "malicious": analysis.get("stats", {}).get("malicious", 0),
+                            "suspicious": analysis.get("stats", {}).get("suspicious", 0),
+                            "undetected": analysis.get("stats", {}).get("undetected", 0),
+                            "timeout": analysis.get("stats", {}).get("timeout", 0)
                         }
                     }
                 })
