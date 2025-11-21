@@ -44,10 +44,10 @@ def assert_iterator_called(mock_client):
 @pytest.mark.parametrize(
     "ioc_field,ioc_value,expected_prefix",
     [
-        ("domain", "google.com", "/domain/"),             # resolved to IP internally
-        ("ip", "8.8.8.8", "/ip/"),
-        ("url", "http://example.com", "/url/"),
-        ("file_hash", "44d88612fea8a8f36de82e1278abb02f", "/file/"),
+        ("domain", "google.com", "/domains/"),             # resolved to IP internally
+        ("ip", "8.8.8.8", "/ip_addresses/"),
+        ("url", "http://example.com", "/urls/"),
+        ("file_hash", "44d88612fea8a8f36de82e1278abb02f", "/files/"),
     ]
 )
 @patch("googlethreatintelligence.get_comments.vt.Client")

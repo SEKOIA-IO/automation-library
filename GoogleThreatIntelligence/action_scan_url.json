@@ -22,58 +22,66 @@
       "success": { "type": "boolean" },
       "data": {
         "type": "object",
-        "description": "VirusTotal Analysis object",
+        "description": "VirusTotal URL analysis result",
         "properties": {
-          "id": {
+          "url": {
             "type": "string",
-            "description": "Unique ID of the analysis"
+            "description": "The URL submitted by the user"
           },
-          "type": {
-            "type": "string",
-            "enum": ["analysis"],
-            "description": "Object type"
-          },
-          "links": {
+          "analysis_stats": {
             "type": "object",
+            "description": "Summary statistics of the URL scan",
             "properties": {
-              "self": {
-                "type": "string",
-                "description": "API path to retrieve this analysis"
-              }
+              "harmless": { "type": "integer" },
+              "malicious": { "type": "integer" },
+              "suspicious": { "type": "integer" },
+              "undetected": { "type": "integer" },
+              "timeout": { "type": "integer" },
+              "failure": { "type": "integer" },
+              "confirmed-timeout": { "type": "integer" },
+              "type-unsupported": { "type": "integer" }
             },
-            "required": ["self"]
+            "required": [
+              "harmless",
+              "malicious",
+              "suspicious",
+              "undetected",
+              "timeout",
+              "failure",
+              "confirmed-timeout",
+              "type-unsupported"
+            ]
           },
-          "attributes": {
+          "analysis_results": {
             "type": "object",
-            "properties": {
-              "status": {
-                "type": "string",
-                "description": "Analysis status"
-              },
-              "date": {
-                "type": ["integer", "null"],
-                "description": "Timestamp of the analysis"
-              },
-              "stats": {
-                "type": ["object", "null"],
-                "properties": {
-                  "harmless": { "type": "integer" },
-                  "malicious": { "type": "integer" },
-                  "suspicious": { "type": "integer" },
-                  "undetected": { "type": "integer" },
-                  "timeout": { "type": "integer" }
+            "description": "Per-engine detailed results",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "confirmed-timeout",
+                    "timeout",
+                    "failure",
+                    "harmless",
+                    "undetected",
+                    "suspicious",
+                    "malicious",
+                    "type-unsupported"
+                  ]
                 },
-                "required": ["harmless", "malicious", "suspicious", "undetected", "timeout"]
+                "engine_name": { "type": "string" },
+                "engine_version": { "type": ["string", "null"] },
+                "engine_update": { "type": ["string", "null"] },
+                "method": { "type": ["string", "null"] },
+                "result": { "type": ["string", "null"] }
               },
-              "results": {
-                "type": ["object", "null"],
-                "description": "Per-engine scanning results"
-              }
-            },
-            "required": ["status"]
+              "required": ["category", "engine_name"]
+            }
           }
         },
-        "required": ["id", "type", "attributes"]
+        "required": ["url", "analysis_stats", "analysis_results"]
       }
     }
   },

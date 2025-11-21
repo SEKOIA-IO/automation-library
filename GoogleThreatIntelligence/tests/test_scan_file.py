@@ -21,7 +21,17 @@ def test_scan_file_success(mock_connector_class, mock_vt_client):
         # Mock VTAPIConnector instance
         mock_connector_instance = MagicMock()
         mock_connector_class.return_value = mock_connector_instance
-        mock_connector_instance.scan_file.return_value = "analysis_1234"
+        
+        # Create a mock Result object that will be in connector.results
+        mock_result = MagicMock()
+        mock_analysis = MagicMock()
+        mock_analysis.stats = {"malicious": 0, "suspicious": 0, "harmless": 50}
+        mock_analysis.results = {"scanner1": "clean", "scanner2": "clean"}
+        mock_result.response = mock_analysis
+        
+        # Mock the results list - scan_file() appends to this list
+        mock_connector_instance.results = [mock_result]
+        mock_connector_instance.scan_file.return_value = None  # scan_file returns None
 
         # Mock vt.Client context manager
         mock_client_instance = MagicMock()
@@ -37,10 +47,12 @@ def test_scan_file_success(mock_connector_class, mock_vt_client):
         # === Assertions ===
         assert response is not None
         assert response["success"] is True
-        assert response["analysis_id"] == "analysis_1234"
-        assert response["file_path"] == tmp_path
+        assert "data" in response
+        assert response["data"]["file_path"] == tmp_path
+        assert "analysis_stats" in response["data"]
+        assert "analysis_results" in response["data"]
 
-        mock_connector_class.assert_called_once_with(API_KEY)
+        mock_connector_class.assert_called_once_with(API_KEY, url="", domain="", ip="", file_hash="", cve="")
         mock_connector_instance.scan_file.assert_called_once_with(mock_client_instance, tmp_path)
         mock_vt_client.assert_called_once_with(API_KEY)
     finally:
@@ -104,7 +116,40 @@ def test_scan_file_api_error(mock_connector_class, mock_vt_client):
         assert response["success"] is False
         assert "API quota exceeded" in response["error"]
 
-        mock_connector_instance.scan_file.assert_called_once()
+        mock_connector_instance.scan_file.assert_called_once_with(mock_client_instance, tmp_path)
         mock_vt_client.assert_called_once_with(API_KEY)
+    finally:
+        os.unlink(tmp_path)
+
+
+# === ADDITIONAL TEST: Empty results list ===
+@patch("googlethreatintelligence.scan_file.vt.Client")
+@patch("googlethreatintelligence.scan_file.VTAPIConnector")
+def test_scan_file_empty_results(mock_connector_class, mock_vt_client):
+    """Test behavior when connector.results is empty (edge case)"""
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_path = tmp_file.name
+        tmp_file.write(b"dummy content")
+
+    try:
+        # Mock connector with empty results
+        mock_connector_instance = MagicMock()
+        mock_connector_instance.results = []  # Empty results list
+        mock_connector_instance.scan_file.return_value = None
+        mock_connector_class.return_value = mock_connector_instance
+
+        # Mock vt.Client context
+        mock_client_instance = MagicMock()
+        mock_vt_client.return_value.__enter__.return_value = mock_client_instance
+
+        action = GTIScanFile()
+        action.module.configuration = {"api_key": API_KEY}
+
+        response = action.run({"file_path": tmp_path})
+
+        # This should cause an IndexError which gets caught by the general exception handler
+        assert response is not None
+        assert response["success"] is False
+        assert "error" in response
     finally:
         os.unlink(tmp_path)

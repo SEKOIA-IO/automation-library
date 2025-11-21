@@ -26,29 +26,9 @@ class GTIScanURL(Action):
 
                 connector.scan_url(client)
                 analysis = connector.results[-1].response
-                print("SCAN URL:", analysis)
+                print(f"API call response: {analysis}")  # Debugging line
 
-                # Convert to JSON-serializable dictionary
-                serializable_analysis = connector._make_serializable({
-                    "id": analysis.get("id"),
-                    "type": "analysis",
-                    "links": {
-                        "self": f"/analyses/{analysis.get('id')}"
-                    },
-                    "attributes": {
-                        "status": analysis.get("status"),
-                        "date": analysis.get("date"),
-                        "stats": {
-                            "harmless": analysis.get("stats", {}).get("harmless", 0),
-                            "malicious": analysis.get("stats", {}).get("malicious", 0),
-                            "suspicious": analysis.get("stats", {}).get("suspicious", 0),
-                            "undetected": analysis.get("stats", {}).get("undetected", 0),
-                            "timeout": analysis.get("stats", {}).get("timeout", 0)
-                        }
-                    }
-                })
-
-                return {"success": True, "data": serializable_analysis}
+            return {"success": True, "data": {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "url": url}}
 
         except Exception as e:
             return {"success": False, "error": str(e)}

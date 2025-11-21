@@ -26,7 +26,7 @@ if API_KEY == "REDACTED":
 
 
 @dataclass
-class TestResult:
+class Result:
     """Structure to hold test results"""
 
     name: str
@@ -61,7 +61,7 @@ class VTAPIConnector:
             cve: CVE ID to query (optional, defaults to CVE-2021-34527)
         """
         self.api_key = api_key
-        self.results: List[TestResult] = []
+        self.results: List[Result] = []
 
         # Use provided values when available, otherwise fall back to sensible defaults
         self.domain = domain or "google.com"
@@ -81,7 +81,7 @@ class VTAPIConnector:
         if response is not None:
             response = self._make_serializable(response)
 
-        result = TestResult(name, method, endpoint, status, response, error)
+        result = Result(name, method, endpoint, status, response, error)
         self.results.append(result)
 
         if error:
@@ -508,7 +508,7 @@ class VTAPIConnector:
             print("SCAN URL:", self.results[-1].response)
             time.sleep(0.5)
 
-            self.scan_file(client)
+            self.scan_file(client, test_file_path)
             print("SCAN FILE:", self.results[-1].response)
             time.sleep(0.5)
 
@@ -590,7 +590,7 @@ def main():
     # Run tests (optionally provide a test file path)
     # connector.run_all_tests(test_file_path="upload.png")
     #connector.run_all_tests()
-    connector.run_all_tests_smart("./sample.exe")
+    connector.run_all_tests_smart("sample.exe")
 
     # Save results
     connector.save_results()

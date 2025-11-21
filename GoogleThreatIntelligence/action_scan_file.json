@@ -22,73 +22,66 @@
       "success": { "type": "boolean" },
       "data": {
         "type": "object",
+        "description": "VirusTotal FILE analysis result",
         "properties": {
-          "file_id": {
+          "file_path": {
             "type": "string",
-            "description": "Unique identifier for the file entry"
+            "description": "The FILE PATH submitted by the user"
           },
-          "file_name": {
-            "type": "string",
-            "description": "Original file name (if available)"
-          },
-          "file_hash": {
-            "type": "string",
-            "description": "Hash of the file (e.g. SHA-256) used to uniquely identify it"
-          },
-          "submitted_date": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp when the file was submitted or ingested"
-          },
-          "last_scanned": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of the last scan/analysis of the file"
-          },
-          "threat_score": {
-            "type": "number",
-            "description": "Numeric threat rating for the file (higher = more dangerous)"
-          },
-          "status": {
-            "type": "string",
-            "description": "Current status (e.g. benign, malicious, unknown)"
-          },
-          "file_size": {
-            "type": "integer",
-            "description": "File size in bytes"
-          },
-          "file_type": {
-            "type": "string",
-            "description": "MIME type or detected file type"
-          },
-          "metadata": {
+          "analysis_stats": {
             "type": "object",
+            "description": "Summary statistics of the FILE scan",
             "properties": {
-              "source": {
-                "type": "string",
-                "description": "Data source or feed name"
-              },
-              "tags": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "List of tags or labels applied to the file"
-              }
-            }
+              "harmless": { "type": "integer" },
+              "malicious": { "type": "integer" },
+              "suspicious": { "type": "integer" },
+              "undetected": { "type": "integer" },
+              "timeout": { "type": "integer" },
+              "failure": { "type": "integer" },
+              "confirmed-timeout": { "type": "integer" },
+              "type-unsupported": { "type": "integer" }
+            },
+            "required": [
+              "harmless",
+              "malicious",
+              "suspicious",
+              "undetected",
+              "timeout",
+              "failure",
+              "confirmed-timeout",
+              "type-unsupported"
+            ]
           },
-          "references": {
-            "type": "array",
-            "items": {
+          "analysis_results": {
+            "type": "object",
+            "description": "Per-engine detailed results",
+            "additionalProperties": {
               "type": "object",
               "properties": {
-                "url": { "type": "string", "format": "uri" },
-                "description": { "type": "string" }
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "confirmed-timeout",
+                    "timeout",
+                    "failure",
+                    "harmless",
+                    "undetected",
+                    "suspicious",
+                    "malicious",
+                    "type-unsupported"
+                  ]
+                },
+                "engine_name": { "type": "string" },
+                "engine_version": { "type": ["string", "null"] },
+                "engine_update": { "type": ["string", "null"] },
+                "method": { "type": ["string", "null"] },
+                "result": { "type": ["string", "null"] }
               },
-              "required": ["url"]
-            },
-            "description": "External references (e.g. vendor advisory, sandbox report link)"
+              "required": ["category", "engine_name"]
+            }
           }
         },
-        "required": ["file_id","file_hash","submitted_date","status"]
+        "required": ["file_path", "analysis_stats", "analysis_results"]
       }
     }
   },

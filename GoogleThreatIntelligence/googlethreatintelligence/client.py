@@ -45,7 +45,7 @@ if API_KEY == "REDACTED":
 
 
 @dataclass
-class TestResult:
+class Result:
     """Structure to hold test results"""
 
     name: str
@@ -80,7 +80,7 @@ class VTAPIConnector:
             cve: CVE ID to query (optional, defaults to CVE-2021-34527)
         """
         self.api_key = api_key
-        self.results: List[TestResult] = []
+        self.results: List[Result] = []
 
         # Use provided values when available, otherwise fall back to sensible defaults
         self.domain = domain or "google.com"
@@ -92,6 +92,13 @@ class VTAPIConnector:
         # Headers used by the internal _request helper
         self.headers = {"x-apikey": self.api_key}
 
+    """
+    Usage Example:
+
+    connector._add_result(
+                "SCAN_URL", "POST", "/api/v3/urls", "SUCCESS", {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "url": self.url}
+                )
+    """
     def _add_result(
         self, name: str, method: str, endpoint: str, status: str, response: Any, error: Optional[str] = None
     ):
@@ -100,7 +107,7 @@ class VTAPIConnector:
         if response is not None:
             response = self._make_serializable(response)
 
-        result = TestResult(name, method, endpoint, status, response, error)
+        result = Result(name, method, endpoint, status, response, error)
         self.results.append(result)
 
         if error:
@@ -220,13 +227,12 @@ class VTAPIConnector:
                 raise FileNotFoundError(f"File not found: {file_path}")
 
             with open(file_path, "rb") as f:
-                analysis = client.scan_file(f)
+                analysis = client.scan_file(f, wait_for_completion=True)
+                print("Analysis completed")
 
             self._add_result(
                 "SCAN_FILE", "POST", "/api/v3/files", "SUCCESS", {"analysis_id": analysis.id, "file": file_path}
             )
-            return analysis
-
         except (vt.APIError, FileNotFoundError, IOError) as e:
             self._add_result("SCAN_FILE", "POST", "/api/v3/files", "ERROR", None, str(e))
             return None
@@ -293,30 +299,33 @@ class VTAPIConnector:
                 f"May require Premium API: {str(e)}",
             )
 
-    def get_comments(self, client: vt.Client, entity_type: str = "domains"):
+    def get_comments(self, client: vt.Client, entity_type: str, entity: str):
         """Get comments for an entity - FULLY tests the iterator"""
         try:
-            entity = self.domain if entity_type == "domains" else self.ip
+            # Special case: URLs must be base64url encoded without "=" padding
+            if entity_type == "urls":
+                import base64
+                entity = base64.urlsafe_b64encode(entity.encode()).decode().strip("=")
 
-            # IMPORTANT: Fully consume the iterator to test it properly
-            comments_it = client.iterator(f"/{entity_type}/{entity}/comments", limit=10)
+            path = f"/{entity_type}/{entity}/comments"
+
+            comments_it = client.iterator(path, limit=10)
 
             comments = []
             for comment in comments_it:
-                comment_data = {
-                    "text": comment.text if hasattr(comment, "text") else None,
-                    "date": str(comment.date) if hasattr(comment, "date") else None,
-                    "votes": (
-                        {
-                            "positive": comment.votes.get("positive", 0) if hasattr(comment, "votes") else 0,
-                            "negative": comment.votes.get("negative", 0) if hasattr(comment, "votes") else 0,
-                        }
-                        if hasattr(comment, "votes")
-                        else {"positive": 0, "negative": 0}
-                    ),
-                    "author": comment.author if hasattr(comment, "author") else None,
-                }
-                comments.append(comment_data)
+                comments.append(
+                    {
+                        "text": getattr(comment, "text", None),
+                        "date": str(getattr(comment, "date", None)),
+                        "votes": {
+                            "positive": getattr(getattr(comment, "votes", {}), "positive", 0)
+                            if hasattr(comment, "votes") else 0,
+                            "negative": getattr(getattr(comment, "votes", {}), "negative", 0)
+                            if hasattr(comment, "votes") else 0,
+                        },
+                        "author": getattr(comment, "author", None),
+                    }
+                )
 
             self._add_result(
                 "GET_COMMENTS",
@@ -326,10 +335,16 @@ class VTAPIConnector:
                 {"comments_count": len(comments), "entity": entity, "comments": comments},
             )
 
-            logger.info(f"Retrieved and processed {len(comments)} comments")
-
         except vt.APIError as e:
-            self._add_result("GET_COMMENTS", "GET", f"/api/v3/{entity_type}/{entity}/comments", "ERROR", None, str(e))
+            self._add_result(
+                "GET_COMMENTS",
+                "GET",
+                f"/api/v3/{entity_type}/{entity}/comments",
+                "ERROR",
+                None,
+                str(e)
+            )
+
 
     def get_passive_dns(self, client: vt.Client):
         """Get passive DNS resolutions - FULLY tests the iterator"""
