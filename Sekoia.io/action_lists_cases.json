@@ -186,24 +186,6 @@
                           "format": "uuid",
                           "x-nullable": true,
                           "description": "UUID of the priority associated to the case"
-                        },
-                        "number_of_alerts": {
-                          "type": "integer"
-                        },
-                        "alerts": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "uuid": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "title": {
-                                "type": "string"
-                              }
-                            }
-                          }
                         }
                     }
                 }
