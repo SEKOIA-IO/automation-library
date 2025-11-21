@@ -11,9 +11,11 @@ from sentinelone_module.singularity.connectors import SingularityIdentityConnect
 from sentinelone_module.threats.create_threat_note import CreateThreatNoteAction
 from sentinelone_module.threats.get_malwares import GetMalwaresAction
 from sentinelone_module.threats.update_threat_incident import UpdateThreatIncidentAction
+from sentinelone_module.account_validator import SentinelOneAccountValidator
 
 if __name__ == "__main__":
     module = SentinelOneModule()
+    module.register_account_validator(SentinelOneAccountValidator)
     module.register(IsolateEndpointAction, "sentinelone_agents_endpoint_isolation")
     module.register(DeisolateEndpointAction, "sentinelone_agents_endpoint_deisolation")
     module.register(QueryDeepVisibilityAction, "sentinelone_deep_visibility_query")
