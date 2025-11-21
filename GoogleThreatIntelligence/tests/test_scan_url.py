@@ -22,8 +22,14 @@ def test_scan_url_success(mock_connector_class, mock_vt_client):
     
     # Create mock result that will be in connector.results list
     mock_result = MagicMock()
-    mock_result.response = mock_analysis
-    
+
+    # /!\ A dict that matches what scan_url.py expects
+    mock_result.response = {
+    "analysis_stats": mock_analysis.stats,
+    "analysis_results": mock_analysis.results,
+    "url": TEST_URL
+    }
+
     # Set up the results list to contain our mock result
     mock_connector_instance.results = [mock_result]
     

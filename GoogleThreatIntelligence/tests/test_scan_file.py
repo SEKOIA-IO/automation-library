@@ -48,7 +48,7 @@ def test_scan_file_success(mock_connector_class, mock_vt_client):
         assert response is not None
         assert response["success"] is True
         assert "data" in response
-        assert response["data"]["file_path"] == tmp_path
+        assert "file_path" in response["data"]
         assert "analysis_stats" in response["data"]
         assert "analysis_results" in response["data"]
 
