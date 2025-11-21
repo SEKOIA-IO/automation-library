@@ -231,7 +231,7 @@ class VTAPIConnector:
                 print("Analysis completed")
 
             self._add_result(
-                "SCAN_FILE", "POST", "/api/v3/files", "SUCCESS", {"analysis_id": analysis.id, "file": file_path}
+                "SCAN_FILE", "POST", "/api/v3/files", "SUCCESS", {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "file_path": file_path}
             )
         except (vt.APIError, FileNotFoundError, IOError) as e:
             self._add_result("SCAN_FILE", "POST", "/api/v3/files", "ERROR", None, str(e))

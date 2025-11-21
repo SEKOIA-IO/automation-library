@@ -29,7 +29,13 @@ class GTIScanFile(Action):
                 analysis = connector.results[-1].response
                 print(f"API call response: {analysis}")  # Debugging line
 
-            return {"success": True, "data": {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "file_path": file_path}}
-
+                return {
+                    "success": True,
+                    "data": {
+                        "analysis_stats": analysis.get("analysis_stats"),
+                        "analysis_results": analysis.get("analysis_results"),
+                        "file_path": analysis.get("file_path", file_path)
+                    }
+                }
         except Exception as e:
             return {"success": False, "error": str(e)}

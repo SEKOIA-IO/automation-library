@@ -28,7 +28,14 @@ class GTIScanURL(Action):
                 analysis = connector.results[-1].response
                 print(f"API call response: {analysis}")  # Debugging line
 
-            return {"success": True, "data": {"analysis_stats": analysis.stats, "analysis_results": analysis.results, "url": url}}
+                return {
+                    "success": True,
+                    "data": {
+                        "analysis_stats": analysis.get("analysis_stats"),
+                        "analysis_results": analysis.get("analysis_results"),
+                        "url": analysis.get("url", url)
+                    }
+                }
 
         except Exception as e:
             return {"success": False, "error": str(e)}
