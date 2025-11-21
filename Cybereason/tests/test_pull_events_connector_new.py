@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from cybereason_modules import CybereasonModule
@@ -199,6 +200,18 @@ def test_fetch_malops(trigger, mock_cybereason_api):
     assert trigger.fetch_malops(0, 9999999) == [EPP_MALOP, EDR_MALOP]
 
 
+def test_fetch_malops_with_retries(trigger, mock_cybereason_api):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/mmng/v2/malops",
+        [
+            {"exc": requests.exceptions.ConnectTimeout},
+            {"status_code": 200, "json": {"data": {"data": [EPP_MALOP, EDR_MALOP]}}},
+        ],
+    )
+
+    assert trigger.fetch_malops(0, 9999999) == [EPP_MALOP, EDR_MALOP]
+
+
 def test_fetch_malops_empty(trigger, mock_cybereason_api):
     mock_cybereason_api.post(
         "https://fake.cybereason.net/rest/mmng/v2/malops",
@@ -239,6 +252,20 @@ def test_get_edr_malop_suspicions(trigger, mock_cybereason_api, suspicions):
 
     assert malop_suspicions is not None
     assert suspicions == consolidate_suspicions(malop_suspicions)
+
+
+def test_get_edr_malop_suspicions_with_retries(trigger, mock_cybereason_api, suspicions):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/crimes/unified",
+        [
+            {"exc": requests.exceptions.ConnectTimeout},
+            {"status_code": 200, "json": EDR_MALOP_SUSPICIONS_RESULTS},
+        ],
+    )
+
+    malop_suspicions = trigger.get_edr_malop_suspicions("11.1882697476172655933", "MalopProcess")
+
+    assert malop_suspicions is not None
 
 
 def test_get_edr_malop_suspicions_with_no_result(trigger, mock_cybereason_api):
