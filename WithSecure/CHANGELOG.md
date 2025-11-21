@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+## 2025-10-20 - 2.16.3
+
+### Fixed
+
+- Fix parsing error for unsupported characters in event  
+
 ## 2025-10-15 - 2.16.2
 
 ### Fixed

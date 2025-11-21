@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-11-14 - 1.4.5
+
+### Added
+
+- Add the ability to define the accuracy of the time helper
+- Add logs to the Wait action
+
+## 2024-11-04 - 1.4.4
+
+### Added
+
+- Add a time helper to sleep duration more accurately
+
+### Fixed
+
+- Use the accurate sleep in the Wait action
+
 ## 2024-10-18 - 1.4.1
 
 ### Changed

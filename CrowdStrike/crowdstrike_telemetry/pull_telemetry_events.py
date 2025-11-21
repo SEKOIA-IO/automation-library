@@ -1,21 +1,19 @@
 """Contains connector, configuration and module."""
 
-import json
-import asyncio
-import time
+import os
+from asyncio import BoundedSemaphore
 from functools import cached_property
-from gzip import decompress
+from typing import Any, AsyncGenerator, Generator, Optional
 
-from loguru import logger
-from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.connector import DefaultConnectorConfiguration
+import orjson
+from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
+from aws_helpers.utils import AsyncReader, normalize_s3_key
+from connectors.metrics import INCOMING_EVENTS
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
 
-from aws.s3 import S3Configuration, S3Wrapper
-from aws.sqs import SqsConfiguration, SqsWrapper
+from crowdstrike_telemetry import CrowdStrikeTelemetryModule
 
-from . import CrowdStrikeTelemetryModule
-from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS, DISCARDED_EVENTS
-from .schemas import CrowdStrikeNotificationSchema
+from .metrics import DISCARDED_EVENTS
 
 EXCLUDED_EVENT_ACTIONS = [
     "SensorHeartbeat",
@@ -40,24 +38,40 @@ EXCLUDED_EVENT_ACTIONS = [
 ]
 
 
-class CrowdStrikeTelemetryConfig(DefaultConnectorConfiguration):
-    queue_name: str
+class CrowdStrikeTelemetryConnectorConfig(AwsS3QueuedConfiguration):
+    # All commented fields are inherited from AwsS3QueuedConfiguration under the same names
+    # chunk_size: int = 10000
+    # frequency: int = 60
+    # queue_name: str
+    # intake_server: str | None = None
+    # intake_key: str
+
+    # this fields are also present in AwsS3QueuedConfiguration but they are not present in the json config
+    # sqs_frequency: int = 10
+    # delete_consumed_messages: bool = True
+
     queue_url: str | None = None
-    chunk_size: int | None = None
-    frequency: int | None = None
-    delete_consumed_messages: bool | None = None
     is_fifo: bool | None = None
 
 
-class CrowdStrikeTelemetryConnector(AsyncConnector):
-    """CrowdStrikeTelemetryConnector class to work with logs."""
+class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
+    """Implementation of CrowdStrikeTelemetryConnector."""
 
     name = "CrowdStrikeTelemetryConnector"
+    configuration: CrowdStrikeTelemetryConnectorConfig
     module: CrowdStrikeTelemetryModule
-    configuration: CrowdStrikeTelemetryConfig
+
+    def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
+        """Init CrowdStrikeTelemetryConnector."""
+        super().__init__(*args, **kwargs)
+
+        self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
+        self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
+        self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
+        self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
     @cached_property
-    def sqs_wrapper(self) -> SqsWrapper:
+    def sqs_wrapper(self) -> SqsWrapper:  # pragma: no cover
         """
         Get SQS wrapper.
 
@@ -65,144 +79,146 @@ class CrowdStrikeTelemetryConnector(AsyncConnector):
             SqsWrapper:
         """
         config = SqsConfiguration(
-            **self.module.configuration.dict(exclude_unset=True, exclude_none=True),
-            **self.configuration.dict(exclude_unset=True, exclude_none=True),
+            frequency=self.configuration.sqs_frequency,
+            delete_consumed_messages=self.configuration.delete_consumed_messages,
+            queue_url=self.configuration.queue_url,
+            queue_name=self.configuration.queue_name,
+            aws_access_key_id=self.module.configuration.aws_access_key,
+            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
+            aws_region=self.module.configuration.aws_region_name,
         )
 
         return SqsWrapper(config)
 
-    @cached_property
-    def s3_wrapper(self) -> S3Wrapper:
+    # Override function in order to get correct bucket and file path.
+    # Schema should look like this:
+    # {
+    #     "cid": "uuid",
+    #     "timestamp": 1662307838018,
+    #     "fileCount": 1,
+    #     "totalSize": 13090,
+    #     "bucket": "bucket-name",
+    #     "pathPrefix": "path-prefix",
+    #     "files": [
+    #         {
+    #             "path": "path-to-file",
+    #             "size": 13090,
+    #             "checksum": "checksum"
+    #         }
+    #     ]
+    # }
+    def _get_object_from_notification(self, sqs_message: dict[str, Any]) -> Generator[tuple[str, str], None, None]:
         """
-        Get SQS wrapper.
-
-        Returns:
-            SqsWrapper:
+        Extract the file information from message
         """
-        config = S3Configuration(**self.module.configuration.dict(exclude_unset=True, exclude_none=True))
+        bucket = sqs_message.get("bucket")
+        if bucket is None:  # pragma: no cover
+            raise ValueError("Bucket is undefined", sqs_message)
 
-        return S3Wrapper(config)
+        for file in sqs_message.get("files", []):
+            if file is None:  # pragma: no cover
+                raise ValueError("File is undefined", sqs_message)
 
-    async def get_crowdstrike_events(self) -> list[str]:
+            path = file.get("path")
+            if path is None:  # pragma: no cover
+                raise ValueError("File path is undefined", sqs_message)
+
+            yield bucket, path
+
+    async def next_batch(self, previous_processing_end: float | None = None) -> tuple[int, list[int]]:
         """
-        Run CrowdStrikeTelemetry.
+        Get next batch of messages.
 
-        Returns:
-            list[str]:
-        """
-        result: list[str] = []
-
-        async with self.sqs_wrapper.receive_messages(delete_consumed_messages=True, max_messages=10) as messages:
-            validated_sqs_messages = []
-            for message in messages:
-                try:
-                    validated_sqs_messages.append(CrowdStrikeNotificationSchema.parse_raw(message))
-                except Exception:  # pragma: no cover
-                    logger.warning("Invalid notification message {invalid_message}", invalid_message=message)
-
-            if validated_sqs_messages:  # pragma: no cover
-                logger.info("Found {sqs_messages} entries in sqs", sqs_messages=len(validated_sqs_messages))
-
-                s3_data_list = await asyncio.gather(
-                    *[
-                        self.process_s3_file(file.path, record.bucket)
-                        for record in validated_sqs_messages
-                        for file in record.files
-                    ]
-                )
-
-                # We have list of lists her, so we should flatten it
-                for records in s3_data_list:
-                    result.extend(records)
-            else:  # pragma: no cover
-                logger.info("No messages in sqs")
-
-            self.log(level="INFO", message=f"Found {len(result)} records to process")
-
-            pushed_ids: list[str] = await self.push_data_to_intakes(result)
-
-            return pushed_ids
-
-    async def process_s3_file(self, key: str, bucket: str | None = None) -> list[str]:
-        """
-        Process S3 objects.
-
-        If it is a compressed file, it will be decompressed, otherwise it will be read as json.
+        Contains main logic of the connector.
 
         Args:
-            key: str
-            bucket: str | None
+            previous_processing_end: float | None
 
         Returns:
-            list[dict]:
-
-        Raises:
-            Exception: Unexpected result type
+            tuple[int, list[int]]:
         """
-        logger.info(f"Reading file {key}")
+        records = []
+        result = 0
+        timestamps_to_log: list[int] = []
 
-        async with self.s3_wrapper.read_key(key, bucket) as content:
-            result_content = content
-            if content[0:2] == b"\x1f\x8b":
-                logger.info(f"Decompressing file by key {key}")
-                result_content = decompress(content)
-        result = []
-        for line in result_content.decode("utf-8").split("\n"):
-            if len(line.strip()) > 0:
+        continue_receiving = True
+
+        while continue_receiving:
+            async with self.sqs_wrapper.receive_messages(max_messages=self.sqs_max_messages) as messages:
+                message_records = []
+
+                if not messages:
+                    continue_receiving = False
+
+                for message_data in messages:
+                    message, message_timestamp = message_data
+
+                    timestamps_to_log.append(message_timestamp)
+                    try:
+                        # This are custom CrowdStrike messages, we just parse them as it is
+                        message_records.append(orjson.loads(message))
+                    except ValueError as e:  # pragma: no cover
+                        self.log_exception(e, message=f"Invalid JSON in message.\nInvalid message is: {message}")
+
+                if not message_records:
+                    continue_receiving = False
+
+                INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_records))
+                for record in message_records:
+                    try:
+                        # This is only one difference between this connector and the base S3 one
+                        for s3_bucket, s3_key in self._get_object_from_notification(record):
+                            normalized_key = normalize_s3_key(s3_key)
+
+                            async with (
+                                self.s3_fetch_concurrency_sem,
+                                self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
+                            ):
+                                async for event in self._parse_content(stream):
+                                    records.append(event)
+
+                                    if len(records) >= self.limit_of_events_to_push:
+                                        continue_receiving = False
+                                        result += len(await self.push_data_to_intakes(events=records))
+                                        records = []
+
+                    except Exception as e:  # pragma: no cover
+                        self.log(
+                            message=f"Failed to fetch content of {record}: {str(e)}",
+                            level="warning",
+                        )
+
+            if not records:
+                continue_receiving = False
+
+        if records:  # pragma: no cover
+            result += len(await self.push_data_to_intakes(events=records))
+
+        return result, timestamps_to_log
+
+    async def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:
+        """
+        Parse content from S3 bucket.
+
+        Args:
+            stream: AsyncReader
+
+        Returns:
+             Generator:
+        """
+        records: AsyncGenerator[bytes, None] = (line.rstrip(b"\n") async for line in stream)
+
+        async for record in records:
+            if len(record) > 0:  # pragma: no cover
                 try:
-                    event = json.loads(line)
+                    json_record = orjson.loads(record)
                     if (
-                        event.get("event_simpleName") is None
-                        or event.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
+                        json_record.get("event_simpleName") is None
+                        or json_record.get("event_simpleName") in EXCLUDED_EVENT_ACTIONS
                     ):
                         DISCARDED_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
                         continue
-                    result.append(line)
-                except Exception as any_exception:
-                    logger.error(
-                        "failed to read line from event stream",
-                        line=line,
-                        stream_root_url=self.stream_root_url,
-                    )
-                    self.log_exception(any_exception)
-        return result
 
-    def run(self) -> None:  # pragma: no cover
-        """Runs Crowdstrike Telemetry."""
-        previous_processing_end = None
-
-        while self.running:
-            try:
-                loop = asyncio.get_event_loop()
-
-                while self.running:
-                    processing_start = time.time()
-                    if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                            processing_start - previous_processing_end
-                        )
-
-                    message_ids: list[str] = loop.run_until_complete(self.get_crowdstrike_events())
-                    processing_end = time.time()
-                    OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
-
-                    log_message = "No records to forward"
-                    if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
-
-                    logger.info(log_message)
-                    self.log(message=log_message, level="info")
-                    logger.info(log_message)
-                    logger.info(
-                        "Processing took {processing_time} seconds",
-                        processing_time=(processing_end - processing_start),
-                    )
-
-                    FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
-                        processing_end - processing_start
-                    )
-
-                    previous_processing_end = processing_end
-
-            except Exception as e:
-                logger.error("Error while running CrowdStrike Telemetry: {error}", error=e)
+                    yield record.decode("utf-8")
+                except Exception as e:
+                    self.log(message=f"Failed to parse a record: {str(e)}", level="warning")

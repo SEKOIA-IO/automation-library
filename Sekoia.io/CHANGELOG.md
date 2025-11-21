@@ -7,11 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-10-17 - 2.68.13
+## 2025-10-17 - 2.68.17
 
 ### Added
 
 - Added action to list alerts
+- 
+## 2025-11-18  - 2.68.16
+
+### Changed
+
+- Upgrade dependencies: Sekoia-automation-SDK 1.21.1
+
+## 2025-11-17 - 2.68.15
+
+### Changed
+
+- Deprecate old `Get Asset V2` action in favor of a new `Get Asset V2` action.
+
+## 2025-11-04  - 2.68.14
+
+### Fixed
+
+- Add retries on Connection Timeouts when getting events from a search job
+
+## 2025-10-28  - 2.68.13
+
+### Changed
+
+- Add more logs to the `Push events to Intake` action
+
+### Fixed
+
+- Change the way to initialize and release the PoolExecutor in the `Push events to Intake` action
+- Compare event length as bytes length instead of string length
 
 ## 2025-09-25  - 2.68.12
 

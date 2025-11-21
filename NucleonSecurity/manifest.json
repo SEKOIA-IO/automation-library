@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Nucleon Security",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Nucleon Security is a cybersecurity company specializing in next-generation Detection & Response solutions. Its technologies combine Zero-Trust principles, AI-driven threat analysis, and deep system visibility to protect organizations against advanced and emerging cyber threats. Designed for both cloud and on-premises environments, Nucleon Security delivers real-time protection, automated response, enabling enterprises and governments to strengthen their cyber resilience and meet the highest regulatory standards.",
+  "name": "Nucleon Security",
+  "uuid": "366bc067-d712-447b-8f6b-159f222d45ed",
+  "version": "1.0.0",
+  "slug": "nucleonsecurity",
+  "categories": [
+    "Endpoint"
+  ]
+}

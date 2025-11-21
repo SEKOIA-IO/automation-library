@@ -7,7 +7,7 @@
     "title": "ApplicationArguments",
     "type": "object",
     "properties": {
-      "id": {
+      "objectId": {
         "title": "Id",
         "description": "Object ID of the app.",
         "type": "string"

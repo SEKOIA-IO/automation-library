@@ -137,6 +137,7 @@ def graph_api_client(session_faker: Faker) -> GraphApi:
     dir_audits.with_url.return_value.get = AsyncMock()
     client_mock.audit_logs.directory_audits = dir_audits
 
+    client._credentials = MagicMock()
     client._client = client_mock
 
     return client

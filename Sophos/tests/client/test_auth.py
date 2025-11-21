@@ -31,7 +31,7 @@ def test_get_credentials():
             f"{api_host_url}/whoami/v1",
             status_code=200,
             json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "id": "00000000-0000-0000-0000-000000000000",
                 "idType": "tenant",
                 "apiHosts": {
                     "global": "https://api.central.sophos.com",
@@ -48,8 +48,8 @@ def test_get_credentials():
         assert credentials.expires_at < (current_dt + timedelta(seconds=1850))
         assert credentials.authorization == "Bearer foo-token"
         assert credentials.tenancy_type == "tenant"
-        assert credentials.tenancy_id == "ea106f70-96b1-4851-bd31-e4395ea407d2"
-        assert credentials.tenancy_header == {"X-Tenant-ID": "ea106f70-96b1-4851-bd31-e4395ea407d2"}
+        assert credentials.tenancy_id == "00000000-0000-0000-0000-000000000000"
+        assert credentials.tenancy_header == {"X-Tenant-ID": "00000000-0000-0000-0000-000000000000"}
 
 
 def test_get_credentials_request_new_token_only_when_needed():
@@ -74,7 +74,7 @@ def test_get_credentials_request_new_token_only_when_needed():
             f"{api_host_url}/whoami/v1",
             status_code=200,
             json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "id": "00000000-0000-0000-0000-000000000000",
                 "idType": "tenant",
                 "apiHosts": {
                     "global": "https://api.central.sophos.com",
@@ -138,7 +138,7 @@ def test_failing_authentication():
             f"{api_host_url}/whoami/v1",
             status_code=200,
             json={
-                "id": "ea106f70-96b1-4851-bd31-e4395ea407d2",
+                "id": "00000000-0000-0000-0000-000000000000",
                 "idType": "tenant",
                 "apiHosts": {
                     "global": "https://api.central.sophos.com",
@@ -185,6 +185,55 @@ def test_failing_whoami():
             auth.get_credentials()
 
             assert str(excinfo.value) == "The Whoami call failed. Check your client_id and client_secret."
+
+
+def test_get_credentials_with_temporary_failing_whoami():
+    api_host_url = "https://api-eu.central.sophos.com"
+    authorization_url = "https://id.sophos.com/api/v2/oauth2/token"
+    client_id = "foo"
+    client_secret = "bar"
+    auth = SophosApiAuthentication(api_host_url, authorization_url, client_id, client_secret)
+
+    with requests_mock.Mocker() as mock:
+        mock.register_uri(
+            "POST",
+            authorization_url,
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "scope": "our-scope",
+                "expires_in": 1799,
+            },
+        )
+
+        mock.get(
+            f"{api_host_url}/whoami/v1",
+            [
+                {"status_code": 502},
+                {
+                    "status_code": 200,
+                    "json": {
+                        "id": "00000000-0000-0000-0000-000000000000",
+                        "idType": "tenant",
+                        "apiHosts": {
+                            "global": "https://api.central.sophos.com",
+                            "dataRegion": "https://api-eu02.central.sophos.com",
+                        },
+                    },
+                },
+            ],
+        )
+
+        current_dt = datetime.utcnow()
+        credentials = auth.get_credentials()
+        assert credentials.token_type == "bearer"
+        assert credentials.access_token == "foo-token"
+        assert credentials.expires_at > (current_dt + timedelta(seconds=1750))
+        assert credentials.expires_at < (current_dt + timedelta(seconds=1850))
+        assert credentials.authorization == "Bearer foo-token"
+        assert credentials.tenancy_type == "tenant"
+        assert credentials.tenancy_id == "00000000-0000-0000-0000-000000000000"
+        assert credentials.tenancy_header == {"X-Tenant-ID": "00000000-0000-0000-0000-000000000000"}
 
 
 @pytest.mark.skipif("{'SOPHOS_CLIENT_ID', 'SOPHOS_CLIENT_SECRET'}.issubset(os.environ.keys()) == False")

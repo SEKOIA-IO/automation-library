@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
-from aws_helpers.account_validator import AwsAccountValidator, AwsCredentialsError
+from aws_helpers.account_validator import AwsAccountValidator
 from aws_helpers.base import AWSModule, AWSConfiguration
 
 
@@ -49,12 +49,18 @@ class TestAwsAccountValidator:
         mock_client.get_login_profile.side_effect = MockNoSuchEntityException("NoSuchEntity error")
         mock_session.return_value.client.return_value = mock_client
 
-        # Act & Assert
-        with pytest.raises(AwsCredentialsError) as exc_info:
-            self.validator.validate()
+        # Mock the error method to track calls
+        self.validator.error = Mock()
 
-        assert "The AWS credentials are invalid or do not have the required permissions" in str(exc_info.value)
-        assert "NoSuchEntity error" in str(exc_info.value)
+        # Act
+        result = self.validator.validate()
+
+        # Assert
+        assert result is False
+        self.validator.error.assert_called_once()
+        error_message = self.validator.error.call_args[0][0]
+        assert "The AWS credentials are invalid or do not have the required permissions" in error_message
+        assert "NoSuchEntity error" in error_message
 
     @patch("aws_helpers.account_validator.boto3.Session")
     def test_validate_service_failure_exception(self, mock_session):
@@ -69,12 +75,18 @@ class TestAwsAccountValidator:
         mock_client.get_login_profile.side_effect = MockServiceFailureException("ServiceFailure error")
         mock_session.return_value.client.return_value = mock_client
 
-        # Act & Assert
-        with pytest.raises(AwsCredentialsError) as exc_info:
-            self.validator.validate()
+        # Mock the error method to track calls
+        self.validator.error = Mock()
 
-        assert "AWS service failure occurred during validation" in str(exc_info.value)
-        assert "ServiceFailure error" in str(exc_info.value)
+        # Act
+        result = self.validator.validate()
+
+        # Assert
+        assert result is False
+        self.validator.error.assert_called_once()
+        error_message = self.validator.error.call_args[0][0]
+        assert "AWS service failure occurred during validation" in error_message
+        assert "ServiceFailure error" in error_message
 
     @patch("aws_helpers.account_validator.boto3.Session")
     def test_validate_generic_exception(self, mock_session):
@@ -86,9 +98,15 @@ class TestAwsAccountValidator:
         mock_client.get_login_profile.side_effect = Exception("Generic error")
         mock_session.return_value.client.return_value = mock_client
 
-        # Act & Assert
-        with pytest.raises(AwsCredentialsError) as exc_info:
-            self.validator.validate()
+        # Mock the error method to track calls
+        self.validator.error = Mock()
 
-        assert "An error occurred during AWS account validation" in str(exc_info.value)
-        assert "Generic error" in str(exc_info.value)
+        # Act
+        result = self.validator.validate()
+
+        # Assert
+        assert result is False
+        self.validator.error.assert_called_once()
+        error_message = self.validator.error.call_args[0][0]
+        assert "An error occurred during AWS account validation" in error_message
+        assert "Generic error" in error_message

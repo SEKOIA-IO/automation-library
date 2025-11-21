@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-03 - 1.3.11
+
+### Changed
+
+- Improve descriptions of the scan actions
+
+## 2025-10-31 - 1.3.10
+
+### Fixed
+
+- Fix XQL query status comparison to handle case-insensitive status values
+
 ## 2025-09-17 - 1.3.9
 
 ### Added

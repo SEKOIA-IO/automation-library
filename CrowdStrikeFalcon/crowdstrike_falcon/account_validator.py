@@ -43,10 +43,13 @@ class CrowdstrikeFalconAccountValidator(AccountValidator):
             return True
         except requests.HTTPError as http_err:
             self.log(message=f"HTTP error validating crowdstrike credentials: {http_err}", level="error")
+            self.error(message=f"Failed to validate crowdstrike credentials due to HTTP error: {http_err}")
             return False
         except requests.RequestException as req_err:
             self.log(message=f"Network error when contacting crowdstrike: {req_err}", level="error")
+            self.error(message=f"Failed to validate crowdstrike credentials due to network error: {req_err}")
             return False
         except Exception as error:
             self.log_exception(error, message="Failed to validate crowdstrike credentials")
+            self.error(message="Failed to validate crowdstrike credentials due to unknown error")
             return False

@@ -1,10 +1,11 @@
 """Unit tests for OktaUserAssetConnector."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from okta_modules.asset_connector.user_assets import OktaUserAssetConnector
+import pytest
 from sekoia_automation.asset_connector.models.ocsf.user import Group, UserOCSFModel
+
+from okta_modules.asset_connector.user_assets import OktaUserAssetConnector
 
 
 class TestOktaUserAssetConnector:

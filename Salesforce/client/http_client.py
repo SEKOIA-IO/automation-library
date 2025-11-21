@@ -25,6 +25,31 @@ class LogType(Enum):
     HOURLY = "Hourly"
 
 
+class Error(Exception):
+    """Base class for exceptions in this module"""
+
+
+class ApiError(Error):
+    pass
+
+
+class AuthenticationError(ApiError):
+    def __init__(
+        self,
+        code: str,
+        message: str | None,
+    ):
+        self.code = code
+        self.message = message
+
+    @classmethod
+    def from_http_response(cls, errors: list[dict[str, Any]]) -> "AuthenticationError":
+        return cls(
+            ",".join([error["errorCode"] for error in errors]),
+            ".".join([error["message"] for error in errors]),
+        )
+
+
 class SalesforceHttpClient(object):
     """Class for Salesforce Http client."""
 
@@ -194,6 +219,18 @@ class SalesforceHttpClient(object):
         Raises:
             Exception: in case if response status is not 200
         """
+        # First of all check auth errors
+        if response.status == 401:
+            try:
+                error_response = await response.json()
+            except Exception:
+                error_msg = await response.text()
+                raise AuthenticationError("unknown", error_msg)
+
+            error = AuthenticationError.from_http_response(error_response)
+
+            raise error
+
         if response.status != 200:
             try:
                 error_response = await response.json()
@@ -205,6 +242,28 @@ class SalesforceHttpClient(object):
             error_msg = ",".join(["Error {errorCode}: {message}".format(**error) for error in error_response])
 
             raise Exception(error_msg)
+
+    @asynccontextmanager
+    async def _get_request(self, url: URL) -> AsyncGenerator[ClientResponse, None]:
+        # First attempt with current token
+        # If auth error occurs, refresh token and retry once again
+        try:
+            headers = await self._request_headers()
+            async with self.session() as session:
+                async with session.get(url, headers=headers, json={}) as response:
+                    await self._handle_error_response(response)
+
+                    yield response
+        except AuthenticationError:
+            refresher = await self._get_token_refresher()
+            await refresher.refresh_token()
+
+            headers = await self._request_headers()
+            async with self.session() as session:
+                async with session.get(url, headers=headers, json={}) as response:
+                    await self._handle_error_response(response)
+
+                    yield response
 
     async def get_log_files(
         self, start_from: datetime | None = None, log_type: LogType | None = None
@@ -227,15 +286,11 @@ class SalesforceHttpClient(object):
         query = self._log_files_query(start_from, log_type)
 
         url = self._request_url_with_query(query)
-        headers = await self._request_headers()
 
-        async with self.session() as session:
-            async with session.get(url, headers=headers, json={}) as response:
-                await self._handle_error_response(response)
-
-                result = SalesforceEventLogFilesResponse(**await response.json())
-                if not result.done:
-                    raise ValueError("Salesforce response is not done")
+        async with self._get_request(url) as response:
+            result = SalesforceEventLogFilesResponse(**await response.json())
+            if not result.done:
+                raise ValueError("Salesforce response is not done")
 
         logger.info("Got {0} log files from Salesforce. Start date is {1}", len(result.records), start_from)
 
@@ -272,47 +327,42 @@ class SalesforceHttpClient(object):
         Returns:
             Tuple[str, str]:
         """
-        headers = await self._request_headers()
-        url = "{0}{1}".format(self.base_url, log_file.LogFile)
+        url = URL("{0}{1}".format(self.base_url, log_file.LogFile))
         _tmp_dir = temp_dir if temp_dir is not None else "/tmp"
 
         logger.info("Start to process log file from Salesforce. Log file is {0}", log_file.Id)
+        async with self._get_request(url) as response:
+            content_length = int(log_file.LogFileLength)
 
-        async with self.session() as session:
-            async with session.get(url, headers=headers) as response:
-                await self._handle_error_response(response)
+            logger.info(
+                """
+                    Log file info:
+                     logfile Id: {file_id}
+                     logfile Url: {url}
+                     content length: {content_length}
+                     maximum log file size to process in memory: {size_to_process}
+                     chunk size: {chunk_size}
+                     always persist to file: {persist_to_file}
+                 """,
+                file_id=log_file.Id,
+                url=log_file.LogFile,
+                content_length=content_length,
+                size_to_process=size_to_process,
+                chunk_size=chunk_size,
+                persist_to_file=persist_to_file,
+            )
 
-                content_length = int(log_file.LogFileLength)
+            save_to_file = persist_to_file if persist_to_file is not None else content_length > size_to_process
 
-                logger.info(
-                    """
-                        Log file info:
-                         logfile Id: {file_id}
-                         logfile Url: {url}
-                         content length: {content_length}
-                         maximum log file size to process in memory: {size_to_process}
-                         chunk size: {chunk_size}
-                         always persist to file: {persist_to_file}
-                     """,
-                    file_id=log_file.Id,
-                    url=log_file.LogFile,
-                    content_length=content_length,
-                    size_to_process=size_to_process,
-                    chunk_size=chunk_size,
-                    persist_to_file=persist_to_file,
-                )
+            if save_to_file:
+                logger.info("Persist log file {0} to local file", log_file.Id)
 
-                save_to_file = persist_to_file if persist_to_file is not None else content_length > size_to_process
+                file_name = await save_response_to_temp_file(response, chunk_size=chunk_size, temp_dir=_tmp_dir)
 
-                if save_to_file:
-                    logger.info("Persist log file {0} to local file", log_file.Id)
+                return None, file_name
+            else:
+                logger.info("Get log file content in memory {0}", log_file.Id)
 
-                    file_name = await save_response_to_temp_file(response, chunk_size=chunk_size, temp_dir=_tmp_dir)
+                data = await response.text()
 
-                    return None, file_name
-                else:
-                    logger.info("Get log file content in memory {0}", log_file.Id)
-
-                    data = await response.text()
-
-                    return list(csv.DictReader(data.splitlines(), delimiter=",")), None
+                return list(csv.DictReader(data.splitlines(), delimiter=",")), None
