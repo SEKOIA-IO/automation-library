@@ -1,7 +1,7 @@
 {
     "uuid": "ac749619-3763-4029-b276-d13d9df9824f",
     "name": "Search Cases",
-    "docker_parameters": "get_cases",
+    "docker_parameters": "list_cases",
     "description": "find cases that match your filters",
     "arguments": {
         "$schema": "http://json-schema.org/draft-07/schema#",
