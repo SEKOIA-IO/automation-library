@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-10-28 - 1.21.0
+
+### Changed
+
+- Fix issue with account validator registration
+
 ## 2025-10-28 - 1.20.16
 
 ### Changed

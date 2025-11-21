@@ -50,7 +50,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.new_most_recent_date: Optional[str] = None
+        self._latest_time: Optional[str] = None
 
     @cached_property
     def client(self) -> SentinelOneClient:
@@ -80,16 +80,16 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         """Update the checkpoint with the most recent date seen.
 
         Raises:
-            ValueError: If new_most_recent_date is None.
+            ValueError: If _latest_time is None.
         """
-        if self.new_most_recent_date is None:
-            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
+        if self._latest_time is None:
+            self.log("Warning: _latest_time is None, skipping checkpoint update", level="warning")
             return
 
         try:
             with self.context as cache:
-                cache["most_recent_date_seen"] = self.new_most_recent_date
-                self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
+                cache["most_recent_date_seen"] = self._latest_time
+                self.log(f"Checkpoint updated with date: {self._latest_time}", level="info")
         except Exception as e:
             self.log(f"Failed to update checkpoint: {str(e)}", level="error")
 
@@ -145,7 +145,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
 
             # Update checkpoint with the most recent date
             if agents:
-                self.new_most_recent_date = self.get_last_created_date(agents)
+                self._latest_time = self.get_last_created_date(agents)
 
             # Get next cursor from pagination
             next_cursor = None
