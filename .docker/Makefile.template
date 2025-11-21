@@ -1,0 +1,100 @@
+# Standardized Makefile for Sekoia Automation modules
+# Variables
+MODULE_NAME ?= $(shell basename $(CURDIR))
+IMAGE_NAME := $(MODULE_NAME)-module:local
+DOCKER_COMPOSE := docker-compose -f docker-compose.local.yml
+
+.PHONY: help setup build rebuild run shell clean clean-all check-config list-actions
+
+help:
+	@echo "🐳 Standardized Makefile for module $(MODULE_NAME)"
+	@echo ""
+	@echo "Available commands:"
+	@echo "  make setup         - Create necessary files"
+	@echo "  make build         - Build Docker image"
+	@echo "  make rebuild       - Rebuild without cache"
+	@echo "  make run ACTION=<action_name> - Execute a specific action"
+	@echo "  make shell         - Open a shell in the container"
+	@echo "  make check-config  - Check configuration"
+	@echo "  make list-actions  - List available actions"
+	@echo "  make clean         - Clean results"
+	@echo "  make clean-all     - Clean everything (including image)"
+	@echo ""
+	@echo "Example: make run ACTION=thehive_create_alert"
+
+setup:
+	@echo "🔧 Configuring standalone environment for $(MODULE_NAME)..."
+	@mkdir -p symphony results config
+	@echo "dummy-token-for-local-testing" > symphony/token
+	@echo "" > symphony/url_callback
+	@echo '{}' > symphony/trigger_configuration.json
+	@echo "✅ Symphony files created"
+	@if [ ! -f config/module_configuration.json ]; then \
+		echo '{}' > config/module_configuration.json; \
+		echo "⚠️  File config/module_configuration.json created (needs customization)"; \
+	fi
+
+build: setup
+	@$(DOCKER_COMPOSE) build
+
+rebuild: setup
+	@$(DOCKER_COMPOSE) build --no-cache
+
+run: setup
+	@if [ -z "$(ACTION)" ]; then \
+		echo "❌ Error: Please specify ACTION=<action_name>"; \
+		echo "Use 'make list-actions' to see available actions"; \
+		exit 1; \
+	fi
+	@if [ ! -f "config/$(ACTION)_args.json" ]; then \
+		echo "⚠️  File config/$(ACTION)_args.json missing, creating empty file..."; \
+		echo '{}' > config/$(ACTION)_args.json; \
+	fi
+	@echo "🚀 Executing action: $(ACTION)"
+	@cp config/module_configuration.json symphony/module_configuration
+	@cp config/$(ACTION)_args.json symphony/arguments
+	@ACTION_NAME=$(ACTION) $(DOCKER_COMPOSE) run --rm module || true
+	@echo ""
+	@echo "=== Results ==="
+	@if ls results/*.json 1> /dev/null 2>&1; then \
+		cat results/*.json 2>/dev/null | jq . 2>/dev/null || cat results/*.json; \
+	else \
+		echo "⚠️  No result file found"; \
+		echo "Check Docker logs for errors: docker-compose -f docker-compose.local.yml logs"; \
+	fi
+
+shell:
+	@$(DOCKER_COMPOSE) run --rm --entrypoint /bin/bash module
+
+clean:
+	@rm -rf results/* symphony/*
+	@$(DOCKER_COMPOSE) down -v
+	@echo "✅ Cleanup completed"
+
+clean-all: clean
+	@docker rmi $(IMAGE_NAME) 2>/dev/null || true
+	@echo "✅ Image removed"
+
+list-actions:
+	@echo "📋 Available actions for $(MODULE_NAME):"
+	@echo ""
+	@for file in action_*.json; do \
+		if [ -f "$$file" ]; then \
+			name=$$(grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' "$$file" | head -1 | sed 's/.*: *"\(.*\)".*/\1/'); \
+			cmd=$$(grep -o '"docker_parameters"[[:space:]]*:[[:space:]]*"[^"]*"' "$$file" | head -1 | sed 's/.*: *"\(.*\)".*/\1/'); \
+			if [ -n "$$cmd" ] && [ "$$cmd" != "" ]; then \
+				echo "  • $$name"; \
+				echo "    Command: make run ACTION=$$cmd"; \
+				echo ""; \
+			fi; \
+		fi; \
+	done || echo "  No actions found"
+
+check-config:
+	@echo "=== Current configuration ==="
+	@echo "\nModule configuration:"
+	@cat config/module_configuration.json 2>/dev/null | jq . || echo "❌ File missing"
+	@echo "\n\nAction configuration files:"
+	@ls -1 config/*_args.json 2>/dev/null || echo "❌ No files found"
+	@echo "\n\nSymphony files:"
+	@ls -la symphony/ 2>/dev/null || echo "❌ Directory missing"
