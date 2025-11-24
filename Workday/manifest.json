@@ -1,0 +1,15 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Workday",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Workday Activity Logging",
+  "name": "Workday",
+  "slug": "workday",
+  "categories": [],
+  "uuid": "1c9659ca-c50b-4922-9f48-6d19ce1db28c",
+  "version": "0.0.1"
+}
