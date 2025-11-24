@@ -1,0 +1,27 @@
+{
+  "name": "Make NRQL query",
+  "description": "Query New Relic data with NRQL",
+  "uuid": "76f81a03-5fad-57a3-9fa5-2bdac9702d32",
+  "docker_parameters": "action_nrql_query",
+  "arguments": {
+    "title": "NRQLQueryActionArguments",
+    "type": "object",
+    "properties": {
+      "account_id": {
+        "title": "Account Id",
+        "description": "The identifier of the account to use",
+        "type": "integer"
+      },
+      "query": {
+        "title": "Query",
+        "description": "The NRQL to execute",
+        "type": "string"
+      }
+    },
+    "required": [
+      "account_id",
+      "query"
+    ]
+  },
+  "results": {}
+}
