@@ -5,19 +5,19 @@ and format them according to OCSF standards.
 """
 
 import asyncio
-from urllib.parse import urlencode
+from collections.abc import Generator
 from functools import cached_property
 from typing import Any, List, Optional
+from urllib.parse import urlencode
+
 from dateutil.parser import isoparse
-from collections.abc import Generator
+from okta.client import Client as OktaClient
+from pydantic import BaseModel
 from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.ocsf.base import (
-    Metadata,
-    Product,
-)
+from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
-    DeviceOCSFModel,
     Device,
+    DeviceOCSFModel,
     DeviceTypeId,
     DeviceTypeStr,
     OperatingSystem,
@@ -25,9 +25,6 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
-
-from okta.client import Client as OktaClient
-from pydantic import BaseModel
 
 
 class OktaDeviceProfile(BaseModel):
@@ -92,7 +89,9 @@ class OktaDeviceAssetConnector(AssetConnector):
             The most recent date seen as a string, or None if not set.
         """
         with self.context as cache:
-            return cache.get("most_recent_date_seen", None)
+            result: str | None = cache.get("most_recent_date_seen", None)
+
+        return result
 
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.

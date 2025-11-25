@@ -3,12 +3,6 @@ from sekoia_automation.account_validator import AccountValidator
 from aws_helpers.base import AWSModule
 
 
-class AwsCredentialsError(Exception):
-    """Custom exception for AWS credential errors."""
-
-    pass
-
-
 class AwsAccountValidator(AccountValidator):
     module: AWSModule
 
@@ -28,10 +22,11 @@ class AwsAccountValidator(AccountValidator):
         except Exception as e:
             # Check if it's a specific AWS exception by examining the exception type
             if hasattr(e, "__class__") and "NoSuchEntity" in e.__class__.__name__:
-                raise AwsCredentialsError(
+                self.error(
                     f"The AWS credentials are invalid or do not have the required permissions. Reason: {str(e)}"
                 )
             elif hasattr(e, "__class__") and "ServiceFailure" in e.__class__.__name__:
-                raise AwsCredentialsError(f"AWS service failure occurred during validation. Reason: {str(e)}")
+                self.error(f"AWS service failure occurred during validation. Reason: {str(e)}")
             else:
-                raise AwsCredentialsError(f"An error occurred during AWS account validation: {str(e)}")
+                self.error(f"An error occurred during AWS account validation: {str(e)}")
+            return False

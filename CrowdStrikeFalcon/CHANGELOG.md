@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-14 - 1.25.3
+
+### Added
+
+- Add environment variable `ACTIVATE_VERTICLES_COLLECTION` to control verticles collection (defaults to "false" for disabled)
+
 ## 2025-09-02 - 1.25.2
 
 ### Changed

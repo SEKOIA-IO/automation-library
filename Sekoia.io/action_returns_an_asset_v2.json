@@ -1,7 +1,7 @@
 {
-  "uuid": "25ebfce7-f980-46e3-a2b8-0b59f1905acb",
+  "uuid": "7df20273-8698-45f8-b2b4-6b6d28717b45",
   "name": "Get Asset (V2)",
-  "docker_parameters": "get-asset-v2",
+  "docker_parameters": "get-assets-v2/{uuid}",
   "description": "Return an asset according to its identifier",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -12,6 +12,16 @@
         "type": "string",
         "in": "path",
         "description": "The identifier of the asset"
+      },
+      "with_telemetry": {
+        "type": "boolean",
+        "in": "query",
+        "description": "Flag to return telemetry information (first_seen, last_seen, occurrences) of the asset"
+      },
+      "with_compliance": {
+        "type": "boolean",
+        "in": "query",
+        "description": "Flag to return the hygiene information (partitions, vulnerabilities) of the asset"
       }
     },
     "required": [
@@ -53,8 +63,8 @@
       },
       "category": {
         "type": [
-          "object",
           "string",
+          "object",
           "null"
         ],
         "default": null,
@@ -303,5 +313,5 @@
       "type"
     ]
   },
-  "slug": "get_assetv2"
+  "slug": "retrieve_assetv2"
 }

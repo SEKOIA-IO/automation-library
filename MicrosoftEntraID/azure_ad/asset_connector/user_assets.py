@@ -32,7 +32,7 @@ class EntraIDAssetConnector(AssetConnector):
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
         self._client: GraphServiceClient | None = None
@@ -63,8 +63,9 @@ class EntraIDAssetConnector(AssetConnector):
         if self._latest_time is None:
             return
         with self.context as cache:
+            # We add 1 second to avoid fetching the same user again in the next run
             cache["most_recent_date_seen"] = (
-                datetime.fromtimestamp(self._latest_time, timezone.utc).replace(microsecond=0).isoformat()
+                datetime.fromtimestamp(self._latest_time + 1, timezone.utc).replace(microsecond=0).isoformat()
             )
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup]) -> UserOCSFModel:

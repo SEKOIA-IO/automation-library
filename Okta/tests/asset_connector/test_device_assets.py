@@ -1,17 +1,19 @@
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock, patch
+from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
-    DeviceOCSFModel,
     Device,
-    OperatingSystem,
+    DeviceOCSFModel,
     DeviceTypeId,
     DeviceTypeStr,
+    OperatingSystem,
     OSTypeId,
     OSTypeStr,
 )
-from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.module import Module
-from okta_modules.asset_connector.device_assets import OktaDeviceAssetConnector, OktaDevice, OktaDeviceProfile
+
+from okta_modules.asset_connector.device_assets import OktaDevice, OktaDeviceAssetConnector, OktaDeviceProfile
 
 
 @pytest.fixture

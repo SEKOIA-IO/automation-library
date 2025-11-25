@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-04 - 2.9.1
+
+### Fixed
+
+- Decrease the `AZURE_BATCH_SIZE` default value to 1000 in the Azure Blob Storage connectors
+
 ## 2025-10-10 - 2.9.0
 
 ### Fixed

@@ -2,6 +2,7 @@ import json
 import queue
 import threading
 import time
+import os
 from collections.abc import Generator
 from functools import cached_property
 
@@ -564,6 +565,9 @@ class EventStreamTrigger(Connector):
     @cached_property
     def verticles_collector(self) -> VerticlesCollector | None:
         try:
+            if os.getenv("ACTIVATE_VERTICLES_COLLECTION", "false").lower() == "false":
+                self.log(message="Verticles collection is disabled by configuration", level="info")
+                return None
             verticles_collector = VerticlesCollector(self, self.client)
             return verticles_collector
         except HTTPError as error:

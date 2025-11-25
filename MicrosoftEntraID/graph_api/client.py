@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from functools import cached_property
 from typing import AsyncGenerator, Iterable
 
 from azure.identity.aio import ClientSecretCredential
@@ -25,15 +24,19 @@ class GraphApi(object):
         self._client: GraphServiceClient | None = None
         self._credentials: ClientSecretCredential | None = None
 
-    @cached_property
+    @property
     def client(self) -> GraphServiceClient:  # pragma: no cover
-        if self._client is None:
+        if self._credentials is None:
             self._credentials = ClientSecretCredential(
                 tenant_id=self._tenant_id,
                 client_id=self._client_id,
                 client_secret=self._client_secret,
             )
 
+            # Reset client to force re-creation with new credentials even if already set
+            self._client = None
+
+        if self._client is None:
             self._client = GraphServiceClient(
                 credentials=self._credentials,
                 scopes=["https://graph.microsoft.com/.default"],
@@ -127,6 +130,9 @@ class GraphApi(object):
         return writer.get_serialized_content().decode("utf-8")
 
     async def close(self) -> None:  # pragma: no cover
+        if self._client:
+            self._client = None
+
         if self._credentials:
             await self._credentials.close()
             self._credentials = None

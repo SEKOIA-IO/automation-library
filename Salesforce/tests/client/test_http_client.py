@@ -10,7 +10,7 @@ import pytest
 from aiohttp import ClientResponse
 from aioresponses import aioresponses
 
-from client.http_client import LogType, SalesforceHttpClient
+from client.http_client import AuthenticationError, LogType, SalesforceHttpClient
 from client.schemas.log_file import EventLogFile, SalesforceEventLogFilesResponse
 from utils.file_utils import delete_file
 
@@ -237,6 +237,32 @@ async def test_salesforce_http_client_error_response_with_non_200_status(session
 
 
 @pytest.mark.asyncio
+async def test_salesforce_http_client_error_response_with_non_401_status(session_faker):
+    """
+    Test SalesforceHttpClient._handle_error_response with a non-200 status code.
+
+    Args:
+        session_faker: Faker
+    """
+    response = MagicMock(spec=ClientResponse)
+
+    error_code = session_faker.word()
+    error_message = session_faker.sentence()
+
+    response.status = 401
+    response.json.return_value = [{"errorCode": error_code, "message": error_message}]
+
+    try:
+        # Call the function
+        await SalesforceHttpClient._handle_error_response(response)
+        # If the function didn't raise an exception, fail the test
+        pytest.fail("Exception not raised")
+    except AuthenticationError as e:
+        assert e.code == error_code
+        assert e.message == error_message
+
+
+@pytest.mark.asyncio
 async def test_salesforce_http_client_get_log_file_content(session_faker, http_token, csv_content):
     """
     Test SalesforceHttpClient.get_log_file_content.
@@ -310,6 +336,71 @@ async def test_salesforce_http_client_get_log_file_content_2(session_faker, http
 
         token_data = http_token.dict()
         token_data["id"] = token_data["tid"]
+
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+        )
+
+        mocked_responses.get(
+            url="{0}{1}".format(base_url, log_file.LogFile),
+            status=200,
+            body=csv_content.encode("utf-8"),
+            headers={"Content-Length": "1"},
+        )
+
+        result_content, result_file = await client.get_log_file_content(log_file, persist_to_file=True)
+
+        assert result_content is None
+        assert result_file is not None
+
+        file_content = []
+        async with aiofiles.open(result_file, encoding="utf-8") as file:
+            async for row in aiocsv.AsyncDictReader(file, delimiter=","):
+                file_content.append(row)
+
+        await delete_file(result_file)
+
+        assert file_content == list(csv.DictReader(csv_content.splitlines(), delimiter=","))
+
+
+@pytest.mark.asyncio
+async def test_salesforce_http_client_get_log_file_content_3(session_faker, http_token, csv_content):
+    """
+    Test SalesforceHttpClient.get_log_file_content with retry on auth error.
+
+    Args:
+        session_faker: Faker
+        http_token: SalesforceToken
+        csv_content: str
+    """
+    with aioresponses() as mocked_responses:
+        base_url = session_faker.uri()
+
+        log_file = EventLogFile(
+            Id=session_faker.pystr(),
+            EventType=session_faker.pystr(),
+            LogFile=session_faker.pystr(),
+            LogDate=session_faker.date_time().isoformat(),
+            CreatedDate=session_faker.date_time().isoformat(),
+            LogFileLength=session_faker.pyfloat(),
+        )
+
+        client = SalesforceHttpClient(
+            client_id=session_faker.pystr(), client_secret=session_faker.pystr(), base_url=base_url
+        )
+
+        token_data = http_token.dict()
+        token_data["id"] = token_data["tid"]
+
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data
+        )
+
+        mocked_responses.get(
+            url="{0}{1}".format(base_url, log_file.LogFile),
+            status=401,
+            payload=[{"errorCode": "INVALID_SESSION_ID", "message": "Session expired or invalid"}],
+        )
 
         mocked_responses.post(
             "{0}/services/oauth2/token?grant_type=client_credentials".format(base_url), status=200, payload=token_data

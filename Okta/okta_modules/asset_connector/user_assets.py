@@ -12,12 +12,8 @@ from typing import Any, Optional
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
 from okta.models.user import User as OktaUser
-
 from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.ocsf.base import (
-    Metadata,
-    Product,
-)
+from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
     AccountTypeId,
@@ -55,7 +51,9 @@ class OktaUserAssetConnector(AssetConnector):
             The most recent date seen as a string, or None if not set.
         """
         with self.context as cache:
-            return cache.get("most_recent_date_seen", None)
+            result: str | None = cache.get("most_recent_date_seen", None)
+
+        return result
 
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
@@ -210,7 +208,10 @@ class OktaUserAssetConnector(AssetConnector):
         """
         if not users:
             raise ValueError("Cannot get last created date from empty users list")
-        return max(user.created for user in users)
+
+        result: str = max(user.created for user in users)
+
+        return result
 
     async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
