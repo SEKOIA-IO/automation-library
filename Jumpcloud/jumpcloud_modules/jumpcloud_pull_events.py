@@ -168,9 +168,10 @@ failed with status {response.status_code} - {response.reason}"
         # save the most recent date
         current_lag: int = 0
         if most_recent_date_seen > self.from_date:
-            if most_recent_date_seen > datetime.now(timezone.utc):
+            now_utc = datetime.now(timezone.utc)
+            if most_recent_date_seen > now_utc:
                 # if the most recent date seen is in the future, set it to now
-                most_recent_date_seen = datetime.now(timezone.utc)
+                most_recent_date_seen = now_utc
 
             self.from_date = most_recent_date_seen
 
