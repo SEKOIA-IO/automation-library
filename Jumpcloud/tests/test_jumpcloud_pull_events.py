@@ -287,7 +287,7 @@ def test_fetch_events_with_future_date(trigger, message1):
     future_message = message1.copy()
     future_time = datetime.now(timezone.utc) + timedelta(hours=1)
     future_message["timestamp"] = future_time.isoformat()
-    
+
     with requests_mock.Mocker() as mock_requests:
         mock_requests.post(
             "https://api.jumpcloud.com/insights/directory/v1/events",
@@ -296,8 +296,8 @@ def test_fetch_events_with_future_date(trigger, message1):
             headers={"X-Result-Count": "1", "X-Limit": "1000"},
         )
         events = trigger.fetch_events()
-        
+
         list(events)
-        
+
         # The from_date should be set to now, not the future
         assert trigger.from_date <= datetime.now(timezone.utc)
