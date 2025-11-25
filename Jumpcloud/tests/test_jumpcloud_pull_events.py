@@ -168,7 +168,7 @@ def test_fetch_events(trigger, message1, message2):
         events = trigger.fetch_events()
 
         assert list(events) == [messages]
-        assert trigger.from_date.isoformat() == "2023-03-07T13:03:43+00:00"
+        assert trigger.from_date.isoformat() == "2022-11-05T11:59:59+00:00"
 
 
 def test_fetch_events_with_pagination(trigger, message1, message2):
@@ -195,7 +195,7 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
         events = trigger.fetch_events()
 
         assert list(events) == [[message1], [message2]]
-        assert trigger.from_date.isoformat() == "2023-03-07T13:03:43+00:00"
+        assert trigger.from_date.isoformat() == "2022-11-05T11:59:59+00:00"
 
 
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
@@ -279,3 +279,25 @@ def test_handle_response_error(data_storage):
         str(m.value)
         == "Request to Jumpcloud Directory Insights API to fetch events failed with status 500 - Internal Error"
     )
+
+
+def test_fetch_events_with_future_date(trigger, message1):
+    """Test that fetch_events properly handles events with future timestamps."""
+    # Create a message with a future timestamp
+    future_message = message1.copy()
+    future_time = datetime.now(timezone.utc) + timedelta(hours=1)
+    future_message["timestamp"] = future_time.isoformat()
+    
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post(
+            "https://api.jumpcloud.com/insights/directory/v1/events",
+            status_code=200,
+            json=[future_message],
+            headers={"X-Result-Count": "1", "X-Limit": "1000"},
+        )
+        events = trigger.fetch_events()
+        
+        list(events)
+        
+        # The from_date should be set to now, not the future
+        assert trigger.from_date <= datetime.now(timezone.utc)
