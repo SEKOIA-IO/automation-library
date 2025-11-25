@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-25 - 1.8.2
+
+### Fixed
+
+- Fix checkpoint handling when events have future timestamps by capping to current time
+
 ## 2024-05-31 - 1.8.1
 
 ### Fixed
