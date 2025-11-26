@@ -365,7 +365,7 @@ def test_list_cases_success():
                 ],
             }
         ],
-        "total": 0,
+        "total": 1,
     }
     arguments = {"match[community_uuid]": "fake_uuid"}
 
