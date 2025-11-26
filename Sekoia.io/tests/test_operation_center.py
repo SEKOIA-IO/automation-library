@@ -307,7 +307,66 @@ def test_list_cases_success():
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
 
     ressource = "cases"
-    expected_response = {"items": [], "total": 0}
+    expected_response = {
+        "items": [
+            {
+                "uuid": "b7978324-90f6-46c4-a454-98f0b4d75579",
+                "short_id": "short id",
+                "created_at": "2025-11-21T16:05:28.495Z",
+                "created_by": "created by",
+                "created_by_type": "created by type",
+                "updated_at": "2025-11-21T16:05:28.495Z",
+                "updated_by": "updated by",
+                "updated_by_type": "updated by type",
+                "title": "title",
+                "description": "This is a *description*",
+                "priority": "medium",
+                "status": "status",
+                "status_uuid": "3209c136-5228-4d1d-a5ff-ff2fa7cba76c",
+                "community_uuid": "cfa4ca81-7d07-4a09-bc85-2105b167a567",
+                "subscribers": [{"avatar_uuid": "5e4ec73e-6330-4283-ac76-a36fbbd911a6", "type": "type"}],
+                "tags": ["tags"],
+                "number_of_comments": 0,
+                "first_seen_at": "2025-11-21T16:05:28.495Z",
+                "last_seen_at": "2025-11-21T16:05:28.495Z",
+                "manual": True,
+                "is_supplied": True,
+                "verdict_uuid": "dc36dcd3-92dc-4649-8d8c-0825876382c4",
+                "verdict": {"description": "This is a *description*", "label": "label", "level": 0, "stage": "stage"},
+                "custom_status_uuid": "5e19d293-2663-4163-bf39-e128468f04bc",
+                "custom_status": {
+                    "description": "This is a *description*",
+                    "label": "label",
+                    "level": 0,
+                    "stage": "stage",
+                },
+                "custom_priority_uuid": "aac0c542-55c1-4af8-b591-1e2893c11e70",
+                "custom_priority": {
+                    "description": "This is a *description*",
+                    "label": "label",
+                    "level": 0,
+                    "color": "color",
+                },
+                "description_updated_manually": True,
+                "priority_updated_manually": True,
+                "custom_fields": [
+                    {
+                        "uuid": "63a8da06-c0a7-4378-8df7-92abdbe59585",
+                        "community_uuid": "81a8a799-06f3-490e-8c4e-47e1022e34d3",
+                        "name": "name",
+                        "slug": "slug",
+                        "description": "This is a *description*",
+                        "type": "text",
+                        "options": [{"uuid": "221fc7f8-5e70-40d1-af77-50d395dd8b1e", "value": "value"}],
+                        "color": "color",
+                        "auto_added_to_case": True,
+                        "value": None,
+                    }
+                ],
+            }
+        ],
+        "total": 0,
+    }
     arguments = {"match[community_uuid]": "fake_uuid"}
 
     with requests_mock.Mocker() as mock:
