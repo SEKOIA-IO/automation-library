@@ -88,6 +88,11 @@ async def test_fetch_activity_logs_401_retry(faker: Faker, workday_client_faker:
         # Activity logs: first 401, then success
         url = urljoin(workday_client_faker.base_url + "/", "activityLogging")
         mocked.get(re.compile(rf"^{re.escape(url)}(\?.+)?$"), status=401)
+        
+        # FIXED: Mock token refresh after 401
+        token2 = faker.pystr()
+        mocked.post(workday_client_faker.token_endpoint, status=200, payload={"access_token": token2, "expires_in": 3600})
+        
         # second registration for same pattern -> success
         mocked.get(re.compile(rf"^{re.escape(url)}(\?.+)?$"), status=200, payload=[{"id": 1}])
 

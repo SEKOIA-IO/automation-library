@@ -56,12 +56,16 @@ async def test_fetch_activity_logs(activity_logging_connector):
 
         # Execute
         total_events = 0
+        batches_received = 0
         async for batch in activity_logging_connector.next_batch():
             total_events += len(batch)
+            batches_received += 1
 
         # Assertions
-        assert total_events == 1000
-        assert activity_logging_connector.push_data_to_intakes.called
+        assert total_events == 1000, f"Expected 1000 events, got {total_events}"
+        assert batches_received > 0, "Expected at least one batch"
+        # FIXED: next_batch() doesn't call push_data_to_intakes, that's done in run()
+        # So we just verify the batches were yielded correctly
 
 
 @pytest.mark.asyncio

@@ -37,13 +37,15 @@ def activity_logging_connector(mock_data_path):
         refresh_token="test_refresh_token",
     )
 
-    # Provide a non-bound callable for load_config to avoid accidental binding of 'self'
-    mock_module.load_config = lambda config_class: WorkdayActivityLoggingConfiguration(
+    # FIXED: The framework calls module.load_config(config_class, config_data_to_load)
+    # Since it's a bound method on the mock, we need to accept the config_class parameter
+    # The MagicMock will handle the self parameter automatically
+    mock_module.load_config = MagicMock(return_value=WorkdayActivityLoggingConfiguration(
         intake_key="test_intake_key",
         frequency=600,
         chunk_size=1000,
         limit=1000
-    )
+    ))
 
     # Create connector instance
     connector = WorkdayActivityLoggingConnector(module=mock_module, data_path=mock_data_path)
