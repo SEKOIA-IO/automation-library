@@ -1,16 +1,56 @@
-from shutil import rmtree
-from tempfile import mkdtemp
+"""Pytest configuration and shared fixtures."""
 
 import pytest
-from sekoia_automation import constants
+from pathlib import Path
+from unittest.mock import MagicMock, AsyncMock
+from faker import Faker
+from types import SimpleNamespace
 
 
 @pytest.fixture
-def data_storage():
-    original_storage = constants.DATA_STORAGE
-    constants.DATA_STORAGE = mkdtemp()
+def faker():
+    """Provide a Faker instance."""
+    return Faker()
 
-    yield constants.DATA_STORAGE
 
-    rmtree(constants.DATA_STORAGE)
-    constants.DATA_STORAGE = original_storage
+@pytest.fixture
+def mock_data_path(tmp_path):
+    """Create a temporary data path for tests."""
+    return tmp_path
+
+
+@pytest.fixture
+def activity_logging_connector(mock_data_path):
+    """Create a WorkdayActivityLoggingConnector instance with mocked dependencies."""
+    from workday.workday_activity_logging_connector import (
+        WorkdayActivityLoggingConnector,
+        WorkdayActivityLoggingConfiguration
+    )
+
+    # Create a mock module and a simple configuration object so attribute access is predictable
+    mock_module = MagicMock()
+    mock_module.configuration = SimpleNamespace(
+        workday_host="wd3-services1.myworkday.com",
+        tenant_name="test_tenant",
+        client_id="test_client_id",
+        client_secret="test_client_secret",
+        refresh_token="test_refresh_token",
+    )
+
+    # Provide a non-bound callable for load_config to avoid accidental binding of 'self'
+    mock_module.load_config = lambda config_class: WorkdayActivityLoggingConfiguration(
+        intake_key="test_intake_key",
+        frequency=600,
+        chunk_size=1000,
+        limit=1000
+    )
+
+    # Create connector instance
+    connector = WorkdayActivityLoggingConnector(module=mock_module, data_path=mock_data_path)
+
+    # Mock push_data_to_intakes
+    connector.push_data_to_intakes = AsyncMock()
+    connector.log = MagicMock()
+    connector.log_exception = MagicMock()
+
+    return connector
