@@ -11,11 +11,7 @@ async def test_fetch_activity_logs(activity_logging_connector):
     """Test activity log fetching with pagination"""
 
     # Mock OAuth token endpoint
-    token_response = {
-        "access_token": "mock_access_token",
-        "token_type": "Bearer",
-        "expires_in": 3600
-    }
+    token_response = {"access_token": "mock_access_token", "token_type": "Bearer", "expires_in": 3600}
 
     # Mock activity logs response (first page)
     events_page1 = [
@@ -30,7 +26,7 @@ async def test_fetch_activity_logs(activity_logging_connector):
             "deviceType": "Desktop",
             "userAgent": "Mozilla/5.0",
             "tenantId": "test_tenant",
-            "tenantHost": "wd3-services1.myworkday.com"
+            "tenantHost": "wd3-services1.myworkday.com",
         }
         for i in range(1000)
     ]
@@ -46,7 +42,9 @@ async def test_fetch_activity_logs(activity_logging_connector):
         )
 
         # Use regex to match activityLogging endpoint (query string/timestamps vary)
-        activity_url_pattern = re.compile(r"^https://wd3-services1\.myworkday\.com/ccx/api/privacy/v1/test_tenant/activityLogging(\?.*)?$")
+        activity_url_pattern = re.compile(
+            r"^https://wd3-services1\.myworkday\.com/ccx/api/privacy/v1/test_tenant/activityLogging(\?.*)?$"
+        )
 
         # Mock first page request
         mocked.get(activity_url_pattern, payload=events_page1)
@@ -97,15 +95,9 @@ async def test_checkpoint_management(activity_logging_connector):
 async def test_event_deduplication(activity_logging_connector):
     """Test event cache deduplication"""
 
-    event1 = {
-        "taskId": "task-123",
-        "requestTime": "2025-10-14T15:30:00.000Z"
-    }
+    event1 = {"taskId": "task-123", "requestTime": "2025-10-14T15:30:00.000Z"}
 
-    event2 = {
-        "taskId": "task-456",
-        "requestTime": "2025-10-14T15:31:00.000Z"
-    }
+    event2 = {"taskId": "task-456", "requestTime": "2025-10-14T15:31:00.000Z"}
 
     # First time should be new
     assert activity_logging_connector._is_new_event(event1) is True

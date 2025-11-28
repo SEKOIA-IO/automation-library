@@ -17,20 +17,11 @@ events_duplicated = Counter(
 )
 
 # API metrics
-api_requests = Counter(
-    "workday_api_requests_total",
-    "Total number of API requests",
-    ["endpoint", "status_code"]
-)
+api_requests = Counter("workday_api_requests_total", "Total number of API requests", ["endpoint", "status_code"])
 
 api_request_duration = Histogram(
-    "workday_api_request_duration_seconds",
-    "API request duration in seconds",
-    ["endpoint"]
+    "workday_api_request_duration_seconds", "API request duration in seconds", ["endpoint"]
 )
 
 # Checkpoint metrics
-checkpoint_age = Gauge(
-    "workday_checkpoint_age_seconds",
-    "Age of the last checkpoint in seconds"
-)
+checkpoint_age = Gauge("workday_checkpoint_age_seconds", "Age of the last checkpoint in seconds")

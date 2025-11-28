@@ -1,7 +1,7 @@
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from asyncio import sleep
 from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict, Any, List
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.storage import PersistentJSON
 from workday.client.http_client import WorkdayClient
@@ -63,7 +63,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                 except Exception:
                     del s[k]
 
-    def _is_new_event(self, event: dict) -> bool:
+    def _is_new_event(self, event: Dict[str, Any]) -> bool:
         """
         Check if event is new using persistent cache
         Cache key: {taskId}:{requestTime}
@@ -75,7 +75,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             s[cache_key] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         return True
 
-    async def fetch_events(self, client: WorkdayClient) -> AsyncGenerator[list[dict], None]:
+    async def fetch_events(self, client: WorkdayClient) -> AsyncGenerator[List[Dict[str, Any]], None]:
         """
         Fetch activity logs from Workday API with pagination
         """
@@ -92,7 +92,8 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
         offset = 0
         limit = self.configuration.limit
-        batch = []
+        # FIXED: Add type annotation for batch
+        batch: List[Dict[str, Any]] = []
 
         while True:
             # Fetch page of events
@@ -133,7 +134,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         # Update checkpoint
         self.save_checkpoint(to_time)
 
-    async def next_batch(self) -> AsyncGenerator[list[dict], None]:
+    async def next_batch(self) -> AsyncGenerator[List[Dict[str, Any]], None]:
         """
         Get next batch of events
         Called by AsyncConnector framework
