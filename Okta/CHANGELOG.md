@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-25 - 2.8.5
+
+### Added
+
+- Fix the issue when work with SecretString
+
 ## 2025-11-12 - 2.8.4
 
 ### Added
