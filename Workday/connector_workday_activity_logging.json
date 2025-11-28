@@ -1,7 +1,6 @@
 {
   "uuid": "e2275913-24cd-4534-a09c-46d55f11a5d6",
   "name": "Collect activity logs from Workday",
-  "slug": "workday_activity_logging",
   "description": "Fetch activity logs from Workday Activity Logging API",
   "docker_parameters": "workday_activity_logging",
   "arguments": {
