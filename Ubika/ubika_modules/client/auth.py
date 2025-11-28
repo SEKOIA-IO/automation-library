@@ -60,7 +60,11 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
             try:
                 response = self.__http_session.post(
                     url=self.__authorization_url,
-                    data={"grant_type": "refresh_token", "client_id": "rest-api", "refresh_token": self.__refresh_token},
+                    data={
+                        "grant_type": "refresh_token",
+                        "client_id": "rest-api",
+                        "refresh_token": self.__refresh_token,
+                    },
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
                     },
@@ -70,12 +74,16 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
 
                 response.raise_for_status()
             except requests.exceptions.Timeout as timeout_exc:
-                raise AuthorizationError("timeout_error", "The request to obtain a new access token timed out.") from timeout_exc
+                raise AuthorizationError(
+                    "timeout_error", "The request to obtain a new access token timed out."
+                ) from timeout_exc
             except requests.exceptions.RequestException as e:
                 if response is not None:
                     raw = response.json()
                     raise AuthorizationError(raw["error"], raw["error_description"]) from e
-                raise AuthorizationError("request_error", f"An error occurred while requesting a new access token : {e}") from e
+                raise AuthorizationError(
+                    "request_error", f"An error occurred while requesting a new access token : {e}"
+                ) from e
 
             api_credentials: dict = response.json()
 
