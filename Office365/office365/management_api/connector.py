@@ -35,11 +35,11 @@ class Office365Connector(AsyncConnector):
         # Call Trigger.stop() to set stop event and stop logs timer
         # Skip Connector/AsyncConnector.stop() as they have sync issues in async context
         super(AsyncConnector, self).stop()
-        
+
         # Close client if it exists (cached_property stores in __dict__)
-        if 'client' in self.__dict__:
+        if "client" in self.__dict__:
             await self.client.close()
-        
+
         if self._session and not self._session.closed:
             await self._session.close()
 
@@ -153,13 +153,13 @@ class Office365Connector(AsyncConnector):
 
     async def collect_events(self):
         checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
-        
+
         try:
             await self.activate_subscriptions()
             await self.forward_events_forever(checkpoint)
         finally:
             # Ensure client is closed on exit (cached_property stores in __dict__)
-            if 'client' in self.__dict__:
+            if "client" in self.__dict__:
                 await self.client.close()
 
     def run(self):  # pragma: no cover
@@ -171,12 +171,12 @@ class Office365Connector(AsyncConnector):
         self.log(message="Office365 Trigger has started", level="info")
 
         loop = asyncio.get_event_loop()
-        
+
         # Set up signal handlers to stop gracefully
         def handle_stop_signal():
             self.log(message="Received stop signal", level="info")
             self.stop()
-        
+
         loop.add_signal_handler(signal.SIGTERM, handle_stop_signal)
         loop.add_signal_handler(signal.SIGINT, handle_stop_signal)
 
@@ -186,7 +186,7 @@ class Office365Connector(AsyncConnector):
         except ApplicationAuthenticationFailed as auth_error:
             message = "Authentication failed. Please check your client ID, client secret and tenant ID."
 
-            if hasattr(auth_error, 'response') and auth_error.response and "error_description" in auth_error.response:
+            if hasattr(auth_error, "response") and auth_error.response and "error_description" in auth_error.response:
                 message = f"{message} Details: {auth_error.response['error_description']}"
 
             self.log_exception(exception=auth_error, message=message)

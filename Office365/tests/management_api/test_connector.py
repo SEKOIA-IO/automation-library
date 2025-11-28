@@ -87,19 +87,20 @@ async def test_forward_next_batches(connector, symphony_storage, event):
 async def test_forward_events_forever_stops_on_stop_event(connector, symphony_storage):
     """Test that forward_events_forever stops when running is False"""
     checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-    
+
     # Mock forward_next_batches to set running to False after first call
     call_count = 0
+
     async def mock_forward_next_batches(cp):
         nonlocal call_count
         call_count += 1
         if call_count >= 2:
             connector._stop_event.set()
         await asyncio.sleep(0.01)
-    
+
     with patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches):
         await connector.forward_events_forever(checkpoint)
-    
+
     assert call_count == 2
     assert not connector.running
 
@@ -108,8 +109,9 @@ async def test_forward_events_forever_stops_on_stop_event(connector, symphony_st
 async def test_forward_events_forever_handles_exceptions(connector, symphony_storage):
     """Test that forward_events_forever handles exceptions and continues"""
     checkpoint = Checkpoint(symphony_storage, connector.configuration.intake_key)
-    
+
     call_count = 0
+
     async def mock_forward_next_batches(cp):
         nonlocal call_count
         call_count += 1
@@ -117,13 +119,13 @@ async def test_forward_events_forever_handles_exceptions(connector, symphony_sto
             raise Exception("Test error")
         if call_count >= 2:
             connector._stop_event.set()
-    
+
     with (
         patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
         patch("office365.management_api.connector.asyncio.sleep", return_value=None),
     ):
         await connector.forward_events_forever(checkpoint)
-    
+
     assert call_count == 2
     connector.log_exception.assert_called_once()
     assert connector.log_exception.call_args[1]["message"] == "Failed to forward events"
@@ -133,20 +135,20 @@ async def test_forward_events_forever_handles_exceptions(connector, symphony_sto
 async def test_collect_events_closes_client_on_exit(connector, symphony_storage):
     """Test that collect_events closes the client in finally block"""
     connector._stop_event.set()  # Set to stop immediately
-    
+
     # Mock the client's close method
     mock_client = AsyncMock()
-    
+
     with (
         patch.object(connector, "activate_subscriptions", new_callable=AsyncMock) as mock_activate,
         patch.object(connector, "forward_events_forever", new_callable=AsyncMock) as mock_forward,
-        patch.object(type(connector), 'client', new=mock_client, create=True),
+        patch.object(type(connector), "client", new=mock_client, create=True),
     ):
         # Access client to ensure it's in __dict__
         _ = connector.client
-        
+
         await connector.collect_events()
-        
+
         mock_activate.assert_called_once()
         mock_forward.assert_called_once()
 
@@ -155,13 +157,13 @@ async def test_collect_events_closes_client_on_exit(connector, symphony_storage)
 async def test_collect_events_calls_activate_and_forward(connector, symphony_storage):
     """Test that collect_events calls activate_subscriptions and forward_events_forever"""
     connector._stop_event.set()  # Stop immediately
-    
+
     with (
         patch.object(connector, "activate_subscriptions", new_callable=AsyncMock) as mock_activate,
         patch.object(connector, "forward_events_forever", new_callable=AsyncMock) as mock_forward,
     ):
         await connector.collect_events()
-        
+
         mock_activate.assert_called_once()
         mock_forward.assert_called_once()
 
@@ -170,9 +172,9 @@ async def test_collect_events_calls_activate_and_forward(connector, symphony_sto
 async def test_shutdown_sets_stop_event(connector):
     """Test that shutdown sets the stop event"""
     assert connector.running  # Initially running
-    
+
     await connector.shutdown()
-    
+
     # Verify stop event was set
     assert not connector.running
 
@@ -181,10 +183,9 @@ async def test_shutdown_sets_stop_event(connector):
 async def test_client_property_is_cached(connector):
     """Test that client property uses cached_property decorator"""
     # Verify cached_property descriptor exists on class
-    assert hasattr(type(connector), 'client')
-    
+    assert hasattr(type(connector), "client")
+
     # Verify property returns same instance on multiple accesses (via fixture mock)
     client1 = connector.client
     client2 = connector.client
     assert client1 is client2
-
