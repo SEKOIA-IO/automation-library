@@ -32,7 +32,14 @@ class Office365Connector(AsyncConnector):
         """
         Shutdown the connector
         """
-        super(Connector, self).stop()
+        # Call Trigger.stop() to set stop event and stop logs timer
+        # Skip Connector/AsyncConnector.stop() as they have sync issues in async context
+        super(AsyncConnector, self).stop()
+        
+        # Close client if it exists (cached_property stores in __dict__)
+        if 'client' in self.__dict__:
+            await self.client.close()
+        
         if self._session and not self._session.closed:
             await self._session.close()
 
@@ -137,35 +144,41 @@ class Office365Connector(AsyncConnector):
 
     async def forward_events_forever(self, checkpoint: Checkpoint):
         while self.running:
-            await self.forward_next_batches(checkpoint)
-
-    async def collect_events(self):
-        await self.activate_subscriptions()
-
-        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
-
-        while self.running:
             try:
-                await self.forward_events_forever(checkpoint)
-
+                await self.forward_next_batches(checkpoint)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
+                # Continue the loop to retry after logging
+                await asyncio.sleep(self.frequency)
 
-        await self.client.close()
+    async def collect_events(self):
+        checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
+        
+        try:
+            await self.activate_subscriptions()
+            await self.forward_events_forever(checkpoint)
+        finally:
+            # Ensure client is closed on exit (cached_property stores in __dict__)
+            if 'client' in self.__dict__:
+                await self.client.close()
 
     def run(self):  # pragma: no cover
         """Main execution thread
 
-        It starts by creating and launching the clear_cache subthread
-        Activate subscriptions
-        Then loop every 60 seconds, pull events using the Office 365 API and forward them.
-        When stopped, the clear_cache is stopped and joined as well so that we wait for it to end gracefully.
+        Runs the async event collection loop. The connector will continuously pull events
+        from Office 365 Management API and forward them to Sekoia intake until stopped.
         """
         self.log(message="Office365 Trigger has started", level="info")
 
         loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(self.shutdown()))
-        loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(self.shutdown()))
+        
+        # Set up signal handlers to stop gracefully
+        def handle_stop_signal():
+            self.log(message="Received stop signal", level="info")
+            self.stop()
+        
+        loop.add_signal_handler(signal.SIGTERM, handle_stop_signal)
+        loop.add_signal_handler(signal.SIGINT, handle_stop_signal)
 
         try:
             loop.run_until_complete(self.collect_events())
@@ -173,7 +186,7 @@ class Office365Connector(AsyncConnector):
         except ApplicationAuthenticationFailed as auth_error:
             message = "Authentication failed. Please check your client ID, client secret and tenant ID."
 
-            if auth_error.response and "error_description" in auth_error.response:
+            if hasattr(auth_error, 'response') and auth_error.response and "error_description" in auth_error.response:
                 message = f"{message} Details: {auth_error.response['error_description']}"
 
             self.log_exception(exception=auth_error, message=message)
