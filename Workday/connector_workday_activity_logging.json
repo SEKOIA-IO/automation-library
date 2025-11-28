@@ -36,6 +36,6 @@
         "maximum": 1000
       }
     },
-    "required": ["intake_key", "intake_server"]
+    "required": ["intake_key"]
   }
 }
