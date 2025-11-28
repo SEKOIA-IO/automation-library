@@ -1,3 +1,4 @@
+import json
 from abc import abstractmethod
 from functools import cached_property
 from typing import Any
@@ -31,6 +32,7 @@ class JIRAAction(Action):
         return response.json() if len(response.content) > 0 else None
 
     def get_paginated_results(self, path: str, result_field: str | None = "values") -> list:
+        # pagination with offset
         start_at = 0
         max_results = 50
 
@@ -49,6 +51,38 @@ class JIRAAction(Action):
             result.extend(items)
             start_at += max_results
             response = self.get_json(path=path, params={"maxResults": max_results, "startAt": start_at})
+
+        return result
+
+    def post_paginated_results(self, path: str, result_field: str, payload: dict | None = None) -> list:
+        # pagination with next token
+        if payload is None:
+            payload = {}
+
+        else:
+            payload = {k: v for k, v in payload.items() if v is not None}
+
+        response = self.post_json(path, json=payload)
+        is_last = response.get("isLast") if type(response) == dict else False
+        if is_last:
+            return response.get(result_field) if result_field else response
+
+        result = []
+        while True:
+            items = response.get(result_field) if result_field else response
+
+            if len(items) == 0:
+                break
+
+            result.extend(items)
+
+            if "nextPageToken" in response:
+                payload["nextPageToken"] = response["next_page_token"]
+
+            else:
+                break
+
+            response = self.post_json(path=path, json=payload)
 
         return result
 
