@@ -4,4 +4,5 @@ from workday.client import WorkdayClientConfiguration
 
 class WorkdayModule(Module):
     """Workday module for Sekoia.io automation"""
+
     configuration: WorkdayClientConfiguration

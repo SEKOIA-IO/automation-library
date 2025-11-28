@@ -10,6 +10,7 @@ from workday.client.errors import WorkdayAuthError
 
 class WorkdayActivityLoggingConfiguration(DefaultConnectorConfiguration):
     """Connector-specific configuration"""
+
     frequency: int = 600  # 10 minutes
     chunk_size: int = 1000
     limit: int = 1000  # API max per request
@@ -19,6 +20,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
     """
     Connector to fetch activity logs from Workday Activity Logging API
     """
+
     name = "WorkdayActivityLogging"
     configuration: WorkdayActivityLoggingConfiguration
 
@@ -81,14 +83,11 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         """
         # Clean up old cache entries at start
         self._cleanup_event_cache()
-        
+
         from_time = self.last_event_date()
         to_time = datetime.now(timezone.utc) - timedelta(minutes=2)  # 2-minute buffer
 
-        self.log(
-            message=f"Fetching events from {from_time.isoformat()} to {to_time.isoformat()}",
-            level="info"
-        )
+        self.log(message=f"Fetching events from {from_time.isoformat()} to {to_time.isoformat()}", level="info")
 
         offset = 0
         limit = self.configuration.limit
@@ -97,12 +96,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
         while True:
             # Fetch page of events
-            events = await client.fetch_activity_logs(
-                from_time=from_time,
-                to_time=to_time,
-                limit=limit,
-                offset=offset
-            )
+            events = await client.fetch_activity_logs(from_time=from_time, to_time=to_time, limit=limit, offset=offset)
 
             if not events:
                 # No more events, yield remaining batch
@@ -118,8 +112,8 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
                 # Yield batch when chunk_size is reached
                 if len(batch) >= self.configuration.chunk_size:
-                    yield batch[:self.configuration.chunk_size]
-                    batch = batch[self.configuration.chunk_size:]
+                    yield batch[: self.configuration.chunk_size]
+                    batch = batch[self.configuration.chunk_size :]
 
             # Check if more pages exist
             if len(events) < limit:
@@ -144,7 +138,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             tenant_name=self.module.configuration.tenant_name,
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
-            refresh_token=self.module.configuration.refresh_token
+            refresh_token=self.module.configuration.refresh_token,
         ) as client:
             async for batch in self.fetch_events(client):
                 yield batch
@@ -159,10 +153,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                     # Push events to intake
                     await self.push_data_to_intakes(events=batch)
 
-                    self.log(
-                        message=f"Forwarded {len(batch)} events to intake",
-                        level="info"
-                    )
+                    self.log(message=f"Forwarded {len(batch)} events to intake", level="info")
 
                 # Wait for next polling interval
                 await sleep(self.configuration.frequency)
@@ -176,5 +167,5 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                 self.log_exception(e, message="Failed to fetch events")
                 # Wait before retry
                 await sleep(60)
-        
+
         self.log(message="Connector stopped", level="info")

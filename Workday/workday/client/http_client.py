@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 from aiolimiter import AsyncLimiter
 from workday.client.errors import WorkdayError, WorkdayAuthError, WorkdayRateLimitError
 
+
 class WorkdayClient:
     def __init__(
         self,
@@ -43,7 +44,7 @@ class WorkdayClient:
         # FIXED: Add assertion to satisfy mypy that session is not None
         if self._session is None:
             raise WorkdayError("HTTP session not initialized")
-        
+
         # return cached if valid
         if self._access_token and self._token_expires_at and datetime.now(timezone.utc) < self._token_expires_at:
             return self._access_token
@@ -60,7 +61,7 @@ class WorkdayClient:
                 self.token_endpoint,
                 data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
-                raise_for_status=False
+                raise_for_status=False,
             ) as resp:
                 if resp.status == 401:
                     # invalid credentials: raise to stop connector
@@ -77,7 +78,9 @@ class WorkdayClient:
         self._token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 300)
         return self._access_token
 
-    async def fetch_activity_logs(self, from_time: datetime, to_time: datetime, limit: int = 1000, offset: int = 0) -> List[Dict[str, Any]]:
+    async def fetch_activity_logs(
+        self, from_time: datetime, to_time: datetime, limit: int = 1000, offset: int = 0
+    ) -> List[Dict[str, Any]]:
         if not self._session:
             raise WorkdayError("HTTP session not initialized")
 
@@ -88,7 +91,7 @@ class WorkdayClient:
             "to": to_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "limit": str(limit),
             "offset": str(offset),
-            "instancesReturned": "1"
+            "instancesReturned": "1",
         }
 
         headers = {"Accept": "application/json"}
