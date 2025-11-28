@@ -12,19 +12,24 @@ from urllib.parse import urlencode
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
+    DeviceDataObject,
+    DeviceEnrichmentObject,
     DeviceOCSFModel,
     DeviceTypeId,
     DeviceTypeStr,
+    EncryptionObject,
     OperatingSystem,
     OSTypeId,
     OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
+
+from okta_modules import OktaModule
 
 
 class OktaDeviceProfile(BaseModel):
@@ -38,6 +43,8 @@ class OktaDeviceProfile(BaseModel):
     serialNumber: Optional[str] = None
     sid: Optional[str] = None
     diskEncryptionType: Optional[str] = None
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
 
 
 class OktaDevice(BaseModel):
@@ -56,6 +63,8 @@ class OktaDeviceAssetConnector(AssetConnector):
     This connector fetches device information from Okta and formats it
     according to OCSF (Open Cybersecurity Schema Framework) standards.
     """
+
+    module: OktaModule
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the Okta Device Asset Connector.
@@ -77,7 +86,7 @@ class OktaDeviceAssetConnector(AssetConnector):
         """
         config = {
             "orgUrl": self.module.configuration.base_url,
-            "token": self.module.configuration.apikey,
+            "token": self.module.configuration.apikey.get_secret_value(),
         }
         return OktaClient(config)
 
@@ -239,6 +248,14 @@ class OktaDeviceAssetConnector(AssetConnector):
         if not okta_device.profile or not okta_device.profile.displayName:
             raise ValueError("Device profile and displayName are required")
 
+        # Parse timestamps
+        created_timestamp = isoparse(okta_device.created).timestamp()
+        last_updated_timestamp = isoparse(okta_device.lastUpdated).timestamp()
+
+        # Determine management and compliance status
+        is_managed = okta_device.profile.registered
+        is_compliant = okta_device.status == "ACTIVE" and okta_device.profile.registered
+
         device = Device(
             hostname=okta_device.profile.displayName,
             uid=okta_device.id,
@@ -246,7 +263,53 @@ class OktaDeviceAssetConnector(AssetConnector):
             type=DeviceTypeStr.OTHER,
             location=None,
             os=self.get_device_os(okta_device.profile.platform, okta_device.profile.osVersion),
+            vendor_name=okta_device.profile.manufacturer,
+            model=okta_device.profile.model,
+            created_time=created_timestamp,
+            last_seen_time=last_updated_timestamp,
+            is_managed=is_managed,
+            is_compliant=is_compliant,
         )
+
+        # Build enrichment data
+        enrichments = []
+
+        # Collect device data for enrichment
+        device_data_dict = {}
+
+        # Add disk encryption if available
+        if okta_device.profile.diskEncryptionType:
+            # Map disk encryption type to partitions
+            partitions = {}
+            if okta_device.profile.diskEncryptionType == "ALL_INTERNAL_VOLUMES":
+                partitions["all_internal"] = "Enabled"
+            elif okta_device.profile.diskEncryptionType == "USER":
+                partitions["user"] = "Enabled"
+            elif okta_device.profile.diskEncryptionType == "FULL":
+                partitions["full"] = "Enabled"
+            else:
+                partitions["none"] = "Disabled"
+
+            device_data_dict["Storage_encryption"] = EncryptionObject(partitions=partitions)
+
+        # Add hardware identifiers as user list (using available field)
+        hardware_info = []
+        if okta_device.profile.serialNumber:
+            hardware_info.append(f"serial_number:{okta_device.profile.serialNumber}")
+        if okta_device.profile.sid:
+            hardware_info.append(f"windows_sid:{okta_device.profile.sid}")
+        if okta_device.profile.secureHardwarePresent is not None:
+            hardware_info.append(f"secure_hardware_present:{okta_device.profile.secureHardwarePresent}")
+
+        if hardware_info:
+            device_data_dict["Users"] = hardware_info
+
+        # Create enrichment if we have any data
+        if device_data_dict:
+            device_data = DeviceDataObject(**device_data_dict)
+            enrichment = DeviceEnrichmentObject(name="device_info", value="hardware_and_security", data=device_data)
+            enrichments.append(enrichment)
+
         return DeviceOCSFModel(
             activity_id=2,
             activity_name="Collect",
@@ -255,12 +318,13 @@ class OktaDeviceAssetConnector(AssetConnector):
             class_name="Device Inventory Info",
             class_uid=5001,
             device=device,
-            time=isoparse(okta_device.created).timestamp(),
+            time=created_timestamp,
             metadata=Metadata(product=Product(name="Okta", vendor_name="Okta", version="N/A"), version="1.6.0"),
             severity="Informational",
             severity_id=1,
-            type_name="Software Inventory Info: Collect",
+            type_name="Device Inventory Info: Collect",
             type_uid=500102,
+            enrichments=enrichments if enrichments else None,
         )
 
     def get_assets(self) -> Generator[DeviceOCSFModel, None, None]:

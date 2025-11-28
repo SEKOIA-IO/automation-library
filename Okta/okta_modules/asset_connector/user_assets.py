@@ -21,8 +21,12 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     Group,
     User,
     UserOCSFModel,
+    UserTypeId,
+    UserTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
+
+from okta_modules import OktaModule
 
 
 class OktaUserAssetConnector(AssetConnector):
@@ -31,6 +35,8 @@ class OktaUserAssetConnector(AssetConnector):
     This connector fetches user information from Okta and formats it
     according to OCSF (Open Cybersecurity Schema Framework) standards.
     """
+
+    module: OktaModule
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the Okta User Asset Connector.
@@ -82,7 +88,7 @@ class OktaUserAssetConnector(AssetConnector):
         """
         config = {
             "orgUrl": self.module.configuration.base_url,
-            "token": self.module.configuration.apikey,
+            "token": self.module.configuration.apikey.get_secret_value(),
         }
         return OktaClient(config)
 
@@ -250,6 +256,36 @@ class OktaUserAssetConnector(AssetConnector):
         groups = await groups_task
         has_mfa = await mfa_task
 
+        # Extract domain from email address
+        domain = None
+        if okta_user.profile.email and "@" in okta_user.profile.email:
+            domain = okta_user.profile.email.split("@")[1]
+
+        # Get display name if available
+        display_name = None
+        if hasattr(okta_user.profile, "displayName"):
+            display_name_value = okta_user.profile.displayName
+            if display_name_value and isinstance(display_name_value, str):
+                display_name = display_name_value
+
+        # Determine user type based on userType field if available
+        user_type_id = None
+        user_type = None
+        if hasattr(okta_user.profile, "userType") and okta_user.profile.userType:
+            user_type_str = okta_user.profile.userType.lower()
+            if "admin" in user_type_str:
+                user_type_id = UserTypeId.ADMIN
+                user_type = UserTypeStr.ADMIN
+            elif "service" in user_type_str:
+                user_type_id = UserTypeId.SERVICE
+                user_type = UserTypeStr.SERVICE
+            elif "system" in user_type_str:
+                user_type_id = UserTypeId.SYSTEM
+                user_type = UserTypeStr.SYSTEM
+            else:
+                user_type_id = UserTypeId.USER
+                user_type = UserTypeStr.USER
+
         user = User(
             uid=okta_user.id,
             full_name=full_name,
@@ -258,6 +294,11 @@ class OktaUserAssetConnector(AssetConnector):
             account=account,
             groups=groups,
             has_mfa=has_mfa,
+            display_name=display_name,
+            domain=domain,
+            uid_alt=okta_user.profile.login,
+            type_id=user_type_id,
+            type=user_type,
         )
 
         return UserOCSFModel(

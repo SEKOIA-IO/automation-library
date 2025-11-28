@@ -4,7 +4,7 @@
   "uuid": "b2e2e2c7-1a3e-4b7a-9c2d-8e4f3a6b7c9d",
   "docker_parameters": "user_okta_asset_connector",
   "type": "asset",
-  "capability": "user",
+  "capability": "account_detection",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
