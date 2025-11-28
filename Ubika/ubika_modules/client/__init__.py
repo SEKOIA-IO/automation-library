@@ -53,13 +53,10 @@ class UbikaCloudProtectorNextGenApiClient(requests.Session):
             backoff_factor=2,
             status_forcelist=[500, 502, 503, 504],
             allowed_methods=["GET", "POST"],
-            raise_on_status=False
+            raise_on_status=False,
         )
 
         self.mount(
             "https://",
-            LimiterAdapter(
-                per_minute=ratelimit_per_minute,
-                max_retries=retry_strategy
-            ),
+            LimiterAdapter(per_minute=ratelimit_per_minute, max_retries=retry_strategy),
         )
