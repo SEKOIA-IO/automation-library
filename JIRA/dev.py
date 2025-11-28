@@ -9,6 +9,8 @@ from pathlib import Path
 from jira_modules.action_change_issue_status import JIRAChangeIssueStatus, JiraChangeStatusArguments
 from jira_modules.action_comment_issue import JiraAddCommentArguments, JIRAAddCommentToIssue
 from jira_modules.action_create_issue import JIRACreateIssue, JiraCreateIssueArguments
+from jira_modules.action_get_issue import JIRAGetIssue, JIRAGetIssueArguments
+from jira_modules.action_search_issues import JIRASearchIssues, JIRASearchIssuesArguments
 from jira_modules.base import JIRAConfiguration, JIRAModule
 
 logging.basicConfig(
@@ -41,15 +43,15 @@ if __name__ == "__main__":
     module.configuration = module_conf
 
     # args = JiraCreateIssueArguments(
-    #    project_key="<PROJECT_KEY>",
-    #    summary="Another Task",
-    #    issue_type="Task",
-    #    due_date="2077-10-23",
-    #    labels="dev,cloud9",
-    #    assignee=None,
-    #    reporter=None,
-    #    priority="High",
-    #    parent_key=None,
+    #     project_key="<PROJECT_KEY>",
+    #     summary="Another Task",
+    #     issue_type="Task",
+    #     due_date="2077-10-23",
+    #     labels="dev,cloud9",
+    #     assignee=None,
+    #     reporter=None,
+    #     priority="High",
+    #     parent_key=None,
     # )
     # action = JIRACreateIssue(module=module, data_path=Path("."))
     # action.log = dumb_log
@@ -70,3 +72,15 @@ if __name__ == "__main__":
     # action.log = dumb_log
     # action.log_exception = dumb_log_exception
     # action.run(args)
+
+    # args = JIRAGetIssueArguments(issue_key="<ISSUE_KEY>", fields=["summary", "comment"], expand="")
+    # action = JIRAGetIssue(module=module, data_path=Path("."))
+    # action.log = dumb_log
+    # action.log_exception = dumb_log_exception
+    # result = action.run(args)
+
+    # args = JIRASearchIssuesArguments(jql='project = "<PROJECT>" order by key', fields=["summary", "comment"])
+    # action = JIRASearchIssues(module=module, data_path=Path("."))
+    # action.log = dumb_log
+    # action.log_exception = dumb_log_exception
+    # result = action.run(args)
