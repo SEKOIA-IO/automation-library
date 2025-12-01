@@ -34,11 +34,12 @@ class Office365Connector(AsyncConnector):
         """
         # Call Trigger.stop() to set stop event and stop logs timer
         # Skip Connector/AsyncConnector.stop() as they have sync issues in async context
-        super(AsyncConnector, self).stop()
+        super().stop()
 
         # Close client if it exists (cached_property stores in __dict__)
-        if "client" in self.__dict__:
+        if "client" in self.__dict__ and not getattr(self, "_client_closed", False):
             await self.client.close()
+            self._client_closed = True
 
         if self._session and not self._session.closed:
             await self._session.close()
@@ -49,12 +50,14 @@ class Office365Connector(AsyncConnector):
 
         Returns: An instance of the client
         """
-        return Office365API(
+        client = Office365API(
             client_id=str(self.configuration.client_id),
             client_secret=self.configuration.client_secret,
             tenant_id=self.configuration.tenant_id,
         )
-
+        self._client_closed = False
+        return client
+    
     async def pull_content(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[list[str], None]:
         """Pulls content from Office 365 subscriptions
 
@@ -107,7 +110,6 @@ class Office365Connector(AsyncConnector):
             )
 
     async def forward_next_batches(self, checkpoint: Checkpoint):
-        start_time = time.time()
         start_pull_date = checkpoint.offset
         end_pull_date = datetime.now(UTC)
 
@@ -130,22 +132,21 @@ class Office365Connector(AsyncConnector):
             # save intermediate end date
             checkpoint.offset = end_date
 
-        # get the ending time and compute the duration to forward the events
-        end_time = time.time()
-        batch_duration = end_time - start_time
-
         # save end date
         checkpoint.offset = end_pull_date
-
-        # compute the remaining sleeping time. If greater than 0, sleep
-        delta_sleep = self.frequency - batch_duration
-        if delta_sleep > 0:
-            await asyncio.sleep(delta_sleep)
 
     async def forward_events_forever(self, checkpoint: Checkpoint):
         while self.running:
             try:
+                start_time = time.time()
                 await self.forward_next_batches(checkpoint)
+                # get the ending time and compute the duration to forward the events
+                end_time = time.time()
+                batch_duration = end_time - start_time
+                # compute the remaining sleeping time. If greater than 0, sleep
+                delta_sleep = self.frequency - batch_duration
+                if delta_sleep > 0:
+                    await asyncio.sleep(delta_sleep)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
                 # Continue the loop to retry after logging
@@ -159,8 +160,9 @@ class Office365Connector(AsyncConnector):
             await self.forward_events_forever(checkpoint)
         finally:
             # Ensure client is closed on exit (cached_property stores in __dict__)
-            if "client" in self.__dict__:
+            if "client" in self.__dict__ and not getattr(self, "_client_closed", False):
                 await self.client.close()
+                self._client_closed = True
 
     def run(self):  # pragma: no cover
         """Main execution thread
@@ -175,7 +177,7 @@ class Office365Connector(AsyncConnector):
         # Set up signal handlers to stop gracefully
         def handle_stop_signal():
             self.log(message="Received stop signal", level="info")
-            self.stop()
+            loop.create_task(self.shutdown())
 
         loop.add_signal_handler(signal.SIGTERM, handle_stop_signal)
         loop.add_signal_handler(signal.SIGINT, handle_stop_signal)
@@ -186,8 +188,9 @@ class Office365Connector(AsyncConnector):
         except ApplicationAuthenticationFailed as auth_error:
             message = "Authentication failed. Please check your client ID, client secret and tenant ID."
 
-            if hasattr(auth_error, "response") and auth_error.response and "error_description" in auth_error.response:
-                message = f"{message} Details: {auth_error.response['error_description']}"
+            response = auth_error.context.get("response")
+            if response and "error_description" in response:
+                message = f"{message} Details: {response['error_description']}"
 
             self.log_exception(exception=auth_error, message=message)
         finally:

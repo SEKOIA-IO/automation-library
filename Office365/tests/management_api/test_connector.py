@@ -1,14 +1,13 @@
 import asyncio
 import json
 from datetime import UTC, datetime, timedelta
-from functools import cached_property
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from prometheus_client import Counter
 
 from office365.management_api.checkpoint import Checkpoint
-from office365.management_api.connector import FORWARD_EVENTS_DURATION, Office365Connector
+from office365.management_api.connector import FORWARD_EVENTS_DURATION
 from office365.management_api.errors import FailedToActivateO365Subscription
 
 
@@ -98,7 +97,10 @@ async def test_forward_events_forever_stops_on_stop_event(connector, symphony_st
             connector._stop_event.set()
         await asyncio.sleep(0.01)
 
-    with patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches):
+    with (
+        patch.object(connector, "forward_next_batches", side_effect=mock_forward_next_batches),
+        patch("office365.management_api.connector.asyncio.sleep", return_value=None),
+    ):
         await connector.forward_events_forever(checkpoint)
 
     assert call_count == 2
