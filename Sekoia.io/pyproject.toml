@@ -16,7 +16,7 @@ websocket-client = "*"
 gevent = "*"
 orjson = "*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests = "*"
