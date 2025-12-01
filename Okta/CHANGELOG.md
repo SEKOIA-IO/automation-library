@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-11-28 - 2.8.5
+## 2025-11-25 - 2.8.5
 
 ### Added
 
+- Fix the issue when work with SecretString
 - Add additional user fields to asset connector (display_name, domain, uid_alt, type_id, type)
 
 ## 2025-11-12 - 2.8.4

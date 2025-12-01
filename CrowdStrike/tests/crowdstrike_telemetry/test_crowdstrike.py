@@ -83,7 +83,7 @@ def connector(session_faker, symphony_storage, mock_push_data_to_intakes) -> Cro
 
     connector.configuration = CrowdStrikeTelemetryConnectorConfig(
         intake_server=session_faker.url(),
-        queue_name=session_faker.word(),
+        # queue_name=session_faker.word(),
         intake_key=session_faker.word(),
         chunk_size=session_faker.random.randint(1, 10),
         frequency=session_faker.random.randint(0, 20),
