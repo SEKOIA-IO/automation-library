@@ -77,7 +77,7 @@ class JIRAAction(Action):
             result.extend(items)
 
             if "nextPageToken" in response:
-                payload["nextPageToken"] = response["next_page_token"]
+                payload["nextPageToken"] = response["nextPageToken"]
 
             else:
                 break
