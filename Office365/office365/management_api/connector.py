@@ -8,7 +8,6 @@ from datetime import UTC, datetime, timedelta
 from functools import cached_property
 
 from sekoia_automation.aio.connector import AsyncConnector
-from sekoia_automation.connector import Connector
 
 from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
@@ -37,7 +36,7 @@ class Office365Connector(AsyncConnector):
         super().stop()
 
         # Close client if it exists (cached_property stores in __dict__)
-        if "client" in self.__dict__ and not getattr(self, "_client_closed", False):
+        if hasattr(self, "client") and not getattr(self, "_client_closed", False):
             await self.client.close()
             self._client_closed = True
 
@@ -57,7 +56,7 @@ class Office365Connector(AsyncConnector):
         )
         self._client_closed = False
         return client
-    
+
     async def pull_content(self, start_date: datetime, end_date: datetime) -> AsyncGenerator[list[str], None]:
         """Pulls content from Office 365 subscriptions
 
