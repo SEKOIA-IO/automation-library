@@ -1,6 +1,8 @@
+# state_manager.py
 import fcntl
 import json
 import tempfile
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -23,6 +25,7 @@ class AlertStateManager:
                 "total_triggers": int,
                 "created_at": str (ISO 8601),
                 "updated_at": str (ISO 8601),
+                "version": int,
             }
         },
         "metadata": {
@@ -34,14 +37,16 @@ class AlertStateManager:
 
     VERSION = "1.0"
 
-    def __init__(self, state_file_path: Path):
+    def __init__(self, state_file_path: Path, logger: Optional[logging.Logger] = None):
         """
         Initialize state manager.
 
         Args:
             state_file_path: Path to the state JSON file
+            logger: Optional logger injected by tests or caller
         """
-        self.state_file_path = state_file_path
+        self.state_file_path = Path(state_file_path)
+        self.logger = logger or logging.getLogger(__name__)
         self._state: dict[str, Any] = self._load_state()
 
     def _load_state(self) -> dict[str, Any]:
@@ -63,11 +68,15 @@ class AlertStateManager:
                     # Migrate if needed
                     if state.get("metadata", {}).get("version") != self.VERSION:
                         state = self._migrate_state(state)
+                    # Ensure structure consistency
+                    state.setdefault("alerts", {})
+                    state.setdefault("metadata", {"version": self.VERSION, "last_cleanup": datetime.now(timezone.utc).isoformat()})
                     return state
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError) as e:
             # Corrupted file: start fresh
+            self.logger.warning("State file corrupted or unreadable; starting fresh: %s", e)
             return {
                 "alerts": {},
                 "metadata": {
@@ -83,12 +92,13 @@ class AlertStateManager:
 
         # Atomic write using temporary file + rename
         temp_fd, temp_path = tempfile.mkstemp(
-            dir=self.state_file_path.parent,
+            dir=str(self.state_file_path.parent),
             prefix=".tmp_state_",
             suffix=".json",
         )
 
         try:
+            # open by fd to ensure correct handle is locked
             with open(temp_fd, "w") as f:
                 fcntl.flock(f.fileno(), fcntl.LOCK_EX)  # Exclusive lock for writing
                 try:
@@ -99,14 +109,20 @@ class AlertStateManager:
 
             # Atomic rename
             Path(temp_path).rename(self.state_file_path)
-        except Exception:
+        except Exception as e:
             # Clean up temp file on error
-            Path(temp_path).unlink(missing_ok=True)
+            try:
+                Path(temp_path).unlink(missing_ok=True)
+            except Exception:
+                pass
+            self.logger.exception("Failed to save state file: %s", e)
             raise
 
     def _migrate_state(self, old_state: dict[str, Any]) -> dict[str, Any]:
-        """Migrate state from older versions."""
+        """Migrate state from older versions. Currently a no-op (placeholder)."""
         # Future: implement version migrations here
+        old_state.setdefault("alerts", {})
+        old_state.setdefault("metadata", {"version": self.VERSION, "last_cleanup": datetime.now(timezone.utc).isoformat()})
         return old_state
 
     def get_alert_state(self, alert_uuid: str) -> Optional[dict[str, Any]]:
@@ -128,6 +144,7 @@ class AlertStateManager:
         rule_uuid: str,
         rule_name: str,
         event_count: int,
+        previous_version: Optional[int] = None,
     ):
         """
         Update state for an alert after triggering.
@@ -138,13 +155,16 @@ class AlertStateManager:
             rule_uuid: UUID of the alert rule
             rule_name: Name of the alert rule
             event_count: Current total event count in the alert
+            previous_version: Optional previous version provided by caller
         """
         now = datetime.now(timezone.utc).isoformat()
 
         existing = self._state["alerts"].get(alert_uuid)
 
         if existing:
-            # Update existing entry
+            # Increment version (basic optimistic/version tracking)
+            current_version = existing.get("version", 0)
+            new_version = current_version + 1
             existing.update({
                 "alert_short_id": alert_short_id,
                 "rule_uuid": rule_uuid,
@@ -153,6 +173,7 @@ class AlertStateManager:
                 "last_triggered_event_count": event_count,
                 "total_triggers": existing.get("total_triggers", 0) + 1,
                 "updated_at": now,
+                "version": new_version,
             })
         else:
             # Create new entry
@@ -166,6 +187,7 @@ class AlertStateManager:
                 "total_triggers": 1,
                 "created_at": now,
                 "updated_at": now,
+                "version": 1,
             }
 
         self._save_state()
@@ -183,7 +205,7 @@ class AlertStateManager:
         cutoff_iso = cutoff_date.isoformat()
         to_remove = []
 
-        for alert_uuid, state in self._state["alerts"].items():
+        for alert_uuid, state in list(self._state["alerts"].items()):
             if state.get("last_triggered_at", "") < cutoff_iso:
                 to_remove.append(alert_uuid)
 
