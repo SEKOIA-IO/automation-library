@@ -7,19 +7,22 @@ from .base import JIRAModule
 
 
 class JIRASearchIssuesArguments(BaseModel):
-    jql: str | None = Field(None, description="JQL query")
-    fields: list[str] | None = Field(None, description="A list of fields to return for the issue (*all by default)")
-    expand: str | None = Field(None, description="Comma-separated list of additional information to include")
+    jql: str | None = Field(default=None, description="JQL query")
+    fields: list[str] | None = Field(
+        default=None, description="A list of fields to return for the issue (*all by default)"
+    )
+    expand: str | None = Field(default=None, description="Comma-separated list of additional information to include")
     properties: list[str] | None = Field(
-        None, description="A list of properties to return for the issue (*all by default)"
+        default=None, description="A list of properties to return for the issue (*all by default)"
     )
     fields_by_keys: bool = Field(
-        False, description="Whether fields in `fields` are referenced by keys rather than IDs"
+        default=False, description="Whether fields in `fields` are referenced by keys rather than IDs"
     )
     fail_fast: bool = Field(
-        False, description="Whether to fail the request quickly in case of an error while loading fields for an issue"
+        default=False,
+        description="Whether to fail the request quickly in case of an error while loading fields for an issue",
     )
-    reconcile_issues: list[int] | None = Field(None, description="List of IDs to reconcile")
+    reconcile_issues: list[int] | None = Field(default=None, description="List of IDs to reconcile")
 
 
 class JIRASearchIssues(JIRAAction):

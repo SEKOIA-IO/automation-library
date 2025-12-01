@@ -8,17 +8,20 @@ from .base import JIRAModule
 
 class JIRAGetIssueArguments(BaseModel):
     issue_key: str = Field(..., description="Issue key (e.g. PROJ-1) or ID")
-    fields: list[str] | None = Field(None, description="A list of fields to return for the issue (*all by default)")
+    fields: list[str] | None = Field(
+        default=None, description="A list of fields to return for the issue (*all by default)"
+    )
     fields_by_keys: bool = Field(
-        False, description="Whether fields in `fields` are referenced by keys rather than IDs"
+        default=False, description="Whether fields in `fields` are referenced by keys rather than IDs"
     )
-    expand: str | None = Field(None, description="Comma-separated list of additional information to include")
+    expand: str | None = Field(default=None, description="Comma-separated list of additional information to include")
     properties: list[str] | None = Field(
-        None, description="A list of properties to return for the issue (*all by default)"
+        default=None, description="A list of properties to return for the issue (*all by default)"
     )
-    update_view_history: bool = Field(False, description="Whether to mark the issue as recently viewed")
+    update_view_history: bool = Field(default=False, description="Whether to mark the issue as recently viewed")
     fail_fast: bool = Field(
-        False, description="Whether to fail the request quickly in case of an error while loading fields for an issue"
+        default=False,
+        description="Whether to fail the request quickly in case of an error while loading fields for an issue",
     )
 
 
