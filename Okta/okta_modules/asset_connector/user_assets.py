@@ -88,7 +88,7 @@ class OktaUserAssetConnector(AssetConnector):
         """
         config = {
             "orgUrl": self.module.configuration.base_url,
-            "token": self.module.configuration.apikey.get_secret_value(),
+            "token": self.module.configuration.apikey,
         }
         return OktaClient(config)
 
