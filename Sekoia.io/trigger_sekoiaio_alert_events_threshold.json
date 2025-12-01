@@ -1,0 +1,111 @@
+{
+  "uuid": "bb064afe-25be-4acf-af96-b997b8fa9112",
+  "name": "Alert Events Threshold Trigger",
+  "slug": "alert_events_threshold",
+  "description": "Trigger playbooks only when alert event accumulation thresholds are met, preventing excessive executions for incremental updates. Internal module with automatic authentication.",
+  "docker": "sekoiaio",
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Alert Events Threshold Trigger Configuration",
+    "properties": {
+      "rule_filter": {
+        "type": "string",
+        "title": "Rule Filter",
+        "description": "Filter by rule name or UUID (single rule only)"
+      },
+      "rule_names_filter": {
+        "type": "array",
+        "title": "Rule Names Filter",
+        "description": "Filter by multiple rule names",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "event_count_threshold": {
+        "type": "integer",
+        "title": "Event Count Threshold",
+        "description": "Minimum number of new events to trigger (volume-based)",
+        "default": 100,
+        "minimum": 1
+      },
+      "time_window_hours": {
+        "type": "integer",
+        "title": "Time Window (Hours)",
+        "description": "Time window in hours for time-based triggering",
+        "default": 1,
+        "minimum": 1,
+        "maximum": 168
+      },
+      "enable_volume_threshold": {
+        "type": "boolean",
+        "title": "Enable Volume Threshold",
+        "description": "Enable triggering when event count threshold is met",
+        "default": true
+      },
+      "enable_time_threshold": {
+        "type": "boolean",
+        "title": "Enable Time Threshold",
+        "description": "Enable triggering when events appear in time window",
+        "default": true
+      },
+      "check_interval_seconds": {
+        "type": "integer",
+        "title": "Check Interval (Seconds)",
+        "description": "Polling interval for checking thresholds",
+        "default": 60,
+        "minimum": 10,
+        "maximum": 3600
+      },
+      "state_cleanup_days": {
+        "type": "integer",
+        "title": "State Cleanup (Days)",
+        "description": "Remove state for alerts inactive for N days",
+        "default": 30,
+        "minimum": 1,
+        "maximum": 365
+      }
+    },
+    "required": []
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "alert": {
+        "type": "object",
+        "description": "Full alert details from Alert API"
+      },
+      "trigger_context": {
+        "type": "object",
+        "description": "Context about why the trigger fired",
+        "properties": {
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "trigger_type": {
+            "type": "string",
+            "const": "alert_events_threshold"
+          },
+          "reason": {
+            "type": "string",
+            "enum": ["first_occurrence", "volume_threshold", "time_threshold", "volume_threshold, time_threshold"]
+          },
+          "new_events": {
+            "type": "integer"
+          },
+          "previous_count": {
+            "type": "integer"
+          },
+          "current_count": {
+            "type": "integer"
+          },
+          "time_window_hours": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}
