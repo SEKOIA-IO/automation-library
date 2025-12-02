@@ -1,19 +1,9 @@
 from functools import cached_property
 from ldap3 import Server, Connection
 
-from pydantic.v1 import BaseModel, Field
 from sekoia_automation.action import Action
-from sekoia_automation.module import Module
 
-
-class MicrosoftADConfiguration(BaseModel):
-    servername: str = Field(..., description="Remote machine IP or Name")
-    admin_username: str = Field(..., description="Admin username")
-    admin_password: str = Field(..., secret=True, description="Admin password")  # type: ignore
-
-
-class MicrosoftADModule(Module):
-    configuration: MicrosoftADConfiguration
+from microsoft_ad.models.common_models import MicrosoftADModule
 
 
 class MicrosoftADAction(Action):
@@ -54,18 +44,3 @@ class MicrosoftADAction(Action):
                     users_query.append([entry.get("dn"), entry.get("attributes").get("userAccountControl")])
 
         return users_query
-
-
-class UserAccountArguments(BaseModel):
-    basedn: str | None = Field(None, description="")
-    username: str | None = Field(
-        None,
-        description="",
-    )
-
-
-class ResetPassUserArguments(UserAccountArguments):
-    new_password: str | None = Field(
-        None,
-        description="",
-    )

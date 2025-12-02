@@ -12,12 +12,8 @@ from typing import Any, Optional
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
 from okta.models.user import User as OktaUser
-
 from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.ocsf.base import (
-    Metadata,
-    Product,
-)
+from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
     AccountTypeId,
@@ -25,8 +21,12 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     Group,
     User,
     UserOCSFModel,
+    UserTypeId,
+    UserTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
+
+from okta_modules import OktaModule
 
 
 class OktaUserAssetConnector(AssetConnector):
@@ -35,6 +35,8 @@ class OktaUserAssetConnector(AssetConnector):
     This connector fetches user information from Okta and formats it
     according to OCSF (Open Cybersecurity Schema Framework) standards.
     """
+
+    module: OktaModule
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the Okta User Asset Connector.
@@ -55,7 +57,9 @@ class OktaUserAssetConnector(AssetConnector):
             The most recent date seen as a string, or None if not set.
         """
         with self.context as cache:
-            return cache.get("most_recent_date_seen", None)
+            result: str | None = cache.get("most_recent_date_seen", None)
+
+        return result
 
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
@@ -210,7 +214,10 @@ class OktaUserAssetConnector(AssetConnector):
         """
         if not users:
             raise ValueError("Cannot get last created date from empty users list")
-        return max(user.created for user in users)
+
+        result: str = max(user.created for user in users)
+
+        return result
 
     async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
@@ -249,6 +256,36 @@ class OktaUserAssetConnector(AssetConnector):
         groups = await groups_task
         has_mfa = await mfa_task
 
+        # Extract domain from email address
+        domain = None
+        if okta_user.profile.email and "@" in okta_user.profile.email:
+            domain = okta_user.profile.email.split("@")[1]
+
+        # Get display name if available
+        display_name = None
+        if hasattr(okta_user.profile, "displayName"):
+            display_name_value = okta_user.profile.displayName
+            if display_name_value and isinstance(display_name_value, str):
+                display_name = display_name_value
+
+        # Determine user type based on userType field if available
+        user_type_id = None
+        user_type = None
+        if hasattr(okta_user.profile, "userType") and okta_user.profile.userType:
+            user_type_str = okta_user.profile.userType.lower()
+            if "admin" in user_type_str:
+                user_type_id = UserTypeId.ADMIN
+                user_type = UserTypeStr.ADMIN
+            elif "service" in user_type_str:
+                user_type_id = UserTypeId.SERVICE
+                user_type = UserTypeStr.SERVICE
+            elif "system" in user_type_str:
+                user_type_id = UserTypeId.SYSTEM
+                user_type = UserTypeStr.SYSTEM
+            else:
+                user_type_id = UserTypeId.USER
+                user_type = UserTypeStr.USER
+
         user = User(
             uid=okta_user.id,
             full_name=full_name,
@@ -257,6 +294,11 @@ class OktaUserAssetConnector(AssetConnector):
             account=account,
             groups=groups,
             has_mfa=has_mfa,
+            display_name=display_name,
+            domain=domain,
+            uid_alt=okta_user.profile.login,
+            type_id=user_type_id,
+            type=user_type,
         )
 
         return UserOCSFModel(

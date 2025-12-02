@@ -26,7 +26,7 @@ class UbikaCloudProtectorNextGenConnectorConfiguration(DefaultConnectorConfigura
     refresh_token: str = Field(..., description="API refresh token", secret=True)
 
     frequency: int = 60
-    chunk_size: int = 1000
+    chunk_size: int = 200
 
 
 class UbikaCloudProtectorNextGenConnector(Connector):
@@ -42,7 +42,7 @@ class UbikaCloudProtectorNextGenConnector(Connector):
             path=self.data_path,
             time_unit=TimeUnit.MILLISECOND,
             start_at=timedelta(days=30),
-            ignore_older_than=timedelta(days=60),
+            ignore_older_than=timedelta(days=7),
         )
         self.from_timestamp = self.cursor.offset
 

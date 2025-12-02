@@ -13,6 +13,7 @@ jsonpath_ng = "^1.5"
 orjson = "*"
 lxml = "^4.6.3"
 datetime = "^5.2"
+structlog = "^25.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

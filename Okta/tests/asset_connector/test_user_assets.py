@@ -1,10 +1,11 @@
 """Unit tests for OktaUserAssetConnector."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from okta_modules.asset_connector.user_assets import OktaUserAssetConnector
+import pytest
 from sekoia_automation.asset_connector.models.ocsf.user import Group, UserOCSFModel
+
+from okta_modules.asset_connector.user_assets import OktaUserAssetConnector
 
 
 class TestOktaUserAssetConnector:
@@ -62,6 +63,8 @@ class TestOktaUserAssetConnector:
         user.profile.firstName = "Test"
         user.profile.lastName = "User"
         user.profile.email = "test.user@example.com"
+        user.profile.displayName = "Test User"
+        user.profile.userType = "User"
         return user
 
     @pytest.fixture
@@ -319,6 +322,12 @@ class TestOktaUserAssetConnector:
         assert result.user.account.uid == "user123"
         assert len(result.user.groups) == 1
         assert result.user.has_mfa is True
+        # Verify new fields
+        assert result.user.display_name == "Test User"
+        assert result.user.domain == "example.com"
+        assert result.user.uid_alt == "test.user@example.com"
+        assert result.user.type_id == 1  # UserTypeId.USER
+        assert result.user.type == "User"  # UserTypeStr.USER
         assert result.activity_name == "Collect"
         assert result.category_name == "Discovery"
         assert result.class_name == "User Inventory Info"
@@ -341,6 +350,10 @@ class TestOktaUserAssetConnector:
         assert result.user.uid == "user123"
         assert len(result.user.groups) == 0
         assert result.user.has_mfa is False
+        # Verify new fields are still populated
+        assert result.user.display_name == "Test User"
+        assert result.user.domain == "example.com"
+        assert result.user.uid_alt == "test.user@example.com"
 
     def test_get_assets_success(self, mock_connector, sample_users_data):
         """Test successful asset generation."""
@@ -492,6 +505,8 @@ class TestOktaUserAssetConnector:
         user.profile.firstName = None
         user.profile.lastName = None
         user.profile.email = "test.user@example.com"
+        # Explicitly set userType to None to prevent MagicMock default
+        user.profile.userType = None
 
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=False)
@@ -505,3 +520,130 @@ class TestOktaUserAssetConnector:
         assert result.user.full_name == "None None"  # None values converted to string
         assert result.user.email_addr == "test.user@example.com"
         assert result.user.name == "test.user@example.com"
+        # Verify new fields with None displayName and userType
+        assert result.user.display_name is None  # displayName not set
+        assert result.user.domain == "example.com"
+        assert result.user.uid_alt == "test.user@example.com"
+        assert result.user.type_id is None  # userType not set (None value)
+        assert result.user.type is None
+
+    @pytest.mark.asyncio
+    async def test_map_fields_with_admin_user_type(self, mock_connector):
+        """Test field mapping with admin user type."""
+        # Setup
+        user = MagicMock()
+        user.id = "admin123"
+        user.created = "2023-01-01T00:00:00.000Z"
+        user.profile.login = "admin@example.com"
+        user.profile.firstName = "Admin"
+        user.profile.lastName = "User"
+        user.profile.email = "admin@example.com"
+        user.profile.displayName = "Admin User"
+        user.profile.userType = "Administrator"
+
+        mock_connector.get_user_groups = AsyncMock(return_value=[])
+        mock_connector.get_user_mfa = AsyncMock(return_value=True)
+
+        # Execute
+        result = await mock_connector.map_fields(user)
+
+        # Verify
+        assert isinstance(result, UserOCSFModel)
+        assert result.user.type_id == 2  # UserTypeId.ADMIN
+        assert result.user.type == "Admin"  # UserTypeStr.ADMIN
+
+    @pytest.mark.asyncio
+    async def test_map_fields_with_service_user_type(self, mock_connector):
+        """Test field mapping with service user type."""
+        # Setup
+        user = MagicMock()
+        user.id = "service123"
+        user.created = "2023-01-01T00:00:00.000Z"
+        user.profile.login = "service@example.com"
+        user.profile.firstName = "Service"
+        user.profile.lastName = "Account"
+        user.profile.email = "service@example.com"
+        user.profile.displayName = "Service Account"
+        user.profile.userType = "service-account"
+
+        mock_connector.get_user_groups = AsyncMock(return_value=[])
+        mock_connector.get_user_mfa = AsyncMock(return_value=False)
+
+        # Execute
+        result = await mock_connector.map_fields(user)
+
+        # Verify
+        assert isinstance(result, UserOCSFModel)
+        assert result.user.type_id == 4  # UserTypeId.SERVICE
+        assert result.user.type == "Service"  # UserTypeStr.SERVICE
+
+    @pytest.mark.asyncio
+    async def test_map_fields_with_system_user_type(self, mock_connector):
+        """Test field mapping with system user type."""
+        # Setup
+        user = MagicMock()
+        user.id = "system123"
+        user.created = "2023-01-01T00:00:00.000Z"
+        user.profile.login = "system@example.com"
+        user.profile.firstName = "System"
+        user.profile.lastName = "User"
+        user.profile.email = "system@example.com"
+        user.profile.displayName = "System User"
+        user.profile.userType = "System"
+
+        mock_connector.get_user_groups = AsyncMock(return_value=[])
+        mock_connector.get_user_mfa = AsyncMock(return_value=False)
+
+        # Execute
+        result = await mock_connector.map_fields(user)
+
+        # Verify
+        assert isinstance(result, UserOCSFModel)
+        assert result.user.type_id == 3  # UserTypeId.SYSTEM
+        assert result.user.type == "System"  # UserTypeStr.SYSTEM
+
+    @pytest.mark.asyncio
+    async def test_map_fields_without_email_domain(self, mock_connector):
+        """Test field mapping when email doesn't have domain."""
+        # Setup
+        user = MagicMock()
+        user.id = "user123"
+        user.created = "2023-01-01T00:00:00.000Z"
+        user.profile.login = "testuser"
+        user.profile.firstName = "Test"
+        user.profile.lastName = "User"
+        user.profile.email = None  # No email
+
+        mock_connector.get_user_groups = AsyncMock(return_value=[])
+        mock_connector.get_user_mfa = AsyncMock(return_value=False)
+
+        # Execute
+        result = await mock_connector.map_fields(user)
+
+        # Verify
+        assert isinstance(result, UserOCSFModel)
+        assert result.user.domain is None  # No domain extracted
+
+    @pytest.mark.asyncio
+    async def test_map_fields_with_display_name_not_string(self, mock_connector):
+        """Test field mapping when displayName is not a string (edge case)."""
+        # Setup
+        user = MagicMock()
+        user.id = "user123"
+        user.created = "2023-01-01T00:00:00.000Z"
+        user.profile.login = "test@example.com"
+        user.profile.firstName = "Test"
+        user.profile.lastName = "User"
+        user.profile.email = "test@example.com"
+        # displayName is available but not a string (int in this case)
+        user.profile.displayName = 12345
+
+        mock_connector.get_user_groups = AsyncMock(return_value=[])
+        mock_connector.get_user_mfa = AsyncMock(return_value=False)
+
+        # Execute
+        result = await mock_connector.map_fields(user)
+
+        # Verify
+        assert isinstance(result, UserOCSFModel)
+        assert result.user.display_name is None  # Not set because it's not a string

@@ -6,9 +6,9 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.11,<3.12"
 ldap3 = "^2.9.1"
-sekoia-automation-sdk = "^1.13.0"
+sekoia-automation-sdk = "^v1.21.1"
 pytest = "^7.4.3"
 
 [tool.poetry.group.dev.dependencies]

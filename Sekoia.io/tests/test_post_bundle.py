@@ -89,7 +89,7 @@ def test_post_bundle_auto_merge(stix_bundle):
     }
 
     with requests_mock.Mocker() as mock:
-        mock.post("http://fake.url/api/v2/inthreat/bundles?auto_merge=1", json={})
+        mock.post("http://fake.url/api/v2/inthreat/bundles?auto_merge=True", json={})
         action.run(arguments)
 
         assert mock.call_count == 1
