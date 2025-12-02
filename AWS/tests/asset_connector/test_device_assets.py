@@ -500,8 +500,11 @@ def test_extract_device_from_instance_exception_handling(test_aws_device_asset_c
     # Verify that an error was logged (error message may vary depending on parsing implementation)
     assert test_aws_device_asset_connector.log.call_count > 0
     # Check that error logging was called with level='error' and contains the instance ID
-    error_calls = [call for call in test_aws_device_asset_connector.log.call_args_list 
-                   if len(call[1]) > 0 and call[1].get('level') == 'error']
+    error_calls = [
+        call
+        for call in test_aws_device_asset_connector.log.call_args_list
+        if len(call[1]) > 0 and call[1].get("level") == "error"
+    ]
     assert len(error_calls) > 0
     assert "i-1234567890abcdef0" in str(error_calls[0])
     test_aws_device_asset_connector.log_exception.assert_called_once()
@@ -557,7 +560,7 @@ def test_get_aws_devices_success(test_aws_device_asset_connector):
     assert device.device.os.type_id == OSTypeId.LINUX
     assert device.device.type == DeviceTypeStr.SERVER
     assert device.device.type_id == DeviceTypeId.SERVER
-    
+
     # Verify device count logging
     test_aws_device_asset_connector.log.assert_any_call("Successfully collected 1 AWS devices", level="info")
 
@@ -697,11 +700,14 @@ def test_get_aws_devices_instance_processing_error(test_aws_device_asset_connect
     assert devices[0][0].device.uid == "i-1234567890abcdef0"
 
     # Verify error was logged for invalid instance (error message may vary)
-    error_calls = [call for call in test_aws_device_asset_connector.log.call_args_list 
-                   if len(call[1]) > 0 and call[1].get('level') == 'error']
+    error_calls = [
+        call
+        for call in test_aws_device_asset_connector.log.call_args_list
+        if len(call[1]) > 0 and call[1].get("level") == "error"
+    ]
     assert len(error_calls) > 0
     assert "i-invalid" in str(error_calls[0])
-    
+
     # Verify device count logging shows only 1 valid device
     test_aws_device_asset_connector.log.assert_any_call("Successfully collected 1 AWS devices", level="info")
 
