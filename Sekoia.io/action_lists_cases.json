@@ -1,0 +1,207 @@
+{
+    "uuid": "ac749619-3763-4029-b276-d13d9df9824f",
+    "name": "Search Cases",
+    "docker_parameters": "list_cases",
+    "description": "find cases that match your filters",
+    "arguments": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "list_cases",
+        "properties": {
+            "match[community_uuid]": {
+                "in": "query",
+                "type": "string"
+            },
+            "match[status_uuid]": {
+                "in": "query",
+                "type": "string"
+            },
+            "match[status_name]": {
+                "in": "query",
+                "type": "string"
+            },
+            "date[created_at]": {
+                "in": "query",
+                "type": "string"
+            },
+            "match[created_by]": {
+                "in": "query",
+                "type": "string"
+            },
+            "match[tags]": {
+                "in": "query",
+                "type": "string"
+            },
+            "match[assignees]": {
+                "in": "query",
+                "type": "string"
+            },
+            "limit": {
+                "in": "query",
+                "type": "integer",
+                "minimum": 1,
+                "default": 20,
+                "maximum": 100
+            },
+            "offset": {
+                "in": "query",
+                "type": "integer"
+            },
+            "sort": {
+                "in": "query",
+                "type": "string"
+            },
+            "direction": {
+                "in": "query",
+                "type": "string"
+            }
+        }
+    },
+    "results": {
+        "type": "object",
+        "properties": {
+            "total": {
+                "type": "integer",
+                "format": "int32"
+            },
+            "has_more": {
+                "type": "boolean"
+            },
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "uuid": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "short_id": {
+                            "type": "string"
+                        },
+                        "created_at": {
+                            "type": "string"
+                        },
+                        "created_by": {
+                            "type": "string"
+                        },
+                        "created_by_type": {
+                            "type": "string"
+                        },
+                        "updated_at": {
+                            "type": "string"
+                        },
+                        "updated_by": {
+                            "type": "string"
+                        },
+                        "updated_by_type": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "priority": {
+                          "default": "medium",
+                          "description": "low|medium|high"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "status_uuid": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "community_uuid": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "subscribers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "avatar_uuid": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "avatar_uuid",
+                              "type"
+                            ]
+                          }
+                        },
+                        "tags": {
+                          "type": "array",
+                          "description": "List of tags associated to the case",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "number_of_comments": {
+                          "type": "integer"
+                        },
+                        "first_seen_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-nullable": true,
+                          "description": "Date and time of the first case event"
+                        },
+                        "last_seen_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "x-nullable": true,
+                          "description": "Date and time of the last case event"
+                        },
+                        "manual": {
+                          "type": "boolean",
+                          "x-nullable": true,
+                          "description": "if True, indicates that the case was created manually"
+                        },
+                        "is_supplied": {
+                          "type": "boolean",
+                          "x-nullable": true,
+                          "description": "if True, indicates that alerts can be automatically added to the case"
+                        },
+                        "verdict_uuid": {
+                          "type": "string",
+                          "format": "uuid",
+                          "x-nullable": true,
+                          "description": "UUID of the verdict associated to the case"
+                        },
+                        "custom_status_uuid": {
+                          "type": "string",
+                          "format": "uuid",
+                          "x-nullable": true,
+                          "description": "UUID of the custom status associated to the case"
+                        },
+                        "custom_priority_uuid": {
+                          "type": "string",
+                          "format": "uuid",
+                          "x-nullable": true,
+                          "description": "UUID of the priority associated to the case"
+                        }
+                    }
+                }
+            }
+        },
+        "required": [
+            "community_uuid",
+            "created_at",
+            "created_by",
+            "created_by_type",
+            "short_id",
+            "status",
+            "status_uuid",
+            "title",
+            "uuid"
+        ]
+    },
+    "slug": "search_cases"
+}

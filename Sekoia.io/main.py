@@ -40,6 +40,7 @@ from sekoiaio.operation_center import (
     GetRule,
     ListAlerts,
     ListAssets,
+    ListsCases,
     PatchAlert,
     PostCommentOnAlert,
     PostCommentOnCase,
@@ -122,6 +123,7 @@ if __name__ == "__main__":
     module.register(UpdateAsset, "update-asset")
     module.register(UpdateCase, "update_case")
     module.register(GetCase, "get_case")
+    module.register(ListsCases, "list_cases")
     module.register(PostCommentOnCase, "post_comment_to_a_case")
     module.register(GetListOfCommentsOfCase, "list_case_comments")
     module.register(DeleteCase, "delete-case/{case_uuid}")
