@@ -144,7 +144,7 @@ class AwsDeviceAssetConnector(AssetConnector):
             List of NetworkInterface objects
         """
         network_interfaces = []
-        
+
         for interface in interfaces:
             try:
                 # Extract basic interface information
@@ -162,7 +162,7 @@ class AwsDeviceAssetConnector(AssetConnector):
             except Exception as e:
                 self.log(f"Error extracting network interface: {str(e)}", level="warning")
                 continue
-        
+
         return network_interfaces
 
     def _extract_security_groups(self, security_groups: List[Dict[str, Any]]) -> List[Group]:
@@ -175,7 +175,7 @@ class AwsDeviceAssetConnector(AssetConnector):
             List of Group objects representing security groups
         """
         groups = []
-        
+
         for sg in security_groups:
             try:
                 # Map EC2 security groups to OCSF Group objects
@@ -187,7 +187,7 @@ class AwsDeviceAssetConnector(AssetConnector):
             except Exception as e:
                 self.log(f"Error extracting security group: {str(e)}", level="warning")
                 continue
-        
+
         return groups
 
     def _extract_name_from_tags(self, tags: List[Dict[str, Any]]) -> Optional[str]:
@@ -344,7 +344,7 @@ class AwsDeviceAssetConnector(AssetConnector):
                     created_time = isoparse(launch_time)
                 else:
                     created_time = launch_time
-            
+
             # Use launch time as boot time
             if launch_time:
                 # Parse datetime string if needed
