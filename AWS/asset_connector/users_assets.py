@@ -324,6 +324,7 @@ class AwsUsersAssetConnector(AssetConnector):
                 type=AccountTypeStr.AWS_ACCOUNT,
                 type_id=AccountTypeId.AWS_ACCOUNT,
                 uid=user_arn,
+                uid_alt=user.get("UserId"),
             )
 
             # Fetch groups and MFA status for the user

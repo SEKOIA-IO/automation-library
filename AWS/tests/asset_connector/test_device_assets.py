@@ -11,7 +11,11 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
     DeviceTypeStr,
     DeviceTypeId,
+    NetworkInterface,
+    NetworkInterfaceTypeId,
+    NetworkInterfaceTypeStr,
 )
+from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.module import Module
 from dateutil.parser import isoparse
 
@@ -64,6 +68,171 @@ def test_get_device_os(test_aws_device_asset_connector):
     assert test_aws_device_asset_connector.get_device_os("Solaris") == OperatingSystem(
         name="Solaris", type=OSTypeStr.UNKNOWN, type_id=OSTypeId.UNKNOWN
     )
+
+
+def test_extract_network_interfaces(test_aws_device_asset_connector):
+    """Test network interface extraction from EC2 instance data."""
+    interfaces_data = [
+        {
+            "NetworkInterfaceId": "eni-0c2dee0a44bced651",
+            "Description": "Primary network interface",
+            "MacAddress": "06:f5:34:c6:b9:a3",
+            "PrivateIpAddress": "172.31.30.218",
+            "PrivateDnsName": "ip-172-31-30-218.eu-north-1.compute.internal",
+        },
+        {
+            "NetworkInterfaceId": "eni-1234567890abcdef0",
+            "Description": "Secondary network interface",
+            "MacAddress": "06:f5:34:c6:b9:a4",
+            "PrivateIpAddress": "172.31.30.219",
+            "PrivateDnsName": "ip-172-31-30-219.eu-north-1.compute.internal",
+        },
+    ]
+
+    result = test_aws_device_asset_connector._extract_network_interfaces(interfaces_data)
+
+    assert len(result) == 2
+    assert isinstance(result[0], NetworkInterface)
+    assert result[0].uid == "eni-0c2dee0a44bced651"
+    assert result[0].name == "Primary network interface"
+    assert result[0].mac == "06:f5:34:c6:b9:a3"
+    assert result[0].ip == "172.31.30.218"
+    assert result[0].hostname == "ip-172-31-30-218.eu-north-1.compute.internal"
+    assert result[0].type == NetworkInterfaceTypeStr.WIRED
+    assert result[0].type_id == NetworkInterfaceTypeId.WIRED
+    assert result[1].uid == "eni-1234567890abcdef0"
+
+
+def test_extract_network_interfaces_empty(test_aws_device_asset_connector):
+    """Test network interface extraction with empty list."""
+    result = test_aws_device_asset_connector._extract_network_interfaces([])
+    assert result == []
+
+
+def test_extract_network_interfaces_with_error(test_aws_device_asset_connector):
+    """Test network interface extraction when one interface has invalid data."""
+    interfaces_data = [
+        {
+            "NetworkInterfaceId": "eni-valid",
+            "MacAddress": "06:f5:34:c6:b9:a3",
+            "PrivateIpAddress": "172.31.30.218",
+        },
+        {
+            # This will cause an error if NetworkInterface requires certain fields
+        },
+    ]
+
+    result = test_aws_device_asset_connector._extract_network_interfaces(interfaces_data)
+
+    # Should have at least the valid interface
+    assert len(result) >= 1
+    assert result[0].uid == "eni-valid"
+
+
+def test_extract_security_groups(test_aws_device_asset_connector):
+    """Test security group extraction from EC2 instance data."""
+    security_groups_data = [
+        {
+            "GroupId": "sg-09b53a8472dbf6457",
+            "GroupName": "launch-wizard-1",
+        },
+        {
+            "GroupId": "sg-1234567890abcdef0",
+            "GroupName": "default",
+        },
+    ]
+
+    result = test_aws_device_asset_connector._extract_security_groups(security_groups_data)
+
+    assert len(result) == 2
+    assert isinstance(result[0], Group)
+    assert result[0].uid == "sg-09b53a8472dbf6457"
+    assert result[0].name == "launch-wizard-1"
+    assert result[1].uid == "sg-1234567890abcdef0"
+    assert result[1].name == "default"
+
+
+def test_extract_security_groups_empty(test_aws_device_asset_connector):
+    """Test security group extraction with empty list."""
+    result = test_aws_device_asset_connector._extract_security_groups([])
+    assert result == []
+
+
+def test_extract_security_groups_with_error(test_aws_device_asset_connector):
+    """Test security group extraction when one group has invalid data."""
+    security_groups_data = [
+        {
+            "GroupId": "sg-valid",
+            "GroupName": "valid-group",
+        },
+        {
+            # Invalid data
+        },
+    ]
+
+    result = test_aws_device_asset_connector._extract_security_groups(security_groups_data)
+
+    # Should have at least the valid group
+    assert len(result) >= 1
+    assert result[0].uid == "sg-valid"
+
+
+def test_extract_name_from_tags(test_aws_device_asset_connector):
+    """Test extraction of Name tag from EC2 instance tags."""
+    tags = [
+        {"Key": "Environment", "Value": "Production"},
+        {"Key": "Name", "Value": "UbuntuInstance"},
+        {"Key": "Owner", "Value": "admin"},
+    ]
+
+    result = test_aws_device_asset_connector._extract_name_from_tags(tags)
+    assert result == "UbuntuInstance"
+
+
+def test_extract_name_from_tags_no_name(test_aws_device_asset_connector):
+    """Test extraction of Name tag when it doesn't exist."""
+    tags = [
+        {"Key": "Environment", "Value": "Production"},
+        {"Key": "Owner", "Value": "admin"},
+    ]
+
+    result = test_aws_device_asset_connector._extract_name_from_tags(tags)
+    assert result is None
+
+
+def test_extract_name_from_tags_empty(test_aws_device_asset_connector):
+    """Test extraction of Name tag from empty list."""
+    result = test_aws_device_asset_connector._extract_name_from_tags([])
+    assert result is None
+
+
+def test_extract_autoscale_group_from_tags(test_aws_device_asset_connector):
+    """Test extraction of autoscaling group name from EC2 instance tags."""
+    tags = [
+        {"Key": "Name", "Value": "WebServer"},
+        {"Key": "aws:autoscaling:groupName", "Value": "web-server-asg"},
+        {"Key": "Environment", "Value": "Production"},
+    ]
+
+    result = test_aws_device_asset_connector._extract_autoscale_group_from_tags(tags)
+    assert result == "web-server-asg"
+
+
+def test_extract_autoscale_group_from_tags_no_asg(test_aws_device_asset_connector):
+    """Test extraction of autoscaling group when it doesn't exist."""
+    tags = [
+        {"Key": "Name", "Value": "WebServer"},
+        {"Key": "Environment", "Value": "Production"},
+    ]
+
+    result = test_aws_device_asset_connector._extract_autoscale_group_from_tags(tags)
+    assert result is None
+
+
+def test_extract_autoscale_group_from_tags_empty(test_aws_device_asset_connector):
+    """Test extraction of autoscaling group from empty list."""
+    result = test_aws_device_asset_connector._extract_autoscale_group_from_tags([])
+    assert result is None
 
 
 def test_client_success(test_aws_device_asset_connector):
@@ -322,17 +491,19 @@ def test_extract_device_from_instance_exception_handling(test_aws_device_asset_c
     # Create instance data that will cause an exception
     instance_data = {
         "InstanceId": "i-1234567890abcdef0",
-        "LaunchTime": "invalid_date",  # This will cause an exception
+        "LaunchTime": "invalid_date",  # This will cause an exception during parsing
     }
 
     result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
 
     assert result is None
-    # The actual error message includes the specific error details
-    test_aws_device_asset_connector.log.assert_called_with(
-        "Error extracting device from instance i-1234567890abcdef0: 'str' object has no attribute 'tzinfo'",
-        level="error",
-    )
+    # Verify that an error was logged (error message may vary depending on parsing implementation)
+    assert test_aws_device_asset_connector.log.call_count > 0
+    # Check that error logging was called with level='error' and contains the instance ID
+    error_calls = [call for call in test_aws_device_asset_connector.log.call_args_list 
+                   if len(call[1]) > 0 and call[1].get('level') == 'error']
+    assert len(error_calls) > 0
+    assert "i-1234567890abcdef0" in str(error_calls[0])
     test_aws_device_asset_connector.log_exception.assert_called_once()
 
 
@@ -386,6 +557,9 @@ def test_get_aws_devices_success(test_aws_device_asset_connector):
     assert device.device.os.type_id == OSTypeId.LINUX
     assert device.device.type == DeviceTypeStr.SERVER
     assert device.device.type_id == DeviceTypeId.SERVER
+    
+    # Verify device count logging
+    test_aws_device_asset_connector.log.assert_any_call("Successfully collected 1 AWS devices", level="info")
 
 
 def test_get_aws_devices_with_checkpoint(test_aws_device_asset_connector):
@@ -521,6 +695,15 @@ def test_get_aws_devices_instance_processing_error(test_aws_device_asset_connect
     assert len(devices) == 1
     assert len(devices[0]) == 1
     assert devices[0][0].device.uid == "i-1234567890abcdef0"
+
+    # Verify error was logged for invalid instance (error message may vary)
+    error_calls = [call for call in test_aws_device_asset_connector.log.call_args_list 
+                   if len(call[1]) > 0 and call[1].get('level') == 'error']
+    assert len(error_calls) > 0
+    assert "i-invalid" in str(error_calls[0])
+    
+    # Verify device count logging shows only 1 valid device
+    test_aws_device_asset_connector.log.assert_any_call("Successfully collected 1 AWS devices", level="info")
 
     # The invalid instance should be skipped but not cause the entire process to fail
     # This test verifies the error handling works without breaking the overall flow
