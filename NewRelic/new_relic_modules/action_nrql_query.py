@@ -3,7 +3,7 @@ from posixpath import join as urljoin
 from typing import Any
 
 import requests
-from pydantic.v1 import BaseModel, Field
+from pydantic.v1 import BaseModel
 from sekoia_automation.action import Action
 
 from . import NewRelicModule
@@ -41,13 +41,13 @@ class NRQLQueryAction(Action):
 
         # Do not escape double quotes, because we expect only single quotes for text values
         # (see: https://docs.newrelic.com/docs/nrql/get-started/introduction-nrql-new-relics-query-language/)
-        account_list = "[%s]" % ",".join(str(account_id) for account_id in arguments.account_ids)
-        query = """{ actor { nrql(accounts: %s query: "%s" timeout: 70) { results } } }""" % (
-            account_list,
-            arguments.query,
-        )
-
-        response = self.client.post(url, data=query)
+        payload = {
+            "query": "query ExecuteQuery($account_ids: [Int!], $query: Nrql!) {"
+            "actor { nrql( accounts: $account_ids query: $query) { results } } "
+            "}",
+            "variables": {"account_ids": arguments.account_ids, "query": arguments.query},
+        }
+        response = self.client.post(url, json=payload)
         self.handle_response_error(response)
 
         return response.json()
