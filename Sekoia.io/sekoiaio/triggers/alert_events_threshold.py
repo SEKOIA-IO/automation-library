@@ -291,18 +291,21 @@ class AlertEventsThresholdTrigger(AsyncConnector):
 
         # First time seeing this alert: trigger immediately
         if previous_state is None:
-            return True, {
+            context = {
                 "reason": "first_occurrence",
                 "new_events": current_event_count,
                 "previous_count": 0,
                 "current_count": current_event_count,
             }
+            THRESHOLD_CHECKS.labels(triggered="true").inc()
+            return True, context
 
         previous_count = previous_state.get("last_triggered_event_count", 0)
         new_events = current_event_count - previous_count
 
         # No new events: skip
         if new_events <= 0:
+            THRESHOLD_CHECKS.labels(triggered="false").inc()
             return False, {}
 
         trigger_reasons = []
@@ -399,12 +402,9 @@ class AlertEventsThresholdTrigger(AsyncConnector):
                 },
             }
 
-            # FIX: Actually call send_event (this was missing the await!)
-            await self.send_event(
-                event_name="alert_threshold_met",
-                event=payload,
-                directory=str(self._data_path),  # Convert Path to str
-            )
+            # CRITICAL FIX: Use positional arguments for send_event
+            # AsyncConnector.send_event signature: send_event(event_name: str, event: dict)
+            await self.send_event("alert_threshold_met", payload)
 
             EVENTS_FORWARDED.labels(
                 reason=context["reason"],
