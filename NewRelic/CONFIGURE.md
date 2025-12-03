@@ -1,6 +1,6 @@
 ## How to create an API Key
 
-1. Log in the New Relic Console
+1. Log in to the New Relic Console
 2. Click your avatar
 
     ![Step 1](docs/assets/apikey_step_01.png){: style="max-width:100%"}

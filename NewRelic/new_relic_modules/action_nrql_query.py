@@ -24,7 +24,7 @@ class NRQLQueryAction(Action):
 
     def handle_response_error(self, response: requests.Response) -> None:
         if not response.ok:
-            level = "critical" if response.status_code in [401, 403] else "error"
+            level = "critical" if response.status_code in {401, 403} else "error"
             message = f"Request to NewRelic API failed with status {response.status_code} - {response.reason}"
 
             self.log(message=message, level=level)
