@@ -1,0 +1,36 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "New Relic",
+    "type": "object",
+    "properties": {
+      "base_url": {
+        "description": "Base URL",
+        "type": "string",
+        "enum": [
+          "https://api.newrelic.com",
+          "https://api.eu.newrelic.com"
+        ]
+      },
+      "api_key": {
+        "description": "API key",
+        "type": "string"
+      }
+    },
+    "required": [
+      "base_url",
+      "api_key"
+    ],
+    "secrets": [
+      "api_key"
+    ]
+  },
+  "description": "New Relic is a cloud-based observability platform delivering full-stack monitoring for applications, infrastructure, logs and metrics. It ingests real-time telemetry—metrics, logs, traces and events—to help DevOps and engineering teams detect anomalies and troubleshoot faster. By transforming raw data into actionable insights, New Relic drives performance optimization and seamless digital experiences.",
+  "name": "New Relic",
+  "slug": "new-relic",
+  "categories": [
+    "Network"
+  ],
+  "uuid": "e44114c6-4c81-47b9-9298-3fe268b30f84",
+  "version": "1.0.0"
+}
