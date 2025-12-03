@@ -1,0 +1,10 @@
+Get IOC Report (API action) - IP address, URL, domain, or file;GET /api/v3/{entity_type}/{entity}
+Get Comments (API action) - IP address, URL, domain, or file;GET /api/v3/{entity_type}/{entity}/comments
+Get Vulnerability Associations - IP address, URL, domain, or file(API action);"GET /api/v3/{entity_type}/{entity}/vulnerabilities
+Example https://www.virustotal.com/api/v3/ip_addresses/45.182.189.102/vulnerabilities"
+Get File Sandbox Report (API action);GET /api/v3/files/{file_id}/behaviours
+Scan Url (API action);"POST /api/v3/urls
+POST /api/v3/private/urls"
+Get Curated Associations (API action);GET /api/v3/{entity_type}/{entity} (avec entity_type=collections, cti, … selon vos collections VT)
+Get Passive DNS Data (API action);GET /api/v3/{entity_type}/{entity}/resolutions
+Get Vulnerability Report (API action);GET /api/v3/collections/vulnerability--cve-2024-6284

@@ -1,0 +1,89 @@
+{
+  "uuid": "f1b2c3d4-e5f6-4789-9a1b-0c2d3e4f5a66",
+  "name": "Scan URL",
+  "description": "Submit a URL for scanning to Google Threat Intelligence (VirusTotal)",
+  "docker_parameters": "scan_url",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "URL to scan"
+      }
+    },
+    "required": ["url"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Scan URL Results",
+    "properties": {
+      "success": { "type": "boolean" },
+      "data": {
+        "type": "object",
+        "description": "VirusTotal URL analysis result",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The URL submitted by the user"
+          },
+          "analysis_stats": {
+            "type": "object",
+            "description": "Summary statistics of the URL scan",
+            "properties": {
+              "harmless": { "type": "integer" },
+              "malicious": { "type": "integer" },
+              "suspicious": { "type": "integer" },
+              "undetected": { "type": "integer" },
+              "timeout": { "type": "integer" },
+              "failure": { "type": "integer" },
+              "confirmed-timeout": { "type": "integer" },
+              "type-unsupported": { "type": "integer" }
+            },
+            "required": [
+              "harmless",
+              "malicious",
+              "suspicious",
+              "undetected",
+              "timeout",
+              "failure",
+              "confirmed-timeout",
+              "type-unsupported"
+            ]
+          },
+          "analysis_results": {
+            "type": "object",
+            "description": "Per-engine detailed results",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "confirmed-timeout",
+                    "timeout",
+                    "failure",
+                    "harmless",
+                    "undetected",
+                    "suspicious",
+                    "malicious",
+                    "type-unsupported"
+                  ]
+                },
+                "engine_name": { "type": "string" },
+                "engine_version": { "type": ["string", "null"] },
+                "engine_update": { "type": ["string", "null"] },
+                "method": { "type": ["string", "null"] },
+                "result": { "type": ["string", "null"] }
+              },
+              "required": ["category", "engine_name"]
+            }
+          }
+        },
+        "required": ["url", "analysis_stats", "analysis_results"]
+      }
+    }
+  },
+  "slug": "scan_url_in_gti"
+}

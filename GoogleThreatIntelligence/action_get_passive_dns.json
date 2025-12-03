@@ -1,0 +1,171 @@
+{
+  "uuid": "e3a9b7c5-2d4f-4b1e-a6f8-8f0d9b7c6a88",
+  "name": "Get Passive DNS",
+  "description": "Retrieve passive DNS data for a domain from Google Threat Intelligence",
+  "docker_parameters": "get_passive_dns",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "domain": {
+        "type": "string",
+        "description": "Domain name to query (e.g., google.com)",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$"
+      }
+    },
+    "required": ["domain"]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Passive DNS Results",
+    "properties": {
+      "success": { "type": "boolean" },
+      "data": {
+        "type": "object",
+        "description": "Container for passive DNS resolution data",
+        "properties": {
+          "resolutions_count": {
+            "type": "integer",
+            "description": "Total number of DNS resolutions retrieved"
+          },
+          "unique_ips_count": {
+            "type": "integer",
+            "description": "Number of unique IP addresses found in resolutions (for domain queries)"
+          },
+          "unique_domains_count": {
+            "type": "integer",
+            "description": "Number of unique domains found in resolutions (for IP queries)"
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity (domain or IP) that was queried"
+          },
+          "entity_type": {
+            "type": "string",
+            "description": "Type of entity queried",
+            "enum": ["domains", "ip_addresses"]
+          },
+          "unique_ips": {
+            "type": "array",
+            "description": "List of unique IP addresses (for domain queries)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "unique_domains": {
+            "type": "array",
+            "description": "List of unique domains (for IP queries)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resolutions": {
+            "type": "array",
+            "description": "Array of DNS resolution records",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Type of the object (always 'resolution')",
+                  "enum": ["resolution"]
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier for the resolution (format: ip_address+hostname)"
+                },
+                "ip_address": {
+                  "type": "string",
+                  "description": "The resolved IP address",
+                  "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+                },
+                "host_name": {
+                  "type": "string",
+                  "description": "The domain name associated with the IP"
+                },
+                "date": {
+                  "type": ["integer", "string"],
+                  "description": "Timestamp when the resolution was observed (Unix timestamp or ISO 8601 string)"
+                },
+                "resolver": {
+                  "type": "string",
+                  "description": "Source of the DNS resolution data (e.g., 'VirusTotal', 'PassiveTotal')"
+                },
+                "host_name_last_analysis_stats": {
+                  "type": "object",
+                  "description": "Analysis statistics for the hostname",
+                  "properties": {
+                    "harmless": {
+                      "type": "integer",
+                      "description": "Number of engines marking as harmless"
+                    },
+                    "malicious": {
+                      "type": "integer",
+                      "description": "Number of engines marking as malicious"
+                    },
+                    "suspicious": {
+                      "type": "integer",
+                      "description": "Number of engines marking as suspicious"
+                    },
+                    "undetected": {
+                      "type": "integer",
+                      "description": "Number of engines with no detection"
+                    },
+                    "timeout": {
+                      "type": "integer",
+                      "description": "Number of engines that timed out"
+                    }
+                  }
+                },
+                "ip_address_last_analysis_stats": {
+                  "type": "object",
+                  "description": "Analysis statistics for the IP address",
+                  "properties": {
+                    "harmless": {
+                      "type": "integer",
+                      "description": "Number of engines marking as harmless"
+                    },
+                    "malicious": {
+                      "type": "integer",
+                      "description": "Number of engines marking as malicious"
+                    },
+                    "suspicious": {
+                      "type": "integer",
+                      "description": "Number of engines marking as suspicious"
+                    },
+                    "undetected": {
+                      "type": "integer",
+                      "description": "Number of engines with no detection"
+                    },
+                    "timeout": {
+                      "type": "integer",
+                      "description": "Number of engines that timed out"
+                    }
+                  }
+                }
+              },
+              "required": ["type", "id", "date"]
+            }
+          },
+          "links": {
+            "type": "object",
+            "description": "Pagination links for additional results",
+            "properties": {
+              "self": {
+                "type": "string",
+                "description": "Link to the current page of results"
+              },
+              "next": {
+                "type": "string",
+                "description": "Link to the next page of results (if available)"
+              }
+            }
+          }
+        },
+        "required": ["resolutions_count", "entity", "entity_type", "resolutions"]
+      }
+    }
+  },
+  "slug": "get_passive_dns_in_gti"
+}
