@@ -13,14 +13,18 @@
         "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$"
       }
     },
-    "required": ["domain"]
+    "required": [
+      "domain"
+    ]
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "title": "Passive DNS Results",
     "properties": {
-      "success": { "type": "boolean" },
+      "success": {
+        "type": "boolean"
+      },
       "data": {
         "type": "object",
         "description": "Container for passive DNS resolution data",
@@ -44,7 +48,10 @@
           "entity_type": {
             "type": "string",
             "description": "Type of entity queried",
-            "enum": ["domains", "ip_addresses"]
+            "enum": [
+              "domains",
+              "ip_addresses"
+            ]
           },
           "unique_ips": {
             "type": "array",
@@ -69,7 +76,9 @@
                 "type": {
                   "type": "string",
                   "description": "Type of the object (always 'resolution')",
-                  "enum": ["resolution"]
+                  "enum": [
+                    "resolution"
+                  ]
                 },
                 "id": {
                   "type": "string",
@@ -85,7 +94,10 @@
                   "description": "The domain name associated with the IP"
                 },
                 "date": {
-                  "type": ["integer", "string"],
+                  "type": [
+                    "integer",
+                    "string"
+                  ],
                   "description": "Timestamp when the resolution was observed (Unix timestamp or ISO 8601 string)"
                 },
                 "resolver": {
@@ -145,7 +157,11 @@
                   }
                 }
               },
-              "required": ["type", "id", "date"]
+              "required": [
+                "type",
+                "id",
+                "date"
+              ]
             }
           },
           "links": {
@@ -163,7 +179,12 @@
             }
           }
         },
-        "required": ["resolutions_count", "entity", "entity_type", "resolutions"]
+        "required": [
+          "resolutions_count",
+          "entity",
+          "entity_type",
+          "resolutions"
+        ]
       }
     }
   },

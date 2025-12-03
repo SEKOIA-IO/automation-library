@@ -47,12 +47,9 @@ class GTIGetComments(Action):
                     entity_type = "domains"
                     entity_name = domain
 
-                print(f"Getting comments for {entity_type}: {entity_name}")
-                # connector.get_comments(client, entity_type)
                 connector.get_comments(client, entity_type, entity_name)
 
                 result = connector.results[-1]
-                print("Comments:", result.response)
 
             return {"success": result.status == "SUCCESS", "data": result.response, "error": result.error}
 

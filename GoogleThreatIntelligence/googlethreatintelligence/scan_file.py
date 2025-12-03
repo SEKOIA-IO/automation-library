@@ -27,7 +27,6 @@ class GTIScanFile(Action):
 
                 connector.scan_file(client, file_path)
                 analysis = connector.results[-1].response
-                print(f"API call response: {analysis}")  # Debugging line
 
                 return {
                     "success": True,

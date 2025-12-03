@@ -1,29 +1,3 @@
-"""
-Google Threat Intelligence (VirusTotal) API Testing Script
-Uses vt-py official library with comprehensive error handling
-
-ACTIONS MAPPING (from requirements):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Action                          | API Endpoint                              | Method(s)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Scan File                       | POST /api/v3/files                        | scan_file()
-                                | POST /api/v3/private/files                |
-Get IOC Report                  | GET /api/v3/{entity_type}/{entity}        | get_ioc_report()
-  - IP address                  | GET /api/v3/ip_addresses/{ip}             | get_ip_report()
-  - URL                         | GET /api/v3/urls/{url_id}                 | get_url_report()
-  - Domain                      | GET /api/v3/domains/{domain}              | get_domain_report()
-  - File                        | GET /api/v3/files/{hash}                  | get_file_report()
-Get Comments                    | GET /api/v3/{entity_type}/{entity}/comments | get_comments()
-Get Vulnerability Associations  | GET /api/v3/{entity_type}/{entity}/vulnerabilities | get_vulnerability_associations()
-Get File Sandbox Report         | GET /api/v3/files/{hash}/behaviours       | get_file_behaviour()
-Scan URL                        | POST /api/v3/urls                         | scan_url()
-                                | POST /api/v3/private/urls                 |
-Get Curated Associations        | GET /api/v3/{entity_type}/{entity}        | get_ioc_report()
-Get Passive DNS Data            | GET /api/v3/{entity_type}/{entity}/resolutions | get_passive_dns()
-Get Vulnerability Report        | GET /api/v3/collections/{vuln_id}         | get_vulnerability_report()
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-
 import vt
 import base64
 from pathlib import Path
@@ -210,9 +184,6 @@ class VTAPIConnector:
         """
         try:
             analysis = client.scan_url(self.url, wait_for_completion=True)
-            print("Analysis completed")
-            # print(analysis.stats)
-            # print(analysis.results)
             self._add_result(
                 "SCAN_URL",
                 "POST",
@@ -233,7 +204,6 @@ class VTAPIConnector:
 
             with open(file_path, "rb") as f:
                 analysis = client.scan_file(f, wait_for_completion=True)
-                print("Analysis completed")
 
             self._add_result(
                 "SCAN_FILE",
@@ -263,29 +233,30 @@ class VTAPIConnector:
     def get_file_behaviour(self, client: vt.Client):
         """Get file sandbox behavior"""
         try:
-            # Use iterator for behaviours and FULLY consume it
             behaviours_it = client.iterator(f"/files/{self.file_hash}/behaviours", limit=5)
 
-            # IMPORTANT: Fully consume the iterator to test it properly
             behaviours = []
             for behaviour in behaviours_it:
-                behaviour_data = {
-                    "sandbox_name": behaviour.sandbox_name if hasattr(behaviour, "sandbox_name") else None,
-                }
 
-                # Extract detailed behaviour information
-                if hasattr(behaviour, "processes_created"):
-                    behaviour_data["processes_created"] = len(behaviour.processes_created)
-                if hasattr(behaviour, "files_written"):
-                    behaviour_data["files_written"] = len(behaviour.files_written)
-                if hasattr(behaviour, "files_deleted"):
-                    behaviour_data["files_deleted"] = len(behaviour.files_deleted)
-                if hasattr(behaviour, "registry_keys_set"):
-                    behaviour_data["registry_keys_set"] = len(behaviour.registry_keys_set)
-                if hasattr(behaviour, "dns_lookups"):
-                    behaviour_data["dns_lookups"] = len(behaviour.dns_lookups)
-                if hasattr(behaviour, "ip_traffic"):
-                    behaviour_data["ip_traffic"] = len(behaviour.ip_traffic)
+                behaviour_data = {}
+
+                # sandbox_name always included when present (tests expect it)
+                if hasattr(behaviour, "sandbox_name"):
+                    behaviour_data["sandbox_name"] = behaviour.sandbox_name
+
+                # For behaviour list attributes: include key if attribute exists
+                # even if attribute is an empty list.
+                for attr in [
+                    "processes_created",
+                    "files_written",
+                    "files_deleted",
+                    "registry_keys_set",
+                    "dns_lookups",
+                    "ip_traffic",
+                ]:
+                    value = getattr(behaviour, attr, None)
+                    if value is not None:
+                        behaviour_data[attr] = len(value)
 
                 behaviours.append(behaviour_data)
 
@@ -296,8 +267,8 @@ class VTAPIConnector:
                 "SUCCESS",
                 {"behaviours_count": len(behaviours), "behaviours": behaviours},
             )
+
         except vt.APIError as e:
-            # This endpoint requires Premium API - log as warning not error
             logger.warning(f"File behaviours not available (may require Premium API): {e}")
             self._add_result(
                 "GET_FILE_SANDBOX",
@@ -434,7 +405,7 @@ class VTAPIConnector:
                 vuln_data,
             )
         except vt.APIError as e:
-            logger.warning(f"OUCH! Vulnerability report not available (may require Premium API): {e}")
+            logger.warning(f"Vulnerability report not available (may require Premium API): {e}")
             self._add_result(
                 "VULN_REPORT",
                 "GET",

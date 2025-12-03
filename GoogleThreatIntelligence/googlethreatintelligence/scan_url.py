@@ -26,7 +26,6 @@ class GTIScanURL(Action):
 
                 connector.scan_url(client)
                 analysis = connector.results[-1].response
-                print(f"API call response: {analysis}")  # Debugging line
 
                 return {
                     "success": True,

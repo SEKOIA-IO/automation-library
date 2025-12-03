@@ -13,14 +13,18 @@
         "pattern": "^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$"
       }
     },
-    "required": ["file_hash"]
+    "required": [
+      "file_hash"
+    ]
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "title": "Get File Behaviour Results",
     "properties": {
-      "success": { "type": "boolean" },
+      "success": {
+        "type": "boolean"
+      },
       "data": {
         "type": "object",
         "description": "Container for the file behaviour data",
@@ -42,7 +46,9 @@
                 "type": {
                   "type": "string",
                   "description": "Type of the object (always 'file_behaviour')",
-                  "enum": ["file_behaviour"]
+                  "enum": [
+                    "file_behaviour"
+                  ]
                 },
                 "id": {
                   "type": "string",
@@ -176,7 +182,11 @@
                       "transport_layer_protocol": {
                         "type": "string",
                         "description": "Protocol used (TCP/UDP)",
-                        "enum": ["TCP", "UDP", "ICMP"]
+                        "enum": [
+                          "TCP",
+                          "UDP",
+                          "ICMP"
+                        ]
                       }
                     }
                   }
@@ -238,11 +248,20 @@
                   }
                 }
               },
-              "required": ["type", "id", "sandbox_name", "analysis_date"]
+              "required": [
+                "type",
+                "id",
+                "sandbox_name",
+                "analysis_date"
+              ]
             }
           }
         },
-        "required": ["behaviours_count", "file_hash", "behaviours"]
+        "required": [
+          "behaviours_count",
+          "file_hash",
+          "behaviours"
+        ]
       }
     }
   },

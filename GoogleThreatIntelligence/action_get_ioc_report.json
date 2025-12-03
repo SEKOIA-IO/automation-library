@@ -30,10 +30,26 @@
       }
     },
     "oneOf": [
-      {"required": ["ip"]},
-      {"required": ["domain"]},
-      {"required": ["url"]},
-      {"required": ["file_hash"]}
+      {
+        "required": [
+          "ip"
+        ]
+      },
+      {
+        "required": [
+          "domain"
+        ]
+      },
+      {
+        "required": [
+          "url"
+        ]
+      },
+      {
+        "required": [
+          "file_hash"
+        ]
+      }
     ]
   },
   "results": {
@@ -69,20 +85,36 @@
             "type": "object",
             "description": "Statistics from last analysis",
             "properties": {
-              "harmless": {"type": "integer"},
-              "malicious": {"type": "integer"},
-              "suspicious": {"type": "integer"},
-              "undetected": {"type": "integer"}
+              "harmless": {
+                "type": "integer"
+              },
+              "malicious": {
+                "type": "integer"
+              },
+              "suspicious": {
+                "type": "integer"
+              },
+              "undetected": {
+                "type": "integer"
+              }
             }
           },
           "detections": {
             "type": "object",
             "description": "Detection summary",
             "properties": {
-              "harmless": {"type": "integer"},
-              "malicious": {"type": "integer"},
-              "suspicious": {"type": "integer"},
-              "undetected": {"type": "integer"}
+              "harmless": {
+                "type": "integer"
+              },
+              "malicious": {
+                "type": "integer"
+              },
+              "suspicious": {
+                "type": "integer"
+              },
+              "undetected": {
+                "type": "integer"
+              }
             }
           },
           "country": {
