@@ -254,29 +254,34 @@ class VTAPIConnector:
     def get_file_behaviour(self, client: vt.Client):
         """Get file sandbox behavior"""
         try:
-            # Use iterator for behaviours and FULLY consume it
-            behaviours_it = client.iterator(f"/files/{self.file_hash}/behaviours", limit=5)
+            behaviours_it = client.iterator(
+                f"/files/{self.file_hash}/behaviours",
+                limit=5
+            )
 
-            # IMPORTANT: Fully consume the iterator to test it properly
             behaviours = []
             for behaviour in behaviours_it:
-                behaviour_data = {
-                    "sandbox_name": behaviour.sandbox_name if hasattr(behaviour, "sandbox_name") else None,
-                }
 
-                # Extract detailed behaviour information
-                if hasattr(behaviour, "processes_created"):
-                    behaviour_data["processes_created"] = len(behaviour.processes_created)
-                if hasattr(behaviour, "files_written"):
-                    behaviour_data["files_written"] = len(behaviour.files_written)
-                if hasattr(behaviour, "files_deleted"):
-                    behaviour_data["files_deleted"] = len(behaviour.files_deleted)
-                if hasattr(behaviour, "registry_keys_set"):
-                    behaviour_data["registry_keys_set"] = len(behaviour.registry_keys_set)
-                if hasattr(behaviour, "dns_lookups"):
-                    behaviour_data["dns_lookups"] = len(behaviour.dns_lookups)
-                if hasattr(behaviour, "ip_traffic"):
-                    behaviour_data["ip_traffic"] = len(behaviour.ip_traffic)
+                behaviour_data = {}
+
+                # sandbox_name always included when present (tests expect it)
+                if hasattr(behaviour, "sandbox_name"):
+                    behaviour_data["sandbox_name"] = behaviour.sandbox_name
+
+                # For behaviour list attributes: include key if attribute exists
+                # even if attribute is an empty list.
+                for attr in [
+                    "processes_created",
+                    "files_written",
+                    "files_deleted",
+                    "registry_keys_set",
+                    "dns_lookups",
+                    "ip_traffic",
+                ]:
+                    value = getattr(behaviour, attr, None)
+                    if value is not None:
+                        behaviour_data[attr] = len(value)
+
 
                 behaviours.append(behaviour_data)
 
@@ -287,8 +292,8 @@ class VTAPIConnector:
                 "SUCCESS",
                 {"behaviours_count": len(behaviours), "behaviours": behaviours},
             )
+
         except vt.APIError as e:
-            # This endpoint requires Premium API - log as warning not error
             logger.warning(f"File behaviours not available (may require Premium API): {e}")
             self._add_result(
                 "GET_FILE_SANDBOX",
@@ -298,6 +303,7 @@ class VTAPIConnector:
                 None,
                 f"May require Premium API: {str(e)}",
             )
+
 
     def get_comments(self, client: vt.Client, entity_type: str, entity: str):
         """Get comments for an entity - FULLY tests the iterator"""
