@@ -23,7 +23,9 @@
   "description": "Google Threat Intelligence provides unmatched visibility into threats enabling us to deliver detailed and timely threat intelligence to security teams",
   "name": "GoogleThreatIntelligence",
   "slug": "googlethreatintelligence",
-  "category": "threat-intelligence",
+  "category": [
+    "Threat Intelligence"
+  ],
   "uuid": "2002b12b-00a9-4dde-a1a5-1c0b27dcc4db",
   "version": "0.1.0"
 }
