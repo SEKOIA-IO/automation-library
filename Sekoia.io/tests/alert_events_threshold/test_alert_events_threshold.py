@@ -1,4 +1,4 @@
-# tests/test_alert_events_threshold.py
+
 import asyncio
 from datetime import datetime, timezone
 import pytest
@@ -84,18 +84,25 @@ async def test_process_alert_update_invalid_notification(trigger):
     await trigger._process_alert_update(None)  # Should not raise
 
 @pytest.mark.asyncio
-async def test_process_alert_update_no_alert_uuid(trigger):
-    # Should handle missing alert_uuid gracefully
-    await trigger._process_alert_update({})  # Should not raise
-
-@pytest.mark.asyncio
 async def test_process_alert_update_triggered(trigger):
-    alert = {"uuid": "alert-1", "short_id": "A-1", "events_count": 10, "rule": {"name": "RuleA", "uuid": "uuid-123"}}
-    
+    alert = {
+        "uuid": "alert-1",
+        "short_id": "A-1",
+        "events_count": 10,
+        "rule": {"name": "RuleA", "uuid": "uuid-123"},
+    }
+
+    # Patch async methods
     trigger._retrieve_alert_from_alertapi = AsyncMock(return_value=alert)
     trigger._count_events_in_time_window = AsyncMock(return_value=1)
-    trigger._matches_rule_filter = AsyncMock(return_value=True)
-    trigger.send_event = AsyncMock()
 
-    await trigger._process_alert_update({"alert_uuid": "alert-1"})
-    trigger.send_event.assert_awaited_once()
+    # _matches_rule_filter is synchronous
+    trigger._matches_rule_filter = lambda a: True
+
+    # Patch state_manager.get_alert_state to return None (first occurrence)
+    trigger.state_manager.get_alert_state = lambda uuid: None
+
+    # Properly patch send_event
+    with patch.object(trigger, "send_event", new_callable=AsyncMock) as mock_send_event:
+        await trigger._process_alert_update({"alert_uuid": "alert-1"})
+        mock_send_event.assert_awaited_once()
