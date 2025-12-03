@@ -5,7 +5,7 @@ import tempfile
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 
 
 class AlertStateManager:
@@ -37,20 +37,68 @@ class AlertStateManager:
 
     VERSION = "1.0"
 
-    def __init__(self, state_file_path: Path, logger: Optional[logging.Logger] = None):
+    def __init__(self, state_file_path: Path, logger: Optional[Callable] = None):
         """
         Initialize state manager.
 
         Args:
             state_file_path: Path to the state JSON file
-            logger: Optional logger injected by tests or caller
+            logger: Optional logger callable (can be a function or logger object)
         """
         self.state_file_path = Path(state_file_path)
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = logger
         self._state: dict[str, Any] = self._load_state()
 
+    def _log_error(self, message: str, exc_info=None):
+        """Helper to log errors using the injected logger."""
+        if self.logger:
+            # Support both function-style loggers and logger objects
+            if callable(self.logger):
+                # If it's a plain function, call it
+                try:
+                    self.logger(message=message, level="error")
+                except TypeError:
+                    # If that doesn't work, try logger.error()
+                    if hasattr(self.logger, 'error'):
+                        self.logger.error(message, exc_info=exc_info)
+            elif hasattr(self.logger, 'error'):
+                self.logger.error(message, exc_info=exc_info)
+
+    def _locked_load_state(self, file_obj):
+        """Load JSON from an already locked file object."""
+        file_obj.seek(0)
+        try:
+            state = json.load(file_obj)
+        except json.JSONDecodeError as exc:
+            self._log_error("State file corrupted; starting fresh", exc_info=exc)
+            return {
+                "alerts": {},
+                "metadata": {
+                    "version": self.VERSION,
+                    "last_cleanup": datetime.now(timezone.utc).isoformat(),
+                },
+            }
+
+        # Ensure structure + version
+        if state.get("metadata", {}).get("version") != self.VERSION:
+            state = self._migrate_state(state)
+
+        state.setdefault("alerts", {})
+        state.setdefault("metadata", {
+            "version": self.VERSION,
+            "last_cleanup": datetime.now(timezone.utc).isoformat(),
+        })
+        return state
+
+    def _locked_save_state(self, file_obj):
+        """Write JSON to an already locked file object."""
+        file_obj.seek(0)
+        file_obj.truncate()
+        json.dump(self._state, file_obj, indent=2)
+        file_obj.flush()
+
     def _load_state(self) -> dict[str, Any]:
-        """Load state from file with locking."""
+        """Load state from file with proper locking and error handling."""
         if not self.state_file_path.exists():
             return {
                 "alerts": {},
@@ -62,21 +110,24 @@ class AlertStateManager:
 
         try:
             with open(self.state_file_path, "r") as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)  # Shared lock for reading
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                 try:
                     state = json.load(f)
-                    # Migrate if needed
-                    if state.get("metadata", {}).get("version") != self.VERSION:
-                        state = self._migrate_state(state)
-                    # Ensure structure consistency
-                    state.setdefault("alerts", {})
-                    state.setdefault("metadata", {"version": self.VERSION, "last_cleanup": datetime.now(timezone.utc).isoformat()})
-                    return state
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        except (json.JSONDecodeError, OSError) as e:
-            # Corrupted file: start fresh
-            self.logger.warning("State file corrupted or unreadable; starting fresh: %s", e)
+            
+            # Migration + defaults
+            if state.get("metadata", {}).get("version") != self.VERSION:
+                state = self._migrate_state(state)
+            state.setdefault("alerts", {})
+            state.setdefault("metadata", {
+                "version": self.VERSION,
+                "last_cleanup": datetime.now(timezone.utc).isoformat()
+            })
+            return state
+        except Exception as exc:
+            # FIX: Use the helper that properly logs errors
+            self._log_error("State file corrupted or unreadable; starting fresh", exc_info=exc)
             return {
                 "alerts": {},
                 "metadata": {
@@ -115,14 +166,17 @@ class AlertStateManager:
                 Path(temp_path).unlink(missing_ok=True)
             except Exception:
                 pass
-            self.logger.exception("Failed to save state file: %s", e)
+            self._log_error(f"Failed to save state file: {e}")
             raise
 
     def _migrate_state(self, old_state: dict[str, Any]) -> dict[str, Any]:
         """Migrate state from older versions. Currently a no-op (placeholder)."""
         # Future: implement version migrations here
         old_state.setdefault("alerts", {})
-        old_state.setdefault("metadata", {"version": self.VERSION, "last_cleanup": datetime.now(timezone.utc).isoformat()})
+        old_state.setdefault("metadata", {
+            "version": self.VERSION,
+            "last_cleanup": datetime.now(timezone.utc).isoformat()
+        })
         return old_state
 
     def get_alert_state(self, alert_uuid: str) -> Optional[dict[str, Any]]:
@@ -147,50 +201,68 @@ class AlertStateManager:
         previous_version: Optional[int] = None,
     ):
         """
-        Update state for an alert after triggering.
+        Update the state for a specific alert with full file locking.
 
         Args:
             alert_uuid: UUID of the alert
-            alert_short_id: Short ID (e.g., "ALT-12345")
-            rule_uuid: UUID of the alert rule
-            rule_name: Name of the alert rule
-            event_count: Current total event count in the alert
-            previous_version: Optional previous version provided by caller
+            alert_short_id: Short ID of the alert
+            rule_uuid: UUID of the rule
+            rule_name: Name of the rule
+            event_count: Current event count
+            previous_version: Expected version for optimistic locking (unused for now)
         """
         now = datetime.now(timezone.utc).isoformat()
 
-        existing = self._state["alerts"].get(alert_uuid)
+        # Ensure state file exists before opening
+        if not self.state_file_path.exists():
+            self.state_file_path.parent.mkdir(parents=True, exist_ok=True)
+            self.state_file_path.write_text(json.dumps({
+                "alerts": {},
+                "metadata": {
+                    "version": self.VERSION,
+                    "last_cleanup": datetime.now(timezone.utc).isoformat(),
+                }
+            }))
 
-        if existing:
-            # Increment version (basic optimistic/version tracking)
-            current_version = existing.get("version", 0)
-            new_version = current_version + 1
-            existing.update({
-                "alert_short_id": alert_short_id,
-                "rule_uuid": rule_uuid,
-                "rule_name": rule_name,
-                "last_triggered_at": now,
-                "last_triggered_event_count": event_count,
-                "total_triggers": existing.get("total_triggers", 0) + 1,
-                "updated_at": now,
-                "version": new_version,
-            })
-        else:
-            # Create new entry
-            self._state["alerts"][alert_uuid] = {
-                "alert_uuid": alert_uuid,
-                "alert_short_id": alert_short_id,
-                "rule_uuid": rule_uuid,
-                "rule_name": rule_name,
-                "last_triggered_at": now,
-                "last_triggered_event_count": event_count,
-                "total_triggers": 1,
-                "created_at": now,
-                "updated_at": now,
-                "version": 1,
-            }
+        # FULL FILE LOCK OVER THE ENTIRE READ → MODIFY → WRITE
+        with open(self.state_file_path, "r+") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                # load fresh state from file
+                self._state = self._locked_load_state(f)
 
-        self._save_state()
+                existing = self._state["alerts"].get(alert_uuid)
+
+                if existing:
+                    current_version = existing.get("version", 0)
+                    existing.update({
+                        "alert_short_id": alert_short_id,
+                        "rule_uuid": rule_uuid,
+                        "rule_name": rule_name,
+                        "last_triggered_at": now,
+                        "last_triggered_event_count": event_count,
+                        "total_triggers": existing.get("total_triggers", 0) + 1,
+                        "updated_at": now,
+                        "version": current_version + 1,
+                    })
+                else:
+                    self._state["alerts"][alert_uuid] = {
+                        "alert_uuid": alert_uuid,
+                        "alert_short_id": alert_short_id,
+                        "rule_uuid": rule_uuid,
+                        "rule_name": rule_name,
+                        "last_triggered_at": now,
+                        "last_triggered_event_count": event_count,
+                        "total_triggers": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                        "version": 1,
+                    }
+
+                # save back
+                self._locked_save_state(f)
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
     def cleanup_old_states(self, cutoff_date: datetime) -> int:
         """
@@ -205,8 +277,11 @@ class AlertStateManager:
         cutoff_iso = cutoff_date.isoformat()
         to_remove = []
 
+        # FIX: Compare using string comparison (ISO format is lexicographically sortable)
         for alert_uuid, state in list(self._state["alerts"].items()):
-            if state.get("last_triggered_at", "") < cutoff_iso:
+            last_triggered = state.get("last_triggered_at", "")
+            # If last_triggered is earlier than cutoff, remove it
+            if last_triggered and last_triggered < cutoff_iso:
                 to_remove.append(alert_uuid)
 
         for alert_uuid in to_remove:

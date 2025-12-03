@@ -1,13 +1,12 @@
 import asyncio
-import json
-import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, call
-from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import AsyncMock, MagicMock, patch
+import tempfile
 
 import pytest
-from aiohttp import ClientError, ClientTimeout, ServerTimeoutError
+import pytest_asyncio 
+from aiohttp import ServerTimeoutError
 from aioresponses import aioresponses
 
 from sekoiaio.triggers.alert_events_threshold import (
@@ -114,8 +113,8 @@ def state_manager(tmp_path):
     return AlertStateManager(state_file, logger=mock_logger)
 
 
-@pytest.fixture
-def trigger(config, mock_module, tmp_path):
+@pytest_asyncio.fixture  # Changed from @pytest.fixture to @pytest_asyncio.fixture
+async def trigger(config, mock_module, tmp_path):
     """Create trigger instance with mocked dependencies."""
     trigger = AlertEventsThresholdTrigger()
     trigger.configuration = config
@@ -129,7 +128,11 @@ def trigger(config, mock_module, tmp_path):
     trigger._api_url = mock_module.configuration.base_url
     trigger._api_key = mock_module.configuration.api_key
 
-    return trigger
+    yield trigger
+
+    # Cleanup: ensure session is closed after each test
+    if trigger.session:
+        await trigger._close_session()
 
 
 # ============================================================================
@@ -195,17 +198,18 @@ async def test_first_occurrence_triggers_immediately(trigger, sample_alert, tmp_
 
         await trigger._init_session()
 
-        # Process alert (first occurrence)
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            # Process alert (first occurrence)
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should trigger immediately
-        assert trigger.send_event.called
-        call_args = trigger.send_event.call_args
-        assert call_args[1]["event_name"] == "alert_threshold_met"
-        assert call_args[1]["event"]["trigger_context"]["reason"] == "first_occurrence"
-
-        await trigger._close_session()
+            # Should trigger immediately
+            assert trigger.send_event.called
+            call_args = trigger.send_event.call_args
+            assert call_args[1]["event_name"] == "alert_threshold_met"
+            assert call_args[1]["event"]["trigger_context"]["reason"] == "first_occurrence"
+        finally:
+            await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -236,17 +240,18 @@ async def test_volume_threshold_trigger(trigger, sample_alert, tmp_path):
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should trigger due to volume threshold
-        assert trigger.send_event.called
-        call_args = trigger.send_event.call_args
-        context = call_args[1]["event"]["trigger_context"]
-        assert "volume_threshold" in context["reason"]
-        assert context["new_events"] == 100
-
-        await trigger._close_session()
+            # Should trigger due to volume threshold
+            assert trigger.send_event.called
+            call_args = trigger.send_event.call_args
+            context = call_args[1]["event"]["trigger_context"]
+            assert "volume_threshold" in context["reason"]
+            assert context["new_events"] == 100
+        finally:
+            await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -275,13 +280,14 @@ async def test_below_threshold_does_not_trigger(trigger, sample_alert, tmp_path)
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should NOT trigger
-        assert not trigger.send_event.called
-
-        await trigger._close_session()
+            # Should NOT trigger
+            assert not trigger.send_event.called
+        finally:
+            await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -314,16 +320,17 @@ async def test_time_threshold_trigger(trigger, sample_alert, tmp_path):
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should trigger due to time threshold
-        assert trigger.send_event.called
-        call_args = trigger.send_event.call_args
-        context = call_args[1]["event"]["trigger_context"]
-        assert "time_threshold" in context["reason"]
-
-        await trigger._close_session()
+            # Should trigger due to time threshold
+            assert trigger.send_event.called
+            call_args = trigger.send_event.call_args
+            context = call_args[1]["event"]["trigger_context"]
+            assert "time_threshold" in context["reason"]
+        finally:
+            await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -340,13 +347,14 @@ async def test_rule_filter_blocks_non_matching_alerts(trigger, sample_alert, tmp
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should NOT trigger (filtered by rule)
-        assert not trigger.send_event.called
-
-        await trigger._close_session()
+            # Should NOT trigger (filtered by rule)
+            assert not trigger.send_event.called
+        finally:
+            await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -370,13 +378,14 @@ async def test_rule_names_filter_matches(trigger, sample_alert, tmp_path):
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should trigger (first occurrence + matches filter)
-        assert trigger.send_event.called
-
-        await trigger._close_session()
+            # Should trigger (first occurrence + matches filter)
+            assert trigger.send_event.called
+        finally:
+            await trigger._close_session()
 
 
 # ============================================================================
@@ -391,15 +400,16 @@ async def test_malformed_notification_missing_alert_uuid(trigger):
         Path(tempfile.mktemp()), logger=trigger.log
     )
 
-    # Notification without alert_uuid
-    notification = {"some_field": "some_value"}
-    await trigger._process_alert_update(notification)
+    try:
+        # Notification without alert_uuid
+        notification = {"some_field": "some_value"}
+        await trigger._process_alert_update(notification)
 
-    # Should log warning and not crash
-    assert trigger.log.called
-    assert not trigger.send_event.called
-
-    await trigger._close_session()
+        # Should log warning and not crash
+        assert trigger.log.called
+        assert not trigger.send_event.called
+    finally:
+        await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -410,17 +420,18 @@ async def test_malformed_notification_not_dict(trigger):
         Path(tempfile.mktemp()), logger=trigger.log
     )
 
-    # Invalid notification types
-    for invalid_notification in ["string", 123, None, ["list"]]:
-        trigger.log.reset_mock()
-        await trigger._process_alert_update(invalid_notification)
+    try:
+        # Invalid notification types
+        for invalid_notification in ["string", 123, None, ["list"]]:
+            trigger.log.reset_mock()
+            await trigger._process_alert_update(invalid_notification)
 
-        # Should log warning
-        assert trigger.log.called
-        log_message = trigger.log.call_args[1]["message"]
-        assert "Invalid notification format" in log_message
-
-    await trigger._close_session()
+            # Should log warning
+            assert trigger.log.called
+            log_message = trigger.log.call_args[1]["message"]
+            assert "Invalid notification format" in log_message
+    finally:
+        await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -436,14 +447,15 @@ async def test_malformed_alert_response_missing_uuid(trigger, tmp_path):
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": "alert-uuid-bad"}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": "alert-uuid-bad"}
+            await trigger._process_alert_update(notification)
 
-        # Should log exception and not crash
-        assert trigger.log_exception.called
-        assert not trigger.send_event.called
-
-        await trigger._close_session()
+            # Should log exception and not crash
+            assert trigger.log_exception.called
+            assert not trigger.send_event.called
+        finally:
+            await trigger._close_session()
 
 
 @pytest.mark.asyncio
@@ -462,15 +474,16 @@ async def test_malformed_event_count_response(trigger, sample_alert, tmp_path):
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should log warning but continue (fail open)
-        assert trigger.log.called
-        # Should still trigger (first occurrence)
-        assert trigger.send_event.called
-
-        await trigger._close_session()
+            # Should log warning but continue (fail open)
+            assert trigger.log.called
+            # Should still trigger (first occurrence)
+            assert trigger.send_event.called
+        finally:
+            await trigger._close_session()
 
 
 # ============================================================================
@@ -496,15 +509,16 @@ async def test_api_timeout_with_retry(trigger, sample_alert, tmp_path):
 
         await trigger._init_session()
 
-        notification = {"alert_uuid": sample_alert["uuid"]}
-        await trigger._process_alert_update(notification)
+        try:
+            notification = {"alert_uuid": sample_alert["uuid"]}
+            await trigger._process_alert_update(notification)
 
-        # Should eventually succeed after retries
-        assert trigger.send_event.called
-        # Should log warnings about retries
-        assert trigger.log.call_count >= 2
-
-        await trigger._close_session()
+            # Should eventually succeed after retries
+            assert trigger.send_event.called
+            # Should log warnings about retries
+            assert trigger.log.call_count >= 2
+        finally:
+            await trigger._close_session()
 
 
 @pytest.mark.asyncio

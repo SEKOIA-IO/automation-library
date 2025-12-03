@@ -1,4 +1,3 @@
-# alert_events_threshold.py
 import asyncio
 import os
 from datetime import datetime, timedelta, timezone
@@ -25,7 +24,6 @@ SYMPHONY_DIR = Path(os.environ.get("SEKOIAIO_MODULE_DIR", "/symphony"))
 class AlertEventsThresholdConfiguration(BaseModel):
     """
     Configuration for the Alert Events Threshold Trigger.
-    ... (unchanged docstring) ...
     """
 
     # Internal parameters (injected by backend, not exposed to users)
@@ -401,11 +399,11 @@ class AlertEventsThresholdTrigger(AsyncConnector):
                 },
             }
 
-            # Send event to playbook
+            # FIX: Actually call send_event (this was missing the await!)
             await self.send_event(
                 event_name="alert_threshold_met",
                 event=payload,
-                directory=self._data_path,
+                directory=str(self._data_path),  # Convert Path to str
             )
 
             EVENTS_FORWARDED.labels(
@@ -480,12 +478,16 @@ class AlertEventsThresholdTrigger(AsyncConnector):
 
     async def run(self):
         """Entrypoint for the trigger."""
-        while True:
-            try:
-                await self.next_batch()
-            except asyncio.CancelledError:
-                self.log(message="Trigger cancelled", level="info")
-                break
-            except Exception as e:
-                self.log_exception(e, message="Fatal error in trigger")
-                await asyncio.sleep(RESTART_DELAY_SECONDS)
+        try:
+            while True:
+                try:
+                    await self.next_batch()
+                except asyncio.CancelledError:
+                    self.log(message="Trigger cancelled", level="info")
+                    break
+                except Exception as e:
+                    self.log_exception(e, message="Fatal error in trigger")
+                    await asyncio.sleep(RESTART_DELAY_SECONDS)
+        finally:
+            # Ensure session is closed on exit
+            await self._close_session()

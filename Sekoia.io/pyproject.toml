@@ -23,6 +23,7 @@ requests = "*"
 requests-mock = "*"
 aioresponses = "^0.7.6"
 aiolimiter = "^1.1.0"
+pytest-asyncio = "^1.3.0"
 
 [build-system]
 requires = [ "poetry-core>=1.0.0",]
@@ -47,3 +48,17 @@ omit = [
 target-version = "py311"
 line-length = 119
 fix = true
+
+# ============================================================================
+# PYTEST CONFIGURATION - Added to fix asyncio warnings
+# ============================================================================
+[tool.pytest.ini_options]
+# Fix pytest-asyncio deprecation warning
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "auto"
+
+# Standard pytest settings
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

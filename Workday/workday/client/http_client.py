@@ -133,6 +133,8 @@ class WorkdayClient:
             raise WorkdayError("HTTP session not initialized")
 
         url = f"{self.base_url}/activityLogging"
+        self.logger.warning(f"[DEBUG] Activity Logging URL = {url}")
+        
         params: Dict[str, str] = {
             "from": from_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "to": to_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
