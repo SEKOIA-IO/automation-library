@@ -41,7 +41,7 @@ class AsyncGithubClient(object):
         self.api_key = api_key
 
         self.pem_file = pem_file
-        self.base_url = "https://%s" % base_url.removeprefix("http://").removeprefix("https://")
+        self.base_url = f'https://{base_url.removeprefix("http://").removeprefix("https://")}'
         self.organization = organization
         self.app_id = app_id
 
