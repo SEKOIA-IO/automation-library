@@ -6,16 +6,17 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
-requests-ratelimiter = "^0.4.0"
-requests = "^2.3.1"
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = {extras = ["all"], version = "^1.21.1"}
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
+isort = "*"
+black = "*"
+mypy = "*"
 
 [build-system]
 requires = [ "poetry-core>=1.0.0",]
