@@ -312,8 +312,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             tenant_name=self.module.configuration.tenant_name,
             client_id=self.module.configuration.client_id,
             client_secret=self.module.configuration.client_secret,
-            refresh_token=self.module.configuration.refresh_token,
-            logger=self.log  # Pass the Sekoia logger
+            refresh_token=self.module.configuration.refresh_token
         ) as client:
             self.log(message="WorkdayClient context entered successfully", level="info")
             
