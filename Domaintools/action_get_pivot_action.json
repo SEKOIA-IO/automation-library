@@ -1,20 +1,24 @@
 {
   "uuid": "e9522106-9886-40d0-80c6-16f5cafe46a8",
-  "name": "Get a pivot request on Domaintools API returning a JSON dump",
-  "description": "A wrapper to pivot on a field (url, domain, ip, email) given a query value on Iris Investigate API v1",
+  "name": "Get Pivot Search Results",
+  "description": "Discover related domains by pivoting on infrastructure connections through DomainTools Iris Investigate API. Search across domains, IP addresses, emails, nameservers, and other indicators to identify associated infrastructure for threat hunting and investigation",
   "docker_parameters": "get_pivot_action",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "query_value": {
-        "description": "The value to query (url domain ip email)",
-        "default": "example.com",
+        "description": "The value to search for (e.g., domain name, IP address, email address, nameserver hostname)",
         "type": "string"
       },
       "pivot_type": {
-        "description": "The field to pivot on",
-        "default": "8.8.8.8",
-        "type": "string"
+        "description": "The infrastructure indicator type to pivot on (e.g., 'domain', 'ip', 'email', 'nameserver_host')",
+        "type": "string",
+        "enum": [
+          "domain",
+          "ip",
+          "email",
+          "nameserver_host"
+        ]
       }
     },
     "required": [
@@ -27,20 +31,143 @@
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "limit_exceeded": {"type": "boolean"},
-      "has_more_results": {"type": "boolean"},
-      "message": {"type": "string"},
-      "results_count": {"type": "integer"},
-      "total_count": {"type": "integer"},
+      "limit_exceeded": {
+        "type": "boolean",
+        "description": "Indicates if the API response limit per page has been exceeded"
+      },
+      "has_more_results": {
+        "type": "boolean",
+        "description": "Indicates if additional results are available beyond the current response"
+      },
+      "message": {
+        "type": "string",
+        "description": "Status message from DomainTools API (e.g., 'Enjoy your data.')"
+      },
+      "results_count": {
+        "type": "integer",
+        "description": "Number of related domains found in the current response"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of related domains matching the pivot query"
+      },
       "results": {
         "type": "array",
+        "description": "Array of domains connected to the queried indicator through shared infrastructure (IP, email, nameserver, etc.)",
         "items": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "Domain name found through the pivot search"
+            },
+            "domain_risk": {
+              "type": "object",
+              "description": "Domain risk assessment",
+              "properties": {
+                "risk_score": {
+                  "type": "integer",
+                  "description": "Numerical risk score for the domain (0-100, where higher values indicate greater risk)"
+                },
+                "risk_score_string": {
+                  "type": "string",
+                  "description": "Risk level classification (e.g., 'low', 'medium', 'high', 'critical')"
+                }
+              }
+            },
+            "registrar": {
+              "type": "object",
+              "description": "Domain registrar information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Registrar name (e.g., 'GoDaddy.com, LLC', 'Name.com LLC')"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains registered with this registrar"
+                }
+              }
+            },
+            "registrant_org": {
+              "type": "object",
+              "description": "Registrant organization information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Organization name of the domain registrant"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains registered to this organization"
+                }
+              }
+            },
+            "create_date": {
+              "type": "object",
+              "description": "Domain registration creation date",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Creation date in ISO format (YYYY-MM-DD)"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "first_seen": {
+              "type": "object",
+              "description": "Date when the domain was first observed by DomainTools",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "First seen date in ISO format (YYYY-MM-DD)"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "server_type": {
+              "type": "object",
+              "description": "Web server type and version information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Server software identifier (e.g., 'nginx/1.21.0', 'Apache/2.4.48', 'cloudflare')"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains using this server type"
+                }
+              }
+            },
+            "website_title": {
+              "type": "object",
+              "description": "HTML title of the website",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Website title text"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains with this title"
+                }
+              }
+            }
+          }
         }
       },
-      "missing_domains": {"type": "array"}
+      "missing_domains": {
+        "type": "array",
+        "description": "Array of domain names that were queried but not found in the DomainTools database"
+      }
     },
-    "title": "Response",
+    "title": "Results",
     "type": "object"
   },
   "slug": "get_pivot_action_in_domaintools"

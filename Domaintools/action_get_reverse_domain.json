@@ -1,14 +1,13 @@
 {
   "uuid": "6b93ba2c-5813-41c9-8494-c6dac9cc210d",
-  "name": "Perform a reverse Domain lookup on Domaintools API returning a JSON dump",
-  "description": "A wrapper to reverse a domain on Iris Investigate API v1",
+  "name": "DomainTools Hosting History",
+  "description": "Retrieve historical IP address and hosting infrastructure data for a domain from DomainTools API. Track changes in domain hosting over time to identify infrastructure migrations, shared hosting relationships, and patterns for threat analysis",
   "docker_parameters": "get_reverse_domain",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "domain": {
-        "description": "The domain to look for",
-        "default": "example.com",
+        "description": "The domain name to retrieve hosting history for (e.g., example.com)",
         "type": "string"
       }
     },
@@ -21,11 +20,53 @@
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "domain": {
-        "type": "string"
+      "domain_name": {
+        "type": "string",
+        "description": "The domain name that was queried"
       },
       "ip_history": {
         "type": "array",
+        "description": "Chronological array of IP addresses where the domain has been hosted, showing infrastructure changes over time",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "Domain name in uppercase format"
+            },
+            "post_ip": {
+              "type": "string",
+              "description": "The IP address after the change (new IP address)"
+            },
+            "pre_ip": {
+              "type": ["string", "null"],
+              "description": "The IP address before the change (previous IP address, null for initial setup)"
+            },
+            "action": {
+              "type": "string",
+              "description": "Action code: 'N' for New, 'C' for Change, 'D' for Delete"
+            },
+            "actiondate": {
+              "type": "string",
+              "description": "Date when the IP address change occurred in YYYY-MM-DD format"
+            },
+            "action_in_words": {
+              "type": "string",
+              "description": "Human-readable description of the action (e.g., 'New', 'Change', 'Delete')"
+            }
+          }
+        }
+      },
+      "registrar_history": {
+        "type": "array",
+        "description": "Historical record of registrar changes for the domain",
+        "items": {
+          "type": "object"
+        }
+      },
+      "nameserver_history": {
+        "type": "array",
+        "description": "Historical record of nameserver changes for the domain",
         "items": {
           "type": "object"
         }

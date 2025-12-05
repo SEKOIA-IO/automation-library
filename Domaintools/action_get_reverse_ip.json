@@ -1,14 +1,13 @@
 {
   "uuid": "bc2d54d3-16b0-4326-a82a-321765ff8bf4",
-  "name": "Perform a reverse ip lookup on Domaintools API returning a JSON dump",
-  "description": "A wrapper to reverse an ip on Iris Investigate API v1",
+  "name": "Get Domain from Reverse IP",
+  "description": "Discover all domains hosted on a specific IP address through DomainTools Iris Investigate API. Identify shared hosting relationships, virtual host configurations, and related infrastructure to map attack surfaces and detect malicious co-hosted domains",
   "docker_parameters": "get_reverse_ip",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "ip": {
-        "description": "The domain (not ip) to look for",
-        "default": "example.com",
+        "description": "The IP address to search for hosted domains (e.g., 8.8.8.8)",
         "type": "string"
       }
     },
@@ -21,11 +20,97 @@
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-      "ip_addresses": {
-        "type": "object"
+      "limit_exceeded": {
+        "type": "boolean",
+        "description": "Indicates if the API response limit per page has been exceeded"
+      },
+      "has_more_results": {
+        "type": "boolean",
+        "description": "Indicates if additional results are available beyond the current response"
+      },
+      "message": {
+        "type": "string",
+        "description": "Status message from DomainTools API (e.g., 'Enjoy your data.')"
+      },
+      "results_count": {
+        "type": "integer",
+        "description": "Number of domains hosted on the IP in the current response"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of domains currently or historically hosted on the queried IP address"
+      },
+      "results": {
+        "type": "array",
+        "description": "Array of domains that resolve or have resolved to the specified IP address, including active and historical hosting relationships",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "Domain name hosted on the IP address"
+            },
+            "domain_risk": {
+              "type": "object",
+              "description": "Risk assessment for the domain",
+              "properties": {
+                "risk_score": {
+                  "type": "integer",
+                  "description": "Overall risk score for the domain (0-100, where higher values indicate greater risk)"
+                }
+              }
+            },
+            "first_seen": {
+              "type": "object",
+              "description": "Date and time when the domain was first observed on this IP",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "First seen timestamp in ISO 8601 format (e.g., '2023-06-10T11:55:34Z')"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "server_type": {
+              "type": "object",
+              "description": "Web server software information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Server software identifier (e.g., 'Apache/2.4.41', 'nginx/1.18.0', 'cloudflare')"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains using this server type"
+                }
+              }
+            },
+            "website_title": {
+              "type": "object",
+              "description": "HTML title of the website",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Website title text"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains with this title"
+                }
+              }
+            }
+          }
+        }
+      },
+      "missing_domains": {
+        "type": "array",
+        "description": "Array of domain names that were queried but not found in the DomainTools database"
       }
     },
-    "title": "Response",
+    "title": "Results",
     "type": "object"
   },
   "slug": "get_reverse_ip_in_domaintools"
