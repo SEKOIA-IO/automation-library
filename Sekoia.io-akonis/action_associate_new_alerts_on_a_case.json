@@ -1,0 +1,39 @@
+{
+  "uuid": "186f5b43-2e79-4497-9eee-9e4f3ca54500",
+  "name": "Attach Alerts to Case",
+  "docker_parameters": "patch-cases/{case_uuid}/alerts",
+  "description": "Attach one or more alerts to a specific case",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "associate_new_alerts_on_a_case",
+    "properties": {
+      "case_uuid": {
+        "description": "UUID or short_id of the case to update",
+        "type": "string",
+        "in": "path"
+      },
+      "alerts": {
+        "type": "array",
+        "items": {
+          "type": "string",
+	  "description": "UUID or short_id of the alert to attach to the case"
+        },
+        "description": "The list of identifiers (UUID or short_id) of alerts to add",
+        "in": "body"
+      }
+    },
+    "required": [
+      "case_uuid"
+    ]
+  },
+  "results": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string"
+      }
+    }
+  },
+  "slug": "attach_alerts_to_case"
+}

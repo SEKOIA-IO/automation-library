@@ -1,0 +1,7 @@
+resources/composes/*
+resources/dockers/*
+resources/stacks/*
+resources/kubernetes/*
+**/*~
+**/__pycache__
+venv

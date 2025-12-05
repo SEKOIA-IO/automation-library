@@ -1,0 +1,98 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "rule_filter": {
+        "type": "string",
+        "description": "Create a run only for alerts matching a rule name"
+      },
+      "rule_names_filter": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Create a run only for alerts matching a list of rule name"
+      }
+    },
+    "type": "object",
+    "title": "Trigger configuration"
+  },
+  "description": "Create an event for each alert creation or modification",
+  "docker_parameters": "security_alerts_trigger",
+  "name": "Any Alert Update",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "file_path": {
+        "description": "File path to the alert on disk.",
+        "type": "string"
+      },
+      "event_type": {
+        "description": "Action that triggered this Sekoia.io Alert notification (could be for example \u201calert-created\u201d, \u201calert-status-changed\u201d, etc.)",
+        "type": "string"
+      },
+      "alert_uuid": {
+        "description": "Unique identifier of the Alert (UUID string).",
+        "type": "string"
+      },
+      "short_id": {
+        "description": "Unique short identifier of the Alert.",
+        "type": "string"
+      },
+      "status": {
+        "description": "Status of the Alert (object containing status description and name).",
+        "type": "object"
+      },
+      "created_at": {
+        "description": "Creation date of the Alert (timestamp).",
+        "type": "integer"
+      },
+      "urgency": {
+        "description": "Current urgency of the Alert.",
+        "type": "integer"
+      },
+      "entity": {
+        "description": "Description of the entity involved with this Alert (object containing entity UUID and name).",
+        "type": "object"
+      },
+      "alert_type": {
+        "description": "Category of the Alert",
+        "type": "object"
+      },
+      "rule": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "first_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "last_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "alert_type",
+      "alert_uuid",
+      "created_at",
+      "entity",
+      "short_id",
+      "status",
+      "urgency",
+      "rule",
+      "last_seen_at",
+      "first_seen_at"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "fe249825-c8c5-4321-8791-f476b505072d"
+}

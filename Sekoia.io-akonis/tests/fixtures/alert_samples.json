@@ -1,0 +1,40 @@
+{
+  "alert_with_100_events": {
+    "uuid": "alert-uuid-100",
+    "short_id": "ALT-10000",
+    "events_count": 100,
+    "status": {
+      "name": "Ongoing",
+      "uuid": "status-ongoing"
+    },
+    "rule": {
+      "uuid": "rule-powershell",
+      "name": "Suspicious PowerShell Activity"
+    },
+    "urgency": {
+      "severity": 70,
+      "criticity": "High"
+    },
+    "created_at": "2025-11-14T08:00:00.000000Z",
+    "updated_at": "2025-11-14T10:00:00.000000Z"
+  },
+  "alert_with_200_events": {
+    "uuid": "alert-uuid-200",
+    "short_id": "ALT-10001",
+    "events_count": 200,
+    "status": {
+      "name": "Ongoing",
+      "uuid": "status-ongoing"
+    },
+    "rule": {
+      "uuid": "rule-mimikatz",
+      "name": "Mimikatz Detection"
+    },
+    "urgency": {
+      "severity": 90,
+      "criticity": "Critical"
+    },
+    "created_at": "2025-11-14T06:00:00.000000Z",
+    "updated_at": "2025-11-14T10:30:00.000000Z"
+  }
+}
