@@ -1,7 +1,7 @@
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from asyncio import sleep
 from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator, Dict, Any, List
+from typing import AsyncGenerator, Dict, Any, List, Optional
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.storage import PersistentJSON
 from workday.client.http_client import WorkdayClient
@@ -14,7 +14,8 @@ class WorkdayActivityLoggingConfiguration(DefaultConnectorConfiguration):
     frequency: int = 600  # 10 minutes
     chunk_size: int = 1000
     limit: int = 1000  # API max per request
-
+    intake_server: Optional[str] = None
+    intake_key: str = ""
 
 class WorkdayActivityLoggingConnector(AsyncConnector):
     """
