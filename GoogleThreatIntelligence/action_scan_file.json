@@ -1,0 +1,138 @@
+{
+  "uuid": "fe3aa9b9-e922-4dcf-a3d5-c05a491f1c74",
+  "name": "Scan File",
+  "description": "Upload a file for scanning to Google Threat Intelligence (VirusTotal)",
+  "docker_parameters": "scan_file",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "description": "Local path to the file to scan"
+      }
+    },
+    "required": [
+      "file_path"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Scan File Results",
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "data": {
+        "type": "object",
+        "description": "VirusTotal FILE analysis result",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "The FILE PATH submitted by the user"
+          },
+          "analysis_stats": {
+            "type": "object",
+            "description": "Summary statistics of the FILE scan",
+            "properties": {
+              "harmless": {
+                "type": "integer"
+              },
+              "malicious": {
+                "type": "integer"
+              },
+              "suspicious": {
+                "type": "integer"
+              },
+              "undetected": {
+                "type": "integer"
+              },
+              "timeout": {
+                "type": "integer"
+              },
+              "failure": {
+                "type": "integer"
+              },
+              "confirmed-timeout": {
+                "type": "integer"
+              },
+              "type-unsupported": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "harmless",
+              "malicious",
+              "suspicious",
+              "undetected",
+              "timeout",
+              "failure",
+              "confirmed-timeout",
+              "type-unsupported"
+            ]
+          },
+          "analysis_results": {
+            "type": "object",
+            "description": "Per-engine detailed results",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "confirmed-timeout",
+                    "timeout",
+                    "failure",
+                    "harmless",
+                    "undetected",
+                    "suspicious",
+                    "malicious",
+                    "type-unsupported"
+                  ]
+                },
+                "engine_name": {
+                  "type": "string"
+                },
+                "engine_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "engine_update": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "method": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "result": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "category",
+                "engine_name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "file_path",
+          "analysis_stats",
+          "analysis_results"
+        ]
+      }
+    }
+  },
+  "slug": "scan_file_in_gti"
+}
