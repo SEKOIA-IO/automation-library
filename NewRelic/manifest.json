@@ -29,8 +29,8 @@
   "name": "New Relic",
   "slug": "new-relic",
   "categories": [
-    "Network"
+    "Applicative"
   ],
   "uuid": "e44114c6-4c81-47b9-9298-3fe268b30f84",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
