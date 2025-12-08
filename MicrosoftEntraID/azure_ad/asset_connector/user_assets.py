@@ -20,7 +20,13 @@ from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
 from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
-from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    UserDataObject,
+    UserEnrichmentObject,
+    UserOCSFModel,
+    UserTypeId,
+    UserTypeStr,
+)
 from sekoia_automation.storage import PersistentJSON
 
 from azure_ad.base import AzureADModule
@@ -81,6 +87,27 @@ class EntraIDAssetConnector(AssetConnector):
             version=self.PRODUCT_VERSION,
         )
         metadata = Metadata(product=product, version="1.6.0")
+        
+        # Extract domain from userPrincipalName
+        domain = None
+        if user.user_principal_name and "@" in user.user_principal_name:
+            domain = user.user_principal_name.split("@")[1]
+        
+        # Determine user type based on employee type or job title
+        user_type_id = UserTypeId.USER
+        user_type_str = UserTypeStr.USER
+        if user.employee_type:
+            employee_type_lower = user.employee_type.lower()
+            if "admin" in employee_type_lower:
+                user_type_id = UserTypeId.ADMIN
+                user_type_str = UserTypeStr.ADMIN
+            elif "service" in employee_type_lower:
+                user_type_id = UserTypeId.SERVICE
+                user_type_str = UserTypeStr.SERVICE
+            elif "system" in employee_type_lower:
+                user_type_id = UserTypeId.SYSTEM
+                user_type_str = UserTypeStr.SYSTEM
+        
         account = Account(
             name=user.user_principal_name or "Unknown",
             type_id=AccountTypeId.AZURE_AD_ACCOUNT,
@@ -95,7 +122,44 @@ class EntraIDAssetConnector(AssetConnector):
             full_name=user.display_name or "Unknown",
             email_addr=user.mail or "Unknown",
             account=account,
+            display_name=user.display_name,
+            domain=domain,
+            type_id=user_type_id,
+            type=user_type_str,
         )
+        
+        # Build enrichment data
+        enrichments = []
+        
+        # Create user data object with account status and login information
+        user_data_obj = UserDataObject(
+            is_enabled=user.account_enabled if user.account_enabled is not None else None,
+            last_logon=(
+                user.sign_in_activity.last_sign_in_date_time.isoformat()
+                if user.sign_in_activity and user.sign_in_activity.last_sign_in_date_time
+                else None
+            ),
+        )
+        
+        # Add account status enrichment
+        enrichments.append(
+            UserEnrichmentObject(
+                name="account",
+                value="status",
+                data=user_data_obj,
+            )
+        )
+        
+        # Add employment info enrichment if available
+        if user.department or user.job_title or user.employee_id or user.employee_type:
+            employment_data = UserDataObject()
+            employment_enrichment = UserEnrichmentObject(
+                name="employment",
+                value=f"{user.department or ''} - {user.job_title or ''}".strip(" -") or "info",
+                data=employment_data,
+            )
+            enrichments.append(employment_enrichment)
+        
         user_ocsf_model = UserOCSFModel(
             activity_id=2,
             activity_name="Collect",
@@ -110,6 +174,7 @@ class EntraIDAssetConnector(AssetConnector):
             metadata=metadata,
             user=user_data,
             type_name="User Inventory",
+            enrichments=enrichments if enrichments else None,
         )
         return user_ocsf_model
 
@@ -176,7 +241,21 @@ class EntraIDAssetConnector(AssetConnector):
         """
         new_users: list[UserOCSFModel] = []
         query_params = UsersRequestBuilder.UsersRequestBuilderGetQueryParameters(
-            select=["id", "displayName", "mail", "identities", "createdDateTime", "userPrincipalName", "mailNickname"],
+            select=[
+                "id",
+                "displayName",
+                "mail",
+                "identities",
+                "createdDateTime",
+                "userPrincipalName",
+                "mailNickname",
+                "accountEnabled",
+                "department",
+                "jobTitle",
+                "employeeId",
+                "employeeType",
+                "signInActivity",
+            ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )
 
