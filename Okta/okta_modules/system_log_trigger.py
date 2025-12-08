@@ -132,7 +132,7 @@ class SystemLogConnector(Connector):
         headers = {"Accept": "application/json"}
         url = urljoin(self.module.configuration.base_url, "api/v1/logs")
 
-        params_to_use = params
+        params_to_use: None | dict[str, str | int] = params
 
         while url is not None and not self._stop_event.is_set():
             response = self.client.get(url, params=params_to_use, headers=headers)
