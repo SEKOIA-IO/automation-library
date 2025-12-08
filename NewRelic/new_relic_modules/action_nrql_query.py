@@ -39,8 +39,6 @@ class NRQLQueryAction(Action):
     def run(self, arguments: NRQLQueryActionArguments) -> Any:
         url = urljoin(self.module.configuration.base_url, "graphql")
 
-        # Do not escape double quotes, because we expect only single quotes for text values
-        # (see: https://docs.newrelic.com/docs/nrql/get-started/introduction-nrql-new-relics-query-language/)
         payload = {
             "query": "query ExecuteQuery($account_ids: [Int!], $query: Nrql!) {"
             "actor { nrql( accounts: $account_ids query: $query) { results } } "
