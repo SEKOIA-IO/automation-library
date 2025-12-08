@@ -132,8 +132,12 @@ class SystemLogConnector(Connector):
         headers = {"Accept": "application/json"}
         url = urljoin(self.module.configuration.base_url, "api/v1/logs")
 
-        while url is not None or not self._stop_event.is_set():
-            response = self.client.get(url, params=params, headers=headers)
+        params_to_use = params
+
+        while url is not None and not self._stop_event.is_set():
+            response = self.client.get(url, params=params_to_use, headers=headers)
+
+            params_to_use = None
 
             # manage the last response
             self._handle_response_error(response)
