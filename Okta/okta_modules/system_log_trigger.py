@@ -11,6 +11,7 @@ import orjson
 import requests
 from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -46,8 +47,13 @@ class SystemLogConnector(Connector):
         super().__init__(*args, **kwargs)
         self._stop_event = Event()
         self.context = PersistentJSON("context.json", self._data_path)
-        self.from_date = self.most_recent_date_seen
         self.fetch_events_limit = 1000
+
+        self.cursor = CheckpointDatetime(
+            path=self.data_path,
+            start_at=timedelta(minutes=1),
+            ignore_older_than=timedelta(days=7),
+        )
 
         # Put cache size to 2000 in order to
         self.cache_size = 2000
@@ -84,27 +90,6 @@ class SystemLogConnector(Connector):
         self.log(message="Stopping OKTA system logs connector", level="info")
         # Exit signal received, asking the processor to stop
         self._stop_event.set()
-
-    @property
-    def most_recent_date_seen(self) -> datetime:
-        now = datetime.now(timezone.utc)
-
-        with self.context as cache:
-            most_recent_date_seen_str = cache.get("most_recent_date_seen")
-
-            # if undefined, retrieve events from the last minute
-            if most_recent_date_seen_str is None:
-                return now - timedelta(minutes=1)
-
-            # parse the most recent date seen
-            most_recent_date_seen = isoparse(most_recent_date_seen_str)
-
-            # We don't retrieve messages older than one week
-            one_week_ago = now - timedelta(days=7)
-            if most_recent_date_seen < one_week_ago:
-                most_recent_date_seen = one_week_ago
-
-            return most_recent_date_seen
 
     @cached_property
     def client(self) -> ApiClient:
@@ -146,9 +131,10 @@ class SystemLogConnector(Connector):
         # get the first page of events
         headers = {"Accept": "application/json"}
         url = urljoin(self.module.configuration.base_url, "api/v1/logs")
-        response = self.client.get(url, params=params, headers=headers)
 
-        while not self._stop_event.is_set():
+        while url is not None or not self._stop_event.is_set():
+            response = self.client.get(url, params=params, headers=headers)
+
             # manage the last response
             self._handle_response_error(response)
 
@@ -162,6 +148,7 @@ class SystemLogConnector(Connector):
             # yielding events if defined
             if filtered_events:
                 INCOMING_MESSAGES.labels(intake_key=self.configuration.intake_key).inc(len(filtered_events))
+
                 yield filtered_events
             else:
                 logger.info(
@@ -171,13 +158,12 @@ class SystemLogConnector(Connector):
                 time.sleep(self.configuration.frequency)
 
             url = response.links.get("next", {}).get("url")
+
             if url is None:
                 return
 
-            response = self.client.get(url, headers=headers)
-
     def fetch_events(self) -> Generator[list[dict[str, Any]], None, None]:
-        most_recent_date_seen = self.from_date
+        most_recent_date_seen = self.cursor.offset
 
         try:
             for next_events in self.__fetch_next_events(most_recent_date_seen):
@@ -199,12 +185,8 @@ class SystemLogConnector(Connector):
                     yield next_events
         finally:
             # save the most recent date
-            if most_recent_date_seen > self.from_date:
-                self.from_date = most_recent_date_seen
-
-                # save in context the most recent date seen
-                with self.context as cache:
-                    cache["most_recent_date_seen"] = most_recent_date_seen.isoformat()
+            if most_recent_date_seen > self.cursor.offset:
+                self.cursor.offset = most_recent_date_seen
 
         now = datetime.now(timezone.utc)
         current_lag = now - most_recent_date_seen
