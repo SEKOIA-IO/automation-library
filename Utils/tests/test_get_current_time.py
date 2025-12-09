@@ -1,15 +1,11 @@
-from utils.action_get_current_time import (
-    GetCurrentTimeAction,
-    Arguments,
-)
 from re import match
 from shutil import rmtree
 from tempfile import mkdtemp
 
-
 import pytest
-
 from sekoia_automation import constants
+
+from utils.action_get_current_time import Arguments, GetCurrentTimeAction
 
 
 @pytest.fixture
@@ -32,3 +28,26 @@ def testGetCurrentTime():
         r"^[0-9]{4}\-[0-9]{2}\-[0-9]{2}T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{6}$",
         reponse["iso8601"],
     )
+
+
+def test_get_current_time_2():
+    action = GetCurrentTimeAction()
+    request = Arguments(selectedNamedTimezone="Europe/Paris")
+    reponse = action.run(request)
+    assert match(r"^[0-9]+$", str(reponse["epoch"]))
+    assert match(
+        r"^[0-9]{4}\-[0-9]{2}\-[0-9]{2}T[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9]{6}$",
+        reponse["iso8601"],
+    )
+
+
+def test_incorrect_inputs():
+    action = GetCurrentTimeAction()
+    request = Arguments(selectedTimezone=None, selectedNamedTimezone=None)
+    with pytest.raises(ValueError):
+        action.run(request)
+
+    action = GetCurrentTimeAction()
+    request = Arguments(selectedNamedTimezone="SomethingNotExisting")
+    with pytest.raises(ValueError):
+        action.run(request)
