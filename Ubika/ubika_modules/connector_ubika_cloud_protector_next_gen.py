@@ -148,7 +148,9 @@ class UbikaCloudProtectorNextGenConnector(Connector):
 
             raise FetchEventsException(message)
 
-    def __fetch_next_events(self, start_timestamp: int, end_timestamp: int) -> Generator[list[dict[str, Any]], None, None]:
+    def __fetch_next_events(
+        self, start_timestamp: int, end_timestamp: int
+    ) -> Generator[list[dict[str, Any]], None, None]:
         # get the first page of events
         headers = {"Content-Type": "application/json"}
         url = f"https://api.ubika.io/rest/logs.ubika.io/v1/ns/{self.configuration.namespace}/security-events"
@@ -242,7 +244,6 @@ class UbikaCloudProtectorNextGenConnector(Connector):
             level="debug",
         )  # pragma: no cover
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
-
 
     def run(self) -> None:
         self.log(message=f"Start fetching {self.NAME} events", level="info")  # pragma: no cover

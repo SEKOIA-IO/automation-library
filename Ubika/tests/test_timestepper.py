@@ -83,7 +83,8 @@ def test_ranges_sleeps_when_next_end_is_in_future(mock_trigger):
     stepper = TimeStepper(mock_trigger, start, end, frequency, timedelta)
 
     with patch("ubika_modules.timestepper.datetime") as mock_datetime, patch(
-            "ubika_modules.timestepper.time") as mock_time:
+        "ubika_modules.timestepper.time"
+    ) as mock_time:
         now = datetime.datetime(2024, 1, 15, 11, 59, 30, tzinfo=datetime.UTC)
         mock_datetime.datetime.now.return_value = now
         mock_datetime.UTC = datetime.UTC
@@ -108,7 +109,8 @@ def test_ranges_does_not_sleep_when_next_end_is_in_past(mock_trigger):
     stepper = TimeStepper(mock_trigger, start, end, frequency, timedelta)
 
     with patch("ubika_modules.timestepper.datetime") as mock_datetime, patch(
-            "ubika_modules.timestepper.time") as mock_time:
+        "ubika_modules.timestepper.time"
+    ) as mock_time:
         mock_datetime.datetime.now.return_value = datetime.datetime(2024, 1, 15, 12, 0, 0, tzinfo=datetime.UTC)
         mock_datetime.UTC = datetime.UTC
         mock_datetime.timedelta = datetime.timedelta
@@ -226,7 +228,8 @@ def test_ranges_logs_waiting_message_when_sleeping(mock_trigger):
     stepper = TimeStepper(mock_trigger, start, end, frequency, timedelta)
 
     with patch("ubika_modules.timestepper.datetime") as mock_datetime, patch(
-            "ubika_modules.timestepper.time") as mock_time:
+        "ubika_modules.timestepper.time"
+    ) as mock_time:
         now = datetime.datetime(2024, 1, 15, 11, 59, 30, tzinfo=datetime.UTC)
         mock_datetime.datetime.now.return_value = now
         mock_datetime.UTC = datetime.UTC
