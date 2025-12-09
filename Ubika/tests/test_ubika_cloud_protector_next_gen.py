@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
 
 import pytest
 import requests_mock
@@ -151,7 +152,7 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
         )
 
         trigger.from_timestamp = 1747326567845
-        events = trigger.fetch_events()
+        events = trigger._UbikaCloudProtectorNextGenConnector__fetch_next_events(1747326567845, 1747326667845)
 
         assert list(events) == [message1["spec"]["items"]]
 
@@ -172,8 +173,7 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
         )
 
         mock_requests.get(
-            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events?filters.fromDate=1747326567845&"
-            "pagination.realtime=True&pagination.pageSize=100",
+            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events?filters.fromDate=1747326560000&filters.toDate=1747326560000&pagination.realtime=True&pagination.pageSize=100",
             status_code=200,
             json=message1,
         )
@@ -192,7 +192,10 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
 
-        trigger.next_batch()
+        start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+        end = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+
+        trigger.next_batch(start, end)
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
@@ -206,5 +209,8 @@ def test_authorization_error(trigger):
             status_code=400,
         )
 
+        start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+        end = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+
         with pytest.raises(AuthorizationError):
-            trigger.next_batch()
+            trigger.next_batch(start=start, end=end)
