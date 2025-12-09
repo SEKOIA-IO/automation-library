@@ -1,5 +1,4 @@
 import time
-from codecs import replace_errors
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
@@ -207,7 +206,7 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                 )
 
             except AuthorizationError as err:
-                self.log(f"Authorization error: {err.args[1] if len(err.args)>1 else str(err)}", level="critical")
+                self.log(f"Authorization error: {err.args[1] if len(err.args) > 1 else str(err)}", level="critical")
                 raise
 
     def next_batch(self, start: datetime, end: datetime) -> None:

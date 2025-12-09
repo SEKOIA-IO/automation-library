@@ -8,6 +8,23 @@ from ubika_modules.metrics import EVENTS_LAG
 
 
 class TimeStepper:
+    """
+    A class to generate time ranges based on a start time, frequency, and timedelta.
+    It yields successive time ranges and adjusts for any lag in processing.
+    Attributes:
+        trigger (Trigger): The trigger instance for logging.
+        start (datetime.datetime): The start time of the current range.
+        end (datetime.datetime): The end time of the current range.
+        frequency (datetime.timedelta): The duration of each time range.
+        timedelta (datetime.timedelta): The delay to account for late-arriving data.
+    Methods:
+        ranges() -> Generator[tuple[datetime.datetime, datetime.datetime], None, None]:
+            Yields successive time ranges as tuples of (start, end).
+        create(trigger: Trigger, frequency: int = 60, timedelta: int = 1, start_time: int = 1) -> "TimeStepper":
+            Class method to create a TimeStepper instance with specified parameters.
+        create_from_time(trigger: Trigger, start: datetime.datetime, frequency: int = 60, timedelta: int = 1) -> "TimeStepper": Class method to create a TimeStepper instance starting from a specific time.
+    """
+
     def __init__(
         self,
         trigger: Trigger,
@@ -46,7 +63,7 @@ class TimeStepper:
                 # compute the max date allowed in the future and set the next_end according
                 current_difference = int((next_end - now).total_seconds())
                 max_difference = min(
-                    current_difference, self.frequency.total_seconds()
+                    current_difference, int(self.frequency.total_seconds())
                 )  # limit the end date in the future
                 next_end = now + datetime.timedelta(seconds=max_difference)
 
