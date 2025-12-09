@@ -109,7 +109,7 @@ class SystemLogConnector(Connector):
     @cached_property
     def client(self) -> ApiClient:
         return ApiClient(
-            apikey=self.module.configuration.apikey,  # type: ignore
+            apikey=self.module.configuration.apikey,
             ratelimit_per_minute=self.configuration.ratelimit_per_minute,
         )
 

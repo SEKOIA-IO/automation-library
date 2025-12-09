@@ -13,7 +13,11 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 )
 from sekoia_automation.module import Module
 
-from okta_modules.asset_connector.device_assets import OktaDevice, OktaDeviceAssetConnector, OktaDeviceProfile
+from okta_modules.asset_connector.device_assets import (
+    OktaDevice,
+    OktaDeviceAssetConnector,
+    OktaDeviceProfile,
+)
 
 
 @pytest.fixture
@@ -24,24 +28,24 @@ def test_okta_device_asset_connector(data_storage):
         "apikey": "fake_okta_api_key",
     }
 
-    test_okta_device_asset_connector = OktaDeviceAssetConnector(module=module, data_path=data_storage)
-    test_okta_device_asset_connector.configuration = {
+    connector = OktaDeviceAssetConnector(module=module, data_path=data_storage)
+    connector.configuration = {
         "sekoia_base_url": "https://sekoia.io",
         "sekoia_api_key": "fake_api_key",
         "frequency": 60,
     }
+    connector.log = Mock()
+    connector.log_exception = Mock()
 
-    test_okta_device_asset_connector.log = Mock()
-    test_okta_device_asset_connector.log_exception = Mock()
-
-    yield test_okta_device_asset_connector
+    return connector
 
 
-# Tests for fetch_next_devices method
+# ========================================
+# Tests: fetch_next_devices method
+# ========================================
 @pytest.mark.asyncio
 async def test_fetch_next_devices_success(test_okta_device_asset_connector):
-    # Arrange
-    mock_executor = AsyncMock()  # Make this AsyncMock too
+    mock_executor = AsyncMock()
     mock_request = MagicMock()
     mock_response = MagicMock()
     mock_device = OktaDevice(
@@ -58,25 +62,22 @@ async def test_fetch_next_devices_success(test_okta_device_asset_connector):
             secureHardwarePresent=True,
             diskEncryptionType="BitLocker",
             osVersion="10",
+            manufacturer="Dell",
+            model="Latitude 7420",
         ),
     )
 
-    # Mock the response properly - get_type() returns a function that takes body as parameter
     mock_response.get_type.return_value = lambda body=None: [mock_device]
     mock_response.get_body.return_value = [mock_device.model_dump()]
-
     mock_executor.create_request = AsyncMock(return_value=(mock_request, None))
     mock_executor.execute = AsyncMock(return_value=(mock_response, None))
 
-    # Mock the client to return the executor directly (not as a coroutine)
     mock_client = MagicMock()
     mock_client.get_request_executor.return_value = mock_executor
     test_okta_device_asset_connector.client = mock_client
 
-    # Act
     devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
-    # Assert
     assert isinstance(devices, list)
     assert len(devices) == 1
     assert devices[0].id == "dev1"
@@ -85,27 +86,23 @@ async def test_fetch_next_devices_success(test_okta_device_asset_connector):
 
 @pytest.mark.asyncio
 async def test_fetch_next_devices_error_response(test_okta_device_asset_connector):
-    # Arrange
     mock_executor = AsyncMock()
     mock_request = MagicMock()
     mock_executor.create_request = AsyncMock(return_value=(mock_request, None))
     mock_executor.execute = AsyncMock(return_value=(None, "Some error"))
-    # Mock the client to return the executor directly (not as a coroutine)
+
     mock_client = MagicMock()
     mock_client.get_request_executor.return_value = mock_executor
     test_okta_device_asset_connector.client = mock_client
 
-    # Act
     devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
-    # Assert
-    assert devices == []  # When there's an error, it returns empty list
+    assert devices == []
     assert response is None
 
 
 @pytest.mark.asyncio
 async def test_fetch_next_devices_no_devices(test_okta_device_asset_connector):
-    # Arrange
     mock_executor = AsyncMock()
     mock_request = MagicMock()
     mock_response = MagicMock()
@@ -113,38 +110,35 @@ async def test_fetch_next_devices_no_devices(test_okta_device_asset_connector):
     mock_response.get_body.return_value = []
     mock_executor.create_request = AsyncMock(return_value=(mock_request, None))
     mock_executor.execute = AsyncMock(return_value=(mock_response, None))
-    # Mock the client to return the executor directly (not as a coroutine)
+
     mock_client = MagicMock()
     mock_client.get_request_executor.return_value = mock_executor
     test_okta_device_asset_connector.client = mock_client
 
-    # Act
     devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
-    # Assert
-    assert devices == []  # When devices is empty, it returns empty list
+    assert devices == []
     assert response is None
 
 
 @pytest.mark.asyncio
 async def test_fetch_next_devices_exception(test_okta_device_asset_connector):
-    # Arrange
     mock_executor = AsyncMock()
     mock_executor.create_request = AsyncMock(side_effect=Exception("Boom"))
-    # Mock the client to return the executor directly (not as a coroutine)
+
     mock_client = MagicMock()
     mock_client.get_request_executor.return_value = mock_executor
     test_okta_device_asset_connector.client = mock_client
 
-    # Act
     devices, response = await test_okta_device_asset_connector.fetch_next_devices("/api/v1/devices")
 
-    # Assert
     assert devices == []
     assert response is None
 
 
-# Tests for next_list_devices method
+# ========================================
+# Tests: next_list_devices method
+# ========================================
 @pytest.mark.asyncio
 async def test_next_list_devices_success(test_okta_device_asset_connector):
     # Arrange
@@ -162,6 +156,8 @@ async def test_next_list_devices_success(test_okta_device_asset_connector):
             secureHardwarePresent=True,
             diskEncryptionType="BitLocker",
             osVersion="10.0.19041",
+            manufacturer="Dell",
+            model="Latitude 7420",
         ),
     )
     mock_device2 = OktaDevice(
@@ -178,6 +174,8 @@ async def test_next_list_devices_success(test_okta_device_asset_connector):
             secureHardwarePresent=True,
             diskEncryptionType="FileVault",
             osVersion="13.0",
+            manufacturer="Apple",
+            model="MacBook Pro",
         ),
     )
 
@@ -208,86 +206,74 @@ async def test_next_list_devices_failure(test_okta_device_asset_connector):
             await test_okta_device_asset_connector.next_list_devices()
 
 
-# Tests for get_device_os method
+# ========================================
+# Tests: get_device_os method
+# ========================================
 def test_get_device_os_windows_success(test_okta_device_asset_connector):
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("windows", "10.0.19041")
 
-    # Assert
     assert os.name == "Windows"
     assert os.type == OSTypeStr.WINDOWS
     assert os.type_id == OSTypeId.WINDOWS
 
 
 def test_get_device_os_macos_success(test_okta_device_asset_connector):
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("macos", "13.0")
 
-    # Assert
     assert os.name == "macOS"
     assert os.type == OSTypeStr.MACOS
     assert os.type_id == OSTypeId.MACOS
 
 
 def test_get_device_os_linux_success(test_okta_device_asset_connector):
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("linux", "5.4.0")
 
-    # Assert
     assert os.name == "Linux"
     assert os.type == OSTypeStr.LINUX
     assert os.type_id == OSTypeId.LINUX
 
 
 def test_get_device_os_ios_success(test_okta_device_asset_connector):
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("ios", "16.0")
 
-    # Assert
     assert os.name == "iOS"
     assert os.type == OSTypeStr.IOS
     assert os.type_id == OSTypeId.IOS
 
 
 def test_get_device_os_android_success(test_okta_device_asset_connector):
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("android", "13")
 
-    # Assert
     assert os.name == "Android"
     assert os.type == OSTypeStr.ANDROID
     assert os.type_id == OSTypeId.ANDROID
 
 
 def test_get_device_os_unknown_success(test_okta_device_asset_connector):
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("unknown", "1.0")
 
-    # Assert
     assert os.name == "unknown"
     assert os.type == OSTypeStr.OTHER
     assert os.type_id == OSTypeId.OTHER
 
 
 def test_get_device_os_case_insensitive(test_okta_device_asset_connector):
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("WINDOWS", "10.0.19041")
 
-    # Assert
     assert os.name == "Windows"
     assert os.type == OSTypeStr.WINDOWS
 
 
-# Tests for map_fields method
+# ========================================
+# Tests: map_fields method
+# ========================================
 @pytest.mark.asyncio
 async def test_map_fields_success(test_okta_device_asset_connector):
-    # Arrange
-    # Create a proper OktaDevice object
     okta_device = OktaDevice(
         id="dev1",
         status="ACTIVE",
         created="2023-01-01T00:00:00Z",
-        lastUpdated="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
         profile=OktaDeviceProfile(
             displayName="Test Device",
             platform="windows",
@@ -295,42 +281,52 @@ async def test_map_fields_success(test_okta_device_asset_connector):
             sid="SID001",
             registered=True,
             secureHardwarePresent=True,
-            diskEncryptionType="BitLocker",
+            diskEncryptionType="ALL_INTERNAL_VOLUMES",
             osVersion="10.0.19041",
+            manufacturer="Dell",
+            model="Latitude 7420",
         ),
     )
 
-    # Act
     result = await test_okta_device_asset_connector.map_fields(okta_device)
 
-    # Assert
     assert isinstance(result, DeviceOCSFModel)
     assert result.device.hostname == "Test Device"
     assert result.device.uid == "dev1"
     assert result.device.type == DeviceTypeStr.OTHER
     assert result.device.type_id == DeviceTypeId.OTHER
     assert result.device.os.name == "Windows"
+    assert result.device.vendor_name == "Dell"
+    assert result.device.model == "Latitude 7420"
+    assert result.device.created_time == 1672531200.0
+    assert result.device.last_seen_time == 1672617600.0
+    assert result.device.is_managed is True
+    assert result.device.is_compliant is True
     assert result.activity_name == "Collect"
     assert result.category_name == "Discovery"
     assert result.class_name == "Device Inventory Info"
     assert result.metadata.product.name == "Okta"
     assert result.metadata.product.vendor_name == "Okta"
     assert result.severity == "Informational"
+    assert result.enrichments is not None
+    assert len(result.enrichments) == 1
+    assert result.enrichments[0].name == "device_info"
+    assert result.enrichments[0].value == "hardware_and_security"
 
 
 @pytest.mark.asyncio
 async def test_map_fields_failure_invalid_device(test_okta_device_asset_connector):
-    # Arrange
     invalid_device = {"invalid": "data"}
 
-    # Act & Assert
-    with pytest.raises(AttributeError):  # dict object has no attribute 'profile'
+    with pytest.raises(AttributeError):
         await test_okta_device_asset_connector.map_fields(invalid_device)
 
 
-# Tests for get_assets method
+# ========================================
+# Tests: get_assets method
+# ========================================
 def test_get_assets_success(test_okta_device_asset_connector):
-    # Arrange
+
     mock_device1 = OktaDevice(
         id="dev1",
         status="ACTIVE",
@@ -345,6 +341,8 @@ def test_get_assets_success(test_okta_device_asset_connector):
             secureHardwarePresent=True,
             diskEncryptionType="BitLocker",
             osVersion="10.0.19041",
+            manufacturer="Dell",
+            model="Latitude 7420",
         ),
     )
     mock_device2 = OktaDevice(
@@ -361,6 +359,8 @@ def test_get_assets_success(test_okta_device_asset_connector):
             secureHardwarePresent=True,
             diskEncryptionType="FileVault",
             osVersion="13.0",
+            manufacturer="Apple",
+            model="MacBook Pro",
         ),
     )
 
@@ -447,6 +447,8 @@ def test_get_assets_failure_mapping_error(test_okta_device_asset_connector):
             secureHardwarePresent=True,
             diskEncryptionType="BitLocker",
             osVersion="10.0.19041",
+            manufacturer="Dell",
+            model="Latitude 7420",
         ),
     )
 
@@ -487,7 +489,9 @@ def test_get_assets_failure_no_devices(test_okta_device_asset_connector):
         mock_next_list.assert_called_once()
 
 
-# Additional tests for edge cases
+# ========================================
+# Tests: Edge cases and additional scenarios
+# ========================================
 @pytest.mark.asyncio
 async def test_fetch_next_devices_with_query_params(test_okta_device_asset_connector):
     """Test fetch_next_devices with query parameters for date filtering."""
@@ -509,6 +513,8 @@ async def test_fetch_next_devices_with_query_params(test_okta_device_asset_conne
             secureHardwarePresent=True,
             diskEncryptionType="BitLocker",
             osVersion="10.0.19041",
+            manufacturer="Dell",
+            model="Latitude 7420",
         ),
     )
 
@@ -561,6 +567,8 @@ async def test_next_list_devices_with_pagination(test_okta_device_asset_connecto
             secureHardwarePresent=True,
             diskEncryptionType="BitLocker",
             osVersion="10.0.19041",
+            manufacturer="Dell",
+            model="Latitude 7420",
         ),
     )
     mock_device2 = OktaDevice(
@@ -577,6 +585,8 @@ async def test_next_list_devices_with_pagination(test_okta_device_asset_connecto
             secureHardwarePresent=True,
             diskEncryptionType="FileVault",
             osVersion="13.0",
+            manufacturer="Apple",
+            model="MacBook Pro",
         ),
     )
 
@@ -607,22 +617,17 @@ async def test_next_list_devices_with_pagination(test_okta_device_asset_connecto
 
 def test_get_device_os_with_none_values(test_okta_device_asset_connector):
     """Test get_device_os with None values for version."""
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("windows", None)
 
-    # Assert
     assert os.name == "Windows"
     assert os.type == OSTypeStr.WINDOWS
     assert os.type_id == OSTypeId.WINDOWS
-    # Note: OperatingSystem model doesn't expose version as an attribute
 
 
 def test_get_device_os_with_empty_string(test_okta_device_asset_connector):
     """Test get_device_os with empty string for platform."""
-    # Act
     os: OperatingSystem = test_okta_device_asset_connector.get_device_os("", "1.0")
 
-    # Assert
     assert os.name == ""
     assert os.type == OSTypeStr.OTHER
     assert os.type_id == OSTypeId.OTHER
@@ -631,7 +636,6 @@ def test_get_device_os_with_empty_string(test_okta_device_asset_connector):
 @pytest.mark.asyncio
 async def test_map_fields_with_minimal_device(test_okta_device_asset_connector):
     """Test map_fields with a device that has minimal profile information."""
-    # Arrange
     minimal_device = OktaDevice(
         id="dev1",
         status="ACTIVE",
@@ -646,10 +650,8 @@ async def test_map_fields_with_minimal_device(test_okta_device_asset_connector):
         ),
     )
 
-    # Act
     result = await test_okta_device_asset_connector.map_fields(minimal_device)
 
-    # Assert
     assert isinstance(result, DeviceOCSFModel)
     assert result.device.hostname == "Minimal Device"
     assert result.device.uid == "dev1"
@@ -667,7 +669,6 @@ async def test_map_fields_with_minimal_device(test_okta_device_asset_connector):
 
 def test_get_last_created_date(test_okta_device_asset_connector):
     """Test get_last_created_date method."""
-    # Arrange
     devices = [
         OktaDevice(
             id="dev1",
@@ -710,15 +711,220 @@ def test_get_last_created_date(test_okta_device_asset_connector):
         ),
     ]
 
-    # Act
     last_date = test_okta_device_asset_connector.get_last_created_date(devices)
 
-    # Assert
     assert last_date == "2023-01-03T00:00:00Z"
 
 
 def test_get_last_created_date_empty_list(test_okta_device_asset_connector):
     """Test get_last_created_date with empty list raises ValueError."""
-    # Act & Assert
     with pytest.raises(ValueError):
         test_okta_device_asset_connector.get_last_created_date([])
+
+
+# ========================================
+# Tests: Enrichments and compliance
+# ========================================
+@pytest.mark.asyncio
+async def test_map_fields_with_enrichments(test_okta_device_asset_connector):
+    """Test map_fields properly creates enrichments for disk encryption."""
+    device_with_encryption = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Encrypted Device",
+            platform="windows",
+            registered=True,
+            secureHardwarePresent=True,
+            osVersion="10.0.19041",
+            diskEncryptionType="ALL_INTERNAL_VOLUMES",
+            manufacturer="Dell",
+            model="Latitude 7420",
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(device_with_encryption)
+
+    assert result.enrichments is not None
+    assert len(result.enrichments) == 1
+    assert result.enrichments[0].name == "device_info"
+    assert result.enrichments[0].value == "hardware_and_security"
+    assert result.enrichments[0].data.Storage_encryption is not None
+    assert "all_internal" in result.enrichments[0].data.Storage_encryption.partitions
+    assert result.enrichments[0].data.Storage_encryption.partitions["all_internal"] == "Enabled"
+
+
+@pytest.mark.asyncio
+async def test_map_fields_without_enrichments(test_okta_device_asset_connector):
+    """Test map_fields with device that has no enrichable data (no serialNumber, sid, or diskEncryptionType)."""
+    device_without_enrichments = OktaDevice(
+        id="dev2",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Minimal Device",
+            platform="windows",
+            registered=True,
+            secureHardwarePresent=True,
+            osVersion="10.0.19041",
+            manufacturer="HP",
+            model="EliteBook 840",
+            # No serialNumber, sid, or diskEncryptionType
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(device_without_enrichments)
+
+    # secureHardwarePresent creates an enrichment
+    assert result.enrichments is not None
+    assert len(result.enrichments) == 1
+    assert result.enrichments[0].data.Users is not None
+    assert "secure_hardware_present:True" in result.enrichments[0].data.Users
+
+
+@pytest.mark.asyncio
+async def test_map_fields_compliance_status(test_okta_device_asset_connector):
+    """Test map_fields properly sets compliance status based on device status and registration."""
+    inactive_device = OktaDevice(
+        id="dev1",
+        status="INACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Inactive Device",
+            platform="windows",
+            registered=True,
+            secureHardwarePresent=True,
+            osVersion="10.0.19041",
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(inactive_device)
+
+    assert result.device.is_managed is True
+    assert result.device.is_compliant is False
+
+
+@pytest.mark.asyncio
+async def test_map_fields_all_encryption_types(test_okta_device_asset_connector):
+    """Test map_fields handles different encryption types correctly."""
+    # Test USER encryption type
+    device_user_encryption = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="User Encrypted Device",
+            platform="android",
+            registered=True,
+            secureHardwarePresent=True,
+            osVersion="13",
+            diskEncryptionType="USER",
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(device_user_encryption)
+
+    assert result.enrichments is not None
+    assert len(result.enrichments) == 1
+    assert "user" in result.enrichments[0].data.Storage_encryption.partitions
+    assert result.enrichments[0].data.Storage_encryption.partitions["user"] == "Enabled"
+
+    # Test FULL encryption type
+    device_full_encryption = OktaDevice(
+        id="dev2",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Fully Encrypted Device",
+            platform="macos",
+            registered=True,
+            secureHardwarePresent=True,
+            osVersion="13.0",
+            diskEncryptionType="FULL",
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(device_full_encryption)
+
+    assert result.enrichments is not None
+    assert len(result.enrichments) == 1
+    assert "full" in result.enrichments[0].data.Storage_encryption.partitions
+    assert result.enrichments[0].data.Storage_encryption.partitions["full"] == "Enabled"
+
+
+@pytest.mark.asyncio
+async def test_map_fields_with_hardware_enrichment(test_okta_device_asset_connector):
+    """Test map_fields creates enrichment for unmapped hardware fields."""
+    device_with_hardware = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Device with Hardware Info",
+            platform="windows",
+            registered=True,
+            secureHardwarePresent=True,
+            osVersion="10.0.19041",
+            serialNumber="SN123456789",
+            sid="S-1-5-21-3623811015-3361044348-30300820-1013",
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(device_with_hardware)
+
+    assert result.enrichments is not None
+    assert len(result.enrichments) == 1
+    assert result.enrichments[0].name == "device_info"
+    assert result.enrichments[0].value == "hardware_and_security"
+    # Hardware info stored in Users field as key:value strings
+    assert result.enrichments[0].data.Users is not None
+    assert "serial_number:SN123456789" in result.enrichments[0].data.Users
+    assert "windows_sid:S-1-5-21-3623811015-3361044348-30300820-1013" in result.enrichments[0].data.Users
+    assert "secure_hardware_present:True" in result.enrichments[0].data.Users
+
+
+@pytest.mark.asyncio
+async def test_map_fields_with_combined_enrichment(test_okta_device_asset_connector):
+    """Test map_fields creates combined enrichment with both encryption and hardware data."""
+    device_with_both = OktaDevice(
+        id="dev1",
+        status="ACTIVE",
+        created="2023-01-01T00:00:00Z",
+        lastUpdated="2023-01-02T00:00:00Z",
+        profile=OktaDeviceProfile(
+            displayName="Device with Full Info",
+            platform="windows",
+            registered=True,
+            secureHardwarePresent=False,
+            osVersion="10.0.19041",
+            serialNumber="SN987654321",
+            diskEncryptionType="ALL_INTERNAL_VOLUMES",
+        ),
+    )
+
+    result = await test_okta_device_asset_connector.map_fields(device_with_both)
+
+    assert result.enrichments is not None
+    assert len(result.enrichments) == 1
+
+    # Check combined enrichment
+    enrichment = result.enrichments[0]
+    assert enrichment.name == "device_info"
+    assert enrichment.value == "hardware_and_security"
+
+    # Check encryption data
+    assert enrichment.data.Storage_encryption is not None
+    assert "all_internal" in enrichment.data.Storage_encryption.partitions
+    assert enrichment.data.Storage_encryption.partitions["all_internal"] == "Enabled"
+
+    # Check hardware data
+    assert enrichment.data.Users is not None
+    assert "serial_number:SN987654321" in enrichment.data.Users
+    assert "secure_hardware_present:False" in enrichment.data.Users
