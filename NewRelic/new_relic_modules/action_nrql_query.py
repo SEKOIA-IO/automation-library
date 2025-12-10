@@ -48,4 +48,6 @@ class NRQLQueryAction(Action):
         response = self.client.post(url, json=payload)
         self.handle_response_error(response)
 
-        return response.json()
+        content = response.json()
+
+        return {"results": content.get("data", {}).get("actor", {}).get("nrql", {}).get("results") or []}
