@@ -4,7 +4,7 @@ from datetime import timedelta
 from functools import cached_property
 
 import orjson
-import requests
+import httpx
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
@@ -97,11 +97,12 @@ class UbikaCloudProtectorNextGenConnector(Connector):
     def client(self) -> UbikaCloudProtectorNextGenApiClient:
         return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
 
-    def _handle_response_error(self, response: requests.Response) -> None:
-        if not response.ok:
+    def _handle_response_error(self, response: httpx.Response) -> None:
+        if not response.is_success:
+            error_data = response.json()
             message = (
                 f"Request on {self.NAME} API to fetch events failed with status "
-                f"{response.status_code} - {response.reason} on {response.request.url}"
+                f"{response.status_code} - {error_data} on {response.request.url}"
             )
 
             raise FetchEventsException(message)

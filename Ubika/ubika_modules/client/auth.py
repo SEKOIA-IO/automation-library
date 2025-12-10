@@ -1,23 +1,21 @@
 from datetime import datetime, timedelta
-from http.client import responses
 
-import requests
-from requests.auth import AuthBase
-from requests_ratelimiter import LimiterAdapter
-from urllib3.util.retry import Retry
+import httpx
+from httpx import Auth, Request, Response
+from httpx_ratelimiter import LimiterTransport
 
 
 class AuthorizationError(Exception):
     pass
 
 
-class ApiKeyAuthentication(AuthBase):
+class ApiKeyAuthentication(Auth):
     def __init__(self, token: str):
         self.__token = token
 
-    def __call__(self, request):
+    def auth_flow(self, request: Request):
         request.headers["Authorization"] = f"Bearer {self.__token}"
-        return request
+        yield request
 
 
 class UbikaCloudProtectorNextGenCredentials:
@@ -30,7 +28,7 @@ class UbikaCloudProtectorNextGenCredentials:
         return f"{self.token_type.title()} {self.access_token}"
 
 
-class UbikaCloudProtectorNextGenAuthentication(AuthBase):
+class UbikaCloudProtectorNextGenAuthentication(Auth):
     def __init__(
         self,
         refresh_token: str,
@@ -40,25 +38,22 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
         self.__refresh_token = refresh_token
         self.__api_credentials: UbikaCloudProtectorNextGenCredentials | None = None
 
-        self.__http_session = requests.Session()
-        self.__http_session.mount(
-            "https://",
-            LimiterAdapter(
+        # Configure HTTPX client with rate limiting and http2 support
+        self.__http_client = httpx.Client(
+            http2=True,
+            transport=LimiterTransport(
                 per_minute=ratelimit_per_minute,
-                max_retries=Retry(
-                    total=5,
-                    backoff_factor=1,
-                ),
             ),
+            timeout=300.0,
         )
 
     def get_credentials(self) -> UbikaCloudProtectorNextGenCredentials:
         current_dt = datetime.utcnow()
 
         if self.__api_credentials is None or current_dt + timedelta(seconds=30) >= self.__api_credentials.expires_at:
-            response: requests.Response | None = None
+            response: Response | None = None
             try:
-                response = self.__http_session.post(
+                response = self.__http_client.post(
                     url=self.__authorization_url,
                     data={
                         "grant_type": "refresh_token",
@@ -68,19 +63,17 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
                     },
-                    # Increased timeout for token requests to 5 minutes
-                    timeout=300,
                 )
 
                 response.raise_for_status()
-            except requests.exceptions.Timeout as timeout_exc:
+            except httpx.TimeoutException as timeout_exc:
                 raise AuthorizationError(
                     "timeout_error", "The request to obtain a new access token timed out."
                 ) from timeout_exc
-            except requests.exceptions.RequestException as e:
-                if response is not None:
-                    raw = response.json()
-                    raise AuthorizationError(raw["error"], raw["error_description"]) from e
+            except httpx.HTTPStatusError as e:
+                raw = response.json()
+                raise AuthorizationError(raw["error"], raw["error_description"]) from e
+            except httpx.RequestError as e:
                 raise AuthorizationError(
                     "request_error", f"An error occurred while requesting a new access token : {e}"
                 ) from e
@@ -95,6 +88,9 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
 
         return self.__api_credentials
 
-    def __call__(self, request):
+    def auth_flow(self, request: Request):
         request.headers["Authorization"] = self.get_credentials().authorization
-        return request
+        yield request
+
+    def __del__(self):
+        self.__http_client.close()
