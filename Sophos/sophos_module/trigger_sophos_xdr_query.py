@@ -24,10 +24,10 @@ class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
 
 class SophosXDRQueryTrigger(SophosConnector):
     """
-    The Sophos XDR Qyery reads the messages exposed after quering the Sophos Data Lake
+    The Sophos XDR Query reads the messages exposed after querying the Sophos Data Lake
     API and forward it to the playbook run.
 
-    Good to know : This's the parent class for all other query classes
+    Good to know : This is the parent class for all other query classes
     """
 
     configuration: SophosXDRQueryConfiguration
@@ -35,9 +35,12 @@ class SophosXDRQueryTrigger(SophosConnector):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.query: dict[str, Any] = {}
         self.from_date = self.most_recent_date_seen
         self.events_sum = 0
+
+    @property
+    def query(self) -> dict[str, Any]:
+        raise NotImplementedError
 
     @property
     def most_recent_date_seen(self) -> datetime:
@@ -230,7 +233,9 @@ class SophosXDRIOCQuery(SophosXDRQueryTrigger):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
 
-        self.query = {
+    @property
+    def query(self) -> dict[str, Any]:
+        return {
             "adHocQuery": {"template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"},
             "from": self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }

@@ -333,3 +333,4 @@ def test_getting_next_results(
         trigger.getting_results("7")
         assert trigger.events_sum == 8
         assert trigger.most_recent_date_seen.date() == datetime.now(timezone.utc).date()
+        assert trigger.query["from"] == trigger.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
