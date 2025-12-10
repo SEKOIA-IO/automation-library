@@ -126,22 +126,14 @@ class WorkdayClient:
             raise WorkdayError("HTTP session not initialized")
 
         url = f"{self.base_url}/activityLogging"
-        self.log(f"[DEBUG] Activity Logging URL = {url}")
 
-        params: Dict[str, str] = {
+        params = {
             "from": from_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "to": to_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "limit": str(limit),
             "offset": str(offset),
             "instancesReturned": "1",
         }
-
-        self.log(
-            f"Fetching activity logs - URL: {url}, "
-            f"Time range: {params['from']} to {params['to']}, "
-            f"Limit: {limit}, Offset: {offset}"
-        )
-        self.log(f"Request params: {params}")
 
         headers = {"Accept": "application/json"}
 
@@ -151,75 +143,78 @@ class WorkdayClient:
 
         while attempt < max_attempts:
             attempt += 1
-            self.log(f"Activity log request attempt {attempt}/{max_attempts}")
 
-            # ensure token
             access_token = await self._get_access_token()
             headers["Authorization"] = f"Bearer {access_token}"
-            self.log(f"Authorization header set with token: {access_token[:12]}...")
 
             async with self._rate_limiter:
-                self.log("Rate limiter acquired for activity log request")
-
                 async with self._session.get(url, params=params, headers=headers, raise_for_status=False) as resp:
                     status = resp.status
-                    response_headers = dict(resp.headers)
 
-                    self.log(f"Activity log response: Status {status}")
-                    self.log(f"Response headers: {response_headers}")
-
-                    # 401: try refreshing once
+                    # 401 → retry with new token
                     if status == 401:
-                        self.log(
-                            f"Received 401 Unauthorized on attempt {attempt}/{max_attempts} - "
-                            "Invalidating token and retrying"
-                        )
                         self._access_token = None
                         self._token_expires_at = None
-
                         if attempt < max_attempts:
                             await sleep(0.5)
-                            self.log("Paused 0.5s before retry after 401")
                             continue
-
-                        self.log("Max attempts reached after 401, raising WorkdayAuthError")
                         raise WorkdayAuthError("Unauthorized when fetching activity logs")
 
+                    # 429 → exponential backoff
                     if status == 429:
                         ra = resp.headers.get("Retry-After")
-                        wait = 60
-                        if ra:
-                            try:
-                                wait = int(ra)
-                                self.log(f"Rate limited (429) - Retry-After header: {ra}s")
-                            except Exception as e:
-                                self.log(f"Could not parse Retry-After header '{ra}': {e}, using default {wait}s")
-
-                        wait = wait * (backoff_base ** (attempt - 1))
-                        self.log(
-                            f"Rate limited (429) on attempt {attempt}/{max_attempts} - "
-                            f"Waiting {wait}s before retry"
-                        )
+                        wait = int(ra) if ra and ra.isdigit() else 60
+                        wait *= backoff_base ** (attempt - 1)
                         await sleep(wait)
                         continue
 
+                    # Other errors
                     if status != 200:
                         text = await resp.text()
-                        self.log(f"Activity log request FAILED with status {status} - Response: {text}")
                         raise WorkdayError(f"ActivityLogging request failed ({status}): {text}")
 
+                    # Parse JSON
                     data = await resp.json()
-                    event_count = len(data) if isinstance(data, list) else "unknown"
-                    self.log(
-                        f"Successfully fetched activity logs - " f"Events received: {event_count}, Offset: {offset}",
-                        level="info",
-                    )
-                    self.log(f"Response data type: {type(data)}, Sample: {str(data)[:200]}")
 
-                    return data
+                    #
+                    # Normalize Workday response into a list
+                    #
+                    events: list[Any] = []
+                    if isinstance(data, dict):
+                        candidates = [
+                            "data",
+                            "ActivityLogEntry",
+                            "Report_Entry",
+                            "items",
+                            "activityLogs",
+                        ]
+                        for key in candidates:
+                            if key in data:
+                                events = data[key] or []
+                                break
+                        else:
+                            # No list found → empty result
+                            self.log(
+                                f"WARNING: No event list found in ActivityLogging response. Keys={list(data.keys())}",
+                                level="warning",
+                            )
+                            events = []
 
-        self.log(f"Exceeded maximum retry attempts ({max_attempts}) for activity logs")
+                    elif isinstance(data, list):
+                        events = data
+                    else:
+                        self.log(f"WARNING: Unexpected response type {type(data)}; treating as empty", level="warning")
+                        events = []
+
+                    # Ensure always list
+                    if not isinstance(events, list):
+                        self.log(f"WARNING: Event container not list (type={type(events)}). Forcing empty list.")
+                        events = []
+
+                    return events
+
         raise WorkdayRateLimitError("Exceeded maximum retry attempts while fetching activity logs")
+
 
     async def __aenter__(self):
         self.log("Entering WorkdayClient context - Creating aiohttp session")
