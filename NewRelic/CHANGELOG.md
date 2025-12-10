@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.0.2] - 2025-12-10
+
+### Fixed
+
+- Fix the output of the NRQL action
+
 ## [1.0.1] - 2025-12-08
 
 ### Fixed
