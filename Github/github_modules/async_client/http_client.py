@@ -19,6 +19,7 @@ class AsyncGithubClient(object):
 
     def __init__(
         self,
+        base_url: str,
         organization: str,
         api_key: str | None = None,
         pem_file: str | None = None,
@@ -26,8 +27,8 @@ class AsyncGithubClient(object):
         rate_limiter: AsyncLimiter | None = None,
     ):
         """
-
         Args:
+            base_url: str
             organization: str
             api_key: str | None
             pem_file: str | None
@@ -40,6 +41,7 @@ class AsyncGithubClient(object):
         self.api_key = api_key
 
         self.pem_file = pem_file
+        self.base_url = f'https://{base_url.removeprefix("http://").removeprefix("https://")}'
         self.organization = organization
         self.app_id = app_id
 
@@ -118,7 +120,7 @@ class AsyncGithubClient(object):
         Returns:
             str:
         """
-        return "https://api.github.com/orgs/{0}/audit-log".format(self.organization)
+        return f"{self.base_url}/orgs/{self.organization}/audit-log"
 
     async def _get_audit_logs(
         self, start_from: int, url: str | None = None
@@ -132,8 +134,10 @@ class AsyncGithubClient(object):
         Returns:
             list[dict[str, Any]]:
         """
-        params = {} if url else {"phrase": "created:>{0}".format(start_from), "order": "asc", "per_page": 100}
-        request_url = url or self.audit_logs_url
+        params: dict[str, Any] = (
+            {} if url else {"phrase": "created:>{0}".format(start_from), "order": "asc", "per_page": 100}
+        )
+        request_url: str = url or self.audit_logs_url
 
         result: list[dict[str, Any]] = []
         links: Union[MultiDictProxy[Union[str, URL]], dict[Any, Any]] = {}
