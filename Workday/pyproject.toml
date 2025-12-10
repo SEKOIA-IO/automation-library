@@ -6,8 +6,8 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.11"
-sekoia-automation-sdk = "^1.21.1"
+python = ">=3.11,<3.14"
+sekoia-automation-sdk = {version = "^1.21.1", extras= ["all"]}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

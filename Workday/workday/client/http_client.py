@@ -7,6 +7,7 @@ from aiolimiter import AsyncLimiter
 from workday.client.errors import WorkdayError, WorkdayAuthError, WorkdayRateLimitError
 from sekoia_automation.trigger import Trigger
 
+
 class WorkdayClient:
     def __init__(
         self,
@@ -16,7 +17,7 @@ class WorkdayClient:
         client_secret: str,
         refresh_token: str,
         token_endpoint: Optional[str] = None,
-        trigger: Optional[Trigger] = None  # Add trigger parameter
+        trigger: Optional[Trigger] = None,  # Add trigger parameter
     ):
         self.workday_host = workday_host
         self.tenant_name = tenant_name
@@ -61,12 +62,10 @@ class WorkdayClient:
                 )
                 return self._access_token
             else:
-                self.log(
-                    f"Access token expired at {self._token_expires_at.isoformat()}, refreshing..."
-                )
+                self.log(f"Access token expired at {self._token_expires_at.isoformat()}, refreshing...")
 
         self.log(f"Requesting new access token from {self.token_endpoint}")
-        
+
         data = {
             "grant_type": "refresh_token",
             "refresh_token": self.refresh_token,
@@ -81,7 +80,7 @@ class WorkdayClient:
 
         async with self._rate_limiter:
             self.log("Rate limiter acquired for token request")
-            
+
             async with self._session.post(
                 self.token_endpoint,
                 data=data,
@@ -90,36 +89,33 @@ class WorkdayClient:
             ) as resp:
                 status = resp.status
                 headers = dict(resp.headers)
-                
+
                 self.log(f"Token endpoint response: Status {status}")
                 self.log(f"Token response headers: {headers}")
-                
+
                 if status == 401:
                     text = await resp.text()
-                    self.log(
-                        f"Token exchange UNAUTHORIZED (401) - Response body: {text}"
-                    )
+                    self.log(f"Token exchange UNAUTHORIZED (401) - Response body: {text}")
                     raise WorkdayAuthError(f"Token exchange unauthorized: {text}")
-                
+
                 if status != 200:
                     text = await resp.text()
-                    self.log(
-                        f"Token request FAILED with status {status} - Response: {text}"
-                    )
+                    self.log(f"Token request FAILED with status {status} - Response: {text}")
                     raise WorkdayError(f"Token request failed ({status}): {text}")
-                
+
                 token_data = await resp.json()
                 self.log(f"Token data keys received: {list(token_data.keys())}")
 
         self._access_token = token_data.get("access_token")
         expires_in = int(token_data.get("expires_in", 3600))
         self._token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 300)
-        
+
         self.log(
             f"Access token obtained successfully - "
             f"Token: {self._access_token[:12] if self._access_token else 'None'}..., "
-            f"Expires in: {expires_in}s (cached until {self._token_expires_at.isoformat()})")
-        
+            f"Expires in: {expires_in}s (cached until {self._token_expires_at.isoformat()})"
+        )
+
         return self._access_token
 
     async def fetch_activity_logs(
@@ -131,7 +127,7 @@ class WorkdayClient:
 
         url = f"{self.base_url}/activityLogging"
         self.log(f"[DEBUG] Activity Logging URL = {url}")
-        
+
         params: Dict[str, str] = {
             "from": from_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "to": to_time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
@@ -143,7 +139,8 @@ class WorkdayClient:
         self.log(
             f"Fetching activity logs - URL: {url}, "
             f"Time range: {params['from']} to {params['to']}, "
-            f"Limit: {limit}, Offset: {offset}")
+            f"Limit: {limit}, Offset: {offset}"
+        )
         self.log(f"Request params: {params}")
 
         headers = {"Accept": "application/json"}
@@ -155,7 +152,7 @@ class WorkdayClient:
         while attempt < max_attempts:
             attempt += 1
             self.log(f"Activity log request attempt {attempt}/{max_attempts}")
-            
+
             # ensure token
             access_token = await self._get_access_token()
             headers["Authorization"] = f"Bearer {access_token}"
@@ -163,14 +160,14 @@ class WorkdayClient:
 
             async with self._rate_limiter:
                 self.log("Rate limiter acquired for activity log request")
-                
+
                 async with self._session.get(url, params=params, headers=headers, raise_for_status=False) as resp:
                     status = resp.status
                     response_headers = dict(resp.headers)
-                    
+
                     self.log(f"Activity log response: Status {status}")
                     self.log(f"Response headers: {response_headers}")
-                    
+
                     # 401: try refreshing once
                     if status == 401:
                         self.log(
@@ -179,15 +176,15 @@ class WorkdayClient:
                         )
                         self._access_token = None
                         self._token_expires_at = None
-                        
+
                         if attempt < max_attempts:
                             await sleep(0.5)
                             self.log("Paused 0.5s before retry after 401")
                             continue
-                        
+
                         self.log("Max attempts reached after 401, raising WorkdayAuthError")
                         raise WorkdayAuthError("Unauthorized when fetching activity logs")
-                    
+
                     if status == 429:
                         ra = resp.headers.get("Retry-After")
                         wait = 60
@@ -196,10 +193,8 @@ class WorkdayClient:
                                 wait = int(ra)
                                 self.log(f"Rate limited (429) - Retry-After header: {ra}s")
                             except Exception as e:
-                                self.log(
-                                    f"Could not parse Retry-After header '{ra}': {e}, using default {wait}s"
-                                )
-                        
+                                self.log(f"Could not parse Retry-After header '{ra}': {e}, using default {wait}s")
+
                         wait = wait * (backoff_base ** (attempt - 1))
                         self.log(
                             f"Rate limited (429) on attempt {attempt}/{max_attempts} - "
@@ -207,23 +202,20 @@ class WorkdayClient:
                         )
                         await sleep(wait)
                         continue
-                    
+
                     if status != 200:
                         text = await resp.text()
-                        self.log(
-                            f"Activity log request FAILED with status {status} - Response: {text}"
-                        )
+                        self.log(f"Activity log request FAILED with status {status} - Response: {text}")
                         raise WorkdayError(f"ActivityLogging request failed ({status}): {text}")
-                    
+
                     data = await resp.json()
                     event_count = len(data) if isinstance(data, list) else "unknown"
                     self.log(
-                        f"Successfully fetched activity logs - "
-                        f"Events received: {event_count}, Offset: {offset}",
-                        level="info"
+                        f"Successfully fetched activity logs - " f"Events received: {event_count}, Offset: {offset}",
+                        level="info",
                     )
                     self.log(f"Response data type: {type(data)}, Sample: {str(data)[:200]}")
-                    
+
                     return data
 
         self.log(f"Exceeded maximum retry attempts ({max_attempts}) for activity logs")
@@ -232,7 +224,7 @@ class WorkdayClient:
     async def __aenter__(self):
         self.log("Entering WorkdayClient context - Creating aiohttp session")
         self._session = aiohttp.ClientSession()
-        
+
         # Validate token immediately at __aenter__ to fail fast on bad credentials
         self.log("Validating credentials by requesting initial access token")
         try:
@@ -241,12 +233,11 @@ class WorkdayClient:
         except Exception as e:
             self.log(f"Initial token validation FAILED: {e}")
             raise
-        
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self.log(
-            f"Exiting WorkdayClient context - Exception: {exc_type.__name__ if exc_type else 'None'}")
+        self.log(f"Exiting WorkdayClient context - Exception: {exc_type.__name__ if exc_type else 'None'}")
         if self._session:
             await self._session.close()
             self.log("aiohttp session closed")
