@@ -30,7 +30,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
         """
         Transform the raw data to key value data.
         """
-        columns_name = records[0].split("Fields:", 1)[1].strip().split(" ")
+        columns_name = records[0].split("Fields:", 1)[1].strip().split()
         values = [record.split("\t") for record in records[1:]]
         df = pd.DataFrame(values, columns=columns_name)
         return df.to_dict(orient="records")
