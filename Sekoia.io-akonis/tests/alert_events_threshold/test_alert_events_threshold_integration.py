@@ -34,6 +34,8 @@ async def fully_configured_trigger():
     trg.configuration = cfg
     trg._api_url = "https://api.test.sekoia.io"
     trg._api_key = "test-api-key"
+    trg.log = MagicMock()
+    trg.log_exception = MagicMock()
     
     with tempfile.TemporaryDirectory() as tmpdir:
         trg._data_path = Path(tmpdir)
@@ -337,6 +339,7 @@ async def test_concurrent_alert_updates():
     trg.configuration = cfg
     trg._api_url = "https://api.test.sekoia.io"
     trg._api_key = "test-key"
+    trg.log = MagicMock()
     
     with tempfile.TemporaryDirectory() as tmpdir:
         trg._data_path = Path(tmpdir)

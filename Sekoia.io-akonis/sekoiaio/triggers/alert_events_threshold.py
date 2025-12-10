@@ -163,10 +163,12 @@ class AlertEventsThresholdTrigger(AsyncConnector):
             self.session = ClientSession(headers=headers, timeout=timeout)
 
     async def _close_session(self):
-        """Close HTTP session gracefully."""
-        if self.session:
-            await self.session.close()
-            self.session = None
+        if getattr(self, "session", None) is not None:
+            try:
+                await self.session.close()
+            finally:
+                self.session = None
+
 
     async def _retrieve_alert_from_alertapi(self, alert_uuid: str) -> dict[str, Any]:
         """

@@ -1,11 +1,9 @@
-import asyncio
 from datetime import datetime, timezone, timedelta
 import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 import tempfile
-import json
 
 from sekoiaio.triggers.alert_events_threshold import (
     AlertEventsThresholdTrigger,
@@ -32,6 +30,11 @@ async def trigger_with_session():
     trg.configuration = cfg
     trg._api_url = "https://api.test.sekoia.io"
     trg._api_key = "test-api-key"
+    trg.log = MagicMock()
+    trg.log_exception = MagicMock()
+    
+    # Mock the callback_url property to avoid FileNotFoundError
+    trg.callback_url = "https://test.callback.url"
     
     # Use temp directory for state
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -392,6 +395,9 @@ async def test_process_alert_update_validation_error(trigger_with_session):
     
     # Should not raise, just log exception
     await trigger_with_session._process_alert_update({"alert_uuid": "alert-1"})
+    
+    # Verify log_exception was called
+    trigger_with_session.log_exception.assert_called()
 
 
 @pytest.mark.asyncio
@@ -403,6 +409,9 @@ async def test_process_alert_update_unexpected_error(trigger_with_session):
     
     # Should not raise, just log exception
     await trigger_with_session._process_alert_update({"alert_uuid": "alert-1"})
+    
+    # Verify log_exception was called
+    trigger_with_session.log_exception.assert_called()
 
 
 # ----------------------------------------------------------------------
