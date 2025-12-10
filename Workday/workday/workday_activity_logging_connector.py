@@ -8,7 +8,7 @@ from workday.client.http_client import WorkdayClient
 from workday.client.errors import WorkdayAuthError
 import asyncio
 import signal
-
+import traceback
 
 class WorkdayActivityLoggingConfiguration(DefaultConnectorConfiguration):
     """Connector-specific configuration"""
@@ -155,6 +155,9 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         from_time = self.last_event_date()
         to_time = datetime.now(timezone.utc) - timedelta(minutes=2)  # 2-minute buffer
 
+        # SAVE CHECKPOINT IMMEDIATELY
+        self.save_checkpoint(to_time)
+
         self.log(
             message=f"Fetch parameters - From: {from_time.isoformat()}, "
             f"To: {to_time.isoformat()}, "
@@ -177,7 +180,10 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             # Fetch page of events
             try:
                 events = await client.fetch_activity_logs(
-                    from_time=from_time, to_time=to_time, limit=limit, offset=offset
+                    from_time=from_time,
+                    to_time=to_time,
+                    limit=limit,
+                    offset=offset
                 )
 
                 events_received = len(events) if events else 0
@@ -191,9 +197,22 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                         level="debug",
                     )
 
+            #except Exception as e:
+            #    self.log(message=f"Error fetching page {page_count} at offset {offset}: {e}", level="error")
+            #    raise
+
             except Exception as e:
-                self.log(message=f"Error fetching page {page_count} at offset {offset}: {e}", level="error")
-                raise
+                self.log(message=f"Transient error fetching page {page_count} at offset {offset}: {e}", level="error")
+
+                # LOG FULL STACKTRACE
+                self.log(message=traceback.format_exc(), level="error")
+
+                # Retry transient aiohttp issues instead of crashing the whole connector
+                await asyncio.sleep(2)
+
+                # Continue to next iteration instead of raising
+                continue
+
 
             if not events:
                 self.log(
@@ -255,8 +274,6 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
             offset += limit
             self.log(message=f"Moving to next page - New offset: {offset}", level="debug")
 
-        # Update checkpoint
-        self.save_checkpoint(to_time)
 
         self.log(
             message=f"Fetch cycle complete - "
