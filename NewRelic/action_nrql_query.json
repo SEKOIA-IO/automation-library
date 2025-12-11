@@ -11,7 +11,9 @@
         "title": "Account IDs",
         "description": "Account identifiers to use",
         "type": "array",
-        "items": { "type": "integer" },
+        "items": {
+          "type": "integer"
+        },
         "minItems": 1
       },
       "query": {
@@ -25,5 +27,21 @@
       "query"
     ]
   },
-  "results": {}
+  "results": {
+    "title": "NRQLQueryActionResults",
+    "type": "object",
+    "properties": {
+      "results": {
+        "title": "Results",
+        "description": "The results of the NRQL query",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      }
+    },
+    "required": [
+      "results"
+    ]
+  }
 }
