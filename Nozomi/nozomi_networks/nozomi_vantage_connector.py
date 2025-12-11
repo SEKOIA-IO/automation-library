@@ -31,11 +31,7 @@ def _format_event(record: dict[str, Any]) -> dict[str, Any]:
         datetime: The event date.
     """
     return {
-        **{
-            key: value
-            for key, value in record.items()
-            if key != "attributes" and key != "type"
-        },
+        **{key: value for key, value in record.items() if key != "attributes" and key != "type"},
         **record.get("attributes", {}),
         "id": record.get("id"),
         "event_type": record.get("type"),
