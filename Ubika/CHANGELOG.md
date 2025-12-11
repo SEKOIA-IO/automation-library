@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-11 - 1.0.4
+
+### Changed
+
+- Replace `requests` library by `httpx`, with the HTTP/2.0 support, for making HTTP requests
+- Deprecate the old connectors
+
 ## 2025-11-28 - 1.0.3
 
 ### Fixed
