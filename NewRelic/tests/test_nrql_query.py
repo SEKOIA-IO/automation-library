@@ -19,15 +19,18 @@ def arguments():
     )
 
 
-@pytest.fixture
-def response_count():
-    return {"data": {"actor": {"nrql": {"results": [{"count": 255}]}}}}
-
-
-def test_query(data_storage, new_relic_module, arguments, response_count):
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"data": {"actor": {"nrql": {"results": [{"count": 255}]}}}},
+        {"data": {"actor": {}}},
+        {"data": {"actor": {"nrql": {"results": []}}}},
+    ],
+)
+def test_query(data_storage, new_relic_module, arguments, response):
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post("https://api.newrelic.com/graphql", json=response_count)
+        mock_requests.post("https://api.newrelic.com/graphql", json=response)
         action = NRQLQueryAction(module=new_relic_module, data_path=data_storage)
         result = action.run(arguments)
 
-        assert result == response_count
+        assert result["results"] == response.get("data", {}).get("actor", {}).get("nrql", {}).get("results", [])
