@@ -1,10 +1,10 @@
-import random
-import time
 from functools import cached_property
 
 import httpx
 from tenacity import (
     Retrying,
+    TryAgain,
+    wait_random,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -36,48 +36,32 @@ class ExponentialBackoffTransport(httpx.BaseTransport):
         """
         return response.status_code in self.statuses
 
-    def calculate_backoff(self, attempt_number: int) -> float:
-        """
-        Calculate backoff time with optional jitter.
-        """
-        backoff = (2**attempt_number) * self.backoff_factor
-        if self.use_jitter:
-            backoff = backoff * (0.5 + random.random() * 0.5)  # Add jitter (50-100% of backoff)
-        return min(backoff, self.backoff_max)
-
     @cached_property
     def retrying(self):
+        wait_strategy = wait_exponential(
+            multiplier=self.backoff_factor,
+            max=self.backoff_max
+        )
+
+        if self.use_jitter:
+            wait_strategy = wait_strategy + wait_random(0, 1)
+
         return Retrying(
             stop=stop_after_attempt(self.max_retries),
-            wait=wait_exponential(multiplier=self.backoff_factor, max=self.backoff_max),
+            wait=wait_strategy,
             retry=retry_if_exception_type(httpx.HTTPError),
             reraise=True,
         )
 
-    def handle_request(self, request: httpx.Request) -> httpx.Response:
+    def handle_request(self, request: httpx.Request) -> httpx.Response | None:
         """
         Handle the request with retry logic.
         """
-        final_response = None
-        for attempt in range(self.max_retries):
-            try:
+        for attempt in self.retrying:
+            with attempt:
                 response = self.transport.handle_request(request)
 
-                if not self.retry_on_status(response) or attempt == self.max_retries - 1:
-                    final_response = response
-                    break
+                if self.retry_on_status(response) and attempt.retry_state.attempt_number < self.max_retries:
+                    raise TryAgain(response)
 
-                # Calculate backoff and sleep
-                backoff_time = self.calculate_backoff(attempt)
-                time.sleep(backoff_time)
-
-            except httpx.HTTPError as e:
-                if attempt == self.max_retries - 1:
-                    raise httpx.RequestError(f"Request failed after {self.max_retries} attempts: {e}")
-                backoff_time = self.calculate_backoff(attempt)
-                time.sleep(backoff_time)
-
-        if final_response is None:
-            raise httpx.RequestError(f"Request failed after {self.max_retries} attempts.")
-
-        return final_response
+                return response
