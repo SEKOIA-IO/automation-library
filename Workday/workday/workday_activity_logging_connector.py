@@ -8,7 +8,6 @@ from workday.client.http_client import WorkdayClient
 from workday.client.errors import WorkdayAuthError
 import asyncio
 import signal
-import traceback
 
 
 class WorkdayActivityLoggingConfiguration(DefaultConnectorConfiguration):
@@ -197,7 +196,6 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
             except Exception as e:
                 # self.log(message=f"Transient error fetching page {page_count} at offset {offset}: {e}", level="error")
-                # self.log(message=traceback.format_exc(), level="error")
                 await asyncio.sleep(2)
                 continue
 

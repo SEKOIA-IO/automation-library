@@ -6,6 +6,11 @@ from typing import Optional, List, Dict, Any
 from aiolimiter import AsyncLimiter
 from workday.client.errors import WorkdayError, WorkdayAuthError, WorkdayRateLimitError
 from sekoia_automation.trigger import Trigger
+from workday.metrics import (
+    api_requests,
+    api_request_duration,
+    events_collected,
+)
 
 
 class WorkdayClient:
@@ -55,10 +60,6 @@ class WorkdayClient:
         if self._access_token and self._token_expires_at:
             now = datetime.now(timezone.utc)
             if now < self._token_expires_at:
-                time_until_expiry = (self._token_expires_at - now).total_seconds()
-                # self.log(
-                #     f"Using cached access token (expires in {time_until_expiry:.0f}s at {self._token_expires_at.isoformat()})"
-                # )
                 return self._access_token
             else:
                 # self.log(f"Access token expired at {self._token_expires_at.isoformat()}, refreshing...")
@@ -79,32 +80,28 @@ class WorkdayClient:
         # )
 
         async with self._rate_limiter:
-            # self.log("Rate limiter acquired for token request")
-
+            start = datetime.now().timestamp()
             async with self._session.post(
                 self.token_endpoint,
                 data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 raise_for_status=False,
             ) as resp:
+                duration = datetime.now().timestamp() - start
                 status = resp.status
-                headers = dict(resp.headers)
-
-                # self.log(f"Token endpoint response: Status {status}")
-                # self.log(f"Token response headers: {headers}")
+                # Prometheus API metrics for token exchange
+                api_requests.labels(endpoint="token", status_code=status).inc()
+                api_request_duration.labels(endpoint="token").observe(duration)
 
                 if status == 401:
                     text = await resp.text()
-                    # self.log(f"Token exchange UNAUTHORIZED (401) - Response body: {text}")
                     raise WorkdayAuthError(f"Token exchange unauthorized: {text}")
 
                 if status != 200:
                     text = await resp.text()
-                    # self.log(f"Token request FAILED with status {status} - Response: {text}")
                     raise WorkdayError(f"Token request failed ({status}): {text}")
 
                 token_data = await resp.json()
-                # self.log(f"Token data keys received: {list(token_data.keys())}")
 
         self._access_token = token_data.get("access_token")
         expires_in = int(token_data.get("expires_in", 3600))
@@ -139,7 +136,7 @@ class WorkdayClient:
 
         max_attempts = 3
         attempt = 0
-        backoff_base = 2
+        backoff_base = 1
 
         while attempt < max_attempts:
             attempt += 1
@@ -148,8 +145,14 @@ class WorkdayClient:
             headers["Authorization"] = f"Bearer {access_token}"
 
             async with self._rate_limiter:
+                start = datetime.now().timestamp()
                 async with self._session.get(url, params=params, headers=headers, raise_for_status=False) as resp:
+                    duration = datetime.now().timestamp() - start
                     status = resp.status
+
+                    # Prometheus API metrics
+                    api_requests.labels(endpoint="activityLogging", status_code=status).inc()
+                    api_request_duration.labels(endpoint="activityLogging").observe(duration)
 
                     if status == 401:
                         self._access_token = None
@@ -201,6 +204,10 @@ class WorkdayClient:
                     if not isinstance(events, list):
                         # self.log(f"WARNING: Event container not list (type={type(events)}). Forcing empty list.")
                         events = []
+
+                    # Prometheus: events collected
+                    if isinstance(events, list):
+                        events_collected.inc(len(events))
 
                     return events
 
