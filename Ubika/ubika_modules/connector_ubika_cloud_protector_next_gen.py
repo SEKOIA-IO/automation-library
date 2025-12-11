@@ -99,11 +99,17 @@ class UbikaCloudProtectorNextGenConnector(Connector):
 
     def _handle_response_error(self, response: httpx.Response) -> None:
         if not response.is_success:
-            error_data = response.json()
-            message = (
-                f"Request on {self.NAME} API to fetch events failed with status "
-                f"{response.status_code} - {error_data} on {response.request.url}"
-            )
+            try:
+                error_data = response.json()
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {error_data} on {response.request.url}"
+                )
+            except (ValueError, KeyError):
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {response.text} on {response.request.url}"
+                )
 
             raise FetchEventsException(message)
 
