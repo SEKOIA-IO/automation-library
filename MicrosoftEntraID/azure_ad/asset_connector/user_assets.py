@@ -17,6 +17,7 @@ from msgraph.generated.models.user import User
 from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
 from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
@@ -108,6 +109,14 @@ class EntraIDAssetConnector(AssetConnector):
                 user_type_id = UserTypeId.SYSTEM
                 user_type_str = UserTypeStr.SYSTEM
         
+        # Create organization object if company name is available
+        org = None
+        if user.company_name:
+            org = Organization(
+                name=user.company_name,
+                ou_name=user.office_location,
+            )
+        
         account = Account(
             name=user.user_principal_name or "Unknown",
             type_id=AccountTypeId.AZURE_AD_ACCOUNT,
@@ -126,6 +135,7 @@ class EntraIDAssetConnector(AssetConnector):
             domain=domain,
             type_id=user_type_id,
             type=user_type_str,
+            org=org,
         )
         
         # Build enrichment data
@@ -255,6 +265,8 @@ class EntraIDAssetConnector(AssetConnector):
                 "employeeId",
                 "employeeType",
                 "signInActivity",
+                "companyName",
+                "officeLocation",
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )

@@ -99,6 +99,8 @@ def test_map_fields(test_entra_id_asset_connector):
         job_title="Software Engineer",
         employee_id="EMP123",
         employee_type="Employee",
+        company_name="Acme Corp",
+        office_location="New York",
     )
     has_mfa = True
     asset_groups = []
@@ -110,6 +112,10 @@ def test_map_fields(test_entra_id_asset_connector):
     assert result.user.domain == "example.com"
     assert result.user.type_id is not None
     assert result.user.type is not None
+    # Verify org field is populated
+    assert result.user.org is not None
+    assert result.user.org.name == "Acme Corp"
+    assert result.user.org.ou_name == "New York"
     # Verify enrichments are created
     assert result.enrichments is not None
     assert len(result.enrichments) > 0
@@ -117,6 +123,29 @@ def test_map_fields(test_entra_id_asset_connector):
     account_enrichment = next((e for e in result.enrichments if e.name == "account"), None)
     assert account_enrichment is not None
     assert account_enrichment.data.is_enabled is True
+
+
+def test_map_fields_without_org(test_entra_id_asset_connector):
+    """Test mapping when organization fields are not available."""
+    from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
+
+    # Mocking the user without company name or office location
+    asset_user = User(
+        user_principal_name="testuser@example.com",
+        id="user_id",
+        display_name="Test User",
+        mail="testuser@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        account_enabled=True,
+    )
+    has_mfa = False
+    asset_groups = []
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    assert result.user.name == "testuser@example.com"
+    assert result.user.uid == "user_id"
+    # Verify org field is None when company_name is not provided
+    assert result.user.org is None
 
 
 @pytest.mark.asyncio

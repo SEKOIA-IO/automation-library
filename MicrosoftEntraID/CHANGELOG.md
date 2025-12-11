@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-11 - 2.10.6
+
+### Added
+
+- Add organization (org) field to user assets connector, mapping company name and office location from Microsoft Entra ID
+
 ## 2025-11-12 - 2.10.5
 
 ### Fixed
