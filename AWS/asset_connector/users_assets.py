@@ -14,6 +14,7 @@ from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 from dateutil.parser import isoparse
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
     AccountTypeId,
@@ -183,6 +184,33 @@ class AwsUsersAssetConnector(AssetConnector):
             self.log_exception(e)
             raise
 
+    def _extract_organization_from_arn(self, arn: str) -> Optional[Organization]:
+        """Extract organization information from AWS ARN.
+
+        Args:
+            arn: The AWS ARN string
+
+        Returns:
+            Organization object with account ID, or None if extraction fails
+        """
+        if not arn:
+            return None
+
+        try:
+            parts = arn.split(":")
+            if len(parts) >= 5:
+                account_id = parts[4]
+                if account_id:
+                    return Organization(
+                        name=f"AWS Account {account_id}",
+                        uid=account_id,
+                    )
+        except Exception as e:
+            self.log(f"Failed to extract organization from ARN {arn}: {str(e)}", level="warning")
+            self.log_exception(e)
+
+        return None
+
     def get_mfa_status_for_user(self, user_name: str) -> bool:
         """Check if a user has MFA devices configured.
 
@@ -340,6 +368,9 @@ class AwsUsersAssetConnector(AssetConnector):
                 self.log(f"Failed to check MFA status for user {user_name}: {str(e)}", level="warning")
                 has_mfa = False
 
+            # Extract organization from ARN
+            org = self._extract_organization_from_arn(user_arn)
+
             # Create user object
             user_obj = User(
                 name=user_name,
@@ -347,6 +378,7 @@ class AwsUsersAssetConnector(AssetConnector):
                 groups=groups,
                 has_mfa=has_mfa,
                 account=account,
+                org=org,
             )
 
             self.log(f"Extracted user: {user_obj.name} ({user_arn})", level="debug")

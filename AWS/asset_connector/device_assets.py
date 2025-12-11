@@ -27,6 +27,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.group import Group
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.storage import PersistentJSON
 from aws_helpers.base import AWSModule
 
@@ -218,6 +219,28 @@ class AwsDeviceAssetConnector(AssetConnector):
                 return tag.get("Value")
         return None
 
+    def _extract_organization_from_owner_id(self, owner_id: str) -> Optional[Organization]:
+        """Extract organization information from AWS Owner ID (account ID).
+
+        Args:
+            owner_id: The AWS account ID from the reservation
+
+        Returns:
+            Organization object with account ID, or None if not provided
+        """
+        if not owner_id:
+            return None
+
+        try:
+            return Organization(
+                name=f"AWS Account {owner_id}",
+                uid=owner_id,
+            )
+        except Exception as e:
+            self.log(f"Failed to create organization from owner ID {owner_id}: {str(e)}", level="warning")
+            self.log_exception(e)
+            return None
+
     def get_device_os(self, platform_details: str) -> OperatingSystem:
         """Determine the operating system from platform details.
 
@@ -271,10 +294,13 @@ class AwsDeviceAssetConnector(AssetConnector):
                 devices = []
 
                 for reservation in page.get("Reservations", []):
+                    # Extract owner ID from reservation for organization info
+                    owner_id = reservation.get("OwnerId")
+
                     for instance in reservation.get("Instances", []):
                         try:
                             # Extract device information with proper error handling
-                            device = self._extract_device_from_instance(instance, date_filter)
+                            device = self._extract_device_from_instance(instance, date_filter, owner_id)
                             if device:
                                 devices.append(device)
                                 device_count += 1
@@ -304,13 +330,14 @@ class AwsDeviceAssetConnector(AssetConnector):
             raise
 
     def _extract_device_from_instance(
-        self, instance: Dict[str, Any], date_filter: Optional[datetime]
+        self, instance: Dict[str, Any], date_filter: Optional[datetime], owner_id: Optional[str] = None
     ) -> Optional[AwsDevice]:
         """Extract device information from an AWS instance.
 
         Args:
             instance: The AWS instance data
             date_filter: Optional date filter for incremental collection
+            owner_id: Optional AWS account ID from the reservation
 
         Returns:
             An AwsDevice object if the instance should be included, None otherwise
@@ -428,6 +455,9 @@ class AwsDeviceAssetConnector(AssetConnector):
             # Convert created_time to timestamp for created_time field
             created_timestamp = created_time.timestamp()
 
+            # Extract organization from owner ID
+            org = self._extract_organization_from_owner_id(owner_id) if owner_id else None
+
             # Create device object with all available fields
             device_obj = Device(
                 type_id=DeviceTypeId.SERVER,
@@ -451,6 +481,7 @@ class AwsDeviceAssetConnector(AssetConnector):
                 is_managed=is_managed,
                 autoscale_uid=autoscale_uid,
                 desc=desc,
+                org=org,
             )
 
             self.log(f"Extracted device: {device_obj.hostname} ({instance_id})", level="debug")

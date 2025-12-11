@@ -249,6 +249,59 @@ def test_client_general_exception(test_aws_users_asset_connector):
         test_aws_users_asset_connector.log_exception.assert_called_once()
 
 
+def test_extract_organization_from_arn_success(test_aws_users_asset_connector):
+    """Test successful extraction of organization from ARN."""
+    arn = "arn:aws:iam::123456789012:user/testuser"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(arn)
+
+    assert org is not None
+    assert org.uid == "123456789012"
+    assert org.name == "AWS Account 123456789012"
+
+
+def test_extract_organization_from_arn_empty(test_aws_users_asset_connector):
+    """Test organization extraction with empty ARN."""
+    org = test_aws_users_asset_connector._extract_organization_from_arn("")
+    assert org is None
+
+
+def test_extract_organization_from_arn_none(test_aws_users_asset_connector):
+    """Test organization extraction with None ARN."""
+    org = test_aws_users_asset_connector._extract_organization_from_arn(None)
+    assert org is None
+
+
+def test_extract_organization_from_arn_invalid_format(test_aws_users_asset_connector):
+    """Test organization extraction with invalid ARN format."""
+    invalid_arn = "invalid:arn:format"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(invalid_arn)
+
+    # Should return None for invalid format (not enough parts)
+    assert org is None
+
+
+def test_extract_organization_from_arn_different_service(test_aws_users_asset_connector):
+    """Test organization extraction from ARN of different AWS service."""
+    arn = "arn:aws:s3::123456789012:bucket/mybucket"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(arn)
+
+    assert org is not None
+    assert org.uid == "123456789012"
+
+
+def test_extract_organization_from_arn_no_account_id(test_aws_users_asset_connector):
+    """Test organization extraction when account ID is empty."""
+    arn = "arn:aws:iam:::user/testuser"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(arn)
+
+    # Should return None when account ID is empty
+    assert org is None
+
+
 # Test most_recent_date_seen property
 def test_most_recent_date_seen_success(test_aws_users_asset_connector):
     """Test successful retrieval of most_recent_date_seen."""
@@ -672,6 +725,10 @@ def test_extract_user_from_iam_user_success(test_aws_users_asset_connector):
     assert aws_user.user.uid == "arn:aws:iam::123456789012:user/testuser"
     assert aws_user.user.has_mfa is True
     assert aws_user.date == isoparse("2023-10-01T12:00:00Z")
+    # Verify organization is extracted from ARN
+    assert aws_user.user.org is not None
+    assert aws_user.user.org.uid == "123456789012"
+    assert aws_user.user.org.name == "AWS Account 123456789012"
 
 
 def test_extract_user_from_iam_user_missing_username(test_aws_users_asset_connector):

@@ -16,6 +16,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     NetworkInterfaceTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.group import Group
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.module import Module
 from dateutil.parser import isoparse
 
@@ -235,6 +236,66 @@ def test_extract_autoscale_group_from_tags_empty(test_aws_device_asset_connector
     assert result is None
 
 
+def test_extract_organization_from_owner_id(test_aws_device_asset_connector):
+    """Test extraction of organization from AWS Owner ID (account ID)."""
+    owner_id = "516755368338"
+
+    result = test_aws_device_asset_connector._extract_organization_from_owner_id(owner_id)
+
+    assert result is not None
+    assert result.uid == "516755368338"
+    assert result.name == "AWS Account 516755368338"
+    assert result.ou_name is None
+    assert result.ou_uid is None
+
+
+def test_extract_organization_from_owner_id_none(test_aws_device_asset_connector):
+    """Test extraction of organization when owner ID is None."""
+    result = test_aws_device_asset_connector._extract_organization_from_owner_id(None)
+    assert result is None
+
+
+def test_extract_organization_from_owner_id_empty(test_aws_device_asset_connector):
+    """Test extraction of organization when owner ID is empty string."""
+    result = test_aws_device_asset_connector._extract_organization_from_owner_id("")
+    assert result is None
+
+
+def test_extract_organization_from_owner_id_short_account(test_aws_device_asset_connector):
+    """Test extraction of organization with shorter account ID."""
+    owner_id = "123456789012"
+
+    result = test_aws_device_asset_connector._extract_organization_from_owner_id(owner_id)
+
+    assert result is not None
+    assert result.uid == "123456789012"
+    assert result.name == "AWS Account 123456789012"
+
+
+def test_extract_organization_from_owner_id_whitespace(test_aws_device_asset_connector):
+    """Test extraction of organization when owner ID has whitespace."""
+    owner_id = "  516755368338  "
+
+    result = test_aws_device_asset_connector._extract_organization_from_owner_id(owner_id)
+
+    assert result is not None
+    assert result.uid == "  516755368338  "
+    assert result.name == "AWS Account   516755368338  "
+
+
+def test_extract_organization_from_owner_id_invalid(test_aws_device_asset_connector):
+    """Test extraction of organization with invalid owner ID format."""
+    # Test that the function handles unexpected formats gracefully
+    owner_id = "invalid-format-123"
+
+    result = test_aws_device_asset_connector._extract_organization_from_owner_id(owner_id)
+
+    # Should still create an organization object even with non-standard format
+    assert result is not None
+    assert result.uid == "invalid-format-123"
+    assert result.name == "AWS Account invalid-format-123"
+
+
 def test_client_success(test_aws_device_asset_connector):
     """Test successful AWS client creation."""
     with mock.patch("boto3.Session") as mock_session:
@@ -363,14 +424,18 @@ def test_extract_device_from_instance_success(test_aws_device_asset_connector):
             }
         ],
     }
+    owner_id = "516755368338"
 
-    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None)
+    result = test_aws_device_asset_connector._extract_device_from_instance(instance_data, None, owner_id)
 
     assert isinstance(result, AwsDevice)
     assert result.device.uid == "i-1234567890abcdef0"
     assert result.device.hostname == "ec2-203-0-113-25.compute-1.amazonaws.com"
     assert result.device.os.name == "Linux"
     assert result.device.type == DeviceTypeStr.SERVER
+    assert result.device.org is not None
+    assert result.device.org.uid == "516755368338"
+    assert result.device.org.name == "AWS Account 516755368338"
 
 
 def test_extract_device_from_instance_no_instance_id(test_aws_device_asset_connector):
