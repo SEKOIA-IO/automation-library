@@ -6,17 +6,21 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.11,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 sekoia-automation-sdk = "^1.18.3"
 cachetools = "^6.0.0"
+httpx = {extras = ["http2"], version = "^0.28.1"}
+pyrate-limiter = ">=2.8.0,<2.9.0"
+httpx-ratelimiter = ">=0.0.1,<1.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
+respx = "^0.22.0"
 
 [build-system]
 requires = ["poetry-core"]

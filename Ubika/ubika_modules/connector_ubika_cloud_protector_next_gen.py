@@ -4,7 +4,7 @@ from datetime import timedelta
 from functools import cached_property
 
 import orjson
-import requests
+import httpx
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
@@ -97,12 +97,19 @@ class UbikaCloudProtectorNextGenConnector(Connector):
     def client(self) -> UbikaCloudProtectorNextGenApiClient:
         return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
 
-    def _handle_response_error(self, response: requests.Response) -> None:
-        if not response.ok:
-            message = (
-                f"Request on {self.NAME} API to fetch events failed with status "
-                f"{response.status_code} - {response.reason} on {response.request.url}"
-            )
+    def _handle_response_error(self, response: httpx.Response) -> None:
+        if not response.is_success:
+            try:
+                error_data = response.json()
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {error_data} on {response.request.url}"
+                )
+            except (ValueError, KeyError):
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {response.text} on {response.request.url}"
+                )
 
             raise FetchEventsException(message)
 
@@ -242,5 +249,9 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                 self.next_batch()
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")  # pragma: no cover
+
+        # Close the client connection
+        if hasattr(self, "_client"):
+            self.client.close()
 
         self.save_events_cache()
