@@ -38,10 +38,7 @@ class ExponentialBackoffTransport(httpx.BaseTransport):
 
     @cached_property
     def retrying(self):
-        wait_strategy = wait_exponential(
-            multiplier=self.backoff_factor,
-            max=self.backoff_max
-        )
+        wait_strategy = wait_exponential(multiplier=self.backoff_factor, max=self.backoff_max)
 
         if self.use_jitter:
             wait_strategy = wait_strategy + wait_random(0, 1)
