@@ -552,9 +552,9 @@ def test_map_fields_domain_extraction(test_entra_id_asset_connector):
         mail="testuser@example.com",
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
-    
+
     assert result.user.domain == "example.com"
 
 
@@ -570,9 +570,9 @@ def test_map_fields_domain_extraction_no_domain(test_entra_id_asset_connector):
         mail="testuser@example.com",
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
-    
+
     assert result.user.domain is None
 
 
@@ -589,9 +589,9 @@ def test_map_fields_user_type_detection_admin(test_entra_id_asset_connector):
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
         employee_type="Administrator",
     )
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
-    
+
     assert result.user.type_id == UserTypeId.ADMIN
     assert result.user.type == UserTypeStr.ADMIN
 
@@ -609,9 +609,9 @@ def test_map_fields_user_type_detection_service(test_entra_id_asset_connector):
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
         employee_type="Service Account",
     )
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
-    
+
     assert result.user.type_id == UserTypeId.SERVICE
     assert result.user.type == UserTypeStr.SERVICE
 
@@ -623,7 +623,7 @@ def test_map_fields_enrichment_with_sign_in_activity(test_entra_id_asset_connect
 
     sign_in_activity = SignInActivity()
     sign_in_activity.last_sign_in_date_time = datetime.datetime(2025, 12, 1, 10, 0, 0, tzinfo=datetime.timezone.utc)
-    
+
     asset_user = User(
         user_principal_name="testuser@example.com",
         id="user_id",
@@ -633,9 +633,9 @@ def test_map_fields_enrichment_with_sign_in_activity(test_entra_id_asset_connect
         account_enabled=True,
         sign_in_activity=sign_in_activity,
     )
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
-    
+
     assert result.enrichments is not None
     account_enrichment = next((e for e in result.enrichments if e.name == "account"), None)
     assert account_enrichment is not None
@@ -658,9 +658,9 @@ def test_map_fields_enrichment_with_employment_info(test_entra_id_asset_connecto
         employee_id="EMP123",
         employee_type="Full-Time",
     )
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
-    
+
     assert result.enrichments is not None
     employment_enrichment = next((e for e in result.enrichments if e.name == "employment"), None)
     assert employment_enrichment is not None
@@ -678,9 +678,9 @@ def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_conne
         mail="testuser@example.com",
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
-    
+
     # Account enrichment should always be present
     assert result.enrichments is not None
     account_enrichment = next((e for e in result.enrichments if e.name == "account"), None)

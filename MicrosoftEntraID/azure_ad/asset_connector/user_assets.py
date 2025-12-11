@@ -88,12 +88,12 @@ class EntraIDAssetConnector(AssetConnector):
             version=self.PRODUCT_VERSION,
         )
         metadata = Metadata(product=product, version="1.6.0")
-        
+
         # Extract domain from userPrincipalName
         domain = None
         if user.user_principal_name and "@" in user.user_principal_name:
             domain = user.user_principal_name.split("@")[1]
-        
+
         # Determine user type based on employee type or job title
         user_type_id = UserTypeId.USER
         user_type_str = UserTypeStr.USER
@@ -108,7 +108,7 @@ class EntraIDAssetConnector(AssetConnector):
             elif "system" in employee_type_lower:
                 user_type_id = UserTypeId.SYSTEM
                 user_type_str = UserTypeStr.SYSTEM
-        
+
         # Create organization object if company name is available
         org = None
         if user.company_name:
@@ -116,7 +116,7 @@ class EntraIDAssetConnector(AssetConnector):
                 name=user.company_name,
                 ou_name=user.office_location,
             )
-        
+
         account = Account(
             name=user.user_principal_name or "Unknown",
             type_id=AccountTypeId.AZURE_AD_ACCOUNT,
@@ -137,10 +137,10 @@ class EntraIDAssetConnector(AssetConnector):
             type=user_type_str,
             org=org,
         )
-        
+
         # Build enrichment data
         enrichments = []
-        
+
         # Create user data object with account status and login information
         user_data_obj = UserDataObject(
             is_enabled=user.account_enabled if user.account_enabled is not None else None,
@@ -150,7 +150,7 @@ class EntraIDAssetConnector(AssetConnector):
                 else None
             ),
         )
-        
+
         # Add account status enrichment
         enrichments.append(
             UserEnrichmentObject(
@@ -159,7 +159,7 @@ class EntraIDAssetConnector(AssetConnector):
                 data=user_data_obj,
             )
         )
-        
+
         # Add employment info enrichment if available
         if user.department or user.job_title or user.employee_id or user.employee_type:
             employment_data = UserDataObject()
@@ -169,7 +169,7 @@ class EntraIDAssetConnector(AssetConnector):
                 data=employment_data,
             )
             enrichments.append(employment_enrichment)
-        
+
         user_ocsf_model = UserOCSFModel(
             activity_id=2,
             activity_name="Collect",
