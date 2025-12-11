@@ -88,7 +88,9 @@ class AzureEventsHubTrigger(AsyncConnector):
         This helps avoid 404 errors when the SDK tries to create ownership blobs with If-Match conditions.
         """
         try:
-            blob_service: BlobServiceClient = BlobServiceClient.from_connection_string(self.configuration.storage_connection_string)
+            blob_service: BlobServiceClient = BlobServiceClient.from_connection_string(
+                self.configuration.storage_connection_string
+            )
 
             # Ensure container exists
             try:
