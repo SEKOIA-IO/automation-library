@@ -1,0 +1,46 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Workday",
+    "type": "object",
+    "properties": {
+      "workday_host": {
+        "description": "Workday Host",
+        "type": "string"
+      },
+      "tenant_name": {
+        "description": "Workday Tenant Name",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "Workday Secret",
+        "type": "string"
+      },
+      "client_id": {
+        "description": "Workday Client ID",
+        "type": "string"
+      },
+      "refresh_token": {
+        "description": "Refresh token",
+        "type": "string"
+      }
+    },
+    "required": [
+      "workday_host",
+      "tenant_name",
+      "client_secret",
+      "client_id",
+      "refresh_token"
+    ],
+    "secrets": [
+      "refresh_token",
+      "client_secret"
+    ]
+  },
+  "description": "Workday Activity Logging",
+  "name": "Workday",
+  "slug": "workday",
+  "categories": ["Applicative"],
+  "uuid": "1c9659ca-c50b-4922-9f48-6d19ce1db28c",
+  "version": "0.1.4"
+}
