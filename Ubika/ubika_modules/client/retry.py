@@ -50,10 +50,12 @@ class ExponentialBackoffTransport(httpx.BaseTransport):
             reraise=True,
         )
 
-    def handle_request(self, request: httpx.Request) -> httpx.Response | None:
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
         """
         Handle the request with retry logic.
         """
+        last_response: httpx.Response | None = None
+
         for attempt in self.retrying:
             with attempt:
                 response = self.transport.handle_request(request)
@@ -62,3 +64,8 @@ class ExponentialBackoffTransport(httpx.BaseTransport):
                     raise TryAgain(response)
 
                 return response
+
+        if last_response is not None:
+            return last_response
+
+        raise RuntimeError("No response received after all retries")
