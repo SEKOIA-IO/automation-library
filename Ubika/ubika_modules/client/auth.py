@@ -96,5 +96,11 @@ class UbikaCloudProtectorNextGenAuthentication(Auth):
         request.headers["Authorization"] = self.get_credentials().authorization
         yield request
 
-    def __del__(self):
+    def close(self):
         self.__http_client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
