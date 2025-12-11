@@ -71,6 +71,10 @@ class UbikaCloudProtectorNextGenAuthentication(Auth):
                     "timeout_error", "The request to obtain a new access token timed out."
                 ) from timeout_exc
             except httpx.HTTPStatusError as e:
+                if response is None:
+                    raise AuthorizationError(
+                        "no_response", "No response received when requesting a new access token."
+                    ) from e
                 raw = response.json()
                 raise AuthorizationError(raw["error"], raw["error_description"]) from e
             except httpx.RequestError as e:
