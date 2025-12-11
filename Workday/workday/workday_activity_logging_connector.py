@@ -38,14 +38,14 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         self.event_cache_store = PersistentJSON("event_cache.json", self._data_path)
         self.event_cache_ttl = timedelta(hours=48)
 
-        # self.log(
-        #     message=f"WorkdayActivityLoggingConnector initialized - "
-        #     f"Data path: {self._data_path}, "
-        #     f"Frequency: {self.configuration.frequency}s, "
-        #     f"Chunk size: {self.configuration.chunk_size}, "
-        #     f"Limit: {self.configuration.limit}",
-        #     level="info",
-        # )
+        self.log(
+            message=f"WorkdayActivityLoggingConnector initialized - "
+            f"Data path: {self._data_path}, "
+            f"Frequency: {self.configuration.frequency}s, "
+            f"Chunk size: {self.configuration.chunk_size}, "
+            f"Limit: {self.configuration.limit}",
+            level="info",
+        )
 
     def last_event_date(self) -> datetime:
         """
@@ -148,7 +148,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         """
         Fetch activity logs from Workday API with pagination
         """
-        # self.log(message="Starting event fetch cycle", level="info")
+        self.log(message="Starting event fetch cycle", level="info")
 
         # Clean up old cache entries at start
         self._cleanup_event_cache()
@@ -159,12 +159,12 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
         # SAVE CHECKPOINT IMMEDIATELY
         self.save_checkpoint(to_time)
 
-        # self.log(
-        #     message=f"Fetch parameters - From: {from_time.isoformat()}, "
-        #     f"To: {to_time.isoformat()}, "
-        #     f"Time window: {(to_time - from_time).total_seconds() / 60:.1f} minutes",
-        #     level="info",
-        # )
+        self.log(
+            message=f"Fetch parameters - From: {from_time.isoformat()}, "
+            f"To: {to_time.isoformat()}, "
+            f"Time window: {(to_time - from_time).total_seconds() / 60:.1f} minutes",
+            level="info",
+        )
 
         offset = 0
         limit = self.configuration.limit
@@ -176,7 +176,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
 
         while True:
             page_count += 1
-            # self.log(message=f"Fetching page {page_count} - Offset: {offset}, Limit: {limit}", level="info")
+            self.log(message=f"Fetching page {page_count} - Offset: {offset}, Limit: {limit}", level="info")
 
             try:
                 events = await client.fetch_activity_logs(
@@ -186,7 +186,7 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                 events_received = len(events) if events else 0
                 total_events_fetched += events_received
 
-                # self.log(message=f"Page {page_count} received - Events: {events_received}", level="info")
+                self.log(message=f"Page {page_count} received - Events: {events_received}", level="info")
 
                 if events_received > 0:
                     pass
@@ -336,16 +336,16 @@ class WorkdayActivityLoggingConnector(AsyncConnector):
                     batch_size = len(batch)
                     total_events += batch_size
 
-                    # self.log(message=f"Pushing batch {batch_count} to intake - Events: {batch_size}", level="info")
+                    self.log(message=f"Pushing batch {batch_count} to intake - Events: {batch_size}", level="info")
 
                     try:
                         await self.push_data_to_intakes(events=batch)
-                        # self.log(
-                        #     message=f"Batch {batch_count} successfully forwarded to intake ({batch_size} events)",
-                        #     level="info",
-                        # )
+                        self.log(
+                            message=f"Batch {batch_count} successfully forwarded to intake ({batch_size} events)",
+                            level="info",
+                        )
                     except Exception as e:
-                        # self.log(message=f"Failed to push batch {batch_count} to intake: {e}", level="error")
+                        self.log(message=f"Failed to push batch {batch_count} to intake: {e}", level="error")
                         raise
 
                 # self.log(
