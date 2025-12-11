@@ -8,7 +8,7 @@ class UtilsWait(Action):
     Action to wait N seconds
     """
 
-    MAX_TIME_TO_WAIT = 3600  # 1 hour
+    MAX_TIME_TO_WAIT = 3540  # 59 minutes
 
     def run(self, arguments) -> None:
         time_to_wait = arguments.get("duration", 0)
