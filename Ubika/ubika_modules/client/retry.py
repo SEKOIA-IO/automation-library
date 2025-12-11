@@ -1,7 +1,6 @@
 import random
 import time
 from functools import cached_property
-from typing import final
 
 import httpx
 from tenacity import (

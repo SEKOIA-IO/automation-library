@@ -1,7 +1,4 @@
-import random
-import time
 import httpx
-from httpx import Response
 from httpx_ratelimiter import LimiterTransport
 
 from .auth import ApiKeyAuthentication, UbikaCloudProtectorNextGenAuthentication
@@ -50,7 +47,7 @@ class UbikaCloudProtectorNextGenApiClient(httpx.Client):
         use_jitter: bool = True,
     ) -> None:
 
-        ubika_auth = UbikaCloudProtectorNextGenAuthentication(
+        self._ubika_auth = UbikaCloudProtectorNextGenAuthentication(
             refresh_token=refresh_token, ratelimit_per_minute=ratelimit_per_minute
         )
 
@@ -72,7 +69,11 @@ class UbikaCloudProtectorNextGenApiClient(httpx.Client):
 
         super().__init__(
             http2=True,
-            auth=ubika_auth,
+            auth=self._ubika_auth,
             timeout=300.0,
             transport=rate_limited_transport,
         )
+
+    def close(self) -> None:
+        self._ubika_auth.close()
+        super().close()

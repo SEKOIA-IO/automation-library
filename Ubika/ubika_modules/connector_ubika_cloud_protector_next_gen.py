@@ -250,4 +250,8 @@ class UbikaCloudProtectorNextGenConnector(Connector):
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")  # pragma: no cover
 
+        # Close the client connection
+        if hasattr(self, "_client"):
+            self.client.close()
+
         self.save_events_cache()

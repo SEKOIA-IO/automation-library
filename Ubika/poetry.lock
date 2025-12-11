@@ -908,21 +908,6 @@ pyrate-limiter = ">=2.8.0,<2.9.0"
 dev = ["pre-commit"]
 
 [[package]]
-name = "httpx-retries"
-version = "0.4.5"
-description = "A retry layer for HTTPX."
-optional = false
-python-versions = ">=3.9"
-groups = ["main"]
-files = [
-    {file = "httpx_retries-0.4.5-py3-none-any.whl", hash = "sha256:ae22d6ef197a2da49242246a01d721474cbd6516b1fef155f6da694ee410bb37"},
-    {file = "httpx_retries-0.4.5.tar.gz", hash = "sha256:acee306d7384eefad71ac12fefe8b13d7b41c19595c538e68d9bd7e40e59539d"},
-]
-
-[package.dependencies]
-httpx = ">=0.20.0"
-
-[[package]]
 name = "hyperframe"
 version = "6.1.0"
 description = "Pure-Python HTTP/2 framing"
@@ -2981,4 +2966,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "e0c24db84205b7551862f5a520e35f1ca6209acf3a7b194b0866a322ee7917e6"
+content-hash = "0f2d9d5c1702492e4f65976921a82e03e7d9ad736af9af749f33ef7fe8d2d4bf"
