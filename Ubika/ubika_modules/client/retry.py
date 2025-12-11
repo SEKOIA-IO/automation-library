@@ -74,7 +74,7 @@ class ExponentialBackoffTransport(httpx.BaseTransport):
 
             except httpx.HTTPError as e:
                 if attempt == self.max_retries - 1:
-                    raise f"Request failed after {self.max_retries} attempts: {e}"
+                    raise httpx.RequestError(f"Request failed after {self.max_retries} attempts: {e}")
                 backoff_time = self.calculate_backoff(attempt)
                 time.sleep(backoff_time)
 
