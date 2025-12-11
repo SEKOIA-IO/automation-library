@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 from .action_base import JIRAAction
 from .base import JIRAModule
