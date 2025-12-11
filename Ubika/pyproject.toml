@@ -15,13 +15,13 @@ httpx = {extras = ["http2"], version = "^0.28.1"}
 httpx-retries = "^0.4.5"
 pyrate-limiter = ">=2.8.0,<2.9.0"
 httpx-ratelimiter = "<0.0.6"
-respx = "^0.22.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
+respx = "^0.22.0"
 
 [build-system]
 requires = ["poetry-core"]
