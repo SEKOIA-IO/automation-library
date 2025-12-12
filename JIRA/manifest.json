@@ -2,7 +2,7 @@
   "uuid": "d1445e5e-8e3b-417f-ae19-bca67a10affd",
   "name": "Atlassian JIRA",
   "slug": "atlassian-jira",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Atlassian JIRA is a popular project management and issue-tracking software designed to help teams plan, track, and manage agile software development projects efficiently. It offers customizable workflows and integrates seamlessly with other Atlassian products.",
   "configuration": {
     "title": "JIRA",
