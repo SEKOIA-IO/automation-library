@@ -13,7 +13,7 @@ readme = "README.md"
 include = "ipinfo"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 sekoia-automation-sdk = "^1.13.0"
 iso3166 = "^2.1.1"
 
