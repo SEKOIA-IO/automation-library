@@ -22,6 +22,8 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     Group,
     User,
     UserOCSFModel,
+    UserTypeId,
+    UserTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
 from aws_helpers.base import AWSModule
@@ -129,6 +131,51 @@ class AwsUsersAssetConnector(AssetConnector):
             self.log_exception(e)
             raise
 
+    def group_privileges(self, group_name: str) -> List[str]:
+        """Retrieve the list of policies attached to a specific group.
+
+        Args:
+            group_name: The name of the group to retrieve policies for
+
+        Returns:
+            The list of policies associated with the group
+
+        Raises:
+            ClientError: If there's an error communicating with AWS
+            BotoCoreError: If there's a low-level boto3 error
+        """
+        if not group_name:
+            self.log("Empty group name provided, returning False for admin status", level="warning")
+            return []
+
+        try:
+            policies = []
+            paginator = self.client().get_paginator("list_attached_group_policies")
+            page_iterator = paginator.paginate(GroupName=group_name)
+
+            for page in page_iterator:
+                for attached_policy in page.get("AttachedPolicies", []):
+                    policy_name = attached_policy.get("PolicyName")
+                    if policy_name:
+                        policies.append(policy_name)
+            return policies
+
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
+            self.log(
+                f"AWS API error checking admin status for group {group_name} ({error_code}): {str(e)}", level="error"
+            )
+            self.log_exception(e)
+            raise
+        except BotoCoreError as e:
+            self.log(f"Boto3 core error checking admin status for group {group_name}: {str(e)}", level="error")
+            self.log_exception(e)
+            raise
+        except Exception as e:
+            self.log(f"Unexpected error checking admin status for group {group_name}: {str(e)}", level="error")
+            self.log_exception(e)
+            raise
+
     def get_groups_for_user(self, user_name: str) -> List[Group]:
         """Fetch groups associated with a specific user.
 
@@ -159,6 +206,7 @@ class AwsUsersAssetConnector(AssetConnector):
                         group_obj = Group(
                             name=group.get("GroupName", ""),
                             uid=group.get("Arn", ""),
+                            privileges=self.group_privileges(group.get("GroupName", "")),
                         )
                         self.log(f"Fetched group: {group_obj.name} for user: {user_name}", level="debug")
                         groups.append(group_obj)
@@ -311,6 +359,17 @@ class AwsUsersAssetConnector(AssetConnector):
             self.log_exception(e)
             raise
 
+    def user_has_admin_policy(self, user_groups: List[Group]) -> bool:
+        """Check if a user has admin policies."""
+        admin_patterns = ["admin", "administrator", "poweruser"]
+
+        for group in user_groups:
+            for policy in group.privileges:
+                policy_lower = policy.lower()
+                if any(pattern in policy_lower for pattern in admin_patterns):
+                    return True
+        return False
+
     def _extract_user_from_iam_user(self, user: Dict[str, Any], date_filter: Optional[datetime]) -> Optional[AwsUser]:
         """Extract user information from an AWS IAM user.
 
@@ -355,7 +414,7 @@ class AwsUsersAssetConnector(AssetConnector):
                 uid_alt=user.get("UserId"),
             )
 
-            # Fetch groups and MFA status for the user
+            # Fetch groups, MFA status, and admin status for the user
             try:
                 groups = self.get_groups_for_user(user_name)
             except Exception as e:
@@ -380,6 +439,13 @@ class AwsUsersAssetConnector(AssetConnector):
                 account=account,
                 org=org,
             )
+
+            if self.user_has_admin_policy(groups):
+                user_obj.type_id = UserTypeId.ADMIN
+                user_obj.type = UserTypeStr.ADMIN
+            else:
+                user_obj.type_id = UserTypeId.USER
+                user_obj.type = UserTypeStr.USER
 
             self.log(f"Extracted user: {user_obj.name} ({user_arn})", level="debug")
             return AwsUser(user=user_obj, date=created_time)
