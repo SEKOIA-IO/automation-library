@@ -11,7 +11,7 @@ authors = []
 
 [tool.black]
 line-length = 119
-target-version = ["py38"]
+target-version = ["py314"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -19,7 +19,7 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.14,<4.0"
 sekoia-automation-sdk = "^1.18.3"
 structlog = "^25.3.0"
 requests = "^2.32.3"
