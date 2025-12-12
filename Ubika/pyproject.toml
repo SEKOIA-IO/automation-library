@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Sekoia.io Automation Module for Ubika"
 version = "0.0"
@@ -5,13 +9,21 @@ description = ""
 authors = []
 package-mode = false
 
+[tool.black]
+line-length = 119
+target-version = ["py38"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 sekoia-automation-sdk = "^1.18.3"
 cachetools = "^6.0.0"
-httpx = {extras = ["http2"], version = "^0.28.1"}
 pyrate-limiter = ">=2.8.0,<2.9.0"
 httpx-ratelimiter = ">=0.0.1,<1.0.0"
 
@@ -22,42 +34,19 @@ requests = "*"
 requests-mock = "*"
 respx = "^0.22.0"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py38']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-    "dev.py"
-]
+omit = ["tests/*", "main.py", "dev.py"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore:.*unclosed.*:ResourceWarning",
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore:.*unclosed.*:ResourceWarning",
 ]
-addopts = '''
-  --strict-markers
-  --tb=short
-  --cov=ubika_modules
-  --cache-clear
-  --cov-report=html
-  --cov-report=term-missing:skip-covered
-  --cov-fail-under=5
-'''
+addopts = "  --strict-markers\n  --tb=short\n  --cov=ubika_modules\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n"
+
+[tool.poetry.dependencies.httpx]
+extras = ["http2"]
+version = "^0.28.1"

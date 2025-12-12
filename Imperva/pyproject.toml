@@ -1,9 +1,21 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "imperva automation module"
 version = "0.1.0"
 description = ""
 authors = []
 package-mode = false
+
+[tool.black]
+line-length = 119
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
@@ -19,25 +31,10 @@ pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py39']
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra --junit-xml=junit.xml --cov-report term --cov-report html:coverage --cov=imperva"
 testpaths = ["tests"]
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]
