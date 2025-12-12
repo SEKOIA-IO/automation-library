@@ -12,7 +12,7 @@ readme = "README.md"
 
 [tool.black]
 line-length = 119
-target-version = ["py38"]
+target-version = ["py314"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -20,7 +20,7 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 openai = "^0.27.7"
 sekoia-automation-sdk = "^1.13.0"
 
