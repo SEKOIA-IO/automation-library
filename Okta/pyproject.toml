@@ -1,9 +1,34 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Sekoia.io Automation Module for Okta"
 version = "0.0"
 description = ""
 authors = []
 package-mode = false
+
+[tool.black]
+line-length = 119
+target-version = ["py311"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -23,54 +48,12 @@ pytest-asyncio = "*"
 requests = "*"
 requests-mock = "*"
 isort = "^5.10.1"
-black = { version = "^24.3.0", extras = ["colorama"] }
 mypy = "^0.991"
 types-python-dateutil = "^2.8.19.13"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py311']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
-[tool.mypy]
-strict = true
-ignore_missing_imports = true
-allow_subclassing_any = true
-allow_untyped_calls = true
-pretty = true
-show_error_codes = true
-implicit_reexport = true
-allow_untyped_decorators = true
-warn_return_any = true
-exclude = ["tests/*"]
-
-#[tool.pytest.ini_options]
-#minversion = "6.0"
-#testpaths = [
-#    "tests",
-#]
-#addopts = '''
-#  --strict-markers
-#  --tb=short
-#  --cov=okta_modules
-#  --cov-branch
-#  --cache-clear
-#  --cov-report=html
-#  --cov-report=term-missing:skip-covered
-#  --cov-fail-under=87
-#  --asyncio-mode=auto
-#'''
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]
+
+[tool.poetry.dev-dependencies.black]
+version = "^24.3.0"
+extras = ["colorama"]

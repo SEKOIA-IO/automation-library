@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Sekoia.io Automation Module for collecting Microsoft Sentinel incidents and managing actions"
 version = "0.0"
@@ -5,25 +9,10 @@ description = ""
 authors = []
 package-mode = false
 
-[tool.poetry.dependencies]
-python = "^3.11"
-azure-mgmt-securityinsight = "^1.0.0"
-orjson = "^3.10.15"
-azure-identity = "^1.19.0"
-sekoia-automation-sdk = "^1.18.2"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.black]
 line-length = 119
-target-version = ['py310']
-include = '\.pyi?$'
+target-version = ["py310"]
+include = "\\.pyi?$"
 
 [tool.isort]
 profile = "black"
@@ -41,8 +30,16 @@ allow_untyped_decorators = true
 warn_return_any = true
 exclude = ["tests/*"]
 
+[tool.poetry.dependencies]
+python = "^3.11"
+azure-mgmt-securityinsight = "^1.0.0"
+orjson = "^3.10.15"
+azure-identity = "^1.19.0"
+sekoia-automation-sdk = "^1.18.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]

@@ -1,9 +1,17 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation module for MISP"
 description = ""
 version = "0.0"
 authors = []
 package-mode = false
+
+[tool.black]
+line-length = 119
+target-version = ["py38"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -19,16 +27,5 @@ pytest-cov = "*"
 requests-mock = "*"
 freezegun = "*"
 
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py38']
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]
