@@ -166,9 +166,9 @@ def test_map_fields_with_admin_user_type(test_entra_id_asset_connector):
     has_mfa = True
     asset_groups = []
     is_admin = True
-    
+
     result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
-    
+
     assert result.user.name == "admin@example.com"
     assert result.user.uid == "admin_user_id"
     assert result.user.type_id == UserTypeId.ADMIN

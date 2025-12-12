@@ -15,7 +15,9 @@ from msgraph.generated.models.phone_authentication_method import PhoneAuthentica
 from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 from msgraph.generated.models.user import User
 from msgraph.generated.users.users_request_builder import UsersRequestBuilder
-from msgraph.generated.users.item.transitive_member_of.transitive_member_of_request_builder import TransitiveMemberOfRequestBuilder
+from msgraph.generated.users.item.transitive_member_of.transitive_member_of_request_builder import (
+    TransitiveMemberOfRequestBuilder,
+)
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
@@ -208,7 +210,7 @@ class EntraIDAssetConnector(AssetConnector):
             return groups
         except Exception as e:
             raise ValueError(f"Error fetching user groups: {e}")
-    
+
     async def fetch_user_admin_roles(self, user_id: str) -> bool:
         """
         Fetch admin roles of the user.
@@ -274,7 +276,7 @@ class EntraIDAssetConnector(AssetConnector):
                 "signInActivity",
                 "companyName",
                 "officeLocation",
-                "isManagementRestricted"
+                "isManagementRestricted",
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )
