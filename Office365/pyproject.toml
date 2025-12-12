@@ -15,7 +15,7 @@ line_length = 119
 
 [tool.black]
 line-length = 119
-target-version = ["py311"]
+target-version = ["py314"]
 
 [tool.ruff]
 target-version = "py311"
@@ -25,7 +25,7 @@ select = ["E", "W", "F", "I", "C", "B", "UP", "FIX", "T20"]
 ignore = ["FIX003", "FIX004", "C901"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 orjson = "^3.7.7"
 tenacity = "^8.0.1"
 msal = "^1.18.0"
