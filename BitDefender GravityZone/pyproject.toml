@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py311"]
+target-version = ["py314"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -19,7 +19,7 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.14,<4.0"
 requests-ratelimiter = ">=0.7.0,<0.8.0"
 sekoia-automation-sdk = ">=1.19.0,<2.0.0"
 pytest = ">=8.4.1,<9.0.0"
