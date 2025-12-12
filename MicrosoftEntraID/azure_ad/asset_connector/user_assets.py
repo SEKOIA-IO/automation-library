@@ -15,6 +15,7 @@ from msgraph.generated.models.phone_authentication_method import PhoneAuthentica
 from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 from msgraph.generated.models.user import User
 from msgraph.generated.users.users_request_builder import UsersRequestBuilder
+from msgraph.generated.users.item.transitive_member_of.transitive_member_of_request_builder import TransitiveMemberOfRequestBuilder
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
@@ -75,7 +76,7 @@ class EntraIDAssetConnector(AssetConnector):
                 datetime.fromtimestamp(self._latest_time + 1, timezone.utc).replace(microsecond=0).isoformat()
             )
 
-    def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup]) -> UserOCSFModel:
+    def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
         """Map fields from UserCollectionResponse to UserOCSFModel.
         Args:
             user (UserCollectionResponse): The user data from Microsoft Graph API.
@@ -97,17 +98,10 @@ class EntraIDAssetConnector(AssetConnector):
         # Determine user type based on employee type or job title
         user_type_id = UserTypeId.USER
         user_type_str = UserTypeStr.USER
-        if user.employee_type:
-            employee_type_lower = user.employee_type.lower()
-            if "admin" in employee_type_lower:
-                user_type_id = UserTypeId.ADMIN
-                user_type_str = UserTypeStr.ADMIN
-            elif "service" in employee_type_lower:
-                user_type_id = UserTypeId.SERVICE
-                user_type_str = UserTypeStr.SERVICE
-            elif "system" in employee_type_lower:
-                user_type_id = UserTypeId.SYSTEM
-                user_type_str = UserTypeStr.SYSTEM
+
+        if is_admin:
+            user_type_id = UserTypeId.ADMIN
+            user_type_str = UserTypeStr.ADMIN
 
         # Create organization object if company name is available
         org = None
@@ -214,6 +208,18 @@ class EntraIDAssetConnector(AssetConnector):
             return groups
         except Exception as e:
             raise ValueError(f"Error fetching user groups: {e}")
+    
+    async def fetch_user_admin_roles(self, user_id: str) -> bool:
+        """
+        Fetch admin roles of the user.
+        """
+        try:
+            user_roles = await self.client.users.by_user_id(user_id).transitive_member_of.graph_directory_role.get()
+            if user_roles and user_roles.value and len(user_roles.value) > 0:
+                return True
+            return False
+        except Exception as e:
+            raise ValueError(f"Error fetching user admin roles: {e}")
 
     async def fetch_user_mfa(self, user_id: str) -> bool:
         """
@@ -242,7 +248,8 @@ class EntraIDAssetConnector(AssetConnector):
         if user.id:
             user_mfa = await self.fetch_user_mfa(user.id)
             user_groups = await self.fetch_user_groups(user.id)
-        return self.map_fields(user, user_mfa, user_groups)
+            is_admin = await self.fetch_user_admin_roles(user.id)
+        return self.map_fields(user, user_mfa, user_groups, is_admin)
 
     async def fetch_new_users(self, last_run_date: str | None = None) -> list[UserOCSFModel]:
         """
@@ -267,6 +274,7 @@ class EntraIDAssetConnector(AssetConnector):
                 "signInActivity",
                 "companyName",
                 "officeLocation",
+                "isManagementRestricted"
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )

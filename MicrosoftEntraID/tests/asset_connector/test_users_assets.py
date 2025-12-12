@@ -104,14 +104,15 @@ def test_map_fields(test_entra_id_asset_connector):
     )
     has_mfa = True
     asset_groups = []
-    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    is_admin = False
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
     assert result.user.name == "testuser@example.com"
     assert result.user.uid == "user_id"
     assert result.user.has_mfa == has_mfa
     assert result.user.display_name == "Test User"
     assert result.user.domain == "example.com"
-    assert result.user.type_id is not None
-    assert result.user.type is not None
+    assert result.user.type_id == 1  # UserTypeId.USER
+    assert result.user.type == "User"
     # Verify org field is populated
     assert result.user.org is not None
     assert result.user.org.name == "Acme Corp"
@@ -141,11 +142,37 @@ def test_map_fields_without_org(test_entra_id_asset_connector):
     )
     has_mfa = False
     asset_groups = []
-    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    is_admin = False
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
     assert result.user.name == "testuser@example.com"
     assert result.user.uid == "user_id"
     # Verify org field is None when company_name is not provided
     assert result.user.org is None
+
+
+def test_map_fields_with_admin_user_type(test_entra_id_asset_connector):
+    """Test that user type is correctly set to Admin when is_admin=True."""
+    from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import UserTypeId, UserTypeStr
+
+    asset_user = User(
+        user_principal_name="admin@example.com",
+        id="admin_user_id",
+        display_name="Admin User",
+        mail="admin@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        account_enabled=True,
+    )
+    has_mfa = True
+    asset_groups = []
+    is_admin = True
+    
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
+    
+    assert result.user.name == "admin@example.com"
+    assert result.user.uid == "admin_user_id"
+    assert result.user.type_id == UserTypeId.ADMIN
+    assert result.user.type == UserTypeStr.ADMIN
 
 
 @pytest.mark.asyncio
@@ -500,7 +527,7 @@ def test_map_fields_with_none_values(test_entra_id_asset_connector):
     asset_groups = []
 
     # Act
-    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, False)
 
     # Assert
     assert result.user.name == "Unknown"
@@ -531,7 +558,7 @@ def test_map_fields_with_groups(test_entra_id_asset_connector):
     ]
 
     # Act
-    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, False)
 
     # Assert
     assert result.user.groups is not None
@@ -553,7 +580,7 @@ def test_map_fields_domain_extraction(test_entra_id_asset_connector):
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
 
-    result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
 
     assert result.user.domain == "example.com"
 
@@ -571,7 +598,7 @@ def test_map_fields_domain_extraction_no_domain(test_entra_id_asset_connector):
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
 
-    result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
 
     assert result.user.domain is None
 
@@ -590,7 +617,7 @@ def test_map_fields_user_type_detection_admin(test_entra_id_asset_connector):
         employee_type="Administrator",
     )
 
-    result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], True)
 
     assert result.user.type_id == UserTypeId.ADMIN
     assert result.user.type == UserTypeStr.ADMIN
@@ -610,10 +637,10 @@ def test_map_fields_user_type_detection_service(test_entra_id_asset_connector):
         employee_type="Service Account",
     )
 
-    result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
 
-    assert result.user.type_id == UserTypeId.SERVICE
-    assert result.user.type == UserTypeStr.SERVICE
+    assert result.user.type_id == UserTypeId.USER
+    assert result.user.type == UserTypeStr.USER
 
 
 def test_map_fields_enrichment_with_sign_in_activity(test_entra_id_asset_connector):
@@ -634,7 +661,7 @@ def test_map_fields_enrichment_with_sign_in_activity(test_entra_id_asset_connect
         sign_in_activity=sign_in_activity,
     )
 
-    result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
 
     assert result.enrichments is not None
     account_enrichment = next((e for e in result.enrichments if e.name == "account"), None)
@@ -659,7 +686,7 @@ def test_map_fields_enrichment_with_employment_info(test_entra_id_asset_connecto
         employee_type="Full-Time",
     )
 
-    result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
 
     assert result.enrichments is not None
     employment_enrichment = next((e for e in result.enrichments if e.name == "employment"), None)
@@ -679,7 +706,7 @@ def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_conne
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
 
-    result = test_entra_id_asset_connector.map_fields(asset_user, False, [])
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
 
     # Account enrichment should always be present
     assert result.enrichments is not None
