@@ -1,4 +1,5 @@
 import time
+from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any, Optional
@@ -39,7 +40,9 @@ class SophosXDRQueryTrigger(SophosConnector):
         self.events_sum = 0
 
     @property
+    @abstractmethod
     def query(self) -> dict[str, Any]:
+        """Return the Sophos XDR query definition."""
         raise NotImplementedError
 
     @property
