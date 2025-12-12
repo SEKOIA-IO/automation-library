@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py39"]
+target-version = ["py314"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -24,7 +24,7 @@ line-length = 119
 fix = true
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 requests = "*"
 sekoia-automation-sdk = "^1.21.1"
 kafka-python = "*"
