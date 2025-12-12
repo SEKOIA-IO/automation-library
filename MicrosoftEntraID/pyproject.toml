@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py311"]
+target-version = ["py314"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -31,7 +31,7 @@ warn_return_any = true
 exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 azure-identity = "^1.23.1"
 pydantic = "2.10"
 msgraph-sdk = "^1.45.0"
