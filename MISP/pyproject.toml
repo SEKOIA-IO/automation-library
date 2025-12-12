@@ -11,10 +11,10 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py38"]
+target-version = ["py314"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 pymisp = "^2.4.169.2"
 sekoia-automation-sdk = "^1.13.0"
 stix2 = "~1.3"
