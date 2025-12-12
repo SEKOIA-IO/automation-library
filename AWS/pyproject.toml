@@ -16,7 +16,7 @@ include = "aws_helpers"
 
 [tool.black]
 line-length = 119
-target-version = ["py311"]
+target-version = ["py314"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -36,7 +36,7 @@ warn_return_any = true
 exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 sekoia-automation-sdk = "^1.21.0"
 boto3 = ">=1.39.9"
 botocore = ">=1.39.9"
