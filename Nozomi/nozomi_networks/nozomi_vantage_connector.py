@@ -21,6 +21,9 @@ def _format_event(record: dict[str, Any]) -> dict[str, Any]:
     """
     Format Nozomi event.
 
+    https://technicaldocs.nozominetworks.com/products/n2os/topics/sdk/open-api/r_n2os-sdk_open-api_alerts.html
+
+
     Args:
         record (dict[str, Any]): The record to extract the date from.
 
@@ -28,9 +31,10 @@ def _format_event(record: dict[str, Any]) -> dict[str, Any]:
         datetime: The event date.
     """
     return {
+        **{key: value for key, value in record.items() if key != "attributes" and key != "type"},
+        **record.get("attributes", {}),
         "id": record.get("id"),
         "event_type": record.get("type"),
-        **record.get("attributes", {}),
     }
 
 
