@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py311"]
+target-version = ["py314"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -19,7 +19,7 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.14,<4.0"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 structlog = "^22.3.0"
