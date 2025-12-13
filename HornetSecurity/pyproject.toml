@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core"]
+requires = [ "poetry-core",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py38"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -28,17 +28,17 @@ show_error_codes = true
 implicit_reexport = true
 allow_untyped_decorators = true
 warn_return_any = true
-exclude = ["tests/*"]
+exclude = [ "tests/*",]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.18.3"
+python = ">=3.11,<4.0"
+sekoia-automation-sdk = "^1.21.2"
 requests = "^2.32.3"
 structlog = "^25.4.0"
 cachetools = "^6.0.0"
 
 [tool.coverage.run]
-omit = ["tests/*", "main.py"]
+omit = [ "tests/*", "main.py",]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -50,4 +50,4 @@ isort = "^5.10.1"
 
 [tool.poetry.group.dev.dependencies.black]
 version = "^25.1.0"
-extras = ["colorama"]
+extras = [ "colorama",]
