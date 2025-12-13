@@ -17,13 +17,19 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "client_id", "client_secret"],
-    "secrets": ["client_secret"]
+    "required": [
+      "base_url",
+      "client_id",
+      "client_secret"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
   },
   "description": "AI-driven cybersecurity platform that detects attacker behaviors to protect your users and hosts from being compromised, regardless of location.",
   "name": "Vectra",
   "uuid": "45a8b20d-60f4-4384-b5d9-8ec0efcf604c",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "slug": "vectra",
   "categories": [
     "Network"
