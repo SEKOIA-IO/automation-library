@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = [ "poetry-core>=1.0.0",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -13,7 +13,7 @@ include = "deep_visibility"
 
 [tool.black]
 line-length = 119
-target-version = ["py38"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -21,8 +21,8 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.18.3"
+python = ">=3.11,<4.0"
+sekoia-automation-sdk = "^1.21.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -32,7 +32,7 @@ requests = "*"
 requests-mock = "*"
 
 [tool.coverage.run]
-omit = ["tests/*", "main.py"]
+omit = [ "tests/*", "main.py",]
 
 [tool.poetry.dependencies.aws-automation]
 path = "../AWS"

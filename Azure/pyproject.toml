@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = [ "poetry-core>=1.0.0",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py310"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -28,13 +28,13 @@ show_error_codes = true
 implicit_reexport = true
 allow_untyped_decorators = true
 warn_return_any = true
-exclude = ["tests/*", "dev.py"]
+exclude = [ "tests/*", "dev.py",]
 [[tool.mypy.overrides]]
 module = "azure.eventhub.extensions.checkpointstoreblobaio.*"
 ignore_errors = true
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.11,<4.0"
 orjson = "^3.9.10"
 azure-eventhub-checkpointstoreblob-aio = "^1.1.4"
 azure-storage-blob = "^12.19.0"
@@ -49,20 +49,16 @@ msgraph-sdk = "^1.45.0"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = ["tests"]
-filterwarnings = [
-  "error",
-  "ignore::DeprecationWarning",
-  "ignore:.*unclosed.*:ResourceWarning",
-]
+testpaths = [ "tests",]
+filterwarnings = [ "error", "ignore::DeprecationWarning", "ignore:.*unclosed.*:ResourceWarning",]
 addopts = "  --strict-markers\n  --tb=short\n  --cov=connectors\n  --cov=azure_helpers\n  --cov=graph_api\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --asyncio-mode=auto\n"
 
 [tool.coverage.run]
-omit = ["tests/*", "main.py", "dev.py"]
+omit = [ "tests/*", "main.py", "dev.py",]
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.16.0"
-extras = ["all"]
+version = "^1.21.2"
+extras = [ "all",]
 
 [tool.poe.tasks.lint]
 help = "Make code linting and formatting."
@@ -98,8 +94,8 @@ poetry = "^1.5.1"
 
 [tool.poetry.group.dev.dependencies.black]
 version = "^24.3.0"
-extras = ["colorama"]
+extras = [ "colorama",]
 
 [tool.poetry.group.dev.dependencies.poethepoet]
 version = "^0.16.5"
-extras = ["poetry_plugin"]
+extras = [ "poetry_plugin",]

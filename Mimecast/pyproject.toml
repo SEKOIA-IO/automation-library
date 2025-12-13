@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core"]
+requires = [ "poetry-core",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py38"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -19,8 +19,8 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.18.2"
+python = ">=3.11,<4.0"
+sekoia-automation-sdk = "^1.21.2"
 requests = "^2.32.3"
 requests-ratelimiter = "^0.7.0"
 python-dateutil = "^2.9.0.post0"
@@ -38,9 +38,9 @@ requests-mock = "*"
 aioresponses = "*"
 
 [tool.coverage.run]
-omit = ["tests/*", "main.py", "dev.py"]
+omit = [ "tests/*", "main.py", "dev.py",]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = ["tests"]
+testpaths = [ "tests",]
 addopts = "  --strict-markers\n  --tb=short\n  --cov=mimecast_modules\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --capture=sys\n"

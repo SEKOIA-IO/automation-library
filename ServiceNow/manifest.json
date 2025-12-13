@@ -30,7 +30,7 @@
   "name": "ServiceNow",
   "slug": "servicenow",
   "description": "ServiceNow is an IT company allowing creating workflow to empower employees productivity and to improve customers experience",
-  "version": "1.25.0",
+  "version": "1.26.0",
   "categories": [
     "Collaboration Tools"
   ]

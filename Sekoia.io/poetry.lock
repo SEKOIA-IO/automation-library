@@ -251,6 +251,7 @@ description = "Backport of CPython tarfile module"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
+markers = "python_version == \"3.11\""
 files = [
     {file = "backports.tarfile-1.2.0-py3-none-any.whl", hash = "sha256:77e284d754527b01fb1e6fa8a1afe577858ebe4e9dad8919e34c862cb399bc34"},
     {file = "backports_tarfile-1.2.0.tar.gz", hash = "sha256:d75e02c268746e1b8144c278978b6e98e85de6ad16f8e4b0844a154557eca991"},
@@ -1343,6 +1344,7 @@ description = "Read metadata from Python packages"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
+markers = "python_version == \"3.11\""
 files = [
     {file = "importlib_metadata-8.7.0-py3-none-any.whl", hash = "sha256:e5dd1551894c77868a30651cef00984d50e1002d06942a7101d34870c5f02afd"},
     {file = "importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000"},
@@ -3055,14 +3057,14 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.21.1"
+version = "1.21.2"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4.0,>=3.11"
 groups = ["main"]
 files = [
-    {file = "sekoia_automation_sdk-1.21.1-py3-none-any.whl", hash = "sha256:163f459b33b37771112d7c84de4d4ef43862c7697a8d8f574c19869e10700b3b"},
-    {file = "sekoia_automation_sdk-1.21.1.tar.gz", hash = "sha256:043cbd265b4677eb721d17de34ad466f2b5dc67667f6c890ec2feeb47e7931bb"},
+    {file = "sekoia_automation_sdk-1.21.2-py3-none-any.whl", hash = "sha256:b445ddba13a9d8af1e89f10cd7bb3436fde8c6f2067b80c7947881a93d1e840c"},
+    {file = "sekoia_automation_sdk-1.21.2.tar.gz", hash = "sha256:6efb5562a9e58deded187d333c27e56c043393127b168c7d84080706c406b493"},
 ]
 
 [package.dependencies]
@@ -3843,6 +3845,7 @@ description = "Backport of pathlib-compatible object wrapper for zip files"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
+markers = "python_version == \"3.11\""
 files = [
     {file = "zipp-3.21.0-py3-none-any.whl", hash = "sha256:ac1bbe05fd2991f160ebce24ffbac5f6d11d83dc90891255885223d42b3cd931"},
     {file = "zipp-3.21.0.tar.gz", hash = "sha256:2c9958f6430a2040341a52eb608ed6dd93ef4392e02ffe219417c1b28b5dd1f4"},
@@ -4045,5 +4048,5 @@ cffi = ["cffi (>=1.11)"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<3.12"
-content-hash = "a9444112e675e09ed9befa9c0a164dcfe5368d32b49efcf3a4f7af63875b511d"
+python-versions = ">=3.11,<4.0"
+content-hash = "57ae85bd110523cc29eaf5ffbe0a828ae345e1377ef7594cfaeb3fa2737d02b6"

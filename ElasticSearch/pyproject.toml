@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = [ "poetry-core>=1.0.0",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py310"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -28,10 +28,10 @@ show_error_codes = true
 implicit_reexport = true
 allow_untyped_decorators = true
 warn_return_any = true
-exclude = ["tests/*", "main.py"]
+exclude = [ "tests/*", "main.py",]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<4.0"
 orjson = "^3.10.16"
 elasticsearch = "^8.17.2"
 aiohttp = "^3.11.16"
@@ -41,20 +41,16 @@ faker = "^37.1.0"
 [tool.pytest.ini_options]
 minversion = "6.0"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["tests"]
-filterwarnings = [
-  "error",
-  "ignore::DeprecationWarning",
-  "ignore:.*unclosed.*:ResourceWarning",
-]
+testpaths = [ "tests",]
+filterwarnings = [ "error", "ignore::DeprecationWarning", "ignore:.*unclosed.*:ResourceWarning",]
 addopts = "  --strict-markers\n  --tb=short\n  --cov=elasticsearch_module\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n  --capture=sys\n"
 
 [tool.coverage.run]
-omit = ["tests/*", "main.py"]
+omit = [ "tests/*", "main.py",]
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-extras = ["all"]
-version = "^1.18.3"
+extras = [ "all",]
+version = "^1.21.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -69,4 +65,4 @@ mypy = "^0.991"
 
 [tool.poetry.group.dev.dependencies.black]
 version = "^24.3.0"
-extras = ["colorama"]
+extras = [ "colorama",]

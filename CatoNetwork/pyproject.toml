@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core"]
+requires = [ "poetry-core",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py310"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -28,10 +28,10 @@ show_error_codes = true
 implicit_reexport = true
 allow_untyped_decorators = true
 warn_return_any = true
-exclude = ["tests/*"]
+exclude = [ "tests/*",]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.11,<4.0"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 loguru = "^0.7.0"
@@ -53,29 +53,25 @@ mypy = "^0.960"
 types-python-dateutil = "^2.8.19.13"
 
 [tool.coverage.run]
-omit = ["cato/metrics.py"]
+omit = [ "cato/metrics.py",]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = ["tests"]
-filterwarnings = [
-  "error",
-  "ignore::DeprecationWarning",
-  "ignore:.*unclosed.*:ResourceWarning",
-]
+testpaths = [ "tests",]
+filterwarnings = [ "error", "ignore::DeprecationWarning", "ignore:.*unclosed.*:ResourceWarning",]
 addopts = "  --strict-markers\n  --tb=short\n  --cov=cato\n  --cov=client\n  --cov=logger\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.13.0"
-extras = ["all"]
+version = "^1.21.2"
+extras = [ "all",]
 
 [tool.poetry.dependencies.gql]
-extras = ["all"]
+extras = [ "all",]
 version = "^3.4.1"
 
 [tool.poetry.dev-dependencies.poethepoet]
 version = "^0.16.5"
-extras = ["poetry_plugin"]
+extras = [ "poetry_plugin",]
 
 [tool.poe.tasks.lint]
 help = "Make code linting and formatting."
@@ -90,3 +86,4 @@ cmd = "poetry run isort ."
 
 [[tool.poe.tasks.lint.sequence]]
 cmd = "poetry run mypy ."
+
