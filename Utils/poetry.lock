@@ -2867,14 +2867,14 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.21.1"
+version = "1.21.2"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4.0,>=3.11"
 groups = ["main"]
 files = [
-    {file = "sekoia_automation_sdk-1.21.1-py3-none-any.whl", hash = "sha256:163f459b33b37771112d7c84de4d4ef43862c7697a8d8f574c19869e10700b3b"},
-    {file = "sekoia_automation_sdk-1.21.1.tar.gz", hash = "sha256:043cbd265b4677eb721d17de34ad466f2b5dc67667f6c890ec2feeb47e7931bb"},
+    {file = "sekoia_automation_sdk-1.21.2-py3-none-any.whl", hash = "sha256:b445ddba13a9d8af1e89f10cd7bb3436fde8c6f2067b80c7947881a93d1e840c"},
+    {file = "sekoia_automation_sdk-1.21.2.tar.gz", hash = "sha256:6efb5562a9e58deded187d333c27e56c043393127b168c7d84080706c406b493"},
 ]
 
 [package.dependencies]
@@ -3572,5 +3572,5 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<3.13"
-content-hash = "d37aefb640f17f1c799a61b5da9d68c47d2a8c3cf85bb8961d0411a038c2ed97"
+python-versions = ">=3.11,<4.0"
+content-hash = "e4b5f01a4167b7cc72ef36664c3bc79b3cd5c8f1458b6d4eca279d6ee75146e1"
