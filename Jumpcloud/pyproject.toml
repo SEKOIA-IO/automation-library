@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core"]
+requires = [ "poetry-core",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py311"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -19,11 +19,11 @@ profile = "black"
 line_length = 119
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.11,<4.0"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 structlog = "^22.3.0"
-sekoia-automation-sdk = "^1.13.0"
+sekoia-automation-sdk = "^1.21.2"
 types-requests = "^2.32.4.20250913"
 
 [tool.poetry.dev-dependencies]
@@ -37,7 +37,7 @@ mypy = "^0.991"
 pytest-clarity = "^1.0.1"
 
 [tool.coverage.run]
-omit = ["tests/*", "main.py"]
+omit = [ "tests/*", "main.py",]
 
 [tool.poetry.dev-dependencies.black]
 version = "^22.6.0"
