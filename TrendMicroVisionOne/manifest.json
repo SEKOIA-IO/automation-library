@@ -25,12 +25,17 @@
         "type": "string"
       }
     },
-    "required": ["base_url", "api_key"]
+    "required": [
+      "base_url",
+      "api_key"
+    ]
   },
   "description": "Trend Micro Vision One is a comprehensive XDR platform that integrates data from various sources, such as: email, company intranet, workstations and servers, containerized environments, cloud environments, integrated solutions from the Trend Micro ecosystem, and third-party integrations (EntraID, Okta, Office365, etc.) to detect, analyze, and respond to threats.",
   "name": "TrendMicro VisionOne",
   "slug": "trend-micro-vision-one",
   "uuid": "6f3d8a54-d51c-47d0-b77c-dbcf31393d59",
-  "version": "0.1.3",
-  "categories": ["Endpoint"]
+  "version": "0.2.0",
+  "categories": [
+    "Endpoint"
+  ]
 }
