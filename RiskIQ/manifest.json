@@ -31,7 +31,7 @@
   "name": "RiskIQ",
   "slug": "riskiq",
   "description": "RiskIQ is a cyber security company providing software as a service to detect phishing, fraud, malware, and other online security threats.",
-  "version": "1.25.1",
+  "version": "1.26.0",
   "categories": [
     "Threat Intelligence"
   ]
