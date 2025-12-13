@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core"]
+requires = [ "poetry-core",]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py310"]
+target-version = [ "py314",]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -28,18 +28,18 @@ show_error_codes = true
 implicit_reexport = true
 allow_untyped_decorators = true
 warn_return_any = true
-exclude = ["tests/*"]
+exclude = [ "tests/*",]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<4.0"
 azure-mgmt-securityinsight = "^1.0.0"
 orjson = "^3.10.15"
 azure-identity = "^1.19.0"
-sekoia-automation-sdk = "^1.18.2"
+sekoia-automation-sdk = "^1.21.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 
 [tool.coverage.run]
-omit = ["tests/*", "main.py"]
+omit = [ "tests/*", "main.py",]
