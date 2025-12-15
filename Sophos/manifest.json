@@ -10,7 +10,7 @@
         "format": "uri"
       },
       "api_host": {
-        "description": "API Url of the Sophos Central API (e.g. 'https://api-{dataRegion}.central.sophos.com')",
+        "description": "API Url of the Sophos Central API",
         "type": "string",
         "default": "https://api.central.sophos.com",
         "format": "uri"
