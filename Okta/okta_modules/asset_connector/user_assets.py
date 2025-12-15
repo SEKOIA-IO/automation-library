@@ -204,7 +204,7 @@ class OktaUserAssetConnector(AssetConnector):
             self.log(f"No roles found for user {user_id}", level="debug")
             return []
 
-        return roles
+        return list(roles)
 
     async def next_list_users(self) -> list[OktaUser]:
         """Fetch all users from Okta.
