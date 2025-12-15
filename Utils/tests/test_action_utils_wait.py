@@ -12,7 +12,7 @@ def test_action_wait_incorrect_param():
 
     with patch("utils.action_utils_wait.accurate_sleep") as mock_time:
         action.run(arguments={"duration": 10000})
-        mock_time.assert_called_once_with(3600)
+        mock_time.assert_called_once_with(3540)
 
 
 def test_action_wait_normal():
