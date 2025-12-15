@@ -39,13 +39,13 @@ class SophosXDRQueryTrigger(SophosConnector):
         self.cursor = CheckpointDatetime(
             path=self.data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
         )
-        self._from_date = self.cursor.offset
+        self._from_date: datetime = self.cursor.offset
         self.events_sum = 0
 
     @property
     def from_date(self) -> datetime:
         # Enforce 30-day limit on every request
-        too_old = datetime.now(timezone.utc) - self.cursor._ignore_older_than
+        too_old: datetime = datetime.now(timezone.utc) - self.cursor._ignore_older_than
         if self._from_date < too_old:
             return too_old
 
