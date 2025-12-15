@@ -82,25 +82,27 @@ class AzureEventsHubTrigger(AsyncConnector):
     def client(self) -> Client:
         return Client(self.configuration)
 
-    async def _initialize_checkpoint_store(self) -> None:
+    async def _initialize_checkpoint_store(self) -> None:  # pragma: no cover
         """
         Pre-create the storage container to prevent race conditions during partition ownership claims.
         This helps avoid 404 errors when the SDK tries to create ownership blobs with If-Match conditions.
         """
         try:
-            blob_service: BlobServiceClient = BlobServiceClient.from_connection_string(
+            service: BlobServiceClient = BlobServiceClient.from_connection_string(
                 self.configuration.storage_connection_string
             )
 
-            # Ensure container exists
             try:
-                await blob_service.create_container(self.configuration.storage_container_name)
+                container = service.get_container_client(self.configuration.storage_container_name)
+                await container.create_container()
                 self.log("Created checkpoint storage container")
             except ResourceExistsError:
                 self.log("Checkpoint storage container already exists", level="debug")
 
-            await blob_service.close()
+            finally:
+                await service.close()
         except Exception as e:
+            # Wrong permissions / invalid conn string / DNS / etc.
             self.log_exception(e, message="Failed to initialize checkpoint store")
 
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
@@ -219,6 +221,8 @@ class AzureEventsHubTrigger(AsyncConnector):
         super(Connector, self).stop(*args, **kwargs)
 
     async def async_run(self) -> None:  # pragma: no cover
+        await self._initialize_checkpoint_store()
+
         while self.running:
             try:
                 await self.receive_events()
