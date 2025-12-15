@@ -423,9 +423,7 @@ def test_user_has_admin_policy_true(test_aws_users_asset_connector):
     """Test user_has_admin_policy returns True for admin user."""
     from sekoia_automation.asset_connector.models.ocsf.user import Group
 
-    groups = [
-        Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["AdminAccess"])
-    ]
+    groups = [Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["AdminAccess"])]
 
     is_admin = test_aws_users_asset_connector.user_has_admin_policy(groups)
 
@@ -436,9 +434,7 @@ def test_user_has_admin_policy_false(test_aws_users_asset_connector):
     """Test user_has_admin_policy returns False for non-admin user."""
     from sekoia_automation.asset_connector.models.ocsf.user import Group
 
-    groups = [
-        Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["ReadOnlyAccess"])
-    ]
+    groups = [Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["ReadOnlyAccess"])]
 
     is_admin = test_aws_users_asset_connector.user_has_admin_policy(groups)
 
@@ -466,9 +462,7 @@ def test_user_has_admin_policy_poweruser(test_aws_users_asset_connector):
     """Test user_has_admin_policy recognizes 'poweruser' pattern."""
     from sekoia_automation.asset_connector.models.ocsf.user import Group
 
-    groups = [
-        Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["PowerUserAccess"])
-    ]
+    groups = [Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["PowerUserAccess"])]
 
     is_admin = test_aws_users_asset_connector.user_has_admin_policy(groups)
 
