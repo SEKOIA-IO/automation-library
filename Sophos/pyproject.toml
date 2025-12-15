@@ -7,10 +7,10 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.21.1"
+sekoia-automation-sdk = "^1.21.2"
 requests-ratelimiter = "^0.7.0"
 structlog = "^23.1.0"
-requests = "*"
+requests = "^2.32.5"
 tenacity = "^9.1.2"
 
 [tool.poetry.group.dev.dependencies]
