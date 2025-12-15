@@ -5,8 +5,8 @@ from functools import cached_property
 from typing import Any, Optional
 
 import orjson
-from dateutil.parser import isoparse
 from requests.exceptions import HTTPError
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
@@ -36,36 +36,30 @@ class SophosXDRQueryTrigger(SophosConnector):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.from_date = self.most_recent_date_seen
+        self.cursor = CheckpointDatetime(
+            path=self.data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+        )
+        self._from_date = self.cursor.offset
         self.events_sum = 0
+
+    @property
+    def from_date(self) -> datetime:
+        # Enforce 30-day limit on every request
+        too_old = datetime.now(timezone.utc) - self.cursor._ignore_older_than
+        if self._from_date < too_old:
+            return too_old
+
+        return self._from_date
+
+    @from_date.setter
+    def from_date(self, value: datetime) -> None:
+        self._from_date = value
 
     @property
     @abstractmethod
     def query(self) -> dict[str, Any]:
         """Return the Sophos XDR query definition."""
         raise NotImplementedError
-
-    @property
-    def most_recent_date_seen(self) -> datetime:
-        now = datetime.now(timezone.utc)
-
-        with self.context as cache:
-            most_recent_date_seen_str = cache.get("most_recent_date_seen")
-
-            # if undefined, retrieve events from the last minute
-            if most_recent_date_seen_str is None:
-                return now - timedelta(days=1)
-
-            # parse the most recent date seen
-            most_recent_date_seen = isoparse(most_recent_date_seen_str)
-
-            # We don't retrieve messages older than 1 month according to documentation
-            # https://developer.sophos.com/reference/edr/Querying-the-Data-Lake
-            one_month_ago = now - timedelta(days=30)
-            if most_recent_date_seen < one_month_ago:
-                most_recent_date_seen = one_month_ago
-
-            return most_recent_date_seen
 
     @cached_property
     def pagination_limit(self) -> int:
@@ -224,8 +218,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
                 most_recent_date_seen = now
                 self.from_date = most_recent_date_seen
-                with self.context as cache:
-                    cache["most_recent_date_seen"] = most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.cursor.offset = most_recent_date_seen
 
             else:
                 self.log(message="No messages to forward", level="info")

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-15 - 1.17.6
+
+### Fixed
+
+- Update last seen "from" date in query
+- Enforce 30-day limit for a "from" date
+
+### Changed
+
+- Update sekoia sdk to 1.21.2
+- Use Checkpoint class from SDK
+
 ## 2025-11-13 - 1.17.5
 
 ### Fixed

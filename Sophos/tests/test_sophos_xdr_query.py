@@ -272,7 +272,7 @@ def test_getting_results(
         trigger.getting_results("7")
         calls = [call.kwargs["events"] for call in trigger.push_events_to_intakes.call_args_list]
         assert len(calls[0]) == 7
-        assert trigger.most_recent_date_seen.date() == datetime.now(timezone.utc).date()
+        assert trigger.cursor.offset.date() == datetime.now(timezone.utc).date()
 
 
 def test_getting_failed_results(trigger, authorization_message, whoami_message, queryRunFailed_message):
@@ -332,5 +332,5 @@ def test_getting_next_results(
         mock.get(url_next_results, json=nextqueryResults_message)
         trigger.getting_results("7")
         assert trigger.events_sum == 8
-        assert trigger.most_recent_date_seen.date() == datetime.now(timezone.utc).date()
+        assert trigger.cursor.offset.date() == datetime.now(timezone.utc).date()
         assert trigger.query["from"] == trigger.from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
