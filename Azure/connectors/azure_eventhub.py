@@ -6,9 +6,11 @@ from functools import cached_property
 from typing import Any, Optional, Union, cast
 
 import orjson
+from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
 from azure.eventhub import EventData
 from azure.eventhub.aio import EventHubConsumerClient, PartitionContext
 from azure.eventhub.extensions.checkpointstoreblobaio import BlobCheckpointStore
+from azure.storage.blob.aio import BlobServiceClient
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
@@ -79,6 +81,29 @@ class AzureEventsHubTrigger(AsyncConnector):
     @cached_property
     def client(self) -> Client:
         return Client(self.configuration)
+
+    async def _initialize_checkpoint_store(self) -> None:  # pragma: no cover
+        """
+        Pre-create the storage container to prevent race conditions during partition ownership claims.
+        This helps avoid 404 errors when the SDK tries to create ownership blobs with If-Match conditions.
+        """
+        try:
+            service: BlobServiceClient = BlobServiceClient.from_connection_string(
+                self.configuration.storage_connection_string
+            )
+
+            try:
+                container = service.get_container_client(self.configuration.storage_container_name)
+                await container.create_container()
+                self.log("Created checkpoint storage container")
+            except ResourceExistsError:
+                self.log("Checkpoint storage container already exists", level="debug")
+
+            finally:
+                await service.close()
+        except Exception as e:
+            # Wrong permissions / invalid conn string / DNS / etc.
+            self.log_exception(e, message="Failed to initialize checkpoint store")
 
     async def handle_messages(self, partition_context: PartitionContext, messages: list[EventData]) -> None:
         """
@@ -179,11 +204,15 @@ class AzureEventsHubTrigger(AsyncConnector):
 
     # Only for easy mock purposed in tests
     async def receive_events(self) -> None:
-        await self.client.receive_batch(
-            on_event_batch=self.handle_messages,
-            on_error=self.handle_exception,
-            max_wait_time=self._consumption_max_wait_time,
-        )
+        try:
+            await self.client.receive_batch(
+                on_event_batch=self.handle_messages,
+                on_error=self.handle_exception,
+                max_wait_time=self._consumption_max_wait_time,
+            )
+
+        except ResourceNotFoundError as e:  # pragma: no cover
+            self.log(str(e), level="warning")
 
     def stop(self, *args: Any, **kwargs: Optional[Any]) -> None:  # pragma: no cover
         """
@@ -192,6 +221,8 @@ class AzureEventsHubTrigger(AsyncConnector):
         super(Connector, self).stop(*args, **kwargs)
 
     async def async_run(self) -> None:  # pragma: no cover
+        await self._initialize_checkpoint_store()
+
         while self.running:
             try:
                 await self.receive_events()
