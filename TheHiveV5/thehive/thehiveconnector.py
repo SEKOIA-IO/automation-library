@@ -147,6 +147,24 @@ SEKOIA_TO_THEHIVE = {
     "user.effective.email": "mail",
 }
 
+# TLP and PAP level mappings (string to int)
+TLP_LEVELS = {
+    "CLEAR": 0,
+    "WHITE": 0,  # Alias for CLEAR
+    "GREEN": 1,
+    "AMBER": 2,
+    "AMBER+STRICT": 3,
+    "RED": 4,
+}
+
+PAP_LEVELS = {
+    "CLEAR": 0,
+    "WHITE": 0,  # Alias for CLEAR
+    "GREEN": 1,
+    "AMBER": 2,
+    "RED": 3,
+}
+
 
 def key_exists(mapping: dict, key_to_check: str) -> bool:
     # ensure type safety with isinstance
@@ -184,6 +202,21 @@ class TheHiveConnector:
 
     @staticmethod
     def sekoia_to_thehive(events, tlp, pap, ioc) -> List[Dict[str, Any]]:
+        # Convert TLP and PAP to integers if they are strings
+        if isinstance(tlp, str):
+            tlp_int = TLP_LEVELS.get(tlp.upper(), 2)  # Default to AMBER (2) if unknown
+            if tlp.upper() not in TLP_LEVELS:
+                logging.warning("Unknown TLP level '%s', defaulting to AMBER (2)", tlp)
+        else:
+            tlp_int = tlp
+
+        if isinstance(pap, str):
+            pap_int = PAP_LEVELS.get(pap.upper(), 2)  # Default to AMBER (2) if unknown
+            if pap.upper() not in PAP_LEVELS:
+                logging.warning("Unknown PAP level '%s', defaulting to AMBER (2)", pap)
+        else:
+            pap_int = pap
+
         observables: List[Dict[str, Any]] = []
         for idx, ev in enumerate(events):
             if not isinstance(ev, dict):
@@ -192,11 +225,18 @@ class TheHiveConnector:
             for k, v in ev.items():
                 if k in SEKOIA_FIELDS:
                     thehive_field = SEKOIA_TO_THEHIVE.get(k, "<unknown>")
+                    # Skip observables with unknown data types
+                    if thehive_field == "<unknown>":
+                        logging.warning("Skipping observable with unknown data type for field '%s'", k)
+                        continue
+                    # Ensure data is a string
+                    if not isinstance(v, str):
+                        v = str(v)
                     observable = {
-                        "dataType": thehive_field,  # or another valid dataType
-                        "data": v,  # your observable value
-                        "tlp": tlp,
-                        "pap": pap,
+                        "dataType": thehive_field,
+                        "data": v,
+                        "tlp": tlp_int,
+                        "pap": pap_int,
                         "ioc": ioc,
                     }
                     observables.append(observable)
