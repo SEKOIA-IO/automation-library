@@ -1,7 +1,6 @@
 from typing import Any, Optional, Dict, List
 import json
 from sekoia_automation.action import Action
-from thehive4py.types.observable import OutputObservable
 
 from .thehiveconnector import TheHiveConnector
 

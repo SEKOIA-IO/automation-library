@@ -13,7 +13,6 @@ from thehive4py import TheHiveApi
 from thehive4py.errors import TheHiveError
 
 from thehive4py.types.comment import InputComment, InputUpdateComment, OutputComment
-from thehive4py.types.observable import OutputObservable
 
 # Optional imports for typed input objects (fallback to dict if missing)
 try:
