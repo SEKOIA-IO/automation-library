@@ -125,6 +125,12 @@ class DelineaPraConnector(AsyncConnector):
                 duration = int(time.time() - duration_start)
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
+                # sleep if no events were fetched
+                data_sleep = self.configuration.frequency - duration
+                if len(results) == 0 and data_sleep > 0:
+                    logger.info(f"Next batch in the future. Sleeping for {data_sleep} seconds.")
+                    await asyncio.sleep(data_sleep)
+
             except Exception as e:
                 logger.error(f"Error while running Delinea PRA: {e}", error=e)
                 self.log_exception(e)
@@ -132,3 +138,5 @@ class DelineaPraConnector(AsyncConnector):
         if self._client:
             await self._client.close()
             self._client = None
+
+
