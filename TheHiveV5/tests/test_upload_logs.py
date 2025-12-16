@@ -63,6 +63,7 @@ def test_upload_logs_action_success(module, data_path):
         "base_url": "https://thehive-project.org",
         "apikey": "LOREM",
         "organisation": "SEKOIA",
+        "verify_certificate": True,
     }
 
     try:
@@ -97,6 +98,7 @@ def test_upload_logs_action_api_error(requests_mock, module, data_path):
         "base_url": "https://thehive-project.org",
         "apikey": "LOREM",
         "organisation": "SEKOIA",
+        "verify_certificate": False,
     }
 
     # ensure the test file exists (even if empty)

@@ -1,7 +1,6 @@
 from typing import Any, Optional, Dict, List
 import json
 from sekoia_automation.action import Action
-from thehive4py.types.observable import OutputObservable
 
 from .thehiveconnector import TheHiveConnector
 
@@ -12,6 +11,7 @@ class TheHiveCreateObservableV5(Action):
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
             organisation=self.module.configuration["organisation"],
+            verify=self.module.configuration.get("verify_certificate", True),
         )
 
         arg_alert_id = arguments["alert_id"]
