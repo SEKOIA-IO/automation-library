@@ -7,7 +7,17 @@ Data models of the HarfangLab module
 from typing import Any, Dict, List, Optional
 
 # third parties
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from sekoia_automation.module import Module
+
+
+class HarfanglabModuleConfiguration(BaseModel):
+    url: str = Field(..., alias="url", description="Base URL of the Harfanglab instance")
+    api_token: str = Field(..., description="API token for authentication with Harfanglab")
+
+
+class HarfanglabModule(Module):
+    configuration: HarfanglabModuleConfiguration
 
 
 class JobTarget(BaseModel):

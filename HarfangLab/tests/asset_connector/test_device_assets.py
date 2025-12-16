@@ -10,11 +10,12 @@ from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 from sekoia_automation.module import Module
 
 from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
+from harfanglab.models import HarfanglabModule, HarfanglabModuleConfiguration
 
 
 @pytest.fixture
 def test_harfanglab_asset_connector(symphony_storage):
-    module = Module()
+    module = HarfanglabModule()
     module.configuration = {
         "url": "https://example.com",
         "api_token": "fake_harfanglab_api_key",
@@ -444,3 +445,131 @@ def test_fetch_devices_no_results(test_harfanglab_asset_connector):
         devices = list(test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
 
         assert len(devices) == 0
+
+
+def test_build_network_interface(test_harfanglab_asset_connector, asset_first_object):
+    network_interface = test_harfanglab_asset_connector.build_network_interface(asset_first_object)
+
+    assert network_interface is not None
+    assert network_interface.hostname == "testhostaname1"
+    assert network_interface.ip == "1.2.2.5"
+    assert network_interface.mac == "55-55-00-22-33-22"
+    assert network_interface.name is None
+    assert network_interface.type == "Wired"
+    assert network_interface.type_id == 1
+    assert network_interface.uid == "35064b52-fa8a-4357-b21d-87ab8114add2"
+
+
+def test_build_network_interface_no_data(test_harfanglab_asset_connector):
+    asset_without_network = {
+        "id": "test-id",
+        "hostname": "test-host",
+        "firstseen": "2023-10-01T12:00:00Z"
+    }
+
+    network_interface = test_harfanglab_asset_connector.build_network_interface(asset_without_network)
+    assert network_interface is None
+
+
+def test_build_enrichments(test_harfanglab_asset_connector, asset_first_object):
+    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_first_object)
+
+    assert enrichment is not None
+    assert enrichment.name == "compliance"
+    assert enrichment.value == "hygiene"
+    assert enrichment.data is not None
+
+    # Test firewall status
+    assert enrichment.data.Firewall_status == "Enabled"
+
+    # Test encryption
+    assert enrichment.data.Storage_encryption is not None
+    assert enrichment.data.Storage_encryption.partitions["disk_0"] == "Disabled"
+
+    # Users should be None
+    assert enrichment.data.Users is None
+
+
+def test_build_enrichments_no_firewall(test_harfanglab_asset_connector):
+    asset_no_firewall = {
+        "id": "test-id",
+        "hostname": "test",
+        "firstseen": "2023-10-01T12:00:00Z",
+        "policy": {"windows_self_protection_feature_firewall": False},
+        "disk_count": 0,
+        "encrypted_disk_count": 0,
+    }
+
+    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_no_firewall)
+    assert enrichment is not None
+    assert enrichment.data.Firewall_status == "Disabled"
+
+
+def test_build_enrichments_mixed_encryption(test_harfanglab_asset_connector):
+    asset_mixed_encryption = {
+        "id": "test-id",
+        "hostname": "test",
+        "firstseen": "2023-10-01T12:00:00Z",
+        "policy": {},
+        "disk_count": 3,
+        "encrypted_disk_count": 2,
+    }
+
+    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_mixed_encryption)
+    assert enrichment is not None
+    assert enrichment.data.Storage_encryption.partitions["disk_0"] == "Enabled"
+    assert enrichment.data.Storage_encryption.partitions["disk_1"] == "Enabled"
+    assert enrichment.data.Storage_encryption.partitions["disk_2"] == "Disabled"
+
+
+def test_build_enrichments_no_data(test_harfanglab_asset_connector):
+    asset_no_data = {
+        "id": "test-id",
+        "hostname": "test",
+        "firstseen": "2023-10-01T12:00:00Z",
+        "disk_count": 0,
+        "encrypted_disk_count": 0,
+    }
+
+    enrichment = test_harfanglab_asset_connector.build_enrichments(asset_no_data)
+    assert enrichment is None
+
+
+def test_build_device_extended_fields(test_harfanglab_asset_connector, asset_first_object):
+    device = test_harfanglab_asset_connector.build_device(asset_first_object)
+
+    # Test nouveaux champs
+    assert device.domain == "TestGROUP"
+    assert device.ip == "1.2.2.5"
+    assert device.subnet == "255.255.255.0"
+    assert device.is_managed is True
+    assert device.is_trusted is True
+    assert device.model == "worktest"
+    assert device.vendor_name == "HarfangLab"
+    assert device.desc is None
+
+    # Test timestamps
+    assert device.first_seen_time is not None
+    assert device.last_seen_time is not None
+    assert device.boot_time == "2025-06-11T00:13:20+00:00"
+    assert device.created_time is not None
+
+    # Test network interfaces
+    assert device.network_interfaces is not None
+    assert len(device.network_interfaces) == 1
+    assert device.network_interfaces[0].ip == "1.2.2.5"
+
+
+def test_build_device_missing_optional_fields(test_harfanglab_asset_connector):
+    minimal_asset = {
+        "id": "test-id",
+        "hostname": "test-host",
+        "firstseen": "2023-10-01T12:00:00Z",
+        "ostype": "linux",
+        "osproducttype": "Ubuntu 22.04",
+    }
+
+    device = test_harfanglab_asset_connector.build_device(minimal_asset)
+
+    assert device.uid == "test-id"
+
