@@ -164,11 +164,11 @@ class TheHiveConnector:
         res = connector.alert_get("ALERT-ID")
     """
 
-    def __init__(self, url: str, api_key: str, organisation: str):
+    def __init__(self, url: str, api_key: str, organisation: str, verify: bool = True):
         if not api_key:
             raise ValueError("API key is required")
 
-        self.api = TheHiveApi(url=url, apikey=api_key, organisation=organisation)
+        self.api = TheHiveApi(url=url, apikey=api_key, organisation=organisation, verify=verify)
 
     def _safe_call(self, fn, *args, **kwargs):
         try:
