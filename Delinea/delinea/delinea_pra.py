@@ -106,6 +106,11 @@ class DelineaPraConnector(AsyncConnector):
             self.save_cache()
             self.last_event_date.offset = new_start_date
 
+        if total_events > 0:
+            self.log(message=f"Fetched {total_events} events from Delinea PRA", level="info")
+        else:
+            self.log(message="No new events fetched from Delinea PRA", level="info")
+
         return total_events
 
     async def async_run(self) -> None:  # pragma: no cover
