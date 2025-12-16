@@ -126,7 +126,7 @@ class DelineaPraConnector(AsyncConnector):
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
                 # sleep if no events were fetched
-                data_sleep = self.configuration.frequency - duration
+                data_sleep = max(0, self.configuration.frequency - duration)
                 if len(results) == 0 and data_sleep > 0:
                     logger.info(f"Next batch in the future. Sleeping for {data_sleep} seconds.")
                     await asyncio.sleep(data_sleep)
