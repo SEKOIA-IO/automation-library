@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-16 - 1.0.5
+
+### Added
+
+- Add parameter to check SSL certificate validity (or not) in TheHive connector
+
 ## 2025-10-20 - 1.0.4
 
 ### Added
