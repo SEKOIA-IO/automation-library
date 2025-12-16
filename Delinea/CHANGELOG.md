@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Add pause in the collect of events
+- Add pause in the collection of events
 
 ## 2025-09-11 - 1.0.0
 
