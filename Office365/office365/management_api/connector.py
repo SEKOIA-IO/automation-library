@@ -6,6 +6,7 @@ import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
+from time import strftime
 
 from sekoia_automation.aio.connector import AsyncConnector
 
@@ -13,7 +14,7 @@ from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
-from .errors import FailedToActivateO365Subscription, ApplicationAuthenticationFailed
+from .errors import ApplicationAuthenticationFailed, FailedToActivateO365Subscription
 from .helpers import split_date_range
 from .office365_client import Office365API
 
@@ -76,6 +77,18 @@ class Office365Connector(AsyncConnector):
                 content_type, start_time=start_date, end_time=end_date
             ):
                 for content in contents:
+                    # https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference
+                    # if content["contentExpiration"]
+                    content_expiration = content.get("contentExpiration")
+                    if content_expiration:
+                        now = datetime.now(UTC)
+                        parsed_expiration = datetime.strptime(content_expiration, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+                            tzinfo=UTC
+                        )
+
+                        if now > parsed_expiration:
+                            continue
+
                     events = await self.client.get_content(content["contentUri"])
                     for event in events:
                         pulled_events.append(json.dumps(event))
