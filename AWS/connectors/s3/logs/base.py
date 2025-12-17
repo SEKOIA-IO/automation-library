@@ -185,38 +185,48 @@ class AwsS3Worker(Thread, metaclass=ABCMeta):  # pragma: no cover
         """
         chunk: list[Any] = []
 
+        # in order to reduce pressure for len(chunk) add simple counter
+        counter = 0
+
         # iter over the events
         for event in events:
-            # if the chnuk is full
-            if len(chunk) >= chunk_size:
+            # if the chunk is full
+            if counter >= chunk_size:
                 # yield the current chunk and create a new one
                 yield chunk
                 chunk = []
+                counter = 0
 
             # add the event to the current chunk
             chunk.append(event)
+            counter += 1
 
         # if the last chunk is not empty
         if len(chunk) > 0:
             # yield the last chunk
             yield chunk
 
-    def forward_events(self) -> None:
+    def forward_events(self) -> int:
         # get next objects
         objects = self._fetch_next_objects(self.marker)
+        total_records = 0
 
         # get and forward events
         try:
             events = self._fetch_events(self.bucket_name, self._move_marker(objects))
             chunks = self._chunk_events(list(events), self.configuration.chunk_size or 10000)
             for records in chunks:
-                self.log(message=f"forwarding {len(records)} records", level="info")
+                records_count = len(records)
+                total_records += records_count
+                self.log(message=f"forwarding {records_count} records", level="info")
                 self.send_records(
                     records=list(records),
                     event_name=f"{self.trigger.name.lower().replace(' ', '-')}_{str(time.time())}",
                 )
         except Exception as ex:
             self.log_exception(ex, message=f"Failed to forward events from {self.bucket_name}")
+
+        return total_records
 
     def stop(self) -> None:
         self.alive.set()
@@ -238,12 +248,13 @@ class AwsS3Worker(Thread, metaclass=ABCMeta):  # pragma: no cover
         while not self.alive.is_set():
             try:
                 self.commit_marker()
-                self.forward_events()
+                forwarded_records = self.forward_events()
+                if forwarded_records == 0:
+                    # Sleep only if there is no records to forward from current fetch
+                    time.sleep(self.configuration.frequency)
             except Exception as ex:
                 self.log_exception(ex, message="An unknown exception occurred")
                 raise
-
-            time.sleep(self.configuration.frequency)
 
 
 class AwsS3FetcherConfiguration(BaseModel):

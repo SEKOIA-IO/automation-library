@@ -1,5 +1,6 @@
 import boto3
 from sekoia_automation.account_validator import AccountValidator
+
 from aws_helpers.base import AWSModule
 
 

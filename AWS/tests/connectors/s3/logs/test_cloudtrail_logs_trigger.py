@@ -322,19 +322,22 @@ def test_forward_events(
         aws_mock:
     """
     with mocked_client.handler_for("s3", S3Mock):
-        worker.forward_events()
+        total_events = worker.forward_events()
         calls = {
             call.kwargs["event_name"]: call.kwargs
             for call in trigger.send_event.call_args_list
             if call.kwargs.get("event_name")
         }
+        expected_result = [record for obj in S3Objects.values() for record in orjson.loads(obj)["Records"]]
+
+        assert total_events == len(expected_result)
         assert len(calls) == 1
         assert all([name.startswith("aws-cloudtrail_") for name in calls.keys()])
         assert [
             record
             for call in calls.values()
             for record in read_file(symphony_storage, call["directory"], call["event"]["records_path"])
-        ] == [record for obj in S3Objects.values() for record in orjson.loads(obj)["Records"]]
+        ] == expected_result
 
 
 def test_commit_marker(prefix: str, worker: CloudTrailLogsWorker, symphony_storage: Path, aws_mock):
