@@ -647,6 +647,7 @@ def asset_second_object():
         "telemetry_last_update": "2025-06-12T00:26:31.974049Z",
     }
 
+
 @pytest.fixture
 def agent_endpoint_response(asset_first_object):
     return {"count": 1, "next": None, "previous": None, "results": [asset_first_object]}
@@ -886,8 +887,8 @@ def test_iterate_devices(test_harfanglab_asset_connector, agent_endpoint_respons
 
         with patch.object(
             type(test_harfanglab_asset_connector),
-            'most_recent_date_seen',
-            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00")
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00"),
         ):
             devices = list(test_harfanglab_asset_connector.iterate_devices())
 
@@ -905,12 +906,13 @@ def test_iterate_devices_no_results(test_harfanglab_asset_connector):
         )
         with patch.object(
             type(test_harfanglab_asset_connector),
-            'most_recent_date_seen',
-            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00")
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00"),
         ):
             devices = list(test_harfanglab_asset_connector.iterate_devices())
 
             assert len(devices) == 0
+
 
 def test_iterate_devices_pagination(test_harfanglab_asset_connector, asset_first_object, asset_second_object):
     agent_endpoint_response_page_1 = {
@@ -940,8 +942,8 @@ def test_iterate_devices_pagination(test_harfanglab_asset_connector, asset_first
 
         with patch.object(
             type(test_harfanglab_asset_connector),
-            'most_recent_date_seen',
-            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00")
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00"),
         ):
             devices = list(test_harfanglab_asset_connector.iterate_devices())
 
@@ -960,8 +962,8 @@ def test_iterate_devices_request_failure(test_harfanglab_asset_connector):
 
         with patch.object(
             type(test_harfanglab_asset_connector),
-            'most_recent_date_seen',
-            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00")
+            "most_recent_date_seen",
+            new_callable=lambda: property(lambda self: "2023-10-01T00:00:00+00:00"),
         ):
             with pytest.raises(requests.exceptions.HTTPError):
                 list(test_harfanglab_asset_connector.iterate_devices())
