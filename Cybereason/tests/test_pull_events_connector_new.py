@@ -381,6 +381,7 @@ def test_failing_connection(trigger, mock_cybereason_api):
     with pytest.raises(ConnectionError):
         trigger.next_batch()
 
+
 def test_failing_timeout(trigger, mock_cybereason_api):
     mock_cybereason_api.post(
         "https://fake.cybereason.net/rest/mmng/v2/malops",
@@ -389,6 +390,7 @@ def test_failing_timeout(trigger, mock_cybereason_api):
 
     with pytest.raises(TimeoutError):
         trigger.next_batch()
+
 
 def test_generic_request_error(trigger, mock_cybereason_api):
     mock_cybereason_api.post(
