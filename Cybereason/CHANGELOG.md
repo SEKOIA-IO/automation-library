@@ -7,12 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2024-06-06 - 1.13.3
+## 2025-12-17 - 1.13.3
 
 ### Fixed
 
 - Fix ConnectionError handling when the API is unreachable
-- Add POST method to retry on failed requests
+- Update HTTP retry behavior
 
 ## 2024-06-06 - 1.13.2
 
