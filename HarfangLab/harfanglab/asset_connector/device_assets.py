@@ -187,7 +187,7 @@ class HarfanglabAssetConnector(AssetConnector):
             vendor_name="HarfangLab",
         )
 
-    def build_enrichments(self, asset: dict[str, Any]) -> DeviceDataObject | None:
+    def build_enrichments(self, asset: dict[str, Any]) -> DeviceEnrichmentObject | None:
         policy = asset.get("policy", {})
 
         # Extract firewall status
@@ -313,8 +313,8 @@ class HarfanglabAssetConnector(AssetConnector):
 
                 device_count += len(devices)
 
-                last_event = max(devices, key=self.extract_timestamp)
-                last_ts = self.extract_timestamp(last_event)
+                last_device = max(devices, key=self.extract_timestamp)
+                last_ts = self.extract_timestamp(last_device)
                 candidate = last_ts + timedelta(microseconds=1)
 
                 if max_date is None or candidate > max_date:
