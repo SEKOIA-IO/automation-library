@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-17 - 1.0.6
+
+### Fixed
+
+- Fixed "Invalid json" error when adding observables by converting TLP and PAP levels from strings to integers as required by TheHive v5 API
+- Added validation to skip observables with unknown data types instead of failing
+- Improved data type conversion to ensure observable data is always a string
+
 ## 2025-12-16 - 1.0.5
 
 ### Added
