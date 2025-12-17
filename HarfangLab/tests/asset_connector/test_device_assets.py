@@ -460,11 +460,7 @@ def test_build_network_interface(test_harfanglab_asset_connector, asset_first_ob
 
 
 def test_build_network_interface_no_data(test_harfanglab_asset_connector):
-    asset_without_network = {
-        "id": "test-id",
-        "hostname": "test-host",
-        "firstseen": "2023-10-01T12:00:00Z"
-    }
+    asset_without_network = {"id": "test-id", "hostname": "test-host", "firstseen": "2023-10-01T12:00:00Z"}
 
     network_interface = test_harfanglab_asset_connector.build_network_interface(asset_without_network)
     assert network_interface is None
@@ -571,4 +567,3 @@ def test_build_device_missing_optional_fields(test_harfanglab_asset_connector):
     device = test_harfanglab_asset_connector.build_device(minimal_asset)
 
     assert device.uid == "test-id"
-
