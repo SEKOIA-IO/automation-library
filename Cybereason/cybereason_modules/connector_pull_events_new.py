@@ -6,7 +6,7 @@ import requests
 from cybereason_modules.connector_pull_events import CybereasonEventConnector
 from cybereason_modules.constants import MALOP_GET_ALL_ENDPOINT
 from cybereason_modules.logging import get_logger
-from cybereason_modules.exceptions import InvalidResponse
+from cybereason_modules.exceptions import InvalidResponse, GenericRequestError
 
 logger = get_logger()
 
@@ -95,4 +95,4 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
                 "General error when trying to fetch events from the Cybereason API",
                 url=url,
             )
-            raise Exception(f"An error occurred while requesting {url} : {error}") from error
+            raise GenericRequestError(url, error) from error
