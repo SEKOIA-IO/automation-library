@@ -12,7 +12,7 @@ from sekoia_automation.module import Module
 
 
 class HarfanglabModuleConfiguration(BaseModel):
-    url: str = Field(..., alias="url", description="Base URL of the Harfanglab instance")
+    url: str = Field(..., description="Base URL of the Harfanglab instance")
     api_token: str = Field(..., description="API token for authentication with Harfanglab")
 
 

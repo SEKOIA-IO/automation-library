@@ -19,7 +19,12 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     OSTypeStr,
     DeviceTypeId,
     DeviceTypeStr,
-    OSTypeId, NetworkInterface, NetworkInterfaceTypeStr, NetworkInterfaceTypeId, DeviceDataObject, EncryptionObject,
+    OSTypeId,
+    NetworkInterface,
+    NetworkInterfaceTypeStr,
+    NetworkInterfaceTypeId,
+    DeviceDataObject,
+    EncryptionObject,
     DeviceEnrichmentObject,
 )
 from sekoia_automation.storage import PersistentJSON
@@ -216,7 +221,7 @@ class HarfanglabAssetConnector(AssetConnector):
             Users=None,
         )
 
-        enrichment_object =  DeviceEnrichmentObject(
+        enrichment_object = DeviceEnrichmentObject(
             name="compliance",
             value="hygiene",
             data=device_data_object

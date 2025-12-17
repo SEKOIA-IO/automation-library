@@ -7,10 +7,9 @@ import datetime
 import requests_mock
 
 from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
-from sekoia_automation.module import Module
 
 from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
-from harfanglab.models import HarfanglabModule, HarfanglabModuleConfiguration
+from harfanglab.models import HarfanglabModule
 
 
 @pytest.fixture
@@ -427,7 +426,7 @@ def test_fetch_devices(test_harfanglab_asset_connector, agent_endpoint_response,
         )
 
         from_date = "2023-10-01T00:00:00+00:00"
-        devices = list(test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
+        devices = list(test_harfanglab_asset_connector._fetch_devices(from_date))
 
         assert len(devices) == 1
         assert devices[0] == [asset_first_object]
@@ -442,7 +441,7 @@ def test_fetch_devices_no_results(test_harfanglab_asset_connector):
         )
 
         from_date = "2023-10-01T00:00:00+00:00"
-        devices = list(test_harfanglab_asset_connector._HarfanglabAssetConnector__fetch_devices(from_date))
+        devices = list(test_harfanglab_asset_connector._fetch_devices(from_date))
 
         assert len(devices) == 0
 
@@ -538,7 +537,7 @@ def test_build_enrichments_no_data(test_harfanglab_asset_connector):
 def test_build_device_extended_fields(test_harfanglab_asset_connector, asset_first_object):
     device = test_harfanglab_asset_connector.build_device(asset_first_object)
 
-    # Test nouveaux champs
+    # Test new fields
     assert device.domain == "TestGROUP"
     assert device.ip == "1.2.2.5"
     assert device.subnet == "255.255.255.0"
