@@ -331,7 +331,7 @@ class AwsS3FetcherTrigger(AWSConnector, metaclass=ABCMeta):  # pragma: no cover
         try:
             while True:
                 self.manage_workers()
-                time.sleep(900)
+                # time.sleep(900) TODO: Check if this is necessary
         finally:
             self.log(message=f"Stopping {self.name} Trigger", level="info")
 
