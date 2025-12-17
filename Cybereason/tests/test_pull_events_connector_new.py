@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from cybereason_modules import CybereasonModule
@@ -369,6 +370,16 @@ def test_failing_authentication(trigger):
 
         with pytest.raises(LoginFailureError):
             trigger.next_batch()
+
+
+def test_failing_connection(trigger, mock_cybereason_api):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/mmng/v2/malops",
+        exc=requests.exceptions.ConnectionError,
+    )
+
+    with pytest.raises(ConnectionError):
+        trigger.next_batch()
 
 
 def test_next_batch_with_login_page_as_malops_listing_reponse(trigger, mock_cybereason_api):

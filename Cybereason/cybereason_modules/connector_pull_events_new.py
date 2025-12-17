@@ -79,4 +79,21 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
                 return malops
 
         except requests.Timeout as error:
+            logger.error(
+                "Timeout error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
             raise TimeoutError(url) from error
+        except requests.ConnectionError as  error:
+            logger.error(
+                "Connection error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
+            raise ConnectionError(url) from error
+        except requests.RequestException as error:
+            logger.error(
+                "General error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
+            raise Exception(f"An error occurred while requesting {url} : {error}") from error
+
