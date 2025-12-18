@@ -285,6 +285,7 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
             self.log("Failed to parse JSON response from Alert Comment API", level="error", content=response.text)
             raise exp
 
+
 # ==============================================================================
 # Alert Events Threshold Trigger
 # ==============================================================================
@@ -336,13 +337,6 @@ class AlertEventsThresholdConfiguration(BaseModel):
         description="Enable time-based threshold (activity in last N hours)",
     )
 
-    check_interval_seconds: int = Field(
-        default=60,
-        ge=10,
-        le=3600,
-        description="Polling interval for checking thresholds (10s - 1h)",
-    )
-
     state_cleanup_days: int = Field(
         default=30,
         ge=1,
@@ -350,14 +344,14 @@ class AlertEventsThresholdConfiguration(BaseModel):
         description="Remove state entries for alerts older than N days",
     )
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_at_least_one_threshold(self):
         """Ensure at least one threshold is enabled."""
         if not self.enable_volume_threshold and not self.enable_time_threshold:
             raise ValueError("At least one threshold must be enabled")
         return self
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def validate_configuration_consistency(self):
         """Validate configuration parameter relationships."""
         # Both filters set is confusing
@@ -392,6 +386,27 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self.state_manager: Optional[AlertStateManager] = None
         self._last_cleanup: Optional[datetime] = None
         self._initialized = False
+        self._validated_config: Optional[AlertEventsThresholdConfiguration] = None
+
+    @property
+    def validated_config(self) -> AlertEventsThresholdConfiguration:
+        """
+        Get validated configuration using Pydantic model.
+        Lazily validates and caches the configuration.
+        """
+        if self._validated_config is None:
+            self.log(message="Validating trigger configuration", level="debug")
+            try:
+                self._validated_config = AlertEventsThresholdConfiguration(**self.configuration)
+                self.log(
+                    message="Configuration validated successfully",
+                    level="debug",
+                    config=str(self._validated_config.model_dump()),
+                )
+            except Exception as exp:
+                self.log_exception(exp, message="Configuration validation failed", raw_config=str(self.configuration))
+                raise
+        return self._validated_config
 
     def _ensure_initialized(self):
         """Lazy initialization of state manager."""
@@ -406,13 +421,11 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 self.log(
                     message="AlertEventsThresholdTrigger initialized successfully",
                     level="info",
-                    state_path=str(state_path)
+                    state_path=str(state_path),
                 )
             except Exception as exp:
                 self.log_exception(
-                    exp,
-                    message="Failed to initialize AlertEventsThresholdTrigger",
-                    state_path=str(state_path)
+                    exp, message="Failed to initialize AlertEventsThresholdTrigger", state_path=str(state_path)
                 )
                 raise
 
@@ -423,7 +436,12 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         This method overrides the parent class to add threshold logic before
         triggering the playbook.
         """
-        self.log(message="Received event message", level="debug", message_type=message.get("type"), message_action=message.get("action"))
+        self.log(
+            message="Received event message",
+            level="debug",
+            message_type=message.get("type"),
+            message_action=message.get("action"),
+        )
 
         # Ensure state manager is initialized
         try:
@@ -443,18 +461,14 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="debug",
                 event_type=event_type,
                 event_action=event_action,
-                handled_types=str(self.HANDLED_EVENT_SUB_TYPES)
+                handled_types=str(self.HANDLED_EVENT_SUB_TYPES),
             )
             return
 
         # Extract alert UUID
         alert_uuid: str = alert_attrs.get("uuid", "")
         if not alert_uuid:
-            self.log(
-                message="Notification missing alert UUID",
-                level="warning",
-                message_attributes=str(alert_attrs)
-            )
+            self.log(message="Notification missing alert UUID", level="warning", message_attributes=str(alert_attrs))
             return
 
         self.log(message="Processing alert update", level="debug", alert_uuid=alert_uuid)
@@ -469,14 +483,10 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 alert_uuid=alert_uuid,
                 short_id=alert.get("short_id"),
                 events_count=alert.get("events_count", 0),
-                rule_name=alert.get("rule", {}).get("name")
+                rule_name=alert.get("rule", {}).get("name"),
             )
         except Exception as exp:
-            self.log_exception(
-                exp,
-                message="Failed to fetch alert from Alert API",
-                alert_uuid=alert_uuid
-            )
+            self.log_exception(exp, message="Failed to fetch alert from Alert API", alert_uuid=alert_uuid)
             return
 
         # Reuse parent's rule filtering logic
@@ -487,7 +497,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="debug",
                 alert_uuid=alert_uuid,
                 rule_name=alert.get("rule", {}).get("name"),
-                rule_uuid=alert.get("rule", {}).get("uuid")
+                rule_uuid=alert.get("rule", {}).get("uuid"),
             )
             return
 
@@ -501,33 +511,35 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="debug",
                 alert_uuid=alert_uuid,
                 has_previous_state=previous_state is not None,
-                previous_count=previous_state.get("last_triggered_event_count") if previous_state else 0
+                previous_count=previous_state.get("last_triggered_event_count") if previous_state else 0,
             )
         except Exception as exp:
             self.log_exception(
-                exp,
-                message="Failed to load previous state, continuing without it",
-                alert_uuid=alert_uuid
+                exp, message="Failed to load previous state, continuing without it", alert_uuid=alert_uuid
             )
             previous_state = None
 
         # Evaluate thresholds
         try:
-            self.log(message=f"Evaluating thresholds for alert {alert.get('short_id')}", level="debug", alert_uuid=alert_uuid)
+            self.log(
+                message=f"Evaluating thresholds for alert {alert.get('short_id')}",
+                level="debug",
+                alert_uuid=alert_uuid,
+            )
             should_trigger, context = self._evaluate_thresholds(alert, previous_state)
             self.log(
                 message=f"Threshold evaluation completed for alert {alert.get('short_id')}",
                 level="debug",
                 alert_uuid=alert_uuid,
                 should_trigger=should_trigger,
-                trigger_context=str(context)
+                trigger_context=str(context),
             )
         except Exception as exp:
             self.log_exception(
                 exp,
                 message="Failed to evaluate thresholds",
                 alert_uuid=alert_uuid,
-                alert_short_id=alert.get("short_id")
+                alert_short_id=alert.get("short_id"),
             )
             return
 
@@ -539,7 +551,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 alert_uuid=alert_uuid,
                 new_events=context.get("new_events"),
                 current_count=context.get("current_count"),
-                previous_count=context.get("previous_count")
+                previous_count=context.get("previous_count"),
             )
             return
 
@@ -554,13 +566,17 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 event_count=alert.get("events_count", 0),
                 previous_version=previous_state.get("version") if previous_state else None,
             )
-            self.log(message=f"State updated successfully for alert {alert.get('short_id')}", level="debug", alert_uuid=alert_uuid)
+            self.log(
+                message=f"State updated successfully for alert {alert.get('short_id')}",
+                level="debug",
+                alert_uuid=alert_uuid,
+            )
         except Exception as exp:
             self.log_exception(
                 exp,
                 message="Failed to update alert state",
                 alert_uuid=alert_uuid,
-                alert_short_id=alert.get("short_id")
+                alert_short_id=alert.get("short_id"),
             )
             # Continue despite state update failure
 
@@ -573,19 +589,34 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         # Reuse parent's method for creating event payload
         try:
-            self.log(message=f"Sending threshold event for alert {alert.get('short_id')}", level="debug", alert_uuid=alert_uuid)
+            self.log(
+                message=f"Sending threshold event for alert {alert.get('short_id')}",
+                level="debug",
+                alert_uuid=alert_uuid,
+            )
             self._send_threshold_event(alert, event_type, context)
-            self.log(message=f"Threshold event sent successfully for alert {alert.get('short_id')}", level="debug", alert_uuid=alert_uuid)
+            self.log(
+                message=f"Threshold event sent successfully for alert {alert.get('short_id')}",
+                level="debug",
+                alert_uuid=alert_uuid,
+            )
         except Exception as exp:
             self.log_exception(
                 exp,
                 message="Failed to send threshold event",
                 alert_uuid=alert_uuid,
-                alert_short_id=alert.get("short_id")
+                alert_short_id=alert.get("short_id"),
             )
             return
 
-        EVENTS_FORWARDED.labels(reason=context["reason"]).inc()
+        # Increment metrics for each trigger type separately to avoid high cardinality
+        trigger_reason = context["reason"]
+        if "first_occurrence" in trigger_reason:
+            EVENTS_FORWARDED.labels(trigger_type="first_occurrence").inc()
+        if "volume_threshold" in trigger_reason:
+            EVENTS_FORWARDED.labels(trigger_type="volume_threshold").inc()
+        if "time_threshold" in trigger_reason:
+            EVENTS_FORWARDED.labels(trigger_type="time_threshold").inc()
 
         self.log(
             message=f"Triggered for alert {alert.get('short_id')}: {context['new_events']} new events ({context['reason']})",
@@ -595,7 +626,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             new_events=context["new_events"],
             trigger_reason=context["reason"],
             current_count=context["current_count"],
-            previous_count=context["previous_count"]
+            previous_count=context["previous_count"],
         )
 
     def _should_process_alert(self, alert: dict[str, Any]) -> bool:
@@ -610,8 +641,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         Returns:
             True if alert matches filters (or no filters configured)
         """
-        rule_filter = self.configuration.get("rule_filter")
-        rule_names_filter = self.configuration.get("rule_names_filter")
+        config = self.validated_config
+        rule_filter = config.rule_filter
+        rule_names_filter = config.rule_names_filter
 
         # No filters: accept all
         if not rule_filter and not rule_names_filter:
@@ -629,7 +661,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="debug",
                 configured_filter=rule_filter,
                 alert_rule_name=rule_name,
-                alert_rule_uuid=rule_uuid
+                alert_rule_uuid=rule_uuid,
             )
             return matches
 
@@ -640,7 +672,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 message=f"Multiple rule names filter check: {matches}",
                 level="debug",
                 configured_filters=str(rule_names_filter),
-                alert_rule_name=rule_name
+                alert_rule_name=rule_name,
             )
             return matches
 
@@ -666,7 +698,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             message=f"Creating threshold event for alert {alert_short_id}",
             level="debug",
             alert_uuid=alert_uuid,
-            event_type=event_type
+            event_type=event_type,
         )
 
         # Create work directory for alert data
@@ -677,10 +709,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(message=f"Created work directory: {work_dir}", level="debug")
         except Exception as exp:
             self.log_exception(
-                exp,
-                message="Failed to create work directory",
-                alert_uuid=alert_uuid,
-                alert_short_id=alert_short_id
+                exp, message="Failed to create work directory", alert_uuid=alert_uuid, alert_short_id=alert_short_id
             )
             raise
 
@@ -690,10 +719,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(message=f"Wrote alert data to {alert_path}", level="debug")
         except Exception as exp:
             self.log_exception(
-                exp,
-                message="Failed to write alert data to file",
-                alert_path=str(alert_path),
-                alert_uuid=alert_uuid
+                exp, message="Failed to write alert data to file", alert_path=str(alert_path), alert_uuid=alert_uuid
             )
             raise
 
@@ -730,7 +756,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             message=f"Built event payload for alert {alert_short_id}",
             level="debug",
             event_name=f"Sekoia.io Alert Threshold: {alert_short_id}",
-            directory=directory
+            directory=directory,
         )
 
         try:
@@ -741,9 +767,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 remove_directory=True,
             )
             self.log(
-                message=f"Event sent successfully for alert {alert_short_id}",
-                level="info",
-                alert_uuid=alert_uuid
+                message=f"Event sent successfully for alert {alert_short_id}", level="info", alert_uuid=alert_uuid
             )
         except Exception as exp:
             self.log_exception(
@@ -751,7 +775,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 message="Failed to send event to playbook",
                 alert_uuid=alert_uuid,
                 alert_short_id=alert_short_id,
-                event_name=f"Sekoia.io Alert Threshold: {alert_short_id}"
+                event_name=f"Sekoia.io Alert Threshold: {alert_short_id}",
             )
             raise
 
@@ -778,7 +802,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             level="debug",
             alert_uuid=alert_uuid,
             current_event_count=current_event_count,
-            has_previous_state=previous_state is not None
+            has_previous_state=previous_state is not None,
         )
 
         # First time seeing this alert: trigger immediately
@@ -794,7 +818,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 message="First occurrence of alert, triggering immediately",
                 level="debug",
                 alert_uuid=alert_uuid,
-                current_event_count=current_event_count
+                current_event_count=current_event_count,
             )
             return True, context
 
@@ -807,7 +831,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             alert_uuid=alert_uuid,
             previous_count=previous_count,
             current_count=current_event_count,
-            new_events=new_events
+            new_events=new_events,
         )
 
         # No new events: skip
@@ -818,15 +842,16 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="debug",
                 alert_uuid=alert_uuid,
                 previous_count=previous_count,
-                current_count=current_event_count
+                current_count=current_event_count,
             )
             return False, {"reason": "no_new_events"}
 
         trigger_reasons = []
+        config = self.validated_config
 
         # Volume-based threshold
-        enable_volume = self.configuration.get("enable_volume_threshold", True)
-        event_count_threshold = self.configuration.get("event_count_threshold", 100)
+        enable_volume = config.enable_volume_threshold
+        event_count_threshold = config.event_count_threshold
 
         self.log(
             message="Checking volume-based threshold",
@@ -834,7 +859,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             alert_uuid=alert_uuid,
             enable_volume=enable_volume,
             event_count_threshold=event_count_threshold,
-            new_events=new_events
+            new_events=new_events,
         )
 
         if enable_volume and new_events >= event_count_threshold:
@@ -842,19 +867,19 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(
                 message=f"Volume threshold met: {new_events} >= {event_count_threshold}",
                 level="debug",
-                alert_uuid=alert_uuid
+                alert_uuid=alert_uuid,
             )
 
         # Time-based threshold
-        enable_time = self.configuration.get("enable_time_threshold", True)
-        time_window_hours = self.configuration.get("time_window_hours", 1)
+        enable_time = config.enable_time_threshold
+        time_window_hours = config.time_window_hours
 
         self.log(
             message="Checking time-based threshold",
             level="debug",
             alert_uuid=alert_uuid,
             enable_time=enable_time,
-            time_window_hours=time_window_hours
+            time_window_hours=time_window_hours,
         )
 
         if enable_time:
@@ -863,26 +888,35 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                     alert_uuid,
                     time_window_hours,
                 )
-                self.log(
-                    message=f"Events in time window: {events_in_window}",
-                    level="debug",
-                    alert_uuid=alert_uuid,
-                    time_window_hours=time_window_hours,
-                    events_in_window=events_in_window
-                )
-                if events_in_window > 0:
-                    trigger_reasons.append("time_threshold")
+                if events_in_window is None:
+                    # API call failed, skip time threshold check (fail open)
                     self.log(
-                        message=f"Time threshold met: {events_in_window} events in last {time_window_hours}h",
-                        level="debug",
-                        alert_uuid=alert_uuid
+                        message="Time threshold check skipped due to API error (fail open)",
+                        level="warning",
+                        alert_uuid=alert_uuid,
+                        time_window_hours=time_window_hours,
                     )
+                else:
+                    self.log(
+                        message=f"Events in time window: {events_in_window}",
+                        level="debug",
+                        alert_uuid=alert_uuid,
+                        time_window_hours=time_window_hours,
+                        events_in_window=events_in_window,
+                    )
+                    if events_in_window > 0:
+                        trigger_reasons.append("time_threshold")
+                        self.log(
+                            message=f"Time threshold met: {events_in_window} events in last {time_window_hours}h",
+                            level="debug",
+                            alert_uuid=alert_uuid,
+                        )
             except Exception as exp:
                 self.log_exception(
                     exp,
                     message="Failed to check time-based threshold, skipping",
                     alert_uuid=alert_uuid,
-                    time_window_hours=time_window_hours
+                    time_window_hours=time_window_hours,
                 )
 
         should_trigger = len(trigger_reasons) > 0
@@ -903,7 +937,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             alert_uuid=alert_uuid,
             should_trigger=should_trigger,
             trigger_reasons=str(trigger_reasons),
-            new_events=new_events
+            new_events=new_events,
         )
 
         return should_trigger, context
@@ -912,7 +946,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self,
         alert_uuid: str,
         hours: int,
-    ) -> int:
+    ) -> Optional[int]:
         """
         Count events added to alert within the last N hours.
 
@@ -921,7 +955,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             hours: Time window in hours
 
         Returns:
-            Number of events in the time window
+            Number of events in the time window, or None if API call failed
+            (None indicates unchecked state, allowing fail-open behavior)
         """
         from posixpath import join as urljoin
 
@@ -932,7 +967,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             level="debug",
             alert_uuid=alert_uuid,
             hours=hours,
-            earliest_time=earliest_time.isoformat()
+            earliest_time=earliest_time.isoformat(),
         )
 
         api_url = urljoin(self.module.configuration["base_url"], "api/v2/events/search")
@@ -955,12 +990,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             "size": 0,  # We only need the count
         }
 
-        self.log(
-            message=f"Calling events API: {api_url}",
-            level="debug",
-            alert_uuid=alert_uuid,
-            payload=str(payload)
-        )
+        self.log(message=f"Calling events API: {api_url}", level="debug", alert_uuid=alert_uuid, payload=str(payload))
 
         try:
             response = requests.post(api_url, headers=headers, json=payload, timeout=30)
@@ -969,7 +999,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 message=f"Events API response received",
                 level="debug",
                 alert_uuid=alert_uuid,
-                status_code=response.status_code
+                status_code=response.status_code,
             )
 
             if not response.ok:
@@ -982,7 +1012,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                     level="error",
                     alert_uuid=alert_uuid,
                     status_code=response.status_code,
-                    error_content=str(error_content)
+                    error_content=str(error_content),
                 )
 
             response.raise_for_status()
@@ -994,7 +1024,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="debug",
                 alert_uuid=alert_uuid,
                 event_count=event_count,
-                hours=hours
+                hours=hours,
             )
 
             return event_count
@@ -1004,25 +1034,21 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="error",
                 alert_uuid=alert_uuid,
                 timeout=30,
-                error=str(e)
+                error=str(e),
             )
-            return 0  # Fail open: don't block on count errors
+            return None  # Return None to indicate unchecked (fail open: skip this check)
         except requests.exceptions.RequestException as e:
             self.log(
                 message=f"Request error counting events for alert {alert_uuid}",
                 level="error",
                 alert_uuid=alert_uuid,
                 error=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
-            return 0  # Fail open: don't block on count errors
+            return None  # Return None to indicate unchecked (fail open: skip this check)
         except Exception as e:
-            self.log_exception(
-                e,
-                message=f"Failed to count events for alert {alert_uuid}",
-                alert_uuid=alert_uuid
-            )
-            return 0  # Fail open: don't block on count errors
+            self.log_exception(e, message=f"Failed to count events for alert {alert_uuid}", alert_uuid=alert_uuid)
+            return None  # Return None to indicate unchecked (fail open: skip this check)
 
     def _cleanup_old_states(self):
         """
@@ -1036,23 +1062,28 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(
                 message=f"Cleanup not needed yet (last run {seconds_since_last:.0f}s ago)",
                 level="debug",
-                seconds_since_last_cleanup=seconds_since_last
+                seconds_since_last_cleanup=seconds_since_last,
             )
             return
 
         self.log(message="Starting state cleanup", level="debug")
 
-        state_cleanup_days = self.configuration.get("state_cleanup_days", 30)
+        config = self.validated_config
+        state_cleanup_days = config.state_cleanup_days
         cutoff_date = now - timedelta(days=state_cleanup_days)
 
         self.log(
             message=f"Cleaning up states older than {state_cleanup_days} days",
             level="debug",
             state_cleanup_days=state_cleanup_days,
-            cutoff_date=cutoff_date.isoformat()
+            cutoff_date=cutoff_date.isoformat(),
         )
 
         try:
+            if not self.state_manager:
+                self.log(message="State manager not initialized, skipping cleanup", level="warning")
+                return
+
             removed = self.state_manager.cleanup_old_states(cutoff_date)
 
             # Update state size metric
@@ -1065,21 +1096,17 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                     level="info",
                     removed_count=removed,
                     state_cleanup_days=state_cleanup_days,
-                    remaining_states=state_size
+                    remaining_states=state_size,
                 )
             else:
                 self.log(
                     message="State cleanup: no old entries to remove",
                     level="debug",
                     state_cleanup_days=state_cleanup_days,
-                    remaining_states=state_size
+                    remaining_states=state_size,
                 )
 
             self._last_cleanup = now
         except Exception as exp:
-            self.log_exception(
-                exp,
-                message="Failed to cleanup old states",
-                state_cleanup_days=state_cleanup_days
-            )
+            self.log_exception(exp, message="Failed to cleanup old states", state_cleanup_days=state_cleanup_days)
             # Don't update _last_cleanup if cleanup failed, will retry next time
