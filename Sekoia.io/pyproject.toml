@@ -1,9 +1,27 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation Module for Sekoia.io"
 description = ""
 version = "0.0"
 authors = []
 package-mode = false
+
+[tool.black]
+line-length = 119
+target-version = ["py39"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.ruff]
+target-version = "py311"
+line-length = 119
+fix = true
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -23,26 +41,5 @@ pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
 
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py39']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
-
-[tool.ruff]
-target-version = "py311"
-line-length = 119
-fix = true
+omit = ["tests/*", "main.py"]

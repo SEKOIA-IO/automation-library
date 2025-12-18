@@ -5,7 +5,6 @@ from generic_onyphe_tests import *  # noqa: F401, F403
 ```
 """
 
-
 import pytest
 import requests_mock
 from requests.exceptions import HTTPError, TooManyRedirects
