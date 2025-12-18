@@ -388,6 +388,7 @@ def test_add_observables_action_success():
         "base_url": "https://thehive-project.org",
         "apikey": "LOREM",
         "organisation": "SEKOIA",
+        "verify_certificate": False,
     }
 
     with requests_mock.Mocker() as mock_requests:

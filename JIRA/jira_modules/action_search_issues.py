@@ -30,7 +30,7 @@ class JIRASearchIssues(JIRAAction):
     description = "Find issues using provided filters"
     module: JIRAModule
 
-    def run(self, arguments: JIRASearchIssuesArguments) -> list[Any]:
+    def run(self, arguments: JIRASearchIssuesArguments) -> dict:
         return self.post_paginated_results(
             path="search/jql",
             result_field="issues",
