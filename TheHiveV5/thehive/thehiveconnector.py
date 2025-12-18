@@ -86,8 +86,6 @@ SEKOIA_FIELDS = [
     "url.full",
     "url.original",
     "user_agent.original",
-    # suggestions:
-    "file.path",
     "user.name",
 ]
 
@@ -128,6 +126,7 @@ SEKOIA_TO_THEHIVE = {
     "user_agent.original": "user-agent",
     "host.hostname": "hostname",
     "host.name": "hostname",
+    "user.name": "hostname",
     "source.ip": "ip",
     "destination.ip": "ip",
     "destination.nat.ip": "ip",
