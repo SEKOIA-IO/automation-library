@@ -1494,7 +1494,7 @@ version = "7.0.0"
 description = "A Python utility / library to sort Python imports."
 optional = false
 python-versions = ">=3.10.0"
-groups = ["main"]
+groups = ["dev"]
 files = [
     {file = "isort-7.0.0-py3-none-any.whl", hash = "sha256:1bcabac8bc3c36c7fb7b98a76c8abb18e0f841a3ba81decac7691008592499c1"},
     {file = "isort-7.0.0.tar.gz", hash = "sha256:5513527951aadb3ac4292a41a16cbc50dd1642432f5e8c20057d414bdafb4187"},
@@ -4128,4 +4128,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "e38294bfaf65dce94d2109579f8f3fb1907a3997f5bb484023ac5ec93ffc657f"
+content-hash = "a785d1cf28edd24d68ac945f3653d660a3d7a4e72054d448c14920f1d9e59039"
