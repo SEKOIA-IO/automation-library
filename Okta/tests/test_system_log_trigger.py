@@ -10,6 +10,7 @@ import requests_mock
 from requests import Response
 
 from okta_modules import OktaModule
+from okta_modules.helpers import get_upper_second
 from okta_modules.system_log_trigger import FetchEventsException, SystemLogConnector
 
 
@@ -38,6 +39,7 @@ def trigger(data_storage, patch_datetime_now):
     trigger.configuration = {
         "intake_key": "intake_key",
     }
+
     yield trigger
 
 
@@ -224,54 +226,83 @@ def message2():
 
 
 def test_fetch_events(trigger, message1, message2):
-    messages = [message1, message2]
+    now = datetime.now(timezone.utc)
+    recent_date = now - timedelta(seconds=34)
+
+    messages = [
+        {**message1, "published": recent_date.isoformat()},
+        message2,
+    ]
+
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get("https://tenant_id.okta.com/api/v1/logs", status_code=200, json=messages)
         events = trigger.fetch_events()
 
         assert list(events) == [messages]
-        assert trigger.from_date.isoformat() == "2022-11-15T08:04:23+00:00"
+        assert trigger.cursor.offset.isoformat() == get_upper_second(recent_date).isoformat()
 
 
 def test_fetch_events_with_pagination(trigger, message1, message2):
+    now = datetime.now(timezone.utc)
+    recent_date = now - timedelta(seconds=45)
+
+    response_1 = [
+        {**message1, "published": recent_date.isoformat()},
+    ]
+
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://tenant_id.okta.com/api/v1/logs",
             status_code=200,
-            json=[message1],
+            json=response_1,
             headers={"Link": "https://tenant_id.okta.com/api/v1/logs?after=1111111; rel=next"},
         )
         mock_requests.get("https://tenant_id.okta.com/api/v1/logs?after=1111111", status_code=200, json=[message2])
         events = trigger.fetch_events()
 
-        assert list(events) == [[message1], [message2]]
-        assert trigger.from_date.isoformat() == "2022-11-15T08:04:23+00:00"
+        assert list(events) == [response_1, [message2]]
+        assert trigger.cursor.offset.isoformat() == get_upper_second(recent_date).isoformat()
 
 
 def test_fetch_events_with_pagination_2(trigger, message1, message2):
-    first_response = [{**message1, "uuid": str(uuid.uuid4())} for _ in range(10)]
+    now = datetime.now(timezone.utc)
+    expected_new_checkpoint_time = now - timedelta(seconds=10)
 
-    second_response = [{**message2, "uuid": str(uuid.uuid4())} for _ in range(5)]
+    result_message_1 = {
+        **message1,
+        "published": expected_new_checkpoint_time.isoformat(),
+    }
+
+    result_message_2 = {
+        **message2,
+        "published": (expected_new_checkpoint_time - timedelta(seconds=11)).isoformat(),
+    }
+
+    first_response = [{**result_message_1, "uuid": str(uuid.uuid4())} for _ in range(10)]
+    second_response = [{**result_message_2, "uuid": str(uuid.uuid4())} for _ in range(5)]
 
     with requests_mock.Mocker() as mock_requests:
         mock_requests.get(
             "https://tenant_id.okta.com/api/v1/logs",
             status_code=200,
-            json=first_response + [message1],
+            json=first_response + [result_message_1],
             headers={"Link": "https://tenant_id.okta.com/api/v1/logs?after=1111111; rel=next"},
         )
 
         mock_requests.get(
-            "https://tenant_id.okta.com/api/v1/logs?after=1111111", status_code=200, json=second_response + [message2]
+            "https://tenant_id.okta.com/api/v1/logs?after=1111111",
+            status_code=200,
+            json=second_response + [result_message_2],
         )
 
+        # caching some of the uuids
         for event in first_response + second_response:
             trigger.events_cache[event["uuid"]] = True
 
-        events = trigger.fetch_events()
+        events = list(trigger.fetch_events())
 
-        assert list(events) == [[message1], [message2]]
-        assert trigger.from_date.isoformat() == "2022-11-15T08:04:23+00:00"
+        assert events == [[result_message_1], [result_message_2]]
+        assert trigger.cursor.offset.isoformat() == get_upper_second(expected_new_checkpoint_time).isoformat()
 
 
 def test_next_batch_sleep_until_next_round(trigger, message1, message2):
