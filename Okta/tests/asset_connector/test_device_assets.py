@@ -13,11 +13,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 )
 from sekoia_automation.module import Module
 
-from okta_modules.asset_connector.device_assets import (
-    OktaDevice,
-    OktaDeviceAssetConnector,
-    OktaDeviceProfile,
-)
+from okta_modules.asset_connector.device_assets import OktaDevice, OktaDeviceAssetConnector, OktaDeviceProfile
 
 
 @pytest.fixture
