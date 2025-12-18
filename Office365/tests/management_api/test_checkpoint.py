@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,7 +19,7 @@ def checkpoint(symphony_storage, intake_key):
 
 
 def test_non_existing_checkpoint(checkpoint):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Not set
     with (
@@ -35,7 +35,7 @@ def test_non_existing_checkpoint(checkpoint):
 
 
 def test_checkpoint_lesser_than_30_days(symphony_storage, checkpoint, intake_key):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     context = symphony_storage / f"o365_{intake_key}_last_pull"
     context.write_text(now.isoformat())
 
@@ -44,7 +44,7 @@ def test_checkpoint_lesser_than_30_days(symphony_storage, checkpoint, intake_key
 
 
 def test_checkpoint_greater_than_7_days(symphony_storage, checkpoint, intake_key):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_cursor = now - timedelta(days=365)
     context = symphony_storage / f"o365_{intake_key}_last_pull"
     context.write_text(current_cursor.isoformat())
@@ -59,8 +59,8 @@ def test_checkpoint_greater_than_7_days(symphony_storage, checkpoint, intake_key
 
 
 def test_checkpoint_greater_than_7_days_bis(symphony_storage, checkpoint, intake_key):
-    now = datetime(2024, 12, 18, 17, 26, 10, tzinfo=timezone.utc)
-    last_date_seen = datetime(2024, 12, 10, 15, 59, 1, tzinfo=timezone.utc)
+    now = datetime(2024, 12, 18, 17, 26, 10, tzinfo=UTC)
+    last_date_seen = datetime(2024, 12, 10, 15, 59, 1, tzinfo=UTC)
     context = symphony_storage / f"o365_{intake_key}_last_pull"
     context.write_text(last_date_seen.isoformat())
 
@@ -75,7 +75,7 @@ def test_checkpoint_greater_than_7_days_bis(symphony_storage, checkpoint, intake
 
 def test_checkpoint_save_last_date(symphony_storage, checkpoint, intake_key):
     # arrange
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     previous_observed_date = now - timedelta(days=5)
     context = symphony_storage / f"o365_{intake_key}_last_pull"
     context.write_text(previous_observed_date.isoformat())

@@ -6,7 +6,6 @@ import time
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from functools import cached_property
-from time import strftime
 
 from sekoia_automation.aio.connector import AsyncConnector
 
