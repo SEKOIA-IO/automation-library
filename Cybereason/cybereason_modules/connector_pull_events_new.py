@@ -84,7 +84,7 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
                 url=url,
             )
             raise TimeoutError(url) from error
-        except requests.ConnectionError as  error:
+        except requests.ConnectionError as error:
             logger.error(
                 "Connection error when trying to fetch events from the Cybereason API",
                 url=url,
@@ -96,4 +96,3 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
                 url=url,
             )
             raise Exception(f"An error occurred while requesting {url} : {error}") from error
-

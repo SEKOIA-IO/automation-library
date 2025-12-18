@@ -17,7 +17,7 @@ class ApiClient(requests.Session):
                     raise_on_status=False,
                     connect=5,
                     read=5,
-                    allowed_methods=["GET", "POST"]
+                    allowed_methods=["GET", "POST"],
                 )
             ),
         )
