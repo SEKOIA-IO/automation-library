@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-18 - 1.0.7
+
+### Fixed
+
+- Fixed "user.name" issue when not mapped to thehive hostname
+
 ## 2025-12-17 - 1.0.6
 
 ### Fixed
