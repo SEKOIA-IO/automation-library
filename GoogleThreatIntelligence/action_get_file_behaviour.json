@@ -9,8 +9,7 @@
     "properties": {
       "file_hash": {
         "type": "string",
-        "description": "File hash to query (MD5, SHA1, or SHA256)",
-        "pattern": "^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{40}$|^[a-fA-F0-9]{64}$"
+        "description": "File hash to query (MD5, SHA1, or SHA256)"
       }
     },
     "required": [
