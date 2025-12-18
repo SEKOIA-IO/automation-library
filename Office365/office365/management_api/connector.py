@@ -24,7 +24,7 @@ class Office365Connector(AsyncConnector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("OFFICE365_BATCH_SIZE", 10000))
-        self.frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
+        self._frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
         self.time_range_interval = int(os.getenv("OFFICE365_TIME_RANGE_INTERVAL", 30))
 
     async def shutdown(self) -> None:
@@ -155,13 +155,13 @@ class Office365Connector(AsyncConnector):
                 end_time = time.time()
                 batch_duration = end_time - start_time
                 # compute the remaining sleeping time. If greater than 0, sleep
-                delta_sleep = self.frequency - batch_duration
+                delta_sleep = self._frequency - batch_duration
                 if delta_sleep > 0:
                     await asyncio.sleep(delta_sleep)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
                 # Continue the loop to retry after logging
-                await asyncio.sleep(self.frequency)
+                await asyncio.sleep(self._frequency)
 
     async def collect_events(self):
         checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)
