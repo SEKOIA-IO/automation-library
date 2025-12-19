@@ -77,7 +77,6 @@ class Office365Connector(AsyncConnector):
             ):
                 for content in contents:
                     # https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference
-                    # if content["contentExpiration"]
                     content_expiration = content.get("contentExpiration")
                     if content_expiration:
                         now = datetime.now(UTC)
