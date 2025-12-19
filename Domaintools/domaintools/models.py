@@ -362,7 +362,7 @@ class BaseDomaintoolsAction:
     action_name: Optional[str] = None
     module: Any  # Will be set by sekoia_automation framework
 
-    def run(self, arguments: dict[str, Any]) -> str:
+    def run(self, arguments: dict[str, Any]) -> dict[str, Any]:
         if self.action_name is None:
             raise NotImplementedError("Subclass must define 'action_name' class attribute")
 
@@ -384,16 +384,16 @@ class BaseDomaintoolsAction:
             return response
 
         except DomainToolsError as e:
-            error_msg = json.dumps({"error": f"DomainTools client initialization error: {e}"}, indent=2)
-            logger.error(error_msg)
+            error_msg = {"error": f"DomainTools client initialization error: {e}"}
+            logger.error(json.dumps(error_msg, indent=2))
             return error_msg
         except Exception as e:
-            error_msg = json.dumps({"error": f"Unexpected initialization error: {e}"}, indent=2)
-            logger.error(error_msg)
+            error_msg = {"error": f"Unexpected initialization error: {e}"}
+            logger.error(json.dumps(error_msg, indent=2))
             return error_msg
 
 
-def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -> str:
+def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -> dict[str, Any]:
     """Execute a specific DomainTools action"""
     try:
 
@@ -428,7 +428,7 @@ def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -
 
         if arg_action:
             if arg_action not in dispatch:
-                return json.dumps({"error": f"Unknown action '{arg_action}'."}, indent=2)
+                return {"error": f"Unknown action '{arg_action}'."}
 
             method_name, args_fn, kwargs, label = dispatch[arg_action]
             args = args_fn()
@@ -446,33 +446,33 @@ def DomaintoolsrunAction(config: DomainToolsConfig, arguments: dict[str, Any]) -
                         # If the client already wrapped an error, preserve it as top-level "error"
                         if "error" in payload:
                             # payload["error"] may be string or dict; normalize
-                            return json.dumps({"error": payload["error"]}, indent=2)
+                            return {"error": payload["error"]}
                         # If there is a nested 'response' key, return it (most normal case)
                         if "response" in payload:
-                            return json.dumps(payload["response"], indent=2)
+                            return payload["response"]
                         # Some endpoints return the full response at top-level (no 'response' key)
                         # return the payload as-is
-                        return json.dumps(payload, indent=2)
+                        return payload
                     else:
                         # Non-dict payload (string, list, None, etc.)
                         if payload is None:
-                            return json.dumps({"error": f"No response returned for action {label}."}, indent=2)
+                            return {"error": f"No response returned for action {label}."}
                         # For strings (e.g. error messages returned by call_method on exceptions), wrap in error
                         if isinstance(payload, str):
                             # If payload already looks like 'DomainToolsError: ...' or similar, preserve it
-                            return json.dumps({"error": payload}, indent=2)
+                            return {"error": payload}
                         # otherwise serialize the payload
-                        return json.dumps(payload, indent=2)
+                        return payload
                 except Exception as e:
-                    return json.dumps({"error": f"Failed to extract response: {e}"}, indent=2)
+                    return {"error": f"Failed to extract response: {e}"}
             else:
                 # call_method already returned False; payload may be an error string or exception info
-                return json.dumps({"error": payload}, indent=2)
+                return {"error": payload}
 
         # If no action specified, return error
-        return json.dumps({"error": "No action specified in arguments"}, indent=2)
+        return {"error": "No action specified in arguments"}
 
     except DomainToolsError as e:
-        return json.dumps({"error": f"DomainTools client initialization error: {e}"}, indent=2)
+        return {"error": f"DomainTools client initialization error: {e}"}
     except Exception as e:
-        return json.dumps({"error": f"Unexpected initialization error: {e}"}, indent=2)
+        return {"error": f"Unexpected initialization error: {e}"}

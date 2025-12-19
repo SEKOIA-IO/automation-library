@@ -73,7 +73,7 @@ def test_get_reverse_email_action_success():
         result = action.run({"email": EMAIL})
 
         assert result is not None
-        data = json.loads(result)
+        data = result  # Response is already a dict, no need for json.loads()
 
         assert data["results"][0]["domain"] == "softwaredealsdls.com"
         assert data["results"][0]["whois_url"] == "https://whois.domaintools.com/softwaredealsdls.com"
@@ -97,7 +97,7 @@ def test_get_reverse_email_action_api_error():
         result = action.run({"email": EMAIL})
 
         if result:
-            data = json.loads(result)
+            data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data or "Error" in str(data)
         else:
             assert not result

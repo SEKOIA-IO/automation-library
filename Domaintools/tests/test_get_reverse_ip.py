@@ -11,7 +11,6 @@ import hashlib
 
 DOMAIN: str = "google.com"
 HOST = "https://api.domaintools.com/"
-# URI = f"v1/iris-investigate/"  # Base URI without domain
 URI = f"v1/{DOMAIN}/reverse-ip/"
 API_KEY = "LOREM"
 API_USERNAME = "IPSUM"
@@ -70,7 +69,7 @@ def test_get_reverse_ip_action_success():
         result = action.run({"domain": DOMAIN})
 
         assert result is not None
-        data = json.loads(result)
+        data = result  # Response is already a dict, no need for json.loads()
 
         assert len(data["ip_addresses"]) == 1
         assert data["ip_addresses"][0]["ip_address"] == "23.192.228.80"
@@ -93,7 +92,7 @@ def test_get_reverse_ip_action_api_error():
         result = action.run({"domain": DOMAIN})
 
         if result:
-            data = json.loads(result)
+            data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data or "Error" in str(data)
         else:
             assert not result

@@ -81,7 +81,7 @@ def test_get_domain_reputation_action_success():
         response = action.run({"domain": DOMAIN})
 
         assert response is not None
-        data = json.loads(response)
+        data = response  # Response is already a dict, no need for json.loads()
 
         assert data["results"][0]["domain"] == DOMAIN
         assert data["results"][0]["whois_url"] == "https://whois.domaintools.com/google.com"
@@ -112,7 +112,7 @@ def test_get_domain_reputation_action_api_error():
         response = action.run({"domain": DOMAIN})
 
         if response:
-            data = json.loads(response)
+            data = response  # Response is already a dict, no need for json.loads()
             assert "error" in data or "Error" in str(data)
         else:
             assert not response

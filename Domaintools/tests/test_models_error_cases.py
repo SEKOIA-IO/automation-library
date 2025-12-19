@@ -221,7 +221,7 @@ class TestDispatchErrors:
         arguments = {"domain": "example.com", "domaintools_action": "unknown_action"}
 
         result = DomaintoolsrunAction(config, arguments)
-        data = json.loads(result)
+        data = result  # Response is already a dict, no need for json.loads()
         assert "error" in data
         assert "Unknown action" in data["error"]
 
@@ -248,7 +248,7 @@ class TestResponseProcessing:
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
 
             result = DomaintoolsrunAction(config, arguments)
-            data = json.loads(result)
+            data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data
 
     def test_http_error_status(self):
@@ -261,7 +261,7 @@ class TestResponseProcessing:
             arguments = {"domain": "example.com", "domaintools_action": "domain_reputation"}
 
             result = DomaintoolsrunAction(config, arguments)
-            data = json.loads(result)
+            data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data
 
 

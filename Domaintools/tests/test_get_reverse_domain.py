@@ -62,7 +62,7 @@ def test_get_reverse_domain_action_success():
         result = action.run({"domain": DOMAIN})
 
         assert result is not None
-        data = json.loads(result)
+        data = result  # Response is already a dict, no need for json.loads()
 
         assert data["domain_name"] == "google.com"
         assert len(data["ip_history"]) == 2
@@ -88,7 +88,7 @@ def test_get_reverse_domain_action_api_error():
         result = action.run({"domain": DOMAIN})
 
         if result:
-            data = json.loads(result)
+            data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data or "Error" in str(data)
         else:
             assert not result

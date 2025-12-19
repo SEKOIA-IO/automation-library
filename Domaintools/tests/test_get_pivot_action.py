@@ -81,7 +81,7 @@ def test_get_pivot_action_action_success():
         result = action.run({"domain": DOMAIN})
 
         assert result is not None
-        data = json.loads(result)
+        data = result  # Response is already a dict, no need for json.loads()
 
         assert data["results"][0]["domain"] == DOMAIN
         assert data["results"][0]["whois_url"] == "https://whois.domaintools.com/google.com"
@@ -112,7 +112,7 @@ def test_get_pivot_action_action_api_error():
         result = action.run({"domain": DOMAIN})
 
         if result:
-            data = json.loads(result)
+            data = result  # Response is already a dict, no need for json.loads()
             assert "error" in data or "Error" in str(data)
         else:
             assert not result
