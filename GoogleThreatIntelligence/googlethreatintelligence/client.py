@@ -387,15 +387,37 @@ class VTAPIConnector:
                 "id": vuln.id if hasattr(vuln, "id") else None,
             }
 
-            # Extract additional vulnerability details
-            if hasattr(vuln, "title"):
-                vuln_data["title"] = vuln.title
-            if hasattr(vuln, "description"):
-                vuln_data["description"] = (
-                    vuln.description[:200] + "..." if len(vuln.description) > 200 else vuln.description
-                )
-            if hasattr(vuln, "cvss"):
-                vuln_data["cvss"] = vuln.cvss
+            # Extract all available vulnerability attributes
+            attributes_to_extract = [
+                "type",
+                "collection_type",
+                "name",
+                "title",
+                "description",
+                "creation_date",
+                "last_modification_date",
+                "risk_rating",
+                "exploitation_state",
+                "exploit_availability",
+                "exploited_as_zero_day",
+                "exploited_in_the_wild",
+                "cvss",
+                "counters",
+                "origin",
+                "tags",
+                "first_published_date",
+                "intelligence_source",
+            ]
+
+            for attr in attributes_to_extract:
+                if hasattr(vuln, attr):
+                    value = getattr(vuln, attr)
+                    # Convert nested objects to dict if needed
+                    if hasattr(value, "__dict__") and not isinstance(value, (str, int, float, bool, list)):
+                        # For objects like cvss or counters, convert to dict
+                        vuln_data[attr] = {k: v for k, v in value.__dict__.items() if not k.startswith("_")}
+                    else:
+                        vuln_data[attr] = value
 
             self._add_result(
                 "VULN_REPORT",

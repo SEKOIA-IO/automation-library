@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-12-18 - 1.0.1
+## 2025-12-19 - 0.1.2
+
+### Fixed
+
+- Get Vulnerability Report: Extract all available fields from VT API response including counters, risk_rating, exploitation_state, exploit_availability, and other critical fields that were previously missing
+
+## 2025-12-18 - 0.1.1
 
 ### Fixed
 
