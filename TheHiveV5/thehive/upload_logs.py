@@ -1,6 +1,5 @@
-from typing import Any, Optional
+from typing import Any
 from sekoia_automation.action import Action
-from thehive4py.types.observable import OutputObservable
 
 # Upload logs <-> Add an observable as a log file OR add_attachment in alert
 ## See: https://docs.strangebee.com/thehive/api-docs/#tag/Observable/operation/Create%20Observable%20in%20Alert
@@ -10,7 +9,7 @@ from .helpers import copy_to_tempfile
 
 
 class TheHiveUploadLogsV5(Action):
-    def run(self, arguments: dict[str, Any]) -> Optional[OutputObservable]:
+    def run(self, arguments: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         api = TheHiveConnector(
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
