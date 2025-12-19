@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from contextlib import contextmanager
@@ -5,7 +6,7 @@ import shutil
 
 
 @contextmanager
-def copy_to_tempfile(source_path: Path) -> str:
+def copy_to_tempfile(source_path: Path) -> Iterator[str]:
     """Context manager to copy a file to a temporary file."""
     with TemporaryDirectory() as temp_dir:
         temp_file_path = Path(temp_dir) / source_path.name

@@ -9,6 +9,7 @@ def test_copy_to_tempfile(tmp_path: Path):
     sample_content = b"Hello, World!"
     sample_file.write_bytes(sample_content)
 
+    temp_file_path: str
     with copy_to_tempfile(sample_file) as temp_file_path:
         # Verify that the temporary file exists
         temp_path = Path(temp_file_path)

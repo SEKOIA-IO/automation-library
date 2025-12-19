@@ -26,5 +26,6 @@ class TheHiveUploadLogsV5(Action):
             raise FileNotFoundError(error_msg)
 
         # copy locally the file as TheHive API requires a physical file (not one in the remote storage)
+        file_name: str
         with copy_to_tempfile(arg_filepath) as file_name:
             return {"outputAttachment": api.alert_add_attachment(arg_alert_id, [file_name])}
