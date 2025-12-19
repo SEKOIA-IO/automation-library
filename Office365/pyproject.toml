@@ -35,13 +35,15 @@ pytest-freezegun = "^0.4.2"
 aiohttp = "^3.9.5"
 structlog = "^24.4.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
 pytest-asyncio = "*"
 requests = "*"
 requests-mock = "*"
 aioresponses = "^0.7.6"
+black = { version = "25.12.0", extras = ["colorama"] }
+isort = "^7.0.0"
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
