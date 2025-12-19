@@ -57,7 +57,7 @@ def test_scan_url_success(mock_connector_class, mock_vt_client):
 
     # Verify mock calls
     mock_connector_class.assert_called_once_with(API_KEY, url=TEST_URL, domain="", ip="", file_hash="", cve="")
-    mock_vt_client.assert_called_once_with(API_KEY)
+    mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
     mock_connector_instance.scan_url.assert_called_once_with(mock_client_instance)
 
 

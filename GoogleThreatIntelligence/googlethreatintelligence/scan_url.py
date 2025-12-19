@@ -22,7 +22,7 @@ class GTIScanURL(Action):
                 return {"success": False, "error": "No URL provided"}
 
             connector = VTAPIConnector(api_key, url=url, domain="", ip="", file_hash="", cve="")
-            with vt.Client(api_key) as client:
+            with vt.Client(api_key, trust_env=True) as client:
 
                 connector.scan_url(client)
                 analysis = connector.results[-1].response

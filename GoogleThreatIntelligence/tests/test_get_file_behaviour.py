@@ -46,7 +46,7 @@ def test_get_file_behaviour_success(mock_vt_client):
     assert response["data"]["behaviours"][0]["sandbox_name"] == "Windows10"
 
     # Verify vt.Client was called with the correct API key
-    mock_vt_client.assert_called_once_with(API_KEY)
+    mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
 
     # Verify iterator was called with the correct endpoint and limit
     mock_client_instance.iterator.assert_called_once_with(f"/files/{FILE_HASH}/behaviours", limit=5)
@@ -76,7 +76,7 @@ def test_get_file_behaviour_fail_api_error(mock_vt_client):
     assert "data" in response or "error" in response
 
     # Verify vt.Client was called
-    mock_vt_client.assert_called_once_with(API_KEY)
+    mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
 
     # Ensure iterator was attempted
     mock_client_instance.iterator.assert_called_once_with(f"/files/{FILE_HASH}/behaviours", limit=5)

@@ -23,7 +23,7 @@ class GTIScanFile(Action):
                 return {"success": False, "error": f"File not found: {file_path}"}
 
             connector = VTAPIConnector(api_key, url="", domain="", ip="", file_hash="", cve="")
-            with vt.Client(api_key) as client:
+            with vt.Client(api_key, trust_env=True) as client:
 
                 connector.scan_file(client, file_path)
                 analysis = connector.results[-1].response

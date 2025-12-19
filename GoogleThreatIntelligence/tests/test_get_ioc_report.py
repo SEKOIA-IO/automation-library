@@ -57,7 +57,7 @@ def test_get_domain_report_success(mock_connector_class, mock_vt_client):
     mock_connector.get_domain_report.assert_called_once_with(mock_client_instance)
 
     # Verify vt.Client was called with the correct API key
-    mock_vt_client.assert_called_once_with(API_KEY)
+    mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
 
 
 @patch("googlethreatintelligence.get_ioc_report.vt.Client")
@@ -222,7 +222,7 @@ def test_get_ioc_report_api_error(mock_connector_class, mock_vt_client):
     assert response["error"] == "WrongCredentialsError: Invalid API key"
 
     # Verify vt.Client was called
-    mock_vt_client.assert_called_once_with(API_KEY)
+    mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
 
 
 def test_get_ioc_report_no_api_key():

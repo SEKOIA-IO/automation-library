@@ -20,7 +20,7 @@ class GTIGetPassiveDNS(Action):
             domain = arguments.get("domain", "")
 
             connector = VTAPIConnector(api_key, domain=domain, ip="", url="", file_hash="")
-            with vt.Client(api_key) as client:
+            with vt.Client(api_key, trust_env=True) as client:
                 connector.get_passive_dns(client)
                 result = connector.results[-1]
 

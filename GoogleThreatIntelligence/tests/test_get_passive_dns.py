@@ -56,7 +56,7 @@ def test_get_passive_dns_success(mock_vt_client):
     assert data["resolutions"][0]["ip_address"] == "8.8.8.8"
 
     # Verify vt.Client was instantiated with the correct API key
-    mock_vt_client.assert_called_once_with(API_KEY)
+    mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
 
     # Verify iterator was called with correct endpoint and limit
     mock_client_instance.iterator.assert_called_once_with(f"/domains/{DOMAIN}/resolutions", limit=40)
@@ -87,7 +87,7 @@ def test_get_passive_dns_fail(mock_vt_client):
     assert "Rate limit exceeded" in response["error"]
 
     # Ensure vt.Client was called
-    mock_vt_client.assert_called_once_with(API_KEY)
+    mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
 
 
 def test_get_passive_dns_no_api_key():

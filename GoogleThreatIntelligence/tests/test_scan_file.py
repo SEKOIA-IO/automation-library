@@ -55,7 +55,7 @@ def test_scan_file_success(mock_connector_class, mock_vt_client):
 
         mock_connector_class.assert_called_once_with(API_KEY, url="", domain="", ip="", file_hash="", cve="")
         mock_connector_instance.scan_file.assert_called_once_with(mock_client_instance, tmp_path)
-        mock_vt_client.assert_called_once_with(API_KEY)
+        mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
     finally:
         os.unlink(tmp_path)
 
@@ -118,7 +118,7 @@ def test_scan_file_api_error(mock_connector_class, mock_vt_client):
         assert "API quota exceeded" in response["error"]
 
         mock_connector_instance.scan_file.assert_called_once_with(mock_client_instance, tmp_path)
-        mock_vt_client.assert_called_once_with(API_KEY)
+        mock_vt_client.assert_called_once_with(API_KEY, trust_env=True)
     finally:
         os.unlink(tmp_path)
 

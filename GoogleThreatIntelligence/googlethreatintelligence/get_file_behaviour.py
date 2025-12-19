@@ -24,7 +24,7 @@ class GTIGetFileBehaviour(Action):
 
         try:
             connector = VTAPIConnector(api_key, domain="", ip="", url="", file_hash=file_hash)
-            with vt.Client(api_key) as client:
+            with vt.Client(api_key, trust_env=True) as client:
                 connector.get_file_behaviour(client)
                 result = connector.results[-1]
 

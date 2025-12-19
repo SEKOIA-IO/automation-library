@@ -37,7 +37,7 @@ class GTIIoCReport(Action):
             file_hash = arguments.get("file_hash", "")
 
             connector = VTAPIConnector(api_key, domain=domain, ip=ip, url=url, file_hash=file_hash)
-            with vt.Client(api_key) as client:
+            with vt.Client(api_key, trust_env=True) as client:
                 if domain != "":
                     connector.get_domain_report(client)
                 elif ip != "":
