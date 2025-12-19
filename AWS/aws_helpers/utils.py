@@ -1,5 +1,4 @@
 import asyncio
-import io
 import gzip
 from abc import abstractmethod
 from concurrent.futures import Executor
