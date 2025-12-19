@@ -51,7 +51,7 @@ async def test_pull_content(connector, event):
     }
     content_not_skipped_2 = {
         "contentUri": " foo://example.com",
-        "contentExpiration": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        "contentExpiration": (datetime.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
     }
 
     connector.client.get_subscription_contents.return_value = async_generator(
