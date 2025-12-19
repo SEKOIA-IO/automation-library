@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-19 - 1.0.8
+
+### Fixed
+
+- Fix the upload logs action
+
 ## 2025-12-18 - 1.0.7
 
 ### Fixed
