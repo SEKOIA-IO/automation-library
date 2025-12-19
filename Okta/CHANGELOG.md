@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-15 - 2.8.9
+
+### Changed
+
+- Update user type detection to use Okta roles instead of userType profile field
+- Add group privileges to user asset connector groups
+
 ## 2025-12-08 - 2.8.8
 
 ### Changed
