@@ -73,14 +73,13 @@ def test_get_reverse_email_action_success():
         result = action.run({"email": EMAIL})
 
         assert result is not None
-
-        # Parse the result - it might be nested in a wrapper
         data = json.loads(result)
 
-        # Debug: print the actual structure
-        print("Result structure:", json.dumps(data, indent=2))
-
-        assert data["results"][0]["domain"] is not None
+        assert data["results"][0]["domain"] == "softwaredealsdls.com"
+        assert data["results"][0]["whois_url"] == "https://whois.domaintools.com/softwaredealsdls.com"
+        assert data["limit_exceeded"] is False
+        assert data["results_count"] == 545
+        assert data["total_count"] == 545
         assert mock_requests.call_count == 1
 
 
@@ -97,16 +96,10 @@ def test_get_reverse_email_action_api_error():
         )
         result = action.run({"email": EMAIL})
 
-        # Debug: print the actual result
-        print("Error result:", result)
-
-        # Parse and check for error
         if result:
             data = json.loads(result)
-            # Check if there's an error in the response
             assert "error" in data or "Error" in str(data)
         else:
-            # If your action returns None/False on error
             assert not result
 
         assert mock_requests.call_count == 1

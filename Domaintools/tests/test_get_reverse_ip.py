@@ -55,19 +55,6 @@ DT_OUTPUT: dict[str, Any] = {
     }
 }
 
-""" 
-def _qs_matcher(expected_params: Dict[str, Any]):
-
-    def matcher(request):
-        actual = {k: v[0] if isinstance(v, list) else v for k, v in request.qs.items()}
-        # Check that all expected params are present with correct values
-        for key, value in expected_params.items():
-            if key not in actual or actual[key] != str(value):
-                return False
-        return True
-    return matcher
- """
-
 
 def test_get_reverse_ip_action_success():
     action = DomaintoolsReverseIP()
@@ -83,14 +70,13 @@ def test_get_reverse_ip_action_success():
         result = action.run({"domain": DOMAIN})
 
         assert result is not None
-
-        # Parse the result - it might be nested in a wrapper
         data = json.loads(result)
 
-        # Debug: print the actual structure
-        print("Result structure:", json.dumps(data, indent=2))
-
-        assert data["ip_addresses"] is not None
+        assert len(data["ip_addresses"]) == 1
+        assert data["ip_addresses"][0]["ip_address"] == "23.192.228.80"
+        assert data["ip_addresses"][0]["domain_count"] == 162
+        assert len(data["ip_addresses"][0]["domain_names"]) == 17
+        assert "0x1bf52.top" in data["ip_addresses"][0]["domain_names"]
         assert mock_requests.call_count == 1
 
 
@@ -106,16 +92,10 @@ def test_get_reverse_ip_action_api_error():
         )
         result = action.run({"domain": DOMAIN})
 
-        # Debug: print the actual result
-        print("Error result:", result)
-
-        # Parse and check for error
         if result:
             data = json.loads(result)
-            # Check if there's an error in the response
             assert "error" in data or "Error" in str(data)
         else:
-            # If your action returns None/False on error
             assert not result
 
         assert mock_requests.call_count == 1
