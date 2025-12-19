@@ -215,7 +215,7 @@ class WorkdayClient:
 
     async def __aenter__(self):
         # self.log("Entering WorkdayClient context - Creating aiohttp session")
-        self._session = aiohttp.ClientSession()
+        self._session = aiohttp.ClientSession(trust_env=True)
 
         # self.log("Validating credentials by requesting initial access token")
         try:
