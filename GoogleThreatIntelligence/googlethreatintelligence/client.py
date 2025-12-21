@@ -90,14 +90,23 @@ class VTAPIConnector:
         else:
             logger.info(f"[{status}] {name}: Success")
 
-    def _make_serializable(self, obj: Any) -> Any:
-        """Convert VT objects to JSON-serializable format"""
-        if isinstance(obj, dict):
-            return {k: self._make_serializable(v) for k, v in obj.items()}
-        elif isinstance(obj, (list, tuple)):
-            return [self._make_serializable(item) for item in obj]
-        elif hasattr(obj, "__dict__"):
+    def _make_serializable(self, obj: Any, depth: int = 0, max_depth: int = 10) -> Any:
+        """Convert VT objects to JSON-serializable format with depth limit to prevent infinite recursion"""
+        # Prevent infinite recursion by limiting depth
+        if depth > max_depth:
             return str(obj)
+
+        if isinstance(obj, dict):
+            return {k: self._make_serializable(v, depth + 1, max_depth) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [self._make_serializable(item, depth + 1, max_depth) for item in obj]
+        elif hasattr(obj, "__dict__"):
+            # Convert object to dict but limit recursion
+            try:
+                obj_dict = {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
+                return self._make_serializable(obj_dict, depth + 1, max_depth)
+            except Exception:
+                return str(obj)
         else:
             return obj
 
@@ -380,44 +389,28 @@ class VTAPIConnector:
         try:
             # Correct path for vulnerability collections
             # `https://www.virustotal.com/api/v3/collections/vulnerability--cve-2010-3765`
+            logger.info(f"Fetching vulnerability report for {self.cve}")
             vuln = client.get_object(f"/collections/vulnerability--{self.cve}")
+            logger.info(f"Successfully retrieved vulnerability report for {self.cve}")
 
-            vuln_data = {
-                "cve": self.cve,
-                "id": vuln.id if hasattr(vuln, "id") else None,
-            }
+            # Use the VT object's to_dict() method if available, otherwise convert manually
+            # This is much faster and safer than manual attribute extraction
+            vuln_data = {"cve": self.cve}
 
-            # Extract all available vulnerability attributes
-            attributes_to_extract = [
-                "type",
-                "collection_type",
-                "name",
-                "title",
-                "description",
-                "creation_date",
-                "last_modification_date",
-                "risk_rating",
-                "exploitation_state",
-                "exploit_availability",
-                "exploited_as_zero_day",
-                "exploited_in_the_wild",
-                "cvss",
-                "counters",
-                "origin",
-                "tags",
-                "first_published_date",
-                "intelligence_source",
-            ]
-
-            for attr in attributes_to_extract:
-                if hasattr(vuln, attr):
-                    value = getattr(vuln, attr)
-                    # Convert nested objects to dict if needed
-                    if hasattr(value, "__dict__") and not isinstance(value, (str, int, float, bool, list)):
-                        # For objects like cvss or counters, convert to dict
-                        vuln_data[attr] = {k: v for k, v in value.__dict__.items() if not k.startswith("_")}
-                    else:
-                        vuln_data[attr] = value
+            # Get all non-private attributes from the vuln object
+            if hasattr(vuln, "to_dict"):
+                # Use VT's built-in serialization if available
+                vuln_dict = vuln.to_dict()
+                vuln_data.update(vuln_dict)
+            elif hasattr(vuln, "__dict__"):
+                # Manually extract attributes, but with depth limit
+                for key, value in vuln.__dict__.items():
+                    if not key.startswith("_"):
+                        # Use _make_serializable with depth limit to prevent infinite loops
+                        vuln_data[key] = self._make_serializable(value, depth=0, max_depth=5)
+            else:
+                # Fallback: just store basic info
+                vuln_data["id"] = str(vuln.id) if hasattr(vuln, "id") else None
 
             self._add_result(
                 "VULN_REPORT",

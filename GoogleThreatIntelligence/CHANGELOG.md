@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-21 - 0.1.4
+
+### Fixed
+
+- Get Vulnerability Report: infinite loop with edge cases.
+
 ## 2025-12-19 - 0.1.3
 
 ### Fixed
