@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix actions identifiers in the metadata file
+- Fix action identifiers in the metadata file
 
 ## 2025-12-19 - 1.0.8
 
