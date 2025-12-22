@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation Module for JIRA"
 description = ""
@@ -5,34 +9,30 @@ version = "0.1"
 authors = []
 package-mode = false
 
+[tool.black]
+line-length = 119
+target-version = ["py38"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
-requests-ratelimiter = "^0.4.0"
-requests = "^2.3.1"
+python = ">=3.11,<3.12"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
-
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py38']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
+isort = "*"
+black = "*"
+mypy = "*"
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-    "dev.py"
-]
+omit = ["tests/*", "main.py", "dev.py"]
+
+[tool.poetry.dependencies.sekoia-automation-sdk]
+extras = ["all"]
+version = "^1.21.1"
