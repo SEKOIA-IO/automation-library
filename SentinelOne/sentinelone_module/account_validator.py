@@ -1,10 +1,13 @@
 from sekoia_automation.account_validator import AccountValidator
 from functools import cached_property
 from sentinelone_module.client import SentinelOneClient
+from sentinelone_module.base import SentinelOneModule
 
 
 class SentinelOneAccountValidator(AccountValidator):
     """Validator for SentinelOne account credentials."""
+
+    module: SentinelOneModule
 
     @cached_property
     def client(self) -> SentinelOneClient:

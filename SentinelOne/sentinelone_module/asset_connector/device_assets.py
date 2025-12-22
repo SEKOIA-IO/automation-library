@@ -32,6 +32,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 from sekoia_automation.storage import PersistentJSON
 from sentinelone_module.client import SentinelOneClient
 from sentinelone_module.asset_connector.models import SentinelOneAgent
+from sentinelone_module.base import SentinelOneModule
 
 
 class SentinelOneDeviceAssetConnector(AssetConnector):
@@ -40,6 +41,8 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
     This connector fetches agent/device information from SentinelOne and formats it
     according to OCSF (Open Cybersecurity Schema Framework) standards.
     """
+
+    module: SentinelOneModule
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the SentinelOne Device Asset Connector.
@@ -50,7 +53,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         """
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self._latest_time: Optional[str] = None
+        self.new_most_recent_date: Optional[str] = None
 
     @cached_property
     def client(self) -> SentinelOneClient:
@@ -80,16 +83,16 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         """Update the checkpoint with the most recent date seen.
 
         Raises:
-            ValueError: If _latest_time is None.
+            ValueError: If new_most_recent_date is None.
         """
-        if self._latest_time is None:
-            self.log("Warning: _latest_time is None, skipping checkpoint update", level="warning")
+        if self.new_most_recent_date is None:
+            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
             return
 
         try:
             with self.context as cache:
-                cache["most_recent_date_seen"] = self._latest_time
-                self.log(f"Checkpoint updated with date: {self._latest_time}", level="info")
+                cache["most_recent_date_seen"] = self.new_most_recent_date
+                self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
         except Exception as e:
             self.log(f"Failed to update checkpoint: {str(e)}", level="error")
 
@@ -145,7 +148,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
 
             # Update checkpoint with the most recent date
             if agents:
-                self._latest_time = self.get_last_created_date(agents)
+                self.new_most_recent_date = self.get_last_created_date(agents)
 
             # Get next cursor from pagination
             next_cursor = None

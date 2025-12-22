@@ -1,7 +1,7 @@
 from functools import cached_property
 
 from management.mgmtsdk_v2_1.mgmt import Management
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 from sekoia_automation.action import Action
 from sekoia_automation.module import Module
 
