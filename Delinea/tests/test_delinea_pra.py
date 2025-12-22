@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -57,7 +57,7 @@ async def test_delinea_pra_connector_1(delinea_pra: DelineaPraConnector) -> None
             ],
         }
         first_url = delinea_pra.client.get_audit_events_url(
-            start_date=delinea_pra.last_event_date.offset, page=1, end_date=datetime.now()
+            start_date=delinea_pra.last_event_date.offset, page=1, end_date=datetime.now(timezone.utc)
         )
         m.get(first_url, payload=first_result)
 
@@ -69,7 +69,7 @@ async def test_delinea_pra_connector_1(delinea_pra: DelineaPraConnector) -> None
             ],
         }
         second_url = delinea_pra.client.get_audit_events_url(
-            start_date=delinea_pra.last_event_date.offset, page=2, end_date=datetime.now()
+            start_date=delinea_pra.last_event_date.offset, page=2, end_date=datetime.now(timezone.utc)
         )
         m.get(second_url, payload=second_result)
 
@@ -77,7 +77,7 @@ async def test_delinea_pra_connector_1(delinea_pra: DelineaPraConnector) -> None
             "auditEvents": [],
         }
         third_url = delinea_pra.client.get_audit_events_url(
-            start_date=delinea_pra.last_event_date.offset, page=3, end_date=datetime.now()
+            start_date=delinea_pra.last_event_date.offset, page=3, end_date=datetime.now(timezone.utc)
         )
         m.get(third_url, payload=third_result)
 

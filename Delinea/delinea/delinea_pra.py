@@ -1,6 +1,6 @@
 import asyncio
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any, Optional
 
@@ -76,7 +76,7 @@ class DelineaPraConnector(AsyncConnector):
     async def get_events(self) -> int:
         total_events = 0
         start_date = self.last_event_date.offset
-        end_date = datetime.now()
+        end_date = datetime.now(timezone.utc)
 
         new_start_date = start_date
 
