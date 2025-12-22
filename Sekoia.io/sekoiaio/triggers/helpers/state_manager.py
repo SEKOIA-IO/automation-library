@@ -351,38 +351,61 @@ class AlertStateManager:
             total_states=len(self._state["alerts"]),
         )
 
-        cutoff_iso = cutoff_date.isoformat()
-        to_remove = []
+        # Ensure state file exists before opening
+        if not self.state_file_path.exists():
+            self._log("State file does not exist, nothing to cleanup", level="debug")
+            return 0
 
-        # FIX: Compare using string comparison (ISO format is lexicographically sortable)
-        for alert_uuid, state in list(self._state["alerts"].items()):
-            last_triggered = state.get("last_triggered_at", "")
-            # If last_triggered is earlier than cutoff, remove it
-            if last_triggered and last_triggered < cutoff_iso:
-                to_remove.append(alert_uuid)
+        # FULL FILE LOCK OVER THE ENTIRE READ → MODIFY → WRITE
+        with open(self.state_file_path, "r+") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                # load fresh state from file
+                self._state = self._locked_load_state(f)
+
+                cutoff_iso = cutoff_date.isoformat()
+                to_remove = []
+
+                # FIX: Compare using string comparison (ISO format is lexicographically sortable)
+                for alert_uuid, state in list(self._state["alerts"].items()):
+                    last_triggered = state.get("last_triggered_at", "")
+                    # If last_triggered is earlier than cutoff, remove it
+                    if last_triggered and last_triggered < cutoff_iso:
+                        to_remove.append(alert_uuid)
+                        self._log(
+                            f"Marking alert {state.get('alert_short_id')} for removal",
+                            level="debug",
+                            alert_uuid=alert_uuid,
+                            last_triggered_at=last_triggered,
+                        )
+
+                for alert_uuid in to_remove:
+                    del self._state["alerts"][alert_uuid]
+
+                if to_remove:
+                    self._state["metadata"]["last_cleanup"] = datetime.now(timezone.utc).isoformat()
+                    # save back with lock
+                    self._locked_save_state(f)
+                    self._log(
+                        f"Cleanup completed: removed {len(to_remove)} old states",
+                        level="info",
+                        removed_count=len(to_remove),
+                        remaining_count=len(self._state["alerts"]),
+                    )
+                else:
+                    self._log("Cleanup completed: no old states to remove", level="debug")
+
+                return len(to_remove)
+            except Exception as e:
                 self._log(
-                    f"Marking alert {state.get('alert_short_id')} for removal",
-                    level="debug",
-                    alert_uuid=alert_uuid,
-                    last_triggered_at=last_triggered,
+                    "Error during cleanup of old states",
+                    level="error",
+                    error=str(e),
+                    error_type=type(e).__name__,
                 )
-
-        for alert_uuid in to_remove:
-            del self._state["alerts"][alert_uuid]
-
-        if to_remove:
-            self._state["metadata"]["last_cleanup"] = datetime.now(timezone.utc).isoformat()
-            self._save_state()
-            self._log(
-                f"Cleanup completed: removed {len(to_remove)} old states",
-                level="info",
-                removed_count=len(to_remove),
-                remaining_count=len(self._state["alerts"]),
-            )
-        else:
-            self._log("Cleanup completed: no old states to remove", level="debug")
-
-        return len(to_remove)
+                raise
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
     def get_stats(self) -> dict[str, Any]:
         """

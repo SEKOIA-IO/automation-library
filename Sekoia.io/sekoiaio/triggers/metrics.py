@@ -1,7 +1,4 @@
-from prometheus_client import Counter, Gauge, Histogram
-
-# Existing metrics...
-# (EVENTS_LAG, OUTCOMING_EVENTS, etc.)
+from prometheus_client import Counter, Gauge
 
 # New metrics for threshold trigger
 THRESHOLD_CHECKS = Counter(

@@ -1,13 +1,18 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 from posixpath import join as urljoin
+from typing import Any, Optional
 
 import orjson
 import requests
+from pydantic import BaseModel, Field, model_validator
 from tenacity import retry, wait_exponential, stop_after_attempt
 
 from sekoiaio.utils import user_agent
 
 from .base import _SEKOIANotificationBaseTrigger
+from .helpers.state_manager import AlertStateManager
+from .metrics import EVENTS_FORWARDED, EVENTS_FILTERED, THRESHOLD_CHECKS, STATE_SIZE
 
 
 class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
@@ -78,7 +83,7 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
             "urgency": alert.get("urgency", {}).get("current_value"),
             "entity": alert.get("entity", {}),
             "alert_type": alert.get("alert_type", {}),
-            "rule": {"name": alert["rule"]["name"], "uuid": alert["rule"]["uuid"]},
+            "rule": {"name": alert.get("rule", {}).get("name"), "uuid": alert.get("rule", {}).get("uuid")},
             "last_seen_at": alert.get("last_seen_at"),
             "first_seen_at": alert.get("first_seen_at"),
         }
@@ -236,7 +241,7 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
             "urgency": alert.get("urgency", {}).get("current_value"),
             "entity": alert.get("entity", {}),
             "alert_type": alert.get("alert_type", {}),
-            "rule": {"name": alert["rule"]["name"], "uuid": alert["rule"]["uuid"]},
+            "rule": {"name": alert.get("rule", {}).get("name"), "uuid": alert.get("rule", {}).get("uuid")},
             "last_seen_at": alert.get("last_seen_at"),
             "first_seen_at": alert.get("first_seen_at"),
         }
@@ -289,13 +294,6 @@ class AlertCommentCreatedTrigger(SecurityAlertsTrigger):
 # ==============================================================================
 # Alert Events Threshold Trigger
 # ==============================================================================
-
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
-from pydantic import BaseModel, Field, model_validator
-
-from .helpers.state_manager import AlertStateManager
-from .metrics import EVENTS_FORWARDED, EVENTS_FILTERED, THRESHOLD_CHECKS, STATE_SIZE
 
 
 class AlertEventsThresholdConfiguration(BaseModel):
@@ -505,6 +503,10 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         # Load previous state for this alert
         try:
+            if self.state_manager is None:
+                self.log(message="State manager not initialized", level="error", alert_uuid=alert_uuid)
+                return
+
             previous_state = self.state_manager.get_alert_state(alert_uuid)
             self.log(
                 message=f"Loaded previous state for alert {alert.get('short_id')}",
@@ -557,6 +559,12 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         # Update state before triggering
         try:
+            if self.state_manager is None:
+                self.log(
+                    message="State manager not initialized, cannot update state", level="error", alert_uuid=alert_uuid
+                )
+                return
+
             self.log(message=f"Updating state for alert {alert.get('short_id')}", level="debug", alert_uuid=alert_uuid)
             self.state_manager.update_alert_state(
                 alert_uuid=alert_uuid,
@@ -740,7 +748,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             "urgency": alert.get("urgency", {}).get("current_value"),
             "entity": alert.get("entity", {}),
             "alert_type": alert.get("alert_type", {}),
-            "rule": {"name": alert["rule"]["name"], "uuid": alert["rule"]["uuid"]},
+            "rule": {"name": alert.get("rule", {}).get("name"), "uuid": alert.get("rule", {}).get("uuid")},
             "last_seen_at": alert.get("last_seen_at"),
             "first_seen_at": alert.get("first_seen_at"),
             "events_count": alert.get("events_count", 0),
@@ -958,8 +966,6 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             Number of events in the time window, or None if API call failed
             (None indicates unchecked state, allowing fail-open behavior)
         """
-        from posixpath import join as urljoin
-
         earliest_time = datetime.now(timezone.utc) - timedelta(hours=hours)
 
         self.log(
