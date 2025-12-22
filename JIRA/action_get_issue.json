@@ -1,0 +1,60 @@
+{
+  "name": "Get issue",
+  "description": "Get issue",
+  "uuid": "c648a43a-02f2-5239-b633-659bad5c1a33",
+  "docker_parameters": "jira_get_issue",
+  "arguments": {
+    "title": "JIRAGetIssueArguments",
+    "type": "object",
+    "properties": {
+      "issue_key": {
+        "title": "Issue Key",
+        "description": "Issue key (e.g. PROJ-1) or ID",
+        "type": "string"
+      },
+      "fields": {
+        "title": "Fields",
+        "description": "A list of fields to return for the issue (*all by default)",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "fields_by_keys": {
+        "title": "Fields By Keys",
+        "description": "Whether fields in `fields` are referenced by keys rather than IDs",
+        "default": false,
+        "type": "boolean"
+      },
+      "expand": {
+        "title": "Expand",
+        "description": "Comma-separated list of additional information to include",
+        "type": "string"
+      },
+      "properties": {
+        "title": "Properties",
+        "description": "A list of properties to return for the issue (*all by default)",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "update_view_history": {
+        "title": "Update View History",
+        "description": "Whether to mark the issue as recently viewed",
+        "default": false,
+        "type": "boolean"
+      },
+      "fail_fast": {
+        "title": "Fail Fast",
+        "description": "Whether to fail the request quickly in case of an error while loading fields for an issue",
+        "default": false,
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "issue_key"
+    ]
+  },
+  "results": {}
+}
