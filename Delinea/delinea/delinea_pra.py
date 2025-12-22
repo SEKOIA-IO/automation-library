@@ -132,7 +132,7 @@ class DelineaPraConnector(AsyncConnector):
                     await asyncio.sleep(data_sleep)
 
             except Exception as e:
-                logger.error(f"Error while running Delinea PRA: {e}", error=e)
+                logger.error(f"Error while running Delinea PRA: {error}", error=e)
                 self.log_exception(e)
 
         if self._client:
