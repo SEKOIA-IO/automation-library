@@ -424,7 +424,6 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             DeviceOCSFModel instances for each agent found in SentinelOne.
         """
         self.log("Starting SentinelOne device assets generator", level="info")
-        self.log(f"Data path: {self._data_path.absolute()}", level="info")
 
         agents = self.list_all_agents()
         self.log(f"Fetched {len(agents)} agents from SentinelOne", level="info")
