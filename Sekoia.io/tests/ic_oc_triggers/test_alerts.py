@@ -10,7 +10,10 @@ from sekoiaio.triggers.alerts import (
     AlertUpdatedTrigger,
     AlertStatusChangedTrigger,
     AlertCommentCreatedTrigger,
+    AlertEventsThresholdTrigger,
+    AlertEventsThresholdConfiguration,
 )
+from sekoiaio.triggers.helpers.state_manager import AlertStateManager
 
 
 @pytest.fixture
@@ -438,3 +441,296 @@ def test_comment_trigger_filter_notification_function(
 
     trigger.handle_event(samplenotif_alert_comment_created)
     trigger.send_event.assert_not_called()
+
+
+# ==============================================================================
+# AlertEventsThresholdTrigger Tests
+# ==============================================================================
+
+
+@pytest.fixture
+def threshold_trigger(module_configuration, symphony_storage):
+    """Create an AlertEventsThresholdTrigger for testing."""
+    trigger = AlertEventsThresholdTrigger()
+    trigger._data_path = symphony_storage
+    trigger.configuration = {
+        "event_count_threshold": 100,
+        "time_window_hours": 1,
+        "enable_volume_threshold": True,
+        "enable_time_threshold": True,
+        "check_interval_seconds": 60,
+        "state_cleanup_days": 30,
+    }
+    trigger.module.configuration = module_configuration
+    trigger.module._community_uuid = "cc93fe3f-c26b-4eb1-82f7-082209cf1892"
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+    trigger.send_event = MagicMock()
+
+    return trigger
+
+
+@pytest.fixture
+def sample_threshold_alert():
+    """Create a sample alert for threshold testing."""
+    return {
+        "uuid": "alert-uuid-threshold-1234",
+        "short_id": "ALT-12345",
+        "events_count": 150,
+        "status": {
+            "name": "Ongoing",
+            "uuid": "status-uuid",
+        },
+        "rule": {
+            "uuid": "rule-uuid-abcd",
+            "name": "Suspicious PowerShell Activity",
+        },
+        "urgency": {
+            "current_value": 70,
+        },
+        "entity": {
+            "uuid": "entity-uuid",
+            "name": "Test Entity",
+        },
+        "alert_type": {
+            "value": "malware",
+        },
+        "created_at": "2025-11-14T08:00:00.000000Z",
+        "updated_at": "2025-11-14T10:30:00.000000Z",
+        "first_seen_at": "2025-11-14T08:00:00.000000Z",
+        "last_seen_at": "2025-11-14T10:30:00.000000Z",
+    }
+
+
+class TestAlertEventsThresholdConfiguration:
+    """Test AlertEventsThresholdConfiguration validation."""
+
+    def test_valid_configuration(self):
+        """Test that valid configuration is accepted."""
+        config = AlertEventsThresholdConfiguration(
+            event_count_threshold=100,
+            time_window_hours=1,
+            enable_volume_threshold=True,
+            enable_time_threshold=True,
+        )
+        assert config.event_count_threshold == 100
+        assert config.time_window_hours == 1
+
+    def test_at_least_one_threshold_required(self):
+        """Test that at least one threshold must be enabled."""
+        with pytest.raises(ValueError, match="At least one threshold must be enabled"):
+            AlertEventsThresholdConfiguration(
+                enable_volume_threshold=False,
+                enable_time_threshold=False,
+            )
+
+    def test_cannot_use_both_filters(self):
+        """Test that both rule filters cannot be used simultaneously."""
+        with pytest.raises(ValueError, match="Use either rule_filter OR rule_names_filter"):
+            AlertEventsThresholdConfiguration(
+                rule_filter="Test Rule",
+                rule_names_filter=["Rule 1", "Rule 2"],
+            )
+
+
+class TestAlertEventsThresholdTrigger:
+    """Test AlertEventsThresholdTrigger logic."""
+
+    def test_threshold_trigger_init(self, threshold_trigger):
+        """Test trigger initialization."""
+        assert type(threshold_trigger) == AlertEventsThresholdTrigger
+        assert threshold_trigger.configuration["event_count_threshold"] == 100
+
+    def test_first_occurrence_triggers_immediately(self, threshold_trigger, sample_threshold_alert):
+        """Test that first occurrence of an alert triggers immediately."""
+        threshold_trigger._ensure_initialized()
+
+        should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state=None)
+
+        assert should_trigger is True
+        assert context["reason"] == "first_occurrence"
+        assert context["new_events"] == 150
+        assert context["previous_count"] == 0
+
+    def test_volume_threshold_triggers(self, threshold_trigger, sample_threshold_alert):
+        """Test that volume threshold triggers correctly."""
+        threshold_trigger._ensure_initialized()
+
+        previous_state = {
+            "last_triggered_event_count": 50,
+            "version": 1,
+        }
+
+        sample_threshold_alert["events_count"] = 150  # 100 new events
+
+        with patch.object(threshold_trigger, "_count_events_in_time_window", return_value=0):
+            should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state)
+
+        assert should_trigger is True
+        assert "volume_threshold" in context["reason"]
+        assert context["new_events"] == 100
+
+    def test_below_threshold_does_not_trigger(self, threshold_trigger, sample_threshold_alert):
+        """Test that alerts below threshold do not trigger."""
+        threshold_trigger.configuration["enable_time_threshold"] = False
+        threshold_trigger._ensure_initialized()
+
+        previous_state = {
+            "last_triggered_event_count": 100,
+            "version": 1,
+        }
+
+        sample_threshold_alert["events_count"] = 150  # Only 50 new events (below 100 threshold)
+
+        should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state)
+
+        assert should_trigger is False
+        assert context["reason"] == "no_threshold_met"
+
+    def test_no_new_events_does_not_trigger(self, threshold_trigger, sample_threshold_alert):
+        """Test that alerts with no new events do not trigger."""
+        threshold_trigger._ensure_initialized()
+
+        previous_state = {
+            "last_triggered_event_count": 150,
+            "version": 1,
+        }
+
+        sample_threshold_alert["events_count"] = 150
+
+        should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state)
+
+        assert should_trigger is False
+        assert context["reason"] == "no_new_events"
+
+    def test_rule_filter_matches_name(self, threshold_trigger, sample_threshold_alert):
+        """Test that rule filter matches by name."""
+        threshold_trigger.configuration["rule_filter"] = "Suspicious PowerShell Activity"
+
+        matches = threshold_trigger._should_process_alert(sample_threshold_alert)
+        assert matches is True
+
+    def test_rule_filter_matches_uuid(self, threshold_trigger, sample_threshold_alert):
+        """Test that rule filter matches by UUID."""
+        threshold_trigger.configuration["rule_filter"] = "rule-uuid-abcd"
+
+        matches = threshold_trigger._should_process_alert(sample_threshold_alert)
+        assert matches is True
+
+    def test_rule_filter_blocks_non_matching(self, threshold_trigger, sample_threshold_alert):
+        """Test that rule filter blocks non-matching alerts."""
+        threshold_trigger.configuration["rule_filter"] = "Different Rule Name"
+
+        matches = threshold_trigger._should_process_alert(sample_threshold_alert)
+        assert matches is False
+
+    def test_handle_event_with_mocked_api(self, threshold_trigger, sample_threshold_alert):
+        """Test the full event handling flow."""
+        message = {
+            "type": "alert",
+            "action": "updated",
+            "attributes": {
+                "uuid": "alert-uuid-threshold-1234",
+            },
+        }
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=sample_threshold_alert):
+            with patch.object(threshold_trigger, "_count_events_in_time_window", return_value=10):
+                threshold_trigger.handle_event(message)
+
+                # First occurrence should trigger
+                assert threshold_trigger.send_event.called
+
+
+class TestAlertStateManager:
+    """Test AlertStateManager functionality."""
+
+    def test_get_nonexistent_alert_returns_none(self, tmp_path):
+        """Test that getting a non-existent alert returns None."""
+        state_path = tmp_path / "test_state.json"
+        manager = AlertStateManager(state_path)
+
+        state = manager.get_alert_state("nonexistent-uuid")
+        assert state is None
+
+    def test_update_alert_state_creates_new(self, tmp_path):
+        """Test creating a new alert state."""
+        state_path = tmp_path / "test_state.json"
+        manager = AlertStateManager(state_path)
+
+        manager.update_alert_state(
+            alert_uuid="test-uuid",
+            alert_short_id="ALT-99999",
+            rule_uuid="rule-uuid",
+            rule_name="Test Rule",
+            event_count=50,
+        )
+
+        state = manager.get_alert_state("test-uuid")
+        assert state is not None
+        assert state["alert_short_id"] == "ALT-99999"
+        assert state["last_triggered_event_count"] == 50
+        assert state["total_triggers"] == 1
+
+    def test_update_alert_state_increments_triggers(self, tmp_path):
+        """Test that updating state increments trigger count."""
+        from datetime import datetime, timedelta, timezone
+
+        state_path = tmp_path / "test_state.json"
+        manager = AlertStateManager(state_path)
+
+        # First update
+        manager.update_alert_state(
+            alert_uuid="test-uuid",
+            alert_short_id="ALT-99999",
+            rule_uuid="rule-uuid",
+            rule_name="Test Rule",
+            event_count=50,
+        )
+
+        # Second update
+        manager.update_alert_state(
+            alert_uuid="test-uuid",
+            alert_short_id="ALT-99999",
+            rule_uuid="rule-uuid",
+            rule_name="Test Rule",
+            event_count=150,
+        )
+
+        state = manager.get_alert_state("test-uuid")
+        assert state["last_triggered_event_count"] == 150
+        assert state["total_triggers"] == 2
+
+    def test_cleanup_old_states(self, tmp_path):
+        """Test cleanup of old alert states."""
+        from datetime import datetime, timedelta, timezone
+
+        state_path = tmp_path / "test_state.json"
+        manager = AlertStateManager(state_path)
+
+        now = datetime.now(timezone.utc)
+
+        # Create old alert (60 days ago)
+        manager._state["alerts"]["old-alert"] = {
+            "alert_uuid": "old-alert",
+            "last_triggered_at": (now - timedelta(days=60)).isoformat(),
+            "last_triggered_event_count": 100,
+        }
+        manager._save_state()
+
+        # Create recent alert
+        manager.update_alert_state(
+            alert_uuid="recent-alert",
+            alert_short_id="ALT-11111",
+            rule_uuid="rule-uuid",
+            rule_name="Recent Rule",
+            event_count=50,
+        )
+
+        # Cleanup entries older than 30 days
+        cutoff = now - timedelta(days=30)
+        removed = manager.cleanup_old_states(cutoff)
+
+        assert removed == 1
+        assert manager.get_alert_state("old-alert") is None
+        assert manager.get_alert_state("recent-alert") is not None
