@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-18 - 1.0.4
+
+### Changed
+
+- Add device to asset mapping
+- Add some extra fields
+- Update sdk version to 1.22.0
+- Add exceptions to the connector
+
 ## 2025-10-06 - 1.0.3
 
 ### Changed
