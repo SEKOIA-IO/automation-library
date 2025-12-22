@@ -661,7 +661,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         rule_name = alert.get("rule", {}).get("name")
         rule_uuid = alert.get("rule", {}).get("uuid")
 
-        # Single rule filter
+        # Single rule filter (note: config validation ensures rule_filter and rule_names_filter are mutually exclusive)
         if rule_filter:
             matches = rule_name == rule_filter or rule_uuid == rule_filter
             self.log(
@@ -673,18 +673,15 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             )
             return matches
 
-        # Multiple rule names filter
-        if rule_names_filter:
-            matches = rule_name in rule_names_filter
-            self.log(
-                message=f"Multiple rule names filter check: {matches}",
-                level="debug",
-                configured_filters=str(rule_names_filter),
-                alert_rule_name=rule_name,
-            )
-            return matches
-
-        return True
+        # Multiple rule names filter (only reached if rule_filter is None)
+        matches = rule_name in rule_names_filter
+        self.log(
+            message=f"Multiple rule names filter check: {matches}",
+            level="debug",
+            configured_filters=str(rule_names_filter),
+            alert_rule_name=rule_name,
+        )
+        return matches
 
     def _send_threshold_event(self, alert: dict[str, Any], event_type: str, context: dict[str, Any]):
         """
