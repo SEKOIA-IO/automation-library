@@ -77,7 +77,8 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             The most recent date seen as a string, or None if not set.
         """
         with self.context as cache:
-            return cache.get("most_recent_date_seen", None)
+            result: str | None = cache.get("most_recent_date_seen", None)
+            return result
 
     def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.

@@ -87,7 +87,8 @@ class SentinelOneClient:
         try:
             response = self.session.get(url, params=params, timeout=30)
             response.raise_for_status()
-            return response.json()
+            result: dict[str, Any] = response.json()
+            return result
 
         except requests.exceptions.HTTPError as e:
             logger.error(f"HTTP error occurred: {e.response.status_code} - {e.response.text}")
