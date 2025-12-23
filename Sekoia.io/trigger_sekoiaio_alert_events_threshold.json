@@ -1,0 +1,194 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "rule_filter": {
+        "type": "string",
+        "description": "Filter by rule name or UUID (single rule only)"
+      },
+      "rule_names_filter": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Filter by multiple rule names"
+      },
+      "event_count_threshold": {
+        "type": "integer",
+        "minimum": 1,
+        "default": 100,
+        "description": "Minimum number of new events to trigger (volume-based)"
+      },
+      "time_window_hours": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 168,
+        "default": 1,
+        "description": "Time window in hours for time-based triggering (max 7 days)"
+      },
+      "enable_volume_threshold": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable volume-based threshold (>= N events)"
+      },
+      "enable_time_threshold": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable time-based threshold (activity in last N hours)"
+      },
+      "state_cleanup_days": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 365,
+        "default": 30,
+        "description": "Remove state entries for alerts older than N days"
+      },
+      "fetch_events": {
+        "type": "boolean",
+        "default": false,
+        "description": "Whether to fetch and include events in the trigger output"
+      },
+      "fetch_all_events": {
+        "type": "boolean",
+        "default": false,
+        "description": "If true, fetch all events from the alert. If false, fetch only new events since last trigger"
+      },
+      "max_events_per_fetch": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10000,
+        "default": 1000,
+        "description": "Maximum number of events to fetch per trigger execution"
+      }
+    },
+    "type": "object",
+    "title": "Trigger configuration"
+  },
+  "description": "Trigger playbooks only when alert event accumulation meets configurable thresholds (volume-based or time-based)",
+  "docker_parameters": "alert_events_threshold_trigger",
+  "name": "Alert Events Threshold",
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "file_path": {
+        "description": "File path to the alert on disk.",
+        "type": "string"
+      },
+      "event_type": {
+        "description": "Action that triggered this Sekoia.io Alert notification.",
+        "type": "string"
+      },
+      "alert_uuid": {
+        "description": "Unique identifier of the Alert (UUID string).",
+        "type": "string"
+      },
+      "short_id": {
+        "description": "Unique short identifier of the Alert.",
+        "type": "string"
+      },
+      "status": {
+        "description": "Status of the Alert (object containing status description and name).",
+        "type": "object"
+      },
+      "created_at": {
+        "description": "Creation date of the Alert (timestamp).",
+        "type": "integer"
+      },
+      "urgency": {
+        "description": "Current urgency of the Alert.",
+        "type": "integer"
+      },
+      "entity": {
+        "description": "Description of the entity involved with this Alert (object containing entity UUID and name).",
+        "type": "object"
+      },
+      "alert_type": {
+        "description": "Category of the Alert",
+        "type": "object"
+      },
+      "rule": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "uuid": {
+            "type": "string"
+          }
+        }
+      },
+      "first_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "last_seen_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "events_count": {
+        "description": "Total number of events in the alert",
+        "type": "integer"
+      },
+      "trigger_context": {
+        "description": "Threshold-specific context about why this alert triggered",
+        "type": "object",
+        "properties": {
+          "triggered_at": {
+            "description": "ISO 8601 timestamp when threshold was met",
+            "type": "string",
+            "format": "date-time"
+          },
+          "trigger_type": {
+            "description": "Type of trigger (always 'alert_events_threshold')",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Reason for triggering (e.g., 'first_occurrence', 'volume_threshold', 'time_threshold')",
+            "type": "string"
+          },
+          "new_events": {
+            "description": "Number of new events since last trigger",
+            "type": "integer"
+          },
+          "previous_count": {
+            "description": "Event count at last trigger",
+            "type": "integer"
+          },
+          "current_count": {
+            "description": "Current total event count",
+            "type": "integer"
+          },
+          "time_window_hours": {
+            "description": "Time window used for time-based threshold check",
+            "type": "integer"
+          }
+        }
+      },
+      "events_file_path": {
+        "description": "File path to the events JSON file on disk (only present if fetch_events is enabled)",
+        "type": "string"
+      },
+      "fetched_events_count": {
+        "description": "Number of events fetched and saved (only present if fetch_events is enabled)",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "alert_type",
+      "alert_uuid",
+      "created_at",
+      "entity",
+      "short_id",
+      "status",
+      "urgency",
+      "rule",
+      "last_seen_at",
+      "first_seen_at",
+      "events_count",
+      "trigger_context"
+    ],
+    "title": "Results",
+    "type": "object"
+  },
+  "uuid": "83d7092a-0036-4adb-83c1-087265c57659"
+}

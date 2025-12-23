@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from posixpath import join as urljoin
@@ -5,8 +6,9 @@ from typing import Any, Optional
 
 import orjson
 import requests
+import urllib3
 from pydantic import BaseModel, Field, model_validator
-from tenacity import retry, wait_exponential, stop_after_attempt
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
 from sekoiaio.utils import user_agent
 
@@ -342,6 +344,23 @@ class AlertEventsThresholdConfiguration(BaseModel):
         description="Remove state entries for alerts older than N days",
     )
 
+    fetch_events: bool = Field(
+        default=False,
+        description="Whether to fetch and include events in the trigger output",
+    )
+
+    fetch_all_events: bool = Field(
+        default=False,
+        description="If True, fetch all events from the alert. If False, fetch only new events since last trigger",
+    )
+
+    max_events_per_fetch: int = Field(
+        default=1000,
+        ge=1,
+        le=10000,
+        description="Maximum number of events to fetch per trigger execution",
+    )
+
     @model_validator(mode="after")
     def validate_at_least_one_threshold(self):
         """Ensure at least one threshold is enabled."""
@@ -385,6 +404,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self._last_cleanup: Optional[datetime] = None
         self._initialized = False
         self._validated_config: Optional[AlertEventsThresholdConfiguration] = None
+        self._http_session: Optional[requests.Session] = None
+        self._events_api_path: Optional[str] = None
 
     @property
     def validated_config(self) -> AlertEventsThresholdConfiguration:
@@ -407,7 +428,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         return self._validated_config
 
     def _ensure_initialized(self):
-        """Lazy initialization of state manager."""
+        """Lazy initialization of state manager and HTTP session."""
         if not self._initialized:
             self.log(message="Initializing AlertEventsThresholdTrigger", level="debug")
             state_path = self._data_path / "alert_thresholds_state.json"
@@ -415,11 +436,26 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
             try:
                 self.state_manager = AlertStateManager(state_path, logger=self.log)
+
+                # Initialize HTTP session for events API
+                self._events_api_path = urljoin(self.module.configuration["base_url"], "api/v1/sic/conf/events")
+                self._events_api_path = self._events_api_path.replace("/api/api", "/api")
+
+                self._http_session = requests.Session()
+                self._http_session.headers.update(
+                    {
+                        "Accept": "application/json",
+                        "Authorization": f"Bearer {self.module.configuration['api_key']}",
+                        "User-Agent": user_agent(),
+                    }
+                )
+
                 self._initialized = True
                 self.log(
                     message="AlertEventsThresholdTrigger initialized successfully",
                     level="info",
                     state_path=str(state_path),
+                    events_api_path=self._events_api_path,
                 )
             except Exception as exp:
                 self.log_exception(
@@ -595,6 +631,46 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log_exception(exp, message="Failed to cleanup old states, continuing")
             # Continue despite cleanup failure
 
+        # Fetch events if configured
+        events = None
+        config = self.validated_config
+        if config.fetch_events:
+            try:
+                self.log(
+                    message=f"Fetching events for alert {alert.get('short_id')}",
+                    level="debug",
+                    alert_uuid=alert_uuid,
+                    fetch_all=config.fetch_all_events,
+                    max_events=config.max_events_per_fetch,
+                )
+                events = self._fetch_alert_events(
+                    alert=alert,
+                    fetch_all=config.fetch_all_events,
+                    previous_state=previous_state,
+                    max_events=config.max_events_per_fetch,
+                )
+                if events is None:
+                    self.log(
+                        message=f"Failed to fetch events for alert {alert.get('short_id')}, continuing without events",
+                        level="warning",
+                        alert_uuid=alert_uuid,
+                    )
+                else:
+                    self.log(
+                        message=f"Fetched {len(events)} events for alert {alert.get('short_id')}",
+                        level="info",
+                        alert_uuid=alert_uuid,
+                        events_count=len(events),
+                    )
+            except Exception as exp:
+                self.log_exception(
+                    exp,
+                    message="Failed to fetch events, continuing without events",
+                    alert_uuid=alert_uuid,
+                    alert_short_id=alert.get("short_id"),
+                )
+                # Continue without events
+
         # Reuse parent's method for creating event payload
         try:
             self.log(
@@ -602,7 +678,13 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 level="debug",
                 alert_uuid=alert_uuid,
             )
-            self._send_threshold_event(alert, event_type, context)
+            self._send_threshold_event(
+                alert=alert,
+                event_type=event_type,
+                context=context,
+                events=events,
+                previous_state=previous_state,
+            )
             self.log(
                 message=f"Threshold event sent successfully for alert {alert.get('short_id')}",
                 level="debug",
@@ -683,7 +765,14 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         )
         return matches
 
-    def _send_threshold_event(self, alert: dict[str, Any], event_type: str, context: dict[str, Any]):
+    def _send_threshold_event(
+        self,
+        alert: dict[str, Any],
+        event_type: str,
+        context: dict[str, Any],
+        events: Optional[list[dict[str, Any]]] = None,
+        previous_state: Optional[dict[str, Any]] = None,
+    ):
         """
         Send event to playbook with threshold context.
 
@@ -693,6 +782,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             alert: Alert data dictionary
             event_type: Type of the event
             context: Threshold evaluation context
+            events: Optional list of events to include
+            previous_state: Previous state for this alert
         """
         import uuid as uuid_lib
 
@@ -704,6 +795,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             level="debug",
             alert_uuid=alert_uuid,
             event_type=event_type,
+            include_events=events is not None,
+            events_count=len(events) if events else 0,
         )
 
         # Create work directory for alert data
@@ -727,6 +820,28 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 exp, message="Failed to write alert data to file", alert_path=str(alert_path), alert_uuid=alert_uuid
             )
             raise
+
+        # Save events if provided
+        events_file_path = None
+        if events is not None:
+            try:
+                events_path = work_dir.joinpath("events.json")
+                with events_path.open("w") as fp:
+                    fp.write(orjson.dumps(events).decode("utf-8"))
+                events_file_path = str(events_path.relative_to(work_dir))
+                self.log(
+                    message=f"Wrote {len(events)} events to {events_path}",
+                    level="debug",
+                    events_count=len(events),
+                )
+            except Exception as exp:
+                self.log_exception(
+                    exp,
+                    message="Failed to write events to file",
+                    events_path=str(events_path) if "events_path" in locals() else None,
+                    alert_uuid=alert_uuid,
+                )
+                # Continue without events file
 
         directory = str(work_dir.relative_to(self._data_path))
         file_path = str(alert_path.relative_to(work_dir))
@@ -756,6 +871,11 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 **context,
             },
         }
+
+        # Add events file path if events were fetched
+        if events_file_path:
+            event["events_file_path"] = events_file_path
+            event["fetched_events_count"] = len(events) if events else 0
 
         self.log(
             message=f"Built event payload for alert {alert_short_id}",
@@ -946,6 +1066,315 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         )
 
         return should_trigger, context
+
+    @retry(
+        reraise=True,
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(10),
+        retry=retry_if_exception_type(requests.exceptions.Timeout)
+        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+    )
+    def _trigger_event_search_job(
+        self, alert_short_id: str, earliest_time: str, latest_time: str, limit: int
+    ) -> Optional[str]:
+        """
+        Trigger an event search job for a specific alert.
+
+        Args:
+            alert_short_id: Short ID of the alert
+            earliest_time: Start time for event search (ISO 8601)
+            latest_time: End time for event search (ISO 8601)
+            limit: Maximum number of events to retrieve
+
+        Returns:
+            UUID of the search job, or None if failed
+        """
+        query = f'alert_short_ids:"{alert_short_id}"'
+
+        data = {
+            "term": query,
+            "earliest_time": earliest_time,
+            "latest_time": latest_time,
+            "visible": False,
+            "max_last_events": limit,
+        }
+
+        self.log(
+            message=f"Triggering event search job for alert {alert_short_id}",
+            level="debug",
+            alert_short_id=alert_short_id,
+            query=query,
+            earliest_time=earliest_time,
+            latest_time=latest_time,
+            limit=limit,
+        )
+
+        try:
+            if self._http_session is None:
+                self.log(message="HTTP session not initialized", level="error")
+                return None
+
+            response = self._http_session.post(
+                f"{self._events_api_path}/search/jobs",
+                json=data,
+                timeout=20,
+            )
+            response.raise_for_status()
+
+            job_uuid = response.json()["uuid"]
+            self.log(
+                message=f"Event search job triggered successfully",
+                level="debug",
+                alert_short_id=alert_short_id,
+                job_uuid=job_uuid,
+            )
+            return job_uuid
+
+        except Exception as e:
+            self.log_exception(e, message="Failed to trigger event search job", alert_short_id=alert_short_id)
+            return None
+
+    @retry(
+        reraise=True,
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(10),
+        retry=retry_if_exception_type(requests.exceptions.Timeout)
+        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+    )
+    def _wait_for_search_job(self, job_uuid: str, timeout: int = 300) -> bool:
+        """
+        Wait for a search job to complete.
+
+        Args:
+            job_uuid: UUID of the search job
+            timeout: Maximum time to wait in seconds
+
+        Returns:
+            True if job completed successfully, False otherwise
+        """
+        if self._http_session is None:
+            self.log(message="HTTP session not initialized", level="error")
+            return False
+
+        start_time = time.time()
+
+        self.log(message=f"Waiting for search job {job_uuid} to complete", level="debug", job_uuid=job_uuid)
+
+        try:
+            # Wait for job to start (status != 0)
+            while True:
+                response = self._http_session.get(
+                    f"{self._events_api_path}/search/jobs/{job_uuid}",
+                    timeout=20,
+                )
+                response.raise_for_status()
+                status = response.json()["status"]
+
+                if status != 0:
+                    break
+
+                if time.time() - start_time > timeout:
+                    self.log(
+                        message=f"Search job {job_uuid} timed out waiting to start", level="error", job_uuid=job_uuid
+                    )
+                    return False
+
+                time.sleep(1)
+
+            # Wait for job to complete (status != 1)
+            while True:
+                response = self._http_session.get(
+                    f"{self._events_api_path}/search/jobs/{job_uuid}",
+                    timeout=20,
+                )
+                response.raise_for_status()
+                status = response.json()["status"]
+
+                if status != 1:
+                    break
+
+                if time.time() - start_time > timeout:
+                    self.log(
+                        message=f"Search job {job_uuid} timed out waiting to complete",
+                        level="error",
+                        job_uuid=job_uuid,
+                    )
+                    return False
+
+                time.sleep(1)
+
+            self.log(message=f"Search job {job_uuid} completed", level="debug", job_uuid=job_uuid)
+            return True
+
+        except Exception as e:
+            self.log_exception(e, message=f"Failed to wait for search job {job_uuid}", job_uuid=job_uuid)
+            return False
+
+    @retry(
+        reraise=True,
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(10),
+        retry=retry_if_exception_type(requests.exceptions.Timeout)
+        | retry_if_exception_type(urllib3.exceptions.TimeoutError),
+    )
+    def _get_search_job_results(self, job_uuid: str, limit: int) -> Optional[list[dict[str, Any]]]:
+        """
+        Retrieve results from a completed search job.
+
+        Args:
+            job_uuid: UUID of the search job
+            limit: Maximum number of results to retrieve per page
+
+        Returns:
+            List of events, or None if failed
+        """
+        if self._http_session is None:
+            self.log(message="HTTP session not initialized", level="error")
+            return None
+
+        self.log(
+            message=f"Retrieving results for search job {job_uuid}",
+            level="debug",
+            job_uuid=job_uuid,
+            limit=limit,
+        )
+
+        results: list[dict[str, Any]] = []
+        offset = 0
+        total = None
+
+        try:
+            while total is None or offset < total:
+                response = self._http_session.get(
+                    f"{self._events_api_path}/search/jobs/{job_uuid}/events",
+                    params={"limit": limit, "offset": offset},
+                    timeout=20,
+                )
+                response.raise_for_status()
+
+                data = response.json()
+                items = data.get("items", [])
+
+                if not items:
+                    num_results = len(results)
+                    if num_results < data.get("total", 0) and num_results < limit:
+                        self.log(
+                            "Number of fetched results doesn't match total",
+                            level="warning",
+                            num_results=num_results,
+                            total=data.get("total", 0),
+                            job_uuid=job_uuid,
+                        )
+                    break
+
+                results.extend(items)
+                total = min(data.get("total", 0), limit)
+                offset += limit
+
+            self.log(
+                message=f"Retrieved {len(results)} events from search job",
+                level="debug",
+                job_uuid=job_uuid,
+                total_events=len(results),
+            )
+
+            return results
+
+        except Exception as e:
+            self.log_exception(e, message=f"Failed to get search job results", job_uuid=job_uuid)
+            return None
+
+    def _fetch_alert_events(
+        self,
+        alert: dict[str, Any],
+        fetch_all: bool,
+        previous_state: Optional[dict[str, Any]],
+        max_events: int,
+    ) -> Optional[list[dict[str, Any]]]:
+        """
+        Fetch events from an alert using the search job API.
+
+        Args:
+            alert: Alert data dictionary
+            fetch_all: If True, fetch all events. If False, fetch only new events
+            previous_state: Previous state for this alert (to get last trigger time)
+            max_events: Maximum number of events to fetch
+
+        Returns:
+            List of events, or None if API call failed
+        """
+        alert_short_id = alert.get("short_id")
+        alert_uuid = alert.get("uuid")
+        first_seen_at = alert.get("first_seen_at")
+        last_seen_at = alert.get("last_seen_at")
+
+        # Validate required fields
+        if not alert_short_id or not first_seen_at or not last_seen_at:
+            self.log(
+                message="Alert missing required fields for event fetching",
+                level="error",
+                alert_uuid=alert_uuid,
+                has_short_id=bool(alert_short_id),
+                has_first_seen_at=bool(first_seen_at),
+                has_last_seen_at=bool(last_seen_at),
+            )
+            return None
+
+        # Determine time range based on fetch_all flag
+        if fetch_all:
+            earliest_time = first_seen_at
+            self.log(
+                message=f"Fetching all events for alert {alert_short_id}",
+                level="debug",
+                alert_uuid=alert_uuid,
+                earliest_time=earliest_time,
+                latest_time=last_seen_at,
+            )
+        else:
+            # Fetch only new events since last trigger
+            if previous_state and previous_state.get("last_triggered_at"):
+                earliest_time = previous_state["last_triggered_at"]
+            else:
+                # First run, use first_seen_at
+                earliest_time = first_seen_at
+
+            self.log(
+                message=f"Fetching new events for alert {alert_short_id}",
+                level="debug",
+                alert_uuid=alert_uuid,
+                earliest_time=earliest_time,
+                latest_time=last_seen_at,
+            )
+
+        # Step 1: Trigger the search job
+        job_uuid = self._trigger_event_search_job(alert_short_id, earliest_time, last_seen_at, max_events)
+        if not job_uuid:
+            self.log(message="Failed to trigger search job", level="error", alert_uuid=alert_uuid)
+            return None
+
+        # Step 2: Wait for the job to complete
+        if not self._wait_for_search_job(job_uuid):
+            self.log(message="Search job did not complete", level="error", alert_uuid=alert_uuid, job_uuid=job_uuid)
+            return None
+
+        # Step 3: Get the results (use 100 as page size like in get_events.py)
+        events = self._get_search_job_results(job_uuid, 100)
+        if events is None:
+            self.log(
+                message="Failed to get search job results", level="error", alert_uuid=alert_uuid, job_uuid=job_uuid
+            )
+            return None
+
+        self.log(
+            message=f"Fetched {len(events)} events for alert {alert_short_id}",
+            level="info",
+            alert_uuid=alert_uuid,
+            alert_short_id=alert_short_id,
+            events_count=len(events),
+            fetch_all=fetch_all,
+        )
+
+        return events
 
     def _count_events_in_time_window(
         self,
