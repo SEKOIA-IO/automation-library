@@ -101,7 +101,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
             return
 
         if "<error>" in response.text and response.status_code == 200:
-            self.log(f"An error occurred. response: {response.txt}", level="error")
+            self.log(f"An error occurred. response: {response.text}", level="error")
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
             return
 
