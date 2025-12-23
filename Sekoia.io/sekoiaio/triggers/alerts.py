@@ -7,7 +7,7 @@ from typing import Any, Optional
 import orjson
 import requests
 import urllib3
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
 from sekoiaio.utils import user_agent
@@ -302,6 +302,8 @@ class AlertEventsThresholdConfiguration(BaseModel):
     """
     Configuration for the Alert Events Threshold Trigger.
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     # User-configurable parameters
     rule_filter: Optional[str] = Field(
