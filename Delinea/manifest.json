@@ -29,8 +29,8 @@
   "name": "Delinea",
   "uuid": "04473922-fd88-40d5-a001-c2a859d208d6",
   "slug": "delinea",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "categories": [
-    "Cloud Providers"
+    "Network"
   ]
 }
