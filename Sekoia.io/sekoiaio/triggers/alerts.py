@@ -438,8 +438,11 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 self.state_manager = AlertStateManager(state_path, logger=self.log)
 
                 # Initialize HTTP session for events API
-                self._events_api_path = urljoin(self.module.configuration["base_url"], "api/v1/sic/conf/events")
-                self._events_api_path = self._events_api_path.replace("/api/api", "/api")
+                # Normalize base_url: remove trailing slashes and ensure it doesn't end with /api
+                base_url = self.module.configuration["base_url"].rstrip("/")
+                if base_url.endswith("/api"):
+                    base_url = base_url[:-4]
+                self._events_api_path = f"{base_url}/api/v1/sic/conf/events"
 
                 self._http_session = requests.Session()
                 self._http_session.headers.update(
@@ -1068,7 +1071,6 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         return should_trigger, context
 
     @retry(
-        reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(requests.exceptions.Timeout)
@@ -1135,7 +1137,6 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             return None
 
     @retry(
-        reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(requests.exceptions.Timeout)
@@ -1211,7 +1212,6 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             return False
 
     @retry(
-        reraise=True,
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(requests.exceptions.Timeout)
@@ -1242,12 +1242,13 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         results: list[dict[str, Any]] = []
         offset = 0
         total = None
+        page_size = limit
 
         try:
             while total is None or offset < total:
                 response = self._http_session.get(
                     f"{self._events_api_path}/search/jobs/{job_uuid}/events",
-                    params={"limit": limit, "offset": offset},
+                    params={"limit": page_size, "offset": offset},
                     timeout=20,
                 )
                 response.raise_for_status()
@@ -1257,7 +1258,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
                 if not items:
                     num_results = len(results)
-                    if num_results < data.get("total", 0) and num_results < limit:
+                    if num_results < data.get("total", 0):
                         self.log(
                             "Number of fetched results doesn't match total",
                             level="warning",
@@ -1268,8 +1269,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                     break
 
                 results.extend(items)
-                total = min(data.get("total", 0), limit)
-                offset += limit
+                if total is None:
+                    total = data.get("total", 0)
+                offset += page_size
 
             self.log(
                 message=f"Retrieved {len(results)} events from search job",

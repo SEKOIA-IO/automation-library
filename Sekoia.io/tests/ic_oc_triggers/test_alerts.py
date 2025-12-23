@@ -933,6 +933,42 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         assert results is not None
         assert len(results) == 0
 
+    def test_get_search_job_results_pagination(self, threshold_trigger, requests_mock):
+        """Test retrieving search job results with multiple pages."""
+        threshold_trigger._ensure_initialized()
+
+        job_uuid = "job-uuid-12345"
+
+        # Create 250 events to test multi-page retrieval with page_size=100
+        page1_events = [{"uuid": f"event-{i}", "data": f"page1-{i}"} for i in range(100)]
+        page2_events = [{"uuid": f"event-{i}", "data": f"page2-{i}"} for i in range(100, 200)]
+        page3_events = [{"uuid": f"event-{i}", "data": f"page3-{i}"} for i in range(200, 250)]
+
+        # Mock paginated responses
+        requests_mock.get(
+            f"http://fake.url/api/v1/sic/conf/events/search/jobs/{job_uuid}/events",
+            [
+                {"json": {"items": page1_events, "total": 250}},
+                {"json": {"items": page2_events, "total": 250}},
+                {"json": {"items": page3_events, "total": 250}},
+            ],
+        )
+
+        results = threshold_trigger._get_search_job_results(job_uuid, limit=100)
+
+        assert results is not None
+        assert len(results) == 250
+        assert results[0]["uuid"] == "event-0"
+        assert results[99]["uuid"] == "event-99"
+        assert results[100]["uuid"] == "event-100"
+        assert results[249]["uuid"] == "event-249"
+
+        # Verify pagination was done correctly
+        assert requests_mock.call_count == 3
+        assert requests_mock.request_history[0].qs == {"limit": ["100"], "offset": ["0"]}
+        assert requests_mock.request_history[1].qs == {"limit": ["100"], "offset": ["100"]}
+        assert requests_mock.request_history[2].qs == {"limit": ["100"], "offset": ["200"]}
+
     def test_fetch_alert_events_all_events(
         self, threshold_trigger, sample_threshold_alert, sample_events, requests_mock
     ):
