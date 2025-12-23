@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-23 - 2.68.20
+
+### Added
+
+- Add three new configuration parameters: fetch_events, fetch_all_events, max_events_per_fetch
+- Implement search jobs API integration for retrieving alert events
+- Add dual-mode event fetching: all events vs new events since last trigger
+- Save fetched events to events.json alongside alert.json
+- Add comprehensive test coverage (18 new tests) for event fetching functionality
+- Fix mypy type errors with proper None checks and type annotations  
+- Add graceful degradation: trigger continues if event fetching fails
+- Update manifest with new configuration parameters and output schema
+
 ## 2025-12-18 - 2.68.19
 
 ### Changed
@@ -24,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added action to list alerts
-- 
+
 ## 2025-11-18  - 2.68.16
 
 ### Changed
