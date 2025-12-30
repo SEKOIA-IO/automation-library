@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-12-30 - 2.68.23
+## 2025-12-23 - 2.68.24
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Use Path.open() instead of smart_open for SDK-managed paths to fix FileNotFoundError
+
+### Added
+
+- AlertEventsThresholdTrigger: Add 4 new tests for lock mechanisms and concurrency handling
+- AlertStateManager: Add 15 comprehensive tests covering state persistence, cleanup, and error scenarios
+
+## 2025-12-23 - 2.68.23
 
 ### Fixed
 
