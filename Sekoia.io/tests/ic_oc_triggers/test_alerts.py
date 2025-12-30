@@ -1431,9 +1431,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
                 # Should trigger because there are events in time window
                 assert threshold_trigger.send_event.called
 
-    def test_time_threshold_does_not_trigger_when_no_events_in_window(
-        self, threshold_trigger, sample_threshold_alert
-    ):
+    def test_time_threshold_does_not_trigger_when_no_events_in_window(self, threshold_trigger, sample_threshold_alert):
         """Test that time-based threshold does NOT trigger when no events in time window."""
         # Initialize state manager first
         threshold_trigger._ensure_initialized()
