@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-23 - 2.68.22
+
+### Fixed
+
+- Fixed Pydantic v2 issue where unknown fields were rejected, preventing playbooks from activating successfully
+
 ## 2025-12-23 - 2.68.21
 
 ### Fixed
