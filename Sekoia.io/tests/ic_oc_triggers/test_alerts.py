@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -1432,6 +1431,49 @@ class TestAlertEventsThresholdTrigger_EventFetching:
                 # Should trigger because there are events in time window
                 assert threshold_trigger.send_event.called
 
+    def test_time_threshold_does_not_trigger_when_no_events_in_window(
+        self, threshold_trigger, sample_threshold_alert
+    ):
+        """Test that time-based threshold does NOT trigger when no events in time window."""
+        # Initialize state manager first
+        threshold_trigger._ensure_initialized()
+
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger.configuration["time_window_hours"] = 1
+
+        # Create previous state with lower event count
+        alert_uuid = "alert-uuid-no-time-events"
+        threshold_trigger.state_manager.update_alert_state(
+            alert_uuid=alert_uuid,
+            alert_short_id="AL_NO_TIME",
+            rule_uuid="rule-123",
+            rule_name="Test Rule",
+            event_count=5,  # Previous count
+        )
+
+        # Alert with higher event count BUT no events in time window
+        alert = {
+            **sample_threshold_alert,
+            "uuid": alert_uuid,
+            "short_id": "AL_NO_TIME",
+            "events_count": 10,  # New events added, but outside time window
+        }
+
+        message = {
+            "type": "alert",
+            "action": "updated",
+            "attributes": {"uuid": alert_uuid},
+        }
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+            # Mock _count_events_in_time_window to return 0 (no events in time window)
+            with patch.object(threshold_trigger, "_count_events_in_time_window", return_value=0):
+                threshold_trigger.handle_event(message)
+
+                # Should NOT trigger because no events in time window (even though there are new events)
+                assert not threshold_trigger.send_event.called
+
     def test_state_cleanup_periodic(self, threshold_trigger, sample_threshold_alert):
         """Test that state cleanup runs periodically."""
         # Initialize state manager first
@@ -1507,7 +1549,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         assert context["current_count"] == 25
 
     def test_error_handling_api_fetch_failure(self, threshold_trigger):
-        """Test error handling when API fetch fails."""
+        """Test error handling when API fetch fails - should log and not send event."""
         message = {
             "type": "alert",
             "action": "updated",
@@ -1520,6 +1562,8 @@ class TestAlertEventsThresholdTrigger_EventFetching:
 
             # Should log the error via log_exception
             assert threshold_trigger.log_exception.called
+            # Should NOT send event when API fetch fails
+            assert not threshold_trigger.send_event.called
 
     def test_error_handling_state_update_failure(self, threshold_trigger, sample_threshold_alert):
         """Test error handling when state update fails - should continue and send event."""

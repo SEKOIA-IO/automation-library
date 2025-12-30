@@ -1,7 +1,6 @@
-import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch, mock_open
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -252,6 +251,12 @@ class TestAlertStateManager:
                     rule_name="Rule",
                     event_count=1,
                 )
+
+            # Verify error was logged
+            assert mock_logger.called
+            # Check that logger was called with error level and appropriate message
+            log_calls = [str(call) for call in mock_logger.call_args_list]
+            assert any("error" in call.lower() or "failed" in call.lower() for call in log_calls)
 
     def test_cleanup_with_exception_propagates(self, state_manager):
         """Test that exceptions during cleanup are propagated."""
