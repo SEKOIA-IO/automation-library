@@ -76,8 +76,14 @@ class AlertStateManager:
                     "last_cleanup": datetime.now(timezone.utc).isoformat(),
                 },
             }
-        except FileNotFoundError:
-            self._log("State file not found in S3, creating new state", level="debug")
+        except (FileNotFoundError, IOError, OSError) as exc:
+            # Handle both standard file errors and S3-specific errors (404, etc.)
+            self._log(
+                "State file not found or inaccessible in S3, creating new state",
+                level="debug",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return {
                 "alerts": {},
                 "metadata": {
@@ -226,8 +232,8 @@ class AlertStateManager:
         )
         now = datetime.now(timezone.utc).isoformat()
 
-        # Reload state from S3 to get latest version
-        self._state = self._load_state_from_s3()
+        # Reload state from S3 to get latest version (use _load_state for consistent error handling)
+        self._state = self._load_state()
 
         existing = self._state["alerts"].get(alert_uuid)
 
@@ -288,8 +294,8 @@ class AlertStateManager:
         )
 
         try:
-            # Reload state from S3 to get latest version
-            self._state = self._load_state_from_s3()
+            # Reload state from S3 to get latest version (use _load_state for consistent error handling)
+            self._state = self._load_state()
 
             cutoff_iso = cutoff_date.isoformat()
             to_remove = []

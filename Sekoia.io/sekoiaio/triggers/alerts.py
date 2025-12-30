@@ -396,6 +396,14 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
     This trigger extends SecurityAlertsTrigger to reuse common alert handling logic
     like API retrieval and rule filtering.
+
+    Concurrency handling:
+    - In-memory locks prevent race conditions within a single pod
+    - S3 state persistence ensures state survives pod restarts
+    - Multi-pod deployments: In rare cases with high-frequency updates to the same
+      alert across multiple pods, duplicate triggers may occur. This is acceptable
+      as S3 writes are atomic and the impact is minimal (1-2 extra triggers vs 20+
+      without locks).
     """
 
     # Handle only alert updates
@@ -411,10 +419,30 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self._events_api_path: Optional[str] = None
         self._alert_locks: dict[str, Lock] = {}
         self._locks_lock = Lock()  # Lock to protect access to _alert_locks dictionary
+        self._max_locks = 1024  # Maximum number of locks to keep in memory
 
     def _get_alert_lock(self, alert_uuid: str) -> Lock:
-        """Get or create a lock for a specific alert to prevent concurrent processing."""
+        """
+        Get or create a lock for a specific alert to prevent concurrent processing.
+
+        Implements bounded cache with max 1024 locks. When threshold is exceeded,
+        prunes unlocked entries to prevent unbounded memory growth.
+        """
         with self._locks_lock:
+            # Clean up unlocked entries if we've hit the max
+            if len(self._alert_locks) >= self._max_locks:
+                # Remove locks that are not currently acquired
+                unlocked = [uuid for uuid, lock in self._alert_locks.items() if not lock.locked()]
+                for uuid in unlocked[: len(unlocked) // 2]:  # Remove half of unlocked locks
+                    del self._alert_locks[uuid]
+
+                if len(self._alert_locks) >= self._max_locks:
+                    self.log(
+                        message=f"Alert locks cache at capacity ({len(self._alert_locks)} locks)",
+                        level="warning",
+                        max_locks=self._max_locks,
+                    )
+
             if alert_uuid not in self._alert_locks:
                 self._alert_locks[alert_uuid] = Lock()
             return self._alert_locks[alert_uuid]
