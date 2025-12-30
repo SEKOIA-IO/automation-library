@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-30 - 2.68.23
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Migrate state storage from local filesystem to S3 to fix read-only filesystem errors in production
+- AlertEventsThresholdTrigger: Add per-alert locks to prevent race conditions causing duplicate triggers
+- AlertEventsThresholdTrigger: Implement bounded lock cache (max 1024) to prevent memory leaks
+- AlertEventsThresholdTrigger: Fix inconsistent error handling in state loading
+- AlertEventsThresholdTrigger: Add S3-specific exception handling (IOError, OSError) for better resilience
+
 ## 2025-12-23 - 2.68.22
 
 ### Fixed

@@ -645,6 +645,84 @@ class TestAlertEventsThresholdTrigger:
                 assert threshold_trigger.send_event.called
 
 
+class TestAlertLockManagement:
+    """Test alert lock management functionality."""
+
+    def test_get_alert_lock_creates_new_lock(self, threshold_trigger):
+        """Test that getting a lock for a new alert creates it."""
+        threshold_trigger._ensure_initialized()
+
+        lock = threshold_trigger._get_alert_lock("alert-1")
+        assert lock is not None
+        assert "alert-1" in threshold_trigger._alert_locks
+
+    def test_get_alert_lock_returns_same_lock(self, threshold_trigger):
+        """Test that getting the same lock twice returns the same object."""
+        threshold_trigger._ensure_initialized()
+
+        lock1 = threshold_trigger._get_alert_lock("alert-1")
+        lock2 = threshold_trigger._get_alert_lock("alert-1")
+        assert lock1 is lock2
+
+    def test_alert_locks_bounded_cache(self, threshold_trigger):
+        """Test that alert locks cache is bounded to max_locks."""
+        threshold_trigger._ensure_initialized()
+        threshold_trigger._max_locks = 10
+
+        # Create 20 locks
+        for i in range(20):
+            threshold_trigger._get_alert_lock(f"alert-{i}")
+
+        # Cache should be pruned to stay under max_locks
+        assert len(threshold_trigger._alert_locks) <= 10
+
+    def test_alert_locks_prunes_unlocked_entries(self, threshold_trigger):
+        """Test that cache pruning removes only unlocked entries."""
+        threshold_trigger._ensure_initialized()
+        threshold_trigger._max_locks = 5
+
+        # Create and acquire some locks
+        locks = []
+        for i in range(3):
+            lock = threshold_trigger._get_alert_lock(f"alert-{i}")
+            lock.acquire()
+            locks.append(lock)
+
+        # Create unlocked locks to exceed max
+        for i in range(3, 10):
+            threshold_trigger._get_alert_lock(f"alert-{i}")
+
+        # Locked entries should remain
+        for i in range(3):
+            assert f"alert-{i}" in threshold_trigger._alert_locks
+
+        # Release locks
+        for lock in locks:
+            lock.release()
+
+    def test_alert_locks_logs_warning_at_capacity(self, threshold_trigger):
+        """Test that a warning is logged when cache is at capacity."""
+        threshold_trigger._ensure_initialized()
+        threshold_trigger._max_locks = 5
+
+        # Create and acquire all locks to prevent pruning
+        locks = []
+        for i in range(5):
+            lock = threshold_trigger._get_alert_lock(f"alert-{i}")
+            lock.acquire()
+            locks.append(lock)
+
+        # Try to add one more
+        threshold_trigger._get_alert_lock("alert-extra")
+
+        # Check warning was logged
+        assert any("Alert locks cache at capacity" in str(call) for call in threshold_trigger.log.call_args_list)
+
+        # Release locks
+        for lock in locks:
+            lock.release()
+
+
 class TestAlertStateManager:
     """Test AlertStateManager functionality."""
 
