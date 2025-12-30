@@ -716,10 +716,7 @@ class TestAlertLockManagement:
         threshold_trigger._get_alert_lock("alert-extra")
 
         # Check warning was logged
-        assert any(
-            "Alert locks cache at capacity" in str(call)
-            for call in threshold_trigger.log.call_args_list
-        )
+        assert any("Alert locks cache at capacity" in str(call) for call in threshold_trigger.log.call_args_list)
 
         # Release locks
         for lock in locks:
