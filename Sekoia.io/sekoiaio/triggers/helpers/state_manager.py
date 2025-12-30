@@ -59,7 +59,7 @@ class AlertStateManager:
     def _load_state_from_s3(self) -> dict[str, Any]:
         """Load JSON from S3."""
         try:
-            with smart_open.open(str(self.state_file_path), 'r') as f:
+            with smart_open.open(str(self.state_file_path), "r") as f:
                 state = json.load(f)
                 self._log("State file loaded successfully from S3", level="debug")
         except json.JSONDecodeError as exc:
@@ -110,7 +110,7 @@ class AlertStateManager:
     def _save_state_to_s3(self):
         """Write JSON to S3."""
         try:
-            with smart_open.open(str(self.state_file_path), 'w') as f:
+            with smart_open.open(str(self.state_file_path), "w") as f:
                 json.dump(self._state, f, indent=2)
             self._log("State saved successfully to S3", level="debug")
         except Exception as e:
