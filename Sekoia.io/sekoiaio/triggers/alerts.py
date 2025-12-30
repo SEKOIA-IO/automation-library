@@ -2,6 +2,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from posixpath import join as urljoin
+from threading import Lock
 from typing import Any, Optional
 
 import orjson
@@ -408,6 +409,15 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self._validated_config: Optional[AlertEventsThresholdConfiguration] = None
         self._http_session: Optional[requests.Session] = None
         self._events_api_path: Optional[str] = None
+        self._alert_locks: dict[str, Lock] = {}
+        self._locks_lock = Lock()  # Lock to protect access to _alert_locks dictionary
+
+    def _get_alert_lock(self, alert_uuid: str) -> Lock:
+        """Get or create a lock for a specific alert to prevent concurrent processing."""
+        with self._locks_lock:
+            if alert_uuid not in self._alert_locks:
+                self._alert_locks[alert_uuid] = Lock()
+            return self._alert_locks[alert_uuid]
 
     @property
     def validated_config(self) -> AlertEventsThresholdConfiguration:
@@ -510,6 +520,16 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(message="Notification missing alert UUID", level="warning", message_attributes=str(alert_attrs))
             return
 
+        # Use a lock to prevent concurrent processing of the same alert
+        alert_lock = self._get_alert_lock(alert_uuid)
+        with alert_lock:
+            self._handle_event_locked(alert_uuid, event_type, message)
+
+    def _handle_event_locked(self, alert_uuid: str, event_type: str, message: dict):
+        """
+        Handle alert update with lock acquired.
+        This method contains the actual logic that was previously in handle_event.
+        """
         self.log(message="Processing alert update", level="debug", alert_uuid=alert_uuid)
 
         try:
