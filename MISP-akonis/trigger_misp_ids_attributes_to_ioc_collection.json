@@ -1,0 +1,35 @@
+{ 
+  "uuid": "9bfd6d9d-3f64-4ec0-bdb5-6253677af677",
+  "name": "MISP IDS Attributes to IOC Collection",
+  "docker_parameters": "trigger-misp-ids-to-ioc-collection",
+  "description": "Periodically retrieves IDS-flagged attributes from a MISP instance and pushes them to a Sekoia.io IOC Collection",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "sleep_time": {
+        "type": "integer",
+        "description": "Time in seconds the worker sleeps between the checks of new events"
+      },
+      "attributes_filter": {
+        "type": "integer",
+        "description": "Time in seconds after which attributes are no longer considered new (0 for no filter)"
+      }
+    },
+    "title": "Trigger Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "event": {
+        "description": "MISP event",
+        "type": "object"
+      }
+    },
+    "required": [
+      "event"
+    ],
+    "title": "Results",
+    "type": "object"
+  }
+}
