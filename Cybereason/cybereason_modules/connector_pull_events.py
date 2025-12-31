@@ -52,8 +52,8 @@ class CybereasonEventConnector(Connector):
         self.cursor = CheckpointTimestamp(
             time_unit=TimeUnit.MILLISECOND,
             path=self._data_path,
-            start_at=timedelta(days=90),
-            ignore_older_than=timedelta(days=90),
+            start_at=timedelta(hours=1),
+            ignore_older_than=timedelta(days=7),
         )
 
         self.from_date: int = self.cursor.offset
