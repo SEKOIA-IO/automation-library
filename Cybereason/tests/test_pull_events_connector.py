@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
+from cachetools import LRUCache
 
 import pytest
 import requests_mock
@@ -417,3 +418,45 @@ def test_fetch_last_events_integration(symphony_storage):
 
     malops = list(trigger.fetch_last_events())
     assert len(malops) > 0
+
+
+def test_load_events_cache_empty(trigger):
+    with patch.object(trigger.cursor, '_context') as mock_context:
+        mock_context.__enter__ = MagicMock(return_value={})
+        mock_context.__exit__ = MagicMock(return_value=False)
+
+        cache = trigger.load_events_cache()
+
+        assert isinstance(cache, LRUCache)
+        assert len(cache) == 0
+
+def test_load_events_cache_with_existing_events(trigger):
+    existing_events = ["event-uuid-1", "event-uuid-2", "event-uuid-3"]
+
+    with patch.object(trigger.cursor, '_context') as mock_context:
+        mock_cache = {"events_cache": existing_events}
+        mock_context.__enter__ = MagicMock(return_value=mock_cache)
+        mock_context.__exit__ = MagicMock(return_value=False)
+
+        cache = trigger.load_events_cache()
+
+        assert len(cache) == 3
+        assert "event-uuid-1" in cache
+        assert "event-uuid-2" in cache
+        assert "event-uuid-3" in cache
+
+def test_save_events_cache(trigger):
+    events_cache = LRUCache(maxsize=1000)
+    events_cache["event-1"] = 1
+    events_cache["event-2"] = 1
+
+    saved_data = {}
+
+    with patch.object(trigger.cursor, '_context') as mock_context:
+        mock_context.__enter__ = MagicMock(return_value=saved_data)
+        mock_context.__exit__ = MagicMock(return_value=False)
+
+        trigger.save_events_cache(events_cache)
+
+        assert "events_cache" in saved_data
+        assert set(saved_data["events_cache"]) == {"event-1", "event-2"}
