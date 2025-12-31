@@ -421,7 +421,7 @@ def test_fetch_last_events_integration(symphony_storage):
 
 
 def test_load_events_cache_empty(trigger):
-    with patch.object(trigger.cursor, '_context') as mock_context:
+    with patch.object(trigger.cursor, "_context") as mock_context:
         mock_context.__enter__ = MagicMock(return_value={})
         mock_context.__exit__ = MagicMock(return_value=False)
 
@@ -430,10 +430,11 @@ def test_load_events_cache_empty(trigger):
         assert isinstance(cache, LRUCache)
         assert len(cache) == 0
 
+
 def test_load_events_cache_with_existing_events(trigger):
     existing_events = ["event-uuid-1", "event-uuid-2", "event-uuid-3"]
 
-    with patch.object(trigger.cursor, '_context') as mock_context:
+    with patch.object(trigger.cursor, "_context") as mock_context:
         mock_cache = {"events_cache": existing_events}
         mock_context.__enter__ = MagicMock(return_value=mock_cache)
         mock_context.__exit__ = MagicMock(return_value=False)
@@ -445,6 +446,7 @@ def test_load_events_cache_with_existing_events(trigger):
         assert "event-uuid-2" in cache
         assert "event-uuid-3" in cache
 
+
 def test_save_events_cache(trigger):
     events_cache = LRUCache(maxsize=1000)
     events_cache["event-1"] = 1
@@ -452,7 +454,7 @@ def test_save_events_cache(trigger):
 
     saved_data = {}
 
-    with patch.object(trigger.cursor, '_context') as mock_context:
+    with patch.object(trigger.cursor, "_context") as mock_context:
         mock_context.__enter__ = MagicMock(return_value=saved_data)
         mock_context.__exit__ = MagicMock(return_value=False)
 
