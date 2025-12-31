@@ -3,7 +3,6 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Callable
-import smart_open
 
 
 class AlertStateManager:
@@ -57,9 +56,10 @@ class AlertStateManager:
                 pass
 
     def _load_state_from_s3(self) -> dict[str, Any]:
-        """Load JSON from S3."""
+        """Load JSON from S3 using Path.open() for SDK compatibility."""
         try:
-            with smart_open.open(str(self.state_file_path), "r") as f:
+            # Use Path.open() instead of smart_open for SDK-managed paths
+            with self.state_file_path.open("r") as f:
                 state = json.load(f)
                 self._log("State file loaded successfully from S3", level="debug")
         except json.JSONDecodeError as exc:
@@ -114,9 +114,10 @@ class AlertStateManager:
         return state
 
     def _save_state_to_s3(self):
-        """Write JSON to S3."""
+        """Write JSON to S3 using Path.open() for SDK compatibility."""
         try:
-            with smart_open.open(str(self.state_file_path), "w") as f:
+            # Use Path.open() instead of smart_open for SDK-managed paths
+            with self.state_file_path.open("w") as f:
                 json.dump(self._state, f, indent=2)
             self._log("State saved successfully to S3", level="debug")
         except Exception as e:
