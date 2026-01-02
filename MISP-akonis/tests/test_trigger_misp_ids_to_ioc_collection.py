@@ -2,9 +2,7 @@ import pytest
 from unittest.mock import Mock, patch, PropertyMock, call
 from pymisp import PyMISPError
 
-from misp.trigger_misp_ids_attributes_to_ioc_collection import (
-    MISPIDSAttributesToIOCCollectionTrigger
-)
+from misp.trigger_misp_ids_attributes_to_ioc_collection import MISPIDSAttributesToIOCCollectionTrigger
 
 
 class TestMISPIDSAttributesToIOCCollectionTrigger:
@@ -55,24 +53,9 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
 
     def test_extract_ioc_value_composite(self, trigger):
         sha256 = "a" * 64
-        assert (
-            trigger.extract_ioc_value(
-                Mock(type="filename|sha256", value=f"x.exe|{sha256}")
-            )
-            == sha256
-        )
-        assert (
-            trigger.extract_ioc_value(
-                Mock(type="ip-dst|port", value="1.1.1.1|443")
-            )
-            == "1.1.1.1"
-        )
-        assert (
-            trigger.extract_ioc_value(
-                Mock(type="domain|ip", value="example.com|1.1.1.1")
-            )
-            == "example.com"
-        )
+        assert trigger.extract_ioc_value(Mock(type="filename|sha256", value=f"x.exe|{sha256}")) == sha256
+        assert trigger.extract_ioc_value(Mock(type="ip-dst|port", value="1.1.1.1|443")) == "1.1.1.1"
+        assert trigger.extract_ioc_value(Mock(type="domain|ip", value="example.com|1.1.1.1")) == "example.com"
 
     # ------------------------------------------------------------------ #
     # MISP
@@ -155,13 +138,14 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
         ]
         mock_pymisp.return_value = misp
 
-        with patch(
-            "misp.trigger_misp_ids_attributes_to_ioc_collection.requests.post"
-        ) as mock_post, patch.object(
-            MISPIDSAttributesToIOCCollectionTrigger,
-            "running",
-            new_callable=PropertyMock,
-        ) as running:
+        with (
+            patch("misp.trigger_misp_ids_attributes_to_ioc_collection.requests.post") as mock_post,
+            patch.object(
+                MISPIDSAttributesToIOCCollectionTrigger,
+                "running",
+                new_callable=PropertyMock,
+            ) as running,
+        ):
             running.side_effect = [True, False]
 
             resp = Mock(status_code=200)
@@ -183,13 +167,14 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
         ]
         mock_pymisp.return_value = misp
 
-        with patch(
-            "misp.trigger_misp_ids_attributes_to_ioc_collection.requests.post"
-        ) as mock_post, patch.object(
-            MISPIDSAttributesToIOCCollectionTrigger,
-            "running",
-            new_callable=PropertyMock,
-        ) as running:
+        with (
+            patch("misp.trigger_misp_ids_attributes_to_ioc_collection.requests.post") as mock_post,
+            patch.object(
+                MISPIDSAttributesToIOCCollectionTrigger,
+                "running",
+                new_callable=PropertyMock,
+            ) as running,
+        ):
             running.side_effect = [True, True, False]
 
             resp = Mock(status_code=200)

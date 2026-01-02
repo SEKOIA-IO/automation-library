@@ -1,5 +1,4 @@
-import logging
-import os
+import os 
 import time
 from traceback import format_exc
 
@@ -19,11 +18,6 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
         super().__init__(*args, **kwargs)
 
         FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
-        logging.basicConfig(
-            level=logging.getLevelName(os.environ.get("LOG_LEVEL", "INFO")),
-            format=FORMAT,
-        )
-        self._logger = logging.getLogger(__name__)
 
         self.misp_client = None
         self.processed_attributes = None
@@ -62,9 +56,15 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                 ssl=True,
                 debug=False,
             )
-            self._logger.info("MISP client initialized successfully")
+            self.log(
+                message="MISP client initialized successfully",
+                level="info",
+            )
         except Exception as error:
-            self._logger.error(f"Failed to initialize MISP client: {error}")
+            self.log(
+                message=f"Failed to initialize MISP client: {error}",
+                level="error",
+            )
             raise
 
     def initialize_cache(self):
@@ -73,9 +73,15 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             # TTL = publish_timestamp in days * seconds per day
             cache_ttl = abs(int(self.publish_timestamp)) * 24 * 3600
             self.processed_attributes = TTLCache(maxsize=10000, ttl=cache_ttl)
-            self._logger.info(f"Cache initialized with TTL={cache_ttl}s")
+            self.log(
+                message=f"Cache initialized with TTL={cache_ttl}s",
+                level="info",
+            )
         except Exception as error:
-            self._logger.error(f"Failed to initialize cache: {error}")
+            self.log(
+                message=f"Failed to initialize cache: {error}",
+                level="error",
+            )
             raise
 
     def fetch_attributes(self, publish_timestamp):
@@ -89,7 +95,10 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             List of MISPAttribute objects
         """
         try:
-            self._logger.info(f"Fetching MISP attributes with to_ids=1, " f"publish_timestamp={publish_timestamp}d")
+            self.log(
+                message=f"Fetching MISP attributes with to_ids=1, publish_timestamp={publish_timestamp}d",
+                level="info",
+            )
 
             attributes = self.misp_client.search(
                 controller="attributes",
@@ -98,14 +107,23 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                 publish_timestamp=f"{publish_timestamp}d",
             )
 
-            self._logger.info(f"Retrieved {len(attributes)} IDS attributes from MISP")
+            self.log(
+                message=f"Retrieved {len(attributes)} IDS attributes from MISP",
+                level="info",
+            )
             return attributes
 
         except PyMISPError as error:
-            self._logger.error(f"MISP API error: {error}")
+            self.log(
+                message=f"MISP API error: {error}",
+                level="error",
+            )
             raise
         except Exception as error:
-            self._logger.error(f"Error fetching attributes from MISP: {error}")
+            self.log(
+                message=f"Error fetching attributes from MISP: {error}",
+                level="error",
+            )
             raise
 
     def filter_supported_types(self, attributes):
@@ -136,7 +154,10 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
 
         filtered = [attr for attr in attributes if attr.type in supported_types]
 
-        self._logger.info(f"Filtered to {len(filtered)} supported attributes " f"(from {len(attributes)} total)")
+        self.log(
+            message=f"Filtered to {len(filtered)} supported attributes (from {len(attributes)} total)",
+            level="info",
+        )
         return filtered
 
     def extract_ioc_value(self, attribute):
@@ -171,14 +192,20 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             ioc_values: List of IOC value strings
         """
         if not ioc_values:
-            self._logger.info("No IOC values to push")
+            self.log(
+                message="No IOC values to push",
+                level="info",
+            )
             return
 
         # Batch into chunks of 1000
         batch_size = 1000
         total_batches = (len(ioc_values) + batch_size - 1) // batch_size
 
-        self._logger.info(f"Pushing {len(ioc_values)} IOCs in {total_batches} batch(es)")
+        self.log(
+            message=f"Pushing {len(ioc_values)} IOCs in {total_batches} batch(es)",
+            level="info",
+        )
 
         for batch_num, i in enumerate(range(0, len(ioc_values), batch_size), 1):
             batch = ioc_values[i : i + batch_size]
@@ -205,11 +232,12 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
 
                     if response.status_code == 200:
                         result = response.json()
-                        self._logger.info(
-                            f"Batch {batch_num}/{total_batches} pushed successfully: "
+                        self.log(
+                            message=f"Batch {batch_num}/{total_batches} pushed successfully: "
                             f"{result.get('created', 0)} created, "
                             f"{result.get('updated', 0)} updated, "
-                            f"{result.get('ignored', 0)} ignored"
+                            f"{result.get('ignored', 0)} ignored",
+                            level="info",
                         )
                         success = True
                         break
@@ -221,46 +249,76 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                         else:
                             wait_time = 2**retry_count * 10
 
-                        self._logger.warning(f"Rate limited. Waiting {wait_time} seconds...")
+                        self.log(
+                            message=f"Rate limited. Waiting {wait_time} seconds...",
+                            level="info",
+                        )
                         time.sleep(wait_time)
                         retry_count += 1
                     elif response.status_code in [401, 403]:
                         # Authentication/Authorization errors - fatal
-                        self._logger.error(f"Authentication error: {response.status_code} - " f"{response.text}")
+                        self.log(
+                            message=f"Authentication error: {response.status_code} - {response.text}",
+                            level="error",
+                        )
                         raise Exception(f"Sekoia API authentication error: {response.status_code}")
                     elif response.status_code == 404:
                         # Not found - fatal
-                        self._logger.error(f"IOC Collection not found: {response.status_code} - " f"{response.text}")
+                        self.log(
+                            message=f"IOC Collection not found: {response.status_code} - {response.text}",
+                            level="error",
+                        )
                         raise Exception(f"IOC Collection not found: {self.ioc_collection_uuid}")
                     else:
                         # Temporary error - retry
-                        self._logger.error(f"Error {response.status_code}: {response.text}")
+                        self.log(
+                            message=f"Error {response.status_code}: {response.text}",
+                            level="error",
+                        )
                         retry_count += 1
                         time.sleep(5)
 
                 except requests.exceptions.Timeout:
-                    self._logger.error("Request timeout")
+                    self.log(
+                        message="Request timeout",
+                        level="error",
+                    )
                     retry_count += 1
                     time.sleep(5)
                 except requests.exceptions.RequestException as error:
-                    self._logger.error(f"Request error: {error}")
+                    self.log(
+                        message=f"Request error: {error}",
+                        level="error",
+                    )
                     retry_count += 1
                     time.sleep(5)
 
             if not success:
-                self._logger.error(f"Failed to push batch {batch_num}/{total_batches} " f"after {max_retries} retries")
+                self.log(
+                    message=f"Failed to push batch {batch_num}/{total_batches} after {max_retries} retries",
+                    level="error",
+                )
 
     def run(self):
         """Main trigger execution loop."""
-        self._logger.info("Starting MISP IDS Attributes to IOC Collection trigger")
+        self.log(
+            message="Starting MISP IDS Attributes to IOC Collection trigger",
+            level="info",
+        )
 
         try:
             # Initialize components
             self.initialize_misp_client()
             self.initialize_cache()
         except Exception as error:
-            self._logger.error(f"Failed to initialize trigger: {error}")
-            self._logger.error(format_exc())
+            self.log(
+                message=f"Failed to initialize trigger: {error}",
+                level="error",
+            )
+            self.log(
+                message=format_exc(),
+                level="error",
+            )
             return
 
         # Main loop
@@ -276,7 +334,10 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                 new_attributes = [attr for attr in supported_attributes if attr.uuid not in self.processed_attributes]
 
                 if new_attributes:
-                    self._logger.info(f"Found {len(new_attributes)} new IOCs to process")
+                    self.log(
+                        message=f"Found {len(new_attributes)} new IOCs to process",
+                        level="info",
+                    )
 
                     # Extract IOC values
                     ioc_values = [self.extract_ioc_value(attr) for attr in new_attributes]
@@ -288,21 +349,42 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                     for attr in new_attributes:
                         self.processed_attributes[attr.uuid] = True
 
-                    self._logger.info(f"Successfully processed {len(new_attributes)} new IOCs")
+                    self.log(
+                        message=f"Successfully processed {len(new_attributes)} new IOCs",
+                        level="info",
+                    )
                 else:
-                    self._logger.info("No new IOCs to process")
+                    self.log(
+                        message="No new IOCs to process",
+                        level="info",
+                    )
 
                 # Sleep until next poll
-                self._logger.info(f"Sleeping for {self.sleep_time} seconds")
+                self.log(
+                    message=f"Sleeping for {self.sleep_time} seconds",
+                    level="info",
+                )
                 time.sleep(self.sleep_time)
 
             except KeyboardInterrupt:
-                self._logger.info("Trigger stopped by user")
+                self.log(
+                    message="Trigger stopped by user",
+                    level="info",
+                )
                 break
             except Exception as error:
-                self._logger.error(f"Error in trigger loop: {error}")
-                self._logger.error(format_exc())
+                self.log(
+                    message=f"Error in trigger loop: {error}",
+                    level="error",
+                )
+                self.log(
+                    message=format_exc(),
+                    level="error",
+                )
                 # Wait 1 minute before retry on error
                 time.sleep(60)
 
-        self._logger.info("MISP IDS Attributes to IOC Collection trigger stopped")
+        self.log(
+            message="MISP IDS Attributes to IOC Collection trigger stopped",
+            level="info",
+        )
