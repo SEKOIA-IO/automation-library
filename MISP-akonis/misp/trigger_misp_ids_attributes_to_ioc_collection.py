@@ -53,7 +53,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             self.misp_client = PyMISP(
                 url=self.module.configuration.get("misp_url"),
                 key=self.module.configuration.get("misp_api_key"),
-                ssl=True,
+                ssl=False,
                 debug=False,
             )
             self.log(
