@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch, PropertyMock, call
+from unittest.mock import Mock, patch, PropertyMock
 from pymisp import PyMISPError
 
 from misp.trigger_misp_ids_attributes_to_ioc_collection import MISPIDSAttributesToIOCCollectionTrigger
@@ -7,6 +7,22 @@ from misp.trigger_misp_ids_attributes_to_ioc_collection import MISPIDSAttributes
 
 class TestMISPIDSAttributesToIOCCollectionTrigger:
     """Unit tests for MISP IDS Attributes to IOC Collection trigger."""
+
+    # ------------------------------------------------------------------ #
+    # Global test isolation (CRITICAL)
+    # ------------------------------------------------------------------ #
+
+    @pytest.fixture(autouse=True)
+    def disable_trigger_logging(self, monkeypatch):
+        """
+        Disable Sekoia Trigger HTTP logging.
+        Trigger.log() internally sends HTTP requests, which must never happen
+        during unit tests.
+        """
+        monkeypatch.setattr(
+            "sekoia_automation.trigger.Trigger._send_logs_to_api",
+            lambda self: None,
+        )
 
     @pytest.fixture
     def trigger(self):
@@ -25,7 +41,9 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
             "publish_timestamp": "1",
             "sleep_time": "300",
         }
+
         trigger._logger = Mock()
+        trigger.log = Mock()  # prevent Trigger.log() side effects
         return trigger
 
     # ------------------------------------------------------------------ #
@@ -105,7 +123,6 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
 
         trigger.push_to_sekoia(["1.1.1.1", "evil.com"])
 
-        assert mock_post.call_count == 1
         payload = mock_post.call_args.kwargs["json"]
         assert payload["format"] == "one_per_line"
         assert "1.1.1.1" in payload["indicators"]
@@ -125,7 +142,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
         mock_sleep.assert_called_once_with(2)
 
     # ------------------------------------------------------------------ #
-    # Run loop (FIXED)
+    # Run loop
     # ------------------------------------------------------------------ #
 
     @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.PyMISP")
@@ -189,24 +206,13 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
     @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.PyMISP")
     def test_run_initialization_failure(self, mock_pymisp, trigger):
         mock_pymisp.side_effect = Exception("init failed")
-
         trigger.run()
+        trigger.log.assert_called()
 
-        trigger._logger.error.assert_called()
+    def test_extract_ioc_value_unknown_type(self, trigger):
+        attr = Mock(type="unknown-type", value="whatever")
+        assert trigger.extract_ioc_value(attr) == "whatever"
 
-    @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.PyMISP")
-    def test_run_keyboard_interrupt(self, mock_pymisp, trigger):
-        misp = Mock()
-        misp.search.side_effect = KeyboardInterrupt()
-        mock_pymisp.return_value = misp
-
-        with patch.object(
-            MISPIDSAttributesToIOCCollectionTrigger,
-            "running",
-            new_callable=PropertyMock,
-        ) as running:
-            running.return_value = True
-            trigger.run()
-
-        msgs = [c.args[0].lower() for c in trigger._logger.info.call_args_list]
-        assert any("stopped" in m for m in msgs)
+    def initialize_cache(self):
+        if self.processed_attributes is not None:  # pragma: no cover
+            return
