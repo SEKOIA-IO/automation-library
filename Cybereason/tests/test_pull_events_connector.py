@@ -464,3 +464,44 @@ def test_save_events_cache(trigger):
 
         assert "events_cache" in saved_data
         assert set(saved_data["events_cache"]) == {"event-1", "event-2"}
+
+
+def test_fetch_last_events_deduplication(
+    trigger,
+    mock_cybereason_api,
+    epp_malop_detail,
+    epp_machines,
+    epp_users,
+    epp_file_suspects,
+    edr_malop,
+    edr_machines,
+    edr_users,
+    edr_suspicions,
+):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/detection/inbox",
+        status_code=200,
+        json={"malops": [EPP_MALOP, EDR_MALOP]},
+    )
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/detection/details",
+        status_code=200,
+        json=EPP_MALOP_DETAIL,
+    )
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/crimes/unified",
+        status_code=200,
+        json=EDR_MALOP_SUSPICIONS_RESULTS,
+    )
+
+    # First call - should return all events
+    events_first_call = list(trigger.fetch_last_events())
+    assert len(events_first_call) == 9
+
+    # Second call with the same malops - should return no events due to deduplication
+    events_second_call = list(trigger.fetch_last_events())
+    assert len(events_second_call) == 0
+
+    # Verify that the malop GUIDs are in the cache
+    assert EPP_MALOP["guid"] in trigger.events_cache
+    assert EDR_MALOP["guid"] in trigger.events_cache
