@@ -1,6 +1,6 @@
 import signal
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from collections import defaultdict
 from collections.abc import Generator
 from functools import cached_property
