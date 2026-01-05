@@ -303,6 +303,9 @@ class CybereasonEventConnector(Connector):
         for malop in next_malops:
 
             malop_uuid = malop["guid"]
+            # skip already processed malops based on their GUID
+            if malop_uuid in self.events_cache:
+                continue
             self.events_cache[malop_uuid] = 1
 
             # save the greater date ever seen
