@@ -1,6 +1,6 @@
 import signal
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from collections import defaultdict
 from collections.abc import Generator
 from functools import cached_property
@@ -53,7 +53,7 @@ class CybereasonEventConnector(Connector):
             time_unit=TimeUnit.MILLISECOND,
             path=self._data_path,
             start_at=timedelta(hours=1),
-            ignore_older_than=timedelta(days=7),
+           ignore_older_than=timedelta(hours=1),
         )
 
         self.from_date: int = self.cursor.offset
@@ -303,6 +303,9 @@ class CybereasonEventConnector(Connector):
         for malop in next_malops:
 
             malop_uuid = malop["guid"]
+            # skip already processed malops based on their GUID
+            if malop_uuid in self.events_cache:
+                continue
             self.events_cache[malop_uuid] = 1
 
             # save the greater date ever seen
