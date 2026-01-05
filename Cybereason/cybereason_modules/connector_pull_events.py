@@ -53,7 +53,7 @@ class CybereasonEventConnector(Connector):
             time_unit=TimeUnit.MILLISECOND,
             path=self._data_path,
             start_at=timedelta(hours=1),
-           ignore_older_than=timedelta(hours=1),
+            ignore_older_than=timedelta(hours=1),
         )
 
         self.from_date: int = self.cursor.offset
