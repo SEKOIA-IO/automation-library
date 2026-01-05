@@ -1,35 +1,72 @@
-{ 
+{
   "uuid": "9bfd6d9d-3f64-4ec0-bdb5-6253677af677",
   "name": "MISP IDS Attributes to IOC Collection",
   "docker_parameters": "trigger-misp-ids-to-ioc-collection",
   "description": "Periodically retrieves IDS-flagged attributes from a MISP instance and pushes them to a Sekoia.io IOC Collection",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Trigger Configuration",
     "properties": {
+      "ioc_collection_server": {
+        "type": "string",
+        "description": "Sekoia.io API server URL (e.g., https://api.sekoia.io)",
+        "default": "https://api.sekoia.io"
+      },
+      "ioc_collection_uuid": {
+        "type": "string",
+        "description": "UUID of the target IOC Collection in Sekoia.io",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "sekoia_api_key": {
+        "type": "string",
+        "description": "Sekoia.io API key with write permissions to the IOC Collection",
+        "secret": true
+      },
+      "publish_timestamp": {
+        "type": "string",
+        "description": "Time window for retrieving attributes (e.g., '1' for 1 day, '7' for 7 days)",
+        "default": "1",
+        "pattern": "^[0-9]+$"
+      },
       "sleep_time": {
         "type": "integer",
-        "description": "Time in seconds the worker sleeps between the checks of new events"
-      },
-      "attributes_filter": {
-        "type": "integer",
-        "description": "Time in seconds after which attributes are no longer considered new (0 for no filter)"
-      }
-    },
-    "title": "Trigger Arguments",
-    "type": "object"
-  },
-  "results": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "properties": {
-      "event": {
-        "description": "MISP event",
-        "type": "object"
+        "description": "Time in seconds between polling cycles (minimum: 60 seconds)",
+        "default": 300,
+        "minimum": 60
       }
     },
     "required": [
-      "event"
-    ],
+      "ioc_collection_server",
+      "ioc_collection_uuid",
+      "sekoia_api_key"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
     "title": "Results",
-    "type": "object"
+    "properties": {
+      "iocs_pushed": {
+        "type": "integer",
+        "description": "Number of IOCs successfully pushed to the collection"
+      },
+      "iocs_created": {
+        "type": "integer",
+        "description": "Number of new IOCs created"
+      },
+      "iocs_updated": {
+        "type": "integer",
+        "description": "Number of existing IOCs updated"
+      },
+      "iocs_ignored": {
+        "type": "integer",
+        "description": "Number of IOCs ignored (duplicates)"
+      },
+      "attributes_processed": {
+        "type": "integer",
+        "description": "Total number of MISP attributes processed"
+      }
+    }
   }
 }

@@ -287,7 +287,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
     def test_push_to_sekoia_timeout(self, mock_sleep, mock_post, trigger):
         mock_post.side_effect = [
             requests.exceptions.Timeout("Timeout"),
-            Mock(status_code=200, **{"json.return_value": {"created": 1, "updated": 0, "ignored": 0}})
+            Mock(status_code=200, **{"json.return_value": {"created": 1, "updated": 0, "ignored": 0}}),
         ]
 
         trigger.push_to_sekoia(["1.1.1.1"])
@@ -300,7 +300,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
     def test_push_to_sekoia_request_exception(self, mock_sleep, mock_post, trigger):
         mock_post.side_effect = [
             requests.exceptions.RequestException("Connection error"),
-            Mock(status_code=200, **{"json.return_value": {"created": 1, "updated": 0, "ignored": 0}})
+            Mock(status_code=200, **{"json.return_value": {"created": 1, "updated": 0, "ignored": 0}}),
         ]
 
         trigger.push_to_sekoia(["1.1.1.1"])

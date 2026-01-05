@@ -1,4 +1,4 @@
-import os 
+import os
 import time
 from traceback import format_exc
 
@@ -35,17 +35,17 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
     @property
     def ioc_collection_server(self):
         """Get IOC collection server URL."""
-        return self.configuration.get("ioc_collection_server")
+        return self.configuration.get("ioc_collection_server", "https://api.sekoia.io")
 
     @property
     def ioc_collection_uuid(self):
         """Get IOC collection UUID."""
-        return self.configuration.get("ioc_collection_uuid")
+        return self.configuration.get("ioc_collection_uuid", "")
 
     @property
     def sekoia_api_key(self):
         """Get Sekoia API key."""
-        return self.configuration.get("sekoia_api_key")
+        return self.configuration.get("sekoia_api_key", os.getenv("SEKOIA_API_KEY", ""))
 
     def initialize_misp_client(self):
         """Initialize MISP client with configuration."""
