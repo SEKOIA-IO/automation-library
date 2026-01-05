@@ -65,7 +65,7 @@ class CybereasonEventConnector(Connector):
         signal.signal(signal.SIGTERM, self.exit)
 
     def load_events_cache(self) -> Cache:
-        result: LRUCache = LRUCache(maxsize=1000)
+        result: LRUCache = LRUCache(maxsize=10000)
 
         with self.cursor._context as cache:
             events_ids = cache.get("events_cache", [])
