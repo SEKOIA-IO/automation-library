@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Add events cache with LRU eviction to prevent duplicate event processing
+- Add an events cache with LRU eviction to prevent duplicate event processing
 - Improve cursor management for better checkpoint persistence
 
 ## 2025-12-17 - 1.13.3
