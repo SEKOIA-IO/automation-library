@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import BinaryIO
 from unittest.mock import AsyncMock, MagicMock
 
-import io
 import orjson
 import pytest
 from faker import Faker
