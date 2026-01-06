@@ -16,7 +16,7 @@
       "ioc_collection_uuid": {
         "type": "string",
         "description": "UUID of the target IOC Collection in Sekoia.io",
-        "pattern": "^ioc-collection--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        "default": "ioc-collection--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       },
       "sekoia_api_key": {
         "type": "string",
