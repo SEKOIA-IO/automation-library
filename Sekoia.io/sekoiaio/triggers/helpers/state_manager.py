@@ -39,10 +39,11 @@ class AlertStateManager:
         Initialize state manager.
 
         Args:
-            state_file_path: Path to the state JSON file
+            state_file_path: Path to the state JSON file (can be S3Path or PosixPath)
             logger: Optional logger callable (can be a function or logger object)
         """
-        self.state_file_path = Path(state_file_path)
+        # Keep the original path object (S3Path, PosixPath, etc.) to preserve S3 functionality
+        self.state_file_path = state_file_path
         self.logger = logger
         self._state: dict[str, Any] = self._load_state()
 
