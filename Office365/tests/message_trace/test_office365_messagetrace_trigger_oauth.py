@@ -7,9 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from office365.message_trace.trigger_office365_messagetrace_oauth import (
-    Office365MessageTraceTrigger,
-)
+from office365.message_trace.trigger_office365_messagetrace_oauth import Office365MessageTraceTrigger
 
 LOGGER = logging.getLogger(__name__)
 
