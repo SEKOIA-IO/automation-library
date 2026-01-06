@@ -25,7 +25,7 @@
   "name": "MISP MISP Events Trigger",
   "uuid": "978bcdea-307b-494c-a66f-cb8edc59672a",
   "slug": "misp-ids-to_ioc-collection",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "categories": [
     "Threat Intelligence"
   ]
