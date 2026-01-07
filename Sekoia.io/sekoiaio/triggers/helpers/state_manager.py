@@ -122,7 +122,7 @@ class AlertStateManager:
             self.state_file_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Use Path.open() for SDK-managed S3 paths
-            with self.state_file_path.open("w") as f:
+            with self.state_file_path.open("w", encoding="utf-8") as f:
                 json.dump(self._state, f, indent=2)
             self._log("State saved successfully to S3", level="debug")
         except Exception as e:
