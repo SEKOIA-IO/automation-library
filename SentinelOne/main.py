@@ -1,5 +1,6 @@
 from sentinelone_module.agents.init_scan import InitiateScanAction
 from sentinelone_module.agents.isolation import DeisolateEndpointAction, IsolateEndpointAction
+from sentinelone_module.asset_connector.device_assets import SentinelOneDeviceAssetConnector
 from sentinelone_module.base import SentinelOneModule
 from sentinelone_module.deep_visibility.consumer import DeepVisibilityTrigger
 from sentinelone_module.deep_visibility.query import QueryDeepVisibilityAction
@@ -10,9 +11,11 @@ from sentinelone_module.singularity.connectors import SingularityIdentityConnect
 from sentinelone_module.threats.create_threat_note import CreateThreatNoteAction
 from sentinelone_module.threats.get_malwares import GetMalwaresAction
 from sentinelone_module.threats.update_threat_incident import UpdateThreatIncidentAction
+from sentinelone_module.account_validator import SentinelOneAccountValidator
 
 if __name__ == "__main__":
     module = SentinelOneModule()
+    module.register_account_validator(SentinelOneAccountValidator)
     module.register(IsolateEndpointAction, "sentinelone_agents_endpoint_isolation")
     module.register(DeisolateEndpointAction, "sentinelone_agents_endpoint_deisolation")
     module.register(QueryDeepVisibilityAction, "sentinelone_deep_visibility_query")
@@ -25,4 +28,5 @@ if __name__ == "__main__":
     module.register(DeepVisibilityTrigger, "sentinelone_deep_visibility_consumer")
     module.register(SentinelOneLogsConnector, "sentinelone_log_connector")
     module.register(SingularityIdentityConnector, "sentinelone_identity_connector")
+    module.register(SentinelOneDeviceAssetConnector, "sentinelone_device_assets_connector")
     module.run()
