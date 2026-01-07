@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "OneIdentity",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "One Identity is a cybersecurity company that specializes in identity and access management (IAM) solutions. It provides tools that help organizations secure, control, and manage user identities, privileges, and access across complex IT environments - whether on-premises, in the cloud, or in hybrid setups.",
+  "name": "One Identity",
+  "uuid": "f4e70396-d25c-4841-9c18-ccc74b1039e9",
+  "version": "1.0.0",
+  "slug": "one-identity",
+  "categories": [
+    "IAM"
+  ]
+}
