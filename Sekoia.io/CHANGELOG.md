@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-07 - 2.68.26
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix FileNotFoundError when saving alert state to S3 with by preserving S3Path object and creating parent directory before writing
+
 ## 2025-12-31 - 2.68.25
 
 ### Fixed
