@@ -117,10 +117,11 @@ class AlertStateManager:
     def _save_state_to_s3(self):
         """Write JSON to S3 using Path.open() for SDK compatibility."""
         try:
-            # Ensure parent directory exists (SDK will handle S3 path translation)
+            # Ensure parent directory exists - required for S3Path (see SDK storage.py)
+            # This pattern is used in all other automation modules
             self.state_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Use Path.open() instead of smart_open for SDK-managed paths
+            # Use Path.open() for SDK-managed S3 paths
             with self.state_file_path.open("w") as f:
                 json.dump(self._state, f, indent=2)
             self._log("State saved successfully to S3", level="debug")
