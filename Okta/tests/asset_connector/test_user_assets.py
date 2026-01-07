@@ -96,6 +96,8 @@ class TestOktaUserAssetConnector:
         mock_response = MagicMock()
         mock_response.has_next.return_value = False
         mock_okta_client.list_user_groups.return_value = (sample_groups_data, mock_response, None)
+        # Mock get_group_privileges to avoid calling list_group_assigned_roles
+        mock_connector.get_group_privileges = AsyncMock(return_value=["privilege1"])
 
         # Execute
         result = await mock_connector.get_user_groups("user123")
@@ -106,9 +108,11 @@ class TestOktaUserAssetConnector:
         assert result[0].name == "Test Group 1"
         assert result[0].uid == "group1"
         assert result[0].desc == "Test Description 1"
+        assert result[0].privileges == ["privilege1"]
         assert result[1].name == "Test Group 2"
         assert result[1].uid == "group2"
         assert result[1].desc == "Test Description 2"
+        assert result[1].privileges == ["privilege1"]
         mock_okta_client.list_user_groups.assert_called_once_with("user123")
 
     @pytest.mark.asyncio
@@ -116,6 +120,8 @@ class TestOktaUserAssetConnector:
         """Test user groups retrieval with pagination."""
         # Setup
         mock_connector.client = mock_okta_client
+        # Mock get_group_privileges to avoid calling list_group_assigned_roles
+        mock_connector.get_group_privileges = AsyncMock(return_value=[])
 
         # First page
         group3 = MagicMock()
@@ -156,7 +162,9 @@ class TestOktaUserAssetConnector:
 
         # Verify
         assert result == []
-        mock_connector.log.assert_called_with("Error while fetching groups for user user123: API Error", level="error")
+        mock_connector.log.assert_called_with(
+            "Error while fetching groups for user user123: API Error", level="warning"
+        )
 
     @pytest.mark.asyncio
     async def test_get_user_groups_no_groups(self, mock_connector, mock_okta_client):
@@ -216,7 +224,7 @@ class TestOktaUserAssetConnector:
         # Verify
         assert result is False
         mock_connector.log.assert_called_with(
-            "Error while fetching MFA status for user user123: API Error", level="error"
+            "Error while fetching MFA status for user user123: API Error", level="warning"
         )
 
     @pytest.mark.asyncio
@@ -308,6 +316,7 @@ class TestOktaUserAssetConnector:
             return_value=[Group(name="Test Group", uid="group1", desc="Test Description")]
         )
         mock_connector.get_user_mfa = AsyncMock(return_value=True)
+        mock_connector.get_user_roles = AsyncMock(return_value=[])
 
         # Execute
         result = await mock_connector.map_fields(sample_user_data)
@@ -326,8 +335,8 @@ class TestOktaUserAssetConnector:
         assert result.user.display_name == "Test User"
         assert result.user.domain == "example.com"
         assert result.user.uid_alt == "test.user@example.com"
-        assert result.user.type_id == 1  # UserTypeId.USER
-        assert result.user.type == "User"  # UserTypeStr.USER
+        assert result.user.type_id is None  # No admin roles
+        assert result.user.type is None
         assert result.activity_name == "Collect"
         assert result.category_name == "Discovery"
         assert result.class_name == "User Inventory Info"
@@ -341,6 +350,7 @@ class TestOktaUserAssetConnector:
         # Setup
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=False)
+        mock_connector.get_user_roles = AsyncMock(return_value=[])
 
         # Execute
         result = await mock_connector.map_fields(sample_user_data)
@@ -510,6 +520,7 @@ class TestOktaUserAssetConnector:
 
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=False)
+        mock_connector.get_user_roles = AsyncMock(return_value=[])
 
         # Execute
         result = await mock_connector.map_fields(user)
@@ -524,7 +535,7 @@ class TestOktaUserAssetConnector:
         assert result.user.display_name is None  # displayName not set
         assert result.user.domain == "example.com"
         assert result.user.uid_alt == "test.user@example.com"
-        assert result.user.type_id is None  # userType not set (None value)
+        assert result.user.type_id is None  # No admin roles
         assert result.user.type is None
 
     @pytest.mark.asyncio
@@ -541,8 +552,16 @@ class TestOktaUserAssetConnector:
         user.profile.displayName = "Admin User"
         user.profile.userType = "Administrator"
 
+        # Mock an active admin role
+        from okta.models.role_status import RoleStatus as OktaRoleStatus
+
+        admin_role = MagicMock()
+        admin_role.type = "SUPER_ADMIN"
+        admin_role.status = OktaRoleStatus.ACTIVE
+
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=True)
+        mock_connector.get_user_roles = AsyncMock(return_value=[admin_role])
 
         # Execute
         result = await mock_connector.map_fields(user)
@@ -553,54 +572,36 @@ class TestOktaUserAssetConnector:
         assert result.user.type == "Admin"  # UserTypeStr.ADMIN
 
     @pytest.mark.asyncio
-    async def test_map_fields_with_service_user_type(self, mock_connector):
-        """Test field mapping with service user type."""
-        # Setup
-        user = MagicMock()
-        user.id = "service123"
-        user.created = "2023-01-01T00:00:00.000Z"
-        user.profile.login = "service@example.com"
-        user.profile.firstName = "Service"
-        user.profile.lastName = "Account"
-        user.profile.email = "service@example.com"
-        user.profile.displayName = "Service Account"
-        user.profile.userType = "service-account"
-
-        mock_connector.get_user_groups = AsyncMock(return_value=[])
-        mock_connector.get_user_mfa = AsyncMock(return_value=False)
-
-        # Execute
-        result = await mock_connector.map_fields(user)
-
-        # Verify
-        assert isinstance(result, UserOCSFModel)
-        assert result.user.type_id == 4  # UserTypeId.SERVICE
-        assert result.user.type == "Service"  # UserTypeStr.SERVICE
-
-    @pytest.mark.asyncio
     async def test_map_fields_with_system_user_type(self, mock_connector):
-        """Test field mapping with system user type."""
+        """Test field mapping with non-admin role."""
         # Setup
         user = MagicMock()
-        user.id = "system123"
+        user.id = "user123"
         user.created = "2023-01-01T00:00:00.000Z"
-        user.profile.login = "system@example.com"
-        user.profile.firstName = "System"
+        user.profile.login = "user@example.com"
+        user.profile.firstName = "Regular"
         user.profile.lastName = "User"
-        user.profile.email = "system@example.com"
-        user.profile.displayName = "System User"
-        user.profile.userType = "System"
+        user.profile.email = "user@example.com"
+        user.profile.displayName = "Regular User"
+
+        # Mock a non-admin role
+        from okta.models.role_status import RoleStatus as OktaRoleStatus
+
+        user_role = MagicMock()
+        user_role.type = "USER_ROLE"
+        user_role.status = OktaRoleStatus.ACTIVE
 
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=False)
+        mock_connector.get_user_roles = AsyncMock(return_value=[user_role])
 
         # Execute
         result = await mock_connector.map_fields(user)
 
         # Verify
         assert isinstance(result, UserOCSFModel)
-        assert result.user.type_id == 3  # UserTypeId.SYSTEM
-        assert result.user.type == "System"  # UserTypeStr.SYSTEM
+        assert result.user.type_id is None  # Not an admin
+        assert result.user.type is None
 
     @pytest.mark.asyncio
     async def test_map_fields_without_email_domain(self, mock_connector):
@@ -616,6 +617,7 @@ class TestOktaUserAssetConnector:
 
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=False)
+        mock_connector.get_user_roles = AsyncMock(return_value=[])
 
         # Execute
         result = await mock_connector.map_fields(user)
@@ -640,6 +642,7 @@ class TestOktaUserAssetConnector:
 
         mock_connector.get_user_groups = AsyncMock(return_value=[])
         mock_connector.get_user_mfa = AsyncMock(return_value=False)
+        mock_connector.get_user_roles = AsyncMock(return_value=[])
 
         # Execute
         result = await mock_connector.map_fields(user)
