@@ -1,6 +1,6 @@
 import asyncio
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any, Optional
 
@@ -76,7 +76,7 @@ class DelineaPraConnector(AsyncConnector):
     async def get_events(self) -> int:
         total_events = 0
         start_date = self.last_event_date.offset
-        end_date = datetime.now()
+        end_date = datetime.now(timezone.utc)
 
         new_start_date = start_date
 
@@ -106,6 +106,11 @@ class DelineaPraConnector(AsyncConnector):
             self.save_cache()
             self.last_event_date.offset = new_start_date
 
+        if total_events > 0:
+            self.log(message=f"Fetched {total_events} events from Delinea PRA", level="info")
+        else:
+            self.log(message="No new events fetched from Delinea PRA", level="info")
+
         return total_events
 
     async def async_run(self) -> None:  # pragma: no cover
@@ -120,8 +125,14 @@ class DelineaPraConnector(AsyncConnector):
                 duration = int(time.time() - duration_start)
                 FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(duration)
 
+                # sleep if no events were fetched
+                data_sleep = max(0, self.configuration.frequency - duration)
+                if results == 0 and data_sleep > 0:
+                    logger.info(f"Next batch in the future. Sleeping for {data_sleep} seconds.")
+                    await asyncio.sleep(data_sleep)
+
             except Exception as e:
-                logger.error(f"Error while running Delinea PRA: {e}", error=e)
+                logger.exception(f"Error while running Delinea PRA: {str(e)}")
                 self.log_exception(e)
 
         if self._client:
