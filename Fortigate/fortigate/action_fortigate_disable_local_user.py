@@ -10,7 +10,7 @@ class FortigateDisableLocalUserAction(Action):
     Action to disable a local user on a remote fortigate
     """
 
-    def run(self, arguments: dict) -> dict:
+    def run(self, arguments: dict) -> None:
         """
         Parameters
         ----------
