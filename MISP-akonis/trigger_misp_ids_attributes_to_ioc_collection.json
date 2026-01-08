@@ -16,11 +16,6 @@
         "type": "string",
         "description": "UUID of the target IOC Collection in Sekoia.io format: ioc-collection--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       },
-      "sekoia_api_key": {
-        "type": "string",
-        "description": "Sekoia.io API key with write permissions to the IOC Collection",
-        "secret": true
-      },
       "publish_timestamp": {
         "type": "string",
         "description": "Time window for retrieving attributes (e.g., '1' for 1 day, '7' for 7 days)",
@@ -34,8 +29,7 @@
     },
     "required": [
       "ioc_collection_server",
-      "ioc_collection_uuid",
-      "sekoia_api_key"
+      "ioc_collection_uuid"
     ]
   },
   "results": {
