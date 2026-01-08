@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-08 - 1.13.5
+
+### Fixed
+
+- Add back the 1 millisecond to exclude the last fetched events from the next batch
+
 ## 2025-12-31 - 1.13.4
 
 ### Fixed
