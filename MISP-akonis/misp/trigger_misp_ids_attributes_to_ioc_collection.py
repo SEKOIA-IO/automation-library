@@ -45,7 +45,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
     @property
     def sekoia_api_key(self):
         """Get Sekoia API key."""
-        return self.configuration.get("sekoia_api_key", os.getenv("SEKOIA_API_KEY", ""))
+        return self.configuration.get("sekoia_api_key", "")
 
     def initialize_misp_client(self):
         """Initialize MISP client with configuration."""

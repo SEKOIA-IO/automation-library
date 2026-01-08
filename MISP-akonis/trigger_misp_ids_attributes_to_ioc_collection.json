@@ -10,13 +10,11 @@
     "properties": {
       "ioc_collection_server": {
         "type": "string",
-        "description": "Sekoia.io API server URL (e.g., https://api.sekoia.io)",
-        "default": "https://api.sekoia.io"
+        "description": "Sekoia.io API server URL (e.g., https://api.sekoia.io)"
       },
       "ioc_collection_uuid": {
         "type": "string",
-        "description": "UUID of the target IOC Collection in Sekoia.io",
-        "default": "ioc-collection--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        "description": "UUID of the target IOC Collection in Sekoia.io format: ioc-collection--xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       },
       "sekoia_api_key": {
         "type": "string",
@@ -26,13 +24,11 @@
       "publish_timestamp": {
         "type": "string",
         "description": "Time window for retrieving attributes (e.g., '1' for 1 day, '7' for 7 days)",
-        "default": "1",
         "pattern": "^[0-9]+$"
       },
       "sleep_time": {
         "type": "integer",
         "description": "Time in seconds between polling cycles (minimum: 60 seconds)",
-        "default": 300,
         "minimum": 60
       }
     },
