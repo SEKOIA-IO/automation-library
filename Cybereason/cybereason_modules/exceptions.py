@@ -1,4 +1,4 @@
-from requests import Response
+from requests import Response, RequestException
 
 
 class ConnectorError(Exception):
@@ -30,3 +30,10 @@ class InvalidJsonResponse(ConnectorError):
             f"Failed to parse the response from the API. Expected JSON. Got: {response.content.decode('utf-8')}"
         )
         self.response = response
+
+
+class GenericRequestError(ConnectorError):
+    def __init__(self, url: str, error: RequestException):
+        super().__init__(f"An error occurred while requesting {url} : {error}")
+        self.url = url
+        self.error = error
