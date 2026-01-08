@@ -58,6 +58,6 @@ class FortigateDisableLocalUserAction(Action):
                 pass
             else:
                 self.log(
-                    f"Succesfully disabled the local user account {name} on the firewall {base_ip}",
+                    f"Successfully disabled the local user account {name} on the firewall {base_ip}",
                 )
                 pass
