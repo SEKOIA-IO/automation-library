@@ -311,7 +311,7 @@ class CybereasonEventConnector(Connector):
             # save the greater date ever seen
             event_date = int(malop["lastUpdateTime"])
             if event_date > most_recent_date_seen:
-                most_recent_date_seen = event_date
+                most_recent_date_seen = event_date + 1  # add 1 ms to avoid getting the same event again
 
             # check if the malop is an AI Hunt malop (EDR) or a generic one
             is_edr = malop.get("edr", False)

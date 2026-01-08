@@ -288,7 +288,7 @@ def test_fetch_last_events(
     ] + edr_users + edr_machines + edr_suspicions == events
 
     # assert the from_date property was updated with the most recent seen date
-    assert trigger.from_date == EDR_MALOP["lastUpdateTime"]
+    assert trigger.from_date == EDR_MALOP["lastUpdateTime"] + 1
 
 
 def test_next_batch_sleep_until_next_batch(trigger, mock_cybereason_api):
