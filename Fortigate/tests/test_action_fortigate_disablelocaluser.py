@@ -61,7 +61,7 @@ def test_fortigate_disable_local_user():
             status: str = "disable"
 
             arguments = {
-                "status": status,
+                "name": name,
             }
             mt.run(arguments)
 
