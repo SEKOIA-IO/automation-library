@@ -5,6 +5,7 @@ import requests
 
 from cybereason_modules.connector_pull_events import CybereasonEventConnector
 from cybereason_modules.constants import MALOP_GET_ALL_ENDPOINT
+from cybereason_modules.helpers import RETRY_ON_STATUS
 from cybereason_modules.logging import get_logger
 from cybereason_modules.exceptions import InvalidResponse, GenericRequestError
 
@@ -62,6 +63,11 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
                             ),
                             level="error",
                         )
+
+                        # Raise for retryable status codes
+                        if response.status_code in RETRY_ON_STATUS:
+                            response.raise_for_status()
+
                         return []
 
                     else:

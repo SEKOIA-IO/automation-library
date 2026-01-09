@@ -25,6 +25,7 @@ from cybereason_modules.constants import (
 )
 from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
 from cybereason_modules.helpers import (
+    RETRY_ON_STATUS,
     extract_models_from_malop,
     merge_suspicions,
     validate_response_not_login_failure,
@@ -141,6 +142,11 @@ class CybereasonEventConnector(Connector):
                             ),
                             level="error",
                         )
+
+                        # Raise for retryable status codes
+                        if response.status_code in RETRY_ON_STATUS:
+                            response.raise_for_status()
+
                         return []
                     else:
                         content = self.parse_response_content(response)
