@@ -183,6 +183,11 @@ class CybereasonEventConnector(Connector):
                 ),
                 level="error",
             )
+
+            # Raise for retryable status codes
+            if response.status_code in RETRY_ON_STATUS:
+                response.raise_for_status()
+
             return None
         else:
             malop = self.parse_response_content(response)
@@ -223,6 +228,11 @@ class CybereasonEventConnector(Connector):
                 ),
                 level="warning",
             )
+
+            # Raise for retryable status codes
+            if response.status_code in RETRY_ON_STATUS:
+                response.raise_for_status()
+
             return None
 
         # get the results
