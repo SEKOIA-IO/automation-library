@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-11 - 1.33.8
+
+### Changed
+
+- Update device asset connector tests with comprehensive coverage for helper methods
+- Add tests for network interfaces, security groups, and tag extraction methods
+- Improve error handling verification in tests
+
+## 2025-12-09 - 1.33.7
+
+### Fixed
+
+- Fix parsing AWS CloudFront logs header with tabs
+
 ## 2025-10-31 - 1.33.6
 
 ### Fixed

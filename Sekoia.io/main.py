@@ -40,6 +40,7 @@ from sekoiaio.operation_center import (
     GetRule,
     ListAlerts,
     ListAssets,
+    ListsCases,
     PatchAlert,
     PostCommentOnAlert,
     PostCommentOnCase,
@@ -63,6 +64,7 @@ from sekoiaio.operation_center.update_asset import UpdateAsset
 from sekoiaio.triggers.alerts import (
     AlertCommentCreatedTrigger,
     AlertCreatedTrigger,
+    AlertEventsThresholdTrigger,
     AlertStatusChangedTrigger,
     AlertUpdatedTrigger,
     SecurityAlertsTrigger,
@@ -122,6 +124,7 @@ if __name__ == "__main__":
     module.register(UpdateAsset, "update-asset")
     module.register(UpdateCase, "update_case")
     module.register(GetCase, "get_case")
+    module.register(ListsCases, "list_cases")
     module.register(PostCommentOnCase, "post_comment_to_a_case")
     module.register(GetListOfCommentsOfCase, "list_case_comments")
     module.register(DeleteCase, "delete-case/{case_uuid}")
@@ -136,6 +139,7 @@ if __name__ == "__main__":
     module.register(AlertUpdatedTrigger, "alert_updated_trigger")
     module.register(AlertStatusChangedTrigger, "alert_status_changed_trigger")
     module.register(AlertCommentCreatedTrigger, "alert_comment_created_trigger")
+    module.register(AlertEventsThresholdTrigger, "alert_events_threshold_trigger")
     module.register(CaseCreatedTrigger, "case_created_trigger")
     module.register(CaseUpdatedTrigger, "case_updated_trigger")
     module.register(CaseAlertsUpdatedTrigger, "case_alerts_updated_trigger")

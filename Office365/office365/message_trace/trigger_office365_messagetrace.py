@@ -3,10 +3,7 @@ from datetime import datetime
 import requests
 from requests import Response
 
-from office365.message_trace.base import (
-    O365BaseConfig,
-    Office365MessageTraceBaseTrigger,
-)
+from office365.message_trace.base import O365BaseConfig, Office365MessageTraceBaseTrigger
 
 
 class O365Config(O365BaseConfig):

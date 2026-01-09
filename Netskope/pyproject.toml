@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation module for Netskope"
 version = "0.0"
@@ -5,10 +9,21 @@ description = ""
 authors = []
 package-mode = false
 
+[tool.black]
+line-length = 119
+target-version = ["py310"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.mypy]
+exclude = ["tests/*", "dev.py"]
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 netskopesdk = "^0.0.34"
-sekoia-automation-sdk = { version="^1.16.0", extras=["all"] }
 google-cloud-pubsublite = "^1.8.3"
 google-api-python-client = "^2.95.0"
 google-auth-httplib2 = "^0.1.0"
@@ -25,38 +40,25 @@ requests = "*"
 requests-mock = "*"
 autoflake = "^1.4"
 isort = "^5.10.1"
-black = { version = "^24.3.0", extras = ["colorama"] }
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py310']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "dev.py",
-    "main.py",
-]
+omit = ["tests/*", "dev.py", "main.py"]
+
+[tool.poetry.dependencies.sekoia-automation-sdk]
+version = "^1.16.0"
+extras = ["all"]
+
+[tool.poetry.dev-dependencies.black]
+version = "^24.3.0"
+extras = ["colorama"]
 
 [tool.poe.tasks.lint]
-sequence = [
-    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
-    { cmd = "poetry run black ." },
-    { cmd = "poetry run isort ." },
-]
 help = "Make code linting and formatting."
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py"
 
-[tool.mypy]
-exclude = [
-    "tests/*",
-    "dev.py"
-]
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run black ."
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run isort ."

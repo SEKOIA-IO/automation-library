@@ -1,56 +1,23 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "aws-automation"
 description = ""
 version = "0.0"
 authors = []
 package-mode = true
-packages = [
-    {include = "connectors"},
-    {include = "aws_helpers"}
-]
+[[tool.poetry.packages]]
+include = "connectors"
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.21.0"
-boto3 = ">=1.39.9"
-botocore = ">=1.39.9"
-aiobotocore = ">=2.24.0"
-orjson = "^3.6.7"
-pandas = "^2.2.2"
-pyarrow = "^17.0.0"
-loguru = "^0.7.0"
-async-lru = "^2.0.2"
-aiofiles = "^23.1.0"
-aiolimiter = ">=1.1.0,<2.0.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-cov = "*"
-pytest-asyncio = "*"
-pytest-xdist = "*"
-pytest-env = "*"
-pytest-flake8 = "*"
-requests = "*"
-requests-mock = "*"
-Faker = "^13.12.0"
-aioresponses = "^0.7.4"
-autoflake = "^1.4"
-isort = "^5.10.1"
-black = { version = "^24.3.0", extras = ["colorama"] }
-mypy = "^0.991"
-types-aiofiles = "^24.1.0.0"
-types-python-dateutil = "^2.8.19.13"
-poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
-poetry = "^1.5.1"
-
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
+[[tool.poetry.packages]]
+include = "aws_helpers"
 
 [tool.black]
 line-length = 119
-target-version = ['py311']
-include = '\.pyi?$'
+target-version = ["py311"]
+include = "\\.pyi?$"
 
 [tool.isort]
 profile = "black"
@@ -68,41 +35,69 @@ allow_untyped_decorators = true
 warn_return_any = true
 exclude = ["tests/*"]
 
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.21.2"
+boto3 = ">=1.39.9"
+botocore = ">=1.39.9"
+aiobotocore = ">=2.24.0"
+orjson = "^3.6.7"
+pandas = "^2.2.2"
+pyarrow = "^17.0.0"
+loguru = "^0.7.0"
+async-lru = "^2.0.2"
+aiofiles = "^23.1.0"
+aiolimiter = ">=1.1.0,<2.0.0"
+
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore:.*unclosed.*:ResourceWarning",
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore:.*unclosed.*:ResourceWarning",
 ]
-addopts = '''
-  --strict-markers
-  --tb=short
-  --cov=aws_helpers
-  --cov=connectors
-  --cov-branch
-  --cache-clear
-  --cov-report=html
-  --cov-report=term-missing:skip-covered
-  --cov-fail-under=5
-  --numprocesses=auto
-  --asyncio-mode=auto
-'''
-
-[tool.poe.tasks.lint]
-sequence = [
-    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
-    { cmd = "poetry run black ." },
-    { cmd = "poetry run isort ." },
-    { cmd = "poetry run mypy ." },
-]
-help = "Make code linting and formatting."
+addopts = "  --strict-markers\n  --tb=short\n  --cov=aws_helpers\n  --cov=connectors\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]
+
+[tool.poe.tasks.lint]
+help = "Make code linting and formatting."
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py"
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run black ."
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run isort ."
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run mypy ."
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-asyncio = "*"
+pytest-xdist = "*"
+pytest-env = "*"
+pytest-flake8 = "*"
+requests = "*"
+requests-mock = "*"
+Faker = "^13.12.0"
+aioresponses = "^0.7.4"
+autoflake = "^1.4"
+isort = "^5.10.1"
+mypy = "^0.991"
+types-aiofiles = "^24.1.0.0"
+types-python-dateutil = "^2.8.19.13"
+poetry = "^1.5.1"
+
+[tool.poetry.group.dev.dependencies.black]
+version = "^24.3.0"
+extras = ["colorama"]
+
+[tool.poetry.group.dev.dependencies.poethepoet]
+version = "^0.16.5"
+extras = ["poetry_plugin"]

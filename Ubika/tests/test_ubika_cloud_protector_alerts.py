@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests_mock
-from requests import Request, Response
+import httpx
+from respx import MockRouter
 
 from ubika_modules import UbikaModule
 from ubika_modules.connector_ubika_cloud_protector_alerts import UbikaCloudProtectorAlertsConnector
@@ -28,7 +28,6 @@ def patch_datetime_now(fake_time):
 def trigger(data_storage, patch_datetime_now):
     module = UbikaModule()
     trigger = UbikaCloudProtectorAlertsConnector(module=module, data_path=data_storage)
-    # mock the log function of trigger that requires network access to the api for reporting
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
     trigger.push_events_to_intakes = MagicMock()
@@ -120,51 +119,43 @@ def message2():
     return {"items": []}
 
 
-def test_fetch_events_with_pagination(trigger, message1, message2):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "ubika_modules.connector_ubika_cloud_protector_base.time"
-    ) as mock_time:
+@pytest.mark.respx(base_url="https://eu-west-2.cloudprotector.com")
+def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1, message2):
+    with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
         mock_time.sleep = MagicMock()
-        mock_requests.get(
-            "https://eu-west-2.cloudprotector.com/api/v1/providers/provider1/tenants/tenant2/alertlogs?"
-            "start_time=1667645999&limit=100",
-            status_code=200,
-            json=message1,
-        )
 
-        mock_requests.get(
-            "https://eu-west-2.cloudprotector.com/api/v1/providers/provider1/tenants/tenant2/alertlogs?"
-            "cursor=2024-04-09T16%3A16%3A46.156145919Z&limit=100",
-            status_code=200,
-            json=message2,
-        )
+        respx_mock.get(
+            "/api/v1/providers/provider1/tenants/tenant2/alertlogs",
+            params={"start_time": "1667645999", "limit": "100"},
+        ).mock(return_value=httpx.Response(200, json=message1))
+
+        respx_mock.get(
+            "/api/v1/providers/provider1/tenants/tenant2/alertlogs",
+            params={"cursor": "2024-04-09T16:16:46.156145919Z", "limit": "100"},
+        ).mock(return_value=httpx.Response(200, json=message2))
+
         events = trigger.fetch_events()
 
         assert list(events) == [message1["items"]]
         assert trigger.from_date.isoformat() == "2024-04-09T16:16:46+00:00"
 
 
-def test_next_batch_sleep_until_next_round(trigger, message1, message2):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "ubika_modules.connector_ubika_cloud_protector_base.time"
-    ) as mock_time:
+@pytest.mark.respx(base_url="https://eu-west-2.cloudprotector.com")
+def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, message1, message2):
+    with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
         mock_time.sleep = MagicMock()
 
-        mock_requests.get(
-            "https://eu-west-2.cloudprotector.com/api/v1/providers/provider1/tenants/tenant2/alertlogs?"
-            "start_time=1667645999&limit=100",
-            status_code=200,
-            json=message1,
-        )
+        respx_mock.get(
+            "/api/v1/providers/provider1/tenants/tenant2/alertlogs",
+            params={"start_time": "1667645999", "limit": "100"},
+        ).mock(return_value=httpx.Response(200, json=message1))
 
-        mock_requests.get(
-            "https://eu-west-2.cloudprotector.com/api/v1/providers/provider1/tenants/tenant2/alertlogs?"
-            "cursor=2024-04-09T16%3A16%3A46.156145919Z&limit=100",
-            status_code=200,
-            json=message2,
-        )
+        respx_mock.get(
+            "/api/v1/providers/provider1/tenants/tenant2/alertlogs",
+            params={"cursor": "2024-04-09T16:16:46.156145919Z", "limit": "100"},
+        ).mock(return_value=httpx.Response(200, json=message2))
 
-        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
+        batch_duration = trigger.configuration.frequency + 20
         start_time = 1666711174.0
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time]
@@ -175,16 +166,22 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
         assert mock_time.sleep.call_count == 0
 
 
-def test_handle_response_error(trigger):
-    response = Response()
-    response.request = Request()
-    response.request.url = "https://sekoia.io"
-    response.status_code = 500
-    response.reason = "Internal Error"
+def test_handle_response_error_with_text(trigger):
+    request = httpx.Request("GET", "https://sekoia.io")
+    response = httpx.Response(500, request=request, text="Internal Error")
+
     with pytest.raises(FetchEventsException) as m:
         trigger._handle_response_error(response)
 
-    assert (
-        str(m.value)
-        == "Request on Ubika Cloud Protector Alerts API to fetch events failed with status 500 - Internal Error on https://sekoia.io"
-    )
+    assert "Internal Error" in str(m.value)
+    assert "500" in str(m.value)
+
+
+def test_handle_response_error_with_json(trigger):
+    request = httpx.Request("GET", "https://sekoia.io")
+    response = httpx.Response(500, request=request, json={"error": "Internal Error"})
+
+    with pytest.raises(FetchEventsException) as m:
+        trigger._handle_response_error(response)
+
+    assert "Internal Error" in str(m.value)

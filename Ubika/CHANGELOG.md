@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-07 - 1.0.5
+
+### Changed
+
+- Remove beta flag from Ubika Cloud Protector Next Gen connector and trigger
+
+## 2025-12-11 - 1.0.4
+
+### Changed
+
+- Replace `requests` library by `httpx`, with the HTTP/2.0 support, for making HTTP requests
+- Deprecate the old connectors
+
+## 2025-11-28 - 1.0.3
+
+### Fixed
+
+- Add jitter strategy to retry mechanism to avoid thundering herd issue
+- Increase timeout for API requests to 5 minutes
+- Decrease checkpoint ignore_older_than to 7 days
+- Decrease the batch size to 200 events per request
+
+
 ## 2025-06-11 - 1.0.2
 
 ### Added

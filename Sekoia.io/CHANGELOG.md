@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-07 - 2.68.26
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix FileNotFoundError when saving alert state to S3 by preserving the S3Path object and creating the parent directory before writing
+
+## 2025-12-31 - 2.68.25
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix FileNotFoundError when saving alert state to S3
+
+## 2025-12-30 - 2.68.24
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Use Path.open() instead of smart_open for SDK-managed paths to fix FileNotFoundError
+
+### Added
+
+- AlertEventsThresholdTrigger: Add 4 new tests for lock mechanisms and concurrency handling
+- AlertStateManager: Add 15 comprehensive tests covering state persistence, cleanup, and error scenarios
+
+## 2025-12-23 - 2.68.23
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Migrate state storage from local filesystem to S3 to fix read-only filesystem errors in production
+- AlertEventsThresholdTrigger: Add per-alert locks to prevent race conditions causing duplicate triggers
+- AlertEventsThresholdTrigger: Implement bounded lock cache (max 1024) to prevent memory leaks
+- AlertEventsThresholdTrigger: Fix inconsistent error handling in state loading
+- AlertEventsThresholdTrigger: Add S3-specific exception handling (IOError, OSError) for better resilience
+
+## 2025-12-23 - 2.68.22
+
+### Fixed
+
+- Fixed Pydantic v2 issue where unknown fields were rejected, preventing playbooks from activating successfully
+
+## 2025-12-23 - 2.68.21
+
+### Fixed
+
+- Fixed missing import in main
+
+## 2025-12-23 - 2.68.20
+
+### Added
+
+- Add three new configuration parameters: fetch_events, fetch_all_events, max_events_per_fetch
+- Implement search jobs API integration for retrieving alert events
+- Add dual-mode event fetching: all events vs new events since last trigger
+- Save fetched events to events.json alongside alert.json
+- Add comprehensive test coverage (18 new tests) for event fetching functionality
+- Fix mypy type errors with proper None checks and type annotations  
+- Add graceful degradation: trigger continues if event fetching fails
+- Update manifest with new configuration parameters and output schema
+
+## 2025-12-18 - 2.68.19
+
+### Changed
+
+- Alert code refactoring
+
+## 2025-12-17 - 2.68.18
+
+### Added
+
+- Added event based trigger on alert
+
+## 2025-10-17 - 2.68.17
+
+### Added
+
+- Added action to list alerts
+
 ## 2025-11-18  - 2.68.16
 
 ### Changed

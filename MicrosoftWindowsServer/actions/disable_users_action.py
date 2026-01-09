@@ -1,4 +1,5 @@
 """Contains DisableUsersAction."""
+
 from typing import Any
 
 from loguru import logger

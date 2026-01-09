@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation module for Tenable"
 version = "0.1.0"
@@ -5,10 +9,21 @@ description = ""
 authors = []
 package-mode = false
 
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+
+[tool.black]
+line-length = 119
+target-version = ["py311"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.21.0"
+sekoia-automation-sdk = "^1.22.0"
 pydantic = "^2.11.7"
 pytenable = "^1.8.2"
 
@@ -19,24 +34,5 @@ requests-mock = "*"
 mypy = "*"
 types-requests = "*"
 
-[tool.mypy]
-plugins = ["pydantic.mypy"]
-
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py311']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]

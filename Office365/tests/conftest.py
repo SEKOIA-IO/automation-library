@@ -118,6 +118,7 @@ def client():
     client.get_subscription_contents = Mock()
     client.list_subscriptions = AsyncMock()
     client.get_content = AsyncMock()
+    client.close = AsyncMock()
     yield client
 
 

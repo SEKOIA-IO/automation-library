@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-15 - 2.8.9
+
+### Changed
+
+- Update user type detection to use Okta roles instead of userType profile field
+- Add group privileges to user asset connector groups
+
+## 2025-12-08 - 2.8.8
+
+### Changed
+
+- Add checkpoint from SDK
+
+## 2025-12-01 - 2.8.7
+
+### Changed
+
+- Improve test coverage for user asset connector with comprehensive tests for new fields
+
+## 2025-11-25 - 2.8.6
+
+### Added
+
+- Add additional user fields to asset connector (display_name, domain, uid_alt, type_id, type)
+
+## 2025-11-25 - 2.8.5
+
+### Added
+
+- Fix the issue when work with SecretString
+
 ## 2025-11-12 - 2.8.4
 
 ### Added

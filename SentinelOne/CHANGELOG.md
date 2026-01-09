@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2024-12-22 - 1.21.1
+
+### Fixed
+
+- Update cachetools dependency to version 6.2.3 to resolve compatibility issue with sekoia-automation-sdk
+
+## 2025-10-28 - 1.21.0
+
+### Changed
+
+- Fix issue with account validator registration
+
+## 2025-10-28 - 1.20.16
+
+### Changed
+
+- Add asset connector for SentinelOne device and Account validator
+
 ## 2025-09-19 - 1.20.15
 
 ### Changed

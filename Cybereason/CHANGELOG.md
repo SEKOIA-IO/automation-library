@@ -7,15 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2024-06-06 - 1.13.3
+## 2026-01-09 - 1.13.6
 
 ### Fixed
 
 - Add retries on transient HTTP errors
 
-### Changed
+## 2026-01-08 - 1.13.5
 
-- Update sekoia sdk to 1.21.1
+### Fixed
+
+- Add back the 1 millisecond to exclude the last fetched events from the next batch
+
+## 2025-12-31 - 1.13.4
+
+### Fixed
+
+- Add an events cache with LRU eviction to prevent duplicate event processing
+- Improve cursor management for better checkpoint persistence
+
+## 2025-12-17 - 1.13.3
+
+### Fixed
+
+- Fix ConnectionError handling when the API is unreachable
+- Update HTTP retry behavior
 
 ## 2024-06-06 - 1.13.2
 

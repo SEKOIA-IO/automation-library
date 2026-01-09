@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-17 - 1.4.1
+
+### Fixed
+
+- Fix return from list to dict
+
+## 2025-12-01 - 1.4.0
+
+### Added
+
+- Add action to get issue
+- Add action to search issues
+
 ## 2025-01-06 - 1.3.0
 
 ### Changed

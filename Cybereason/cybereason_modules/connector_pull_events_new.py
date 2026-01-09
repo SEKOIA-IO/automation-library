@@ -6,7 +6,7 @@ import requests
 from cybereason_modules.connector_pull_events import CybereasonEventConnector
 from cybereason_modules.constants import MALOP_GET_ALL_ENDPOINT
 from cybereason_modules.logging import get_logger
-from cybereason_modules.exceptions import InvalidResponse
+from cybereason_modules.exceptions import InvalidResponse, GenericRequestError
 
 logger = get_logger()
 
@@ -81,6 +81,22 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
                         return malops
 
         except requests.Timeout as error:
+            logger.error(
+                "Timeout error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
             raise TimeoutError(url) from error
+        except requests.ConnectionError as error:
+            logger.error(
+                "Connection error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
+            raise ConnectionError(url) from error
+        except requests.RequestException as error:
+            logger.error(
+                "General error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
+            raise GenericRequestError(url, error) from error
 
         return []

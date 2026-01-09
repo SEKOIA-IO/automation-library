@@ -4,8 +4,11 @@ from functools import cached_property
 from okta.client import Client as OktaClient
 from sekoia_automation.account_validator import AccountValidator
 
+from okta_modules import OktaModule
+
 
 class OktaAccountValidator(AccountValidator):
+    module: OktaModule
 
     @cached_property
     def client(self) -> OktaClient:

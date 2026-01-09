@@ -1,4 +1,5 @@
 """Module to work with windows remote server."""
+
 from sekoia_automation.loguru.config import init_logging
 
 from actions import MicrosoftModule
