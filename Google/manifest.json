@@ -19,10 +19,7 @@
           "auth_provider_x509_cert_url",
           "client_x509_cert_url"
         ],
-        "secrets": [
-          "private_key_id",
-          "private_key"
-        ],
+        "secrets": ["private_key_id", "private_key"],
         "properties": {
           "type": {
             "type": "string"
@@ -55,20 +52,20 @@
           "client_x509_cert_url": {
             "type": "string",
             "format": "uri"
+          },
+          "universe_domain": {
+            "type": "string",
+            "default": "googleapis.com"
           }
         }
       }
     },
-    "required": [
-      "credentials"
-    ]
+    "required": ["credentials"]
   },
   "description": "Google Cloud is a suite of cloud computing services that offers infrastructure as a service, platform as a service, and serverless computing. It provides tools for storage, machine learning, data analytics, and app development, leveraging Google's infrastructure.",
   "name": "Google Cloud",
   "uuid": "4f682a9e-9a25-43a5-8a48-cd9bd7fade7e",
   "slug": "google",
-  "version": "1.21.6",
-  "categories": [
-    "Cloud Providers"
-  ]
+  "version": "1.22.0",
+  "categories": ["Cloud Providers"]
 }
