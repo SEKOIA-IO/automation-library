@@ -1,13 +1,13 @@
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import requests
 
 from cybereason_modules.connector_pull_events import CybereasonEventConnector
 from cybereason_modules.constants import MALOP_GET_ALL_ENDPOINT
+from cybereason_modules.exceptions import GenericRequestError, InvalidResponse
 from cybereason_modules.helpers import RETRY_ON_STATUS
 from cybereason_modules.logging import get_logger
-from cybereason_modules.exceptions import InvalidResponse, GenericRequestError
 
 logger = get_logger()
 

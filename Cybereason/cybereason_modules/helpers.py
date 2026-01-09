@@ -5,7 +5,7 @@ import orjson
 import requests
 import urllib3
 from bs4 import BeautifulSoup
-from tenacity import Retrying, retry_if_exception_type, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import Retrying, retry_if_exception, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from cybereason_modules.exceptions import InvalidResponse
 

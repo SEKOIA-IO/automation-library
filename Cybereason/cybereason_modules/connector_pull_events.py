@@ -1,18 +1,18 @@
 import signal
 import time
-from datetime import timedelta
 from collections import defaultdict
 from collections.abc import Generator
+from datetime import timedelta
 from functools import cached_property
+from posixpath import join as urljoin
 from threading import Event
 from typing import Any
-from posixpath import join as urljoin
 
 import orjson
 import requests
 from cachetools import Cache, LRUCache
-from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
+from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from cybereason_modules import CybereasonModule
 from cybereason_modules.client import ApiClient
@@ -28,9 +28,9 @@ from cybereason_modules.helpers import (
     RETRY_ON_STATUS,
     extract_models_from_malop,
     merge_suspicions,
-    validate_response_not_login_failure,
     retry,
     retry_strategy,
+    validate_response_not_login_failure,
 )
 from cybereason_modules.logging import get_logger
 from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS

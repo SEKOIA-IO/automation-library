@@ -6,12 +6,11 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests
-import requests
 import requests_mock
 
 from cybereason_modules import CybereasonModule
 from cybereason_modules.connector_pull_events_new import CybereasonEventConnectorNew
-from cybereason_modules.exceptions import InvalidResponse, LoginFailureError, GenericRequestError
+from cybereason_modules.exceptions import GenericRequestError, InvalidResponse, LoginFailureError
 from tests.data import EDR_MALOP, EDR_MALOP_SUSPICIONS_RESULTS, EPP_MALOP, EPP_MALOP_DETAIL, LOGIN_HTML
 
 
