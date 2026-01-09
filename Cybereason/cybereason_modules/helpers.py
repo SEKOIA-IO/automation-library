@@ -92,17 +92,19 @@ def validate_response_not_login_failure(response: requests.Response) -> bool:
         raise InvalidResponse(response) from error
 
 
+RETRY_ON_STATUS = {429, 500, 502, 503, 504}
+
+
 def retry_strategy(max_retries: int = 10) -> Retrying:
     """
     Define retry strategy for HTTP requests
     """
-    retry_on_status = {429, 500, 502, 503, 504}
 
     def retry_on_statuses(exception: BaseException) -> bool:
         if isinstance(exception, requests.exceptions.RequestException):
             response = getattr(exception, "response", None)
             # Retry on connection errors and 5xx responses
-            if response is None or response.status_code in retry_on_status:
+            if response is None or response.status_code in RETRY_ON_STATUS:
                 return True
         return False
 
