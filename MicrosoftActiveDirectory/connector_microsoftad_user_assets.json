@@ -5,6 +5,7 @@
   "docker_parameters": "microsoft_ad_user_assets_connector",
   "type": "asset",
   "capability": "account_detection",
+  "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"],
   "uuid": "226573e7-3969-4e31-bb3a-0846760b35b9",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
