@@ -7,15 +7,14 @@ import datetime
 import requests
 import requests_mock
 
+from sekoia_automation.module import Module
 from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 
 from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
-from harfanglab.models import HarfanglabModule
-
 
 @pytest.fixture
 def test_harfanglab_asset_connector(symphony_storage):
-    module = HarfanglabModule()
+    module = Module()
     module.configuration = {
         "url": "https://example.com",
         "api_token": "fake_harfanglab_api_key",

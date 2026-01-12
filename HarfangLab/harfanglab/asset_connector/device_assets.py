@@ -31,12 +31,8 @@ from sekoia_automation.storage import PersistentJSON
 
 from harfanglab.helpers import handle_uri
 from harfanglab.client import ApiClient
-from harfanglab.models import HarfanglabModule
-
 
 class HarfanglabAssetConnector(AssetConnector):
-
-    module: HarfanglabModule
 
     # Configuration Constants
     AGENT_ENDPOINT: str = "/api/data/endpoint/Agent"
@@ -68,11 +64,11 @@ class HarfanglabAssetConnector(AssetConnector):
 
     @cached_property
     def base_url(self) -> str:
-        return handle_uri(self.module.configuration.url)
+        return handle_uri(self.module.configuration["url"])
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(token=self.module.configuration.api_token, instance_url=self.base_url)
+        return ApiClient(token=self.module.configuration["api_token"], instance_url=self.base_url)
 
     @staticmethod
     def extract_timestamp(asset: dict[str, Any]) -> datetime:
