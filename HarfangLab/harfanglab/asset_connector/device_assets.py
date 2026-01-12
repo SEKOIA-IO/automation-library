@@ -67,54 +67,126 @@ class HarfanglabAssetConnector(AssetConnector):
             return cache.get("most_recent_date_seen")
 
     @cached_property
-    def client(self) -> ApiClient:
-        return ApiClient(token=self.module.configuration.api_token, instance_url=self.base_url)
-
-    @cached_property
     def base_url(self) -> str:
         return handle_uri(self.module.configuration.url)
 
+    @cached_property
+    def client(self) -> ApiClient:
+        return ApiClient(token=self.module.configuration.api_token, instance_url=self.base_url)
+
     @staticmethod
     def extract_timestamp(asset: dict[str, Any]) -> datetime:
-        if "firstseen" not in asset:
-            raise KeyError("Required field 'firstseen' is missing from asset")
-
-        try:
-            return isoparse(asset["firstseen"])
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Invalid date format for 'firstseen': {asset.get('firstseen')}") from e
+        """
+        Extract and parse the 'firstseen' timestamp from the asset.
+        Args:
+            asset (dict): Harfanglab asset data.
+        Returns:
+            datetime: Parsed 'firstseen' timestamp.
+        """
+        # Firstseen is mandatory
+        # Checking this field existence will be done before calling this method
+        return isoparse(asset["firstseen"])
 
     @staticmethod
     def extract_os_type(os_type: str | None) -> str:
+        """
+        Normalize and validate OS type string.
+        Args:
+            os_type (str | None): OS type string from Harfanglab asset.
+        Returns:
+            str: Normalized OS type or "OTHER"/"UNKNOWN".
+        """
         if not os_type:
             return "UNKNOWN"
 
-        normalized = os_type.strip().upper()
+        normalized_os = os_type.strip().upper()
         valid_types = {member.name for member in OSTypeStr}
 
-        if normalized not in valid_types:
+        if normalized_os not in valid_types:
             return "OTHER"
 
-        return normalized
+        return normalized_os
 
-    def _validate_asset_data(self, asset: dict[str, Any]) -> None:
+    def _filter_valid_devices(self, devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        Filter devices with required fields.
+        Args:
+            devices (list[dict]): List of device dictionaries.
+        Returns:
+            list[dict]: Filtered list of devices with valid timestamps.
+        """
+        valid_devices = []
         required_fields = ["id", "hostname", "firstseen"]
-        missing_fields = [field for field in required_fields if field not in asset]
-
-        if missing_fields:
-            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+        for device in devices:
+            if not all(field in device for field in required_fields):
+                missing = [field for field in required_fields if field not in device]
+                self.log(f"Skipping device {device} due to missing fields {missing}", level="warning")
+                continue
+            valid_devices.append(device)
+        return valid_devices
 
     @cached_property
     def metadata(self) -> Metadata:
+        """
+        Build Metadata object for OCSF assets.
+        Returns:
+            Metadata: OCSF Metadata object.
+        """
         return Metadata(
             product=Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION), version=self.METADATA_VERSION
         )
 
     def build_operating_system(self, os_product_type: Optional[str], os_type: Optional[str]) -> OperatingSystem:
+        """
+        Build OperatingSystem object from Harfanglab asset data.
+        Args:
+            os_product_type (str | None): OS product type from Harfanglab asset.
+            os_type (str | None): OS type from Harfanglab asset.
+        Returns:
+            OperatingSystem: Mapped OCSF OperatingSystem object.
+        """
         os_type = self.extract_os_type(os_type)
         return OperatingSystem(name=os_product_type, type=OSTypeStr[os_type], type_id=OSTypeId[os_type])
 
+    def _detect_network_interface_type(
+        self, asset: dict[str, Any]
+    ) -> tuple[NetworkInterfaceTypeStr, NetworkInterfaceTypeId]:
+        """
+        Detect network interface type based on asset data.
+        Args:
+            asset (dict): Harfanglab asset data.
+        Returns:
+            tuple: (NetworkInterfaceTypeStr, NetworkInterfaceTypeId)
+        """
+        subnet_info = asset.get("subnet", {})
+        interface_name = (subnet_info.get("name") or "").lower() if subnet_info else ""
+
+        # Detect wireless interfaces
+        wireless_indicators = ("wifi", "wlan", "wireless", "wi-fi", "80211")
+        if any(indicator in interface_name for indicator in wireless_indicators):
+            return NetworkInterfaceTypeStr.WIRELESS, NetworkInterfaceTypeId.WIRELESS
+
+        # Detect mobile/cellular interfaces
+        mobile_indicators = ("mobile", "cellular", "lte", "5g", "4g", "3g", "wwan")
+        if any(indicator in interface_name for indicator in mobile_indicators):
+            return NetworkInterfaceTypeStr.MOBILE, NetworkInterfaceTypeId.MOBILE
+
+        # Detect tunnel/VPN interfaces
+        tunnel_indicators = ("tun", "tap", "vpn", "tunnel")
+        if any(indicator in interface_name for indicator in tunnel_indicators):
+            return NetworkInterfaceTypeStr.TUNNEL, NetworkInterfaceTypeId.TUNNEL
+
+        # Default to wired
+        return NetworkInterfaceTypeStr.WIRED, NetworkInterfaceTypeId.WIRED
+
     def build_network_interface(self, asset: dict[str, Any]) -> NetworkInterface | None:
+        """
+        Build NetworkInterface object from Harfanglab asset data.
+        Args:
+            asset (dict): Harfanglab asset data.
+        Returns:
+            NetworkInterface | None: Mapped OCSF NetworkInterface object or None if no data
+        """
         ip = asset.get("ipaddress")
         subnet_info = asset.get("subnet", {})
 
@@ -122,8 +194,7 @@ class HarfanglabAssetConnector(AssetConnector):
             return None
 
         # Determine interface type based on available data
-        interface_type = NetworkInterfaceTypeStr.WIRED
-        interface_type_id = NetworkInterfaceTypeId.WIRED
+        interface_type, interface_type_id = self._detect_network_interface_type(asset)
 
         return NetworkInterface(
             hostname=asset.get("hostname"),
@@ -136,7 +207,14 @@ class HarfanglabAssetConnector(AssetConnector):
         )
 
     def build_device(self, asset: dict[str, Any]) -> Device:
-        asset_id = asset.get("id", "unknown")
+        """
+        Build Device object from Harfanglab asset data.
+        Args:
+            asset (dict): Harfanglab asset data.
+        Returns:
+            Device: Mapped OCSF Device object.
+        """
+        asset_id = asset["id"]
 
         os_type = asset.get("ostype")
         os_product_type = asset.get("osproducttype")
@@ -188,6 +266,13 @@ class HarfanglabAssetConnector(AssetConnector):
         )
 
     def build_enrichments(self, asset: dict[str, Any]) -> DeviceEnrichmentObject | None:
+        """
+        Build enrichment object for device compliance hygiene data.
+        Args:
+            asset (dict): Harfanglab asset data.
+        Returns:
+            DeviceEnrichmentObject | None: Enrichment object or None if no data.
+        """
         policy = asset.get("policy", {})
 
         # Extract firewall status
@@ -218,10 +303,16 @@ class HarfanglabAssetConnector(AssetConnector):
         return enrichment_object
 
     def map_fields(self, asset: dict[str, Any]) -> DeviceOCSFModel:
+        """
+        Map Harfanglab asset fields to OCSF Device model.
+        Args:
+            asset (dict): Harfanglab asset data.
+        Returns:
+            DeviceOCSFModel: Mapped OCSF device model.
+        """
         try:
-            self._validate_asset_data(asset)
-            asset_id = asset.get("id", "unknown")
-            hostname = asset.get("hostname", "Unknown")
+            asset_id = asset["id"]
+            hostname = asset["hostname"]
 
             self.log(f"Mapping asset - ID: {asset_id}, Hostname: {hostname}", level="debug")
 
@@ -247,9 +338,16 @@ class HarfanglabAssetConnector(AssetConnector):
             raise
 
     def _fetch_devices(self, from_date: str | None) -> Generator[list[dict[str, Any]], None, None]:
+        """
+        Fetch devices from Harfanglab API with pagination.
+        Args:
+            from_date (str | None): ISO 8601 formatted date string to filter devices first seen after this date.
+        Yields:
+            Generator[list[dict]]: Generator yielding lists of device dictionaries.
+        """
         self.log(f"Fetching devices from Harfanglab API - Start date: {from_date or 'beginning'}", level="info")
 
-        devices_url = urljoin(self.base_url, self.AGENT_ENDPOINT)
+        current_url = urljoin(self.base_url, self.AGENT_ENDPOINT)
         params: dict[str, str | int] = {
             "ordering": self.DEVICE_ORDERING_FIELD,
             "limit": self.DEFAULT_LIMIT,
@@ -259,7 +357,7 @@ class HarfanglabAssetConnector(AssetConnector):
             params["firstseen"] = from_date
 
         try:
-            device_response = self.client.get(devices_url, params=params)
+            device_response = self.client.get(current_url, params=params)
             device_response.raise_for_status()
 
             page_number = 1
@@ -286,18 +384,23 @@ class HarfanglabAssetConnector(AssetConnector):
                     return
 
                 page_number += 1
-                next_page_url = urljoin(self.base_url, next_page)
+                current_url = urljoin(self.base_url, next_page)
 
-                self.log(f"Fetching next page {page_number} - URL: {next_page_url}", level="debug")
+                self.log(f"Fetching next page {page_number} - URL: {current_url}", level="debug")
 
-                device_response = self.client.get(next_page_url)
+                device_response = self.client.get(current_url)
                 device_response.raise_for_status()
 
         except RequestException as e:
-            self.log(f"API request failed - URL: {devices_url}, Error: {str(e)}", level="error")
+            self.log(f"API request failed - URL: {current_url}, Error: {str(e)}", level="error")
             raise
 
     def iterate_devices(self) -> Generator[list[dict[str, Any]], None, None]:
+        """
+        Iterate over devices fetched from the Harfanglab API, updating the checkpoint timestamp as needed.
+        Yields:
+            Generator[list[dict]]: Generator yielding lists of device dictionaries.
+        """
         orig_date = isoparse(self.most_recent_date_seen) if self.most_recent_date_seen else None
         max_date: datetime | None = None
 
@@ -313,14 +416,22 @@ class HarfanglabAssetConnector(AssetConnector):
 
                 device_count += len(devices)
 
-                last_device = max(devices, key=self.extract_timestamp)
+                valid_devices = self._filter_valid_devices(devices)
+                if not valid_devices:
+                    self.log(
+                        "No valid devices found in the current batch, skipping checkpoint update.", level="warning"
+                    )
+                    yield []
+                    continue
+
+                last_device = max(valid_devices, key=self.extract_timestamp)
                 last_ts = self.extract_timestamp(last_device)
                 candidate = last_ts + timedelta(microseconds=1)
 
                 if max_date is None or candidate > max_date:
                     max_date = candidate
 
-                yield devices
+                yield valid_devices
 
             self.log(f"Device iteration complete - Total devices processed: {device_count}", level="info")
 
