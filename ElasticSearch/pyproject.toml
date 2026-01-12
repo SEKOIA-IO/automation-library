@@ -34,7 +34,7 @@ exclude = ["tests/*", "main.py"]
 python = ">=3.11,<3.12"
 orjson = "^3.10.16"
 elasticsearch = "^8.17.2"
-aiohttp = "^3.11.16"
+aiohttp = "^3.13.3"
 tenacity = "^9.1.2"
 faker = "^37.1.0"
 
