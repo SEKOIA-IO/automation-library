@@ -116,7 +116,10 @@ class HarfanglabAssetConnector(AssetConnector):
         for device in devices:
             if not all(field in device for field in required_fields):
                 missing = [field for field in required_fields if field not in device]
-                self.log(f"Skipping device {device} due to missing fields {missing}", level="warning")
+                self.log(
+                    f"Skipping device (ID: {device.get('id', 'unknown')}) due to missing fields {missing}",
+                    level="warning",
+                )
                 continue
             valid_devices.append(device)
         return valid_devices
