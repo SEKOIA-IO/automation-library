@@ -32,6 +32,7 @@ from sekoia_automation.storage import PersistentJSON
 from harfanglab.helpers import handle_uri
 from harfanglab.client import ApiClient
 
+
 class HarfanglabAssetConnector(AssetConnector):
 
     # Configuration Constants

@@ -12,6 +12,7 @@ from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
 
 from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
 
+
 @pytest.fixture
 def test_harfanglab_asset_connector(symphony_storage):
     module = Module()
