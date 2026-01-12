@@ -34,7 +34,7 @@ def test_submit_file_to_be_analysed_succeed(add_file_to_storage, token):
 
     arguments = SubmitArgument(file_name=file)
     uuid = "1da0cb84-c5cc-4832-8882-4a7e9df11ed2"
-    with patch("gdetect.api.Client.push") as mock:
+    with patch("gdetect.api.Client.push_reader") as mock:
         mock.return_value = uuid
         response: SubmitResponse = action.run(arguments)
 
@@ -50,7 +50,7 @@ def test_submit_file_gdetect_error(add_file_to_storage, token):
 
     arguments = SubmitArgument(file_name=file)
 
-    with patch("gdetect.api.Client.push") as mock:
+    with patch("gdetect.api.Client.push_reader") as mock:
         mock.side_effect = GDetectError("invalid GLIMPS Detect response")
         with pytest.raises(GDetectError):
             action.run(arguments)
@@ -63,7 +63,7 @@ def test_submit_file_error(add_file_to_storage, token):
 
     arguments = SubmitArgument(file_name=file)
 
-    with patch("gdetect.api.Client.push") as mock:
+    with patch("gdetect.api.Client.push_reader") as mock:
         mock.side_effect = Exception("random exception")
         with pytest.raises(Exception):
             action.run(arguments)
