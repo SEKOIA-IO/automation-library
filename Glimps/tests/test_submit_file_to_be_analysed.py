@@ -1,18 +1,11 @@
 import os
-import pytest
-from glimps.submit_file_to_be_analysed_action import (
-    SubmitFile,
-    WaitForFile,
-)
-from glimps.models import (
-    SubmitArgument,
-    SubmitResponse,
-    AnalysisDetails,
-    GLIMPSConfiguration,
-    WaitForResultArgument,
-)
-from gdetect import GDetectError
 from unittest.mock import patch
+
+import pytest
+from gdetect import GDetectError
+
+from glimps.models import AnalysisDetails, GLIMPSConfiguration, SubmitArgument, SubmitResponse, WaitForResultArgument
+from glimps.submit_file_to_be_analysed_action import SubmitFile, WaitForFile
 
 test_base_url = "https://gmalware.ggp.glimps.re"
 
