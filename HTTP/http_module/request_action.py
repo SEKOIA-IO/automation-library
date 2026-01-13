@@ -1,9 +1,19 @@
 import requests
+from requests.auth import AuthBase, HTTPBasicAuth, HTTPDigestAuth
+from requests.exceptions import JSONDecodeError
 from sekoia_automation.action import Action
 from tenacity import Retrying, stop_after_attempt, wait_exponential
-from requests.exceptions import JSONDecodeError
 
 from http_module.helpers import params_as_dict
+
+
+class BearerAuth(AuthBase):
+    def __init__(self, token: str) -> None:
+        self._token = token
+
+    def __call__(self, r: requests.Request) -> requests.Request:
+        r.headers["Authorization"] = f"Bearer {self._token}"
+        return r
 
 
 class RequestAction(Action):
@@ -28,6 +38,31 @@ class RequestAction(Action):
         verify = arguments.get("verify_ssl", True)
         fail_on_http_error = arguments.get("fail_on_http_error", True)
 
+        auth_type = arguments.get("auth_type")
+        auth_token = arguments.get("auth_token", "")
+        auth_username = arguments.get("auth_username", "")
+        auth_password = arguments.get("auth_password", "")
+
+        auth = None
+
+        if auth_type == "Token":
+            if not auth_token:
+                raise ValueError("Token should not be empty for Token auth type")
+
+            auth = BearerAuth(token=auth_token)
+
+        elif auth_type == "Basic":
+            if not auth_username or not auth_password:
+                raise ValueError("Username/Password should not be empty for Basic auth type")
+
+            auth = HTTPBasicAuth(username=auth_username, password=auth_password)
+
+        elif auth_type == "Digest":
+            if not auth_username or not auth_password:
+                raise ValueError("Username/Password should not be empty for Digest auth type")
+
+            auth = HTTPDigestAuth(username=auth_username, password=auth_password)
+
         self.log(message=f"Request URL module started. Target URL: {url}", level="info")
 
         for attempt in self._retry():
@@ -35,6 +70,7 @@ class RequestAction(Action):
                 response = requests.request(
                     method=method,
                     url=url,
+                    auth=auth,
                     data=data,
                     json=json,
                     params=params,

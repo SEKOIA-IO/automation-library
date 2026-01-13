@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-13 - 1.120.0
+
+### Added
+
+- Add authentication fields
+
 ## 2025-10-07 - 1.119.6
 
 ### Fixed
