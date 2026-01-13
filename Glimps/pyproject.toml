@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation module for Glimps"
 version = "0.0"
@@ -5,11 +9,20 @@ description = ""
 authors = []
 package-mode = false
 
+[tool.black]
+line-length = 119
+target-version = ["py39"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.17.0"
+python = ">=3.11,<4.0"
+sekoia-automation-sdk = "^1.22.0"
 tenacity = "*"
-gdetect = "^0.8.0"
+gdetect = "^0.9.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -17,21 +30,5 @@ pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py39']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]
