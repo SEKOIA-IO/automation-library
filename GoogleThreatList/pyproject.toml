@@ -1,0 +1,31 @@
+# Auto-generated pyproject.toml
+# Generated from AKONIS Integration Standard v0.1.0
+
+[tool.poetry]
+name = "google_threat_intelligence-integration"
+version = "1.0.0"
+description = "Google Threat Intelligence Threat List to IOC Collection"
+authors = ["SEKOIA.IO <support@sekoia.io>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+sekoia-automation-sdk = "*"
+requests = ">=2.31.0"
+cachetools = ">=5.3.0"
+pydantic = ">=2.5.0"
+tenacity = ">=8.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+requests_mock = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=google_threat_intelligence --cov-report=term-missing"
+testpaths = ["tests"]
