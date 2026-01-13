@@ -5,12 +5,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "automation-module-misp"
 description = "MISP automation module for Sekoia.io - Retrieve and process IDS-flagged attributes"
-version = "1.0.0"
-authors = ["Your Name <your.email@example.com>"]
-license = "MIT"
+version = "2.8.1"
+authors = ["AKONIS"]
 readme = "README.md"
-homepage = "https://github.com/your-org/automation-module-misp"
-repository = "https://github.com/your-org/automation-module-misp"
 documentation = "https://docs.sekoia.io"
 keywords = ["misp", "threat-intelligence", "ioc", "sekoia", "automation"]
 classifiers = [
@@ -19,7 +16,6 @@ classifiers = [
     "Intended Audience :: Information Technology",
     "Topic :: Security",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
