@@ -175,7 +175,7 @@ def edr_suspicions():
 
 
 @pytest.fixture
-def trigger(symphony_storage, patch_time):
+def trigger(symphony_storage, patch_time, fake_time):
     module = CybereasonModule()
     trigger = CybereasonEventConnectorNew(module=module, data_path=symphony_storage)
     trigger.log = MagicMock()
@@ -187,6 +187,8 @@ def trigger(symphony_storage, patch_time):
         "password": "password",
     }
     trigger.configuration = {"intake_key": "intake_key", "frequency": 60, "chunk_size": 20}
+    trigger.from_date = (fake_time - 60) * 1000
+    trigger.cursor.offset = (fake_time - 60) * 1000
     return trigger
 
 

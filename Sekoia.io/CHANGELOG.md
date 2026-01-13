@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-07 - 2.68.26
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix FileNotFoundError when saving alert state to S3 by preserving the S3Path object and creating the parent directory before writing
+
+## 2025-12-31 - 2.68.25
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix FileNotFoundError when saving alert state to S3
+
+## 2025-12-30 - 2.68.24
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Use Path.open() instead of smart_open for SDK-managed paths to fix FileNotFoundError
+
+### Added
+
+- AlertEventsThresholdTrigger: Add 4 new tests for lock mechanisms and concurrency handling
+- AlertStateManager: Add 15 comprehensive tests covering state persistence, cleanup, and error scenarios
+
+## 2025-12-23 - 2.68.23
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Migrate state storage from local filesystem to S3 to fix read-only filesystem errors in production
+- AlertEventsThresholdTrigger: Add per-alert locks to prevent race conditions causing duplicate triggers
+- AlertEventsThresholdTrigger: Implement bounded lock cache (max 1024) to prevent memory leaks
+- AlertEventsThresholdTrigger: Fix inconsistent error handling in state loading
+- AlertEventsThresholdTrigger: Add S3-specific exception handling (IOError, OSError) for better resilience
+
 ## 2025-12-23 - 2.68.22
 
 ### Fixed

@@ -1,6 +1,8 @@
-from sekoia_automation.action import Action
-from gdetect import Client, GDetectError
 from functools import cached_property
+
+from gdetect import Client, GDetectError
+from sekoia_automation.action import Action
+
 from glimps.models import GLIMPSModule
 
 

@@ -34,6 +34,7 @@ websocket-client = "*"
 gevent = "*"
 orjson = "*"
 structlog = "^25.5.0"
+smart-open = "^7.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
