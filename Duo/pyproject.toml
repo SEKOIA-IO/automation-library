@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Sekoia.io Automation Module for Duo"
 version = "0.0"
@@ -5,11 +9,20 @@ description = ""
 authors = []
 package-mode = false
 
+[tool.black]
+line-length = 119
+target-version = ["py38"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-orjson = "^3.7.7"
-sekoia-automation-sdk = "^1.13.0"
-duo-client = "^5.0.1"
+python = ">=3.11,<4.0"
+orjson = "^3.11.5"
+sekoia-automation-sdk = "^1.22.0"
+duo-client = "^5.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -18,22 +31,5 @@ isort = "*"
 black = "*"
 mypy = "*"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py38']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-    "dev.py"
-]
+omit = ["tests/*", "main.py", "dev.py"]
