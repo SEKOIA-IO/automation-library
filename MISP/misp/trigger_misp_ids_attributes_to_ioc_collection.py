@@ -16,6 +16,8 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
+
         self.misp_client = None
         self.processed_attributes = None
 
@@ -281,10 +283,17 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                             level="error",
                         )
                         raise Exception(f"IOC Collection not found: {self.ioc_collection_uuid}")
-                    else:
-                        # Temporary error - retry
+                    elif 400 <= response.status_code < 500:
+                        # Other client errors (non-retriable) - fatal
                         self.log(
-                            message=f"Error {response.status_code}: {response.text}",
+                            message=f"Client error when pushing IOCs: {response.status_code} - {response.text}",
+                            level="error",
+                        )
+                        raise Exception(f"Sekoia API client error: {response.status_code}")
+                    else:
+                        # Server errors (5xx) - temporary, retry
+                        self.log(
+                            message=f"Server error {response.status_code}: {response.text}",
                             level="error",
                         )
                         retry_count += 1

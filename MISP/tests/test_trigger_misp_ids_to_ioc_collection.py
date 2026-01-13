@@ -269,6 +269,30 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
             trigger.push_to_sekoia(["1.1.1.1"])
 
     @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.requests.post")
+    def test_push_to_sekoia_client_error_400(self, mock_post, trigger):
+        """Test that 400 Bad Request is treated as fatal (non-retriable)."""
+        resp = Mock(status_code=400, text="Bad Request")
+        mock_post.return_value = resp
+
+        with pytest.raises(Exception, match="client error"):
+            trigger.push_to_sekoia(["1.1.1.1"])
+
+        # Should only call once, not retry
+        assert mock_post.call_count == 1
+
+    @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.requests.post")
+    def test_push_to_sekoia_client_error_422(self, mock_post, trigger):
+        """Test that 422 Unprocessable Entity is treated as fatal (non-retriable)."""
+        resp = Mock(status_code=422, text="Unprocessable Entity")
+        mock_post.return_value = resp
+
+        with pytest.raises(Exception, match="client error"):
+            trigger.push_to_sekoia(["1.1.1.1"])
+
+        # Should only call once, not retry
+        assert mock_post.call_count == 1
+
+    @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.requests.post")
     @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.time.sleep")
     def test_push_to_sekoia_server_error_retry(self, mock_sleep, mock_post, trigger):
         r500 = Mock(status_code=500, text="Server Error")
