@@ -1,4 +1,3 @@
-import os
 import time
 from traceback import format_exc
 
@@ -16,8 +15,6 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 
         self.misp_client = None
         self.processed_attributes = None
@@ -45,7 +42,6 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
     @property
     def sekoia_api_key(self):
         """Get Sekoia API key."""
-        #return self.configuration.get("sekoia_api_key", "")
         return self.module.configuration.get("sekoia_api_key", "")
 
     def initialize_misp_client(self):
