@@ -20,8 +20,7 @@
     },
     "required": [
       "misp_url",
-      "misp_api_key",
-      "sekoia_api_key"
+      "misp_api_key"
     ],
     "secrets": [
       "misp_api_key",
@@ -32,7 +31,7 @@
   "name": "MISP MISP Events Trigger",
   "uuid": "978bcdea-307b-494c-a66f-cb8edc59672a",
   "slug": "misp-ids-to_ioc-collection",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "categories": [
     "Threat Intelligence"
   ]

@@ -199,6 +199,21 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             )
             return
 
+        # Validate required parameters before attempting push
+        if not self.sekoia_api_key:
+            self.log(
+                message="Cannot push IOCs: sekoia_api_key is not configured",
+                level="error",
+            )
+            return
+
+        if not self.ioc_collection_uuid:
+            self.log(
+                message="Cannot push IOCs: ioc_collection_uuid is not configured",
+                level="error",
+            )
+            return
+
         # Batch into chunks of 1000
         batch_size = 1000
         total_batches = (len(ioc_values) + batch_size - 1) // batch_size
@@ -308,6 +323,35 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
         )
 
         try:
+            # Validate required configuration parameters
+            if not self.sekoia_api_key:
+                self.log(
+                    message="Missing required parameter: sekoia_api_key",
+                    level="error",
+                )
+                return
+
+            if not self.ioc_collection_uuid:
+                self.log(
+                    message="Missing required parameter: ioc_collection_uuid",
+                    level="error",
+                )
+                return
+
+            if not self.module.configuration.get("misp_url"):
+                self.log(
+                    message="Missing required parameter: misp_url",
+                    level="error",
+                )
+                return
+
+            if not self.module.configuration.get("misp_api_key"):
+                self.log(
+                    message="Missing required parameter: misp_api_key",
+                    level="error",
+                )
+                return
+
             # Initialize components
             self.initialize_misp_client()
             self.initialize_cache()
