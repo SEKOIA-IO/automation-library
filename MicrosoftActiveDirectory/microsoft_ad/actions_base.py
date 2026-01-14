@@ -37,7 +37,7 @@ class MicrosoftADAction(Action):
                 search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail", "userAccountControl"]
             )
         except Exception as e:
-            raise Exception(f"LDAP search failed in base {basedn}: {str(e)}")
+            raise Exception(f"LDAP search failed in base {basedn}: {e}") from e
 
         users_query = []
 
