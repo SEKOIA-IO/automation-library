@@ -7,11 +7,11 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 from http_module.helpers import params_as_dict
 
 
-class BearerAuth(AuthBase):
+class HTTPBearerAuth(AuthBase):
     def __init__(self, token: str) -> None:
         self._token = token
 
-    def __call__(self, r: requests.Request) -> requests.Request:
+    def __call__(self, r: requests.PreparedRequest) -> requests.PreparedRequest:
         r.headers["Authorization"] = f"Bearer {self._token}"
         return r
 
@@ -43,13 +43,13 @@ class RequestAction(Action):
         auth_username = arguments.get("auth_username", "")
         auth_password = arguments.get("auth_password", "")
 
-        auth = None
+        auth: AuthBase | None = None
 
         if auth_type == "Token":
             if not auth_token:
                 raise ValueError("Token should not be empty for Token auth type")
 
-            auth = BearerAuth(token=auth_token)
+            auth = HTTPBearerAuth(token=auth_token)
 
         elif auth_type == "Basic":
             if not auth_username or not auth_password:
