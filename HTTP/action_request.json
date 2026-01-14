@@ -8,8 +8,31 @@
         "format": "uri"
       },
       "headers": {
-        "description": "Headers to use when sending the requests. i.e. {\"authorization\": \"Bearer foo\"}",
+        "description": "Headers to use when sending the requests. e.g. {\"Content-Type\": \"application/json\"}",
         "type": "object"
+      },
+      "auth_type": {
+        "description": "Type of authorization, if applicable",
+        "type": "string",
+        "default": "None",
+        "enum": [
+          "None",
+          "Basic",
+          "Digest",
+          "Bearer"
+        ]
+      },
+      "auth_token": {
+        "description": "Token for Bearer authentication",
+        "type": "string"
+      },
+      "auth_username": {
+        "description": "Username for Basic and Digest authentications",
+        "type": "string"
+      },
+      "auth_password": {
+        "description": "Password for Basic and Digest authentications",
+        "type": "string"
       },
       "method": {
         "description": "Method of the HTTP request",
@@ -57,6 +80,7 @@
       "url",
       "method"
     ],
+    "secrets": ["auth_token", "auth_password"],
     "title": "Arguments",
     "type": "object"
   },
