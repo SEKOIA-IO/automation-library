@@ -14,7 +14,6 @@ class UstaAtpConnector(Connector):
     Simple Sekoia.io connector that:
       - Fetches compromised credentials tickets from USTA
       - Uses `created` as the cursor
-      - Stores last cursor in context.json (key: last_created)
       - Forwards raw JSON events to the intake
     No extras, retries, metrics, or optionals.
     """
@@ -40,7 +39,7 @@ class UstaAtpConnector(Connector):
             return
 
         usta_cli = UstaClient(token=self.module.configuration.api_key)
-        date_cursor = datetime.now() - timedelta(
+        date_cursor = datetime.now(timezone.utc) - timedelta(
             days=self.configuration.max_historical_days
         )
         # Iterate until the Connector is shut down by Sekoia
@@ -59,7 +58,7 @@ class UstaAtpConnector(Connector):
 
             # Push events to Sekoia platform
             if collected_events:
-                date_cursor = datetime.now()
+                date_cursor = datetime.now(timezone.utc)
                 self.log(
                     message=f"{len(collected_events)} events collected",
                     level="info",

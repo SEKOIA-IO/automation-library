@@ -35,14 +35,21 @@ class UstaClient:
     # ────────────────────────────────────────────────────────────
     # INTERNAL REQUEST HANDLER
     # ────────────────────────────────────────────────────────────
-    def _request(self, method: str, path: str, params: Optional[Dict[str, Any]] = None):
-        url = f"{self.BASE_URL}/{path.lstrip('/')}"
-        response = self.session.request(
-            method=method,
-            url=url,
-            params=params,
-            timeout=self.timeout,
-        )
+    def _request(self, method: str, url_or_path: str, params: Optional[Dict[str, Any]] = None):
+        if url_or_path.startswith("http"):
+            url = url_or_path
+        else:
+            url = f"{self.BASE_URL}/{url_or_path.lstrip('/')}"
+
+        try:
+            response = self.session.request(
+                method=method,
+                url=url,
+                params=params,
+                timeout=self.timeout,
+            )
+        except RequestException as e:
+            raise UstaAPIError(f"Network request failed: {str(e)}") from e
 
         # Basic network error handling
         if response.status_code >= 500:
@@ -138,15 +145,7 @@ class UstaClient:
         next_url = data.get("next")
 
         while next_url:
-            response = self.session.get(next_url, timeout=self.timeout)
-
-            if response.status_code != 200:
-                raise UstaAPIError(f"Pagination error: {response.text}")
-
-            try:
-                data = response.json()
-            except ValueError:
-                raise UstaAPIError("Invalid JSON in pagination response.")
+            data = self._request("GET", next_url)
 
             yield from data.get("results", [])
             next_url = data.get("next")
