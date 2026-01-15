@@ -550,7 +550,10 @@ class TestAlertEventsThresholdTrigger:
         """Test that first occurrence of an alert triggers immediately."""
         threshold_trigger._ensure_initialized()
 
-        should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state=None)
+        # Pass event_count_from_notification (simulating Kafka notification)
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            sample_threshold_alert, previous_state=None, event_count_from_notification=150
+        )
 
         assert should_trigger is True
         assert context["reason"] == "first_occurrence"
@@ -566,10 +569,11 @@ class TestAlertEventsThresholdTrigger:
             "version": 1,
         }
 
-        sample_threshold_alert["events_count"] = 150  # 100 new events
-
         with patch.object(threshold_trigger, "_count_events_in_time_window", return_value=0):
-            should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state)
+            # Pass event_count_from_notification=150 (100 new events since previous 50)
+            should_trigger, context = threshold_trigger._evaluate_thresholds(
+                sample_threshold_alert, previous_state, event_count_from_notification=150
+            )
 
         assert should_trigger is True
         assert "volume_threshold" in context["reason"]
@@ -585,9 +589,10 @@ class TestAlertEventsThresholdTrigger:
             "version": 1,
         }
 
-        sample_threshold_alert["events_count"] = 150  # Only 50 new events (below 100 threshold)
-
-        should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state)
+        # Pass event_count_from_notification=150 (only 50 new events, below 100 threshold)
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            sample_threshold_alert, previous_state, event_count_from_notification=150
+        )
 
         assert should_trigger is False
         assert context["reason"] == "no_threshold_met"
@@ -601,9 +606,10 @@ class TestAlertEventsThresholdTrigger:
             "version": 1,
         }
 
-        sample_threshold_alert["events_count"] = 150
-
-        should_trigger, context = threshold_trigger._evaluate_thresholds(sample_threshold_alert, previous_state)
+        # Pass event_count_from_notification=150 (same as previous, no new events)
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            sample_threshold_alert, previous_state, event_count_from_notification=150
+        )
 
         assert should_trigger is False
         assert context["reason"] == "no_new_events"
@@ -748,7 +754,7 @@ class TestAlertStateManager:
         """Test that initialization creates empty state structure."""
         assert "alerts" in state_manager._state
         assert "metadata" in state_manager._state
-        assert state_manager._state["metadata"]["version"] == "1.0"
+        assert state_manager._state["metadata"]["version"] == "1.1"
         assert len(state_manager._state["alerts"]) == 0
 
     def test_load_state_from_nonexistent_file(self, state_file_path, mock_logger):
@@ -756,7 +762,7 @@ class TestAlertStateManager:
         manager = AlertStateManager(state_file_path, logger=mock_logger)
 
         assert manager._state["alerts"] == {}
-        assert manager._state["metadata"]["version"] == "1.0"
+        assert manager._state["metadata"]["version"] == "1.1"
 
     def test_load_state_with_corrupted_json(self, state_file_path, mock_logger):
         """Test loading state with corrupted JSON file."""
@@ -767,7 +773,7 @@ class TestAlertStateManager:
 
         # Should start with fresh state
         assert manager._state["alerts"] == {}
-        assert manager._state["metadata"]["version"] == "1.0"
+        assert manager._state["metadata"]["version"] == "1.1"
         # Should log error
         mock_logger.assert_called()
 
@@ -902,7 +908,7 @@ class TestAlertStateManager:
         stats = state_manager.get_stats()
 
         assert stats["total_alerts"] == 3
-        assert stats["version"] == "1.0"
+        assert stats["version"] == "1.1"
         assert "last_cleanup" in stats
 
     def test_save_and_load_state_persistence(self, state_file_path, mock_logger):
@@ -953,7 +959,7 @@ class TestAlertStateManager:
 
         assert "alerts" in migrated
         assert "metadata" in migrated
-        assert migrated["metadata"]["version"] == "1.0"
+        assert migrated["metadata"]["version"] == "1.1"
 
     def test_update_alert_state_with_ioerror(self, state_file_path, mock_logger):
         """Test handling of IOError during state update."""
@@ -1617,18 +1623,21 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             event_count=5,  # Previous count
         )
 
-        # Alert with higher event count BUT no events in time window
+        # Alert info
         alert = {
             **sample_threshold_alert,
             "uuid": alert_uuid,
             "short_id": "AL_NO_TIME",
-            "events_count": 10,  # New events added, but outside time window
         }
 
+        # Message with event count from Kafka notification (similar=10)
         message = {
             "type": "alert",
             "action": "updated",
-            "attributes": {"uuid": alert_uuid},
+            "attributes": {
+                "uuid": alert_uuid,
+                "updated": {"similar": 10},  # 10 events total, 5 new
+            },
         }
 
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
@@ -1692,7 +1701,6 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         alert = {
             "uuid": "alert-test",
             "short_id": "AL_TEST",
-            "events_count": 25,
             "rule": {"uuid": "rule-123", "name": "Test Rule"},
         }
 
@@ -1705,7 +1713,10 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         threshold_trigger.configuration["enable_volume_threshold"] = True
         threshold_trigger.configuration["event_count_threshold"] = 10
 
-        should_trigger, context = threshold_trigger._evaluate_thresholds(alert, previous_state)
+        # Pass event_count_from_notification=25 (15 new events since previous 10)
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            alert, previous_state, event_count_from_notification=25
+        )
 
         assert should_trigger
         assert context["reason"] == "volume_threshold"
@@ -1910,3 +1921,364 @@ class TestAlertEventsThresholdTrigger_EventFetching:
 
             # Should have logged the exception
             assert trigger.log_exception.called
+
+
+# ==============================================================================
+# AlertEventsThresholdTrigger - New Optimizations Tests
+# ==============================================================================
+
+
+class TestAlertEventsThresholdTrigger_KafkaNotification:
+    """Test using event count from Kafka notifications."""
+
+    def test_event_count_from_kafka_notification_updated(self, threshold_trigger, sample_threshold_alert):
+        """Test that event count is extracted from alert:updated notification."""
+        threshold_trigger._ensure_initialized()
+
+        # Test _evaluate_thresholds directly with event_count_from_notification
+        # This tests that the threshold evaluation uses the count from the notification
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            sample_threshold_alert, previous_state=None, event_count_from_notification=50
+        )
+
+        # First occurrence should trigger
+        assert should_trigger is True
+        assert context["reason"] == "first_occurrence"
+        # Verify the context uses the event count from notification (50), not from alert (150)
+        assert context["current_count"] == 50
+        assert context["new_events"] == 50
+
+    def test_event_count_from_kafka_notification_created(self, threshold_trigger, sample_threshold_alert):
+        """Test that event count is extracted from alert:created notification (similar=0)."""
+        threshold_trigger._ensure_initialized()
+
+        # Create an alert info as it would be extracted from alert:created notification
+        alert_from_created = {
+            "uuid": "alert-uuid-created",
+            "short_id": "ALT-CREATED",
+            "status": {"name": "Pending", "uuid": "status-uuid"},
+            "rule": {"uuid": "rule-uuid-abcd", "name": "Test Rule"},
+            "entity": {"uuid": "entity-uuid", "name": "Test Entity"},
+            "urgency": {"current_value": 50},
+            "alert_type": {"category": "malware", "value": "malware"},
+        }
+
+        # Test _evaluate_thresholds directly with event_count_from_notification=0
+        # This simulates what happens when alert:created notification arrives with similar=0
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            alert_from_created, previous_state=None, event_count_from_notification=0
+        )
+
+        # First occurrence should trigger even with 0 events
+        assert should_trigger is True
+        assert context["reason"] == "first_occurrence"
+        assert context["current_count"] == 0
+        assert context["new_events"] == 0
+
+
+class TestAlertEventsThresholdTrigger_AlertInfoOptimization:
+    """Test alert info caching to avoid API calls."""
+
+    def test_alert_created_extracts_info_from_notification(self, threshold_trigger):
+        """Test that alert:created extracts info directly from notification without API."""
+        threshold_trigger._ensure_initialized()
+
+        alert_attrs = {
+            "uuid": "alert-uuid-123",
+            "short_id": "ALT-123",
+            "similar": 0,
+            "status_name": "Pending",
+            "status_uuid": "status-uuid",
+            "urgency_current_value": 70,
+            "rule_uuid": "rule-uuid",
+            "rule_name": "Test Rule",
+            "entity_uuid": "entity-uuid",
+            "entity_name": "Test Entity",
+            "alert_type_category": "intrusions",
+            "alert_type_value": "application-compromise",
+            "assets_uuids": ["asset-1", "asset-2"],
+        }
+
+        alert = threshold_trigger._extract_alert_from_created_notification(alert_attrs)
+
+        assert alert["uuid"] == "alert-uuid-123"
+        assert alert["short_id"] == "ALT-123"
+        assert alert["status"]["name"] == "Pending"
+        assert alert["rule"]["name"] == "Test Rule"
+        assert alert["rule"]["uuid"] == "rule-uuid"
+        assert alert["entity"]["name"] == "Test Entity"
+        assert len(alert["assets"]) == 2
+
+    def test_get_alert_info_optimized_uses_cache(self, threshold_trigger, sample_threshold_alert):
+        """Test that cached alert info is used instead of API call."""
+        threshold_trigger._ensure_initialized()
+
+        alert_uuid = "alert-cached-123"
+
+        # Pre-populate the cache directly in state (simulating previous update_alert_info call)
+        threshold_trigger.state_manager._state["alerts"][alert_uuid] = {
+            "alert_uuid": alert_uuid,
+            "alert_short_id": sample_threshold_alert.get("short_id", ""),
+            "alert_info": sample_threshold_alert,
+            "current_event_count": 10,
+        }
+
+        # Should use cache, not API
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi") as mock_api:
+            alert = threshold_trigger._get_alert_info_optimized(
+                alert_uuid=alert_uuid,
+                event_action="updated",
+                alert_attrs={"uuid": alert_uuid},
+            )
+
+            # API should NOT be called
+            mock_api.assert_not_called()
+            assert alert is not None
+
+    def test_get_alert_info_optimized_falls_back_to_api(self, threshold_trigger, sample_threshold_alert):
+        """Test that API is called when cache is empty."""
+        threshold_trigger._ensure_initialized()
+
+        alert_uuid = "alert-not-cached-123"
+
+        # Cache is empty, should call API
+        with patch.object(
+            threshold_trigger, "_retrieve_alert_from_alertapi", return_value=sample_threshold_alert
+        ) as mock_api:
+            alert = threshold_trigger._get_alert_info_optimized(
+                alert_uuid=alert_uuid,
+                event_action="updated",
+                alert_attrs={"uuid": alert_uuid},
+            )
+
+            # API should be called
+            mock_api.assert_called_once_with(alert_uuid)
+            assert alert is not None
+
+
+class TestAlertStateManager_NewMethods:
+    """Test new AlertStateManager methods for caching and time threshold."""
+
+    def test_update_alert_info_creates_new_entry(self, state_manager):
+        """Test that update_alert_info creates a new state entry."""
+        alert_uuid = "alert-new-info"
+        alert_info = {
+            "uuid": alert_uuid,
+            "short_id": "ALT-NEW",
+            "rule": {"uuid": "rule-uuid", "name": "Test Rule"},
+        }
+
+        state_manager.update_alert_info(
+            alert_uuid=alert_uuid,
+            alert_info=alert_info,
+            event_count=5,
+        )
+
+        state = state_manager.get_alert_state(alert_uuid)
+        assert state is not None
+        assert state["alert_uuid"] == alert_uuid
+        assert state["current_event_count"] == 5
+        assert state["alert_info"] == alert_info
+        assert state["last_triggered_event_count"] == 0  # Not triggered yet
+
+    def test_update_alert_info_updates_existing_entry(self, state_manager):
+        """Test that update_alert_info updates an existing entry."""
+        alert_uuid = "alert-update-info"
+        alert_info = {
+            "uuid": alert_uuid,
+            "short_id": "ALT-UPD",
+            "rule": {"uuid": "rule-uuid", "name": "Test Rule"},
+        }
+
+        # Create initial entry
+        state_manager.update_alert_info(
+            alert_uuid=alert_uuid,
+            alert_info=alert_info,
+            event_count=5,
+        )
+
+        # Update with new event count
+        state_manager.update_alert_info(
+            alert_uuid=alert_uuid,
+            alert_info=alert_info,
+            event_count=10,
+        )
+
+        state = state_manager.get_alert_state(alert_uuid)
+        assert state["current_event_count"] == 10
+        assert state["last_triggered_event_count"] == 0  # Still not triggered
+
+    def test_get_alert_info_returns_cached_info(self, state_manager):
+        """Test that get_alert_info returns cached alert info."""
+        alert_uuid = "alert-get-info"
+        alert_info = {
+            "uuid": alert_uuid,
+            "short_id": "ALT-GET",
+            "rule": {"uuid": "rule-uuid", "name": "Test Rule"},
+        }
+
+        state_manager.update_alert_info(
+            alert_uuid=alert_uuid,
+            alert_info=alert_info,
+            event_count=5,
+        )
+
+        result = state_manager.get_alert_info(alert_uuid)
+        assert result == alert_info
+
+    def test_get_alert_info_returns_none_for_nonexistent(self, state_manager):
+        """Test that get_alert_info returns None for non-existent alert."""
+        result = state_manager.get_alert_info("nonexistent-alert")
+        assert result is None
+
+    def test_get_alerts_pending_time_check(self, state_manager):
+        """Test that get_alerts_pending_time_check returns correct alerts."""
+        now = datetime.now(timezone.utc)
+
+        # Alert with pending events within time window
+        state_manager._state["alerts"]["alert-pending"] = {
+            "alert_uuid": "alert-pending",
+            "alert_short_id": "ALT-PEND",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+        }
+
+        # Alert with no pending events
+        state_manager._state["alerts"]["alert-no-pending"] = {
+            "alert_uuid": "alert-no-pending",
+            "alert_short_id": "ALT-NOPEND",
+            "current_event_count": 5,
+            "last_triggered_event_count": 5,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": now.isoformat(),
+        }
+
+        # Alert with old events (outside time window)
+        state_manager._state["alerts"]["alert-old"] = {
+            "alert_uuid": "alert-old",
+            "alert_short_id": "ALT-OLD",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": (now - timedelta(hours=3)).isoformat(),
+            "last_triggered_at": (now - timedelta(hours=4)).isoformat(),
+        }
+
+        pending = state_manager.get_alerts_pending_time_check(time_window_hours=1)
+
+        assert len(pending) == 1
+        assert pending[0]["alert_uuid"] == "alert-pending"
+
+    def test_get_all_alerts(self, state_manager):
+        """Test that get_all_alerts returns all alert states."""
+        state_manager._state["alerts"]["alert-1"] = {"alert_uuid": "alert-1"}
+        state_manager._state["alerts"]["alert-2"] = {"alert_uuid": "alert-2"}
+        state_manager._state["alerts"]["alert-3"] = {"alert_uuid": "alert-3"}
+
+        all_alerts = state_manager.get_all_alerts()
+
+        assert len(all_alerts) == 3
+        assert "alert-1" in all_alerts
+        assert "alert-2" in all_alerts
+        assert "alert-3" in all_alerts
+
+
+class TestAlertEventsThresholdTrigger_TimeThresholdThread:
+    """Test periodic time threshold check thread."""
+
+    def test_time_threshold_thread_starts_when_enabled(self, threshold_trigger):
+        """Test that time threshold thread starts when enabled."""
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger._ensure_initialized()
+
+        assert threshold_trigger._time_threshold_thread is not None
+        assert threshold_trigger._time_threshold_thread.is_alive()
+
+        # Clean up
+        threshold_trigger._stop_time_threshold_thread()
+
+    def test_time_threshold_thread_does_not_start_when_disabled(self, module_configuration, symphony_storage):
+        """Test that time threshold thread does not start when disabled."""
+        trigger = AlertEventsThresholdTrigger()
+        trigger._data_path = symphony_storage
+        trigger.module.configuration = module_configuration
+        trigger.configuration = {
+            "enable_volume_threshold": True,
+            "enable_time_threshold": False,
+        }
+        trigger.log = MagicMock()
+
+        trigger._ensure_initialized()
+
+        assert trigger._time_threshold_thread is None
+
+    def test_stop_time_threshold_thread(self, threshold_trigger):
+        """Test that stop properly stops the time threshold thread."""
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger._ensure_initialized()
+
+        # Thread should be running
+        assert threshold_trigger._time_threshold_thread.is_alive()
+
+        # Stop the thread
+        threshold_trigger._stop_time_threshold_thread()
+
+        # Thread should be stopped
+        assert (
+            threshold_trigger._time_threshold_thread is None or not threshold_trigger._time_threshold_thread.is_alive()
+        )
+
+    def test_check_pending_time_thresholds_triggers_alerts(self, threshold_trigger, sample_threshold_alert):
+        """Test that _check_pending_time_thresholds triggers pending alerts."""
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["time_window_hours"] = 1
+        threshold_trigger._ensure_initialized()
+
+        # Stop the auto-started thread to avoid interference
+        threshold_trigger._stop_time_threshold_thread()
+
+        now = datetime.now(timezone.utc)
+
+        # Add a pending alert to the state and save it
+        threshold_trigger.state_manager._state["alerts"]["alert-time-check"] = {
+            "alert_uuid": "alert-time-check",
+            "alert_short_id": "ALT-TIME",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+            "alert_info": sample_threshold_alert,
+            "rule_uuid": "rule-uuid",
+            "rule_name": "Test Rule",
+            "version": 1,
+        }
+        # Save state so it persists when _check_pending_time_thresholds reloads
+        threshold_trigger.state_manager._save_state_to_s3()
+
+        # Run the check
+        threshold_trigger._check_pending_time_thresholds()
+
+        # Verify send_event was called
+        assert threshold_trigger.send_event.called
+
+        # Verify context
+        call_args = threshold_trigger.send_event.call_args
+        event = call_args[1]["event"]
+        assert event["trigger_context"]["reason"] == "time_threshold"
+
+    def test_trigger_stop_method_stops_thread(self, threshold_trigger):
+        """Test that the trigger's stop method stops the time threshold thread."""
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger._ensure_initialized()
+
+        # Thread should be running
+        assert threshold_trigger._time_threshold_thread.is_alive()
+
+        # Call stop
+        threshold_trigger.stop()
+
+        # Thread should be stopped
+        assert (
+            threshold_trigger._time_threshold_thread is None or not threshold_trigger._time_threshold_thread.is_alive()
+        )

@@ -23,6 +23,10 @@ class AlertStateManager:
                 "created_at": str (ISO 8601),
                 "updated_at": str (ISO 8601),
                 "version": int,
+                # New fields for optimizations:
+                "alert_info": dict (cached alert data from API/notification),
+                "current_event_count": int (latest known event count),
+                "last_event_at": str (ISO 8601, timestamp of last event received),
             }
         },
         "metadata": {
@@ -32,7 +36,7 @@ class AlertStateManager:
     }
     """
 
-    VERSION = "1.0"
+    VERSION = "1.1"
 
     def __init__(self, state_file_path: Path, logger: Optional[Callable] = None):
         """
@@ -357,3 +361,147 @@ class AlertStateManager:
             "version": self._state["metadata"]["version"],
             "last_cleanup": self._state["metadata"]["last_cleanup"],
         }
+
+    def update_alert_info(
+        self,
+        alert_uuid: str,
+        alert_info: dict[str, Any],
+        event_count: int,
+    ):
+        """
+        Update cached alert info and current event count (without triggering).
+        Used to store alert data from notifications to avoid API calls.
+
+        Args:
+            alert_uuid: UUID of the alert
+            alert_info: Alert data to cache (from notification or API)
+            event_count: Current event count from notification
+        """
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Reload state from S3 to get latest version
+        self._state = self._load_state()
+
+        existing = self._state["alerts"].get(alert_uuid)
+
+        if existing:
+            existing.update(
+                {
+                    "alert_info": alert_info,
+                    "current_event_count": event_count,
+                    "last_event_at": now,
+                    "updated_at": now,
+                }
+            )
+            self._log(
+                f"Updated alert info cache for {alert_uuid}",
+                level="debug",
+                alert_uuid=alert_uuid,
+                event_count=event_count,
+            )
+        else:
+            # Create new state entry with alert info but no trigger yet
+            self._state["alerts"][alert_uuid] = {
+                "alert_uuid": alert_uuid,
+                "alert_short_id": alert_info.get("short_id", ""),
+                "rule_uuid": alert_info.get("rule", {}).get("uuid", ""),
+                "rule_name": alert_info.get("rule", {}).get("name", ""),
+                "last_triggered_at": None,
+                "last_triggered_event_count": 0,
+                "total_triggers": 0,
+                "created_at": now,
+                "updated_at": now,
+                "version": 1,
+                "alert_info": alert_info,
+                "current_event_count": event_count,
+                "last_event_at": now,
+            }
+            self._log(
+                f"Created new alert info cache for {alert_uuid}",
+                level="debug",
+                alert_uuid=alert_uuid,
+                event_count=event_count,
+            )
+
+        # Save back to S3
+        self._save_state_to_s3()
+
+    def get_alert_info(self, alert_uuid: str) -> Optional[dict[str, Any]]:
+        """
+        Get cached alert info for a specific alert.
+
+        Args:
+            alert_uuid: UUID of the alert
+
+        Returns:
+            Cached alert info dictionary or None if not found
+        """
+        state = self._state["alerts"].get(alert_uuid)
+        if state and state.get("alert_info"):
+            self._log(
+                f"Retrieved cached alert info for {alert_uuid}",
+                level="debug",
+                alert_uuid=alert_uuid,
+            )
+            return state.get("alert_info")
+        return None
+
+    def get_alerts_pending_time_check(self, time_window_hours: int) -> list[dict[str, Any]]:
+        """
+        Get alerts that have pending events within the time window and haven't been triggered yet.
+        Used for periodic time threshold checking.
+
+        Args:
+            time_window_hours: Time window in hours (1-168)
+
+        Returns:
+            List of alert states that need time threshold evaluation
+        """
+        from datetime import timedelta
+
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=time_window_hours)
+        cutoff_iso = cutoff.isoformat()
+
+        pending_alerts = []
+        for alert_uuid, state in self._state["alerts"].items():
+            last_event_at = state.get("last_event_at")
+            last_triggered_at = state.get("last_triggered_at")
+            current_count = state.get("current_event_count", 0)
+            last_triggered_count = state.get("last_triggered_event_count", 0)
+
+            # Skip if no events received yet
+            if not last_event_at:
+                continue
+
+            # Check if there are pending events (current > last triggered)
+            pending_events = current_count - last_triggered_count
+            if pending_events <= 0:
+                continue
+
+            # Check if last event is within the time window
+            if last_event_at < cutoff_iso:
+                continue
+
+            # Check if we haven't triggered since the last event
+            # (or never triggered at all)
+            if last_triggered_at is None or last_triggered_at < last_event_at:
+                pending_alerts.append(state)
+                self._log(
+                    f"Alert {state.get('alert_short_id')} pending for time check",
+                    level="debug",
+                    alert_uuid=alert_uuid,
+                    pending_events=pending_events,
+                    last_event_at=last_event_at,
+                )
+
+        return pending_alerts
+
+    def get_all_alerts(self) -> dict[str, dict[str, Any]]:
+        """
+        Get all alert states.
+
+        Returns:
+            Dictionary of all alert states
+        """
+        return self._state["alerts"].copy()
