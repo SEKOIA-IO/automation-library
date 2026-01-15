@@ -1,7 +1,7 @@
 {
   "description": "Mimecast - Email Security",
   "docker_parameters": "mimecast_email_security",
-  "name": "[BETA] Fetch new email events from Mimecast",
+  "name": "Fetch new email events from Mimecast",
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
