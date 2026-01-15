@@ -30,7 +30,7 @@
         "title": "Frequency (in seconds)",
         "description": "How often to fetch user assets from microsoft AD (minimum 60 seconds)"
       },
-      "chunk_size": {
+      "batch_size": {
         "type": "integer",
         "minimum": 1,
         "default": 1000,
