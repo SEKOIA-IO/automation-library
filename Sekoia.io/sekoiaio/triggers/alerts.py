@@ -566,6 +566,21 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         """
         alert_uuid = alert_state.get("alert_uuid")
         alert_short_id = alert_state.get("alert_short_id")
+
+        # Type guards for required fields
+        if not isinstance(alert_uuid, str) or not isinstance(alert_short_id, str):
+            self.log(
+                message="Invalid alert state: missing alert_uuid or alert_short_id",
+                level="error",
+                alert_uuid=alert_uuid,
+                alert_short_id=alert_short_id,
+            )
+            return
+
+        if self.state_manager is None:
+            self.log(message="State manager not initialized", level="error")
+            return
+
         current_count = alert_state.get("current_event_count", 0)
         last_triggered_count = alert_state.get("last_triggered_event_count", 0)
         new_events = current_count - last_triggered_count
@@ -918,9 +933,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(message=f"Updating state for alert {alert.get('short_id')}", level="debug", alert_uuid=alert_uuid)
             self.state_manager.update_alert_state(
                 alert_uuid=alert_uuid,
-                alert_short_id=alert.get("short_id"),
-                rule_uuid=alert.get("rule", {}).get("uuid"),
-                rule_name=alert.get("rule", {}).get("name"),
+                alert_short_id=str(alert.get("short_id", "")),
+                rule_uuid=str(alert.get("rule", {}).get("uuid", "")),
+                rule_name=str(alert.get("rule", {}).get("name", "")),
                 event_count=context.get("current_count", 0),  # Use current_count from threshold evaluation
                 previous_version=previous_state.get("version") if previous_state else None,
             )
@@ -1346,8 +1361,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             )
         else:
             # Fall back to API call if notification doesn't contain event count
-            current_event_count = self._get_total_event_count(alert)
-            if current_event_count is None:
+            api_event_count = self._get_total_event_count(alert)
+            if api_event_count is None:
                 self.log(
                     message="Failed to get event count from API, using 0",
                     level="warning",
@@ -1355,6 +1370,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 )
                 current_event_count = 0
             else:
+                current_event_count = api_event_count
                 self.log(
                     message="Using event count from API (fallback)",
                     level="debug",
