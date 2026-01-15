@@ -7,7 +7,7 @@ from functools import cached_property
 from threading import Event
 
 import orjson
-import requests
+import httpx
 from dateutil.parser import isoparse
 from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
@@ -80,14 +80,16 @@ class UbikaCloudProtectorBaseConnector(Connector):
             self.configuration.token,
         )
 
-    def _handle_response_error(self, response: requests.Response) -> None:
-        if not response.ok:
-            message = (
-                f"Request on {self.NAME} API to fetch events failed with status "
-                f"{response.status_code} - {response.reason} on {response.request.url}"
-            )
+    def _handle_response_error(self, response: httpx.Response):
+        if not response.is_success:
+            error_message = f"Request failed with status {response.status_code}"
+            try:
+                error_data = response.json()
+                error_message = f"{error_message}: {error_data}"
+            except Exception:
+                error_message = f"{error_message}: {response.text}"
 
-            raise FetchEventsException(message)
+            raise FetchEventsException(error_message)
 
     @abstractmethod
     def generate_endpoint_url(self) -> str:
