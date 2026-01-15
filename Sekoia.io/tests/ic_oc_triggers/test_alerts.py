@@ -1975,6 +1975,46 @@ class TestAlertEventsThresholdTrigger_KafkaNotification:
         assert context["current_count"] == 0
         assert context["new_events"] == 0
 
+    def test_evaluate_thresholds_fallback_to_api_when_no_notification_count(
+        self, threshold_trigger, sample_threshold_alert
+    ):
+        """Test that _evaluate_thresholds falls back to API when event_count_from_notification is None."""
+        threshold_trigger._ensure_initialized()
+
+        # Mock _get_total_event_count to return a value (simulating successful API call)
+        with patch.object(threshold_trigger, "_get_total_event_count", return_value=75) as mock_api:
+            should_trigger, context = threshold_trigger._evaluate_thresholds(
+                sample_threshold_alert, previous_state=None, event_count_from_notification=None
+            )
+
+            # Should have called the API fallback
+            mock_api.assert_called_once_with(sample_threshold_alert)
+
+            # First occurrence should trigger
+            assert should_trigger is True
+            assert context["reason"] == "first_occurrence"
+            assert context["current_count"] == 75
+            assert context["new_events"] == 75
+
+    def test_evaluate_thresholds_fallback_api_failure(self, threshold_trigger, sample_threshold_alert):
+        """Test that _evaluate_thresholds handles API failure gracefully when fallback is needed."""
+        threshold_trigger._ensure_initialized()
+
+        # Mock _get_total_event_count to return None (simulating API failure)
+        with patch.object(threshold_trigger, "_get_total_event_count", return_value=None) as mock_api:
+            should_trigger, context = threshold_trigger._evaluate_thresholds(
+                sample_threshold_alert, previous_state=None, event_count_from_notification=None
+            )
+
+            # Should have called the API fallback
+            mock_api.assert_called_once_with(sample_threshold_alert)
+
+            # Should still trigger (first occurrence) but with 0 events
+            assert should_trigger is True
+            assert context["reason"] == "first_occurrence"
+            assert context["current_count"] == 0
+            assert context["new_events"] == 0
+
 
 class TestAlertEventsThresholdTrigger_AlertInfoOptimization:
     """Test alert info caching to avoid API calls."""

@@ -505,3 +505,13 @@ class AlertStateManager:
             Dictionary of all alert states
         """
         return self._state["alerts"].copy()
+
+    def reload_state(self):
+        """
+        Reload state from storage (S3 or local file).
+
+        This is useful when you need to get the latest state from storage,
+        for example in periodic background tasks.
+        """
+        self._state = self._load_state()
+        self._log("State reloaded from storage", level="debug")

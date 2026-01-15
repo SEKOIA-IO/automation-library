@@ -482,9 +482,11 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self._time_threshold_thread.join(timeout=10)
         if self._time_threshold_thread.is_alive():
             self.log(message="Time threshold thread did not stop cleanly", level="warning")
+            # Keep reference to thread so we don't create duplicates
+            # Thread is daemon so it will be killed when main process exits
         else:
             self.log(message="Time threshold thread stopped", level="debug")
-        self._time_threshold_thread = None
+            self._time_threshold_thread = None
 
     def _time_threshold_check_loop(self):
         """
@@ -526,10 +528,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             time_window_hours=time_window_hours,
         )
 
-        # Reload state to get latest data
+        # Reload state to get latest data from S3
         try:
-            # Force reload from S3
-            self.state_manager._state = self.state_manager._load_state()
+            self.state_manager.reload_state()
         except Exception as exp:
             self.log_exception(exp, message="Failed to reload state for time threshold check")
             return
