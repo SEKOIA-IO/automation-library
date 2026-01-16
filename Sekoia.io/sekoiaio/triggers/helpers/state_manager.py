@@ -182,12 +182,43 @@ class AlertStateManager:
             raise
 
     def _migrate_state(self, old_state: dict[str, Any]) -> dict[str, Any]:
-        """Migrate state from older versions. Currently a no-op (placeholder)."""
-        # Future: implement version migrations here
+        """
+        Migrate state from older versions.
+
+        Migration from v1.0 to v1.1:
+        - Adds 'alert_info' field (cached alert data, default: None)
+        - Adds 'current_event_count' field (latest known count, default: last_triggered_event_count)
+        - Adds 'last_event_at' field (timestamp of last event, default: None)
+        """
         old_state.setdefault("alerts", {})
         old_state.setdefault(
             "metadata", {"version": self.VERSION, "last_cleanup": datetime.now(timezone.utc).isoformat()}
         )
+
+        # Migrate each alert entry to add new fields (v1.0 -> v1.1)
+        for alert_uuid, alert_state in old_state.get("alerts", {}).items():
+            # Initialize 'alert_info' if not present (v1.1 field)
+            if "alert_info" not in alert_state:
+                alert_state["alert_info"] = None
+
+            # Initialize 'current_event_count' if not present (v1.1 field)
+            # Default to last_triggered_event_count for backwards compatibility
+            if "current_event_count" not in alert_state:
+                alert_state["current_event_count"] = alert_state.get("last_triggered_event_count", 0)
+
+            # Initialize 'last_event_at' if not present (v1.1 field)
+            if "last_event_at" not in alert_state:
+                alert_state["last_event_at"] = None
+
+            self._log(
+                f"Migrated alert state for {alert_uuid}",
+                level="debug",
+                alert_uuid=alert_uuid,
+            )
+
+        # Update version in metadata
+        old_state["metadata"]["version"] = self.VERSION
+
         return old_state
 
     def get_alert_state(self, alert_uuid: str) -> Optional[dict[str, Any]]:
@@ -372,6 +403,11 @@ class AlertStateManager:
         Update cached alert info and current event count (without triggering).
         Used to store alert data from notifications to avoid API calls.
 
+        Note: This method reloads state from S3 on each call to ensure consistency.
+        While this adds latency per notification, it ensures we don't lose updates
+        from other processes. For high-volume scenarios, consider implementing
+        a write-through cache or batching updates.
+
         Args:
             alert_uuid: UUID of the alert
             alert_info: Alert data to cache (from notification or API)
@@ -379,7 +415,8 @@ class AlertStateManager:
         """
         now = datetime.now(timezone.utc).isoformat()
 
-        # Reload state from S3 to get latest version
+        # Reload state from S3 to get latest version before updating
+        # This ensures consistency when multiple processes may be updating
         self._state = self._load_state()
 
         existing = self._state["alerts"].get(alert_uuid)
@@ -461,17 +498,16 @@ class AlertStateManager:
 
         now = datetime.now(timezone.utc)
         cutoff = now - timedelta(hours=time_window_hours)
-        cutoff_iso = cutoff.isoformat()
 
         pending_alerts = []
         for alert_uuid, state in self._state["alerts"].items():
-            last_event_at = state.get("last_event_at")
-            last_triggered_at = state.get("last_triggered_at")
+            last_event_at_str = state.get("last_event_at")
+            last_triggered_at_str = state.get("last_triggered_at")
             current_count = state.get("current_event_count", 0)
             last_triggered_count = state.get("last_triggered_event_count", 0)
 
             # Skip if no events received yet
-            if not last_event_at:
+            if not last_event_at_str:
                 continue
 
             # Check if there are pending events (current > last triggered)
@@ -479,21 +515,48 @@ class AlertStateManager:
             if pending_events <= 0:
                 continue
 
-            # Check if last event is within the time window
-            if last_event_at < cutoff_iso:
+            # Parse timestamps to datetime for robust comparison
+            # All timestamps are stored in ISO 8601 UTC format
+            try:
+                last_event_at = datetime.fromisoformat(last_event_at_str.replace("Z", "+00:00"))
+                # Ensure timezone-aware comparison
+                if last_event_at.tzinfo is None:
+                    last_event_at = last_event_at.replace(tzinfo=timezone.utc)
+            except (ValueError, AttributeError):
+                # Skip if timestamp is invalid
+                self._log(
+                    f"Invalid last_event_at timestamp for alert {alert_uuid}",
+                    level="warning",
+                    alert_uuid=alert_uuid,
+                    last_event_at=last_event_at_str,
+                )
                 continue
 
-            # Check if we haven't triggered since the last event
-            # (or never triggered at all)
-            if last_triggered_at is None or last_triggered_at < last_event_at:
-                pending_alerts.append(state)
-                self._log(
-                    f"Alert {state.get('alert_short_id')} pending for time check",
-                    level="debug",
-                    alert_uuid=alert_uuid,
-                    pending_events=pending_events,
-                    last_event_at=last_event_at,
-                )
+            # Check if last event is within the time window
+            if last_event_at < cutoff:
+                continue
+
+            # Check if we haven't triggered since the last event (or never triggered at all)
+            if last_triggered_at_str is not None:
+                try:
+                    last_triggered_at = datetime.fromisoformat(last_triggered_at_str.replace("Z", "+00:00"))
+                    if last_triggered_at.tzinfo is None:
+                        last_triggered_at = last_triggered_at.replace(tzinfo=timezone.utc)
+                    # Skip if already triggered after last event
+                    if last_triggered_at >= last_event_at:
+                        continue
+                except (ValueError, AttributeError):
+                    # If timestamp is invalid, treat as not triggered
+                    pass
+
+            pending_alerts.append(state)
+            self._log(
+                f"Alert {state.get('alert_short_id')} pending for time check",
+                level="debug",
+                alert_uuid=alert_uuid,
+                pending_events=pending_events,
+                last_event_at=last_event_at_str,
+            )
 
         return pending_alerts
 
@@ -512,6 +575,14 @@ class AlertStateManager:
 
         This is useful when you need to get the latest state from storage,
         for example in periodic background tasks.
+
+        Concurrency model:
+        - This class uses a single-writer model: one trigger instance owns the state
+        - In-memory state may become stale immediately after reload if another process
+          writes to S3 concurrently (eventual consistency)
+        - For multi-instance deployments, external coordination (e.g., locks) should be used
+        - The current implementation is designed for single-instance deployments where
+          one trigger process handles all notifications for a given configuration
         """
         self._state = self._load_state()
         self._log("State reloaded from storage", level="debug")

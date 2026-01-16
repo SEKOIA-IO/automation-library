@@ -1156,6 +1156,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         Extract alert info from alert:created notification attributes.
 
         The alert:created notification contains all the alert fields we need.
+        For temporal fields not present in the notification, we use the current
+        timestamp as a reasonable default (the alert was just created).
 
         Args:
             alert_attrs: Attributes from the notification
@@ -1163,6 +1165,12 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         Returns:
             Alert info dictionary in the same format as API response
         """
+        from datetime import datetime, timezone
+
+        # Use current time as default for temporal fields not in notification
+        # This is reasonable since alert:created means the alert was just created
+        now_iso = datetime.now(timezone.utc).isoformat()
+
         return {
             "uuid": alert_attrs.get("uuid"),
             "short_id": alert_attrs.get("short_id"),
@@ -1186,10 +1194,11 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 "name": alert_attrs.get("entity_name"),
             },
             "assets": [{"uuid": uuid} for uuid in alert_attrs.get("assets_uuids", [])],
-            # These fields are not in alert:created notification, will be None
-            "created_at": None,
-            "first_seen_at": None,
-            "last_seen_at": None,
+            # Temporal fields: use notification values if present, else current time
+            # (alert:created means the alert was just created, so current time is reasonable)
+            "created_at": alert_attrs.get("created_at", now_iso),
+            "first_seen_at": alert_attrs.get("first_seen_at", now_iso),
+            "last_seen_at": alert_attrs.get("last_seen_at", now_iso),
         }
 
     def _send_threshold_event(
@@ -1454,6 +1463,16 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         # Time-based threshold
         # This checks if there are new events AND we're within the time window.
         # We use the new_events count (from Kafka notification) instead of making API calls.
+        #
+        # Design assumption: When we receive a Kafka notification about new events,
+        # those events are considered "within the time window" because:
+        # 1. Kafka notifications are delivered in near real-time (typically < 1 minute delay)
+        # 2. The time_window_hours config is meant for periodic checks, not real-time notifications
+        # 3. For delayed/out-of-order notifications, the periodic background thread
+        #    (_time_threshold_check_loop) validates actual timestamps against the window
+        #
+        # This approach avoids expensive event search API calls while maintaining correctness
+        # for the common case. Edge cases (delayed notifications) are handled by the periodic check.
         enable_time = config.enable_time_threshold
         time_window_hours = config.time_window_hours
 
@@ -1468,7 +1487,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         if enable_time and new_events > 0:
             # We have new events - time threshold is met
-            # The time window check is implicitly satisfied because we just received a notification
+            # The notification itself serves as proof that events occurred recently
             trigger_reasons.append("time_threshold")
             self.log(
                 message=f"Time threshold met: {new_events} new events",

@@ -2659,9 +2659,7 @@ class TestAlertEventsThresholdTrigger_TriggerTimeThreshold:
         threshold_trigger.state_manager._state["alerts"]["valid-uuid"] = alert_state.copy()
         threshold_trigger.state_manager._save_state_to_s3()
 
-        # Create a mock state manager that raises on update_alert_state
-        original_get = threshold_trigger.state_manager.get_alert_state
-
+        # Create a mock that raises on update_alert_state
         def mock_update(*args, **kwargs):
             raise Exception("State update failed")
 
@@ -2716,11 +2714,8 @@ class TestAlertEventsThresholdTrigger_TimeThresholdLoop:
             # Stop the loop after exception is handled
             threshold_trigger._time_threshold_stop_event.set()
 
-        # Mock the stop event wait to return immediately
-        original_wait = threshold_trigger._time_threshold_stop_event.wait
-
         def fast_wait(timeout=None):
-            # Just check if set without waiting
+            # Just check if set without waiting (avoids real sleep)
             return threshold_trigger._time_threshold_stop_event.is_set()
 
         with patch.object(threshold_trigger, "_check_pending_time_thresholds", side_effect=check_and_stop):
