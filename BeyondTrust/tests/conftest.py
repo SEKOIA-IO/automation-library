@@ -91,3 +91,11 @@ def session_xml():
 </session>
 </session_list>
 """
+
+
+@pytest.fixture
+def error_response_xml():
+    return b"""<?xml version="1.0" encoding="UTF-8"?>
+<error xmlns="http://www.beyondtrust.com/sra/namespaces/API/reporting" code="authentication_failed">
+Authentication failed. Please check your credentials.
+</error>"""
