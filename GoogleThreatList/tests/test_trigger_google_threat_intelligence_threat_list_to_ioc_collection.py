@@ -3,10 +3,8 @@ Unit tests for GoogleThreatIntelligenceThreatListToIOCCollectionTrigger
 
 Tests the VirusTotal API-based GTI Threat List connector per SOW specification.
 """
-import hashlib
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-import requests
+from unittest.mock import Mock, patch
 
 from google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection import (
     GoogleThreatIntelligenceThreatListToIOCCollectionTrigger,
@@ -660,13 +658,14 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
 
         with patch.object(trigger, "_make_request") as mock_request:
             mock_request.return_value = response_no_cursor
-            with patch.object(
-                type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
-            ):
-                trigger.run()
+            with patch.object(trigger, "push_to_sekoia") as mock_push:
+                with patch.object(
+                    type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
+                ):
+                    trigger.run()
 
-        # Verify events were fetched and sent
-        assert trigger.send_event.called
+        # Verify push_to_sekoia was called with IOC values
+        assert mock_push.called
 
     @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
     def test_run_handles_fatal_error(self, mock_sleep, trigger):
@@ -723,7 +722,7 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
 
     @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
     def test_run_sends_events(self, mock_sleep, trigger, sample_vt_response):
-        """Test run method sends events via send_event."""
+        """Test run method pushes IOCs to Sekoia."""
         trigger.initialize_client()
 
         response_no_cursor = sample_vt_response.copy()
@@ -738,13 +737,17 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
 
         with patch.object(trigger, "_make_request") as mock_request:
             mock_request.return_value = response_no_cursor
-            with patch.object(
-                type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
-            ):
-                trigger.run()
+            with patch.object(trigger, "push_to_sekoia") as mock_push:
+                with patch.object(
+                    type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
+                ):
+                    trigger.run()
 
-        # Verify send_event was called for each IOC
-        assert trigger.send_event.call_count == 2
+        # Verify push_to_sekoia was called with IOC values (2 IOCs from sample response)
+        assert mock_push.call_count == 1
+        # Check the IOC values passed to push_to_sekoia
+        ioc_values = mock_push.call_args[0][0]
+        assert len(ioc_values) == 2
 
 
 class TestExceptionClasses:

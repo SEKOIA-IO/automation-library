@@ -123,6 +123,21 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         """Get extra query parameters for advanced filtering."""
         return self.configuration.get("extra_query_params", "")
 
+    @property
+    def ioc_collection_server(self) -> str:
+        """Get IOC collection server URL."""
+        return self.configuration.get("ioc_collection_server", "https://api.sekoia.io")
+
+    @property
+    def ioc_collection_uuid(self) -> str:
+        """Get IOC collection UUID."""
+        return self.configuration.get("ioc_collection_uuid", "")
+
+    @property
+    def sekoia_api_key(self) -> str:
+        """Get Sekoia API key."""
+        return self.module.configuration.get("sekoia_api_key", "")
+
     def initialize_client(self) -> None:
         """Initialize HTTP session with authentication headers."""
         if not self.api_key:
@@ -218,7 +233,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         """Build the API URL with query parameters."""
         endpoint = f"{self.BASE_URL}/threat_lists/{threat_list_id}/latest"
 
-        params = {"limit": self.max_iocs}
+        params: dict[str, str | int] = {"limit": self.max_iocs}
 
         # Add IOC types filter
         if self.ioc_types:
@@ -365,6 +380,154 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         )
         return new_events
 
+    def push_to_sekoia(self, ioc_values: list[str]) -> None:
+        """
+        Push batch of IOCs to Sekoia IOC Collection.
+
+        Args:
+            ioc_values: List of IOC value strings
+        """
+        if not ioc_values:
+            self.log(
+                message="No IOC values to push",
+                level="info",
+            )
+            return
+
+        # Validate required parameters before attempting push
+        if not self.sekoia_api_key:
+            self.log(
+                message="Cannot push IOCs: sekoia_api_key is not configured",
+                level="error",
+            )
+            return
+
+        if not self.ioc_collection_uuid:
+            self.log(
+                message="Cannot push IOCs: ioc_collection_uuid is not configured",
+                level="error",
+            )
+            return
+
+        # Batch into chunks of 1000
+        batch_size = 1000
+        total_batches = (len(ioc_values) + batch_size - 1) // batch_size
+
+        self.log(
+            message=f"Pushing {len(ioc_values)} IOCs in {total_batches} batch(es)",
+            level="info",
+        )
+
+        for batch_num, i in enumerate(range(0, len(ioc_values), batch_size), 1):
+            batch = ioc_values[i : i + batch_size]
+            indicators_text = "\n".join(batch)
+
+            # Prepare request
+            url = (
+                f"{self.ioc_collection_server}/v2/inthreat/ioc-collections/"
+                f"{self.ioc_collection_uuid}/indicators/text"
+            )
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.sekoia_api_key}",
+            }
+
+            payload = {"indicators": indicators_text, "format": "one_per_line"}
+
+            # Send request with retry logic
+            retry_count = 0
+            max_retries = 3
+            success = False
+
+            while retry_count < max_retries and not success:
+                try:
+                    response = requests.post(
+                        url, json=payload, headers=headers, timeout=30
+                    )
+
+                    if response.status_code == 200:
+                        result = response.json()
+                        self.log(
+                            message=f"Batch {batch_num}/{total_batches} pushed successfully: "
+                            f"{result.get('created', 0)} created, "
+                            f"{result.get('updated', 0)} updated, "
+                            f"{result.get('ignored', 0)} ignored",
+                            level="info",
+                        )
+                        success = True
+                        break
+                    elif response.status_code == 429:
+                        # Rate limit - exponential backoff
+                        retry_after = response.headers.get("Retry-After", None)
+                        if retry_after:
+                            wait_time = int(retry_after)
+                        else:
+                            wait_time = 2**retry_count * 10
+
+                        self.log(
+                            message=f"Rate limited. Waiting {wait_time} seconds...",
+                            level="info",
+                        )
+                        time.sleep(wait_time)
+                        retry_count += 1
+                    elif response.status_code in [401, 403]:
+                        # Authentication/Authorization errors - fatal
+                        self.log(
+                            message=f"Authentication error: {response.status_code} - {response.text}",
+                            level="error",
+                        )
+                        raise InvalidAPIKeyError(
+                            f"Sekoia API authentication error: {response.status_code}"
+                        )
+                    elif response.status_code == 404:
+                        # Not found - fatal
+                        self.log(
+                            message=f"IOC Collection not found: {response.status_code} - {response.text}",
+                            level="error",
+                        )
+                        raise VirusTotalAPIError(
+                            f"IOC Collection not found: {self.ioc_collection_uuid}"
+                        )
+                    elif 400 <= response.status_code < 500:
+                        # Other client errors (non-retriable) - fatal
+                        self.log(
+                            message=f"Client error when pushing IOCs: {response.status_code} - {response.text}",
+                            level="error",
+                        )
+                        raise VirusTotalAPIError(
+                            f"Sekoia API client error: {response.status_code}"
+                        )
+                    else:
+                        # Server errors (5xx) - temporary, retry
+                        self.log(
+                            message=f"Server error {response.status_code}: {response.text}",
+                            level="error",
+                        )
+                        retry_count += 1
+                        time.sleep(5)
+
+                except requests.exceptions.Timeout:
+                    self.log(
+                        message="Request timeout",
+                        level="error",
+                    )
+                    retry_count += 1
+                    time.sleep(5)
+                except requests.exceptions.RequestException as error:
+                    self.log(
+                        message=f"Request error: {error}",
+                        level="error",
+                    )
+                    retry_count += 1
+                    time.sleep(5)
+
+            if not success:
+                self.log(
+                    message=f"Failed to push batch {batch_num}/{total_batches} after {max_retries} retries",
+                    level="error",
+                )
+
     def run(self) -> None:
         """Main trigger loop."""
         self.log(message="Starting GTI Threat List trigger", level="info")
@@ -396,12 +559,9 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                         message=f"Processing {len(new_iocs)} new IoCs",
                         level="info",
                     )
-                    # Send events (the SDK handles forwarding to IOC collection)
-                    for ioc in new_iocs:
-                        self.send_event(
-                            event_name=f"gti_{ioc['type']}_ioc",
-                            event=ioc,
-                        )
+                    # Extract IOC values and push to Sekoia IOC Collection
+                    ioc_values = [ioc["value"] for ioc in new_iocs]
+                    self.push_to_sekoia(ioc_values)
 
                 # Update cursor for pagination
                 meta = response.get("meta", {})

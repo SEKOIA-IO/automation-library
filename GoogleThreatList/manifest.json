@@ -1,19 +1,19 @@
 {
   "uuid": "b2c3d4e5-6f7a-4b5c-9d0e-1f2a3b4c5d6e",
-  "name": "Google Threat Intelligence",
-  "slug": "google_threat_intelligence",
-  "version": "1.0.0",
+  "name": "Google Threat List",
+  "slug": "google_threat_list",
+  "version": "0.0.1",
   "description": "Google Threat Intelligence Threat List to IOC Collection",
   "configuration": {
-    "google_threat_intelligence_url": {
+    "google_threat_list_url": {
       "type": "string",
       "description": "Google Threat Intelligence Server URL"
     },
-    "google_threat_intelligence_api_key": {
+    "google_threat_list_api_key": {
       "type": "string",
       "description": "API Key for authentication",
       "secret": true
     }
   },
-  "docker": "google_threat_intelligence:latest"
+  "docker": "google_threat_list:latest"
 }
