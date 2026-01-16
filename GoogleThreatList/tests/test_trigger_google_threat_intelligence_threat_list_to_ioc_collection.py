@@ -52,6 +52,7 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             "ioc_types": ["file", "url"],
             "max_iocs": 1000,
         }
+        trigger.context = {}
         trigger.log = Mock()
         trigger.send_event = Mock()
         return trigger
@@ -110,7 +111,28 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     def test_sleep_time_default(self, trigger):
         """Test sleep_time default value."""
         trigger.configuration = {}
-        assert trigger.sleep_time == 300
+        assert trigger.sleep_time == 3600
+
+    def test_polling_frequency_hours_overrides_sleep_time(self, trigger):
+        """Test polling_frequency_hours takes precedence over sleep_time."""
+        trigger.configuration["sleep_time"] = 300
+        trigger.configuration["polling_frequency_hours"] = 2
+        assert trigger.sleep_time == 2 * 3600
+
+    def test_polling_frequency_hours_clamped(self, trigger):
+        """Test polling_frequency_hours is clamped to [1, 24]."""
+        trigger.configuration["polling_frequency_hours"] = 0
+        assert trigger.sleep_time == 1 * 3600
+
+        trigger.configuration["polling_frequency_hours"] = 30
+        assert trigger.sleep_time == 24 * 3600
+    
+    def test_checkpoint_cursor_persisted(self, trigger):
+        trigger.save_cursor("cursor123")
+        assert trigger.load_cursor() == "cursor123"
+
+        trigger.save_cursor(None)
+        assert trigger.load_cursor() is None
 
     def test_api_key_property(self, trigger, valid_api_key):
         """Test api_key property returns module configuration value."""
@@ -793,14 +815,22 @@ class TestConstants:
     def test_valid_threat_list_ids_contains_expected(self):
         """Test VALID_THREAT_LIST_IDS contains expected values."""
         expected = [
-            "ransomware",
-            "malware",
-            "phishing",
-            "threat-actor",
-            "infostealer",
+        "ransomware",
+        "malicious-network-infrastructure",
+        "malware",
+        "threat-actor",
+        "trending",
+        "mobile",
+        "osx",
+        "linux",
+        "iot",
+        "cryptominer",
+        "phishing",
+        "first-stage-delivery-vectors",
+        "vulnerability-weaponization",
+        "infostealer",
         ]
-        for item in expected:
-            assert item in VALID_THREAT_LIST_IDS
+        assert set(VALID_THREAT_LIST_IDS) == set(expected)
 
     def test_valid_ioc_types_contains_expected(self):
         """Test VALID_IOC_TYPES contains expected values."""

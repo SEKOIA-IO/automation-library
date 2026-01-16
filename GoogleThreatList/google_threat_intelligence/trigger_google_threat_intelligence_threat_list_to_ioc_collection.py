@@ -92,9 +92,52 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         self.processed_events = TTLCache(maxsize=10000, ttl=604800)  # 7 days TTL
 
     @property
+    def polling_frequency_hours(self) -> int | None:
+        """Get polling frequency in hours.
+
+        SOW expects `polling_frequency_hours` (1-24). We keep backward
+        compatibility with the legacy `sleep_time` option.
+
+        Returns:
+            An int in [1, 24] if provided, otherwise None.
+        """
+        if "polling_frequency_hours" not in self.configuration:
+            return None
+
+        raw = self.configuration.get("polling_frequency_hours")
+        if raw is None or raw == "":
+            return None
+
+        try:
+            hours = int(raw)
+        except (TypeError, ValueError):
+            return None
+
+        # Clamp to SOW bounds
+        if hours < 1:
+            hours = 1
+        elif hours > 24:
+            hours = 24
+
+        return hours
+
+    @property
     def sleep_time(self) -> int:
-        """Get sleep time between polls in seconds."""
-        return int(self.configuration.get("sleep_time", 300))
+        """Get sleep time between polls in seconds.
+
+        Priority order:
+          1) polling_frequency_hours
+          2) sleep_time (legacy)
+          3) default = 1 hour (default)
+        """
+        hours = self.polling_frequency_hours
+        if hours is not None:
+            return hours * 3600
+
+        try:
+            return int(self.configuration.get("sleep_time", 3600))
+        except (TypeError, ValueError):
+            return 3600
 
     @property
     def api_key(self) -> str:
@@ -518,6 +561,78 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                     message=f"Failed to push batch {batch_num}/{total_batches} after {max_retries} retries",
                     level="error",
                 )
+    
+    def _get_context_store(self) -> dict:
+        """
+        Return a dict-like store for checkpointing.
+        In SEKOIA runtime, Trigger usually has a persistent `context`.
+        In unit tests, we fallback to an in-memory dict.
+        """
+        store = getattr(self, "context", None)
+        if store is None:
+            if not hasattr(self, "_local_context"):
+                self._local_context = {}
+            store = self._local_context
+        return store
+
+    def load_checkpoint(self) -> dict:
+        """Load checkpoint from context store."""
+        store = self._get_context_store()
+        return store.get("checkpoint", {}) or {}
+
+    def save_checkpoint(self, checkpoint: dict) -> None:
+        """Save checkpoint to context store."""
+        store = self._get_context_store()
+        store["checkpoint"] = checkpoint
+
+    def load_cursor(self) -> str | None:
+        checkpoint = self.load_checkpoint()
+        cursor = checkpoint.get("cursor")
+        return cursor if cursor else None
+
+    def save_cursor(self, cursor: str | None) -> None:
+        checkpoint = self.load_checkpoint()
+        checkpoint["cursor"] = cursor
+        checkpoint["last_saved_ts"] = int(time.time())
+        self.save_checkpoint(checkpoint)
+
+    def load_metrics(self) -> dict:
+        checkpoint = self.load_checkpoint()
+        metrics = checkpoint.get("metrics", {}) or {}
+
+        # defaults
+        metrics.setdefault("runs", 0)
+        metrics.setdefault("pages_fetched", 0)
+        metrics.setdefault("iocs_fetched", 0)
+        metrics.setdefault("iocs_transformed", 0)
+        metrics.setdefault("iocs_deduped", 0)
+        metrics.setdefault("iocs_pushed", 0)
+        metrics.setdefault("errors", 0)
+        metrics.setdefault("quota_errors", 0)
+
+        checkpoint["metrics"] = metrics
+        self.save_checkpoint(checkpoint)
+        return metrics
+
+    def inc_metric(self, name: str, value: int = 1) -> None:
+        checkpoint = self.load_checkpoint()
+        metrics = checkpoint.get("metrics", {}) or {}
+
+        # ensure defaults exist at least once
+        if not metrics:
+            metrics = self.load_metrics()
+
+        metrics[name] = int(metrics.get(name, 0)) + int(value)
+        checkpoint["metrics"] = metrics
+        self.save_checkpoint(checkpoint)
+
+    def log_kv(self, level: str, event: str, **fields) -> None:
+        """
+        Structured log helper (key/value).
+        For now we serialize as string to keep compatibility with sekoia_automation Trigger.log.
+        """
+        payload = {"event": event, **fields}
+        self.log(message=str(payload), level=level)
 
     def run(self) -> None:
         """Main trigger loop."""
@@ -526,54 +641,111 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         try:
             self.initialize_client()
         except Exception as error:
+            self.inc_metric("errors", 1) if hasattr(self, "inc_metric") else None
+            # Keep legacy log message for tests while emitting structured log.
             self.log(message=f"Failed to initialize client: {error}", level="error")
+            if hasattr(self, "log_kv"):
+                self.log_kv("error", "init_failed", error=str(error))
             return
 
-        cursor = None
+        # Step 4: metrics + structured startup log
+        self.load_metrics()
+        self.inc_metric("runs", 1)
+        self.log_kv(
+            "info",
+            "trigger_started",
+            threat_list_id=self.threat_list_id,
+            ioc_types=self.ioc_types,
+        )
+
+        cursor = self.load_cursor()
+        if cursor:
+            self.log_kv("info", "resume_from_cursor", cursor=cursor)
 
         while self.running:
             try:
                 # Fetch IoCs from VirusTotal
                 response = self.fetch_events(cursor)
-                raw_iocs = response.get("data", [])
+                raw_iocs = response.get("data", []) or []
+
+                # Step 4: page metrics + log
+                meta = response.get("meta", {}) or {}
+                next_cursor = meta.get("continuation_cursor")
+
+                self.inc_metric("pages_fetched", 1)
+                self.inc_metric("iocs_fetched", len(raw_iocs))
+                self.log_kv(
+                    "info",
+                    "page_fetched",
+                    count=len(raw_iocs),
+                    has_cursor=bool(next_cursor),
+                )
 
                 # Transform IoCs
                 transformed = [self.transform_ioc(ioc) for ioc in raw_iocs]
+                self.inc_metric("iocs_transformed", len(transformed))
 
                 # Filter out duplicates
                 new_iocs = self.filter_new_events(transformed)
+                self.inc_metric("iocs_deduped", len(new_iocs))
+
+                self.log_kv(
+                    "info",
+                    "batch_prepared",
+                    transformed=len(transformed),
+                    deduped=len(new_iocs),
+                )
 
                 if new_iocs:
-                    self.log(
-                        message=f"Processing {len(new_iocs)} new IoCs",
-                        level="info",
-                    )
                     # Extract IOC values and push to Sekoia IOC Collection
-                    ioc_values = [ioc["value"] for ioc in new_iocs]
-                    self.push_to_sekoia(ioc_values)
+                    ioc_values = [ioc.get("value") for ioc in new_iocs if ioc.get("value")]
 
-                # Update cursor for pagination
-                meta = response.get("meta", {})
-                cursor = meta.get("continuation_cursor")
+                    if ioc_values:
+                        self.push_to_sekoia(ioc_values)
+                        self.inc_metric("iocs_pushed", len(ioc_values))
+                        self.log_kv("info", "batch_pushed", pushed=len(ioc_values))
+                    else:
+                        self.log_kv("warning", "batch_empty_values", deduped=len(new_iocs))
+                else:
+                    self.log_kv("info", "nothing_to_push")
+
+                # Update cursor for pagination + checkpoint
+                cursor = next_cursor
+                self.save_cursor(cursor)
 
                 # If no more pages, reset cursor and sleep
                 if not cursor:
                     cursor = None
+                    self.save_cursor(None)
+                    self.log_kv("info", "sleeping", seconds=self.sleep_time)
                     time.sleep(self.sleep_time)
 
             except KeyboardInterrupt:
-                self.log(message="Trigger stopped by user", level="info")
+                self.log_kv("info", "stopped_by_user")
                 break
 
             except (InvalidAPIKeyError, ThreatListNotFoundError) as error:
-                # Non-retryable errors - stop the trigger
+                self.inc_metric("errors", 1)
                 self.log(message=f"Fatal error: {error}", level="error")
+                self.log_kv("error", "fatal_error", error=str(error))
                 break
 
-            except Exception as error:
-                self.log(message=f"Error in loop: {error}", level="error")
-                self.log(message=format_exc(), level="error")
-                cursor = None  # Reset cursor on error
+            except QuotaExceededError as error:
+                # Recoverable: rate limit
+                self.inc_metric("quota_errors", 1)
+                self.inc_metric("errors", 1)
+                self.log(message=f"Error in loop: {error}", level="error")  # legacy style
+                self.log_kv("warning", "quota_exceeded", error=str(error))
                 time.sleep(60)
 
+            except Exception as error:
+                self.inc_metric("errors", 1)
+                self.log(message=f"Error in loop: {error}", level="error")
+                self.log_kv("error", "loop_error", error=str(error))
+                self.log(message=format_exc(), level="error")
+                cursor = None  # Reset cursor on error
+                self.save_cursor(None)
+                time.sleep(60)
+
+        self.log_kv("info", "trigger_stopped")
         self.log(message="GTI Threat List trigger stopped", level="info")
