@@ -5,15 +5,20 @@
   "version": "0.0.2",
   "description": "Google Threat Intelligence Threat List to IOC Collection",
   "configuration": {
-    "google_threat_list_url": {
-      "type": "string",
-      "description": "Google Threat Intelligence Server URL"
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "google_threat_list_url": {
+        "type": "string",
+        "description": "Google Threat Intelligence Server URL"
+      },
+      "google_threat_list_api_key": {
+        "type": "string",
+        "description": "API Key for authentication",
+        "secret": true
+      }
     },
-    "google_threat_list_api_key": {
-      "type": "string",
-      "description": "API Key for authentication",
-      "secret": true
-    }
+    "required": ["google_threat_list_url", "google_threat_list_api_key"]
   },
   "docker": "google_threat_list:latest"
 }
