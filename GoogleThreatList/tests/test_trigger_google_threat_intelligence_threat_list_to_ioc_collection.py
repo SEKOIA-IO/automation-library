@@ -126,6 +126,19 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
 
         trigger.configuration["polling_frequency_hours"] = 30
         assert trigger.sleep_time == 24 * 3600
+
+    def test_polling_frequency_hours_invalid(self, trigger):
+        """Test polling_frequency_hours ignores invalid values."""
+        trigger.configuration["polling_frequency_hours"] = ""
+        assert trigger.polling_frequency_hours is None
+
+        trigger.configuration["polling_frequency_hours"] = "invalid"
+        assert trigger.polling_frequency_hours is None
+
+    def test_sleep_time_invalid_falls_back_to_default(self, trigger):
+        """Test invalid sleep_time falls back to default."""
+        trigger.configuration["sleep_time"] = "invalid"
+        assert trigger.sleep_time == 3600
     
     def test_checkpoint_cursor_persisted(self, trigger):
         trigger.save_cursor("cursor123")
@@ -176,6 +189,15 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         """Test extra_query_params property."""
         trigger.configuration["extra_query_params"] = "gti_score:60+"
         assert trigger.extra_query_params == "gti_score:60+"
+    
+    def test_ioc_collection_properties_default(self, trigger):
+        """Test default IOC collection properties."""
+        assert trigger.ioc_collection_server == "https://api.sekoia.io"
+        assert trigger.ioc_collection_uuid == ""
+
+    def test_validate_query_skips_empty_parts(self, trigger):
+        """Test validate_query ignores empty query parts."""
+        assert trigger.validate_query("gti_score:60+ and  and positives:5") is True
 
     # =============================================================================
     # Client Initialization Tests
@@ -648,6 +670,124 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         assert all("ioc_hash" in event for event in new_events)
 
     # =============================================================================
+    # Push to SEKOIA Tests
+    # =============================================================================
+
+    def test_push_to_sekoia_no_values(self, trigger):
+        """Test push_to_sekoia returns early on empty input."""
+        trigger.push_to_sekoia([])
+        assert any("No IOC values to push" in str(call) for call in trigger.log.call_args_list)
+
+    def test_push_to_sekoia_missing_sekoia_api_key(self, trigger):
+        """Test push_to_sekoia logs error without sekoia_api_key."""
+        trigger.module.configuration["sekoia_api_key"] = ""
+        trigger.push_to_sekoia(["ioc1"])
+        assert any("sekoia_api_key is not configured" in str(call) for call in trigger.log.call_args_list)
+
+    def test_push_to_sekoia_missing_ioc_collection_uuid(self, trigger):
+        """Test push_to_sekoia logs error without ioc_collection_uuid."""
+        trigger.module.configuration["sekoia_api_key"] = "sek-key"
+        trigger.configuration["ioc_collection_uuid"] = ""
+        trigger.push_to_sekoia(["ioc1"])
+        assert any("ioc_collection_uuid is not configured" in str(call) for call in trigger.log.call_args_list)
+
+    @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
+    def test_push_to_sekoia_rate_limited_then_success(self, mock_sleep, trigger):
+        """Test push_to_sekoia handles 429 then succeeds."""
+        trigger.module.configuration["sekoia_api_key"] = "sek-key"
+        trigger.configuration["ioc_collection_uuid"] = "uuid-1"
+
+        rate_response = Mock()
+        rate_response.status_code = 429
+        rate_response.headers = {"Retry-After": "1"}
+        rate_response.text = "rate limit"
+
+        ok_response = Mock()
+        ok_response.status_code = 200
+        ok_response.json.return_value = {"created": 1, "updated": 0, "ignored": 0}
+        ok_response.text = ""
+
+        with patch(
+            "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.requests.post"
+        ) as mock_post:
+            mock_post.side_effect = [rate_response, ok_response]
+            trigger.push_to_sekoia(["ioc1"])
+
+        assert mock_sleep.called
+
+    def test_push_to_sekoia_auth_error(self, trigger):
+        """Test push_to_sekoia raises on auth error."""
+        trigger.module.configuration["sekoia_api_key"] = "sek-key"
+        trigger.configuration["ioc_collection_uuid"] = "uuid-1"
+
+        response = Mock()
+        response.status_code = 401
+        response.text = "unauthorized"
+
+        with patch(
+            "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.requests.post",
+            return_value=response,
+        ):
+            with pytest.raises(InvalidAPIKeyError):
+                trigger.push_to_sekoia(["ioc1"])
+
+    def test_push_to_sekoia_not_found(self, trigger):
+        """Test push_to_sekoia raises on 404."""
+        trigger.module.configuration["sekoia_api_key"] = "sek-key"
+        trigger.configuration["ioc_collection_uuid"] = "uuid-1"
+
+        response = Mock()
+        response.status_code = 404
+        response.text = "not found"
+
+        with patch(
+            "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.requests.post",
+            return_value=response,
+        ):
+            with pytest.raises(VirusTotalAPIError):
+                trigger.push_to_sekoia(["ioc1"])
+
+    def test_push_to_sekoia_client_error(self, trigger):
+        """Test push_to_sekoia raises on 4xx client error."""
+        trigger.module.configuration["sekoia_api_key"] = "sek-key"
+        trigger.configuration["ioc_collection_uuid"] = "uuid-1"
+
+        response = Mock()
+        response.status_code = 400
+        response.text = "bad request"
+
+        with patch(
+            "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.requests.post",
+            return_value=response,
+        ):
+            with pytest.raises(VirusTotalAPIError):
+                trigger.push_to_sekoia(["ioc1"])
+
+    @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
+    def test_push_to_sekoia_server_error_retries(self, mock_sleep, trigger):
+        """Test push_to_sekoia retries on server error and logs failure."""
+        trigger.module.configuration["sekoia_api_key"] = "sek-key"
+        trigger.configuration["ioc_collection_uuid"] = "uuid-1"
+
+        response = Mock()
+        response.status_code = 500
+        response.text = "server error"
+
+        with patch(
+            "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.requests.post"
+        ) as mock_post:
+            mock_post.side_effect = [response, response, response]
+            trigger.push_to_sekoia(["ioc1"])
+
+        assert any("Failed to push batch" in str(call) for call in trigger.log.call_args_list)
+
+    def test_context_store_fallback(self, trigger):
+        """Test context store falls back to local dict."""
+        delattr(trigger, "context")
+        store = trigger._get_context_store()
+        assert store == {}
+
+    # =============================================================================
     # Run Loop Tests
     # =============================================================================
 
@@ -664,6 +804,50 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         assert any(
             "Failed to initialize" in str(call) for call in trigger.log.call_args_list
         )
+
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
+    def test_run_logs_resume_from_cursor(self, mock_sleep, trigger):
+        """Test run method logs resume when cursor exists."""
+        trigger.initialize_client()
+        trigger.save_cursor("cursor123")
+
+        with patch.object(
+            type(trigger),
+            "running",
+            new_callable=lambda: property(lambda s: False),
+        ):
+            trigger.run()
+
+        assert any("resume_from_cursor" in str(call) for call in trigger.log.call_args_list)
+
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
+    def test_run_logs_nothing_to_push(self, mock_sleep, trigger):
+        """Test run method logs when there is nothing to push."""
+        trigger.initialize_client()
+
+        response_no_data = {"data": [], "meta": {}}
+
+        call_count = 0
+
+        def mock_running():
+            nonlocal call_count
+            call_count += 1
+            return call_count <= 1
+
+        with patch.object(trigger, "fetch_events") as mock_fetch:
+            mock_fetch.return_value = response_no_data
+            with patch.object(
+                type(trigger),
+                "running",
+                new_callable=lambda: property(lambda s: mock_running()),
+            ):
+                trigger.run()
+
+        assert any("nothing_to_push" in str(call) for call in trigger.log.call_args_list)
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
@@ -758,6 +942,56 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         assert any("Error in loop" in str(call) for call in trigger.log.call_args_list)
         # Sleep should be called for error recovery
         mock_sleep.assert_called()
+
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
+    def test_run_handles_keyboard_interrupt(self, mock_sleep, trigger):
+        """Test run method handles KeyboardInterrupt."""
+        trigger.initialize_client()
+
+        call_count = 0
+
+        def mock_running():
+            nonlocal call_count
+            call_count += 1
+            return call_count <= 1
+
+        with patch.object(trigger, "fetch_events") as mock_fetch:
+            mock_fetch.side_effect = KeyboardInterrupt
+            with patch.object(
+                type(trigger),
+                "running",
+                new_callable=lambda: property(lambda s: mock_running()),
+            ):
+                trigger.run()
+
+        assert any("stopped_by_user" in str(call) for call in trigger.log.call_args_list)
+
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
+    def test_run_handles_quota_exceeded(self, mock_sleep, trigger):
+        """Test run method handles quota exceeded errors."""
+        trigger.initialize_client()
+
+        call_count = 0
+
+        def mock_running():
+            nonlocal call_count
+            call_count += 1
+            return call_count <= 1
+
+        with patch.object(trigger, "fetch_events") as mock_fetch:
+            mock_fetch.side_effect = QuotaExceededError("rate limit")
+            with patch.object(
+                type(trigger),
+                "running",
+                new_callable=lambda: property(lambda s: mock_running()),
+            ):
+                trigger.run()
+
+        assert any("quota_exceeded" in str(call) for call in trigger.log.call_args_list)
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
