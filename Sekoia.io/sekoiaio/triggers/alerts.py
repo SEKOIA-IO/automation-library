@@ -1452,6 +1452,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             )
 
         # Time-based threshold
+        # This checks if there are new events AND we're within the time window.
+        # We use the new_events count (from Kafka notification) instead of making API calls.
         enable_time = config.enable_time_threshold
         time_window_hours = config.time_window_hours
 
@@ -1461,44 +1463,19 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             alert_uuid=alert_uuid,
             enable_time=enable_time,
             time_window_hours=time_window_hours,
+            new_events=new_events,
         )
 
-        if enable_time:
-            try:
-                events_in_window = self._count_events_in_time_window(
-                    alert_uuid,
-                    time_window_hours,
-                )
-                if events_in_window is None:
-                    # API call failed, skip time threshold check (fail open)
-                    self.log(
-                        message="Time threshold check skipped due to API error (fail open)",
-                        level="warning",
-                        alert_uuid=alert_uuid,
-                        time_window_hours=time_window_hours,
-                    )
-                else:
-                    self.log(
-                        message=f"Events in time window: {events_in_window}",
-                        level="debug",
-                        alert_uuid=alert_uuid,
-                        time_window_hours=time_window_hours,
-                        events_in_window=events_in_window,
-                    )
-                    if events_in_window > 0:
-                        trigger_reasons.append("time_threshold")
-                        self.log(
-                            message=f"Time threshold met: {events_in_window} events in last {time_window_hours}h",
-                            level="debug",
-                            alert_uuid=alert_uuid,
-                        )
-            except Exception as exp:
-                self.log_exception(
-                    exp,
-                    message="Failed to check time-based threshold, skipping",
-                    alert_uuid=alert_uuid,
-                    time_window_hours=time_window_hours,
-                )
+        if enable_time and new_events > 0:
+            # We have new events - time threshold is met
+            # The time window check is implicitly satisfied because we just received a notification
+            trigger_reasons.append("time_threshold")
+            self.log(
+                message=f"Time threshold met: {new_events} new events",
+                level="debug",
+                alert_uuid=alert_uuid,
+                time_window_hours=time_window_hours,
+            )
 
         should_trigger = len(trigger_reasons) > 0
 
@@ -1910,112 +1887,6 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         except Exception as e:
             self.log_exception(e, message=f"Failed to get event count from search job", alert_uuid=alert_uuid)
             return None
-
-    def _count_events_in_time_window(
-        self,
-        alert_uuid: str,
-        hours: int,
-    ) -> Optional[int]:
-        """
-        Count events added to alert within the last N hours.
-
-        Args:
-            alert_uuid: UUID of the alert
-            hours: Time window in hours
-
-        Returns:
-            Number of events in the time window, or None if API call failed
-            (None indicates unchecked state, allowing fail-open behavior)
-        """
-        earliest_time = datetime.now(timezone.utc) - timedelta(hours=hours)
-
-        self.log(
-            message=f"Counting events in time window for alert {alert_uuid}",
-            level="debug",
-            alert_uuid=alert_uuid,
-            hours=hours,
-            earliest_time=earliest_time.isoformat(),
-        )
-
-        api_url = urljoin(self.module.configuration["base_url"], "api/v2/events/search")
-        api_url = api_url.replace("/api/api", "/api")
-
-        api_key = self.module.configuration["api_key"]
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "User-Agent": user_agent(),
-        }
-
-        payload = {
-            "filter": {
-                "alert_uuid": alert_uuid,
-                "created_at": {
-                    "gte": earliest_time.isoformat(),
-                },
-            },
-            "size": 0,  # We only need the count
-        }
-
-        self.log(message=f"Calling events API: {api_url}", level="debug", alert_uuid=alert_uuid, payload=str(payload))
-
-        try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
-
-            self.log(
-                message=f"Events API response received",
-                level="debug",
-                alert_uuid=alert_uuid,
-                status_code=response.status_code,
-            )
-
-            if not response.ok:
-                try:
-                    error_content = response.json()
-                except Exception:
-                    error_content = response.text
-                self.log(
-                    message="Events API returned error",
-                    level="error",
-                    alert_uuid=alert_uuid,
-                    status_code=response.status_code,
-                    error_content=str(error_content),
-                )
-
-            response.raise_for_status()
-            data = response.json()
-            event_count = data.get("total", 0)
-
-            self.log(
-                message=f"Successfully counted events in time window",
-                level="debug",
-                alert_uuid=alert_uuid,
-                event_count=event_count,
-                hours=hours,
-            )
-
-            return event_count
-        except requests.exceptions.Timeout as e:
-            self.log(
-                message=f"Timeout counting events for alert {alert_uuid}",
-                level="error",
-                alert_uuid=alert_uuid,
-                timeout=30,
-                error=str(e),
-            )
-            return None  # Return None to indicate unchecked (fail open: skip this check)
-        except requests.exceptions.RequestException as e:
-            self.log(
-                message=f"Request error counting events for alert {alert_uuid}",
-                level="error",
-                alert_uuid=alert_uuid,
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-            return None  # Return None to indicate unchecked (fail open: skip this check)
-        except Exception as e:
-            self.log_exception(e, message=f"Failed to count events for alert {alert_uuid}", alert_uuid=alert_uuid)
-            return None  # Return None to indicate unchecked (fail open: skip this check)
 
     def _cleanup_old_states(self):
         """
