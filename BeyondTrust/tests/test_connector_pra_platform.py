@@ -149,17 +149,6 @@ def test_fetch_events_xml_error_with_attributes(trigger, error_response_xml):
         events = trigger.fetch_events()
 
         assert list(events) == []
-        # Verify that the error was logged with level="error"
-        trigger.log.assert_called()
-        # Check that at least one call has level="error" and contains the error response
-        found_error_log = False
-        for call in trigger.log.call_args_list:
-            # Check both kwargs and positional args
-            if (len(call) > 1 and call[1].get("level") == "error") or (
-                len(call) > 0 and len(call[0]) > 1 and call[0][1] == "error"
-            ):
-                # Verify the log message contains reference to error
-                if "error" in str(call).lower():
-                    found_error_log = True
-                    break
-        assert found_error_log, "Expected to find an error-level log call containing 'error'"
+        # Verify that the error was logged with the expected format
+        expected_error_msg = f"An error occurred. response: {error_response_xml.decode('utf-8')}"
+        trigger.log.assert_any_call(expected_error_msg, level="error")
