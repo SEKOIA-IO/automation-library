@@ -2,7 +2,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from posixpath import join as urljoin
-from threading import Lock
+from threading import Lock, Thread, Event
 from typing import Any, Optional
 
 import orjson
@@ -406,8 +406,12 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
       without locks).
     """
 
-    # Handle only alert updates
-    HANDLED_EVENT_SUB_TYPES = [("alert", "updated")]
+    # Handle alert creation and updates
+    HANDLED_EVENT_SUB_TYPES = [("alert", "created"), ("alert", "updated")]
+
+    # Interval for periodic time threshold check (in seconds)
+    # Check every 5 minutes to balance responsiveness vs resource usage
+    TIME_THRESHOLD_CHECK_INTERVAL_SECONDS = 300
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -420,6 +424,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self._alert_locks: dict[str, Lock] = {}
         self._locks_lock = Lock()  # Lock to protect access to _alert_locks dictionary
         self._max_locks = 1024  # Maximum number of locks to keep in memory
+        # Periodic time threshold check thread
+        self._time_threshold_thread: Optional[Thread] = None
+        self._time_threshold_stop_event = Event()
 
     def _get_alert_lock(self, alert_uuid: str) -> Lock:
         """
@@ -446,6 +453,223 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             if alert_uuid not in self._alert_locks:
                 self._alert_locks[alert_uuid] = Lock()
             return self._alert_locks[alert_uuid]
+
+    def _start_time_threshold_thread(self):
+        """Start the periodic time threshold check thread."""
+        if self._time_threshold_thread is not None and self._time_threshold_thread.is_alive():
+            self.log(message="Time threshold thread already running", level="debug")
+            return
+
+        self._time_threshold_stop_event.clear()
+        self._time_threshold_thread = Thread(
+            target=self._time_threshold_check_loop,
+            name="TimeThresholdChecker",
+            daemon=True,
+        )
+        self._time_threshold_thread.start()
+        self.log(
+            message="Started time threshold check thread",
+            level="info",
+            interval_seconds=self.TIME_THRESHOLD_CHECK_INTERVAL_SECONDS,
+        )
+
+    def _stop_time_threshold_thread(self):
+        """Stop the periodic time threshold check thread."""
+        if self._time_threshold_thread is None:
+            return
+
+        self._time_threshold_stop_event.set()
+        self._time_threshold_thread.join(timeout=10)
+        if self._time_threshold_thread.is_alive():
+            self.log(message="Time threshold thread did not stop cleanly", level="warning")
+            # Keep reference to thread so we don't create duplicates
+            # Thread is daemon so it will be killed when main process exits
+        else:
+            self.log(message="Time threshold thread stopped", level="debug")
+            self._time_threshold_thread = None
+
+    def _time_threshold_check_loop(self):
+        """
+        Periodic loop that checks time thresholds for pending alerts.
+
+        This runs in a separate thread and checks every TIME_THRESHOLD_CHECK_INTERVAL_SECONDS.
+        """
+        self.log(message="Time threshold check loop started", level="debug")
+
+        while not self._time_threshold_stop_event.is_set():
+            try:
+                self._check_pending_time_thresholds()
+            except Exception as exp:
+                self.log_exception(exp, message="Error in time threshold check loop")
+
+            # Wait for interval or stop event
+            self._time_threshold_stop_event.wait(timeout=self.TIME_THRESHOLD_CHECK_INTERVAL_SECONDS)
+
+        self.log(message="Time threshold check loop stopped", level="debug")
+
+    def _check_pending_time_thresholds(self):
+        """
+        Check all pending alerts for time threshold triggers.
+
+        This is called periodically by the time threshold thread.
+        """
+        if self.state_manager is None:
+            return
+
+        config = self.validated_config
+        if not config.enable_time_threshold:
+            return
+
+        time_window_hours = config.time_window_hours
+
+        self.log(
+            message="Checking pending time thresholds",
+            level="debug",
+            time_window_hours=time_window_hours,
+        )
+
+        # Reload state to get latest data from S3
+        try:
+            self.state_manager.reload_state()
+        except Exception as exp:
+            self.log_exception(exp, message="Failed to reload state for time threshold check")
+            return
+
+        pending_alerts = self.state_manager.get_alerts_pending_time_check(time_window_hours)
+
+        if not pending_alerts:
+            self.log(message="No pending alerts for time threshold check", level="debug")
+            return
+
+        self.log(
+            message=f"Found {len(pending_alerts)} alerts pending time threshold check",
+            level="debug",
+            pending_count=len(pending_alerts),
+        )
+
+        for alert_state in pending_alerts:
+            try:
+                self._trigger_time_threshold_for_alert(alert_state)
+            except Exception as exp:
+                self.log_exception(
+                    exp,
+                    message="Failed to trigger time threshold for alert",
+                    alert_uuid=alert_state.get("alert_uuid"),
+                )
+
+    def _trigger_time_threshold_for_alert(self, alert_state: dict[str, Any]):
+        """
+        Trigger the playbook for an alert that meets the time threshold.
+
+        Args:
+            alert_state: Alert state from state manager
+        """
+        alert_uuid = alert_state.get("alert_uuid")
+        alert_short_id = alert_state.get("alert_short_id")
+
+        # Type guards for required fields
+        if not isinstance(alert_uuid, str) or not isinstance(alert_short_id, str):
+            self.log(
+                message="Invalid alert state: missing alert_uuid or alert_short_id",
+                level="error",
+                alert_uuid=alert_uuid,
+                alert_short_id=alert_short_id,
+            )
+            return
+
+        if self.state_manager is None:
+            self.log(message="State manager not initialized", level="error")
+            return
+
+        current_count = alert_state.get("current_event_count", 0)
+        last_triggered_count = alert_state.get("last_triggered_event_count", 0)
+        new_events = current_count - last_triggered_count
+
+        self.log(
+            message=f"Triggering time threshold for alert {alert_short_id}",
+            level="info",
+            alert_uuid=alert_uuid,
+            new_events=new_events,
+            current_count=current_count,
+        )
+
+        # Get alert info from cache
+        alert = alert_state.get("alert_info")
+        if alert is None:
+            self.log(
+                message=f"No cached alert info for {alert_short_id}, skipping time threshold trigger",
+                level="warning",
+                alert_uuid=alert_uuid,
+            )
+            return
+
+        # Use lock to prevent race condition with notification handler
+        alert_lock = self._get_alert_lock(alert_uuid)
+        with alert_lock:
+            # Re-check state after acquiring lock (may have been updated)
+            current_state = self.state_manager.get_alert_state(alert_uuid)
+            if current_state is None:
+                return
+
+            # Re-calculate new events with fresh state
+            current_count = current_state.get("current_event_count", 0)
+            last_triggered_count = current_state.get("last_triggered_event_count", 0)
+            new_events = current_count - last_triggered_count
+
+            if new_events <= 0:
+                self.log(
+                    message=f"No new events for alert {alert_short_id} after lock (already triggered)",
+                    level="debug",
+                    alert_uuid=alert_uuid,
+                )
+                return
+
+            context = {
+                "reason": "time_threshold",
+                "new_events": new_events,
+                "previous_count": last_triggered_count,
+                "current_count": current_count,
+                "time_window_hours": self.validated_config.time_window_hours,
+            }
+
+            # Update state
+            try:
+                self.state_manager.update_alert_state(
+                    alert_uuid=alert_uuid,
+                    alert_short_id=alert_short_id,
+                    rule_uuid=alert.get("rule", {}).get("uuid", ""),
+                    rule_name=alert.get("rule", {}).get("name", ""),
+                    event_count=current_count,
+                    previous_version=current_state.get("version"),
+                )
+            except Exception as exp:
+                self.log_exception(exp, message="Failed to update state for time threshold trigger")
+                # Continue despite error
+
+            # Send event to playbook
+            try:
+                self._send_threshold_event(
+                    alert=alert,
+                    event_type="alert",
+                    context=context,
+                    events=None,  # No event fetch for periodic triggers
+                    previous_state=current_state,
+                )
+
+                EVENTS_FORWARDED.labels(trigger_type="time_threshold").inc()
+
+                self.log(
+                    message=f"Time threshold triggered for alert {alert_short_id}",
+                    level="info",
+                    alert_uuid=alert_uuid,
+                    new_events=new_events,
+                )
+            except Exception as exp:
+                self.log_exception(
+                    exp,
+                    message="Failed to send time threshold event",
+                    alert_uuid=alert_uuid,
+                )
 
     @property
     def validated_config(self) -> AlertEventsThresholdConfiguration:
@@ -494,17 +718,42 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 )
 
                 self._initialized = True
+
+                # Start periodic time threshold check thread if enabled
+                config = self.validated_config
+                if config.enable_time_threshold:
+                    self._start_time_threshold_thread()
+
                 self.log(
                     message="AlertEventsThresholdTrigger initialized successfully",
                     level="info",
                     state_path=str(state_path),
                     events_api_path=self._events_api_path,
+                    time_threshold_enabled=config.enable_time_threshold,
+                    time_window_hours=config.time_window_hours,
                 )
             except Exception as exp:
                 self.log_exception(
                     exp, message="Failed to initialize AlertEventsThresholdTrigger", state_path=str(state_path)
                 )
                 raise
+
+    def stop(self, *args, **kwargs):
+        """Stop the trigger and clean up resources."""
+        self.log(message="Stopping AlertEventsThresholdTrigger", level="info")
+
+        # Stop the time threshold thread
+        self._stop_time_threshold_thread()
+
+        # Close HTTP session
+        if self._http_session is not None:
+            self._http_session.close()
+            self._http_session = None
+
+        # Call parent stop
+        super().stop(*args, **kwargs)
+
+        self.log(message="AlertEventsThresholdTrigger stopped", level="info")
 
     def handle_event(self, message):
         """
@@ -548,35 +797,61 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(message="Notification missing alert UUID", level="warning", message_attributes=str(alert_attrs))
             return
 
+        # Extract event count from notification (similar field contains total event count)
+        # For alert:updated -> similar is in attributes.updated.similar
+        # For alert:created -> similar is in attributes.similar
+        updated_fields = alert_attrs.get("updated", {})
+        event_count_from_notification: Optional[int] = updated_fields.get("similar")
+        if event_count_from_notification is None:
+            # Fallback to direct similar field (for alert:created notifications)
+            event_count_from_notification = alert_attrs.get("similar")
+
         # Use a lock to prevent concurrent processing of the same alert
         alert_lock = self._get_alert_lock(alert_uuid)
         with alert_lock:
-            self._handle_event_locked(alert_uuid, event_type, message)
+            self._handle_event_locked(alert_uuid, event_type, message, event_count_from_notification)
 
-    def _handle_event_locked(self, alert_uuid: str, event_type: str, message: dict):
+    def _handle_event_locked(
+        self, alert_uuid: str, event_type: str, message: dict, event_count_from_notification: Optional[int] = None
+    ):
         """
         Handle alert update with lock acquired.
         This method contains the actual logic that was previously in handle_event.
-        """
-        self.log(message="Processing alert update", level="debug", alert_uuid=alert_uuid)
 
-        try:
-            # Reuse parent's method for API retrieval
-            self.log(message=f"Fetching alert {alert_uuid} from API", level="debug")
-            alert = self._retrieve_alert_from_alertapi(alert_uuid)
+        Args:
+            alert_uuid: UUID of the alert
+            event_type: Type of the event (e.g., "alert")
+            message: Full notification message
+            event_count_from_notification: Total event count from Kafka notification (similar field)
+        """
+        self.log(message="Processing alert event", level="debug", alert_uuid=alert_uuid)
+
+        event_action = message.get("action", "")
+        alert_attrs = message.get("attributes", {})
+
+        # Try to get alert info without API call
+        alert = self._get_alert_info_optimized(alert_uuid, event_action, alert_attrs)
+        if alert is None:
             self.log(
-                message=f"Successfully retrieved alert {alert.get('short_id')}",
-                level="debug",
+                message="Could not retrieve alert info, skipping",
+                level="warning",
                 alert_uuid=alert_uuid,
-                short_id=alert.get("short_id"),
-                events_count=alert.get("events_count", 0),
-                rule_name=alert.get("rule", {}).get("name"),
             )
-        except Exception as exp:
-            self.log_exception(exp, message="Failed to fetch alert from Alert API", alert_uuid=alert_uuid)
             return
 
-        # Reuse parent's rule filtering logic
+        # Update state with current event count (for time threshold periodic check)
+        if self.state_manager is not None and event_count_from_notification is not None:
+            try:
+                self.state_manager.update_alert_info(
+                    alert_uuid=alert_uuid,
+                    alert_info=alert,
+                    event_count=event_count_from_notification,
+                )
+            except Exception as exp:
+                self.log_exception(exp, message="Failed to update alert info in state", alert_uuid=alert_uuid)
+                # Continue despite error
+
+        # Apply rule filtering
         if not self._should_process_alert(alert):
             EVENTS_FILTERED.labels(reason="rule_filter").inc()
             self.log(
@@ -616,8 +891,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 message=f"Evaluating thresholds for alert {alert.get('short_id')}",
                 level="debug",
                 alert_uuid=alert_uuid,
+                event_count_from_notification=event_count_from_notification,
             )
-            should_trigger, context = self._evaluate_thresholds(alert, previous_state)
+            should_trigger, context = self._evaluate_thresholds(alert, previous_state, event_count_from_notification)
             self.log(
                 message=f"Threshold evaluation completed for alert {alert.get('short_id')}",
                 level="debug",
@@ -657,10 +933,10 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             self.log(message=f"Updating state for alert {alert.get('short_id')}", level="debug", alert_uuid=alert_uuid)
             self.state_manager.update_alert_state(
                 alert_uuid=alert_uuid,
-                alert_short_id=alert.get("short_id"),
-                rule_uuid=alert.get("rule", {}).get("uuid"),
-                rule_name=alert.get("rule", {}).get("name"),
-                event_count=alert.get("events_count", 0),
+                alert_short_id=str(alert.get("short_id", "")),
+                rule_uuid=str(alert.get("rule", {}).get("uuid", "")),
+                rule_name=str(alert.get("rule", {}).get("name", "")),
+                event_count=context.get("current_count", 0),  # Use current_count from threshold evaluation
                 previous_version=previous_state.get("version") if previous_state else None,
             )
             self.log(
@@ -818,6 +1094,113 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         )
         return matches
 
+    def _get_alert_info_optimized(
+        self, alert_uuid: str, event_action: str, alert_attrs: dict[str, Any]
+    ) -> Optional[dict[str, Any]]:
+        """
+        Get alert info optimized to avoid API calls when possible.
+
+        Strategy:
+        1. If alert:created -> extract info from notification, no API call
+        2. If alert:updated and state has cached info -> use cache, no API call
+        3. If alert:updated and no cache -> API call, then cache
+
+        Args:
+            alert_uuid: UUID of the alert
+            event_action: Action from notification ("created" or "updated")
+            alert_attrs: Attributes from notification
+
+        Returns:
+            Alert info dictionary or None if could not retrieve
+        """
+        # Case 1: alert:created - extract from notification
+        if event_action == "created":
+            alert = self._extract_alert_from_created_notification(alert_attrs)
+            self.log(
+                message="Using alert info from created notification",
+                level="debug",
+                alert_uuid=alert_uuid,
+                short_id=alert.get("short_id"),
+            )
+            return alert
+
+        # Case 2 & 3: alert:updated - check cache first
+        if self.state_manager is not None:
+            cached_alert = self.state_manager.get_alert_info(alert_uuid)
+            if cached_alert is not None:
+                self.log(
+                    message="Using cached alert info from state",
+                    level="debug",
+                    alert_uuid=alert_uuid,
+                    short_id=cached_alert.get("short_id"),
+                )
+                return cached_alert
+
+        # Case 3: No cache, need API call
+        try:
+            self.log(message=f"Fetching alert {alert_uuid} from API (no cache)", level="debug")
+            alert = self._retrieve_alert_from_alertapi(alert_uuid)
+            self.log(
+                message=f"Successfully retrieved alert {alert.get('short_id')} from API",
+                level="debug",
+                alert_uuid=alert_uuid,
+                short_id=alert.get("short_id"),
+            )
+            return alert
+        except Exception as exp:
+            self.log_exception(exp, message="Failed to fetch alert from Alert API", alert_uuid=alert_uuid)
+            return None
+
+    def _extract_alert_from_created_notification(self, alert_attrs: dict[str, Any]) -> dict[str, Any]:
+        """
+        Extract alert info from alert:created notification attributes.
+
+        The alert:created notification contains all the alert fields we need.
+        For temporal fields not present in the notification, we use the current
+        timestamp as a reasonable default (the alert was just created).
+
+        Args:
+            alert_attrs: Attributes from the notification
+
+        Returns:
+            Alert info dictionary in the same format as API response
+        """
+        from datetime import datetime, timezone
+
+        # Use current time as default for temporal fields not in notification
+        # This is reasonable since alert:created means the alert was just created
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        return {
+            "uuid": alert_attrs.get("uuid"),
+            "short_id": alert_attrs.get("short_id"),
+            "status": {
+                "name": alert_attrs.get("status_name"),
+                "uuid": alert_attrs.get("status_uuid"),
+            },
+            "urgency": {
+                "current_value": alert_attrs.get("urgency_current_value"),
+            },
+            "alert_type": {
+                "category": alert_attrs.get("alert_type_category"),
+                "value": alert_attrs.get("alert_type_value"),
+            },
+            "rule": {
+                "uuid": alert_attrs.get("rule_uuid"),
+                "name": alert_attrs.get("rule_name"),
+            },
+            "entity": {
+                "uuid": alert_attrs.get("entity_uuid"),
+                "name": alert_attrs.get("entity_name"),
+            },
+            "assets": [{"uuid": uuid} for uuid in alert_attrs.get("assets_uuids", [])],
+            # Temporal fields: use notification values if present, else current time
+            # (alert:created means the alert was just created, so current time is reasonable)
+            "created_at": alert_attrs.get("created_at", now_iso),
+            "first_seen_at": alert_attrs.get("first_seen_at", now_iso),
+            "last_seen_at": alert_attrs.get("last_seen_at", now_iso),
+        }
+
     def _send_threshold_event(
         self,
         alert: dict[str, Any],
@@ -916,7 +1299,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             "rule": {"name": alert.get("rule", {}).get("name"), "uuid": alert.get("rule", {}).get("uuid")},
             "last_seen_at": alert.get("last_seen_at"),
             "first_seen_at": alert.get("first_seen_at"),
-            "events_count": alert.get("events_count", 0),
+            "events_count": context.get("current_count", 0),  # Use current_count from threshold evaluation
             # Add threshold-specific context
             "trigger_context": {
                 "triggered_at": datetime.now(timezone.utc).isoformat(),
@@ -961,6 +1344,7 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self,
         alert: dict[str, Any],
         previous_state: Optional[dict[str, Any]],
+        event_count_from_notification: Optional[int] = None,
     ) -> tuple[bool, dict[str, Any]]:
         """
         Evaluate whether alert meets triggering thresholds.
@@ -968,12 +1352,40 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         Args:
             alert: Current alert data
             previous_state: Previous state for this alert (if any)
+            event_count_from_notification: Total event count from Kafka notification (similar field)
 
         Returns:
             Tuple of (should_trigger, trigger_context)
         """
         alert_uuid = alert["uuid"]
-        current_event_count = alert.get("events_count", 0)
+
+        # Use event count from Kafka notification if available, otherwise fall back to API
+        if event_count_from_notification is not None:
+            current_event_count = event_count_from_notification
+            self.log(
+                message="Using event count from Kafka notification",
+                level="debug",
+                alert_uuid=alert_uuid,
+                event_count=current_event_count,
+            )
+        else:
+            # Fall back to API call if notification doesn't contain event count
+            api_event_count = self._get_total_event_count(alert)
+            if api_event_count is None:
+                self.log(
+                    message="Failed to get event count from API, using 0",
+                    level="warning",
+                    alert_uuid=alert_uuid,
+                )
+                current_event_count = 0
+            else:
+                current_event_count = api_event_count
+                self.log(
+                    message="Using event count from API (fallback)",
+                    level="debug",
+                    alert_uuid=alert_uuid,
+                    event_count=current_event_count,
+                )
 
         self.log(
             message="Starting threshold evaluation",
@@ -1049,6 +1461,18 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             )
 
         # Time-based threshold
+        # This checks if there are new events AND we're within the time window.
+        # We use the new_events count (from Kafka notification) instead of making API calls.
+        #
+        # Design assumption: When we receive a Kafka notification about new events,
+        # those events are considered "within the time window" because:
+        # 1. Kafka notifications are delivered in near real-time (typically < 1 minute delay)
+        # 2. The time_window_hours config is meant for periodic checks, not real-time notifications
+        # 3. For delayed/out-of-order notifications, the periodic background thread
+        #    (_time_threshold_check_loop) validates actual timestamps against the window
+        #
+        # This approach avoids expensive event search API calls while maintaining correctness
+        # for the common case. Edge cases (delayed notifications) are handled by the periodic check.
         enable_time = config.enable_time_threshold
         time_window_hours = config.time_window_hours
 
@@ -1058,44 +1482,19 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             alert_uuid=alert_uuid,
             enable_time=enable_time,
             time_window_hours=time_window_hours,
+            new_events=new_events,
         )
 
-        if enable_time:
-            try:
-                events_in_window = self._count_events_in_time_window(
-                    alert_uuid,
-                    time_window_hours,
-                )
-                if events_in_window is None:
-                    # API call failed, skip time threshold check (fail open)
-                    self.log(
-                        message="Time threshold check skipped due to API error (fail open)",
-                        level="warning",
-                        alert_uuid=alert_uuid,
-                        time_window_hours=time_window_hours,
-                    )
-                else:
-                    self.log(
-                        message=f"Events in time window: {events_in_window}",
-                        level="debug",
-                        alert_uuid=alert_uuid,
-                        time_window_hours=time_window_hours,
-                        events_in_window=events_in_window,
-                    )
-                    if events_in_window > 0:
-                        trigger_reasons.append("time_threshold")
-                        self.log(
-                            message=f"Time threshold met: {events_in_window} events in last {time_window_hours}h",
-                            level="debug",
-                            alert_uuid=alert_uuid,
-                        )
-            except Exception as exp:
-                self.log_exception(
-                    exp,
-                    message="Failed to check time-based threshold, skipping",
-                    alert_uuid=alert_uuid,
-                    time_window_hours=time_window_hours,
-                )
+        if enable_time and new_events > 0:
+            # We have new events - time threshold is met
+            # The notification itself serves as proof that events occurred recently
+            trigger_reasons.append("time_threshold")
+            self.log(
+                message=f"Time threshold met: {new_events} new events",
+                level="debug",
+                alert_uuid=alert_uuid,
+                time_window_hours=time_window_hours,
+            )
 
         should_trigger = len(trigger_reasons) > 0
 
@@ -1428,111 +1827,85 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         return events
 
-    def _count_events_in_time_window(
-        self,
-        alert_uuid: str,
-        hours: int,
-    ) -> Optional[int]:
+    def _get_total_event_count(self, alert: dict[str, Any]) -> Optional[int]:
         """
-        Count events added to alert within the last N hours.
+        Get total count of events for an alert using the search job API.
+
+        This method triggers a search job with size=0 to get only the total count
+        without fetching all events, which is much more efficient.
 
         Args:
-            alert_uuid: UUID of the alert
-            hours: Time window in hours
+            alert: Alert data dictionary (must contain short_id, first_seen_at, last_seen_at)
 
         Returns:
-            Number of events in the time window, or None if API call failed
-            (None indicates unchecked state, allowing fail-open behavior)
+            Total number of events, or None if API call failed
         """
-        earliest_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+        alert_uuid = alert.get("uuid")
+        alert_short_id = alert.get("short_id")
+        first_seen_at = alert.get("first_seen_at")
+        last_seen_at = alert.get("last_seen_at")
 
         self.log(
-            message=f"Counting events in time window for alert {alert_uuid}",
+            message=f"Getting total event count for alert {alert_uuid}",
             level="debug",
             alert_uuid=alert_uuid,
-            hours=hours,
-            earliest_time=earliest_time.isoformat(),
         )
 
-        api_url = urljoin(self.module.configuration["base_url"], "api/v2/events/search")
-        api_url = api_url.replace("/api/api", "/api")
-
-        api_key = self.module.configuration["api_key"]
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "User-Agent": user_agent(),
-        }
-
-        payload = {
-            "filter": {
-                "alert_uuid": alert_uuid,
-                "created_at": {
-                    "gte": earliest_time.isoformat(),
-                },
-            },
-            "size": 0,  # We only need the count
-        }
-
-        self.log(message=f"Calling events API: {api_url}", level="debug", alert_uuid=alert_uuid, payload=str(payload))
-
-        try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
-
+        if not alert_short_id or not first_seen_at or not last_seen_at:
             self.log(
-                message=f"Events API response received",
-                level="debug",
+                message="Alert missing required fields for event counting",
+                level="error",
                 alert_uuid=alert_uuid,
-                status_code=response.status_code,
+                has_short_id=bool(alert_short_id),
+                has_first_seen_at=bool(first_seen_at),
+                has_last_seen_at=bool(last_seen_at),
             )
+            return None
 
-            if not response.ok:
-                try:
-                    error_content = response.json()
-                except Exception:
-                    error_content = response.text
-                self.log(
-                    message="Events API returned error",
-                    level="error",
-                    alert_uuid=alert_uuid,
-                    status_code=response.status_code,
-                    error_content=str(error_content),
-                )
+        # Step 1: Trigger the search job with max_last_events=1 to minimize data transfer
+        job_uuid = self._trigger_event_search_job(alert_short_id, first_seen_at, last_seen_at, limit=1)
+        if not job_uuid:
+            self.log(message="Failed to trigger search job for event counting", level="error", alert_uuid=alert_uuid)
+            return None
 
+        # Step 2: Wait for the job to complete
+        if not self._wait_for_search_job(job_uuid):
+            self.log(
+                message="Search job did not complete for event counting",
+                level="error",
+                alert_uuid=alert_uuid,
+                job_uuid=job_uuid,
+            )
+            return None
+
+        # Step 3: Get only the first page to extract the total count
+        try:
+            if self._http_session is None:
+                self.log(message="HTTP session not initialized", level="error")
+                return None
+
+            response = self._http_session.get(
+                f"{self._events_api_path}/search/jobs/{job_uuid}/events",
+                params={"limit": 1, "offset": 0},  # Only fetch 1 item to get the total
+                timeout=20,
+            )
             response.raise_for_status()
+
             data = response.json()
             event_count = data.get("total", 0)
 
             self.log(
-                message=f"Successfully counted events in time window",
+                message=f"Successfully got total event count",
                 level="debug",
                 alert_uuid=alert_uuid,
                 event_count=event_count,
-                hours=hours,
             )
 
             return event_count
-        except requests.exceptions.Timeout as e:
-            self.log(
-                message=f"Timeout counting events for alert {alert_uuid}",
-                level="error",
-                alert_uuid=alert_uuid,
-                timeout=30,
-                error=str(e),
-            )
-            return None  # Return None to indicate unchecked (fail open: skip this check)
-        except requests.exceptions.RequestException as e:
-            self.log(
-                message=f"Request error counting events for alert {alert_uuid}",
-                level="error",
-                alert_uuid=alert_uuid,
-                error=str(e),
-                error_type=type(e).__name__,
-            )
-            return None  # Return None to indicate unchecked (fail open: skip this check)
+
         except Exception as e:
-            self.log_exception(e, message=f"Failed to count events for alert {alert_uuid}", alert_uuid=alert_uuid)
-            return None  # Return None to indicate unchecked (fail open: skip this check)
+            self.log_exception(e, message=f"Failed to get event count from search job", alert_uuid=alert_uuid)
+            return None
 
     def _cleanup_old_states(self):
         """

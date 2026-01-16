@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-07 - 2.68.27
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix event counting by using `similar` field from Kafka notifications instead of non-existent `events_count` field from Alert API
+
+### Added
+
+- AlertEventsThresholdTrigger: Add support for `alert:created` notifications (previously only handled `alert:updated`)
+- AlertEventsThresholdTrigger: Add alert info caching to reduce API calls (extract from notification on `alert:created`, cache on first API call for `alert:updated`)
+- AlertEventsThresholdTrigger: Add periodic time threshold check thread for alerts that received events but didn't meet volume threshold
+- AlertStateManager: Add new fields for caching (`alert_info`, `current_event_count`, `last_event_at`)
+- AlertStateManager: Add new methods `update_alert_info()`, `get_alert_info()`, `get_alerts_pending_time_check()`, `get_all_alerts()`
+- AlertStateManager: Bump state version from 1.0 to 1.1
+
 ## 2026-01-07 - 2.68.26
 
 ### Fixed
