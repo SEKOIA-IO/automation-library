@@ -839,18 +839,6 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             )
             return
 
-        # Update state with current event count (for time threshold periodic check)
-        if self.state_manager is not None and event_count_from_notification is not None:
-            try:
-                self.state_manager.update_alert_info(
-                    alert_uuid=alert_uuid,
-                    alert_info=alert,
-                    event_count=event_count_from_notification,
-                )
-            except Exception as exp:
-                self.log_exception(exp, message="Failed to update alert info in state", alert_uuid=alert_uuid)
-                # Continue despite error
-
         # Apply rule filtering
         if not self._should_process_alert(alert):
             EVENTS_FILTERED.labels(reason="rule_filter").inc()
@@ -866,11 +854,16 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         self.log(message=f"Alert {alert.get('short_id')} passed rule filter", level="debug", alert_uuid=alert_uuid)
 
         # Load previous state for this alert
+        # IMPORTANT: We must reload state from S3 before reading to ensure we have the latest
+        # state from other concurrent notifications. Without this reload, we could read stale
+        # data from the in-memory cache and trigger multiple times for the same alert.
         try:
             if self.state_manager is None:
                 self.log(message="State manager not initialized", level="error", alert_uuid=alert_uuid)
                 return
 
+            # Reload state from S3 to get latest version (prevents race conditions)
+            self.state_manager.reload_state()
             previous_state = self.state_manager.get_alert_state(alert_uuid)
             self.log(
                 message=f"Loaded previous state for alert {alert.get('short_id')}",
@@ -920,6 +913,18 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
                 current_count=context.get("current_count"),
                 previous_count=context.get("previous_count"),
             )
+            # Update alert info for time threshold periodic check (only when not triggering)
+            # This stores the current event count so the background thread can detect
+            # alerts that received events but didn't meet the volume threshold yet.
+            if self.state_manager is not None and event_count_from_notification is not None:
+                try:
+                    self.state_manager.update_alert_info(
+                        alert_uuid=alert_uuid,
+                        alert_info=alert,
+                        event_count=event_count_from_notification,
+                    )
+                except Exception as exp:
+                    self.log_exception(exp, message="Failed to update alert info in state", alert_uuid=alert_uuid)
             return
 
         # Update state before triggering
