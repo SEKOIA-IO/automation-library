@@ -6,6 +6,7 @@ and forwards them to a SEKOIA.IO IOC Collection.
 
 Based on GOOGLE_THREAT_LIST_SOW_SPEC.md specification.
 """
+
 import hashlib
 import time
 from traceback import format_exc
@@ -186,16 +187,12 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                 # Validate gti_score filter
                 value_part = part[10:]  # Remove 'gti_score:'
                 if not self._validate_numeric_filter(value_part):
-                    raise QueryValidationError(
-                        f"Invalid gti_score filter: {part}"
-                    )
+                    raise QueryValidationError(f"Invalid gti_score filter: {part}")
             elif part.startswith("positives:"):
                 # Validate positives filter
                 value_part = part[10:]  # Remove 'positives:'
                 if not self._validate_numeric_filter(value_part):
-                    raise QueryValidationError(
-                        f"Invalid positives filter: {part}"
-                    )
+                    raise QueryValidationError(f"Invalid positives filter: {part}")
             elif part.startswith("has:"):
                 # Validate has: filter
                 value_part = part[4:]  # Remove 'has:'
@@ -227,9 +224,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         except ValueError:
             return False
 
-    def build_query_url(
-        self, threat_list_id: str, cursor: str | None = None
-    ) -> str:
+    def build_query_url(self, threat_list_id: str, cursor: str | None = None) -> str:
         """Build the API URL with query parameters."""
         endpoint = f"{self.BASE_URL}/threat_lists/{threat_list_id}/latest"
 
@@ -270,9 +265,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         elif response.status_code == 404:
             raise ThreatListNotFoundError(f"Threat list not found: {url}")
         elif response.status_code >= 500:
-            raise VirusTotalAPIError(
-                f"Server error: {response.status_code}"
-            )
+            raise VirusTotalAPIError(f"Server error: {response.status_code}")
         else:
             raise VirusTotalAPIError(
                 f"API error: {response.status_code} - {response.text}"
@@ -354,9 +347,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         hash_input = f"{ioc_type}:{normalized_value}"
         return hashlib.sha256(hash_input.encode()).hexdigest()
 
-    def filter_new_events(
-        self, events: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def filter_new_events(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Filter out already processed events using LRU cache.
 
@@ -535,9 +526,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         try:
             self.initialize_client()
         except Exception as error:
-            self.log(
-                message=f"Failed to initialize client: {error}", level="error"
-            )
+            self.log(message=f"Failed to initialize client: {error}", level="error")
             return
 
         cursor = None
@@ -578,9 +567,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
             except (InvalidAPIKeyError, ThreatListNotFoundError) as error:
                 # Non-retryable errors - stop the trigger
-                self.log(
-                    message=f"Fatal error: {error}", level="error"
-                )
+                self.log(message=f"Fatal error: {error}", level="error")
                 break
 
             except Exception as error:

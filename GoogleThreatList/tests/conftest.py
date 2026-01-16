@@ -3,6 +3,7 @@ Pytest fixtures for GoogleThreatIntelligenceThreatListToIOCCollectionTrigger tes
 
 Tests the VirusTotal API-based GTI Threat List connector per SOW specification.
 """
+
 import pytest
 
 

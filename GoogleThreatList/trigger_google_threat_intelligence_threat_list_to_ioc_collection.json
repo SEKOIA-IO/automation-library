@@ -16,26 +16,43 @@
       },
       "ioc_collection_uuid": {
         "type": "string",
-        "description": "SEKOIA.IO IOC Collection UUID to populate"      },      "threat_list_id": {
+        "description": "SEKOIA.IO IOC Collection UUID to populate"
+      },
+      "threat_list_id": {
         "type": "string",
         "description": "Single threat list to monitor",
-        "enum": ["ransomware", "malicious-network-infrastructure", "malware", "threat-actor", "trending", "mobile", "osx", "linux", "iot", "cryptominer", "phishing", "first-stage-delivery-vectors", "vulnerability-weaponization", "infostealer"]      },      "ioc_types": {
+        "enum": ["ransomware", "malicious-network-infrastructure", "malware", "threat-actor", "trending", "mobile", "osx", "linux", "iot", "cryptominer", "phishing", "first-stage-delivery-vectors", "vulnerability-weaponization", "infostealer"]
+      },
+      "ioc_types": {
         "type": "array",
         "description": "Types of IoCs to retrieve",
-        "default": ["file", "url", "ip_address", "domain"]      },      "max_iocs": {
+        "default": ["file", "url", "ip_address", "domain"]
+      },
+      "max_iocs": {
         "type": "integer",
         "description": "Maximum number of IoCs to retrieve per execution",
-        "default": 4000      },      "polling_frequency_hours": {
+        "default": 4000
+      },
+      "polling_frequency_hours": {
         "type": "integer",
         "description": "Hours between each poll (1-24)",
-        "default": 1      },      "extra_query_params": {
+        "default": 1
+      },
+      "extra_query_params": {
         "type": "string",
-        "description": "Advanced filtering query (optional)"      },      "sekoia_api_key": {
-        "type": "password",
-        "description": "SEKOIA.IO API Key for IOC Collection"      },      "sekoia_base_url": {
+        "description": "Advanced filtering query (optional)"
+      },
+      "sekoia_api_key": {
+        "type": "string",
+        "description": "SEKOIA.IO API Key for IOC Collection",
+        "secret": true
+      },
+      "sekoia_base_url": {
         "type": "string",
         "description": "SEKOIA.IO API base URL",
-        "default": "https://api.sekoia.io"      }    }
+        "default": "https://api.sekoia.io"
+      }
+    }
   },
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",

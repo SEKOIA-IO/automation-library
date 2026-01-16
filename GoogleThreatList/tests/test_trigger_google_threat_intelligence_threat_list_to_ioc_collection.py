@@ -3,6 +3,7 @@ Unit tests for GoogleThreatIntelligenceThreatListToIOCCollectionTrigger
 
 Tests the VirusTotal API-based GTI Threat List connector per SOW specification.
 """
+
 import pytest
 from unittest.mock import Mock, patch
 
@@ -628,7 +629,9 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     # Run Loop Tests
     # =============================================================================
 
-    @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
     def test_run_initialization_failure(self, mock_sleep, trigger):
         """Test run method handles initialization failure."""
         trigger.module.configuration["virustotal_api_key"] = ""
@@ -640,7 +643,9 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             "Failed to initialize" in str(call) for call in trigger.log.call_args_list
         )
 
-    @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
     def test_run_loop_one_iteration(self, mock_sleep, trigger, sample_vt_response):
         """Test run method executes one iteration successfully."""
         trigger.initialize_client()
@@ -660,14 +665,18 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             mock_request.return_value = response_no_cursor
             with patch.object(trigger, "push_to_sekoia") as mock_push:
                 with patch.object(
-                    type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
+                    type(trigger),
+                    "running",
+                    new_callable=lambda: property(lambda s: mock_running()),
                 ):
                     trigger.run()
 
         # Verify push_to_sekoia was called with IOC values
         assert mock_push.called
 
-    @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
     def test_run_handles_fatal_error(self, mock_sleep, trigger):
         """Test run method handles fatal errors gracefully."""
         trigger.initialize_client()
@@ -683,15 +692,21 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
                 return call_count <= 2
 
             with patch.object(
-                type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
+                type(trigger),
+                "running",
+                new_callable=lambda: property(lambda s: mock_running()),
             ):
                 trigger.run()
 
         # Should log fatal error
         assert any("Fatal error" in str(call) for call in trigger.log.call_args_list)
 
-    @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
-    def test_run_handles_recoverable_error(self, mock_sleep, trigger, sample_vt_response):
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
+    def test_run_handles_recoverable_error(
+        self, mock_sleep, trigger, sample_vt_response
+    ):
         """Test run method handles recoverable errors and continues."""
         trigger.initialize_client()
 
@@ -711,7 +726,9 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
                 response_no_cursor,
             ]
             with patch.object(
-                type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
+                type(trigger),
+                "running",
+                new_callable=lambda: property(lambda s: mock_running()),
             ):
                 trigger.run()
 
@@ -720,7 +737,9 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         # Sleep should be called for error recovery
         mock_sleep.assert_called()
 
-    @patch("google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep")
+    @patch(
+        "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
+    )
     def test_run_sends_events(self, mock_sleep, trigger, sample_vt_response):
         """Test run method pushes IOCs to Sekoia."""
         trigger.initialize_client()
@@ -739,7 +758,9 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             mock_request.return_value = response_no_cursor
             with patch.object(trigger, "push_to_sekoia") as mock_push:
                 with patch.object(
-                    type(trigger), "running", new_callable=lambda: property(lambda s: mock_running())
+                    type(trigger),
+                    "running",
+                    new_callable=lambda: property(lambda s: mock_running()),
                 ):
                     trigger.run()
 
