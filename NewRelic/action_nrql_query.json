@@ -20,12 +20,14 @@
         "title": "Query",
         "description": "The NRQL to execute",
         "type": "string"
+      },
+      "save_to_file": {
+        "title": "Save output to file",
+        "description": "Whether to save response as a file",
+        "type": "boolean"
       }
     },
-    "required": [
-      "account_ids",
-      "query"
-    ]
+    "required": ["account_ids", "query"]
   },
   "results": {
     "title": "NRQLQueryActionResults",
@@ -38,10 +40,12 @@
         "items": {
           "type": "object"
         }
+      },
+      "file_path": {
+        "description": "Path of the file with results of the NRQL query",
+        "type": "string"
       }
     },
-    "required": [
-      "results"
-    ]
+    "oneOf": [{ "required": ["results"] }, { "required": ["file_path"] }]
   }
 }
