@@ -1,0 +1,15 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Ping Federate",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Ping Identity is a software company that specializes in identity management solutions, providing a suite of products including PingID for multifactor authentication, PingFederate for single sign-on capabilities, PingOne for cloud identity, PingAccess for access management, PingDirectory for identity storage, PingAuthorize for policy-based access control, and PingIntelligence for AI-powered cyber threat detection.",
+  "name": "Ping Federate",
+  "uuid": "dc605cd5-5669-4d57-b0a1-ca81d4060797",
+  "version": "1.0.0",
+  "slug": "ping-federate",
+  "categories": ["IAM"]
+}
