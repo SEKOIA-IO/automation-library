@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-16 - 2.68.28
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix race condition causing multiple triggers for same alert when receiving batch notifications. The issue was caused by:
+  1. `get_alert_state()` reading stale data from in-memory cache instead of reloading from S3
+  2. `update_alert_info()` being called before threshold evaluation, creating state entries with `last_triggered_event_count=0`
+
+  Solution: Reload state from S3 before reading alert state, and move `update_alert_info()` call to only execute when threshold is NOT met (for the periodic time check thread).
+
+### Added
+
+- AlertEventsThresholdTrigger: Add 5 new tests for race condition fix covering:
+  - `reload_state()` is called before `get_alert_state()`
+  - `update_alert_info()` is called when threshold is NOT met
+  - `update_alert_info()` is NOT called when threshold IS met
+  - Concurrent notifications use latest state from S3
+  - Batch notifications trigger correct number of times with correct event counts
+- Fix flaky test `test_time_threshold_triggers` by stopping background thread during test execution
+
 ## 2026-01-07 - 2.68.27
 
 ### Fixed
