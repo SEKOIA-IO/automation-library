@@ -854,7 +854,7 @@ def test_build_device_extended_fields(test_harfanglab_asset_connector, asset_fir
     # Test timestamps
     assert device.first_seen_time is not None
     assert device.last_seen_time is not None
-    assert device.boot_time == "2025-06-11T00:13:20+00:00"
+    assert device.boot_time == 1749600800
     assert device.created_time is not None
 
     # Test network interfaces

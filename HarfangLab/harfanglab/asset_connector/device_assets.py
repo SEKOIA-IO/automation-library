@@ -231,7 +231,7 @@ class HarfanglabAssetConnector(AssetConnector):
                 last_seen_time = isoparse(asset["lastseen"]).timestamp()
             if asset.get("machine_boottime"):
                 boot_time_dt = isoparse(asset["machine_boottime"])
-                boot_time = boot_time_dt.timestamp()
+                boot_time = int(boot_time_dt.timestamp())
             if asset.get("installdate"):
                 created_time = datetime.fromisoformat(asset["installdate"]).timestamp()
         except (ValueError, TypeError) as e:
