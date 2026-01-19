@@ -27,8 +27,8 @@ class ResetUserPasswordAction(MicrosoftADAction):
                 )
 
             self.log(f"Password reset successful for user: {arguments.username}", level="info")
-        except:
-            raise Exception(f"Failed to reset {arguments.username} password account!!!")
+        except e:
+            raise Exception(f"Failed to reset {arguments.username} password account!!!") from e
 
 
 class EnableUserAction(MicrosoftADAction):
