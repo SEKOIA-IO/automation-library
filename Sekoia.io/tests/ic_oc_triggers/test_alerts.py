@@ -2981,11 +2981,27 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
         # Second notification should NOT trigger (no new events)
         assert threshold_trigger.send_event.call_count == 0
 
-    def test_batch_notifications_trigger_once(self, threshold_trigger, sample_threshold_alert):
-        """Test that a batch of notifications for the same alert triggers only once.
+    def test_batch_notifications_trigger_with_correct_event_counts(self, threshold_trigger, sample_threshold_alert):
+        """Test that batch notifications with incrementing counts trigger correctly.
 
-        This is the key test for the race condition fix. When 5 events arrive
-        in a batch, each generating a notification, only the first should trigger.
+        This is the key test for the race condition fix. When 5 events arrive in a batch,
+        each generating a notification with an incrementing similar count (5, 6, 7, 8, 9),
+        each notification should trigger once with the correct new_events count.
+
+        The fix ensures that:
+        - Each notification reloads state from S3 before reading
+        - Each notification sees the updated state from the previous trigger
+        - No duplicate triggers occur for the same events
+
+        Without the fix, all 5 notifications would see the same stale state and
+        each would report 5 new events (triggering 5 times with count=5,5,5,5,5).
+
+        With the fix, notifications trigger correctly:
+        - 1st (similar=5): 5 new events (first occurrence)
+        - 2nd (similar=6): 1 new event (6-5=1)
+        - 3rd (similar=7): 1 new event (7-6=1)
+        - 4th (similar=8): 1 new event (8-7=1)
+        - 5th (similar=9): 1 new event (9-8=1)
         """
         threshold_trigger.configuration["enable_time_threshold"] = True
         threshold_trigger.configuration["enable_volume_threshold"] = False
@@ -3014,11 +3030,6 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
                     },
                 }
                 threshold_trigger.handle_event(message)
-
-        # Should only trigger once (first occurrence) + once for each new event batch
-        # But with the fix, after the first trigger, subsequent notifications
-        # with incrementing counts should still trigger because they have new events
-        # The key is that we don't trigger 5 times with count=5,5,5,5,5
 
         # All 5 notifications should trigger because each has new events
         # (5 new on first, then 1 new each for 6,7,8,9)

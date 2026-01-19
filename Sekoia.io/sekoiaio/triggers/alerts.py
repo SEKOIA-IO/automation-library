@@ -857,6 +857,12 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
         # IMPORTANT: We must reload state from S3 before reading to ensure we have the latest
         # state from other concurrent notifications. Without this reload, we could read stale
         # data from the in-memory cache and trigger multiple times for the same alert.
+        #
+        # Performance note: This reload adds S3 latency on every notification. This is an
+        # intentional trade-off: correctness (no duplicate triggers) over performance.
+        # In practice, alert notifications are relatively infrequent compared to event
+        # ingestion, and the S3 read latency (~50-100ms) is acceptable. For high-throughput
+        # scenarios, consider implementing a distributed lock or cache TTL mechanism.
         try:
             if self.state_manager is None:
                 self.log(message="State manager not initialized", level="error", alert_uuid=alert_uuid)
