@@ -1592,6 +1592,11 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         threshold_trigger._validated_config = None  # Clear cached config
         threshold_trigger._ensure_initialized()
 
+        # Stop the background thread to prevent race conditions during test
+        # The thread may reload state concurrently, causing flaky test results
+        if threshold_trigger._time_threshold_thread is not None:
+            threshold_trigger._stop_time_threshold_thread()
+
         alert_uuid = "alert-uuid-time-test"
 
         # Create previous state so it's not a first occurrence
@@ -2754,3 +2759,285 @@ class TestAlertEventsThresholdTrigger_Cleanup:
         threshold_trigger.log.assert_any_call(
             message="State manager not initialized, skipping cleanup", level="warning"
         )
+
+
+class TestAlertEventsThresholdTrigger_RaceConditionFix:
+    """Tests for the race condition fix in _handle_event_locked.
+
+    These tests verify that:
+    1. State is reloaded from S3 before reading to prevent stale cache reads
+    2. update_alert_info() is only called when threshold is NOT met
+    3. update_alert_info() is NOT called when threshold IS met (to avoid creating
+       entries with last_triggered_event_count=0 before the actual trigger)
+    """
+
+    def test_reload_state_before_get_alert_state(self, threshold_trigger, sample_threshold_alert):
+        """Test that reload_state() is called before get_alert_state() to prevent stale reads."""
+        threshold_trigger._ensure_initialized()
+
+        # Stop background thread to prevent interference
+        if threshold_trigger._time_threshold_thread is not None:
+            threshold_trigger._stop_time_threshold_thread()
+
+        alert_uuid = "test-reload-uuid"
+        message = {
+            "type": "alert",
+            "action": "updated",
+            "attributes": {
+                "uuid": alert_uuid,
+                "updated": {"similar": 10},
+            },
+        }
+
+        alert = {**sample_threshold_alert, "uuid": alert_uuid}
+
+        # Track call order
+        call_order = []
+
+        original_reload = threshold_trigger.state_manager.reload_state
+        original_get_state = threshold_trigger.state_manager.get_alert_state
+
+        def mock_reload():
+            call_order.append("reload_state")
+            return original_reload()
+
+        def mock_get_state(uuid):
+            call_order.append("get_alert_state")
+            return original_get_state(uuid)
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+            with patch.object(threshold_trigger.state_manager, "reload_state", side_effect=mock_reload):
+                with patch.object(threshold_trigger.state_manager, "get_alert_state", side_effect=mock_get_state):
+                    threshold_trigger.handle_event(message)
+
+        # Verify reload_state is called before get_alert_state
+        assert "reload_state" in call_order
+        assert "get_alert_state" in call_order
+        reload_idx = call_order.index("reload_state")
+        get_state_idx = call_order.index("get_alert_state")
+        assert reload_idx < get_state_idx, "reload_state must be called before get_alert_state"
+
+    def test_update_alert_info_called_when_threshold_not_met(self, threshold_trigger, sample_threshold_alert):
+        """Test that update_alert_info() is called when threshold is NOT met."""
+        threshold_trigger.configuration["enable_volume_threshold"] = True
+        threshold_trigger.configuration["event_count_threshold"] = 100  # High threshold
+        threshold_trigger.configuration["enable_time_threshold"] = False
+        threshold_trigger._validated_config = None
+        threshold_trigger._ensure_initialized()
+
+        # Stop background thread
+        if threshold_trigger._time_threshold_thread is not None:
+            threshold_trigger._stop_time_threshold_thread()
+
+        alert_uuid = "test-no-trigger-uuid"
+
+        # Create existing state with some events
+        threshold_trigger.state_manager.update_alert_state(
+            alert_uuid=alert_uuid,
+            alert_short_id="ALT-NO-TRIG",
+            rule_uuid="rule-123",
+            rule_name="Test Rule",
+            event_count=5,
+        )
+
+        message = {
+            "type": "alert",
+            "action": "updated",
+            "attributes": {
+                "uuid": alert_uuid,
+                "updated": {"similar": 10},  # Only 5 new events, below threshold of 100
+            },
+        }
+
+        alert = {**sample_threshold_alert, "uuid": alert_uuid, "short_id": "ALT-NO-TRIG"}
+
+        # Track if update_alert_info is called
+        update_alert_info_called = False
+        original_update_alert_info = threshold_trigger.state_manager.update_alert_info
+
+        def mock_update_alert_info(*args, **kwargs):
+            nonlocal update_alert_info_called
+            update_alert_info_called = True
+            return original_update_alert_info(*args, **kwargs)
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+            with patch.object(
+                threshold_trigger.state_manager, "update_alert_info", side_effect=mock_update_alert_info
+            ):
+                threshold_trigger.handle_event(message)
+
+        # Threshold not met (5 new events < 100 threshold), so should NOT trigger
+        assert not threshold_trigger.send_event.called
+
+        # update_alert_info SHOULD be called when threshold not met
+        assert update_alert_info_called, "update_alert_info should be called when threshold is not met"
+
+    def test_update_alert_info_not_called_when_threshold_met(self, threshold_trigger, sample_threshold_alert):
+        """Test that update_alert_info() is NOT called when threshold IS met."""
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger._validated_config = None
+        threshold_trigger._ensure_initialized()
+
+        # Stop background thread
+        if threshold_trigger._time_threshold_thread is not None:
+            threshold_trigger._stop_time_threshold_thread()
+
+        alert_uuid = "test-trigger-uuid"
+
+        # Create existing state
+        threshold_trigger.state_manager.update_alert_state(
+            alert_uuid=alert_uuid,
+            alert_short_id="ALT-TRIG",
+            rule_uuid="rule-123",
+            rule_name="Test Rule",
+            event_count=5,
+        )
+
+        message = {
+            "type": "alert",
+            "action": "updated",
+            "attributes": {
+                "uuid": alert_uuid,
+                "updated": {"similar": 10},  # 5 new events
+            },
+        }
+
+        alert = {**sample_threshold_alert, "uuid": alert_uuid, "short_id": "ALT-TRIG"}
+
+        # Track if update_alert_info is called
+        update_alert_info_called = False
+
+        def mock_update_alert_info(*args, **kwargs):
+            nonlocal update_alert_info_called
+            update_alert_info_called = True
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+            with patch.object(
+                threshold_trigger.state_manager, "update_alert_info", side_effect=mock_update_alert_info
+            ):
+                threshold_trigger.handle_event(message)
+
+        # Threshold met (time_threshold enabled and new_events > 0), so should trigger
+        assert threshold_trigger.send_event.called
+
+        # update_alert_info should NOT be called when threshold is met
+        assert not update_alert_info_called, "update_alert_info should NOT be called when threshold is met"
+
+    def test_concurrent_notifications_use_latest_state(self, threshold_trigger, sample_threshold_alert):
+        """Test that concurrent notifications correctly use the latest state from S3.
+
+        This test simulates the race condition scenario where:
+        1. First notification triggers and updates state
+        2. Second notification should see the updated state and not trigger again
+        """
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger._validated_config = None
+        threshold_trigger._ensure_initialized()
+
+        # Stop background thread
+        if threshold_trigger._time_threshold_thread is not None:
+            threshold_trigger._stop_time_threshold_thread()
+
+        alert_uuid = "test-concurrent-uuid"
+
+        # First notification - should trigger (first occurrence)
+        message1 = {
+            "type": "alert",
+            "action": "updated",
+            "attributes": {
+                "uuid": alert_uuid,
+                "updated": {"similar": 5},
+            },
+        }
+
+        alert = {**sample_threshold_alert, "uuid": alert_uuid, "short_id": "ALT-CONC"}
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+            threshold_trigger.handle_event(message1)
+
+        # First notification should trigger
+        assert threshold_trigger.send_event.call_count == 1
+        first_call = threshold_trigger.send_event.call_args
+        assert first_call[1]["event"]["trigger_context"]["reason"] == "first_occurrence"
+
+        # Reset mock
+        threshold_trigger.send_event.reset_mock()
+
+        # Second notification with same event count - should NOT trigger
+        message2 = {
+            "type": "alert",
+            "action": "updated",
+            "attributes": {
+                "uuid": alert_uuid,
+                "updated": {"similar": 5},  # Same count as before
+            },
+        }
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+            threshold_trigger.handle_event(message2)
+
+        # Second notification should NOT trigger (no new events)
+        assert threshold_trigger.send_event.call_count == 0
+
+    def test_batch_notifications_trigger_with_correct_event_counts(self, threshold_trigger, sample_threshold_alert):
+        """Test that batch notifications with incrementing counts trigger correctly.
+
+        This is the key test for the race condition fix. When 5 events arrive in a batch,
+        each generating a notification with an incrementing similar count (5, 6, 7, 8, 9),
+        each notification should trigger once with the correct new_events count.
+
+        The fix ensures that:
+        - Each notification reloads state from S3 before reading
+        - Each notification sees the updated state from the previous trigger
+        - No duplicate triggers occur for the same events
+
+        Without the fix, all 5 notifications would see the same stale state and
+        each would report 5 new events (triggering 5 times with count=5,5,5,5,5).
+
+        With the fix, notifications trigger correctly:
+        - 1st (similar=5): 5 new events (first occurrence)
+        - 2nd (similar=6): 1 new event (6-5=1)
+        - 3rd (similar=7): 1 new event (7-6=1)
+        - 4th (similar=8): 1 new event (8-7=1)
+        - 5th (similar=9): 1 new event (9-8=1)
+        """
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger._validated_config = None
+        threshold_trigger._ensure_initialized()
+
+        # Stop background thread
+        if threshold_trigger._time_threshold_thread is not None:
+            threshold_trigger._stop_time_threshold_thread()
+
+        alert_uuid = "test-batch-uuid"
+        alert = {**sample_threshold_alert, "uuid": alert_uuid, "short_id": "ALT-BATCH"}
+
+        # Simulate 5 notifications arriving with incrementing similar counts
+        # This mimics what happens when 5 events are added to an alert
+        similar_counts = [5, 6, 7, 8, 9]
+
+        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
+            for similar in similar_counts:
+                message = {
+                    "type": "alert",
+                    "action": "updated",
+                    "attributes": {
+                        "uuid": alert_uuid,
+                        "updated": {"similar": similar},
+                    },
+                }
+                threshold_trigger.handle_event(message)
+
+        # All 5 notifications should trigger because each has new events
+        # (5 new on first, then 1 new each for 6,7,8,9)
+        assert threshold_trigger.send_event.call_count == 5
+
+        # Verify the counts in each trigger
+        calls = threshold_trigger.send_event.call_args_list
+        expected_new_events = [5, 1, 1, 1, 1]
+        for i, (call, expected) in enumerate(zip(calls, expected_new_events)):
+            context = call[1]["event"]["trigger_context"]
+            assert context["new_events"] == expected, f"Notification {i+1} should have {expected} new events"
