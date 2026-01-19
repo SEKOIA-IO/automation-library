@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-14 - 1.4.2
+
+### Fixed
+
+- Fix the case when the account user param is a list
+- Add some more logs for debugging
+
 ## 2025-11-20 - 1.4.1
 
 ### Fixed
