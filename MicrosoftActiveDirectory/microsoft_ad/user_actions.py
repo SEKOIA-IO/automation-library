@@ -1,3 +1,5 @@
+from ldap3.core.exceptions import LDAPException
+
 from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.models.action_models import ResetPassUserArguments, UserAccountArguments
 
@@ -61,8 +63,8 @@ class EnableUserAction(MicrosoftADAction):
 
             self.log(f"User {arguments.username} enabled successfully", level="info")
 
-        except:
-            raise Exception(f"Failed to Enable {arguments.username} account!!!")
+        except LDAPException as e:
+            raise Exception(f"Failed to Enable {arguments.username} account: {e}") from e
 
 
 class DisableUserAction(MicrosoftADAction):
@@ -97,5 +99,5 @@ class DisableUserAction(MicrosoftADAction):
                 )
 
             self.log(f"User {arguments.username} has been disabled successfully", level="info")
-        except:
-            raise Exception(f"Failed to Disable {arguments.username} account!!!")
+        except LDAPException as e:
+            raise Exception(f"Failed to Disable {arguments.username} account: {e}") from e
