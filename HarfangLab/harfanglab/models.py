@@ -4,7 +4,7 @@ Data models of the HarfangLab module
 """
 
 # natives
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 # third parties
 from pydantic import BaseModel
