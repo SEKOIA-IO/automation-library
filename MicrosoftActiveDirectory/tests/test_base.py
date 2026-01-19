@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from microsoft_ad.actions_base import MicrosoftADAction
 
 

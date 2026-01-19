@@ -4,6 +4,9 @@ from microsoft_ad.actions_base import MicrosoftADAction
 from microsoft_ad.models.action_models import ResetPassUserArguments, UserAccountArguments
 
 
+DEFAULT_UAC = 512
+
+
 class ResetUserPasswordAction(MicrosoftADAction):
     name = "Reset Password"
     description = "Reset password with an rdp connection with an admin account"
@@ -29,8 +32,9 @@ class ResetUserPasswordAction(MicrosoftADAction):
                 )
 
             self.log(f"Password reset successful for user: {arguments.username}", level="info")
-        except e:
-            raise Exception(f"Failed to reset {arguments.username} password account!!!") from e
+
+        except LDAPException as e:
+            raise Exception(f"Failed to reset {arguments.username} password account: {e}") from e
 
 
 class EnableUserAction(MicrosoftADAction):
@@ -49,7 +53,7 @@ class EnableUserAction(MicrosoftADAction):
         try:
             uac_disabled = 2
             user_dn = user_query[0][0]
-            current_uac = user_query[0][1]
+            current_uac = user_query[0][1] if user_query[0][1] is not None else DEFAULT_UAC
 
             self.log(f"User DN : {user_dn} and userAccountControl value {current_uac} were found", level="info")
 
@@ -85,7 +89,7 @@ class DisableUserAction(MicrosoftADAction):
         try:
             uac_disabled = 2
             user_dn = user_query[0][0]
-            current_uac = user_query[0][1]
+            current_uac = user_query[0][1] if user_query[0][1] is not None else DEFAULT_UAC
 
             self.log(f"User DN : {user_dn} and userAccountControl value {current_uac} were found", level="info")
 
@@ -99,5 +103,6 @@ class DisableUserAction(MicrosoftADAction):
                 )
 
             self.log(f"User {arguments.username} has been disabled successfully", level="info")
+
         except LDAPException as e:
             raise Exception(f"Failed to Disable {arguments.username} account: {e}") from e
