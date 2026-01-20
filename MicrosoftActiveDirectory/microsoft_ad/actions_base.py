@@ -28,13 +28,13 @@ class MicrosoftADAction(Action):
 
     def search_userdn_query(self, username, basedn):
         safe_username = escape_filter_chars(username)
-        SEARCHFILTER = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
+        search_filter = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
 
         self.log(f"Starting search in {basedn} for {username}", level="debug")
 
         try:
             self.client.search(
-                search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail", "userAccountControl"]
+                search_base=basedn, search_filter=search_filter, attributes=["cn", "mail", "userAccountControl"]
             )
         except Exception as e:
             raise Exception(f"LDAP search failed in base {basedn}: {e}") from e

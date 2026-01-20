@@ -27,7 +27,7 @@ class ResetUserPasswordAction(MicrosoftADAction):
         try:
             self.client.extend.microsoft.modify_password(user_dn, arguments.new_password)
         except LDAPException as e:
-            raise Exception(f"Failed to reset {arguments.username} password account: {e}") from e
+            raise Exception(f"Failed to reset password for account {arguments.username}: {e}") from e
 
         if self.client.result.get("description") != "success":
             raise Exception(f"Password reset failed for {arguments.username}: {self.client.result.get('description')}")
@@ -61,7 +61,7 @@ class EnableUserAction(MicrosoftADAction):
         try:
             self.client.modify(user_dn, {"userAccountControl": [("MODIFY_REPLACE", new_uac)]}, None)
         except LDAPException as e:
-            raise Exception(f"Failed to Enable {arguments.username} account: {e}") from e
+            raise Exception(f"Failed to enable {arguments.username} account: {e}") from e
 
         if self.client.result.get("description") != "success":
             raise Exception(f"Enable action failed for {arguments.username}: {self.client.result.get('description')}")
@@ -95,7 +95,7 @@ class DisableUserAction(MicrosoftADAction):
         try:
             self.client.modify(user_dn, {"userAccountControl": [("MODIFY_REPLACE", new_uac)]}, None)
         except LDAPException as e:
-            raise Exception(f"Failed to Disable {arguments.username} account: {e}") from e
+            raise Exception(f"Failed to disable {arguments.username} account: {e}") from e
 
         if self.client.result.get("description") != "success":
             raise Exception(f"Disable action failed for {arguments.username}: {self.client.result.get('description')}")
