@@ -84,7 +84,6 @@ async def test_aws_s3_logs_trigger_parse_data(connector: AwsS3FlowLogsTrigger, t
     """
 
     async with async_temporary_file(test_data) as f:
-
         assert (
             await async_list(connector._parse_content(f))
             == [
