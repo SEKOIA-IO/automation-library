@@ -1,5 +1,6 @@
 from functools import cached_property
 from ldap3 import Server, Connection
+from ldap3.utils.conv import escape_filter_chars
 
 from sekoia_automation.action import Action
 
@@ -26,8 +27,9 @@ class MicrosoftADAction(Action):
         return conn
 
     def search_userdn_query(self, username, basedn):
+        safe_username = escape_filter_chars(username)
         SEARCHFILTER = (
-            f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
+            f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
         )
 
         self.log(f"Starting search in {basedn} for {username}", level="debug")
