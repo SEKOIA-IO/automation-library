@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "FileUtils automation module"
+description = ""
+version = "0.0"
+authors = []
+package-mode = false
+
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+sekoia-automation-sdk = "^1.13.0"
+jsonpath_ng = "^1.5"
+orjson = "*"
+lxml = "^4.6.3"
+datetime = "^5.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+requests-mock = "*"
+
+[build-system]
+requires = [ "poetry-core>=1.0.0",]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "main.py",
+]
