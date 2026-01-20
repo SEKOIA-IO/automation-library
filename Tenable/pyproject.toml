@@ -27,7 +27,7 @@ sekoia-automation-sdk = "^1.22.0"
 pydantic = "^2.11.7"
 pytenable = "^1.8.2"
 
-[tool.poetry.dev-dependencies]
+[poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
