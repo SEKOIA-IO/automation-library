@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix the case when the account user param is a list
+- Fixed handling of the userAccountControl attribute when returned as a list from LDAP queries
 - Add some more logs for debugging
 
 ## 2025-11-20 - 1.4.1

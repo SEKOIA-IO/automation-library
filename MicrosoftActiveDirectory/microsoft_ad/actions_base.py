@@ -47,7 +47,7 @@ class MicrosoftADAction(Action):
             if isinstance(entry, dict) and entry.get("type") == "searchResEntry":
                 dn = entry.get("dn")
                 user_attributes = entry.get("attributes", {})
-                account_control: int | list = user_attributes.get("userAccountControl")
+                account_control: int | list[int] | None = user_attributes.get("userAccountControl")
 
                 self.log(f"Found user {dn} with userAccountControl param: {account_control}", level="debug")
 
