@@ -72,7 +72,7 @@ def init_logging(log_conf: LoggingConfig = LoggingConfig()) -> None:
         logging.getLogger(name).propagate = True
 
     logger.configure(
-        handlers=[
+        handlers=[  # type: ignore
             {
                 "sink": sys.stdout,
                 "serialize": log_conf.json_logs,
