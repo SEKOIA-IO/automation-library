@@ -13,6 +13,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from client.http_client import LogType, SalesforceHttpClient
+from client.token_refresher import RefreshTokenException
 from salesforce import SalesforceModule
 from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 from utils.file_utils import csv_file_as_rows, delete_file
@@ -192,6 +193,10 @@ class SalesforceConnector(AsyncConnector):
                             time.sleep(delta_sleep)
 
                     previous_processing_end = processing_end
+
+            except RefreshTokenException as error:
+                logger.error("Error while running Salesforce: {error}", error=error)
+                self.log(message=error, level="critical")
 
             except Exception as error:
                 logger.error("Error while running Salesforce: {error}", error=error)

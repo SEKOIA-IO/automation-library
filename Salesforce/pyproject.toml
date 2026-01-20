@@ -31,7 +31,7 @@ warn_return_any = true
 exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.11,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 loguru = "^0.7.0"
@@ -68,7 +68,7 @@ filterwarnings = [
 addopts = "  --strict-markers\n  --tb=short\n  --cov=salesforce\n  --cov=client\n  --cov=logger\n  --cov=utils\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.16.0"
+version = "^1.22.1"
 extras = ["all"]
 
 [tool.poetry.dev-dependencies.black]
