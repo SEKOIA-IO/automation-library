@@ -1406,30 +1406,27 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             has_previous_state=previous_state is not None,
         )
 
-        # First time seeing this alert: trigger immediately
-        if previous_state is None:
-            context = {
-                "reason": "first_occurrence",
-                "new_events": current_event_count,
-                "previous_count": 0,
-                "current_count": current_event_count,
-            }
-            THRESHOLD_CHECKS.labels(triggered="true").inc()
-            self.log(
-                message="First occurrence of alert, triggering immediately",
-                level="debug",
-                alert_uuid=alert_uuid,
-                current_event_count=current_event_count,
-            )
-            return True, context
+        config = self.validated_config
+        enable_volume = config.enable_volume_threshold
+        event_count_threshold = config.event_count_threshold
+        enable_time = config.enable_time_threshold
+        time_window_hours = config.time_window_hours
 
-        previous_count = previous_state.get("last_triggered_event_count", 0)
-        new_events = current_event_count - previous_count
+        # Determine previous count and new events
+        if previous_state is None:
+            previous_count = 0
+            new_events = current_event_count
+            is_first_occurrence = True
+        else:
+            previous_count = previous_state.get("last_triggered_event_count", 0)
+            new_events = current_event_count - previous_count
+            is_first_occurrence = False
 
         self.log(
-            message="Comparing event counts",
+            message="Calculated event counts",
             level="debug",
             alert_uuid=alert_uuid,
+            is_first_occurrence=is_first_occurrence,
             previous_count=previous_count,
             current_count=current_event_count,
             new_events=new_events,
@@ -1448,12 +1445,9 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             return False, {"reason": "no_new_events"}
 
         trigger_reasons = []
-        config = self.validated_config
 
-        # Volume-based threshold
-        enable_volume = config.enable_volume_threshold
-        event_count_threshold = config.event_count_threshold
-
+        # Volume-based threshold check
+        # Triggers immediately if new_events >= event_count_threshold
         self.log(
             message="Checking volume-based threshold",
             level="debug",
@@ -1465,6 +1459,8 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
 
         if enable_volume and new_events >= event_count_threshold:
             trigger_reasons.append("volume_threshold")
+            if is_first_occurrence:
+                trigger_reasons.append("first_occurrence")
             self.log(
                 message=f"Volume threshold met: {new_events} >= {event_count_threshold}",
                 level="debug",
@@ -1472,39 +1468,27 @@ class AlertEventsThresholdTrigger(SecurityAlertsTrigger):
             )
 
         # Time-based threshold
-        # This checks if there are new events AND we're within the time window.
-        # We use the new_events count (from Kafka notification) instead of making API calls.
+        # IMPORTANT: Time-based triggering is NOT evaluated here on each notification.
+        # Instead, it is handled by the periodic background thread (_time_threshold_check_loop)
+        # which checks every TIME_THRESHOLD_CHECK_INTERVAL_SECONDS if the time window has elapsed.
         #
-        # Design assumption: When we receive a Kafka notification about new events,
-        # those events are considered "within the time window" because:
-        # 1. Kafka notifications are delivered in near real-time (typically < 1 minute delay)
-        # 2. The time_window_hours config is meant for periodic checks, not real-time notifications
-        # 3. For delayed/out-of-order notifications, the periodic background thread
-        #    (_time_threshold_check_loop) validates actual timestamps against the window
+        # The time threshold logic is:
+        # - Wait for time_window_hours after the last trigger (or first event)
+        # - If there are pending events (>= 1) when the window elapses, trigger
+        # - This prevents triggering on every single event notification
         #
-        # This approach avoids expensive event search API calls while maintaining correctness
-        # for the common case. Edge cases (delayed notifications) are handled by the periodic check.
-        enable_time = config.enable_time_threshold
-        time_window_hours = config.time_window_hours
-
-        self.log(
-            message="Checking time-based threshold",
-            level="debug",
-            alert_uuid=alert_uuid,
-            enable_time=enable_time,
-            time_window_hours=time_window_hours,
-            new_events=new_events,
-        )
-
-        if enable_time and new_events > 0:
-            # We have new events - time threshold is met
-            # The notification itself serves as proof that events occurred recently
-            trigger_reasons.append("time_threshold")
+        # For first_occurrence: we do NOT trigger immediately unless volume threshold is met.
+        # The alert state will be stored (via update_alert_info) and the background thread
+        # will trigger after time_window_hours has elapsed.
+        if enable_time and not trigger_reasons:
             self.log(
-                message=f"Time threshold met: {new_events} new events",
+                message="Time-based threshold check deferred to background thread",
                 level="debug",
                 alert_uuid=alert_uuid,
+                enable_time=enable_time,
                 time_window_hours=time_window_hours,
+                new_events=new_events,
+                is_first_occurrence=is_first_occurrence,
             )
 
         should_trigger = len(trigger_reasons) > 0
