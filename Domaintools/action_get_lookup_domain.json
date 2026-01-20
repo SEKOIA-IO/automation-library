@@ -1,0 +1,954 @@
+{
+  "uuid": "d3959678-9f40-49a1-8b3f-8a051ecb2dee",
+  "name": "Get Lookup Domain",
+  "description": "Retrieve comprehensive domain intelligence data from DomainTools Iris Investigate API, including WHOIS records, DNS information, IP addresses, risk scores, SSL certificates, and registration details for threat intelligence analysis",
+  "docker_parameters": "get_lookup_domain",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "domain": {
+        "description": "The domain name to investigate (e.g., example.com)",
+        "default": "example.com",
+        "type": "string"
+      }
+    },
+    "required": [
+      "domain"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "limit_exceeded": {
+        "type": "boolean",
+        "description": "Indicates if the API response limit per page has been exceeded"
+      },
+      "has_more_results": {
+        "type": "boolean",
+        "description": "Indicates if additional results are available beyond the current response"
+      },
+      "message": {
+        "type": "string",
+        "description": "Status message from DomainTools API (e.g., 'Enjoy your data.')"
+      },
+      "results_count": {
+        "type": "integer",
+        "description": "Number of domain results returned in the current response"
+      },
+      "total_count": {
+        "type": "integer",
+        "description": "Total number of matching domain records available"
+      },
+      "results": {
+        "type": "array",
+        "description": "Array of domain investigation results containing WHOIS data, DNS records, IP addresses, risk scores, SSL certificates, registrar information, and historical data",
+        "items": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "The queried domain name"
+            },
+            "tld": {
+              "type": "string",
+              "description": "Top-level domain (e.g., 'com', 'org', 'net')"
+            },
+            "active": {
+              "type": "boolean",
+              "description": "Whether the domain is currently active"
+            },
+            "alexa": {
+              "type": "integer",
+              "description": "Alexa traffic ranking"
+            },
+            "adsense": {
+              "type": "object",
+              "description": "Google AdSense tracking information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "AdSense publisher ID"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains sharing this AdSense ID"
+                }
+              }
+            },
+            "google_analytics": {
+              "type": "object",
+              "description": "Google Analytics tracking information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Google Analytics tracking ID"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains sharing this Analytics ID"
+                }
+              }
+            },
+            "create_date": {
+              "type": "object",
+              "description": "Domain registration creation date",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Creation date in ISO format (YYYY-MM-DD)"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "expiration_date": {
+              "type": "object",
+              "description": "Domain registration expiration date",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Expiration date in ISO format (YYYY-MM-DD)"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "first_seen": {
+              "type": "object",
+              "description": "Date when the domain was first observed by DomainTools",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "First seen date in ISO format (YYYY-MM-DD)"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "domain_risk": {
+              "type": "object",
+              "description": "Domain risk assessment",
+              "properties": {
+                "risk_score": {
+                  "type": "integer",
+                  "description": "Overall risk score for the domain (0-100, where higher values indicate greater risk)"
+                }
+              }
+            },
+            "registrar": {
+              "type": "object",
+              "description": "Domain registrar information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Registrar name"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains registered with this registrar"
+                }
+              }
+            },
+            "registrar_status": {
+              "type": "array",
+              "description": "Array of domain status codes (e.g., 'clientTransferProhibited', 'serverDeleteProhibited')",
+              "items": {
+                "type": "string"
+              }
+            },
+            "registrant_name": {
+              "type": "object",
+              "description": "Registrant name information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Registrant name"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains registered to this name"
+                }
+              }
+            },
+            "registrant_org": {
+              "type": "object",
+              "description": "Registrant organization information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Registrant organization name"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains registered to this organization"
+                }
+              }
+            },
+            "registrant_contact": {
+              "type": "object",
+              "description": "Registrant contact details from WHOIS",
+              "properties": {
+                "name": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Contact name"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this contact name"
+                    }
+                  }
+                },
+                "org": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Organization name"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this organization"
+                    }
+                  }
+                },
+                "email": {
+                  "type": "array",
+                  "description": "Email addresses",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Email address"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of domains with this email"
+                      }
+                    }
+                  }
+                },
+                "street": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Street address"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this address"
+                    }
+                  }
+                },
+                "city": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "City"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains in this city"
+                    }
+                  }
+                },
+                "state": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "State or province code"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains in this state"
+                    }
+                  }
+                },
+                "postal": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Postal code"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this postal code"
+                    }
+                  }
+                },
+                "country": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Country code (ISO 3166-1 alpha-2)"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains in this country"
+                    }
+                  }
+                },
+                "phone": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Phone number"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this phone"
+                    }
+                  }
+                },
+                "fax": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Fax number"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this fax"
+                    }
+                  }
+                }
+              }
+            },
+            "admin_contact": {
+              "type": "object",
+              "description": "Administrative contact details from WHOIS",
+              "properties": {
+                "name": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Admin contact name"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this admin name"
+                    }
+                  }
+                },
+                "org": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Admin organization name"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this admin organization"
+                    }
+                  }
+                },
+                "email": {
+                  "type": "array",
+                  "description": "Admin email addresses",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Email address"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of domains with this email"
+                      }
+                    }
+                  }
+                },
+                "city": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "City"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains in this city"
+                    }
+                  }
+                },
+                "country": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Country code"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains in this country"
+                    }
+                  }
+                },
+                "phone": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Phone number"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this phone"
+                    }
+                  }
+                }
+              }
+            },
+            "technical_contact": {
+              "type": "object",
+              "description": "Technical contact details from WHOIS",
+              "properties": {
+                "name": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Technical contact name"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this tech contact"
+                    }
+                  }
+                },
+                "org": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Technical organization name"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains with this tech organization"
+                    }
+                  }
+                },
+                "email": {
+                  "type": "array",
+                  "description": "Technical email addresses",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Email address"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of domains with this email"
+                      }
+                    }
+                  }
+                },
+                "city": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "City"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains in this city"
+                    }
+                  }
+                },
+                "country": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "description": "Country code"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of domains in this country"
+                    }
+                  }
+                }
+              }
+            },
+            "additional_whois_email": {
+              "type": "array",
+              "description": "Additional email addresses found in WHOIS",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "description": "Email address"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "description": "Number of domains with this email"
+                  }
+                }
+              }
+            },
+            "email_domain": {
+              "type": "array",
+              "description": "Domain parts of email addresses",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "description": "Email domain"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "description": "Number of occurrences"
+                  }
+                }
+              }
+            },
+            "soa_email": {
+              "type": "array",
+              "description": "Start of Authority (SOA) record email addresses",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "description": "SOA email address"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "description": "Number of domains with this SOA email"
+                  }
+                }
+              }
+            },
+            "ip": {
+              "type": "array",
+              "description": "IP addresses associated with the domain",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "IP address"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of domains on this IP"
+                      }
+                    }
+                  },
+                  "asn": {
+                    "type": "array",
+                    "description": "Autonomous System Numbers",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "ASN identifier"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "description": "Number of IPs in this ASN"
+                        }
+                      }
+                    }
+                  },
+                  "country_code": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "IP country code"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of IPs in this country"
+                      }
+                    }
+                  },
+                  "isp": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Internet Service Provider name"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of IPs with this ISP"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "mx": {
+              "type": "array",
+              "description": "Mail Exchange (MX) records",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "MX hostname"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of domains using this MX"
+                      }
+                    }
+                  },
+                  "domain": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "MX domain"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of occurrences"
+                      }
+                    }
+                  },
+                  "ip": {
+                    "type": "array",
+                    "description": "IP addresses of the MX server",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "IP address"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "description": "Number of MX records with this IP"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "name_server": {
+              "type": "array",
+              "description": "Name server (NS) records",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Name server hostname"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of domains using this nameserver"
+                      }
+                    }
+                  },
+                  "domain": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Name server domain"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of occurrences"
+                      }
+                    }
+                  },
+                  "ip": {
+                    "type": "array",
+                    "description": "IP addresses of the nameserver",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "IP address"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "description": "Number of nameservers with this IP"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "server_type": {
+              "type": "object",
+              "description": "Web server type and version",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Server software (e.g., 'nginx/1.18.0', 'Apache/2.4')"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains using this server type"
+                }
+              }
+            },
+            "website_title": {
+              "type": "object",
+              "description": "HTML title of the website",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Website title text"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of domains with this title"
+                }
+              }
+            },
+            "redirect": {
+              "type": "object",
+              "description": "URL redirect information",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Redirect target URL"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "redirect_domain": {
+              "type": "object",
+              "description": "Domain of the redirect target",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Redirect domain name"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Number of occurrences"
+                }
+              }
+            },
+            "ssl_info": {
+              "type": "array",
+              "description": "SSL/TLS certificate information",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "hash": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate hash"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of domains with this certificate"
+                      }
+                    }
+                  },
+                  "subject": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate subject"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of occurrences"
+                      }
+                    }
+                  },
+                  "common_name": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Common Name (CN) from certificate"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of certificates with this CN"
+                      }
+                    }
+                  },
+                  "issuer_common_name": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate Authority that issued the certificate"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of certificates from this CA"
+                      }
+                    }
+                  },
+                  "organization": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Organization from certificate"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of certificates for this organization"
+                      }
+                    }
+                  },
+                  "email": {
+                    "type": "array",
+                    "description": "Email addresses in certificate",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Email address"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "description": "Number of certificates with this email"
+                        }
+                      }
+                    }
+                  },
+                  "alt_names": {
+                    "type": "array",
+                    "description": "Subject Alternative Names (SANs)",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "description": "Alternative domain name"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "description": "Number of occurrences"
+                        }
+                      }
+                    }
+                  },
+                  "not_before": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate valid from date (ISO format)"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of occurrences"
+                      }
+                    }
+                  },
+                  "not_after": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate expiration date (ISO format)"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of occurrences"
+                      }
+                    }
+                  },
+                  "duration": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "description": "Certificate validity duration in days"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "description": "Number of certificates with this duration"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "tags": {
+              "type": "array",
+              "description": "Domain classification tags",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Tag label (e.g., 'suspicious_domain', 'phishing')"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "description": "Tag scope (e.g., 'organization', 'global')"
+                  },
+                  "tagged_at": {
+                    "type": "string",
+                    "description": "ISO timestamp when the tag was applied"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "missing_domains": {
+        "type": "array",
+        "description": "Array of domain names that were queried but not found in the DomainTools database"
+      }
+    },
+    "title": "Results",
+    "type": "object"
+  },
+  "slug": "get_lookup_domain_in_domaintools"
+}

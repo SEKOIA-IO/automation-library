@@ -1,0 +1,39 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Domaintools configuration",
+    "type": "object",
+    "properties": {
+      "api_username": {
+        "description": "Client username",
+        "type": "string"
+      },
+      "api_key": {
+        "description": "API key",
+        "type": "string"
+      },
+      "host": {
+        "description": "Base URL of the API",
+        "type": "string",
+        "default": "https://api.domaintools.com/",
+        "format": "uri"
+      }
+    },
+    "required": [
+      "api_username",
+      "api_key",
+      "host"
+    ],
+    "secrets": [
+      "api_key"
+    ]
+  },
+  "description": "DomainTools offers SOC teams advanced domain risk analytics, integrating fresh DNS, Whois data, and x.509 certificates for proactive defensive strategies.",
+  "name": "Domaintools",
+  "slug": "domaintools",
+  "categories": [
+    "Threat Intelligence"
+  ],
+  "uuid": "5c5d30cc-164a-459d-9694-58ba4665320d",
+  "version": "0.2.8"
+}
