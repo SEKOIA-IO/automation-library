@@ -1,5 +1,5 @@
 from glimps.base import GLIMPSAction
-from glimps.models import AnalysisDetails, GetAnalysisByUUIDArgument, AnalysisResponse
+from glimps.models import AnalysisDetails, AnalysisResponse, GetAnalysisByUUIDArgument
 
 
 class RetrieveAnalysis(GLIMPSAction):

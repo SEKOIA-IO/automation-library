@@ -4,7 +4,6 @@ from sekoia_automation.action import Action
 import requests
 from tenacity import retry, wait_exponential, stop_after_attempt
 
-
 STATUS_UUIDS = {
     "PENDING": "2efc4930-1442-4abb-acf2-58ba219a4fd0",
     "ACKNOWLEDGED": "8f206505-af6d-433e-93f4-775d46dc7d0f",

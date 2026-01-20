@@ -4,11 +4,7 @@ import shutil
 import pytest
 import requests_mock
 
-from glimps.deprecated import (
-    DeprecatedRetrieveAnalysis,
-    DeprecatedSubmitFileToBeAnalysed,
-    MaxFileSizeExceedError,
-)
+from glimps.deprecated import DeprecatedRetrieveAnalysis, DeprecatedSubmitFileToBeAnalysed, MaxFileSizeExceedError
 
 
 @pytest.mark.skipif("'GLIMPS_API_KEY' not in os.environ.keys()")
