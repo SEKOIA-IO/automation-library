@@ -5,7 +5,7 @@
   "docker_parameters": "aws_device_asset_connector",
   "type": "asset",
   "capability": "host_detection",
-    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"],
+  "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"],
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
