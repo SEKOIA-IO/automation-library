@@ -28,9 +28,7 @@ class MicrosoftADAction(Action):
 
     def search_userdn_query(self, username, basedn):
         safe_username = escape_filter_chars(username)
-        SEARCHFILTER = (
-            f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
-        )
+        SEARCHFILTER = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
 
         self.log(f"Starting search in {basedn} for {username}", level="debug")
 
