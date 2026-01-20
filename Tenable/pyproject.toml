@@ -33,6 +33,7 @@ pytest-cov = "*"
 requests-mock = "*"
 mypy = "*"
 types-requests = "*"
+black = { version = "26.1.0", extras = ["colorama"] }
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
