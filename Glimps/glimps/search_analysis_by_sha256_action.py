@@ -1,9 +1,5 @@
 from glimps.base import GLIMPSAction
-from glimps.models import (
-    AnalysisDetails,
-    SearchAnalysisBySha256Argument,
-    AnalysisResponse,
-)
+from glimps.models import AnalysisDetails, AnalysisResponse, SearchAnalysisBySha256Argument
 
 
 class SearchPreviousAnalysis(GLIMPSAction):

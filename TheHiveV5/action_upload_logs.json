@@ -1,5 +1,5 @@
 {
-  "uuid": "42724f7a-36d1-4265-8a29-e209090dbfa3",
+  "uuid": "4b5db174-6e63-4ba9-89c6-d7ffe6df89f4",
   "name": "Upload logs to an alert in The Hive v5",
   "description": "",
   "docker_parameters": "thehive_upload_logs",

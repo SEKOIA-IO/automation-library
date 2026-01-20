@@ -1,0 +1,59 @@
+{
+  "name": "Search issues",
+  "description": "Find issues using provided filters",
+  "uuid": "ce81a7f5-c088-5439-9ad3-3d99b247a36c",
+  "docker_parameters": "jira_search_issues",
+  "arguments": {
+    "title": "JIRASearchIssuesArguments",
+    "type": "object",
+    "properties": {
+      "jql": {
+        "title": "JQL",
+        "description": "JQL query",
+        "type": "string"
+      },
+      "fields": {
+        "title": "Fields",
+        "description": "A list of fields to return for the issue (*all by default)",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "expand": {
+        "title": "Expand",
+        "description": "Comma-separated list of additional information to include",
+        "type": "string"
+      },
+      "properties": {
+        "title": "Properties",
+        "description": "A list of properties to return for the issue (*all by default)",
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "fields_by_keys": {
+        "title": "Fields By Keys",
+        "description": "Whether fields in `fields` are referenced by keys rather than IDs",
+        "default": false,
+        "type": "boolean"
+      },
+      "fail_fast": {
+        "title": "Fail Fast",
+        "description": "Whether to fail the request quickly in case of an error while loading fields for an issue",
+        "default": false,
+        "type": "boolean"
+      },
+      "reconcile_issues": {
+        "title": "Reconcile Issues",
+        "description": "List of IDs to reconcile",
+        "type": "array",
+        "items": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "results": {}
+}

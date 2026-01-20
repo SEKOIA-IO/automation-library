@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-19 - 2.19.1
+
+### Changed
+
+- Skip expired events using their `ExpirationTime` field
+
+
+## 2025-12-01 - 2.19.0
+
+### Changed
+
+- Improve Management API connector shutdown and error handling
+- Enhance resource management with proper client closure tracking
+- Fix exception handling to properly access authentication error responses
+- Optimize timing logic in event forwarding loop
+
 ## 2025-10-28 - 2.18.9
 
 ### Changed

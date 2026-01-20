@@ -2,13 +2,16 @@ import signal
 import time
 from collections import defaultdict
 from collections.abc import Generator
+from datetime import timedelta
 from functools import cached_property
+from posixpath import join as urljoin
 from threading import Event
 from typing import Any
-from posixpath import join as urljoin
 
 import orjson
 import requests
+from cachetools import Cache, LRUCache
+from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
 from cybereason_modules import CybereasonModule
@@ -21,7 +24,14 @@ from cybereason_modules.constants import (
     MALOP_INBOX_ENDPOINT,
 )
 from cybereason_modules.exceptions import InvalidJsonResponse, InvalidResponse, LoginFailureError, TimeoutError
-from cybereason_modules.helpers import extract_models_from_malop, merge_suspicions, validate_response_not_login_failure
+from cybereason_modules.helpers import (
+    RETRY_ON_STATUS,
+    extract_models_from_malop,
+    merge_suspicions,
+    retry,
+    retry_strategy,
+    validate_response_not_login_failure,
+)
 from cybereason_modules.logging import get_logger
 from cybereason_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MALOPS, OUTCOMING_EVENTS
 
@@ -45,12 +55,37 @@ class CybereasonEventConnector(Connector):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.from_date: int = (int(time.time()) - 60) * 1000  # milliseconds
+
+        self.cursor = CheckpointTimestamp(
+            time_unit=TimeUnit.MILLISECOND,
+            path=self._data_path,
+            start_at=timedelta(hours=1),
+            ignore_older_than=timedelta(hours=1),
+        )
+
+        self.from_date: int = self.cursor.offset
+        self.events_cache: Cache = self.load_events_cache()
         self._stop_event = Event()  # Event to notify we must stop the thread
+        self.retry = retry_strategy()
 
         # Register signal to terminate thread
         signal.signal(signal.SIGINT, self.exit)
         signal.signal(signal.SIGTERM, self.exit)
+
+    def load_events_cache(self) -> Cache:
+        result: LRUCache = LRUCache(maxsize=10000)
+
+        with self.cursor._context as cache:
+            events_ids = cache.get("events_cache", [])
+
+        for event_id in events_ids:
+            result[event_id] = 1
+
+        return result
+
+    def save_events_cache(self, events_cache: Cache) -> None:
+        with self.cursor._context as cache:
+            cache["events_cache"] = list(events_cache.keys())
 
     @cached_property
     def client(self):
@@ -95,32 +130,42 @@ class CybereasonEventConnector(Connector):
         url = urljoin(self.module.configuration.base_url, MALOP_INBOX_ENDPOINT)
         try:
             logger.debug("Fetching malops", url=url, params=params)
-            response = self.client.post(url, json=params, timeout=60)
+            for attempt in self.retry:
+                with attempt:
+                    response = self.client.post(url, json=params, timeout=60)
 
-            if not response.ok:
-                self.log(
-                    message=(
-                        f"Request on Cybereason API to fetch events failed with status {response.status_code}"
-                        f" - {response.reason}"
-                    ),
-                    level="error",
-                )
-                return []
-            else:
-                content = self.parse_response_content(response)
-                malops = content.get("malops")
+                    if not response.ok:
+                        self.log(
+                            message=(
+                                f"Request on Cybereason API to fetch events failed with status {response.status_code}"
+                                f" - {response.reason}"
+                            ),
+                            level="error",
+                        )
 
-                if malops is None:
-                    raise InvalidResponse(response)
+                        # Raise for retryable status codes
+                        if response.status_code in RETRY_ON_STATUS:
+                            response.raise_for_status()
 
-                self.log(
-                    message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
-                    level="debug",
-                )
-                return malops
+                        return []
+                    else:
+                        content = self.parse_response_content(response)
+                        malops = content.get("malops")
+
+                        if malops is None:
+                            raise InvalidResponse(response)
+
+                        self.log(
+                            message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
+                            level="debug",
+                        )
+                        return malops
         except requests.Timeout as error:
             raise TimeoutError(url) from error
 
+        return []
+
+    @retry()
     def get_malop_detail(self, malop_uuid: str) -> dict[str, Any] | None:
         """
         Retrieve the detail of a malop
@@ -138,6 +183,11 @@ class CybereasonEventConnector(Connector):
                 ),
                 level="error",
             )
+
+            # Raise for retryable status codes
+            if response.status_code in RETRY_ON_STATUS:
+                response.raise_for_status()
+
             return None
         else:
             malop = self.parse_response_content(response)
@@ -150,6 +200,7 @@ class CybereasonEventConnector(Connector):
             )
             return malop
 
+    @retry()
     def get_edr_malop_suspicions(
         self, malop_uuid: str, requested_type: str
     ) -> dict[tuple[str, str], dict[str, Any]] | None:
@@ -177,6 +228,11 @@ class CybereasonEventConnector(Connector):
                 ),
                 level="warning",
             )
+
+            # Raise for retryable status codes
+            if response.status_code in RETRY_ON_STATUS:
+                response.raise_for_status()
+
             return None
 
         # get the results
@@ -265,15 +321,8 @@ class CybereasonEventConnector(Connector):
         Fetch the last malops from the Cybereason API
         """
         from_date = self.from_date
-        now = int(time.time()) * 1000  # milliseconds
-
-        # We don't retrieve messages older than one hour
-        one_hour_ago = now - 3600000
-        if from_date < one_hour_ago:
-            from_date = one_hour_ago
-
         # compute the ending time to retrieve malops (Currently, now)
-        to_date = now
+        to_date = int(time.time()) * 1000
 
         # fetch malops for the timerange
         next_malops = self.fetch_malops(from_date, to_date)
@@ -281,12 +330,17 @@ class CybereasonEventConnector(Connector):
 
         most_recent_date_seen = from_date
         for malop in next_malops:
+
+            malop_uuid = malop["guid"]
+            # skip already processed malops based on their GUID
+            if malop_uuid in self.events_cache:
+                continue
+            self.events_cache[malop_uuid] = 1
+
             # save the greater date ever seen
             event_date = int(malop["lastUpdateTime"])
             if event_date > most_recent_date_seen:
-                most_recent_date_seen = (
-                    event_date + 1
-                )  # add 1 milli-seconds to exclude the current malop from the next search
+                most_recent_date_seen = event_date + 1  # add 1 ms to avoid getting the same event again
 
             # check if the malop is an AI Hunt malop (EDR) or a generic one
             is_edr = malop.get("edr", False)
@@ -313,8 +367,11 @@ class CybereasonEventConnector(Connector):
             else:
                 yield from self.enrich_generic_malop(malop)
 
+        self.save_events_cache(self.events_cache)
+
         # save the most recent date and compute the lag
         if most_recent_date_seen > self.from_date:
+            self.cursor.offset = most_recent_date_seen
             self.from_date = most_recent_date_seen
             current_lag = int(time.time() - (most_recent_date_seen / 1000))
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)

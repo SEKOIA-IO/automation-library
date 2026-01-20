@@ -1,0 +1,36 @@
+{
+  "configuration": {
+    "title": "Delinea",
+    "type": "object",
+    "properties": {
+      "client_id": {
+        "description": "Client Id to interact with the Delinea API",
+        "type": "string"
+      },
+      "client_secret": {
+        "description": "Client Secret to interact with the Delinea API",
+        "type": "string"
+      },
+      "base_url": {
+        "description": "Base URL of the Delinea instance (e.g., https://<your-domain>.delinea.com)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "client_id",
+      "client_secret",
+      "base_url"
+    ],
+    "secrets": [
+      "client_secret"
+    ]
+  },
+  "description": "Delinea is a cybersecurity company specializing in Privileged Access Management (PAM). Its platform helps organizations securely store and rotate sensitive credentials—such as passwords, SSH keys and certificates—in an encrypted vault, while controlling and auditing elevated access to critical systems. By brokering remote sessions (RDP, SSH, SFTP) without exposing underlying secrets, enforcing least-privilege policies and capturing detailed activity logs, Delinea enables enterprises to reduce risk, meet compliance mandates and gain full visibility into who accessed what and when. Available as a cloud service or on-premises appliance, it integrates with existing identity and security infrastructure to simplify the protection of high-value accounts across hybrid IT environments.",
+  "name": "Delinea",
+  "uuid": "04473922-fd88-40d5-a001-c2a859d208d6",
+  "slug": "delinea",
+  "version": "1.0.3",
+  "categories": [
+    "IAM"
+  ]
+}

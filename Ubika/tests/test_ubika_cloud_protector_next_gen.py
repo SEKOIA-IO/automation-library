@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests_mock
+import httpx
+from respx import MockRouter
 
 from ubika_modules import UbikaModule
 from ubika_modules.client.auth import AuthorizationError
@@ -121,34 +122,39 @@ def message2():
     }
 
 
-def test_fetch_events_with_pagination(trigger, message1, message2):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "ubika_modules.connector_ubika_cloud_protector_base.time"
-    ) as mock_time:
+@pytest.mark.respx(base_url="https://login.ubika.io")
+def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1, message2):
+    with patch("ubika_modules.connector_ubika_cloud_protector_base.time") as mock_time:
         mock_time.sleep = MagicMock()
 
-        mock_requests.post(
-            "https://login.ubika.io/auth/realms/main/protocol/openid-connect/token",
-            json={
-                "access_token": "foo-token",
-                "token_type": "bearer",
-                "expires_in": 1799,
+        respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "access_token": "foo-token",
+                    "token_type": "bearer",
+                    "expires_in": 1799,
+                },
+            )
+        )
+
+        respx_mock.get(
+            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+            params={
+                "filters.fromDate": "1747326567845",
+                "pagination.realtime": "true",
+                "pagination.pageSize": "100",
             },
-        )
+        ).mock(return_value=httpx.Response(200, json=message1))
 
-        mock_requests.get(
-            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events?filters.fromDate=1747326567845&"
-            "pagination.realtime=True&pagination.pageSize=100",
-            status_code=200,
-            json=message1,
-        )
-
-        mock_requests.get(
-            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events?pagination.pageToken=token123&"
-            "pagination.pageSize=100&pagination.realtime=True",
-            status_code=200,
-            json=message2,
-        )
+        respx_mock.get(
+            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+            params={
+                "pagination.pageToken": "token123",
+                "pagination.pageSize": "100",
+                "pagination.realtime": "true",
+            },
+        ).mock(return_value=httpx.Response(200, json=message2))
 
         trigger.from_timestamp = 1747326567845
         events = trigger.fetch_events()
@@ -156,38 +162,43 @@ def test_fetch_events_with_pagination(trigger, message1, message2):
         assert list(events) == [message1["spec"]["items"]]
 
 
-def test_next_batch_sleep_until_next_round(trigger, message1, message2):
-    with requests_mock.Mocker() as mock_requests, patch(
-        "ubika_modules.connector_ubika_cloud_protector_next_gen.time"
-    ) as mock_time:
+@pytest.mark.respx(base_url="https://login.ubika.io")
+def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, message1, message2):
+    with patch("ubika_modules.connector_ubika_cloud_protector_next_gen.time") as mock_time:
         mock_time.sleep = MagicMock()
 
-        mock_requests.post(
-            "https://login.ubika.io/auth/realms/main/protocol/openid-connect/token",
-            json={
-                "access_token": "foo-token",
-                "token_type": "bearer",
-                "expires_in": 1799,
+        respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "access_token": "foo-token",
+                    "token_type": "bearer",
+                    "expires_in": 1799,
+                },
+            )
+        )
+
+        respx_mock.get(
+            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+            params={
+                "filters.fromDate": "1747326567845",
+                "pagination.realtime": "true",
+                "pagination.pageSize": "100",
             },
-        )
+        ).mock(return_value=httpx.Response(200, json=message1))
 
-        mock_requests.get(
-            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events?filters.fromDate=1747326567845&"
-            "pagination.realtime=True&pagination.pageSize=100",
-            status_code=200,
-            json=message1,
-        )
-
-        mock_requests.get(
-            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events?pagination.pageToken=token123&"
-            "pagination.pageSize=100&pagination.realtime=True",
-            status_code=200,
-            json=message2,
-        )
+        respx_mock.get(
+            "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
+            params={
+                "pagination.pageToken": "token123",
+                "pagination.pageSize": "100",
+                "pagination.realtime": "true",
+            },
+        ).mock(return_value=httpx.Response(200, json=message2))
 
         trigger.from_timestamp = 1747326567845
 
-        batch_duration = trigger.configuration.frequency + 20  # the batch lasts more than the frequency
+        batch_duration = trigger.configuration.frequency + 20
         start_time = 1747326560
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
@@ -198,13 +209,14 @@ def test_next_batch_sleep_until_next_round(trigger, message1, message2):
         assert mock_time.sleep.call_count == 0
 
 
-def test_authorization_error(trigger):
-    with requests_mock.Mocker() as mock_requests:
-        mock_requests.post(
-            "https://login.ubika.io/auth/realms/main/protocol/openid-connect/token",
+@pytest.mark.respx(base_url="https://login.ubika.io")
+def test_authorization_error(respx_mock: MockRouter, trigger):
+    respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
+        return_value=httpx.Response(
+            400,
             json={"error": "invalid_grant", "error_description": "Invalid refresh token"},
-            status_code=400,
         )
+    )
 
-        with pytest.raises(AuthorizationError):
-            trigger.next_batch()
+    with pytest.raises(AuthorizationError):
+        trigger.next_batch()

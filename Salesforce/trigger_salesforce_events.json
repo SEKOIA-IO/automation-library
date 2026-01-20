@@ -25,8 +25,8 @@
       },
       "fetch_daily_logs": {
         "type": "boolean",
-        "description": "Fetch daily logs. By default, it will fetch Hourly logs",
-        "default": false
+        "description": "True to fetch Daily logs, False to fetch Hourly logs. By default, it will fetch Daily logs",
+        "default": true
       }
     },
     "required": [

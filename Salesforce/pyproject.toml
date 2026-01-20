@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Sekoia.io Automation Module to work with Salesforce"
 version = "0.0"
@@ -5,11 +9,31 @@ description = ""
 authors = []
 package-mode = false
 
+[tool.black]
+line-length = 119
+target-version = ["py310"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
-sekoia-automation-sdk = { version = "^1.16.0", extras = ["all"] }
 loguru = "^0.7.0"
 async-lru = "^2.0.2"
 aiohttp = "^3.8.5"
@@ -28,69 +52,43 @@ Faker = "^13.12.0"
 aioresponses = "^0.7.4"
 autoflake = "^1.4"
 isort = "^5.10.1"
-black = { version = "^24.3.0", extras = ["colorama"] }
 mypy = "^0.991"
 types-aiofiles = "^23.1.0.4"
 types-python-dateutil = "^2.8.19.13"
-poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
 poetry = "^1.5.1"
-
-[tool.black]
-line-length = 119
-target-version = ['py310']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
-[tool.mypy]
-strict = true
-ignore_missing_imports = true
-allow_subclassing_any = true
-allow_untyped_calls = true
-pretty = true
-show_error_codes = true
-implicit_reexport = true
-allow_untyped_decorators = true
-warn_return_any = true
-exclude = ["tests/*"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore:.*unclosed.*:ResourceWarning",
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore:.*unclosed.*:ResourceWarning",
 ]
-addopts = '''
-  --strict-markers
-  --tb=short
-  --cov=salesforce
-  --cov=client
-  --cov=logger
-  --cov=utils
-  --cov-branch
-  --cache-clear
-  --cov-report=html
-  --cov-report=term-missing:skip-covered
-  --cov-fail-under=5
-  --numprocesses=auto
-  --asyncio-mode=auto
-'''
+addopts = "  --strict-markers\n  --tb=short\n  --cov=salesforce\n  --cov=client\n  --cov=logger\n  --cov=utils\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
+
+[tool.poetry.dependencies.sekoia-automation-sdk]
+version = "^1.16.0"
+extras = ["all"]
+
+[tool.poetry.dev-dependencies.black]
+version = "^24.3.0"
+extras = ["colorama"]
+
+[tool.poetry.dev-dependencies.poethepoet]
+version = "^0.16.5"
+extras = ["poetry_plugin"]
 
 [tool.poe.tasks.lint]
-sequence = [
-    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
-    { cmd = "poetry run black ." },
-    { cmd = "poetry run isort ." },
-    { cmd = "poetry run mypy ." },
-]
 help = "Make code linting and formatting."
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run black ."
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run isort ."
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run mypy ."

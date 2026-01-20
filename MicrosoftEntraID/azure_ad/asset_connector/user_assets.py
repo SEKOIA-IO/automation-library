@@ -14,13 +14,27 @@ from msgraph.generated.models.microsoft_authenticator_authentication_method impo
 from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
 from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 from msgraph.generated.models.user import User
+from msgraph.generated.users.item.transitive_member_of.transitive_member_of_request_builder import (
+    TransitiveMemberOfRequestBuilder,
+)
 from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
-from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
+from sekoia_automation.asset_connector.models.ocsf.organization import Organization
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    Account,
+    AccountTypeId,
+    AccountTypeStr,
+)
 from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
-from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    UserDataObject,
+    UserEnrichmentObject,
+    UserOCSFModel,
+    UserTypeId,
+    UserTypeStr,
+)
 from sekoia_automation.storage import PersistentJSON
 
 from azure_ad.base import AzureADModule
@@ -68,7 +82,7 @@ class EntraIDAssetConnector(AssetConnector):
                 datetime.fromtimestamp(self._latest_time + 1, timezone.utc).replace(microsecond=0).isoformat()
             )
 
-    def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup]) -> UserOCSFModel:
+    def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
         """Map fields from UserCollectionResponse to UserOCSFModel.
         Args:
             user (UserCollectionResponse): The user data from Microsoft Graph API.
@@ -81,6 +95,28 @@ class EntraIDAssetConnector(AssetConnector):
             version=self.PRODUCT_VERSION,
         )
         metadata = Metadata(product=product, version="1.6.0")
+
+        # Extract domain from userPrincipalName
+        domain = None
+        if user.user_principal_name and "@" in user.user_principal_name:
+            domain = user.user_principal_name.split("@")[1]
+
+        # Determine user type based on employee type or job title
+        user_type_id = UserTypeId.USER
+        user_type_str = UserTypeStr.USER
+
+        if is_admin:
+            user_type_id = UserTypeId.ADMIN
+            user_type_str = UserTypeStr.ADMIN
+
+        # Create organization object if company name is available
+        org = None
+        if user.company_name:
+            org = Organization(
+                name=user.company_name,
+                ou_name=user.office_location,
+            )
+
         account = Account(
             name=user.user_principal_name or "Unknown",
             type_id=AccountTypeId.AZURE_AD_ACCOUNT,
@@ -95,7 +131,45 @@ class EntraIDAssetConnector(AssetConnector):
             full_name=user.display_name or "Unknown",
             email_addr=user.mail or "Unknown",
             account=account,
+            display_name=user.display_name,
+            domain=domain,
+            type_id=user_type_id,
+            type=user_type_str,
+            org=org,
         )
+
+        # Build enrichment data
+        enrichments = []
+
+        # Create user data object with account status and login information
+        user_data_obj = UserDataObject(
+            is_enabled=user.account_enabled if user.account_enabled is not None else None,
+            last_logon=(
+                user.sign_in_activity.last_sign_in_date_time.isoformat()
+                if user.sign_in_activity and user.sign_in_activity.last_sign_in_date_time
+                else None
+            ),
+        )
+
+        # Add account status enrichment
+        enrichments.append(
+            UserEnrichmentObject(
+                name="account",
+                value="status",
+                data=user_data_obj,
+            )
+        )
+
+        # Add employment info enrichment if available
+        if user.department or user.job_title or user.employee_id or user.employee_type:
+            employment_data = UserDataObject()
+            employment_enrichment = UserEnrichmentObject(
+                name="employment",
+                value=f"{user.department or ''} - {user.job_title or ''}".strip(" -") or "info",
+                data=employment_data,
+            )
+            enrichments.append(employment_enrichment)
+
         user_ocsf_model = UserOCSFModel(
             activity_id=2,
             activity_name="Collect",
@@ -110,6 +184,7 @@ class EntraIDAssetConnector(AssetConnector):
             metadata=metadata,
             user=user_data,
             type_name="User Inventory",
+            enrichments=enrichments if enrichments else None,
         )
         return user_ocsf_model
 
@@ -140,6 +215,18 @@ class EntraIDAssetConnector(AssetConnector):
         except Exception as e:
             raise ValueError(f"Error fetching user groups: {e}")
 
+    async def fetch_user_admin_roles(self, user_id: str) -> bool:
+        """
+        Fetch admin roles of the user.
+        """
+        try:
+            user_roles = await self.client.users.by_user_id(user_id).transitive_member_of.graph_directory_role.get()
+            if user_roles and user_roles.value and len(user_roles.value) > 0:
+                return True
+            return False
+        except Exception as e:
+            raise ValueError(f"Error fetching user admin roles: {e}")
+
     async def fetch_user_mfa(self, user_id: str) -> bool:
         """
         Fetch MFA status of the user.
@@ -167,7 +254,8 @@ class EntraIDAssetConnector(AssetConnector):
         if user.id:
             user_mfa = await self.fetch_user_mfa(user.id)
             user_groups = await self.fetch_user_groups(user.id)
-        return self.map_fields(user, user_mfa, user_groups)
+            is_admin = await self.fetch_user_admin_roles(user.id)
+        return self.map_fields(user, user_mfa, user_groups, is_admin)
 
     async def fetch_new_users(self, last_run_date: str | None = None) -> list[UserOCSFModel]:
         """
@@ -176,7 +264,24 @@ class EntraIDAssetConnector(AssetConnector):
         """
         new_users: list[UserOCSFModel] = []
         query_params = UsersRequestBuilder.UsersRequestBuilderGetQueryParameters(
-            select=["id", "displayName", "mail", "identities", "createdDateTime", "userPrincipalName", "mailNickname"],
+            select=[
+                "id",
+                "displayName",
+                "mail",
+                "identities",
+                "createdDateTime",
+                "userPrincipalName",
+                "mailNickname",
+                "accountEnabled",
+                "department",
+                "jobTitle",
+                "employeeId",
+                "employeeType",
+                "signInActivity",
+                "companyName",
+                "officeLocation",
+                "isManagementRestricted",
+            ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )
 

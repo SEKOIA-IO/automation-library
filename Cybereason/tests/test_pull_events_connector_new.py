@@ -5,11 +5,12 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from cybereason_modules import CybereasonModule
 from cybereason_modules.connector_pull_events_new import CybereasonEventConnectorNew
-from cybereason_modules.exceptions import InvalidResponse, LoginFailureError
+from cybereason_modules.exceptions import GenericRequestError, InvalidResponse, LoginFailureError
 from tests.data import EDR_MALOP, EDR_MALOP_SUSPICIONS_RESULTS, EPP_MALOP, EPP_MALOP_DETAIL, LOGIN_HTML
 
 
@@ -174,7 +175,7 @@ def edr_suspicions():
 
 
 @pytest.fixture
-def trigger(symphony_storage, patch_time):
+def trigger(symphony_storage, patch_time, fake_time):
     module = CybereasonModule()
     trigger = CybereasonEventConnectorNew(module=module, data_path=symphony_storage)
     trigger.log = MagicMock()
@@ -186,6 +187,8 @@ def trigger(symphony_storage, patch_time):
         "password": "password",
     }
     trigger.configuration = {"intake_key": "intake_key", "frequency": 60, "chunk_size": 20}
+    trigger.from_date = (fake_time - 60) * 1000
+    trigger.cursor.offset = (fake_time - 60) * 1000
     return trigger
 
 
@@ -194,6 +197,18 @@ def test_fetch_malops(trigger, mock_cybereason_api):
         "https://fake.cybereason.net/rest/mmng/v2/malops",
         status_code=200,
         json={"data": {"data": [EPP_MALOP, EDR_MALOP]}},
+    )
+
+    assert trigger.fetch_malops(0, 9999999) == [EPP_MALOP, EDR_MALOP]
+
+
+def test_fetch_malops_with_retries(trigger, mock_cybereason_api):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/mmng/v2/malops",
+        [
+            {"exc": requests.exceptions.ConnectTimeout},
+            {"status_code": 200, "json": {"data": {"data": [EPP_MALOP, EDR_MALOP]}}},
+        ],
     )
 
     assert trigger.fetch_malops(0, 9999999) == [EPP_MALOP, EDR_MALOP]
@@ -239,6 +254,20 @@ def test_get_edr_malop_suspicions(trigger, mock_cybereason_api, suspicions):
 
     assert malop_suspicions is not None
     assert suspicions == consolidate_suspicions(malop_suspicions)
+
+
+def test_get_edr_malop_suspicions_with_retries(trigger, mock_cybereason_api, suspicions):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/crimes/unified",
+        [
+            {"exc": requests.exceptions.ConnectTimeout},
+            {"status_code": 200, "json": EDR_MALOP_SUSPICIONS_RESULTS},
+        ],
+    )
+
+    malop_suspicions = trigger.get_edr_malop_suspicions("11.1882697476172655933", "MalopProcess")
+
+    assert malop_suspicions is not None
 
 
 def test_get_edr_malop_suspicions_with_no_result(trigger, mock_cybereason_api):
@@ -369,6 +398,36 @@ def test_failing_authentication(trigger):
 
         with pytest.raises(LoginFailureError):
             trigger.next_batch()
+
+
+def test_failing_connection(trigger, mock_cybereason_api):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/mmng/v2/malops",
+        exc=requests.exceptions.ConnectionError,
+    )
+
+    with pytest.raises(ConnectionError):
+        trigger.next_batch()
+
+
+def test_failing_timeout(trigger, mock_cybereason_api):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/mmng/v2/malops",
+        exc=requests.exceptions.Timeout,
+    )
+
+    with pytest.raises(TimeoutError):
+        trigger.next_batch()
+
+
+def test_generic_request_error(trigger, mock_cybereason_api):
+    mock_cybereason_api.post(
+        "https://fake.cybereason.net/rest/mmng/v2/malops",
+        exc=requests.exceptions.RequestException("Generic error"),
+    )
+
+    with pytest.raises(GenericRequestError):
+        trigger.next_batch()
 
 
 def test_next_batch_with_login_page_as_malops_listing_reponse(trigger, mock_cybereason_api):

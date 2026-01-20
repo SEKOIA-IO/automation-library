@@ -7,6 +7,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-16 - 2.68.28
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix race condition causing multiple triggers for same alert when receiving batch notifications. The issue was caused by:
+  1. `get_alert_state()` reading stale data from in-memory cache instead of reloading from S3
+  2. `update_alert_info()` being called before threshold evaluation, creating state entries with `last_triggered_event_count=0`
+
+  Solution: Reload state from S3 before reading alert state, and move `update_alert_info()` call to only execute when threshold is NOT met (for the periodic time check thread).
+
+### Added
+
+- AlertEventsThresholdTrigger: Add 5 new tests for race condition fix covering:
+  - `reload_state()` is called before `get_alert_state()`
+  - `update_alert_info()` is called when threshold is NOT met
+  - `update_alert_info()` is NOT called when threshold IS met
+  - Concurrent notifications use latest state from S3
+  - Batch notifications trigger correct number of times with correct event counts
+- Fix flaky test `test_time_threshold_triggers` by stopping background thread during test execution
+
+## 2026-01-07 - 2.68.27
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix event counting by using `similar` field from Kafka notifications instead of non-existent `events_count` field from Alert API
+
+### Added
+
+- AlertEventsThresholdTrigger: Add support for `alert:created` notifications (previously only handled `alert:updated`)
+- AlertEventsThresholdTrigger: Add alert info caching to reduce API calls (extract from notification on `alert:created`, cache on first API call for `alert:updated`)
+- AlertEventsThresholdTrigger: Add periodic time threshold check thread for alerts that received events but didn't meet volume threshold
+- AlertStateManager: Add new fields for caching (`alert_info`, `current_event_count`, `last_event_at`)
+- AlertStateManager: Add new methods `update_alert_info()`, `get_alert_info()`, `get_alerts_pending_time_check()`, `get_all_alerts()`
+- AlertStateManager: Bump state version from 1.0 to 1.1
+
+## 2026-01-07 - 2.68.26
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix FileNotFoundError when saving alert state to S3 by preserving the S3Path object and creating the parent directory before writing
+
+## 2025-12-31 - 2.68.25
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix FileNotFoundError when saving alert state to S3
+
+## 2025-12-30 - 2.68.24
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Use Path.open() instead of smart_open for SDK-managed paths to fix FileNotFoundError
+
+### Added
+
+- AlertEventsThresholdTrigger: Add 4 new tests for lock mechanisms and concurrency handling
+- AlertStateManager: Add 15 comprehensive tests covering state persistence, cleanup, and error scenarios
+
+## 2025-12-23 - 2.68.23
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Migrate state storage from local filesystem to S3 to fix read-only filesystem errors in production
+- AlertEventsThresholdTrigger: Add per-alert locks to prevent race conditions causing duplicate triggers
+- AlertEventsThresholdTrigger: Implement bounded lock cache (max 1024) to prevent memory leaks
+- AlertEventsThresholdTrigger: Fix inconsistent error handling in state loading
+- AlertEventsThresholdTrigger: Add S3-specific exception handling (IOError, OSError) for better resilience
+
+## 2025-12-23 - 2.68.22
+
+### Fixed
+
+- Fixed Pydantic v2 issue where unknown fields were rejected, preventing playbooks from activating successfully
+
+## 2025-12-23 - 2.68.21
+
+### Fixed
+
+- Fixed missing import in main
+
+## 2025-12-23 - 2.68.20
+
+### Added
+
+- Add three new configuration parameters: fetch_events, fetch_all_events, max_events_per_fetch
+- Implement search jobs API integration for retrieving alert events
+- Add dual-mode event fetching: all events vs new events since last trigger
+- Save fetched events to events.json alongside alert.json
+- Add comprehensive test coverage (18 new tests) for event fetching functionality
+- Fix mypy type errors with proper None checks and type annotations  
+- Add graceful degradation: trigger continues if event fetching fails
+- Update manifest with new configuration parameters and output schema
+
+## 2025-12-18 - 2.68.19
+
+### Changed
+
+- Alert code refactoring
+
+## 2025-12-17 - 2.68.18
+
+### Added
+
+- Added event based trigger on alert
+
+## 2025-10-17 - 2.68.17
+
+### Added
+
+- Added action to list alerts
+
 ## 2025-11-18  - 2.68.16
 
 ### Changed

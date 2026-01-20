@@ -13,7 +13,7 @@ class PublishToMISPAction(Action):
 
     @property
     def api_key(self):
-        return (self.module.configuration["misp_api_key"],)
+        return self.module.configuration["misp_api_key"]
 
     def run(self, arguments):
         event = self.json_argument("event", arguments)

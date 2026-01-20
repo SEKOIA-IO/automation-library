@@ -1,0 +1,40 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Connector Delinea PRA configuration",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "description": "Server of the intake server (e.g. 'https://intake.sekoia.io')",
+        "default": "https://intake.sekoia.io",
+        "type": "string"
+      },
+      "intake_key": {
+        "description": "Intake key to use when sending events",
+        "type": "string"
+      },
+      "chunk_size": {
+        "type": "integer",
+        "description": "The max size of chunks for the batch processing",
+        "default": 1000
+      },
+      "frequency": {
+        "type": "integer",
+        "description": "Batch frequency in seconds",
+        "default": 60
+      }
+    },
+    "required": [
+      "intake_key"
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "title": "The records"
+  },
+  "description": "Collect Delinea PRA events.",
+  "docker_parameters": "delinea_pra",
+  "name": "Collect Delinea PRA events",
+  "uuid": "495a9ea5-ff22-4a86-b6be-935f6f121719"
+}
