@@ -1,4 +1,4 @@
-from requests import Response, RequestException
+from requests import RequestException, Response
 
 
 class ConnectorError(Exception):

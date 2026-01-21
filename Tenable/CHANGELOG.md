@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-12 - 1.0.6
+
+### Fixed
+
+- Fix the way we handle CVE IDs
+
 ## 2025-01-08 - 1.0.5
 
 ### Changed

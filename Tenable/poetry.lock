@@ -3075,14 +3075,14 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.22.0"
+version = "1.22.1"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4.0,>=3.11"
 groups = ["main"]
 files = [
-    {file = "sekoia_automation_sdk-1.22.0-py3-none-any.whl", hash = "sha256:56399633a828dd066fef78f177b2407dfca88583efd3e1dd36aa3b20e01307cc"},
-    {file = "sekoia_automation_sdk-1.22.0.tar.gz", hash = "sha256:24649a80ed6ed3067dbf0f0c2dc6c3c09b97b3a6b105cd10c8fc30a660db1f50"},
+    {file = "sekoia_automation_sdk-1.22.1-py3-none-any.whl", hash = "sha256:1d2e33d9e4b9e2730b77887aa9e6d9d600d56ab7df0c0ee7f42ada0e8f681a27"},
+    {file = "sekoia_automation_sdk-1.22.1.tar.gz", hash = "sha256:4e514f63c3ad88a4f4e83cbd3771d70cf7840e17886f28f2aaa8a608ffce1538"},
 ]
 
 [package.dependencies]
@@ -3856,4 +3856,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "c062d845d48a3b312997ee93c18e304294ae087df6ce63c7516e5f5cc9d85c46"
+content-hash = "76f2db6dee9c5558103264daf3f99fed293afe7579cf01cd76b0ac84d7194e19"

@@ -34,7 +34,7 @@
       "enable_time_threshold": {
         "type": "boolean",
         "default": true,
-        "description": "Enable time-based threshold (activity in last N hours)"
+        "description": "Enable time-based threshold (triggers if there is activity in last N hours, checked periodically)"
       },
       "state_cleanup_days": {
         "type": "integer",

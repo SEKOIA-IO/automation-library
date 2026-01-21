@@ -1,5 +1,9 @@
+from functools import cached_property
+
+from azure.identity import UsernamePasswordCredential
 from kiota_abstractions.native_response_handler import NativeResponseHandler
 from kiota_http.middleware.options import ResponseHandlerOption
+from msgraph import GraphServiceClient
 from msgraph.generated.models.user import User
 from msgraph.generated.users.item.authentication.methods.item.reset_password.reset_password_post_request_body import (
     ResetPasswordPostRequestBody,
@@ -107,9 +111,30 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
             request_configuration=req_conf
         )
 
+    @cached_property
+    def client(self):
+        """
+        Used client with preconfigured scopes for password reset action
+        It's a not a good practice to use. But we app permission not supported for this action
+        More information about it here:
+        https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.usernamepasswordcredential?view=azure-python
+        """
+        credentials = UsernamePasswordCredential(
+            client_id=self.module.configuration.client_id,
+            username=self.module.configuration.username,
+            password=self.module.configuration.password,
+            tenant_id=self.module.configuration.tenant_id,
+        )
+
+        # https://learn.microsoft.com/en-us/graph/authenticationmethods-get-started?utm_source=chatgpt.com&tabs=http
+        # Put scopes explicitly in order to follow documentation and avoid issues
+        scopes = ["UserAuthenticationMethod.ReadWrite.All"]
+
+        return GraphServiceClient(credentials=credentials, scopes=scopes)
+
     async def query_reset_user_password(self, user_param, id_methods, req_body, req_conf):
         return (
-            await self.delegated_client.users.by_user_id(user_param)
+            await self.client.users.by_user_id(user_param)
             .authentication.methods.by_authentication_method_id(id_methods)
             .reset_password.post(body=req_body, request_configuration=req_conf)
         )
