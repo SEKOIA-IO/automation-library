@@ -45,9 +45,9 @@ class RequestAction(Action):
 
         auth: AuthBase | None = None
 
-        if auth_type == "Token":
+        if auth_type == "Bearer":
             if not auth_token:
-                raise ValueError("Token should not be empty for Token auth type")
+                raise ValueError("Token should not be empty for Bearer auth type")
 
             auth = HTTPBearerAuth(token=auth_token)
 
