@@ -1,0 +1,40 @@
+FROM python:3.11
+
+# Arguments pour l'utilisateur
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+WORKDIR /app
+
+# Installation de poetry et dépendances système
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir poetry
+
+# Copier les fichiers de dépendances
+COPY poetry.lock pyproject.toml ./
+
+# Installer les dépendances Python
+RUN poetry config virtualenvs.create false && \
+    poetry install --only main --no-interaction --no-ansi
+
+# Copier le code source
+COPY . .
+
+# Créer l'utilisateur avec l'UID/GID spécifié
+RUN groupadd -g ${GROUP_ID} moduleuser || true && \
+    useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash moduleuser || true && \
+    chown -R ${USER_ID}:${GROUP_ID} /app
+
+# Définir l'utilisateur par défaut (peut être overridé par docker-compose)
+USER ${USER_ID}:${GROUP_ID}
+
+ENV PYTHONUNBUFFERED=1
+
+ENTRYPOINT ["python", "main.py"]
