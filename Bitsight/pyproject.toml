@@ -34,7 +34,7 @@ exclude = ["tests/*"]
 python = ">=3.11,<3.12"
 sekoia-automation-sdk = "^1.20.0"
 orjson = "^3.8.12"
-aiohttp = "^3.8.5"
+aiohttp = "^3.13.3"
 aiolimiter = "^1.1.0"
 loguru = "^0.7.3"
 
