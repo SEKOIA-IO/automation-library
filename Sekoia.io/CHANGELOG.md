@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-20 - 2.68.29
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix time-based threshold triggering incorrectly on every notification. The time threshold now correctly waits for the configured `time_window_hours` to elapse before triggering:
+  - Time threshold evaluation is now handled exclusively by the background thread, not on each Kafka notification
+  - First occurrence no longer triggers immediately unless volume threshold is met
+  - Properly tracks reference time (last trigger or first event) to determine when time window elapses
+
+### Changed
+
+- AlertStateManager: `get_alerts_pending_time_check()` now correctly checks if `time_window_hours` has elapsed since last trigger (or first event), instead of just checking if events are "recent"
+
+### Added
+
+- AlertEventsThresholdTrigger: Update tests to reflect new time threshold behavior (time-based triggering via background thread only)
+
 ## 2026-01-16 - 2.68.28
 
 ### Fixed

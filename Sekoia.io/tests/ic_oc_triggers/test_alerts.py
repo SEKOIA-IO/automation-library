@@ -555,19 +555,62 @@ class TestAlertEventsThresholdTrigger:
         assert type(threshold_trigger) == AlertEventsThresholdTrigger
         assert threshold_trigger.configuration["event_count_threshold"] == 100
 
-    def test_first_occurrence_triggers_immediately(self, threshold_trigger, sample_threshold_alert):
-        """Test that first occurrence of an alert triggers immediately."""
+    def test_first_occurrence_triggers_with_volume_threshold(self, threshold_trigger, sample_threshold_alert):
+        """Test that first occurrence triggers only when volume threshold is met."""
         threshold_trigger._ensure_initialized()
 
-        # Pass event_count_from_notification (simulating Kafka notification)
+        # Pass event_count_from_notification=150 which exceeds threshold of 100
         should_trigger, context = threshold_trigger._evaluate_thresholds(
             sample_threshold_alert, previous_state=None, event_count_from_notification=150
         )
 
         assert should_trigger is True
-        assert context["reason"] == "first_occurrence"
+        assert "volume_threshold" in context["reason"]
+        assert "first_occurrence" in context["reason"]
         assert context["new_events"] == 150
         assert context["previous_count"] == 0
+
+    def test_first_occurrence_does_not_trigger_below_volume_threshold(self, threshold_trigger, sample_threshold_alert):
+        """Test that first occurrence does NOT trigger when below volume threshold."""
+        threshold_trigger._ensure_initialized()
+
+        # Pass event_count_from_notification=50 which is below threshold of 100
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            sample_threshold_alert, previous_state=None, event_count_from_notification=50
+        )
+
+        # Should NOT trigger - time threshold is handled by background thread
+        assert should_trigger is False
+        assert context["reason"] == "no_threshold_met"
+        assert context["new_events"] == 50
+        assert context["previous_count"] == 0
+
+    def test_time_threshold_deferred_to_background_thread(self, threshold_trigger, sample_threshold_alert):
+        """Test that time threshold is deferred to background thread when volume not met."""
+        # Enable time threshold, disable volume threshold
+        threshold_trigger.configuration["enable_time_threshold"] = True
+        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger._validated_config = None
+        threshold_trigger._ensure_initialized()
+
+        # Stop background thread to prevent interference
+        if threshold_trigger._time_threshold_thread is not None:
+            threshold_trigger._stop_time_threshold_thread()
+
+        # Pass some events - should NOT trigger immediately
+        should_trigger, context = threshold_trigger._evaluate_thresholds(
+            sample_threshold_alert, previous_state=None, event_count_from_notification=5
+        )
+
+        # Should NOT trigger - time threshold evaluation is deferred
+        assert should_trigger is False
+        assert context["reason"] == "no_threshold_met"
+        assert context["new_events"] == 5
+
+        # Verify that a log was made about deferring to background thread
+        # (checked via the log mock call_args_list)
+        log_calls = [str(call) for call in threshold_trigger.log.call_args_list]
+        assert any("deferred to background" in call.lower() for call in log_calls)
 
     def test_volume_threshold_triggers(self, threshold_trigger, sample_threshold_alert):
         """Test that volume threshold triggers correctly."""
@@ -644,19 +687,23 @@ class TestAlertEventsThresholdTrigger:
         assert matches is False
 
     def test_handle_event_with_mocked_api(self, threshold_trigger, sample_threshold_alert):
-        """Test the full event handling flow."""
+        """Test the full event handling flow when volume threshold is met."""
+        # Ensure volume threshold is configured to trigger with the event count
+        threshold_trigger.configuration["event_count_threshold"] = 100
+
         message = {
             "type": "alert",
             "action": "updated",
             "attributes": {
                 "uuid": "alert-uuid-threshold-1234",
+                "updated": {"similar": 150},  # 150 events, exceeds threshold of 100
             },
         }
 
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=sample_threshold_alert):
             threshold_trigger.handle_event(message)
 
-            # First occurrence should trigger
+            # Should trigger because volume threshold is met (150 >= 100)
             assert threshold_trigger.send_event.called
 
 
@@ -1411,16 +1458,18 @@ class TestAlertEventsThresholdTrigger_EventFetching:
     def test_handle_event_with_event_fetching(
         self, threshold_trigger, sample_threshold_alert, sample_events, requests_mock
     ):
-        """Test full event handling with event fetching enabled."""
+        """Test full event handling with event fetching enabled when volume threshold is met."""
         threshold_trigger.configuration["fetch_events"] = True
         threshold_trigger.configuration["fetch_all_events"] = False
         threshold_trigger.configuration["max_events_per_fetch"] = 500
+        threshold_trigger.configuration["event_count_threshold"] = 100
 
         message = {
             "type": "alert",
             "action": "updated",
             "attributes": {
                 "uuid": "alert-uuid-threshold-1234",
+                "updated": {"similar": 150},  # 150 events exceeds threshold of 100
             },
         }
 
@@ -1448,7 +1497,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
 
         threshold_trigger.handle_event(message)
 
-        # Verify send_event was called
+        # Verify send_event was called (volume threshold met)
         assert threshold_trigger.send_event.called
 
         # Verify events were fetched
@@ -1458,14 +1507,16 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         assert event["fetched_events_count"] == 3
 
     def test_handle_event_fetch_events_disabled(self, threshold_trigger, sample_threshold_alert):
-        """Test event handling with event fetching disabled."""
+        """Test event handling with event fetching disabled when volume threshold is met."""
         threshold_trigger.configuration["fetch_events"] = False
+        threshold_trigger.configuration["event_count_threshold"] = 100
 
         message = {
             "type": "alert",
             "action": "updated",
             "attributes": {
                 "uuid": "alert-uuid-threshold-1234",
+                "updated": {"similar": 150},  # 150 events exceeds threshold of 100
             },
         }
 
@@ -1476,7 +1527,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
                 # Verify _fetch_alert_events was NOT called
                 assert not mock_fetch.called
 
-                # Verify send_event was called (first occurrence)
+                # Verify send_event was called (volume threshold met)
                 assert threshold_trigger.send_event.called
 
                 # Verify no events in payload
@@ -1485,14 +1536,16 @@ class TestAlertEventsThresholdTrigger_EventFetching:
                 assert "events_file_path" not in event
 
     def test_handle_event_fetch_events_failure_continues(self, threshold_trigger, sample_threshold_alert):
-        """Test that event handling continues even if event fetching fails."""
+        """Test that event handling continues even if event fetching fails when volume threshold is met."""
         threshold_trigger.configuration["fetch_events"] = True
+        threshold_trigger.configuration["event_count_threshold"] = 100
 
         message = {
             "type": "alert",
             "action": "updated",
             "attributes": {
                 "uuid": "alert-uuid-threshold-1234",
+                "updated": {"similar": 150},  # 150 events exceeds threshold of 100
             },
         }
 
@@ -1500,7 +1553,7 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             with patch.object(threshold_trigger, "_fetch_alert_events", return_value=None):
                 threshold_trigger.handle_event(message)
 
-                # Verify send_event was still called despite fetch failure
+                # Verify send_event was still called despite fetch failure (volume threshold met)
                 assert threshold_trigger.send_event.called
 
                 # Verify warning was logged
@@ -1584,8 +1637,8 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         # Verify lock was acquired during processing
         assert lock_acquired
 
-    def test_time_threshold_triggers(self, threshold_trigger, sample_threshold_alert):
-        """Test that time-based threshold triggers correctly when there are new events."""
+    def test_time_threshold_triggers_via_background_thread(self, threshold_trigger, sample_threshold_alert):
+        """Test that time-based threshold triggers via background thread, not on notification."""
         threshold_trigger.configuration["enable_time_threshold"] = True
         threshold_trigger.configuration["enable_volume_threshold"] = False
         threshold_trigger.configuration["time_window_hours"] = 1
@@ -1593,48 +1646,40 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         threshold_trigger._ensure_initialized()
 
         # Stop the background thread to prevent race conditions during test
-        # The thread may reload state concurrently, causing flaky test results
         if threshold_trigger._time_threshold_thread is not None:
             threshold_trigger._stop_time_threshold_thread()
 
         alert_uuid = "alert-uuid-time-test"
+        now = datetime.now(timezone.utc)
 
-        # Create previous state so it's not a first occurrence
-        threshold_trigger.state_manager.update_alert_state(
-            alert_uuid=alert_uuid,
-            alert_short_id="AL_TIME",
-            rule_uuid="rule-123",
-            rule_name="Test Rule",
-            event_count=5,
-        )
-
-        alert_with_events = {
-            **sample_threshold_alert,
-            "uuid": alert_uuid,
-            "short_id": "AL_TIME",
+        # Create previous state with last trigger more than 1 hour ago
+        threshold_trigger.state_manager._state["alerts"][alert_uuid] = {
+            "alert_uuid": alert_uuid,
+            "alert_short_id": "AL_TIME",
+            "rule_uuid": "rule-123",
+            "rule_name": "Test Rule",
+            "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+            "last_triggered_event_count": 5,
+            "current_event_count": 10,
+            "last_event_at": now.isoformat(),
+            "created_at": (now - timedelta(hours=3)).isoformat(),
+            "updated_at": now.isoformat(),
+            "version": 1,
+            "alert_info": {**sample_threshold_alert, "uuid": alert_uuid, "short_id": "AL_TIME"},
         }
+        threshold_trigger.state_manager._save_state()
 
-        # Message with new events (similar=10 means 5 new events since previous 5)
-        message = {
-            "type": "alert",
-            "action": "updated",
-            "attributes": {
-                "uuid": alert_uuid,
-                "updated": {"similar": 10},  # 10 total, 5 new
-            },
-        }
+        # Call the background thread check directly
+        threshold_trigger._check_pending_time_thresholds()
 
-        with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert_with_events):
-            threshold_trigger.handle_event(message)
+        # Should trigger because time window has elapsed and there are pending events
+        assert threshold_trigger.send_event.called
 
-            # Should trigger because there are new events (new_events > 0)
-            assert threshold_trigger.send_event.called
-
-            # Verify reason includes time_threshold
-            args, kwargs = threshold_trigger.send_event.call_args
-            event = kwargs["event"]
-            trigger_context = event.get("trigger_context", {})
-            assert "time_threshold" in trigger_context.get("reason", "")
+        # Verify reason is time_threshold
+        args, kwargs = threshold_trigger.send_event.call_args
+        event = kwargs["event"]
+        trigger_context = event.get("trigger_context", {})
+        assert "time_threshold" in trigger_context.get("reason", "")
 
     def test_time_threshold_does_not_trigger_when_no_new_events(self, threshold_trigger, sample_threshold_alert):
         """Test that time-based threshold does NOT trigger when there are no new events."""
@@ -1679,14 +1724,15 @@ class TestAlertEventsThresholdTrigger_EventFetching:
             assert not threshold_trigger.send_event.called
 
     def test_state_cleanup_periodic(self, threshold_trigger, sample_threshold_alert):
-        """Test that state cleanup runs periodically."""
-        # Initialize state manager first
-        threshold_trigger._ensure_initialized()
-
+        """Test that state cleanup runs periodically when volume threshold is met."""
+        # Configure BEFORE initialization so validated_config picks it up
         threshold_trigger.configuration["state_cleanup_days"] = 30
-        threshold_trigger._last_cleanup = None  # Force cleanup to run
         threshold_trigger.configuration["enable_volume_threshold"] = True
         threshold_trigger.configuration["event_count_threshold"] = 10
+        threshold_trigger._validated_config = None  # Clear cached config
+        threshold_trigger._ensure_initialized()
+
+        threshold_trigger._last_cleanup = None  # Force cleanup to run
 
         # Set up alert with events that will trigger
         alert = {
@@ -1697,7 +1743,10 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         message = {
             "type": "alert",
             "action": "updated",
-            "attributes": {"uuid": "alert-cleanup-test"},
+            "attributes": {
+                "uuid": "alert-cleanup-test",
+                "updated": {"similar": 15},  # 15 events exceeds threshold of 10
+            },
         }
 
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
@@ -1773,11 +1822,11 @@ class TestAlertEventsThresholdTrigger_EventFetching:
 
     def test_error_handling_state_update_failure(self, threshold_trigger, sample_threshold_alert):
         """Test error handling when state update fails - should continue and send event."""
-        # Initialize state manager first
-        threshold_trigger._ensure_initialized()
-
+        # Configure BEFORE initialization so validated_config picks it up
         threshold_trigger.configuration["enable_volume_threshold"] = True
         threshold_trigger.configuration["event_count_threshold"] = 10
+        threshold_trigger._validated_config = None  # Clear cached config
+        threshold_trigger._ensure_initialized()
 
         # Set up alert that should trigger
         alert = {
@@ -1788,7 +1837,10 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         message = {
             "type": "alert",
             "action": "updated",
-            "attributes": {"uuid": "alert-state-error"},
+            "attributes": {
+                "uuid": "alert-state-error",
+                "updated": {"similar": 15},  # 15 events exceeds threshold of 10
+            },
         }
 
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
@@ -1805,12 +1857,13 @@ class TestAlertEventsThresholdTrigger_EventFetching:
 
     def test_error_handling_cleanup_failure(self, threshold_trigger, sample_threshold_alert):
         """Test error handling when cleanup fails - should continue and send event."""
-        # Initialize state manager first
-        threshold_trigger._ensure_initialized()
-
-        threshold_trigger._last_cleanup = None
+        # Configure BEFORE initialization so validated_config picks it up
         threshold_trigger.configuration["enable_volume_threshold"] = True
         threshold_trigger.configuration["event_count_threshold"] = 10
+        threshold_trigger._validated_config = None  # Clear cached config
+        threshold_trigger._ensure_initialized()
+
+        threshold_trigger._last_cleanup = None  # Force cleanup to run
 
         # Set up alert that should trigger
         alert = {
@@ -1821,7 +1874,10 @@ class TestAlertEventsThresholdTrigger_EventFetching:
         message = {
             "type": "alert",
             "action": "updated",
-            "attributes": {"uuid": "alert-cleanup-error"},
+            "attributes": {
+                "uuid": "alert-cleanup-error",
+                "updated": {"similar": 15},  # 15 events exceeds threshold of 10
+            },
         }
 
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
@@ -1964,23 +2020,28 @@ class TestAlertEventsThresholdTrigger_KafkaNotification:
     def test_event_count_from_kafka_notification_updated(self, threshold_trigger, sample_threshold_alert):
         """Test that event count is extracted from alert:updated notification."""
         threshold_trigger._ensure_initialized()
+        threshold_trigger.configuration["event_count_threshold"] = 100
 
-        # Test _evaluate_thresholds directly with event_count_from_notification
-        # This tests that the threshold evaluation uses the count from the notification
+        # Test _evaluate_thresholds directly with event_count_from_notification=150
+        # which exceeds the volume threshold of 100
         should_trigger, context = threshold_trigger._evaluate_thresholds(
-            sample_threshold_alert, previous_state=None, event_count_from_notification=50
+            sample_threshold_alert, previous_state=None, event_count_from_notification=150
         )
 
-        # First occurrence should trigger
+        # Should trigger because volume threshold is met (150 >= 100)
         assert should_trigger is True
-        assert context["reason"] == "first_occurrence"
-        # Verify the context uses the event count from notification (50), not from alert (150)
-        assert context["current_count"] == 50
-        assert context["new_events"] == 50
+        assert "volume_threshold" in context["reason"]
+        assert "first_occurrence" in context["reason"]
+        # Verify the context uses the event count from notification
+        assert context["current_count"] == 150
+        assert context["new_events"] == 150
 
-    def test_event_count_from_kafka_notification_created(self, threshold_trigger, sample_threshold_alert):
-        """Test that event count is extracted from alert:created notification (similar=0)."""
+    def test_event_count_from_kafka_notification_created_below_threshold(
+        self, threshold_trigger, sample_threshold_alert
+    ):
+        """Test that alert:created with few events does NOT trigger immediately (deferred to time threshold)."""
         threshold_trigger._ensure_initialized()
+        threshold_trigger.configuration["event_count_threshold"] = 100
 
         # Create an alert info as it would be extracted from alert:created notification
         alert_from_created = {
@@ -1993,25 +2054,28 @@ class TestAlertEventsThresholdTrigger_KafkaNotification:
             "alert_type": {"category": "malware", "value": "malware"},
         }
 
-        # Test _evaluate_thresholds directly with event_count_from_notification=0
-        # This simulates what happens when alert:created notification arrives with similar=0
+        # Test _evaluate_thresholds directly with event_count_from_notification=1
+        # This simulates what happens when alert:created notification arrives with 1 event
         should_trigger, context = threshold_trigger._evaluate_thresholds(
-            alert_from_created, previous_state=None, event_count_from_notification=0
+            alert_from_created, previous_state=None, event_count_from_notification=1
         )
 
-        # First occurrence should trigger even with 0 events
-        assert should_trigger is True
-        assert context["reason"] == "first_occurrence"
-        assert context["current_count"] == 0
-        assert context["new_events"] == 0
+        # Should NOT trigger - below volume threshold, time threshold handled by background thread
+        assert should_trigger is False
+        assert context["reason"] == "no_threshold_met"
+        assert context["current_count"] == 1
+        assert context["new_events"] == 1
 
     def test_evaluate_thresholds_fallback_to_api_when_no_notification_count(
         self, threshold_trigger, sample_threshold_alert
     ):
         """Test that _evaluate_thresholds falls back to API when event_count_from_notification is None."""
+        # Set threshold before initialization so validated_config picks it up
+        threshold_trigger.configuration["event_count_threshold"] = 50  # Set threshold to 50
+        threshold_trigger._validated_config = None  # Clear cached config
         threshold_trigger._ensure_initialized()
 
-        # Mock _get_total_event_count to return a value (simulating successful API call)
+        # Mock _get_total_event_count to return 75 (above threshold of 50)
         with patch.object(threshold_trigger, "_get_total_event_count", return_value=75) as mock_api:
             should_trigger, context = threshold_trigger._evaluate_thresholds(
                 sample_threshold_alert, previous_state=None, event_count_from_notification=None
@@ -2020,9 +2084,10 @@ class TestAlertEventsThresholdTrigger_KafkaNotification:
             # Should have called the API fallback
             mock_api.assert_called_once_with(sample_threshold_alert)
 
-            # First occurrence should trigger
+            # Should trigger because volume threshold is met (75 >= 50)
             assert should_trigger is True
-            assert context["reason"] == "first_occurrence"
+            assert "volume_threshold" in context["reason"]
+            assert "first_occurrence" in context["reason"]
             assert context["current_count"] == 75
             assert context["new_events"] == 75
 
@@ -2039,11 +2104,10 @@ class TestAlertEventsThresholdTrigger_KafkaNotification:
             # Should have called the API fallback
             mock_api.assert_called_once_with(sample_threshold_alert)
 
-            # Should still trigger (first occurrence) but with 0 events
-            assert should_trigger is True
-            assert context["reason"] == "first_occurrence"
-            assert context["current_count"] == 0
-            assert context["new_events"] == 0
+            # When API returns None (failure), current_event_count defaults to 0
+            # which means no new events, so should not trigger
+            assert should_trigger is False
+            assert context["reason"] == "no_new_events"
 
 
 class TestAlertEventsThresholdTrigger_AlertInfoOptimization:
@@ -2202,43 +2266,65 @@ class TestAlertStateManager_NewMethods:
         assert result is None
 
     def test_get_alerts_pending_time_check(self, state_manager):
-        """Test that get_alerts_pending_time_check returns correct alerts."""
+        """Test that get_alerts_pending_time_check returns alerts where time window has elapsed."""
         now = datetime.now(timezone.utc)
 
-        # Alert with pending events within time window
-        state_manager._state["alerts"]["alert-pending"] = {
-            "alert_uuid": "alert-pending",
-            "alert_short_id": "ALT-PEND",
+        # Alert with pending events AND time window elapsed (last trigger > 1 hour ago)
+        # This should be returned because:
+        # - Has pending events (10 - 5 = 5 pending)
+        # - Time since last trigger (2 hours) > time_window_hours (1 hour)
+        state_manager._state["alerts"]["alert-ready"] = {
+            "alert_uuid": "alert-ready",
+            "alert_short_id": "ALT-READY",
             "current_event_count": 10,
             "last_triggered_event_count": 5,
             "last_event_at": now.isoformat(),
             "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+            "created_at": (now - timedelta(hours=3)).isoformat(),
         }
 
-        # Alert with no pending events
+        # Alert with pending events but time window NOT elapsed (last trigger < 1 hour ago)
+        # This should NOT be returned because time_window hasn't elapsed yet
+        state_manager._state["alerts"]["alert-not-ready"] = {
+            "alert_uuid": "alert-not-ready",
+            "alert_short_id": "ALT-NOTREADY",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": (now - timedelta(minutes=30)).isoformat(),  # Only 30 min ago
+            "created_at": (now - timedelta(hours=3)).isoformat(),
+        }
+
+        # Alert with no pending events (already fully triggered)
         state_manager._state["alerts"]["alert-no-pending"] = {
             "alert_uuid": "alert-no-pending",
             "alert_short_id": "ALT-NOPEND",
             "current_event_count": 5,
             "last_triggered_event_count": 5,
             "last_event_at": now.isoformat(),
-            "last_triggered_at": now.isoformat(),
+            "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+            "created_at": (now - timedelta(hours=3)).isoformat(),
         }
 
-        # Alert with old events (outside time window)
-        state_manager._state["alerts"]["alert-old"] = {
-            "alert_uuid": "alert-old",
-            "alert_short_id": "ALT-OLD",
+        # New alert never triggered, with pending events, created > 1 hour ago
+        # Should be returned because created_at is used as reference when never triggered
+        state_manager._state["alerts"]["alert-never-triggered"] = {
+            "alert_uuid": "alert-never-triggered",
+            "alert_short_id": "ALT-NEVER",
             "current_event_count": 10,
-            "last_triggered_event_count": 5,
-            "last_event_at": (now - timedelta(hours=3)).isoformat(),
-            "last_triggered_at": (now - timedelta(hours=4)).isoformat(),
+            "last_triggered_event_count": 0,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": None,
+            "created_at": (now - timedelta(hours=2)).isoformat(),  # Created 2 hours ago
         }
 
         pending = state_manager.get_alerts_pending_time_check(time_window_hours=1)
 
-        assert len(pending) == 1
-        assert pending[0]["alert_uuid"] == "alert-pending"
+        # Should return alert-ready and alert-never-triggered
+        assert len(pending) == 2
+        pending_uuids = [p["alert_uuid"] for p in pending]
+        assert "alert-ready" in pending_uuids
+        assert "alert-never-triggered" in pending_uuids
 
     def test_get_all_alerts(self, state_manager):
         """Test that get_all_alerts returns all alert states."""
@@ -2252,6 +2338,67 @@ class TestAlertStateManager_NewMethods:
         assert "alert-1" in all_alerts
         assert "alert-2" in all_alerts
         assert "alert-3" in all_alerts
+
+    def test_get_alerts_pending_time_check_skips_no_events(self, state_manager):
+        """Test that alerts without last_event_at are skipped."""
+        now = datetime.now(timezone.utc)
+
+        # Alert without last_event_at - should be skipped
+        state_manager._state["alerts"]["alert-no-events"] = {
+            "alert_uuid": "alert-no-events",
+            "alert_short_id": "ALT-NOEV",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": None,  # No events received
+            "last_triggered_at": (now - timedelta(hours=2)).isoformat(),
+            "created_at": (now - timedelta(hours=3)).isoformat(),
+        }
+
+        pending = state_manager.get_alerts_pending_time_check(time_window_hours=1)
+
+        # Should return empty list since no valid alerts
+        assert len(pending) == 0
+
+    def test_get_alerts_pending_time_check_fallback_to_last_event(self, state_manager):
+        """Test that last_event_at is used as fallback when no created_at or last_triggered_at."""
+        now = datetime.now(timezone.utc)
+
+        # Alert with only last_event_at - should use it as reference
+        state_manager._state["alerts"]["alert-fallback"] = {
+            "alert_uuid": "alert-fallback",
+            "alert_short_id": "ALT-FALL",
+            "current_event_count": 10,
+            "last_triggered_event_count": 0,
+            "last_event_at": (now - timedelta(hours=2)).isoformat(),  # 2 hours ago
+            "last_triggered_at": None,
+            "created_at": None,  # No created_at
+        }
+
+        pending = state_manager.get_alerts_pending_time_check(time_window_hours=1)
+
+        # Should return the alert since 2 hours > 1 hour window
+        assert len(pending) == 1
+        assert pending[0]["alert_uuid"] == "alert-fallback"
+
+    def test_get_alerts_pending_time_check_invalid_timestamp(self, state_manager):
+        """Test that alerts with invalid timestamps are skipped."""
+        now = datetime.now(timezone.utc)
+
+        # Alert with invalid timestamp
+        state_manager._state["alerts"]["alert-invalid"] = {
+            "alert_uuid": "alert-invalid",
+            "alert_short_id": "ALT-INV",
+            "current_event_count": 10,
+            "last_triggered_event_count": 5,
+            "last_event_at": now.isoformat(),
+            "last_triggered_at": "not-a-valid-timestamp",  # Invalid
+            "created_at": None,
+        }
+
+        pending = state_manager.get_alerts_pending_time_check(time_window_hours=1)
+
+        # Should return empty list since timestamp is invalid
+        assert len(pending) == 0
 
 
 class TestAlertEventsThresholdTrigger_ConfigValidation:
@@ -2873,9 +3020,10 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
         assert update_alert_info_called, "update_alert_info should be called when threshold is not met"
 
     def test_update_alert_info_not_called_when_threshold_met(self, threshold_trigger, sample_threshold_alert):
-        """Test that update_alert_info() is NOT called when threshold IS met."""
+        """Test that update_alert_info() is NOT called when volume threshold IS met."""
         threshold_trigger.configuration["enable_time_threshold"] = True
-        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger.configuration["enable_volume_threshold"] = True
+        threshold_trigger.configuration["event_count_threshold"] = 10  # Set threshold to 10
         threshold_trigger._validated_config = None
         threshold_trigger._ensure_initialized()
 
@@ -2899,7 +3047,7 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
             "action": "updated",
             "attributes": {
                 "uuid": alert_uuid,
-                "updated": {"similar": 10},  # 5 new events
+                "updated": {"similar": 20},  # 15 new events, exceeds threshold of 10
             },
         }
 
@@ -2918,7 +3066,7 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
             ):
                 threshold_trigger.handle_event(message)
 
-        # Threshold met (time_threshold enabled and new_events > 0), so should trigger
+        # Volume threshold met (15 new events >= 10 threshold), so should trigger
         assert threshold_trigger.send_event.called
 
         # update_alert_info should NOT be called when threshold is met
@@ -2928,11 +3076,12 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
         """Test that concurrent notifications correctly use the latest state from S3.
 
         This test simulates the race condition scenario where:
-        1. First notification triggers and updates state
+        1. First notification triggers via volume threshold and updates state
         2. Second notification should see the updated state and not trigger again
         """
         threshold_trigger.configuration["enable_time_threshold"] = True
-        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger.configuration["enable_volume_threshold"] = True
+        threshold_trigger.configuration["event_count_threshold"] = 5  # Low threshold
         threshold_trigger._validated_config = None
         threshold_trigger._ensure_initialized()
 
@@ -2942,7 +3091,7 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
 
         alert_uuid = "test-concurrent-uuid"
 
-        # First notification - should trigger (first occurrence)
+        # First notification - should trigger (volume threshold met: 5 >= 5)
         message1 = {
             "type": "alert",
             "action": "updated",
@@ -2957,10 +3106,11 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
             threshold_trigger.handle_event(message1)
 
-        # First notification should trigger
+        # First notification should trigger (volume threshold met)
         assert threshold_trigger.send_event.call_count == 1
         first_call = threshold_trigger.send_event.call_args
-        assert first_call[1]["event"]["trigger_context"]["reason"] == "first_occurrence"
+        assert "volume_threshold" in first_call[1]["event"]["trigger_context"]["reason"]
+        assert "first_occurrence" in first_call[1]["event"]["trigger_context"]["reason"]
 
         # Reset mock
         threshold_trigger.send_event.reset_mock()
@@ -2981,30 +3131,30 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
         # Second notification should NOT trigger (no new events)
         assert threshold_trigger.send_event.call_count == 0
 
-    def test_batch_notifications_trigger_with_correct_event_counts(self, threshold_trigger, sample_threshold_alert):
-        """Test that batch notifications with incrementing counts trigger correctly.
+    def test_batch_notifications_trigger_only_when_volume_threshold_met(
+        self, threshold_trigger, sample_threshold_alert
+    ):
+        """Test that batch notifications only trigger when volume threshold is met.
 
-        This is the key test for the race condition fix. When 5 events arrive in a batch,
-        each generating a notification with an incrementing similar count (5, 6, 7, 8, 9),
-        each notification should trigger once with the correct new_events count.
+        With the new time threshold logic (handled by background thread), notifications
+        do NOT trigger immediately just because there are new events. They only trigger
+        when the volume threshold is met.
 
-        The fix ensures that:
-        - Each notification reloads state from S3 before reading
-        - Each notification sees the updated state from the previous trigger
-        - No duplicate triggers occur for the same events
+        This test verifies that:
+        - First notification triggers when volume threshold is met (5 >= 5)
+        - Subsequent notifications only trigger when accumulated new events meet threshold
+        - Time-based triggering is deferred to the background thread
 
-        Without the fix, all 5 notifications would see the same stale state and
-        each would report 5 new events (triggering 5 times with count=5,5,5,5,5).
-
-        With the fix, notifications trigger correctly:
-        - 1st (similar=5): 5 new events (first occurrence)
-        - 2nd (similar=6): 1 new event (6-5=1)
-        - 3rd (similar=7): 1 new event (7-6=1)
-        - 4th (similar=8): 1 new event (8-7=1)
-        - 5th (similar=9): 1 new event (9-8=1)
+        Example with volume_threshold=5:
+        - 1st (similar=5): 5 new events >= 5, TRIGGERS
+        - 2nd (similar=6): 1 new event < 5, does NOT trigger (deferred to time check)
+        - 3rd (similar=7): 2 new events < 5, does NOT trigger
+        - ...
+        - 6th (similar=10): 5 new events >= 5, TRIGGERS
         """
         threshold_trigger.configuration["enable_time_threshold"] = True
-        threshold_trigger.configuration["enable_volume_threshold"] = False
+        threshold_trigger.configuration["enable_volume_threshold"] = True
+        threshold_trigger.configuration["event_count_threshold"] = 5  # Volume threshold of 5
         threshold_trigger._validated_config = None
         threshold_trigger._ensure_initialized()
 
@@ -3015,9 +3165,9 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
         alert_uuid = "test-batch-uuid"
         alert = {**sample_threshold_alert, "uuid": alert_uuid, "short_id": "ALT-BATCH"}
 
-        # Simulate 5 notifications arriving with incrementing similar counts
-        # This mimics what happens when 5 events are added to an alert
-        similar_counts = [5, 6, 7, 8, 9]
+        # Simulate notifications: first with 5, then incrementing
+        # Only triggers at 5 (first) and 10 (5 new since last trigger at 5)
+        similar_counts = [5, 6, 7, 8, 9, 10]
 
         with patch.object(threshold_trigger, "_retrieve_alert_from_alertapi", return_value=alert):
             for similar in similar_counts:
@@ -3031,13 +3181,14 @@ class TestAlertEventsThresholdTrigger_RaceConditionFix:
                 }
                 threshold_trigger.handle_event(message)
 
-        # All 5 notifications should trigger because each has new events
-        # (5 new on first, then 1 new each for 6,7,8,9)
-        assert threshold_trigger.send_event.call_count == 5
+        # Only 2 triggers: at similar=5 (first, 5 new) and similar=10 (5 new since last trigger)
+        assert threshold_trigger.send_event.call_count == 2
 
         # Verify the counts in each trigger
         calls = threshold_trigger.send_event.call_args_list
-        expected_new_events = [5, 1, 1, 1, 1]
-        for i, (call, expected) in enumerate(zip(calls, expected_new_events)):
-            context = call[1]["event"]["trigger_context"]
-            assert context["new_events"] == expected, f"Notification {i+1} should have {expected} new events"
+        # First trigger: 5 new events (first occurrence)
+        assert calls[0][1]["event"]["trigger_context"]["new_events"] == 5
+        assert "volume_threshold" in calls[0][1]["event"]["trigger_context"]["reason"]
+        # Second trigger: 5 new events (10 - 5)
+        assert calls[1][1]["event"]["trigger_context"]["new_events"] == 5
+        assert "volume_threshold" in calls[1][1]["event"]["trigger_context"]["reason"]

@@ -485,24 +485,29 @@ class AlertStateManager:
 
     def get_alerts_pending_time_check(self, time_window_hours: int) -> list[dict[str, Any]]:
         """
-        Get alerts that have pending events within the time window and haven't been triggered yet.
+        Get alerts that have pending events and the time window has elapsed since last trigger.
         Used for periodic time threshold checking.
+
+        The time threshold logic:
+        - If never triggered: check if time_window_hours has passed since the first event
+        - If previously triggered: check if time_window_hours has passed since last trigger
+        - Only return alerts with pending events (current_count > last_triggered_count)
 
         Args:
             time_window_hours: Time window in hours (1-168)
 
         Returns:
-            List of alert states that need time threshold evaluation
+            List of alert states that need time threshold triggering
         """
         from datetime import timedelta
 
         now = datetime.now(timezone.utc)
-        cutoff = now - timedelta(hours=time_window_hours)
 
         pending_alerts = []
         for alert_uuid, state in self._state["alerts"].items():
             last_event_at_str = state.get("last_event_at")
             last_triggered_at_str = state.get("last_triggered_at")
+            created_at_str = state.get("created_at")
             current_count = state.get("current_event_count", 0)
             last_triggered_count = state.get("last_triggered_event_count", 0)
 
@@ -515,47 +520,55 @@ class AlertStateManager:
             if pending_events <= 0:
                 continue
 
-            # Parse timestamps to datetime for robust comparison
-            # All timestamps are stored in ISO 8601 UTC format
+            # Determine the reference time for the time window check:
+            # - If previously triggered: use last_triggered_at
+            # - If never triggered: use created_at (first time we saw this alert)
+            if last_triggered_at_str is not None:
+                reference_time_str = last_triggered_at_str
+            elif created_at_str is not None:
+                reference_time_str = created_at_str
+            else:
+                # Fallback to last_event_at if no other timestamp available
+                reference_time_str = last_event_at_str
+
+            # Parse reference timestamp
             try:
-                last_event_at = datetime.fromisoformat(last_event_at_str.replace("Z", "+00:00"))
-                # Ensure timezone-aware comparison
-                if last_event_at.tzinfo is None:
-                    last_event_at = last_event_at.replace(tzinfo=timezone.utc)
+                reference_time = datetime.fromisoformat(reference_time_str.replace("Z", "+00:00"))
+                if reference_time.tzinfo is None:
+                    reference_time = reference_time.replace(tzinfo=timezone.utc)
             except (ValueError, AttributeError):
-                # Skip if timestamp is invalid
                 self._log(
-                    f"Invalid last_event_at timestamp for alert {alert_uuid}",
+                    f"Invalid reference timestamp for alert {alert_uuid}",
                     level="warning",
                     alert_uuid=alert_uuid,
-                    last_event_at=last_event_at_str,
+                    reference_time=reference_time_str,
                 )
                 continue
 
-            # Check if last event is within the time window
-            if last_event_at < cutoff:
-                continue
+            # Check if time_window_hours has elapsed since reference time
+            time_since_reference = now - reference_time
+            required_duration = timedelta(hours=time_window_hours)
 
-            # Check if we haven't triggered since the last event (or never triggered at all)
-            if last_triggered_at_str is not None:
-                try:
-                    last_triggered_at = datetime.fromisoformat(last_triggered_at_str.replace("Z", "+00:00"))
-                    if last_triggered_at.tzinfo is None:
-                        last_triggered_at = last_triggered_at.replace(tzinfo=timezone.utc)
-                    # Skip if already triggered after last event
-                    if last_triggered_at >= last_event_at:
-                        continue
-                except (ValueError, AttributeError):
-                    # If timestamp is invalid, treat as not triggered
-                    pass
+            if time_since_reference < required_duration:
+                # Not enough time has passed yet
+                self._log(
+                    f"Alert {state.get('alert_short_id')} not ready yet (time remaining: {required_duration - time_since_reference})",
+                    level="debug",
+                    alert_uuid=alert_uuid,
+                    pending_events=pending_events,
+                    time_since_reference_hours=time_since_reference.total_seconds() / 3600,
+                    required_hours=time_window_hours,
+                )
+                continue
 
             pending_alerts.append(state)
             self._log(
-                f"Alert {state.get('alert_short_id')} pending for time check",
+                f"Alert {state.get('alert_short_id')} ready for time threshold trigger",
                 level="debug",
                 alert_uuid=alert_uuid,
                 pending_events=pending_events,
-                last_event_at=last_event_at_str,
+                time_since_reference_hours=time_since_reference.total_seconds() / 3600,
+                required_hours=time_window_hours,
             )
 
         return pending_alerts
