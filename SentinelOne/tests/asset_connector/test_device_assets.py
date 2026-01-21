@@ -101,6 +101,8 @@ def sample_agent():
         networkQuarantineEnabled=False,
         firewallEnabled=True,
         locations=[Location(id="loc-1", name="New York Office", scope="group")],
+        proxyStates={"httpProxyEnabled": None, "httpsProxyEnabled": False},
+        containerizedWorkloadCounts={"total": None, "running": 0, "stopped": 0}
     )
 
 
