@@ -34,7 +34,7 @@ exclude = ["tests/*"]
 python = ">=3.10,<3.12"
 orjson = "^3.10.18"
 python-dateutil = "^2.9.0.post0"
-aiohttp = "^3.12.8"
+aiohttp = "^3.13.3"
 loguru = "^0.7.3"
 async-lru = "^2.0.2"
 aiolimiter = "^1.2.1"
