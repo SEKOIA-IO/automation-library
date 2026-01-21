@@ -27,7 +27,6 @@
       }
     },
     "required": [
-      "base_url",
       "org_name"
     ],
     "secrets": [
