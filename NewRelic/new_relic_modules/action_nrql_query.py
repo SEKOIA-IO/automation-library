@@ -41,9 +41,7 @@ class NRQLQueryAction(Action):
 
     def save_to_file(self, results: list[dict]) -> str:
         filename = str(uuid.uuid4())
-
-        file_path = self.data_path / str(uuid.uuid4()) / filename
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path = self.data_path / filename
 
         with file_path.open("wb") as f:
             f.write(orjson.dumps(results))

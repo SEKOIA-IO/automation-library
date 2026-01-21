@@ -46,7 +46,15 @@ def test_query(data_storage, new_relic_module, arguments, response):
         assert result["results"] == response.get("data", {}).get("actor", {}).get("nrql", {}).get("results", [])
 
 
-def test_query_results_saved_in_file(data_storage, new_relic_module, arguments_file):
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"data": {"actor": {"nrql": {"results": [{"count": 255}]}}}},
+        {"data": {"actor": {}}},
+        {"data": {"actor": {"nrql": {"results": []}}}},
+    ],
+)
+def test_query_results_saved_in_file(data_storage, new_relic_module, arguments_file, response):
     results = [{"count": 123}]
     response = {"data": {"actor": {"nrql": {"results": results}}}}
     with requests_mock.Mocker() as mock_requests:
@@ -59,4 +67,4 @@ def test_query_results_saved_in_file(data_storage, new_relic_module, arguments_f
     assert path.exists() is True
 
     with path.open("rb") as fp:
-        assert orjson.loads(fp.read()) == results
+        assert orjson.loads(fp.read()) == response.get("data", {}).get("actor", {}).get("nrql", {}).get("results", [])
