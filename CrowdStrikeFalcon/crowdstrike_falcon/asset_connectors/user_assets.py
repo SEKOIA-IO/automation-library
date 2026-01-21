@@ -23,7 +23,6 @@ from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 
 class CrowdstrikeUserAssetConnector(AssetConnector):
-
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION = "N/A"
     LIMIT: int = 100

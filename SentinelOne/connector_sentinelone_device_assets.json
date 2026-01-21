@@ -6,6 +6,7 @@
   "docker_parameters": "sentinelone_device_assets_connector",
   "type": "asset",
   "capability": "host_detection",
+  "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"],
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
@@ -29,7 +30,7 @@
         "title": "Frequency (in seconds)",
         "description": "How often to fetch device assets from SentinelOne (minimum 60 seconds)"
       },
-      "chunk_size": {
+      "batch_size": {
         "type": "integer",
         "minimum": 1,
         "default": 1000,
