@@ -2,6 +2,9 @@
 
 from sekoia_automation.loguru.config import init_logging
 
+from asset_connector.device_assets import AwsDeviceAssetConnector
+from asset_connector.users_assets import AwsUsersAssetConnector
+from aws_helpers.account_validator import AwsAccountValidator
 from connectors import AwsModule
 from connectors.s3.logs.trigger_cloudtrail_logs import CloudTrailLogsTrigger
 from connectors.s3.logs.trigger_flowlog_records import FlowlogRecordsTrigger
@@ -12,9 +15,6 @@ from connectors.s3.trigger_s3_logs import AwsS3LogsTrigger
 from connectors.s3.trigger_s3_ocsf_parquet import AwsS3OcsfTrigger
 from connectors.s3.trigger_s3_records import AwsS3RecordsTrigger
 from connectors.trigger_sqs_messages import AwsSqsMessagesTrigger
-from asset_connector.device_assets import AwsDeviceAssetConnector
-from asset_connector.users_assets import AwsUsersAssetConnector
-from aws_helpers.account_validator import AwsAccountValidator
 
 if __name__ == "__main__":
     init_logging()
