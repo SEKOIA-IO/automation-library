@@ -42,4 +42,4 @@ types-requests = "*"
 omit = ["tests/*", "main.py"]
 
 [tool.poetry.group.dev.dependencies]
-aiohttp = "^3.12.14"
+aiohttp = "^3.13.3"
