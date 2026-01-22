@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-22 - 1.4.2
+
+### Changed
+
+- Added internals field to AWS asset connectors
+
 ## 2025-11-20 - 1.4.1
 
 ### Fixed
