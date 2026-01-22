@@ -760,7 +760,6 @@ def test_build_network_interface(test_harfanglab_asset_connector, asset_first_ob
     assert network_interface is not None
     assert network_interface.hostname == "testhostaname1"
     assert network_interface.ip == "1.2.2.5"
-    assert network_interface.mac == "55-55-00-22-33-22"
     assert network_interface.name is None
     assert network_interface.type == "Wired"
     assert network_interface.type_id == 1

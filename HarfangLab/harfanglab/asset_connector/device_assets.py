@@ -199,7 +199,6 @@ class HarfanglabAssetConnector(AssetConnector):
         return NetworkInterface(
             hostname=asset.get("hostname"),
             ip=ip,
-            mac=subnet_info.get("gateway_macaddress") if subnet_info else None,
             name=subnet_info.get("name") if subnet_info else None,
             type=interface_type,
             type_id=interface_type_id,
