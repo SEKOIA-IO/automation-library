@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Added internals field to AWS asset connectors
+- Added internals field to Tenable asset connectors
 
 ## 2025-01-12 - 1.0.6
 
