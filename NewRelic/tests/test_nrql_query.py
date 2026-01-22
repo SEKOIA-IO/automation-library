@@ -63,7 +63,7 @@ def test_query_results_saved_in_file(data_storage, new_relic_module, arguments_f
         result = action.run(arguments_file)
 
     assert "file_path" in result
-    path = Path(result["file_path"])
+    path = data_storage / result["file_path"]
     assert path.exists() is True
 
     with path.open("rb") as fp:
