@@ -4,6 +4,11 @@
     "title": "Github",
     "type": "object",
     "properties": {
+      "base_url": {
+        "description": "The base URL (e.g `https://api.SUBDOMAIN.ghe.com`)",
+        "type": "string",
+        "default": "https://api.github.com"
+      },
       "org_name": {
         "description": "The name of your Github organization",
         "type": "string"
@@ -33,7 +38,7 @@
   "name": "Github",
   "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
   "slug": "github",
-  "version": "1.10.2",
+  "version": "1.11.1",
   "categories": [
     "Collaboration Tools"
   ]

@@ -1,0 +1,49 @@
+{
+  "name": "Fetch device assets from SentinelOne",
+  "description": "Collect device/agent inventory from SentinelOne and send to Sekoia.io Asset Management",
+  "uuid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "slug": "sentinelone_device_assets_connector",
+  "docker_parameters": "sentinelone_device_assets_connector",
+  "type": "asset",
+  "capability": "host_detection",
+  "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"],
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "SentinelOne Device Assets Connector Configuration",
+    "properties": {
+      "sekoia_base_url": {
+        "type": "string",
+        "default": "https://api.sekoia.io",
+        "title": "Sekoia.io Base URL",
+        "description": "The base URL of the Sekoia.io API"
+      },
+      "sekoia_api_key": {
+        "type": "string",
+        "title": "Sekoia.io API Key",
+        "description": "The API key to authenticate to Sekoia.io"
+      },
+      "frequency": {
+        "type": "integer",
+        "minimum": 60,
+        "default": 3600,
+        "title": "Frequency (in seconds)",
+        "description": "How often to fetch device assets from SentinelOne (minimum 60 seconds)"
+      },
+      "batch_size": {
+        "type": "integer",
+        "minimum": 1,
+        "default": 1000,
+        "title": "Chunk Size",
+        "description": "Number of assets to send in each batch to Sekoia.io"
+      }
+    },
+    "required": [
+      "sekoia_base_url",
+      "sekoia_api_key"
+    ],
+    "secrets": [
+      "sekoia_api_key"
+    ]
+  }
+}

@@ -101,8 +101,7 @@ class BeyondTrustPRAPlatformConnector(Connector):
             return
 
         if "<error>" in response.text and response.status_code == 200:
-            # no sessions
-            self.log(response.text, level="debug")
+            self.log(f"An error occurred. response: {response.text}", level="error")
             EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
             return
 

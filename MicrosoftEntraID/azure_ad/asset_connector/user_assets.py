@@ -14,14 +14,18 @@ from msgraph.generated.models.microsoft_authenticator_authentication_method impo
 from msgraph.generated.models.phone_authentication_method import PhoneAuthenticationMethod
 from msgraph.generated.models.software_oath_authentication_method import SoftwareOathAuthenticationMethod
 from msgraph.generated.models.user import User
-from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from msgraph.generated.users.item.transitive_member_of.transitive_member_of_request_builder import (
     TransitiveMemberOfRequestBuilder,
 )
+from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
-from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    Account,
+    AccountTypeId,
+    AccountTypeStr,
+)
 from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
 from sekoia_automation.asset_connector.models.ocsf.user import (

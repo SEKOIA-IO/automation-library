@@ -54,7 +54,7 @@ class JIRAAction(Action):
 
         return result
 
-    def post_paginated_results(self, path: str, result_field: str, payload: dict | None = None) -> list:
+    def post_paginated_results(self, path: str, result_field: str, payload: dict | None = None) -> dict:
         # pagination with next token
         if payload is None:
             payload = {}
@@ -65,11 +65,11 @@ class JIRAAction(Action):
         response = self.post_json(path, json=payload)
         is_last = response.get("isLast") if type(response) == dict else False
         if is_last:
-            return response.get(result_field) if result_field else response
+            return {result_field: response.get(result_field)}
 
         result = []
         while True:
-            items = response.get(result_field) if result_field else response
+            items = response.get(result_field, [])
 
             if len(items) == 0:
                 break
@@ -84,7 +84,7 @@ class JIRAAction(Action):
 
             response = self.post_json(path=path, json=payload)
 
-        return result
+        return {result_field: result}
 
     def _handle_response_error(self, response: requests.Response):
         if not response.ok:

@@ -1,4 +1,5 @@
 """Contains the EnableUsersAction."""
+
 from typing import Any
 
 from loguru import logger

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-01-12 - 1.0.6
+
+### Fixed
+
+- Fix the way we handle CVE IDs
+
+## 2025-01-08 - 1.0.5
+
+### Changed
+
+- Update hostname field
+
+## 2025-12-18 - 1.0.4
+
+### Changed
+
+- Add device to asset mapping
+- Add some extra fields
+- Update sdk version to 1.22.0
+- Add exceptions to the connector
+
 ## 2025-10-06 - 1.0.3
 
 ### Changed

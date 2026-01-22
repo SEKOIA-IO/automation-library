@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-21 - 1.11.1
+
+### Fixed
+
+- Remove base URL from the required fields
+
+## 2025-11-06 - 1.11.0
+
+### Added
+
+- Added field for base URL
+
 ## 2024-06-11 - 1.10.2
 
 ### Changed
