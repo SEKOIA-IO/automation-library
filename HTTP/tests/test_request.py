@@ -254,7 +254,7 @@ def test_basic_digest(symphony_storage):
         mock.get(
             "https://api.sekoia.io",
             [
-                # Simulate the Chanllenge and Response on the first request with no authentication
+                # Simulate the Challenge and Response on the first request with no authentication
                 {
                     "status_code": 401,
                     "reason": "Unauthorized",
