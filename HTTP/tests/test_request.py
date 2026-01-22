@@ -246,7 +246,7 @@ def test_basic_auth_miss_credentials(symphony_storage):
         action.run({"method": "get", "url": "https://api.sekoia.io", "auth_type": "Basic"})
 
 
-def test_basic_digest(symphony_storage):
+def test_digest_auth(symphony_storage):
     action = RequestAction(data_path=symphony_storage)
     action.module.configuration = {}
 
