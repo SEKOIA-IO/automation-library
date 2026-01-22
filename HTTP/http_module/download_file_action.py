@@ -56,14 +56,15 @@ class DownloadFileAction(Action):
         Save the requests's response in a file.
         """
         filename = self._get_file_name(response)
-        file_path = self._data_path / str(uuid4()) / filename
+        file_path = self.data_path / str(uuid4()) / filename
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with file_path.open("wb") as f:
             response.raw.decode_content = True  # Force decoding content
             f.write(response.raw.read())
 
-        return {"file_path": str(file_path)}
+        result_path = file_path.relative_to(self.data_path)
+        return {"file_path": str(result_path)}
 
     @staticmethod
     def _get_file_name(response: Response) -> str:
