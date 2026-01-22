@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Added internals field to AWS asset connectors
+- Added internals field to Microsoft Entra ID asset connectors
 
 ## 2026-01-14 - 2.10.7
 
