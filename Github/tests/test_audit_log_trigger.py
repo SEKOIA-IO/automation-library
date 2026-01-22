@@ -203,7 +203,7 @@ async def test_next_batch_with_api_key_no_base_url(
     Test AuditLogConnector next_batch.
 
     Args:
-        connector_with_api_key: AuditLogConnector
+        connector_with_api_key_no_base_url: AuditLogConnector
         github_response: list[dict[str, Any]]
     """
     with aioresponses() as mocked_responses:
