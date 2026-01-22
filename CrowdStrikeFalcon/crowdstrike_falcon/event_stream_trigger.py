@@ -462,13 +462,13 @@ class EventForwarder(threading.Thread):
 
         while self.running:
             try:
-                (stream_root_url, event) = self.events_queue.get(block=True, timeout=5)
+                stream_root_url, event = self.events_queue.get(block=True, timeout=5)
                 batch_of_events = [event]
                 last_event_per_stream: dict[str, str] = {stream_root_url: event}
 
                 try:
                     while len(batch_of_events) < MAX_EVENTS_PER_BATCH:
-                        (stream_root_url, event) = self.events_queue.get(block=True, timeout=0.5)
+                        stream_root_url, event = self.events_queue.get(block=True, timeout=0.5)
                         last_event_per_stream[stream_root_url] = event
                         batch_of_events.append(event)
 
