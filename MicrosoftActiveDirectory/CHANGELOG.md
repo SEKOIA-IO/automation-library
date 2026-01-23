@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-01-22 - 1.4.3
+## 2026-01-23 - 1.4.4
 
 ### Changed
 
-- Added internals field to Microsoft Active Directory asset connectors
+- Update internals field inside arguments of Microsoft AD asset connectors
 
 ## 2026-01-14 - 1.4.2
 
