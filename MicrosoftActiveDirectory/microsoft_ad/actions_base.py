@@ -1,5 +1,8 @@
 from functools import cached_property
-from ldap3 import Server, Connection
+import ssl
+import tempfile
+
+from ldap3 import Server, Connection, Tls
 from ldap3.utils.conv import escape_filter_chars
 
 from sekoia_automation.action import Action
@@ -12,10 +15,21 @@ class MicrosoftADAction(Action):
 
     @cached_property
     def client(self):
+        tls_config = None
+        ca_cert = self.module.configuration.ca_certificate
+        if ca_cert:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as f:
+                f.write(ca_cert)
+                ca_file = f.name
+            tls_config = Tls(validate=ssl.CERT_REQUIRED, ca_certs_file=ca_file)
+        else:
+            tls_config = Tls(validate=ssl.CERT_NONE)
+
         server = Server(
             host=self.module.configuration.servername,
             port=636,
             use_ssl=True,
+            tls=tls_config,
         )
         conn = Connection(
             server,
