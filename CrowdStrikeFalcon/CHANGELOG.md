@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-22 - 1.25.4
+
+### Changed
+
+- Added internals field to crowdstrike falcon asset connectors
+
 ## 2025-11-14 - 1.25.3
 
 ### Added
