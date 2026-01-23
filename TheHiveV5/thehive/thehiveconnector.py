@@ -6,8 +6,11 @@ Simple TheHive Alert Connector
 - Adds basic error handling and logging
 """
 
+import atexit
 import logging
-from typing import Optional, Dict, List, Any
+import os
+import tempfile
+from typing import Optional, Dict, List, Any, Union
 
 from thehive4py import TheHiveApi
 from thehive4py.errors import TheHiveError
@@ -173,6 +176,32 @@ def key_exists(mapping: dict, key_to_check: str) -> bool:
     return key_to_check in mapping
 
 
+def _prepare_verify_param(verify: bool, ca_certificate: Optional[str] = None) -> Union[bool, str]:
+    """
+    Prepare the verify parameter for requests/thehive4py.
+
+    Args:
+        verify: Whether to verify the certificate
+        ca_certificate: PEM-encoded CA certificate content (optional)
+
+    Returns:
+        - False if verify is False
+        - Path to temp CA file if ca_certificate is provided
+        - True otherwise (use system CA store)
+    """
+    if not verify:
+        return False
+
+    if ca_certificate:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as f:
+            f.write(ca_certificate)
+            ca_file = f.name
+        atexit.register(lambda: os.unlink(ca_file) if os.path.exists(ca_file) else None)
+        return ca_file
+
+    return True
+
+
 class TheHiveConnector:
     """
     Minimal TheHive Alert Connector.
@@ -181,11 +210,14 @@ class TheHiveConnector:
         res = connector.alert_get("ALERT-ID")
     """
 
-    def __init__(self, url: str, api_key: str, organisation: str, verify: bool = True):
+    def __init__(
+        self, url: str, api_key: str, organisation: str, verify: bool = True, ca_certificate: Optional[str] = None
+    ):
         if not api_key:
             raise ValueError("API key is required")
 
-        self.api = TheHiveApi(url=url, apikey=api_key, organisation=organisation, verify=verify)
+        verify_param = _prepare_verify_param(verify, ca_certificate)
+        self.api = TheHiveApi(url=url, apikey=api_key, organisation=organisation, verify=verify_param)
 
     def _safe_call(self, fn, *args, **kwargs):
         try:

@@ -1,9 +1,10 @@
+import os
 import pytest
 import sys
 import unittest.mock as mock
 import requests_mock
 
-from thehive.thehiveconnector import TheHiveConnector, key_exists
+from thehive.thehiveconnector import TheHiveConnector, key_exists, _prepare_verify_param
 from thehive4py.errors import TheHiveError
 
 
@@ -27,6 +28,41 @@ def test_connector_init_without_apikey():
     with pytest.raises(ValueError) as exc_info:
         TheHiveConnector("http://localhost:9000", "", "TESTORG")
     assert "API key is required" in str(exc_info.value)
+
+
+class TestPrepareVerifyParam:
+    """Tests for the _prepare_verify_param helper function"""
+
+    def test_verify_false_returns_false(self):
+        """When verify is False, should return False regardless of ca_certificate"""
+        assert _prepare_verify_param(verify=False) is False
+        assert _prepare_verify_param(verify=False, ca_certificate="some cert") is False
+
+    def test_verify_true_without_ca_returns_true(self):
+        """When verify is True and no CA, should return True (use system CA store)"""
+        assert _prepare_verify_param(verify=True) is True
+        assert _prepare_verify_param(verify=True, ca_certificate=None) is True
+
+    def test_verify_true_with_ca_returns_file_path(self):
+        """When verify is True and CA provided, should return path to temp file"""
+        ca_cert = "-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----"
+        result = _prepare_verify_param(verify=True, ca_certificate=ca_cert)
+
+        assert isinstance(result, str)
+        assert result.endswith(".pem")
+        assert os.path.exists(result)
+
+        # Verify content
+        with open(result, "r") as f:
+            assert f.read() == ca_cert
+
+    def test_ca_file_registered_for_cleanup(self):
+        """The CA temp file should be registered for cleanup at exit"""
+        ca_cert = "-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----"
+        result = _prepare_verify_param(verify=True, ca_certificate=ca_cert)
+
+        # File should exist now
+        assert os.path.exists(result)
 
 
 def test_connector_safe_call_with_thehive_error():
