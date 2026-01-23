@@ -9,6 +9,9 @@ class MicrosoftADConfiguration(BaseModel):
     admin_username: str = Field(..., description="Admin username")
     admin_password: str = Field(..., secret=True, description="Admin password")  # type: ignore
     ca_certificate: str | None = Field(None, description="PEM-encoded CA certificate for TLS verification")
+    skip_tls_verify: bool = Field(
+        False, description="Skip TLS certificate verification (insecure, use only for testing)"
+    )
 
 
 class MicrosoftADModule(Module):

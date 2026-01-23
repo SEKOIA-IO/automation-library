@@ -22,6 +22,12 @@
         "title": "CA Certificate",
         "description": "PEM-encoded CA certificate for TLS verification (optional, for internal PKI)",
         "type": "string"
+      },
+      "skip_tls_verify": {
+        "title": "Skip TLS Verification",
+        "description": "Skip TLS certificate verification (insecure, use only for testing)",
+        "type": "boolean",
+        "default": false
       }
     },
     "required": [

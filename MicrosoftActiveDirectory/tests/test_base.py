@@ -1,3 +1,4 @@
+import os
 import pytest
 import ssl
 import tempfile
@@ -15,7 +16,8 @@ class TestClientTlsConfiguration:
     @patch("microsoft_ad.actions_base.Connection")
     @patch("microsoft_ad.actions_base.Server")
     @patch("microsoft_ad.actions_base.Tls")
-    def test_client_without_ca_certificate_uses_cert_none(self, mock_tls, mock_server, mock_connection):
+    def test_client_without_ca_certificate_and_skip_tls_uses_default(self, mock_tls, mock_server, mock_connection):
+        """Without ca_certificate and skip_tls_verify=False, no Tls config is created (uses library default)."""
         action = object.__new__(ConcreteMicrosoftADAction)
         mock_module = Mock()
         mock_module.configuration = MicrosoftADConfiguration(
@@ -23,19 +25,46 @@ class TestClientTlsConfiguration:
             admin_username="admin@example.com",
             admin_password="password",
             ca_certificate=None,
+            skip_tls_verify=False,
+        )
+        action.module = mock_module
+
+        _ = action.client
+
+        mock_tls.assert_not_called()
+        mock_server.assert_called_once_with(
+            host="ldap.example.com",
+            port=636,
+            use_ssl=True,
+            tls=None,
+        )
+
+    @patch("microsoft_ad.actions_base.Connection")
+    @patch("microsoft_ad.actions_base.Server")
+    @patch("microsoft_ad.actions_base.Tls")
+    def test_client_with_skip_tls_verify_uses_cert_none(self, mock_tls, mock_server, mock_connection):
+        """With skip_tls_verify=True, CERT_NONE is used."""
+        action = object.__new__(ConcreteMicrosoftADAction)
+        mock_module = Mock()
+        mock_module.configuration = MicrosoftADConfiguration(
+            servername="ldap.example.com",
+            admin_username="admin@example.com",
+            admin_password="password",
+            ca_certificate=None,
+            skip_tls_verify=True,
         )
         action.module = mock_module
 
         _ = action.client
 
         mock_tls.assert_called_once_with(validate=ssl.CERT_NONE)
-        mock_server.assert_called_once()
         assert mock_server.call_args[1]["tls"] == mock_tls.return_value
 
     @patch("microsoft_ad.actions_base.Connection")
     @patch("microsoft_ad.actions_base.Server")
     @patch("microsoft_ad.actions_base.Tls")
     def test_client_with_ca_certificate_uses_cert_required(self, mock_tls, mock_server, mock_connection):
+        """With ca_certificate provided, CERT_REQUIRED is used with the CA file."""
         action = object.__new__(ConcreteMicrosoftADAction)
         mock_module = Mock()
         ca_cert_content = "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJALa...\n-----END CERTIFICATE-----"
@@ -58,7 +87,8 @@ class TestClientTlsConfiguration:
     @patch("microsoft_ad.actions_base.Connection")
     @patch("microsoft_ad.actions_base.Server")
     @patch("microsoft_ad.actions_base.Tls")
-    def test_client_with_ca_certificate_writes_cert_to_temp_file(self, mock_tls, mock_server, mock_connection):
+    def test_client_with_ca_certificate_cleans_up_temp_file(self, mock_tls, mock_server, mock_connection):
+        """The temporary CA file is deleted after the connection is established."""
         action = object.__new__(ConcreteMicrosoftADAction)
         mock_module = Mock()
         ca_cert_content = "-----BEGIN CERTIFICATE-----\nTEST_CERT_CONTENT\n-----END CERTIFICATE-----"
@@ -74,9 +104,29 @@ class TestClientTlsConfiguration:
 
         call_kwargs = mock_tls.call_args[1]
         ca_file_path = call_kwargs["ca_certs_file"]
-        with open(ca_file_path, "r") as f:
-            content = f.read()
-        assert content == ca_cert_content
+        assert not os.path.exists(ca_file_path), "Temporary CA file should be deleted after connection"
+
+    @patch("microsoft_ad.actions_base.Connection")
+    @patch("microsoft_ad.actions_base.Server")
+    @patch("microsoft_ad.actions_base.Tls")
+    def test_client_ca_certificate_takes_precedence_over_skip_tls(self, mock_tls, mock_server, mock_connection):
+        """If both ca_certificate and skip_tls_verify are set, ca_certificate takes precedence."""
+        action = object.__new__(ConcreteMicrosoftADAction)
+        mock_module = Mock()
+        ca_cert_content = "-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----"
+        mock_module.configuration = MicrosoftADConfiguration(
+            servername="ldap.example.com",
+            admin_username="admin@example.com",
+            admin_password="password",
+            ca_certificate=ca_cert_content,
+            skip_tls_verify=True,
+        )
+        action.module = mock_module
+
+        _ = action.client
+
+        call_kwargs = mock_tls.call_args[1]
+        assert call_kwargs["validate"] == ssl.CERT_REQUIRED
 
     @patch("microsoft_ad.actions_base.Connection")
     @patch("microsoft_ad.actions_base.Server")
@@ -88,6 +138,7 @@ class TestClientTlsConfiguration:
             servername="ldap.example.com",
             admin_username="admin@example.com",
             admin_password="password",
+            skip_tls_verify=True,
         )
         action.module = mock_module
 

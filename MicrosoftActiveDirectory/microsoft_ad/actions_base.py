@@ -1,4 +1,5 @@
 from functools import cached_property
+import os
 import ssl
 import tempfile
 
@@ -16,27 +17,34 @@ class MicrosoftADAction(Action):
     @cached_property
     def client(self):
         tls_config = None
+        ca_file = None
         ca_cert = self.module.configuration.ca_certificate
-        if ca_cert:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as f:
-                f.write(ca_cert)
-                ca_file = f.name
-            tls_config = Tls(validate=ssl.CERT_REQUIRED, ca_certs_file=ca_file)
-        else:
-            tls_config = Tls(validate=ssl.CERT_NONE)
+        skip_tls_verify = self.module.configuration.skip_tls_verify
 
-        server = Server(
-            host=self.module.configuration.servername,
-            port=636,
-            use_ssl=True,
-            tls=tls_config,
-        )
-        conn = Connection(
-            server,
-            auto_bind=True,
-            user=self.module.configuration.admin_username,
-            password=self.module.configuration.admin_password,
-        )
+        try:
+            if ca_cert:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as f:
+                    f.write(ca_cert)
+                    ca_file = f.name
+                tls_config = Tls(validate=ssl.CERT_REQUIRED, ca_certs_file=ca_file)
+            elif skip_tls_verify:
+                tls_config = Tls(validate=ssl.CERT_NONE)
+
+            server = Server(
+                host=self.module.configuration.servername,
+                port=636,
+                use_ssl=True,
+                tls=tls_config,
+            )
+            conn = Connection(
+                server,
+                auto_bind=True,
+                user=self.module.configuration.admin_username,
+                password=self.module.configuration.admin_password,
+            )
+        finally:
+            if ca_file and os.path.exists(ca_file):
+                os.unlink(ca_file)
 
         return conn
 
