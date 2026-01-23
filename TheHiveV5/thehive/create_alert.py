@@ -6,12 +6,12 @@ from thehive4py.types.alert import InputAlert, OutputAlert
 from requests import HTTPError
 from posixpath import join as urljoin
 
-from .thehiveconnector import _prepare_verify_param
+from .thehiveconnector import prepare_verify_param
 
 
 class TheHiveCreateAlertV5(Action):
     def run(self, arguments: dict[str, Any]) -> Optional[OutputAlert]:
-        verify_param = _prepare_verify_param(
+        verify_param = prepare_verify_param(
             self.module.configuration.get("verify_certificate", True),
             self.module.configuration.get("ca_certificate"),
         )

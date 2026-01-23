@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add optional `ca_certificate` configuration parameter for custom PKI/internal CA support in TLS connections
+- Implement CA certificate file caching to avoid creating duplicate temp files for the same certificate
+- Add robust cleanup mechanism for temporary CA files at process exit
 
 ## 2025-12-22 - 1.0.9
 

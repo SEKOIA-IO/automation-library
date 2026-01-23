@@ -7,6 +7,7 @@ Simple TheHive Alert Connector
 """
 
 import atexit
+import hashlib
 import logging
 import os
 import tempfile
@@ -176,7 +177,22 @@ def key_exists(mapping: dict, key_to_check: str) -> bool:
     return key_to_check in mapping
 
 
-def _prepare_verify_param(verify: bool, ca_certificate: Optional[str] = None) -> Union[bool, str]:
+# Cache for CA certificate files to avoid creating duplicates
+_ca_file_cache: Dict[str, str] = {}
+_atexit_registered = False
+
+
+def _cleanup_ca_files() -> None:
+    """Clean up all cached CA certificate files at process exit."""
+    for ca_file in _ca_file_cache.values():
+        try:
+            if os.path.exists(ca_file):
+                os.unlink(ca_file)
+        except OSError:
+            logger.warning("Failed to clean up temporary CA file: %s", ca_file)
+
+
+def prepare_verify_param(verify: bool, ca_certificate: Optional[str] = None) -> Union[bool, str]:
     """
     Prepare the verify parameter for requests/thehive4py.
 
@@ -189,14 +205,29 @@ def _prepare_verify_param(verify: bool, ca_certificate: Optional[str] = None) ->
         - Path to temp CA file if ca_certificate is provided
         - True otherwise (use system CA store)
     """
+    global _atexit_registered
+
     if not verify:
         return False
 
     if ca_certificate:
+        # Use hash of certificate content as cache key to avoid duplicates
+        ca_hash = hashlib.sha256(ca_certificate.encode()).hexdigest()
+
+        if ca_hash in _ca_file_cache and os.path.exists(_ca_file_cache[ca_hash]):
+            return _ca_file_cache[ca_hash]
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as f:
             f.write(ca_certificate)
             ca_file = f.name
-        atexit.register(lambda: os.unlink(ca_file) if os.path.exists(ca_file) else None)
+
+        _ca_file_cache[ca_hash] = ca_file
+
+        # Register cleanup only once
+        if not _atexit_registered:
+            atexit.register(_cleanup_ca_files)
+            _atexit_registered = True
+
         return ca_file
 
     return True
@@ -216,7 +247,7 @@ class TheHiveConnector:
         if not api_key:
             raise ValueError("API key is required")
 
-        verify_param = _prepare_verify_param(verify, ca_certificate)
+        verify_param = prepare_verify_param(verify, ca_certificate)
         self.api = TheHiveApi(url=url, apikey=api_key, organisation=organisation, verify=verify_param)
 
     def _safe_call(self, fn, *args, **kwargs):
