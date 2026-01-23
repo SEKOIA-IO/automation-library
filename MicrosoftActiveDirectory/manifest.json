@@ -17,6 +17,17 @@
         "title": "Password account",
         "description": "The dedicated password of the account",
         "type": "string"
+      },
+      "ca_certificate": {
+        "title": "CA Certificate",
+        "description": "PEM-encoded CA certificate for TLS verification (optional, for internal PKI)",
+        "type": "string"
+      },
+      "skip_tls_verify": {
+        "title": "Skip TLS Verification",
+        "description": "Skip TLS certificate verification (insecure, use only for testing)",
+        "type": "boolean",
+        "default": false
       }
     },
     "required": [
@@ -32,7 +43,7 @@
   "name": "Microsoft Active Directory",
   "uuid": "b2d96259-af89-4f7a-ae6e-a0af2d2400f3",
   "slug": "microsoft-ad",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "categories": [
     "IAM"
   ],

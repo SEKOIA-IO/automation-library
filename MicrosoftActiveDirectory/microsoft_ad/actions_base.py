@@ -1,5 +1,9 @@
 from functools import cached_property
-from ldap3 import Server, Connection
+import os
+import ssl
+import tempfile
+
+from ldap3 import Server, Connection, Tls
 from ldap3.utils.conv import escape_filter_chars
 
 from sekoia_automation.action import Action
@@ -12,17 +16,35 @@ class MicrosoftADAction(Action):
 
     @cached_property
     def client(self):
-        server = Server(
-            host=self.module.configuration.servername,
-            port=636,
-            use_ssl=True,
-        )
-        conn = Connection(
-            server,
-            auto_bind=True,
-            user=self.module.configuration.admin_username,
-            password=self.module.configuration.admin_password,
-        )
+        tls_config = None
+        ca_file = None
+        ca_cert = self.module.configuration.ca_certificate
+        skip_tls_verify = self.module.configuration.skip_tls_verify
+
+        try:
+            if ca_cert:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as f:
+                    f.write(ca_cert)
+                    ca_file = f.name
+                tls_config = Tls(validate=ssl.CERT_REQUIRED, ca_certs_file=ca_file)
+            elif skip_tls_verify:
+                tls_config = Tls(validate=ssl.CERT_NONE)
+
+            server = Server(
+                host=self.module.configuration.servername,
+                port=636,
+                use_ssl=True,
+                tls=tls_config,
+            )
+            conn = Connection(
+                server,
+                auto_bind=True,
+                user=self.module.configuration.admin_username,
+                password=self.module.configuration.admin_password,
+            )
+        finally:
+            if ca_file and os.path.exists(ca_file):
+                os.unlink(ca_file)
 
         return conn
 

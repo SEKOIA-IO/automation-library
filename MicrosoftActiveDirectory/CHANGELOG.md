@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-23 - 1.5.0
+
+### Added
+
+- Add optional `ca_certificate` configuration parameter for custom PKI/internal CA support in TLS connections
+- Add optional `skip_tls_verify` configuration parameter to explicitly disable TLS verification (for testing only)
+
+### Fixed
+
+- Fix temporary CA certificate file leak by cleaning up after connection establishment
+
 ## 2026-01-22 - 1.4.3
 
 ### Changed
