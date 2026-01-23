@@ -4,7 +4,7 @@
   "uuid": "f7da3627-6016-415d-9885-231e1455a7a5",
   "docker_parameters": "harfanglab_asset_connector",
   "type": "asset",
-  "capability": "device",
+  "capability": "host_detection",
   "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"],
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
