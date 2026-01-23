@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Update internals field inside arguments of AWS asset connectors
+- Update internals field inside arguments of HarfangLab asset connectors
 
 ## 2025-10-28 - 1.28.15
 
