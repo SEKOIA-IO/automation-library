@@ -16,6 +16,14 @@
         "type": "string",
         "description": "Sekoia.io API key with write permissions to the IOC Collection",
         "secret": true
+      },
+      "http_proxy": {
+        "type": "string",
+        "description": "HTTP proxy URL (e.g., http://proxy:8080)"
+      },
+      "https_proxy": {
+        "type": "string",
+        "description": "HTTPS proxy URL (e.g., http://proxy:8080)"
       }
     },
     "required": [

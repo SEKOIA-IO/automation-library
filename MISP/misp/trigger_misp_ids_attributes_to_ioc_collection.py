@@ -46,15 +46,30 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
         """Get Sekoia API key."""
         return self.module.configuration.get("sekoia_api_key", "")
 
+    @property
+    def proxies(self):
+        """Get proxy configuration for HTTP requests."""
+        proxies = {}
+        http_proxy = self.module.configuration.get("http_proxy")
+        https_proxy = self.module.configuration.get("https_proxy")
+        if http_proxy:
+            proxies["http"] = http_proxy
+        if https_proxy:
+            proxies["https"] = https_proxy
+        return proxies if proxies else None
+
     def initialize_misp_client(self):
         """Initialize MISP client with configuration."""
         try:
-            self.misp_client = PyMISP(
-                url=self.module.configuration.get("misp_url"),
-                key=self.module.configuration.get("misp_api_key"),
-                ssl=False,
-                debug=False,
-            )
+            misp_kwargs = {
+                "url": self.module.configuration.get("misp_url"),
+                "key": self.module.configuration.get("misp_api_key"),
+                "ssl": False,
+                "debug": False,
+            }
+            if self.proxies:
+                misp_kwargs["proxies"] = self.proxies
+            self.misp_client = PyMISP(**misp_kwargs)
             self.log(
                 message="MISP client initialized successfully",
                 level="info",
@@ -242,7 +257,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
 
             while retry_count < max_retries and not success:
                 try:
-                    response = requests.post(url, json=payload, headers=headers, timeout=30)
+                    response = requests.post(url, json=payload, headers=headers, timeout=30, proxies=self.proxies)
 
                     if response.status_code == 200:
                         result = response.json()
