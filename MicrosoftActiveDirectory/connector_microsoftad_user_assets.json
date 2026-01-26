@@ -1,5 +1,5 @@
 {
-  "name": "Fetch user assets from Microsoft Active Directory",
+  "name": "Microsoft Active Directory Users",
   "description": "Collect user inventory from microsoft active directory",
   "slug": "microsoft_ad_user_assets_connector",
   "docker_parameters": "microsoft_ad_user_assets_connector",
