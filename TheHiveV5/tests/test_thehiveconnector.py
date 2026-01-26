@@ -1,9 +1,16 @@
+import os
 import pytest
 import sys
 import unittest.mock as mock
 import requests_mock
 
-from thehive.thehiveconnector import TheHiveConnector, key_exists
+from thehive.thehiveconnector import (
+    TheHiveConnector,
+    key_exists,
+    prepare_verify_param,
+    _ca_file_cache,
+    _cleanup_ca_files,
+)
 from thehive4py.errors import TheHiveError
 
 
@@ -27,6 +34,66 @@ def test_connector_init_without_apikey():
     with pytest.raises(ValueError) as exc_info:
         TheHiveConnector("http://localhost:9000", "", "TESTORG")
     assert "API key is required" in str(exc_info.value)
+
+
+class TestPrepareVerifyParam:
+    """Tests for the prepare_verify_param helper function"""
+
+    def test_verify_false_returns_false(self):
+        """When verify is False, should return False regardless of ca_certificate"""
+        assert prepare_verify_param(verify=False) is False
+        assert prepare_verify_param(verify=False, ca_certificate="some cert") is False
+
+    def test_verify_true_without_ca_returns_true(self):
+        """When verify is True and no CA, should return True (use system CA store)"""
+        assert prepare_verify_param(verify=True) is True
+        assert prepare_verify_param(verify=True, ca_certificate=None) is True
+
+    def test_verify_true_with_ca_returns_file_path(self):
+        """When verify is True and CA provided, should return path to temp file"""
+        ca_cert = "-----BEGIN CERTIFICATE-----\nTEST_UNIQUE_1\n-----END CERTIFICATE-----"
+        result = prepare_verify_param(verify=True, ca_certificate=ca_cert)
+
+        assert isinstance(result, str)
+        assert result.endswith(".pem")
+        assert os.path.exists(result)
+
+        # Verify content
+        with open(result, "r") as f:
+            assert f.read() == ca_cert
+
+    def test_same_ca_returns_cached_file(self):
+        """Same CA certificate content should return the same cached file path"""
+        ca_cert = "-----BEGIN CERTIFICATE-----\nTEST_CACHE\n-----END CERTIFICATE-----"
+        result1 = prepare_verify_param(verify=True, ca_certificate=ca_cert)
+        result2 = prepare_verify_param(verify=True, ca_certificate=ca_cert)
+
+        assert result1 == result2
+        assert os.path.exists(result1)
+
+    def test_different_ca_returns_different_files(self):
+        """Different CA certificates should return different file paths"""
+        ca_cert1 = "-----BEGIN CERTIFICATE-----\nTEST_DIFF_1\n-----END CERTIFICATE-----"
+        ca_cert2 = "-----BEGIN CERTIFICATE-----\nTEST_DIFF_2\n-----END CERTIFICATE-----"
+        result1 = prepare_verify_param(verify=True, ca_certificate=ca_cert1)
+        result2 = prepare_verify_param(verify=True, ca_certificate=ca_cert2)
+
+        assert result1 != result2
+        assert os.path.exists(result1)
+        assert os.path.exists(result2)
+
+    def test_cleanup_function_removes_files(self):
+        """The cleanup function should remove all cached CA files"""
+        ca_cert = "-----BEGIN CERTIFICATE-----\nTEST_CLEANUP\n-----END CERTIFICATE-----"
+        result = prepare_verify_param(verify=True, ca_certificate=ca_cert)
+
+        assert os.path.exists(result)
+
+        # Call cleanup
+        _cleanup_ca_files()
+
+        # File should be removed
+        assert not os.path.exists(result)
 
 
 def test_connector_safe_call_with_thehive_error():
