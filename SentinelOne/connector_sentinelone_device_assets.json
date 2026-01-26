@@ -29,7 +29,7 @@
         "title": "Frequency (in seconds)",
         "description": "How often to fetch device assets from SentinelOne (minimum 60 seconds)"
       },
-      "chunk_size": {
+      "batch_size": {
         "type": "integer",
         "minimum": 1,
         "default": 1000,
@@ -43,6 +43,7 @@
     ],
     "secrets": [
       "sekoia_api_key"
-    ]
+    ],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
   }
 }

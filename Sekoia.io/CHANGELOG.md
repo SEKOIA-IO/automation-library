@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-20 - 2.68.29
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix time-based threshold triggering incorrectly on every notification. The time threshold now correctly waits for the configured `time_window_hours` to elapse before triggering:
+  - Time threshold evaluation is now handled exclusively by the background thread, not on each Kafka notification
+  - First occurrence no longer triggers immediately unless volume threshold is met
+  - Properly tracks reference time (last trigger or first event) to determine when time window elapses
+
+### Changed
+
+- AlertStateManager: `get_alerts_pending_time_check()` now correctly checks if `time_window_hours` has elapsed since last trigger (or first event), instead of just checking if events are "recent"
+
+### Added
+
+- AlertEventsThresholdTrigger: Update tests to reflect new time threshold behavior (time-based triggering via background thread only)
+
+## 2026-01-16 - 2.68.28
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix race condition causing multiple triggers for same alert when receiving batch notifications. The issue was caused by:
+  1. `get_alert_state()` reading stale data from in-memory cache instead of reloading from S3
+  2. `update_alert_info()` being called before threshold evaluation, creating state entries with `last_triggered_event_count=0`
+
+  Solution: Reload state from S3 before reading alert state, and move `update_alert_info()` call to only execute when threshold is NOT met (for the periodic time check thread).
+
+### Added
+
+- AlertEventsThresholdTrigger: Add 5 new tests for race condition fix covering:
+  - `reload_state()` is called before `get_alert_state()`
+  - `update_alert_info()` is called when threshold is NOT met
+  - `update_alert_info()` is NOT called when threshold IS met
+  - Concurrent notifications use latest state from S3
+  - Batch notifications trigger correct number of times with correct event counts
+- Fix flaky test `test_time_threshold_triggers` by stopping background thread during test execution
+
+## 2026-01-07 - 2.68.27
+
+### Fixed
+
+- AlertEventsThresholdTrigger: Fix event counting by using `similar` field from Kafka notifications instead of non-existent `events_count` field from Alert API
+
+### Added
+
+- AlertEventsThresholdTrigger: Add support for `alert:created` notifications (previously only handled `alert:updated`)
+- AlertEventsThresholdTrigger: Add alert info caching to reduce API calls (extract from notification on `alert:created`, cache on first API call for `alert:updated`)
+- AlertEventsThresholdTrigger: Add periodic time threshold check thread for alerts that received events but didn't meet volume threshold
+- AlertStateManager: Add new fields for caching (`alert_info`, `current_event_count`, `last_event_at`)
+- AlertStateManager: Add new methods `update_alert_info()`, `get_alert_info()`, `get_alerts_pending_time_check()`, `get_all_alerts()`
+- AlertStateManager: Bump state version from 1.0 to 1.1
+
 ## 2026-01-07 - 2.68.26
 
 ### Fixed

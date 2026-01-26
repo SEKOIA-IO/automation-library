@@ -374,6 +374,18 @@ filecache = ["filelock (>=3.8.0)"]
 redis = ["redis (>=2.10.5)"]
 
 [[package]]
+name = "cachetools"
+version = "6.2.4"
+description = "Extensible memoizing collections and decorators"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "cachetools-6.2.4-py3-none-any.whl", hash = "sha256:69a7a52634fed8b8bf6e24a050fb60bff1c9bd8f6d24572b99c32d4e71e62a51"},
+    {file = "cachetools-6.2.4.tar.gz", hash = "sha256:82c5c05585e70b6ba2d3ae09ea60b79548872185d2f24ae1f2709d37299fd607"},
+]
+
+[[package]]
 name = "certifi"
 version = "2025.7.14"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -2776,19 +2788,20 @@ jeepney = ">=0.6"
 
 [[package]]
 name = "sekoia-automation-sdk"
-version = "1.21.0"
+version = "1.22.1"
 description = "SDK to create Sekoia.io playbook modules"
 optional = false
 python-versions = "<4.0,>=3.11"
 groups = ["main"]
 files = [
-    {file = "sekoia_automation_sdk-1.21.0-py3-none-any.whl", hash = "sha256:36d83bd22d7ca4439b42ed20aea4225f8b3a96bc50a5f6895e3943a187157abe"},
-    {file = "sekoia_automation_sdk-1.21.0.tar.gz", hash = "sha256:c40abe4a8a44ac9d9d781ba4611633d65e52f590f75118803ff090905588b5ba"},
+    {file = "sekoia_automation_sdk-1.22.1-py3-none-any.whl", hash = "sha256:1d2e33d9e4b9e2730b77887aa9e6d9d600d56ab7df0c0ee7f42ada0e8f681a27"},
+    {file = "sekoia_automation_sdk-1.22.1.tar.gz", hash = "sha256:4e514f63c3ad88a4f4e83cbd3771d70cf7840e17886f28f2aaa8a608ffce1538"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.4,<4.0.0"
 black = "*"
+cachetools = ">=6.2.3,<7.0.0"
 cookiecutter = ">=2.1,<3.0"
 flask = ">=3.1.2,<4.0.0"
 Jinja2 = ">=3.0.3,<4.0.0"
@@ -3443,4 +3456,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "853cb68d76c9315a4927c2fd48884e3bbe56a0a18dc84e6dab47cb9b341883d8"
+content-hash = "b1e0af0534f55bb5da1a8277aebbcd0ac70420ab36610b8567501757605230a3"

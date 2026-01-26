@@ -645,8 +645,8 @@ def test_map_fields_user_type_detection_service(test_entra_id_asset_connector):
 
 def test_map_fields_enrichment_with_sign_in_activity(test_entra_id_asset_connector):
     """Test that enrichments include last_logon when sign_in_activity is present."""
-    from msgraph.generated.models.user import User
     from msgraph.generated.models.sign_in_activity import SignInActivity
+    from msgraph.generated.models.user import User
 
     sign_in_activity = SignInActivity()
     sign_in_activity.last_sign_in_date_time = datetime.datetime(2025, 12, 1, 10, 0, 0, tzinfo=datetime.timezone.utc)

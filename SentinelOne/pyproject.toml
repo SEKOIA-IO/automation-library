@@ -82,5 +82,5 @@ extras = ["aiohttp"]
 version = "^3.5.0"
 
 [tool.poetry.dev-dependencies.black]
-version = "^24.3.0"
+version = "^26.1.0"
 extras = ["colorama"]

@@ -56,7 +56,6 @@ def normalize_s3_key(key: str) -> str:
 
 
 class AsyncReader(Protocol):
-
     @abstractmethod
     async def read(self, size: int = -1, /) -> Any:
         return NotImplemented

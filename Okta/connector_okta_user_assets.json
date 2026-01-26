@@ -31,6 +31,7 @@
       }
     },
     "required": ["sekoia_api_key"],
-    "secrets": ["sekoia_api_key"]
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
   }
 }

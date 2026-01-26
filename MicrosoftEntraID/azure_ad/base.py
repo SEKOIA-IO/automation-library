@@ -62,21 +62,6 @@ class MicrosoftGraphAction(AsyncAction):
 
         return self._client
 
-    @cached_property
-    def delegated_client(self):
-        """
-        Used for password reset action
-        It's a not a good practice to use. but we app permission
-        not supported for this action
-        """
-        credentials = UsernamePasswordCredential(
-            client_id=self.module.configuration.client_id,
-            username=self.module.configuration.username,
-            password=self.module.configuration.password,
-        )
-
-        return GraphServiceClient(credentials=credentials)
-
 
 class ApplicationArguments(BaseModel):
     objectId: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
