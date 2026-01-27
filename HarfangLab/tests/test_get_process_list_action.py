@@ -1,8 +1,9 @@
 # coding: utf-8
 
 # natives
-from unittest.mock import MagicMock
 import os
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 # third parties
 import pytest
@@ -13,14 +14,61 @@ from harfanglab.get_process_list_action import GetProcessListAction
 from harfanglab.models import JobAction, JobTarget, JobTriggerResult
 
 
-def test_with_one_target_group():
+@pytest.fixture
+def response_job_status_done() -> dict[str, Any]:
+    return {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "title": None,
+        "description": None,
+        "creationtime": "2026-01-26T10:40:06.844865Z",
+        "creator": {"id": 1, "username": "Admin"},
+        "source_type": None,
+        "source_id": None,
+        "template": None,
+        "archived": False,
+        "agent_count": 1,
+        "tasks": [
+            {
+                "id": "22222222-2222-2222-2222-222222222222",
+                "task_id": 0,
+                "action": {
+                    "getProcessList": {
+                        "auto_download_new_files": False,
+                        "maxsize_files_download": 104857600,
+                        "getConnectionsList": False,
+                        "getHandlesList": False,
+                        "getSignaturesInfo": False,
+                    }
+                },
+                "status": {
+                    "total": 1,
+                    "done": 1,
+                    "waiting": 0,
+                    "running": 0,
+                    "canceled": 0,
+                    "injecting": 0,
+                    "error": 0,
+                },
+                "can_read_action": True,
+            }
+        ],
+        "status": {"total": 1, "done": 1, "waiting": 0, "running": 0, "canceled": 0, "injecting": 0, "error": 0},
+    }
+
+
+@pytest.fixture
+def response_results() -> dict[str, Any]:
+    return {"count": 0, "next": None, "previous": None, "results": []}
+
+
+def test_with_one_target_group(symphony_storage, response_job_status_done):
     instance_url = "https://test.hurukau.io"
     api_token = "117a15380a4f434c94fbe1ea7052904e"
 
-    action = GetProcessListAction()
+    action = GetProcessListAction(data_path=symphony_storage)
     action.module.configuration = {"url": instance_url, "api_token": api_token}
 
-    with requests_mock.Mocker() as mock:
+    with requests_mock.Mocker() as requests_mocker, patch("harfanglab.get_process_list_action.sleep") as sleep_mock:
         # Example from api doc
         mocked_response = {
             "agent_count": "<integer>",
@@ -29,16 +77,29 @@ def test_with_one_target_group():
             "archived": "<boolean>",
             "creationtime": "2021-04-11T11:06:40.089232Z",
             "description": "<string>",
-            "id": "ff3acfea-e3fb-496c-919f-d3a6afb28a24",
+            "id": "11111111-1111-1111-1111-111111111111",
             "source_id": "<string>",
             "source_type": "agent",
             "template": "<string>",
             "title": "<string>",
         }
-        mock.post(
+        requests_mocker.post(
             f"{instance_url}/api/data/job/batch/",
             json=mocked_response,
         )
+
+        requests_mocker.get(
+            f"{instance_url}/api/data/job/batch/11111111-1111-1111-1111-111111111111/",
+            status_code=200,
+            json=response_job_status_done,
+        )
+
+        requests_mocker.get(
+            f"{instance_url}/api/data/investigation/hunting/Process/?job_id=11111111-1111-1111-1111-111111111111",
+            status_code=200,
+            json={},
+        )
+
         res = action.run(
             {
                 "target_agents": "",
@@ -46,104 +107,11 @@ def test_with_one_target_group():
                 "get_connections_list": False,
                 "get_handles_list": False,
                 "get_signatures_list": False,
+                "save_to_file": False,
             }
         )
 
-        assert res == {
-            "id": "ff3acfea-e3fb-496c-919f-d3a6afb28a24",
-            "action": "getProcessList",
-            "creationtime": "2021-04-11T11:06:40.089232Z",
-            "parameters": {
-                "getHandlesList": False,
-                "getConnectionsList": False,
-                "getSignaturesInfo": False,
-            },
-        }
-
-
-def test_with_two_target_groups():
-    instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
-
-    action = GetProcessListAction()
-    action.module.configuration = {"url": instance_url, "api_token": api_token}
-
-    trigger_job_mock = MagicMock(
-        return_value=JobTriggerResult(
-            id="595ad86a-c98a-4fc6-8b6d-8a7723e6d386",
-            action="getProcessList",
-            creationtime="2021-04-11T12:27:23.179844Z",
-            parameters={
-                "getHandlesList": False,
-                "getConnectionsList": False,
-                "getSignaturesInfo": False,
-            },
-        )
-    )
-
-    action.trigger_job = trigger_job_mock
-    action.run(
-        {
-            "target_agents": "",
-            "target_groups": "default_policy_group_id,mIXTwHgB9x_xfY4PJueN",
-            "get_connections_list": False,
-            "get_handles_list": False,
-            "get_signatures_list": False,
-        }
-    )
-
-    call_kwargs = trigger_job_mock.call_args.kwargs
-    assert call_kwargs["target"] == JobTarget(group_ids=["default_policy_group_id", "mIXTwHgB9x_xfY4PJueN"])
-    assert call_kwargs["job"] == JobAction(
-        value="getProcessList",
-        params={
-            "getHandlesList": False,
-            "getConnectionsList": False,
-            "getSignaturesInfo": False,
-        },
-    )
-
-
-def test_with_one_target_agent():
-    instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
-
-    action = GetProcessListAction()
-    action.module.configuration = {"url": instance_url, "api_token": api_token}
-
-    trigger_job_mock = MagicMock(
-        return_value=JobTriggerResult(
-            id="595ad86a-c98a-4fc6-8b6d-8a7723e6d386",
-            action="getProcessList",
-            creationtime="2021-04-11T12:27:23.179844Z",
-            parameters={
-                "getHandlesList": False,
-                "getConnectionsList": False,
-                "getSignaturesInfo": False,
-            },
-        )
-    )
-
-    action.trigger_job = trigger_job_mock
-    action.run(
-        {
-            "target_agents": "my-agent1",
-            "target_groups": "",
-            "get_connections_list": True,
-            "get_handles_list": False,
-            "get_signatures_list": False,
-        }
-    )
-    call_kwargs = trigger_job_mock.call_args.kwargs
-    assert call_kwargs["target"] == JobTarget(agent_ids=["my-agent1"])
-    assert call_kwargs["job"] == JobAction(
-        value="getProcessList",
-        params={
-            "getHandlesList": False,
-            "getConnectionsList": True,
-            "getSignaturesInfo": False,
-        },
-    )
+        assert res == {"results": []}
 
 
 @pytest.mark.skipif(

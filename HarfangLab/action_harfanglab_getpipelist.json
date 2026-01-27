@@ -9,6 +9,10 @@
       "target_groups": {
         "description": "Targeted groups identifier",
         "type": "string"
+      },
+      "save_to_file": {
+        "description": "Save results to file",
+        "type": "boolean"
       }
     },
     "required": [],
@@ -19,33 +23,22 @@
   "docker_parameters": "harfanglab_get_pipe_list",
   "name": "List named pipes",
   "results": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
     "properties": {
-      "id": {
-        "description": "Identifier of the job",
-        "type": "string"
+      "results": {
+        "title": "Results",
+        "description": "The results",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
       },
-      "action": {
-        "description": "Name of job action",
+      "file_path": {
+        "description": "Path of the file with results",
         "type": "string"
-      },
-      "creationtime": {
-        "description": "Creation date of the job",
-        "type": "string"
-      },
-      "parameters": {
-        "description": "Parameters of the job",
-        "type": "object"
       }
     },
-    "required": [
-      "id",
-      "action",
-      "creationtime",
-      "parameters"
-    ],
-    "title": "Results",
-    "type": "object"
+    "oneOf": [{ "required": ["results"] }, { "required": ["file_path"] }]
   },
   "uuid": "a1151541-ab34-4d7c-80a1-b2e05f8e91ec",
   "slug": "list_named_pipes"

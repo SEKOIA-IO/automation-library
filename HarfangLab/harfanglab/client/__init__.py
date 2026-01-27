@@ -9,7 +9,7 @@ class ApiClient(requests.Session):
     def __init__(self, instance_url: str, token: str, nb_retries: int = 5, ratelimit_per_second: int = 100):
         super().__init__()
 
-        self.instance_url = instance_url
+        self.instance_url = instance_url.rstrip("/")
         self.token = token
 
         self.auth = HarfangLabApiAuthentication(token=token)

@@ -21,6 +21,10 @@
       "get_signatures_list": {
         "description": "Get signature info of processes and DLLs",
         "type": "boolean"
+      },
+      "save_to_file": {
+        "description": "Save results to file",
+        "type": "boolean"
       }
     },
     "required": [],
@@ -31,33 +35,22 @@
   "docker_parameters": "harfanglab_get_process_list",
   "name": "List processes",
   "results": {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
     "properties": {
-      "id": {
-        "description": "Identifier of the job",
-        "type": "string"
+      "results": {
+        "title": "Results",
+        "description": "The results",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
       },
-      "action": {
-        "description": "Name of job action",
+      "file_path": {
+        "description": "Path of the file with results",
         "type": "string"
-      },
-      "creationtime": {
-        "description": "Creation date of the job",
-        "type": "string"
-      },
-      "parameters": {
-        "description": "Parameters of the job",
-        "type": "object"
       }
     },
-    "required": [
-      "id",
-      "action",
-      "creationtime",
-      "parameters"
-    ],
-    "title": "Results",
-    "type": "object"
+    "oneOf": [{ "required": ["results"] }, { "required": ["file_path"] }]
   },
   "uuid": "0ecd45f2-f99a-4af2-920d-39cbbe94b321",
   "slug": "list_processes"

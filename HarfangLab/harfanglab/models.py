@@ -7,7 +7,7 @@ Data models of the HarfangLab module
 from typing import Any, List
 
 # third parties
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 
 class JobTarget(BaseModel):

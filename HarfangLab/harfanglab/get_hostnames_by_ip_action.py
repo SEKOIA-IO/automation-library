@@ -1,13 +1,9 @@
 # coding: utf-8
 
-# natives
-from typing import Any
-
-import requests
 from sekoia_automation.action import Action
 
-# third parties
-from harfanglab.models import HostnameEntry, HostnamesResult
+from .client import ApiClient
+from .models import HostnameEntry, HostnamesResult
 
 
 class GetHostnamesByIP(Action):
@@ -19,13 +15,14 @@ class GetHostnamesByIP(Action):
         target_ip = arguments.get("target_ip", "")
         get_only_last_seen = arguments.get("get_only_last_seen", False)
 
-        instance_url: str = self.module.configuration["url"]
-        api_token: str = self.module.configuration["api_token"]
+        client: ApiClient = ApiClient(
+            instance_url=self.module.configuration["url"], token=self.module.configuration["api_token"]
+        )
 
-        job_url = f"{instance_url}/api/data/endpoint/Agent/"
+        job_url = f"{client.instance_url}/api/data/endpoint/Agent/"
         params: dict = {"ipaddress": target_ip}
 
-        response = requests.get(url=job_url, params=params, headers={"Authorization": f"Token {api_token}"})
+        response = client.get(url=job_url, params=params)
         response.raise_for_status()
 
         data = response.json()

@@ -1,14 +1,12 @@
+import datetime
 import json
+from unittest.mock import Mock, patch
 
 import pytest
-from unittest.mock import Mock, patch
-import datetime
-
 import requests
 import requests_mock
-
-from sekoia_automation.module import Module
 from sekoia_automation.asset_connector.models.ocsf.device import DeviceOCSFModel
+from sekoia_automation.module import Module
 
 from harfanglab.asset_connector.device_assets import HarfanglabAssetConnector
 

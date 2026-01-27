@@ -43,3 +43,13 @@ omit = ["tests/*", "main.py"]
 
 [tool.poetry.group.dev.dependencies]
 aiohttp = "^3.12.14"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+filterwarnings = [
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore:.*unclosed.*:ResourceWarning",
+]
+addopts = "  --strict-markers\n  --tb=short\n  --cov=harfanglab\n --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n"
