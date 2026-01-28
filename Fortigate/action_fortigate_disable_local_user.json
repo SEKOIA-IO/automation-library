@@ -1,0 +1,22 @@
+{
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+      "name": {
+        "description": "The name of the local account to disable.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "title": "Arguments",
+    "type": "object"
+  },
+  "description": "Disable a local user account of a Fortigate Firewall",
+  "docker_parameters": "fortigate_disable_local_user",
+  "name": "Disable Fortigate local user account",
+  "results": {},
+  "uuid": "83ffd9c7-ed8e-4e14-950f-3d2fada0a4a3",
+  "slug": "disable_local_user_account"
+}
