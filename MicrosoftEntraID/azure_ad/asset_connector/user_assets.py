@@ -293,6 +293,8 @@ class EntraIDAssetConnector(AssetConnector):
                 "companyName",
                 "officeLocation",
                 "isManagementRestricted",
+                "givenName",
+                "surname",
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )
