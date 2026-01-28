@@ -106,7 +106,7 @@ def test_map_fields(test_entra_id_asset_connector):
     asset_groups = []
     is_admin = False
     result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
-    assert result.user.name == "testuser@example.com"
+    assert result.user.name == "Test User"
     assert result.user.uid == "user_id"
     assert result.user.has_mfa == has_mfa
     assert result.user.display_name == "Test User"
@@ -144,7 +144,7 @@ def test_map_fields_without_org(test_entra_id_asset_connector):
     asset_groups = []
     is_admin = False
     result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
-    assert result.user.name == "testuser@example.com"
+    assert result.user.name == "Test User"
     assert result.user.uid == "user_id"
     # Verify org field is None when company_name is not provided
     assert result.user.org is None
@@ -169,7 +169,7 @@ def test_map_fields_with_admin_user_type(test_entra_id_asset_connector):
 
     result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
 
-    assert result.user.name == "admin@example.com"
+    assert result.user.name == "Admin User"
     assert result.user.uid == "admin_user_id"
     assert result.user.type_id == UserTypeId.ADMIN
     assert result.user.type == UserTypeStr.ADMIN

@@ -105,6 +105,18 @@ class EntraIDAssetConnector(AssetConnector):
         user_type_id = UserTypeId.USER
         user_type_str = UserTypeStr.USER
 
+        # Create username based on first name and last name
+        first_name = user.given_name or ""
+        last_name = user.surname or ""
+        if first_name and last_name:
+            username = f"{first_name}.{last_name}".lower()
+        elif first_name:
+            username = first_name.lower()
+        elif last_name:
+            username = last_name.lower()
+        else:
+            username = "Unknown"
+
         if is_admin:
             user_type_id = UserTypeId.ADMIN
             user_type_str = UserTypeStr.ADMIN
@@ -125,10 +137,10 @@ class EntraIDAssetConnector(AssetConnector):
         )
         user_data = UserOCSF(
             has_mfa=has_mfa,
-            name=user.user_principal_name or "Unknown",
+            name=user.display_name or username,
             uid=user.id,
             groups=groups,
-            full_name=user.display_name or "Unknown",
+            full_name=user.display_name or username,
             email_addr=user.mail or "Unknown",
             account=account,
             display_name=user.display_name,
