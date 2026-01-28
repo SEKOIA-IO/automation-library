@@ -1,0 +1,15 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "GoogleThreatList",
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "description": "Google Threat List module for collecting and managing threat intelligence",
+  "name": "GoogleThreatList",
+  "slug": "googlethreatlist",
+  "categories": [],
+  "uuid": "1bea4a0a-0843-435d-acda-09274310152b",
+  "version": "0.1.0"
+}
