@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import time
 from traceback import format_exc
+from typing import Any
+from urllib.request import getproxies
 
 import requests
 from cachetools import TTLCache
-from pymisp import PyMISP, PyMISPError
+from pymisp import MISPAttribute, PyMISP, PyMISPError
 from sekoia_automation.trigger import Trigger
 
 
@@ -13,55 +17,66 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
     to a Sekoia.io IOC Collection.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    misp_client: PyMISP | None
+    processed_attributes: TTLCache[str, bool] | None
 
-        FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
         self.misp_client = None
         self.processed_attributes = None
 
     @property
-    def sleep_time(self):
+    def sleep_time(self) -> int:
         """Get sleep time between polling cycles."""
         return int(self.configuration.get("sleep_time", 300))
 
     @property
-    def publish_timestamp(self):
+    def publish_timestamp(self) -> str:
         """Get publish timestamp window in days."""
-        return self.configuration.get("publish_timestamp", "1")
+        return str(self.configuration.get("publish_timestamp", "1"))
 
     @property
-    def ioc_collection_server(self):
+    def ioc_collection_server(self) -> str:
         """Get IOC collection server URL."""
-        return self.configuration.get("ioc_collection_server", "https://api.sekoia.io")
+        return str(self.configuration.get("ioc_collection_server", "https://api.sekoia.io"))
 
     @property
-    def ioc_collection_uuid(self):
+    def ioc_collection_uuid(self) -> str:
         """Get IOC collection UUID."""
-        return self.configuration.get("ioc_collection_uuid", "")
+        return str(self.configuration.get("ioc_collection_uuid", ""))
 
     @property
-    def sekoia_api_key(self):
+    def sekoia_api_key(self) -> str:
         """Get Sekoia API key."""
-        return self.module.configuration.get("sekoia_api_key", "")
+        return str(self.module.configuration.get("sekoia_api_key", ""))
 
     @property
-    def proxies(self):
-        """Get proxy configuration for HTTP requests."""
-        proxies = {}
+    def proxies(self) -> dict[str, str] | None:
+        """Get proxy configuration for HTTP requests.
+
+        Priority:
+        1. Module configuration (http_proxy, https_proxy)
+        2. Environment variables (HTTP_PROXY, HTTPS_PROXY, etc.)
+        """
+        proxies: dict[str, str] = {}
         http_proxy = self.module.configuration.get("http_proxy")
         https_proxy = self.module.configuration.get("https_proxy")
         if http_proxy:
             proxies["http"] = http_proxy
         if https_proxy:
             proxies["https"] = https_proxy
+
+        # Fallback to environment variables if no explicit configuration
+        if not proxies:
+            proxies = getproxies()
+
         return proxies if proxies else None
 
-    def initialize_misp_client(self):
+    def initialize_misp_client(self) -> None:
         """Initialize MISP client with configuration."""
         try:
-            misp_kwargs = {
+            misp_kwargs: dict[str, Any] = {
                 "url": self.module.configuration.get("misp_url"),
                 "key": self.module.configuration.get("misp_api_key"),
                 "ssl": False,
@@ -81,7 +96,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             )
             raise
 
-    def initialize_cache(self):
+    def initialize_cache(self) -> None:
         """Initialize processed attributes cache with TTL."""
         try:
             # TTL = publish_timestamp in days * seconds per day
@@ -98,7 +113,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             )
             raise
 
-    def fetch_attributes(self, publish_timestamp):
+    def fetch_attributes(self, publish_timestamp: str) -> list[MISPAttribute]:
         """
         Fetch IDS-flagged attributes from MISP.
 
@@ -114,12 +129,17 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                 level="info",
             )
 
-            attributes = self.misp_client.search(
+            if self.misp_client is None:
+                raise RuntimeError("MISP client not initialized")
+
+            result = self.misp_client.search(
                 controller="attributes",
                 to_ids=1,  # Only IDS-flagged attributes
                 pythonify=True,  # Return Python objects
                 publish_timestamp=f"{publish_timestamp}d",
             )
+            # Result is list of MISPAttribute when controller="attributes" and pythonify=True
+            attributes: list[Any] = list(result) if isinstance(result, list) else []
 
             self.log(
                 message=f"Retrieved {len(attributes)} IDS attributes from MISP",
@@ -140,7 +160,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
             )
             raise
 
-    def filter_supported_types(self, attributes):
+    def filter_supported_types(self, attributes: list[MISPAttribute]) -> list[MISPAttribute]:
         """
         Filter attributes to only include supported IOC types.
 
@@ -174,7 +194,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
         )
         return filtered
 
-    def extract_ioc_value(self, attribute):
+    def extract_ioc_value(self, attribute: MISPAttribute) -> str:
         """
         Extract IOC value from MISP attribute, handling composite types.
 
@@ -184,8 +204,8 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
         Returns:
             String containing the IOC value
         """
-        value = attribute.value
-        attr_type = attribute.type
+        value: str = str(attribute.value)
+        attr_type: str = str(attribute.type)
 
         # Handle composite types
         if "|" in value:
@@ -198,7 +218,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
 
         return value
 
-    def push_to_sekoia(self, ioc_values):
+    def push_to_sekoia(self, ioc_values: list[str]) -> None:
         """
         Push batch of IOCs to Sekoia IOC Collection.
 
@@ -335,7 +355,7 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                     level="error",
                 )
 
-    def run(self):
+    def run(self) -> None:
         """Main trigger execution loop."""
         self.log(
             message="Starting MISP IDS Attributes to IOC Collection trigger",
@@ -396,6 +416,8 @@ class MISPIDSAttributesToIOCCollectionTrigger(Trigger):
                 supported_attributes = self.filter_supported_types(attributes)
 
                 # Filter out already processed attributes (deduplication)
+                if self.processed_attributes is None:
+                    raise RuntimeError("Cache not initialized")
                 new_attributes = [attr for attr in supported_attributes if attr.uuid not in self.processed_attributes]
 
                 if new_attributes:

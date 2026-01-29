@@ -31,7 +31,7 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
         mock_module.configuration = {
             "misp_url": "https://misp.example.com",
             "misp_api_key": "test_misp_api_key",
-            "sekoia_api_key": "test_sekoia_api_key"
+            "sekoia_api_key": "test_sekoia_api_key",
         }
 
         trigger = MISPIDSAttributesToIOCCollectionTrigger()
@@ -69,8 +69,100 @@ class TestMISPIDSAttributesToIOCCollectionTrigger:
     def test_ioc_collection_uuid(self, trigger):
         assert trigger.ioc_collection_uuid == "test-collection-uuid"
 
-    #def test_sekoia_api_key(self, trigger):
+    # def test_sekoia_api_key(self, trigger):
     #    assert trigger.sekoia_api_key == "test_sekoia_api_key"
+
+    # ------------------------------------------------------------------ #
+    # Proxy configuration
+    # ------------------------------------------------------------------ #
+
+    def test_proxies_from_module_configuration(self, trigger):
+        """Test that proxies are retrieved from module configuration."""
+        trigger.module.configuration["http_proxy"] = "http://proxy.example.com:8080"
+        trigger.module.configuration["https_proxy"] = "https://proxy.example.com:8443"
+
+        proxies = trigger.proxies
+
+        assert proxies == {
+            "http": "http://proxy.example.com:8080",
+            "https": "https://proxy.example.com:8443",
+        }
+
+    def test_proxies_http_only(self, trigger):
+        """Test proxies with only HTTP configured."""
+        trigger.module.configuration["http_proxy"] = "http://proxy.example.com:8080"
+
+        proxies = trigger.proxies
+
+        assert proxies == {"http": "http://proxy.example.com:8080"}
+
+    def test_proxies_https_only(self, trigger):
+        """Test proxies with only HTTPS configured."""
+        trigger.module.configuration["https_proxy"] = "https://proxy.example.com:8443"
+
+        proxies = trigger.proxies
+
+        assert proxies == {"https": "https://proxy.example.com:8443"}
+
+    @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.getproxies")
+    def test_proxies_fallback_to_environment(self, mock_getproxies, trigger):
+        """Test that proxies fall back to environment variables when not configured."""
+        mock_getproxies.return_value = {
+            "http": "http://env-proxy.example.com:8080",
+            "https": "https://env-proxy.example.com:8443",
+        }
+
+        proxies = trigger.proxies
+
+        assert proxies == {
+            "http": "http://env-proxy.example.com:8080",
+            "https": "https://env-proxy.example.com:8443",
+        }
+        mock_getproxies.assert_called_once()
+
+    @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.getproxies")
+    def test_proxies_module_config_takes_priority(self, mock_getproxies, trigger):
+        """Test that module configuration takes priority over environment variables."""
+        trigger.module.configuration["http_proxy"] = "http://config-proxy.example.com:8080"
+        trigger.module.configuration["https_proxy"] = "https://config-proxy.example.com:8443"
+        mock_getproxies.return_value = {
+            "http": "http://env-proxy.example.com:8080",
+            "https": "https://env-proxy.example.com:8443",
+        }
+
+        proxies = trigger.proxies
+
+        assert proxies == {
+            "http": "http://config-proxy.example.com:8080",
+            "https": "https://config-proxy.example.com:8443",
+        }
+        mock_getproxies.assert_not_called()
+
+    @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.getproxies")
+    def test_proxies_returns_none_when_no_proxy(self, mock_getproxies, trigger):
+        """Test that proxies returns None when no proxy is configured."""
+        mock_getproxies.return_value = {}
+
+        proxies = trigger.proxies
+
+        assert proxies is None
+
+    @patch("misp.trigger_misp_ids_attributes_to_ioc_collection.getproxies")
+    def test_proxies_environment_with_no_proxy(self, mock_getproxies, trigger):
+        """Test proxies from environment including NO_PROXY."""
+        mock_getproxies.return_value = {
+            "http": "http://env-proxy.example.com:8080",
+            "https": "https://env-proxy.example.com:8443",
+            "no": "localhost,127.0.0.1",
+        }
+
+        proxies = trigger.proxies
+
+        assert proxies == {
+            "http": "http://env-proxy.example.com:8080",
+            "https": "https://env-proxy.example.com:8443",
+            "no": "localhost,127.0.0.1",
+        }
 
     # ------------------------------------------------------------------ #
     # Initialization
