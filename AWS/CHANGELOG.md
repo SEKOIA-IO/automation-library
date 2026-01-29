@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update asset connector name
 
-
 ## 2026-01-23 - 1.33.10
 
 ### Changed
