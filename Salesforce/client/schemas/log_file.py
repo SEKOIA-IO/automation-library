@@ -1,6 +1,6 @@
 """Contains schemas to work with log file."""
 
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 
 class EventLogFile(BaseModel):
