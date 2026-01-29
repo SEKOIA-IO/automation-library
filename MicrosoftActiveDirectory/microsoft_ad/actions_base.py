@@ -1,5 +1,6 @@
 from functools import cached_property
 from ldap3 import Server, Connection
+from ldap3.utils.conv import escape_filter_chars
 
 from sekoia_automation.action import Action
 
@@ -26,21 +27,38 @@ class MicrosoftADAction(Action):
         return conn
 
     def search_userdn_query(self, username, basedn):
-        SEARCHFILTER = (
-            f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
-        )
+        safe_username = escape_filter_chars(username)
+        search_filter = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
+
+        self.log(f"Starting search in {basedn} for {username}", level="debug")
 
         try:
             self.client.search(
-                search_base=basedn, search_filter=SEARCHFILTER, attributes=["cn", "mail", "userAccountControl"]
+                search_base=basedn, search_filter=search_filter, attributes=["cn", "mail", "userAccountControl"]
             )
-        except:
-            raise Exception(f"Failed to search in this base {basedn}")
+        except Exception as e:
+            raise Exception(f"LDAP search failed in base {basedn}: {e}") from e
 
         users_query = []
+
         for entry in self.client.response:
-            if entry.get("dn") and entry.get("attributes"):
-                if entry.get("attributes").get("cn"):
-                    users_query.append([entry.get("dn"), entry.get("attributes").get("userAccountControl")])
+            if isinstance(entry, dict) and entry.get("type") == "searchResEntry":
+                dn = entry.get("dn")
+                user_attributes = entry.get("attributes", {})
+                account_control: int | list[int] | None = user_attributes.get("userAccountControl")
+
+                self.log(f"Found user {dn} with userAccountControl param: {account_control}", level="debug")
+
+                if dn and user_attributes.get("cn"):
+                    account_control_final = None
+                    if account_control is not None:
+                        if isinstance(account_control, list):
+                            account_control_final = int(account_control[0]) if len(account_control) > 0 else None
+                        else:
+                            account_control_final = account_control
+
+                    users_query.append([dn, account_control_final])
+
+        self.log(f"Search finished. {len(users_query)} user(s) found.", level="debug")
 
         return users_query
