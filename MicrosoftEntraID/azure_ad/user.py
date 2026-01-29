@@ -1,9 +1,12 @@
 from functools import cached_property
 
 from azure.identity import UsernamePasswordCredential
+from azure.identity.aio import ClientSecretCredential
+from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_abstractions.native_response_handler import NativeResponseHandler
 from kiota_http.middleware.options import ResponseHandlerOption
 from msgraph import GraphServiceClient
+from msgraph.generated.models.password_profile import PasswordProfile
 from msgraph.generated.models.user import User
 from msgraph.generated.users.item.authentication.methods.item.reset_password.reset_password_post_request_body import (
     ResetPasswordPostRequestBody,
@@ -103,8 +106,8 @@ class EnableUserAction(MicrosoftGraphAction):
 
 
 class ResetUserPasswordAction(MicrosoftGraphAction):
-    name = "Reset User Password"
-    description = "Reset a user's password. You will need UserAuthenticationMethod.ReadWrite.All deleguated permission."  # noqa: E501
+    name = "Reset User Password [DEPRECATED]"
+    description = "Reset a user's password. You will need UserAuthenticationMethod.ReadWrite. All deleguated permission."  # noqa: E501
 
     async def query_list_user_methods(self, user_param, req_conf):
         return await self.client.users.by_user_id(user_param).authentication.password_methods.get(
@@ -115,7 +118,7 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
     def client(self):
         """
         Used client with preconfigured scopes for password reset action
-        It's a not a good practice to use. But we app permission not supported for this action
+        It's a not a good practice to use. But the app permission not supported for this action
         More information about it here:
         https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.usernamepasswordcredential?view=azure-python
         """
@@ -155,3 +158,69 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         response = await self.query_reset_user_password(user_param, id_methods, request_body, request_configuration)
 
         response.raise_for_status()
+
+
+class ResetUserPasswordActionV2(MicrosoftGraphAction):
+    name = "Reset User Password Through Patching Password Profile"
+    description = (
+        "Resets a user's password by patching passwordProfile. "
+        "Requires User-PasswordProfile.ReadWrite.All (Application), admin consent "
+        "and appropriate Entra role assignment."
+    )
+
+    @cached_property
+    def client(self) -> GraphServiceClient:
+        """
+        Recommended is ClientSecretCredential. Switch here to it instead of UsernamePasswordCredential
+        But the same permissions ReadWrite are still required
+        More info here: https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0&tabs=http
+        """
+        credential = ClientSecretCredential(
+            tenant_id=self.module.configuration.tenant_id,
+            client_id=self.module.configuration.client_id,
+            client_secret=self.module.configuration.client_secret,
+        )
+
+        # For application permissions, we should use .default
+        scopes = ["https://graph.microsoft.com/.default"]
+
+        return GraphServiceClient(credentials=credential, scopes=scopes)
+
+    async def query_reset_user_password(self, user_id_or_upn: str, new_password: str):
+        body = User(
+            password_profile=PasswordProfile(
+                password=new_password,
+                force_change_password_next_sign_in=True,
+                # TODO: maybe add this as well or make it configurable through input args?
+                # force_change_password_next_sign_in_with_mfa=True,
+            )
+        )
+
+        # Graph API can return the updated resource with `Prefer` header
+        # Otherwise PATCH will return 204 No Content. For now it is ok but check later
+        #
+        # request_config: RequestConfiguration[QueryParameters] = RequestConfiguration(
+        #     options=[ResponseHandlerOption(NativeResponseHandler())],
+        # )
+        # request_config.headers.add("Prefer", "return=representation")
+
+        # Without NativeResponseHandler it will raise APIError in case of error
+        # No need to rerise again with raise_for_status
+        await self.client.users.by_user_id(user_id_or_upn).patch(
+            body=body,
+            request_configuration=RequestConfiguration(),
+        )
+
+    async def run(self, arguments: RequiredTwoUserArguments) -> None:
+        new_password = arguments.userNewPassword
+        if new_password is None:
+            raise ValueError("New password is required for this operation.")
+
+        user_id_or_upn = arguments.id or arguments.userPrincipalName
+        if user_id_or_upn is None:
+            raise ValueError("User id or principal name is required for this operation.")
+
+        await self.query_reset_user_password(
+            user_id_or_upn=user_id_or_upn,
+            new_password=new_password,
+        )
