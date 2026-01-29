@@ -195,9 +195,9 @@ class SalesforceConnector(AsyncConnector):
                     previous_processing_end = processing_end
 
             except RefreshTokenException as error:
-                logger.error("Error while running Salesforce: {error}", error=error)
-                self.log(message=error, level="critical")
+                logger.error("Error while running Salesforce", error=error)
+                self.log(message="Using refresh token failed. Please check the credentials", level="critical")
 
             except Exception as error:
-                logger.error("Error while running Salesforce: {error}", error=error)
+                logger.error("Error while running Salesforce", error=error)
                 self.log_exception(error, message="Failed to forward events")
