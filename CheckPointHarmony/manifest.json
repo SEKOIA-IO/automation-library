@@ -3,19 +3,19 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "client_id": {
-        "description": "Client Id to interact with Checkpoint API",
+        "description": "Client Id to interact with Checkpoint Harmony API",
         "type": "string"
       },
       "secret_key": {
-        "description": "Secret key to work with Checkpoint API",
+        "description": "Secret key to work with Checkpoint Harmony API",
         "type": "string"
       },
       "authentication_url": {
-        "description": "Authentication url to authenticate Checkpoint API",
+        "description": "Authentication url to authenticate Checkpoint Harmony API",
         "type": "string"
       },
       "base_url": {
-        "description": "Base url to interact with Checkpoint API",
+        "description": "Base url to interact with Checkpoint Harmony API",
         "type": "string",
         "default": "https://cloudinfra-gw.portal.checkpoint.com"
       }
@@ -28,15 +28,16 @@
     "secrets": [
       "secret_key"
     ],
-    "title": "Check Point module Configuration",
+    "title": "Check Point Harmony module Configuration",
     "type": "object"
   },
   "description": "Check Point Harmony is the industry\u2019s first unified security solution for users devices and access.",
-  "name": "Check Point",
+  "name": "Check Point Harmony",
   "uuid": "096f4eda-68dd-11ee-8c99-0242ac120002",
-  "slug": "checkpoint",
+  "slug": "checkpoint-harmony",
   "version": "1.5.0",
   "categories": [
-    "Network"
+    "Endpoint",
+    "Email"
   ]
 }
