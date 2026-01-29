@@ -1,0 +1,17 @@
+{
+  "configuration": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {},
+    "required": [],
+    "title": "Check Point Quantum module Configuration",
+    "type": "object"
+  },
+  "description": "Check Point Quantum is a unified cybersecurity platform combining next-generation firewall, intrusion prevention, VPN and advanced threat protection across on-premises, cloud and remote environments.",
+  "name": "Check Point Quantum",
+  "uuid": "af67e28c-fff0-489f-ac3c-a556e44a5cf5",
+  "slug": "checkpoint-quantum",
+  "version": "1.0.0",
+  "categories": [
+    "Network"
+  ]
+}
