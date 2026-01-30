@@ -3,8 +3,8 @@ from collections.abc import Generator
 from datetime import timedelta
 from functools import cached_property
 
-import orjson
 import httpx
+import orjson
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit

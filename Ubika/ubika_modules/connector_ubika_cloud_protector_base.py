@@ -6,8 +6,8 @@ from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from threading import Event
 
-import orjson
 import httpx
+import orjson
 from dateutil.parser import isoparse
 from pydantic.v1 import Field
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
