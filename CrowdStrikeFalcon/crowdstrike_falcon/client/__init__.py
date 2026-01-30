@@ -95,6 +95,68 @@ class ApiClient(requests.Session):
             else:
                 still_fetching_items = False
 
+    def request_graphql_endpoint(
+            self,
+            endpoint: str,
+            query: str,
+            data_path: list[str],
+            page_info_path: list[str] | None = None,
+            cursor_param: str = "after",
+            **kwargs
+    ) -> Generator[Any, None, None]:
+        """
+        Send GraphQL request and handle cursor-based pagination.
+
+        Args:
+            endpoint: GraphQL endpoint URL
+            query: GraphQL query string (must contain {cursor} placeholder for pagination)
+            data_path: Path to extract nodes (e.g., ["entities", "nodes"])
+            page_info_path: Path to pageInfo (e.g., ["entities", "pageInfo"]), defaults to data_path[:-1] + ["pageInfo"]
+            cursor_param: Name of the cursor parameter in the query
+        """
+        url = self.get_url(endpoint)
+
+        if page_info_path is None:
+            page_info_path = data_path[:-1] + ["pageInfo"]
+
+        after_cursor: str | None = None
+        has_next_page = True
+
+        while has_next_page:
+            cursor_value = f'{cursor_param}: "{after_cursor}"' if after_cursor else ""
+            formatted_query = query.replace("{cursor}", cursor_value)
+
+            payload: dict[str, Any] = {"query": formatted_query}
+
+            response = self.request(method="POST", url=url, json=payload, **kwargs)
+            response.raise_for_status()
+
+            content = response.json()
+
+            if "errors" in content:
+                errors_str = "\n".join([e.get("message", str(e)) for e in content["errors"]])
+                raise HTTPError(f"GraphQL errors: {errors_str}", response=response)
+
+            data = content.get("data", {})
+
+            # Extract nodes using data_path
+            nodes = data
+            for key in data_path:
+                nodes = nodes.get(key, {}) if isinstance(nodes, dict) else {}
+
+            yield from nodes if isinstance(nodes, list) else []
+
+            # Extract pageInfo using page_info_path
+            page_info = data
+            for key in page_info_path:
+                page_info = page_info.get(key, {}) if isinstance(page_info, dict) else {}
+
+            has_next_page = page_info.get("hasNextPage", False)
+            after_cursor = page_info.get("endCursor") if has_next_page else None
+
+            if not after_cursor:
+                has_next_page = False
+
 
 class CrowdstrikeFalconClient(ApiClient):
     def __init__(
@@ -200,22 +262,6 @@ class CrowdstrikeFalconClient(ApiClient):
             **kwargs,
         )
 
-    def list_users_uuids(self, limit: int, sort: str, **kwargs) -> Generator[str, None, None]:
-        yield from self.request_endpoint(
-            "GET",
-            "/user-management/queries/users/v1",
-            params={"limit": limit, "sort": sort},
-            **kwargs,
-        )
-
-    def get_users_infos(self, ids: list[str], **kwargs) -> Generator[dict[str, Any], None, None]:
-        yield from self.request_endpoint(
-            "POST",
-            "/user-management/entities/users/GET/v1",
-            json={"ids": ids},
-            **kwargs,
-        )
-
     def list_devices_uuids(self, limit: int, sort: str, **kwargs) -> Generator[str, None, None]:
         yield from self.request_endpoint(
             "GET",
@@ -229,5 +275,14 @@ class CrowdstrikeFalconClient(ApiClient):
             "POST",
             "/devices/entities/devices/v2",
             json={"ids": ids},
+            **kwargs,
+        )
+
+    def list_identity_entities(self, query: str, **kwargs) -> Generator[dict[str, Any], None, None]:
+        """Fetch identity entities from GraphQL endpoint with pagination."""
+        yield from self.request_graphql_endpoint(
+            endpoint="/identity-protection/combined/graphql/v1",
+            query=query,
+            data_path=["entities", "nodes"],
             **kwargs,
         )
