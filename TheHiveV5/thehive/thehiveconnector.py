@@ -184,12 +184,14 @@ _atexit_registered = False
 
 def _cleanup_ca_files() -> None:
     """Clean up all cached CA certificate files at process exit."""
-    for ca_file in _ca_file_cache.values():
+    global _ca_file_cache
+    for ca_file in list(_ca_file_cache.values()):
         try:
             if os.path.exists(ca_file):
                 os.unlink(ca_file)
         except OSError:
             logger.warning("Failed to clean up temporary CA file: %s", ca_file)
+    _ca_file_cache.clear()
 
 
 def prepare_verify_param(verify: bool, ca_certificate: Optional[str] = None) -> Union[bool, str]:
@@ -211,15 +213,49 @@ def prepare_verify_param(verify: bool, ca_certificate: Optional[str] = None) -> 
         return False
 
     if ca_certificate:
+        # Treat empty or whitespace-only certificate as no certificate
+        ca_certificate = ca_certificate.strip()
+        if not ca_certificate:
+            return True
+
+        # Normalize line endings to Unix-style for consistent hashing
+        ca_certificate = ca_certificate.replace("\r\n", "\n").replace("\r", "\n")
+
         # Use hash of certificate content as cache key to avoid duplicates
         ca_hash = hashlib.sha256(ca_certificate.encode()).hexdigest()
 
-        if ca_hash in _ca_file_cache and os.path.exists(_ca_file_cache[ca_hash]):
-            return _ca_file_cache[ca_hash]
+        # Check cache with existence verification
+        if ca_hash in _ca_file_cache:
+            cached_path = _ca_file_cache[ca_hash]
+            try:
+                # Verify file still exists and is readable
+                with open(cached_path, "r") as f:
+                    f.read(1)
+                return cached_path
+            except (OSError, IOError):
+                # File was deleted or is inaccessible, remove from cache
+                del _ca_file_cache[ca_hash]
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as f:
-            f.write(ca_certificate)
-            ca_file = f.name
+        # Create new temp file with restricted permissions
+        fd, ca_file = tempfile.mkstemp(suffix=".pem", text=True)
+        try:
+            # Set restrictive permissions (owner read/write only)
+            os.chmod(ca_file, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(ca_certificate)
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception:
+            # Clean up on failure
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            try:
+                os.unlink(ca_file)
+            except OSError:
+                pass
+            raise
 
         _ca_file_cache[ca_hash] = ca_file
 
