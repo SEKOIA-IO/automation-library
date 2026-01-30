@@ -13,6 +13,7 @@ class TheHiveCreateCommentV5(Action):
             self.module.configuration["apikey"],
             organisation=self.module.configuration["organisation"],
             verify=self.module.configuration.get("verify_certificate", True),
+            ca_certificate=self.module.configuration.get("ca_certificate"),
         )
 
         arg_alert_id = arguments["alert_id"]
