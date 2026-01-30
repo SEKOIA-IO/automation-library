@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
 import httpx
+import pytest
 from respx import MockRouter
 
 from ubika_modules import UbikaModule

@@ -46,15 +46,15 @@ class UbikaCloudProtectorNextGenApiClient(httpx.Client):
         ratelimit_per_minute: int = 20,
         use_jitter: bool = True,
     ) -> None:
-
-        self._ubika_auth = UbikaCloudProtectorNextGenAuthentication(
-            refresh_token=refresh_token, ratelimit_per_minute=ratelimit_per_minute
-        )
-
         base_transport = httpx.HTTPTransport()
 
-        retry_transport = ExponentialBackoffTransport(
+        rate_limited_transport = LimiterTransport(
             transport=base_transport,
+            per_minute=ratelimit_per_minute,
+        )
+
+        retry_transport = ExponentialBackoffTransport(
+            transport=rate_limited_transport,
             max_retries=nb_retries,
             backoff_factor=1.0,
             backoff_max=60.0,
@@ -62,9 +62,8 @@ class UbikaCloudProtectorNextGenApiClient(httpx.Client):
             use_jitter=use_jitter,
         )
 
-        rate_limited_transport = LimiterTransport(
-            transport=retry_transport,
-            per_minute=ratelimit_per_minute,
+        self._ubika_auth = UbikaCloudProtectorNextGenAuthentication(
+            refresh_token=refresh_token, transport=retry_transport
         )
 
         super().__init__(

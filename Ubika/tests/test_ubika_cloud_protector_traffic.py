@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
 import httpx
+import pytest
 from respx import MockRouter
 from sekoia_automation.storage import PersistentJSON
 
