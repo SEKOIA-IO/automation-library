@@ -204,7 +204,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             domain=domain,
             risk_level=risk_level_str,
             risk_level_id=risk_level_id,
-            risk_score=entity.get("riskScore"),
+            risk_score=int((entity.get("riskScore") or 0) * 100),
             type_id=user_type_id,
             type=user_type_str,
         )
@@ -244,7 +244,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             self.log(f"Resuming from checkpoint: {checkpoint}", level="info")
 
         for entity in self.client.list_identity_entities(IDENTITY_ENTITIES_QUERY):
-            asset_date = entity.get("lastSeenTimestamp")
+            asset_date = entity.get("creationTime")
 
             if checkpoint and asset_date and asset_date <= checkpoint:
                 continue
@@ -254,11 +254,12 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
 
             yield entity
         if most_recent_date and most_recent_date != checkpoint:
-            self.update_checkpoint(most_recent_date)
+            self._latest_time = most_recent_date
+            self.update_checkpoint()
             self.log(f"Checkpoint updated to: {most_recent_date}", level="info")
 
     def get_assets(self) -> Generator[UserOCSFModel, None, None]:
-        """Point d'entrée principal - récupère et mappe les assets."""
+        """Retrieve user assets from Crowdstrike and map them to OCSF models."""
         self.log("Fetching users from Identity Protection GraphQL endpoint", level="info")
         for entity in self._fetch_identity_entities():
             yield self.map_identity_entity_fields(entity)
