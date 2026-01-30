@@ -8,7 +8,7 @@ class MicrosoftADConfiguration(BaseModel):
     servername: str = Field(..., description="Remote machine IP or Name")
     admin_username: str = Field(..., description="Admin username")
     admin_password: str = Field(..., secret=True, description="Admin password")  # type: ignore
-    ca_certificate: str | None = Field(None, description="PEM-encoded CA certificate for TLS verification")
+    ca_certificate: str | None = Field(None, secret=True, description="PEM-encoded CA certificate for TLS verification")  # type: ignore
     skip_tls_verify: bool = Field(
         False, description="Skip TLS certificate verification (insecure, use only for testing)"
     )

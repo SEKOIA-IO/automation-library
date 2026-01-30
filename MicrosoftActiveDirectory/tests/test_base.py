@@ -1,10 +1,9 @@
 import os
 import pytest
 import ssl
-import tempfile
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from microsoft_ad.actions_base import MicrosoftADAction
-from microsoft_ad.models.common_models import MicrosoftADConfiguration, MicrosoftADModule
+from microsoft_ad.models.common_models import MicrosoftADConfiguration
 
 
 class ConcreteMicrosoftADAction(MicrosoftADAction):

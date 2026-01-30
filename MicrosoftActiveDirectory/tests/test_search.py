@@ -70,14 +70,16 @@ def test_search_with_attributes():
 
 
 def test_search_in_base_exception():
-
     username = "Mick Lennon"
     search = f"(|(samaccountname={username})(userPrincipalName={username})(mail={username})(givenName={username}))"
     basedn = "dc=example,dc=com"
     attributes = ["name"]
     action = configured_action(SearchAction)
 
-    with patch("microsoft_ad.search_actions.SearchAction.run", side_effect=Exception("mocked error")):
+    # Patch the client property to avoid real LDAP connection
+    with patch("microsoft_ad.actions_base.MicrosoftADAction.client") as mock_client:
+        mock_client.search.side_effect = Exception("LDAP connection failed")
+
         with pytest.raises(Exception) as exc_info:
             action.run({"search_filter": search, "basedn": basedn, "attributes": attributes})
 
