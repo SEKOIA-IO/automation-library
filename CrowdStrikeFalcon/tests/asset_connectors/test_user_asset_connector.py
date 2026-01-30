@@ -2,9 +2,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock
 
-from crowdstrike_falcon.asset_connectors.user_assets import (
-    CrowdstrikeUserAssetConnector
-)
+from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
     AccountTypeId,

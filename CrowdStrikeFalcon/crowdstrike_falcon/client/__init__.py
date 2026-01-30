@@ -96,13 +96,13 @@ class ApiClient(requests.Session):
                 still_fetching_items = False
 
     def request_graphql_endpoint(
-            self,
-            endpoint: str,
-            query: str,
-            data_path: list[str],
-            page_info_path: list[str] | None = None,
-            cursor_param: str = "after",
-            **kwargs
+        self,
+        endpoint: str,
+        query: str,
+        data_path: list[str],
+        page_info_path: list[str] | None = None,
+        cursor_param: str = "after",
+        **kwargs,
     ) -> Generator[Any, None, None]:
         """
         Send GraphQL request and handle cursor-based pagination.

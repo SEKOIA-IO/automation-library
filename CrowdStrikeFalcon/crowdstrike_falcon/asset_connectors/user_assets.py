@@ -103,7 +103,8 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         return {
             "User-Agent": "sekoiaio-connector/{0}-{1}".format(
                 self.module.manifest.get("slug"), self.module.manifest.get("version")
-            ),}
+            ),
+        }
 
     @cached_property
     def client(self):
@@ -186,11 +187,13 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
                 uid=acc.get("objectSid") or acc.get("objectGuid") or entity_id,
             )
 
-            enrichments.append(UserEnrichmentObject(
-                name="account_details",
-                value=account_type_str.value,
-                data=UserDataObject(is_enabled=acc.get("enabled")),
-            ))
+            enrichments.append(
+                UserEnrichmentObject(
+                    name="account_details",
+                    value=account_type_str.value,
+                    data=UserDataObject(is_enabled=acc.get("enabled")),
+                )
+            )
 
         risk_level_id, risk_level_str = self._map_risk_level(entity.get("riskScoreSeverity"))
         user_type_id, user_type_str = self._determine_user_type(entity)
@@ -263,4 +266,3 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         self.log("Fetching users from Identity Protection GraphQL endpoint", level="info")
         for entity in self._fetch_identity_entities():
             yield self.map_identity_entity_fields(entity)
-
