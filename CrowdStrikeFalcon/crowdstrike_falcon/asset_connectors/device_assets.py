@@ -26,7 +26,6 @@ from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 
 class CrowdstrikeDeviceAssetConnector(AssetConnector):
-
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION = "N/A"
     OCSF_VERSION: str = "1.6.0"

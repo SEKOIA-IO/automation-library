@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-19 - 1.7.4
+
+### Changed
+
+- Throw critical error if unable to use refresh token
+- Update sekoia-automation-sdk to 1.22.1
+
 ## 2025-12-22 - 1.7.3
 
 ### Fixed

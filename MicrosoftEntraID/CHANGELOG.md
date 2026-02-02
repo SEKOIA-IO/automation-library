@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-29 - 2.10.10
+
+### Changed
+
+- Update asset connector name
+
+## 2026-01-23 - 2.10.9
+
+### Changed
+
+- Update internals field inside arguments of Entra ID asset connector
+
+## 2026-01-22 - 2.10.8
+
+### Changed
+
+- Added internals field to Microsoft Entra ID asset connectors
+
 ## 2026-01-14 - 2.10.7
 
 ### Fixed

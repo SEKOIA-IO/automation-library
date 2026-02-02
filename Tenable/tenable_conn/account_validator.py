@@ -9,7 +9,6 @@ from sekoia_automation.account_validator import AccountValidator
 
 
 class TenableAccountValidator(AccountValidator):
-
     TIMEOUT = 10
 
     @property
