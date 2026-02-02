@@ -550,7 +550,7 @@ async def test_reset_user_password_v2_success_prefers_id_over_upn():
 
     action.__dict__["client"] = client_mock
 
-    await action.run(
+    result = await action.run(
         {
             "id": "testUserId",
             "userPrincipalName": "testUserPrincipalName",
@@ -561,21 +561,80 @@ async def test_reset_user_password_v2_success_prefers_id_over_upn():
     users_obj.by_user_id.assert_called_once_with("testUserId")
     patch_mock.assert_awaited_once()
 
+    assert result["newPassword"] == "test_password"
+
 
 @pytest.mark.asyncio
-async def test_reset_user_password_v2_missing_password_raises():
+async def test_reset_user_password_v2_missing_password_should_not_raise_error():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    patch_mock = AsyncMock(return_value=None)
+
+    by_user_id_obj = MagicMock()
+    by_user_id_obj.patch = patch_mock
+
+    users_obj = MagicMock()
+    users_obj.by_user_id.return_value = by_user_id_obj
+
+    client_mock = MagicMock()
+    client_mock.users = users_obj
+
+    action.__dict__["client"] = client_mock
+
+    result = await action.run({"userPrincipalName": "test@test.test"})
+
+    users_obj.by_user_id.assert_called_once_with("test@test.test")
+    patch_mock.assert_awaited_once()
+
+    assert result["newPassword"] != ""
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_missing_user_identifier_raises_1():
     action = configured_action(ResetUserPasswordActionV2)
 
     with pytest.raises(ValueError):
-        await action.run({"userPrincipalName": "test@test.test"})
+        await action.run({"userNewPassword": "test_password"})
 
 
 @pytest.mark.asyncio
 async def test_reset_user_password_v2_missing_user_identifier_raises():
     action = configured_action(ResetUserPasswordActionV2)
 
+    patch_mock = AsyncMock(return_value=None)
+
+    by_user_id_obj = MagicMock()
+    by_user_id_obj.patch = patch_mock
+
+    users_obj = MagicMock()
+    users_obj.by_user_id.return_value = by_user_id_obj
+
+    client_mock = MagicMock()
+    client_mock.users = users_obj
+
+    action.__dict__["client"] = client_mock
+
+    result = await action.run({"userNewPassword": " ", "userPrincipalName": "test@test.test"})
+    users_obj.by_user_id.assert_called_once_with("test@test.test")
+    patch_mock.assert_awaited_once()
+
+    assert result["newPassword"] != ""
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_empty_user_identifier_raises_1():
+    action = configured_action(ResetUserPasswordActionV2)
+
     with pytest.raises(ValueError):
-        await action.run({"userNewPassword": "test_password"})
+        await action.run({"userNewPassword": "test_password", "userPrincipalName": " "})
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_empty_user_identifier_raises_2():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    with pytest.raises(ValueError):
+        await action.run({"userNewPassword": "test_password", "id": ""})
 
 
 @pytest.mark.asyncio
