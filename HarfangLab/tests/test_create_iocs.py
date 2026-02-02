@@ -84,7 +84,7 @@ STIX_OBJECT_IPv4 = {
 
 def test_creating_iocs():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = CreateIOCs()
     action.module.configuration = {"url": instance_url, "api_token": api_token}
