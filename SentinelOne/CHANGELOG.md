@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fix issue with data model
+- Allow nullable values in proxyStates and containerizedWorkloadCounts fields in the SentinelOne data model to prevent validation errors
 ## 2026-01-29 - 1.21.4
 
 ### Changed
