@@ -20,8 +20,18 @@
       },
       "frequency": {
         "type": "integer",
-        "description": "Batch frequency in seconds",
+        "description": "Batch frequency in seconds (time window size)",
         "default": 600
+      },
+      "hours_ago": {
+        "type": "integer",
+        "description": "Number of hours to go back for initial event collection",
+        "default": 6
+      },
+      "timedelta": {
+        "type": "integer",
+        "description": "Timeshift in minutes - how far in the past to collect events to allow indexing delay",
+        "default": 15
       },
       "fetch_daily_logs": {
         "type": "boolean",

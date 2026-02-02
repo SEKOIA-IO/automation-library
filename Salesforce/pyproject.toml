@@ -40,6 +40,7 @@ aiohttp = "^3.8.5"
 aiofiles = "^23.1.0"
 aiolimiter = "^1.1.0"
 aiocsv = "^1.2.4"
+cachetools = "^6.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

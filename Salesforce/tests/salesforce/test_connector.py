@@ -116,30 +116,139 @@ def connector(symphony_storage, client_id, client_secret, salesforce_url, pushed
 
 
 @pytest.mark.asyncio
-async def test_salesforce_connector_last_event_date(connector):
+async def test_salesforce_connector_stepper_new(connector):
     """
-    Test `last_event_date`.
+    Test stepper creation when no cache exists.
 
     Args:
         connector: SalesforceConnector
     """
+    # Clear cache
     with connector.context as cache:
-        cache["last_event_date"] = None
+        cache.clear()
 
-    current_date = datetime.now(timezone.utc).replace(microsecond=0)
-    one_hour_ago = current_date - timedelta(hours=1)
+    stepper = connector.stepper
+    assert stepper is not None
+    assert stepper.connector == connector
 
-    assert connector.last_event_date == one_hour_ago
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_stepper_from_cache(connector):
+    """
+    Test stepper recovery from cache.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    cached_date = datetime.now(timezone.utc) - timedelta(hours=2)
+    with connector.context as cache:
+        cache["last_event_date"] = cached_date.isoformat()
+
+    stepper = connector.stepper
+    # Start should be the cached date
+    assert stepper.start == cached_date
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_stepper_max_history(connector):
+    """
+    Test stepper enforces 30-day max history.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    old_date = datetime.now(timezone.utc) - timedelta(days=60)
+    with connector.context as cache:
+        cache["last_event_date"] = old_date.isoformat()
+
+    stepper = connector.stepper
+    max_history_date = datetime.now(timezone.utc) - timedelta(days=30)
+    # Start should be capped at 30 days ago
+    assert stepper.start >= max_history_date - timedelta(minutes=1)
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_update_stepper(connector):
+    """
+    Test update_stepper saves the date to cache.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    recent_date = datetime.now(timezone.utc)
+    connector.update_stepper(recent_date)
 
     with connector.context as cache:
-        cache["last_event_date"] = current_date.isoformat()
+        assert cache["last_event_date"] == recent_date.isoformat()
 
-    assert connector.last_event_date == current_date
 
+@pytest.mark.asyncio
+async def test_log_file_cache(connector):
+    """
+    Test log file ID cache operations.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    log_file_id = "test_log_file_123"
+
+    assert not connector.is_log_file_processed(log_file_id)
+
+    connector.mark_log_file_processed(log_file_id)
+    assert connector.is_log_file_processed(log_file_id)
+
+
+@pytest.mark.asyncio
+async def test_log_file_cache_persistence(connector):
+    """
+    Test log file cache is persisted and loaded correctly.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    # Mark some log files as processed
+    connector.mark_log_file_processed("log_1")
+    connector.mark_log_file_processed("log_2")
+
+    # Save the cache
+    connector._save_log_file_cache()
+
+    # Verify it was saved to context
     with connector.context as cache:
-        cache["last_event_date"] = (one_hour_ago - timedelta(minutes=20)).isoformat()
+        saved_ids = cache.get("processed_log_files", [])
+        assert "log_1" in saved_ids
+        assert "log_2" in saved_ids
 
-    assert connector.last_event_date == one_hour_ago
+    # Create a new cache by loading from context
+    new_cache = connector._load_log_file_cache()
+    assert "log_1" in new_cache
+    assert "log_2" in new_cache
+
+
+@pytest.mark.asyncio
+async def test_log_file_cache_lru_eviction(connector):
+    """
+    Test that LRU cache evicts oldest entries when full.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    # Set a small cache size for testing
+    from cachetools import LRUCache
+
+    connector.log_file_cache = LRUCache(maxsize=3)
+
+    # Add 4 items - first one should be evicted
+    connector.mark_log_file_processed("log_1")
+    connector.mark_log_file_processed("log_2")
+    connector.mark_log_file_processed("log_3")
+    connector.mark_log_file_processed("log_4")
+
+    # First item should have been evicted
+    assert not connector.is_log_file_processed("log_1")
+    assert connector.is_log_file_processed("log_2")
+    assert connector.is_log_file_processed("log_3")
+    assert connector.is_log_file_processed("log_4")
 
 
 @pytest.mark.asyncio
@@ -232,6 +341,10 @@ async def test_salesforce_connector_get_salesforce_events(
     """
     log_file_date = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(days=1)
 
+    # Define time window for the test
+    start_time = log_file_date - timedelta(hours=1)
+    end_time = datetime.now(timezone.utc)
+
     event_log_file = EventLogFile(
         Id=session_faker.pystr(),
         EventType=session_faker.pystr(),
@@ -254,7 +367,9 @@ async def test_salesforce_connector_get_salesforce_events(
         )
 
         query = connector.salesforce_client._log_files_query(
-            connector.last_event_date, connector.configuration.log_type
+            start_from=start_time,
+            end_at=end_time,
+            log_type=connector.configuration.log_type,
         )
         get_log_files_url = connector.salesforce_client._request_url_with_query(query)
 
@@ -273,7 +388,7 @@ async def test_salesforce_connector_get_salesforce_events(
             headers={"Content-Length": "{0}".format(len(csv_content.encode("utf-8")))},
         )
 
-        result = await connector.get_salesforce_events()
+        result = await connector.get_salesforce_events(start_time, end_time)
 
         assert result == pushed_events_ids
 
@@ -283,7 +398,7 @@ async def test_salesforce_connector_get_salesforce_events_1(
     connector: SalesforceConnector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
 ):
     """
-    Test salesforce connector get salesforce events.
+    Test salesforce connector get salesforce events with large file (persisted to disk).
 
     Args:
         connector: SalesforceConnector
@@ -295,9 +410,9 @@ async def test_salesforce_connector_get_salesforce_events_1(
     current_date = datetime.now(timezone.utc).replace(microsecond=0)
     log_file_date = current_date - timedelta(days=1)
 
-    # Try to put last event date higher to be 1 day ahead of the log file date
-    with connector.context as cache:
-        cache["last_event_date"] = (current_date + timedelta(days=1)).isoformat()
+    # Define time window for the test
+    start_time = log_file_date - timedelta(hours=1)
+    end_time = current_date
 
     event_log_file = EventLogFile(
         Id=session_faker.pystr(),
@@ -321,7 +436,9 @@ async def test_salesforce_connector_get_salesforce_events_1(
         )
 
         query = connector.salesforce_client._log_files_query(
-            connector.last_event_date, connector.configuration.log_type
+            start_from=start_time,
+            end_at=end_time,
+            log_type=connector.configuration.log_type,
         )
         get_log_files_url = connector.salesforce_client._request_url_with_query(query)
 
@@ -341,7 +458,7 @@ async def test_salesforce_connector_get_salesforce_events_1(
             headers={"Content-Length": "{0}".format(1024 * 1024 * 1024)},
         )
 
-        result = await connector.get_salesforce_events()
+        result = await connector.get_salesforce_events(start_time, end_time)
 
         expected_result = []
         [expected_result.extend(pushed_events_ids) for _ in range(1, len(csv_content.splitlines()))]
@@ -354,7 +471,7 @@ async def test_salesforce_connector_get_salesforce_events_2(
     connector: SalesforceConnector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
 ):
     """
-    Test salesforce connector get salesforce events.
+    Test salesforce connector get salesforce events with daily logs.
 
     Args:
         connector: SalesforceConnector
@@ -367,9 +484,9 @@ async def test_salesforce_connector_get_salesforce_events_2(
     log_file_date = current_date - timedelta(days=1)
     connector.configuration.fetch_daily_logs = True
 
-    # Try to put last event date higher to be 1 day ahead of the log file date
-    with connector.context as cache:
-        cache["last_event_date"] = (current_date + timedelta(days=1)).isoformat()
+    # Define time window for the test
+    start_time = log_file_date - timedelta(hours=1)
+    end_time = current_date
 
     event_log_file = EventLogFile(
         Id=session_faker.pystr(),
@@ -393,7 +510,9 @@ async def test_salesforce_connector_get_salesforce_events_2(
         )
 
         query = connector.salesforce_client._log_files_query(
-            connector.last_event_date, connector.configuration.log_type
+            start_from=start_time,
+            end_at=end_time,
+            log_type=connector.configuration.log_type,
         )
         get_log_files_url = connector.salesforce_client._request_url_with_query(query)
 
@@ -413,9 +532,75 @@ async def test_salesforce_connector_get_salesforce_events_2(
             headers={"Content-Length": "{0}".format(1024 * 1024 * 1024)},
         )
 
-        result = await connector.get_salesforce_events()
+        result = await connector.get_salesforce_events(start_time, end_time)
 
         expected_result = []
         [expected_result.extend(pushed_events_ids) for _ in range(1, len(csv_content.splitlines()))]
 
         assert result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_salesforce_connector_skips_processed_log_files(
+    connector: SalesforceConnector, session_faker, http_token, csv_content, salesforce_url, pushed_events_ids
+):
+    """
+    Test that connector skips already processed log files.
+
+    Args:
+        connector: SalesforceConnector
+        session_faker: Faker
+        http_token: HttpToken
+        csv_content: str
+        salesforce_url: str
+    """
+    current_date = datetime.now(timezone.utc).replace(microsecond=0)
+    log_file_date = current_date - timedelta(days=1)
+
+    # Define time window for the test
+    start_time = log_file_date - timedelta(hours=1)
+    end_time = current_date
+
+    log_file_id = session_faker.pystr()
+
+    # Mark the log file as already processed
+    connector.mark_log_file_processed(log_file_id)
+
+    event_log_file = EventLogFile(
+        Id=log_file_id,
+        EventType=session_faker.pystr(),
+        LogFile=session_faker.pystr(),
+        LogDate=log_file_date.isoformat(),
+        CreatedDate=log_file_date.isoformat(),
+        LogFileLength=len(csv_content.encode("utf-8")),
+    )
+
+    log_files_response_success = SalesforceEventLogFilesResponse(totalSize=1, done=True, records=[event_log_file])
+
+    token_data = http_token.dict()
+    token_data["id"] = token_data["tid"]
+
+    with aioresponses() as mocked_responses:
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(salesforce_url),
+            status=200,
+            payload=token_data,
+        )
+
+        query = connector.salesforce_client._log_files_query(
+            start_from=start_time,
+            end_at=end_time,
+            log_type=connector.configuration.log_type,
+        )
+        get_log_files_url = connector.salesforce_client._request_url_with_query(query)
+
+        mocked_responses.get(
+            get_log_files_url,
+            payload=log_files_response_success.dict(),
+        )
+
+        # The log file content should NOT be fetched since it's already processed
+        result = await connector.get_salesforce_events(start_time, end_time)
+
+        # Should return empty list since log file was skipped
+        assert result == []

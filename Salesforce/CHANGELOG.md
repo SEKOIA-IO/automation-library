@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-02 - 1.8.0
+
+### Added
+
+- Timestepper for orchestrating event collection with configurable time windows
+- Log file ID cache to prevent re-processing duplicate files
+- New configuration parameters `hours_ago` and `timedelta`
+
+### Changed
+
+- Event collection now uses bounded time windows instead of open-ended queries
+- Improved lag monitoring with proper EVENTS_LAG metric calculation
+
 ## 2026-01-19 - 1.7.4
 
 ### Changed

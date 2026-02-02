@@ -134,7 +134,11 @@ class SalesforceHttpClient(object):
         return " ".join([line.strip() for line in query.strip().splitlines()]).replace(" ", "+").replace(",", "+,")
 
     @staticmethod
-    def _log_files_query(start_from: datetime | None = None, log_type: LogType | None = None) -> str:
+    def _log_files_query(
+        start_from: datetime | None = None,
+        end_at: datetime | None = None,
+        log_type: LogType | None = None,
+    ) -> str:
         """
         Query to get log files.
 
@@ -147,7 +151,8 @@ class SalesforceHttpClient(object):
         Value of filter criterion for field 'CreatedDate' must be of type dateTime and should not be enclosed in quotes.
 
         Args:
-            start_from: datetime | None
+            start_from: datetime | None - Start of time window (exclusive)
+            end_at: datetime | None - End of time window (inclusive)
             log_type: LogType | None
 
         Returns:
@@ -164,6 +169,9 @@ class SalesforceHttpClient(object):
 
         if start_from:
             filters.append("CreatedDate > {0}".format(start_from.strftime("%Y-%m-%dT%H:%M:%SZ")))
+
+        if end_at:
+            filters.append("CreatedDate <= {0}".format(end_at.strftime("%Y-%m-%dT%H:%M:%SZ")))
 
         if filters:
             query = "{0} WHERE {1}".format(query, " AND ".join(filters))
@@ -266,13 +274,17 @@ class SalesforceHttpClient(object):
                     yield response
 
     async def get_log_files(
-        self, start_from: datetime | None = None, log_type: LogType | None = None
+        self,
+        start_from: datetime | None = None,
+        end_at: datetime | None = None,
+        log_type: LogType | None = None,
     ) -> SalesforceEventLogFilesResponse:
         """
         Get log files from Salesforce.
 
         Args:
-            start_from: datetime | None
+            start_from: datetime | None - Start of time window (exclusive)
+            end_at: datetime | None - End of time window (inclusive)
             log_type: LogType | None
 
         Raises:
@@ -281,9 +293,9 @@ class SalesforceHttpClient(object):
         Returns:
             SalesforceEventLogFilesResponse:
         """
-        logger.info("Getting log files from Salesforce. Start date is {0}", start_from)
+        logger.info("Getting log files from Salesforce. Start date is {0}, end date is {1}", start_from, end_at)
 
-        query = self._log_files_query(start_from, log_type)
+        query = self._log_files_query(start_from, end_at, log_type)
 
         url = self._request_url_with_query(query)
 

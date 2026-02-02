@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import orjson
+from cachetools import Cache, LRUCache
 from dateutil.parser import isoparse
 from loguru import logger
 from sekoia_automation.aio.connector import AsyncConnector
@@ -15,7 +16,8 @@ from sekoia_automation.storage import PersistentJSON
 from client.http_client import LogType, SalesforceHttpClient
 from client.token_refresher import RefreshTokenException
 from salesforce import SalesforceModule
-from salesforce.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from salesforce.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
+from salesforce.timestepper import TimeStepper
 from utils.file_utils import csv_file_as_rows, delete_file
 
 
@@ -23,6 +25,8 @@ class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     """SalesforceConnector configuration."""
 
     frequency: int = 600
+    hours_ago: int = 6
+    timedelta: int = 15
     fetch_daily_logs: bool = False
 
     @property
@@ -41,38 +45,106 @@ class SalesforceConnector(AsyncConnector):
 
     _salesforce_client: SalesforceHttpClient | None = None
 
+    # Maximum history limit for recovery (in days)
+    MAX_HISTORY_DAYS = 30
+    # LRU cache size for processed log file IDs
+    LOG_FILE_CACHE_SIZE = 10_000
+
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init SalesforceConnector."""
-
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
+        self.log_file_cache: Cache[str, bool] = self._load_log_file_cache()
 
     @property
-    def last_event_date(self) -> datetime:
+    def stepper(self) -> TimeStepper:
         """
-        Get last event date.
+        Get or create the timestepper.
+
+        Recovers from cache if available, otherwise creates new with hours_ago lookback.
 
         Returns:
-            datetime:
+            TimeStepper instance
         """
+        with self.context as cache:
+            most_recent_date_str = cache.get("last_event_date")
+
+        if most_recent_date_str is None:
+            return TimeStepper.create(
+                self,
+                self.configuration.frequency,
+                self.configuration.timedelta,
+                self.configuration.hours_ago,
+            )
+
+        # Parse the most recent requested date
+        most_recent_date = isoparse(most_recent_date_str)
+
+        # Enforce maximum history limit
         now = datetime.now(timezone.utc)
-        one_hour_ago = (now - timedelta(hours=1)).replace(microsecond=0)
+        max_history_date = now - timedelta(days=self.MAX_HISTORY_DAYS)
+        if most_recent_date < max_history_date:
+            most_recent_date = max_history_date
+
+        return TimeStepper.create_from_time(
+            self,
+            most_recent_date,
+            self.configuration.frequency,
+            self.configuration.timedelta,
+        )
+
+    def update_stepper(self, recent_date: datetime) -> None:
+        """
+        Save the most recent date processed.
+
+        Args:
+            recent_date: End datetime of the last processed window
+        """
+        with self.context as cache:
+            cache["last_event_date"] = recent_date.isoformat()
+
+    def _load_log_file_cache(self) -> Cache[str, bool]:
+        """
+        Load log file IDs from persistent storage into LRU cache.
+
+        Returns:
+            LRUCache with previously processed log file IDs
+        """
+        result: Cache[str, bool] = LRUCache(maxsize=self.LOG_FILE_CACHE_SIZE)
 
         with self.context as cache:
-            last_event_date_str = cache.get("last_event_date")
+            log_file_ids = cache.get("processed_log_files", [])
 
-            # If undefined, retrieve events from the last 1 hour
-            if last_event_date_str is None:
-                return one_hour_ago
+        for log_file_id in log_file_ids:
+            result[log_file_id] = True
 
-            # Parse the most recent date seen
-            last_event_date = isoparse(last_event_date_str).replace(microsecond=0)
+        return result
 
-            # We don't retrieve messages older than 1 hour
-            if last_event_date < one_hour_ago:
-                return one_hour_ago
+    def _save_log_file_cache(self) -> None:
+        """Persist the LRU cache to storage."""
+        with self.context as cache:
+            cache["processed_log_files"] = list(self.log_file_cache.keys())
 
-            return last_event_date
+    def is_log_file_processed(self, log_file_id: str) -> bool:
+        """
+        Check if a log file has already been processed.
+
+        Args:
+            log_file_id: The Salesforce log file ID
+
+        Returns:
+            True if the log file was already processed
+        """
+        return log_file_id in self.log_file_cache
+
+    def mark_log_file_processed(self, log_file_id: str) -> None:
+        """
+        Mark a log file as processed.
+
+        Args:
+            log_file_id: The Salesforce log file ID
+        """
+        self.log_file_cache[log_file_id] = True
 
     @property
     def salesforce_client(self) -> SalesforceHttpClient:
@@ -94,29 +166,42 @@ class SalesforceConnector(AsyncConnector):
 
         return self._salesforce_client
 
-    async def get_salesforce_events(self) -> list[str]:
+    async def get_salesforce_events(self, start: datetime, end: datetime) -> list[str]:
         """
-        Process salesforce events.
+        Process salesforce events for a specific time window.
+
+        Args:
+            start: Start of time window (exclusive)
+            end: End of time window (inclusive)
 
         Returns:
-            datetime: last event date
+            List of message IDs pushed to intake
         """
-        _last_event_date = self.last_event_date
-        log_files = await self.salesforce_client.get_log_files(_last_event_date, self.configuration.log_type)
+        log_files = await self.salesforce_client.get_log_files(
+            start_from=start,
+            end_at=end,
+            log_type=self.configuration.log_type,
+        )
 
         logger.info(
-            "Found {count} log files to process since {date}",
+            "Found {count} log files to process for window {start} to {end}",
             count=len(log_files.records),
-            date=_last_event_date.isoformat(),
+            start=start.isoformat(),
+            end=end.isoformat(),
         )
 
         result = []
 
         for log_file in log_files.records:
+            # Check if already processed
+            if self.is_log_file_processed(log_file.Id):
+                logger.info(
+                    "Skipping already processed log file {log_file_id}",
+                    log_file_id=log_file.Id,
+                )
+                continue
+
             log_file_results = []
-            log_file_date = isoparse(log_file.CreatedDate)
-            if _last_event_date < log_file_date:
-                _last_event_date = log_file_date
 
             records, csv_path = await self.salesforce_client.get_log_file_content(
                 log_file=log_file,
@@ -135,45 +220,37 @@ class SalesforceConnector(AsyncConnector):
                 await delete_file(csv_path)
 
             logger.info(
-                "Finished to process log file {log_file_id}. Total amount of records is {count}",
+                "Finished processing log file {log_file_id}. Total records: {count}",
                 log_file_id=log_file.Id,
                 count=len(log_file_results),
             )
 
+            # Mark as processed
+            self.mark_log_file_processed(log_file.Id)
             result.extend(log_file_results)
-
-            with self.context as cache:
-                logger.info(
-                    "New last event date now is {last_event_date}",
-                    last_event_date=_last_event_date.isoformat(),
-                )
-
-                cache["last_event_date"] = _last_event_date.isoformat()
 
         return result
 
     def run(self) -> None:  # pragma: no cover
-        """Runs Salesforce."""
+        """Runs Salesforce connector with timestepper."""
         while self.running:
             try:
                 loop = asyncio.get_event_loop()
 
-                previous_processing_end = None
+                for start, end in self.stepper.ranges():
+                    if not self.running:
+                        break
 
-                while self.running:
                     processing_start = time.time()
-                    if previous_processing_end is not None:
-                        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(
-                            processing_start - previous_processing_end
-                        )
 
-                    message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events())
+                    message_ids: list[str] = loop.run_until_complete(self.get_salesforce_events(start, end))
+
                     processing_end = time.time()
                     OUTCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(message_ids))
 
                     log_message = "No records to forward"
                     if len(message_ids) > 0:
-                        log_message = "Pushed {0} records".format(len(message_ids))
+                        log_message = f"Pushed {len(message_ids)} records"
 
                     logger.info(log_message)
                     self.log(message=log_message, level="info")
@@ -181,18 +258,9 @@ class SalesforceConnector(AsyncConnector):
                     batch_duration = processing_end - processing_start
                     FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
-                    # If no records were fetched
-                    if len(message_ids) == 0:
-                        # compute the remaining sleeping time. If greater than 0, sleep
-                        delta_sleep = self.configuration.frequency - batch_duration
-                        if delta_sleep > 0:
-                            self.log(
-                                message=f"Next batch of events in the future. " f"Waiting {delta_sleep} seconds",
-                                level="info",
-                            )
-                            time.sleep(delta_sleep)
-
-                    previous_processing_end = processing_end
+                    # Save progress after each window
+                    self.update_stepper(end)
+                    self._save_log_file_cache()
 
             except RefreshTokenException as error:
                 logger.error("Error while running Salesforce", error=error)
