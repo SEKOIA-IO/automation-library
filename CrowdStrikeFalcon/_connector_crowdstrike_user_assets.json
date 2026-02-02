@@ -1,5 +1,5 @@
 {
-  "name": "Crowdstrike Falcon users",
+  "name": "CrowdStrike Falcon Users",
   "description": "Fetch Crowdstrike Falcon user assets",
   "uuid": "27117d09-4e1d-4667-9735-ac35024a79f9",
   "docker_parameters": "crowdstrike_falcon_user_asset_connector",
@@ -27,6 +27,7 @@
       }
     },
     "required": ["sekoia_api_key"],
-    "secrets": ["sekoia_api_key"]
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
   }
 }

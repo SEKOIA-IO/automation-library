@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-30 - 1.0.6
+
+### Changed
+
+- Update token sooner (60s instead of 30s)
+- Use retries for authentication timeout
+
 ## 2026-01-07 - 1.0.5
 
 ### Changed
