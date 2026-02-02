@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix issue with data model
-=======
 ## 2026-01-29 - 1.21.4
 
 ### Changed
