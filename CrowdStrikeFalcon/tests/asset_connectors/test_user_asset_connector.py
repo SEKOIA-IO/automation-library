@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest.mock import Mock
 
 from crowdstrike_falcon.asset_connectors.user_assets import CrowdstrikeUserAssetConnector
+from crowdstrike_falcon.client import CrowdstrikeFalconClient
 from sekoia_automation.asset_connector.models.ocsf.user import (
     UserOCSFModel,
     AccountTypeId,
@@ -37,6 +38,13 @@ def connector():
     c.log_exception = Mock()
     return c
 
+@pytest.fixture
+def client():
+    return CrowdstrikeFalconClient(
+        base_url="https://api.crowdstrike.com",
+        client_id="fake_client_id",
+        client_secret="fake_client_secret",
+    )
 
 class TestMapRiskLevel:
     def test_map_risk_level_critical(self, connector):
@@ -377,3 +385,56 @@ class TestParseTimestamp:
         result = connector._parse_timestamp("2025-01-01T12:00:00.123456Z")
         expected = int(datetime.fromisoformat("2025-01-01T12:00:00.123456+00:00").timestamp())
         assert result == expected
+
+
+class TestListIdentityEntities:
+    def test_list_identity_entities_single_page(self, client):
+        entities = [
+            {"entityId": "1", "primaryDisplayName": "User1"},
+            {"entityId": "2", "primaryDisplayName": "User2"},
+        ]
+        client.request_graphql_endpoint = Mock(return_value=iter(entities))
+
+        result = list(client.list_identity_entities("query { test }"))
+
+        assert len(result) == 2
+        assert result[0]["entityId"] == "1"
+        assert result[1]["entityId"] == "2"
+        client.request_graphql_endpoint.assert_called_once()
+
+    def test_list_identity_entities_multiple_pages(self, client):
+        entities = [
+            {"entityId": "1"},
+            {"entityId": "2"},
+        ]
+        client.request_graphql_endpoint = Mock(return_value=iter(entities))
+
+        result = list(client.list_identity_entities("query { test }"))
+
+        assert len(result) == 2
+        assert result[0]["entityId"] == "1"
+        assert result[1]["entityId"] == "2"
+
+    def test_list_identity_entities_empty_response(self, client):
+        client.request_graphql_endpoint = Mock(return_value=iter([]))
+
+        result = list(client.list_identity_entities("query { test }"))
+
+        assert result == []
+
+    def test_list_identity_entities_handles_none_response(self, client):
+        client.request_graphql_endpoint = Mock(return_value=None)
+
+        with pytest.raises(TypeError):
+            list(client.list_identity_entities("query { test }"))
+
+    def test_list_identity_entities_passes_correct_parameters(self, client):
+        client.request_graphql_endpoint = Mock(return_value=iter([]))
+
+        list(client.list_identity_entities("query { test }"))
+
+        client.request_graphql_endpoint.assert_called_once_with(
+            endpoint="/identity-protection/combined/graphql/v1",
+            query="query { test }",
+            data_path=["entities", "nodes"],
+        )
