@@ -217,7 +217,11 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             try:
                 time_value = int(datetime.fromisoformat(created.replace("Z", "+00:00")).timestamp())
             except (ValueError, AttributeError):
-                pass
+                # Fallback to default time_value when creationTime has an invalid format
+                self.log(
+                    f"Failed to parse creationTime '{created}' for entity '{entity_id}', using default time_value=0",
+                    level="debug",
+                )
 
         return UserOCSFModel(
             activity_id=2,
