@@ -320,3 +320,60 @@ class TestGetAssets:
         assets = list(connector.get_assets())
 
         assert assets == []
+
+
+class TestParseTimestamp:
+    def test_parse_timestamp_with_z_suffix(self, connector):
+        """Test parsing timestamp with Z suffix."""
+        result = connector._parse_timestamp("2025-01-01T12:00:00Z")
+        expected = int(datetime.fromisoformat("2025-01-01T12:00:00+00:00").timestamp())
+        assert result == expected
+
+    def test_parse_timestamp_with_explicit_utc_offset(self, connector):
+        """Test parsing timestamp with explicit +00:00 offset."""
+        result = connector._parse_timestamp("2025-01-01T12:00:00+00:00")
+        expected = int(datetime.fromisoformat("2025-01-01T12:00:00+00:00").timestamp())
+        assert result == expected
+
+    def test_parse_timestamp_with_positive_offset(self, connector):
+        """Test parsing timestamp with positive timezone offset."""
+        result = connector._parse_timestamp("2025-01-01T12:00:00+01:00")
+        expected = int(datetime.fromisoformat("2025-01-01T12:00:00+01:00").timestamp())
+        assert result == expected
+
+    def test_parse_timestamp_with_negative_offset(self, connector):
+        """Test parsing timestamp with negative timezone offset."""
+        result = connector._parse_timestamp("2025-01-01T12:00:00-05:00")
+        expected = int(datetime.fromisoformat("2025-01-01T12:00:00-05:00").timestamp())
+        assert result == expected
+
+    def test_parse_timestamp_none(self, connector):
+        """Test parsing None returns 0."""
+        result = connector._parse_timestamp(None)
+        assert result == 0
+
+    def test_parse_timestamp_empty_string(self, connector):
+        """Test parsing empty string returns 0."""
+        result = connector._parse_timestamp("")
+        assert result == 0
+
+    def test_parse_timestamp_invalid_format(self, connector):
+        """Test parsing invalid format returns 0."""
+        result = connector._parse_timestamp("invalid-date")
+        assert result == 0
+
+    def test_parse_timestamp_partial_date(self, connector):
+        """Test parsing partial date returns 0."""
+        result = connector._parse_timestamp("2025-01-01")
+        assert isinstance(result, int)
+
+    def test_parse_timestamp_malformed_iso(self, connector):
+        """Test parsing malformed ISO string returns 0."""
+        result = connector._parse_timestamp("2025/01/01T12:00:00Z")
+        assert result == 0
+
+    def test_parse_timestamp_with_microseconds(self, connector):
+        """Test parsing timestamp with microseconds."""
+        result = connector._parse_timestamp("2025-01-01T12:00:00.123456Z")
+        expected = int(datetime.fromisoformat("2025-01-01T12:00:00.123456+00:00").timestamp())
+        assert result == expected

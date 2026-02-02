@@ -115,6 +115,24 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             default_headers=self._http_default_headers,
         )
 
+    def _parse_timestamp(self, timestamp: str | None) -> int:
+        """
+        Parse ISO 8601 timestamp to Unix epoch.
+
+        Args:
+            timestamp: ISO 8601 formatted timestamp string.
+
+        Returns:
+            Unix timestamp as integer, or 0 if parsing fails.
+        """
+        if not timestamp:
+            return 0
+        try:
+            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            return int(dt.timestamp())
+        except (ValueError, AttributeError):
+            return 0
+
     def _map_risk_level(self, severity: str | None) -> tuple[RiskLevelId | None, RiskLevelStr | None]:
         """
         Map Crowdstrike risk severity to OCSF risk level.
@@ -212,12 +230,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             type=user_type_str,
         )
 
-        time_value = 0
-        if created := entity.get("creationTime"):
-            try:
-                time_value = int(datetime.fromisoformat(created.replace("Z", "+00:00")).timestamp())
-            except (ValueError, AttributeError):
-                pass
+        time_value = self._parse_timestamp(entity.get("creationTime"))
 
         return UserOCSFModel(
             activity_id=2,
