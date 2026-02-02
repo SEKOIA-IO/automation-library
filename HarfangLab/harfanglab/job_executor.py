@@ -99,7 +99,7 @@ class JobExecutor(Action, ABC):
         file_path = self.data_path / str(uuid.uuid4())
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(file_path, "wb") as file:
+        with file_path.open("wb") as file:
             file.write(orjson.dumps(js))
 
         result_path = file_path.relative_to(self.data_path)
