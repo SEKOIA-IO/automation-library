@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from aioresponses import aioresponses
 
-from client.token_refresher import SalesforceTokenRefresher
+from client.token_refresher import RefreshTokenException, SalesforceTokenRefresher
 
 
 @pytest.mark.asyncio
@@ -72,6 +72,37 @@ async def test_salesforce_refresher_refresh_token_1(http_token, session_faker):
         assert token_refresher._token.token.access_token == token_data["access_token"]
 
         await token_refresher.close()
+
+
+@pytest.mark.asyncio
+async def test_salesforce_refresher_refresh_token_failed(session_faker):
+    """
+    Test SalesforceTokenRefresher.refresh_token.
+
+    Args:
+        http_token: HttpToken
+        session_faker: Faker
+    """
+    with aioresponses() as mocked_responses:
+        auth_url = session_faker.uri()
+
+        token_refresher = SalesforceTokenRefresher(
+            session_faker.word(),
+            session_faker.word(),
+            auth_url,
+            session_faker.pyint(),
+        )
+
+        error_response = {"error": "invalid_grant", "error_description": "authentication failure"}
+
+        mocked_responses.post(
+            "{0}/services/oauth2/token?grant_type=client_credentials".format(auth_url),
+            status=400,
+            payload=error_response,
+        )
+
+        with pytest.raises(RefreshTokenException):
+            await token_refresher.refresh_token()
 
 
 @pytest.mark.asyncio

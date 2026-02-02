@@ -1,5 +1,5 @@
 from aiolimiter import AsyncLimiter
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic.v1 import BaseModel, Field, HttpUrl
 
 
 class SalesforceModuleConfig(BaseModel):
