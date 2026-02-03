@@ -12,7 +12,9 @@ from harfanglab.endpoint_actions import (
 from harfanglab.get_agent_telemetry import GetAgentTelemetry
 from harfanglab.get_hostnames_by_ip_action import GetHostnamesByIP
 from harfanglab.get_pipe_list_action import GetPipeListAction
+from harfanglab.get_pipe_list_action_v2 import GetPipeListActionV2
 from harfanglab.get_process_list_action import GetProcessListAction
+from harfanglab.get_process_list_action_v2 import GetProcessListActionV2
 from harfanglab.iocs import CreateIOCs
 from harfanglab.threat_actions import AddCommentToThreat, UpdateThreatStatus
 
@@ -21,7 +23,9 @@ if __name__ == "__main__":
     module.register_account_validator(HarfanglabAccountValidator)
     module.register(HarfanglabAssetConnector, "harfanglab_asset_connector")
     module.register(GetProcessListAction, "harfanglab_get_process_list")
+    module.register(GetProcessListActionV2, "harfanglab_get_process_list_v2")
     module.register(GetPipeListAction, "harfanglab_get_pipe_list")
+    module.register(GetPipeListActionV2, "harfanglab_get_pipe_list_v2")
     module.register(EndpointGroupIsolationAction, "harfanglab_endpoint_group_isolation")
     module.register(EndpointGroupDeisolationAction, "harfanglab_endpoint_group_deisolation")
     module.register(EndpointAgentIsolationAction, "harfanglab_endpoint_agent_isolation")

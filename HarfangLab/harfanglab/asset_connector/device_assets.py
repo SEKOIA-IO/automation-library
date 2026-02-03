@@ -1,36 +1,32 @@
-from functools import cached_property
 from collections.abc import Generator
+from datetime import datetime, timedelta
+from functools import cached_property
 from typing import Any, Optional
 from urllib.parse import urljoin
-from datetime import timedelta, datetime
 
 from dateutil.parser import isoparse
 from requests.exceptions import RequestException
-
 from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.ocsf.base import (
-    Metadata,
-    Product,
-)
+from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
-    DeviceOCSFModel,
-    OperatingSystem,
     Device,
-    OSTypeStr,
+    DeviceDataObject,
+    DeviceEnrichmentObject,
+    DeviceOCSFModel,
     DeviceTypeId,
     DeviceTypeStr,
-    OSTypeId,
-    NetworkInterface,
-    NetworkInterfaceTypeStr,
-    NetworkInterfaceTypeId,
-    DeviceDataObject,
     EncryptionObject,
-    DeviceEnrichmentObject,
+    NetworkInterface,
+    NetworkInterfaceTypeId,
+    NetworkInterfaceTypeStr,
+    OperatingSystem,
+    OSTypeId,
+    OSTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
 
-from harfanglab.helpers import handle_uri
 from harfanglab.client import ApiClient
+from harfanglab.helpers import handle_uri
 
 
 class HarfanglabAssetConnector(AssetConnector):

@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
 import httpx
+import pytest
 from respx import MockRouter
 
 from ubika_modules import UbikaModule
@@ -210,13 +210,43 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
 
 
 @pytest.mark.respx(base_url="https://login.ubika.io")
-def test_authorization_error(respx_mock: MockRouter, trigger):
-    respx_mock.post("/auth/realms/main/protocol/openid-connect/token").mock(
+def test_authorization_http_error_without_retry(respx_mock: MockRouter, trigger):
+    route = respx_mock.post("/auth/realms/main/protocol/openid-connect/token")
+    route.mock(
         return_value=httpx.Response(
             400,
             json={"error": "invalid_grant", "error_description": "Invalid refresh token"},
         )
     )
 
-    with pytest.raises(AuthorizationError):
+    with patch("time.sleep"), pytest.raises(AuthorizationError):
         trigger.next_batch()
+
+    assert route.call_count == 1
+
+
+@pytest.mark.respx(base_url="https://login.ubika.io")
+def test_authorization_http_error_with_retry(respx_mock: MockRouter, trigger):
+    route = respx_mock.post("/auth/realms/main/protocol/openid-connect/token")
+    route.mock(
+        return_value=httpx.Response(
+            500,
+            json={"error": "some_error", "error_description": "Error worth retrying"},
+        )
+    )
+
+    with patch("time.sleep"), pytest.raises(AuthorizationError):
+        trigger.next_batch()
+
+    assert route.call_count == 5
+
+
+@pytest.mark.respx(base_url="https://login.ubika.io")
+def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
+    route = respx_mock.post("/auth/realms/main/protocol/openid-connect/token")
+    route.side_effect = httpx.TimeoutException("Timeout")
+
+    with patch("time.sleep"), pytest.raises(AuthorizationError):
+        trigger.next_batch()
+
+    assert route.call_count == 5

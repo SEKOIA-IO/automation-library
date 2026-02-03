@@ -46,7 +46,8 @@ class NRQLQueryAction(Action):
         with file_path.open("wb") as f:
             f.write(orjson.dumps(results))
 
-        return str(file_path)
+        result_path = file_path.relative_to(self.data_path)
+        return str(result_path)
 
     def run(self, arguments: NRQLQueryActionArguments) -> Any:
         url = urljoin(self.module.configuration.base_url, "graphql")

@@ -1,5 +1,5 @@
 {
-  "name": "Fetch device assets from SentinelOne",
+  "name": "SentinelOne Devices",
   "description": "Collect device/agent inventory from SentinelOne and send to Sekoia.io Asset Management",
   "uuid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "slug": "sentinelone_device_assets_connector",
