@@ -2,10 +2,13 @@ from datetime import datetime, timedelta
 
 import httpx
 from httpx import Auth, Request, Response
-from httpx_ratelimiter import LimiterTransport
 
 
 class AuthorizationError(Exception):
+    pass
+
+
+class AuthorizationTimeoutError(Exception):
     pass
 
 
@@ -61,7 +64,7 @@ class UbikaCloudProtectorNextGenAuthentication(Auth):
                 response.raise_for_status()
 
             except httpx.TimeoutException as timeout_exc:
-                raise AuthorizationError(
+                raise AuthorizationTimeoutError(
                     "timeout_error", "The request to obtain a new access token timed out."
                 ) from timeout_exc
 
