@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 
 import httpx
 from httpx import Auth, Request, Response
-from httpx_ratelimiter import LimiterTransport
 
 
 class AuthorizationError(Exception):
