@@ -5,7 +5,7 @@ import pytest
 from respx import MockRouter
 
 from ubika_modules import UbikaModule
-from ubika_modules.client.auth import AuthorizationError
+from ubika_modules.client.auth import AuthorizationError, AuthorizationTimeoutError
 from ubika_modules.connector_ubika_cloud_protector_next_gen import UbikaCloudProtectorNextGenConnector
 
 
@@ -246,7 +246,7 @@ def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
     route = respx_mock.post("/auth/realms/main/protocol/openid-connect/token")
     route.side_effect = httpx.TimeoutException("Timeout")
 
-    with patch("time.sleep"), pytest.raises(AuthorizationError):
+    with patch("time.sleep"), pytest.raises(AuthorizationTimeoutError):
         trigger.next_batch()
 
     assert route.call_count == 5
