@@ -8,6 +8,10 @@ class AuthorizationError(Exception):
     pass
 
 
+class AuthorizationTimeoutError(Exception):
+    pass
+
+
 class ApiKeyAuthentication(Auth):
     def __init__(self, token: str):
         self.__token = token
@@ -60,7 +64,7 @@ class UbikaCloudProtectorNextGenAuthentication(Auth):
                 response.raise_for_status()
 
             except httpx.TimeoutException as timeout_exc:
-                raise AuthorizationError(
+                raise AuthorizationTimeoutError(
                     "timeout_error", "The request to obtain a new access token timed out."
                 ) from timeout_exc
 
