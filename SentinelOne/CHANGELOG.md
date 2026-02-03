@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-21 - 1.21.5
+
+### Fixed
+
+- Allow nullable values in proxyStates and containerizedWorkloadCounts fields in the SentinelOne data model to prevent validation errors
+## 2026-01-29 - 1.21.4
+
+### Changed
+
+- Update asset connector name
+## 2026-01-23 - 1.21.3
+
+### Changed
+
+- Update internals field inside arguments of SentinelOne asset connectors
+
+## 2026-01-22 - 1.21.2
+
+### Changed
+
+- Added internals field to SentinelOne asset connectors
+
+
 ## 2024-12-22 - 1.21.1
 
 ### Fixed
