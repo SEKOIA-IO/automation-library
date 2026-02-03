@@ -38,6 +38,7 @@ def connector():
     c.log_exception = Mock()
     return c
 
+
 @pytest.fixture
 def client():
     return CrowdstrikeFalconClient(
@@ -45,6 +46,7 @@ def client():
         client_id="fake_client_id",
         client_secret="fake_client_secret",
     )
+
 
 class TestMapRiskLevel:
     def test_map_risk_level_critical(self, connector):
