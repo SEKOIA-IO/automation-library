@@ -216,13 +216,13 @@ class TestCheckpoint:
     def test_update_checkpoint_saves_latest_time(self, connector):
         connector._latest_time = "2025-06-01T12:00:00Z"
         connector.update_checkpoint()
-        assert connector.context["most_recent_date_seen"] == "2025-06-01T12:00:00Z"
+        assert connector.context["user_assets_last_seen_timestamp"] == "2025-06-01T12:00:00Z"
 
     def test_update_checkpoint_does_nothing_when_latest_time_is_none(self, connector):
-        connector.context["most_recent_date_seen"] = "2025-01-01T00:00:00Z"
+        connector.context["user_assets_last_seen_timestamp"] = "2025-01-01T00:00:00Z"
         connector._latest_time = None
         connector.update_checkpoint()
-        assert connector.context["most_recent_date_seen"] == "2025-01-01T00:00:00Z"
+        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-01T00:00:00Z"
         connector.log.assert_called_with(
             "Warning: new_most_recent_date is None, skipping checkpoint update", level="warning"
         )
@@ -248,7 +248,7 @@ class TestCheckpoint:
         list(connector._fetch_identity_entities())
         connector.update_checkpoint()
 
-        assert connector.context["most_recent_date_seen"] == "2025-01-03T10:00:00Z"
+        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-03T10:00:00Z"
 
 
 class TestFetchIdentityEntities:
@@ -290,7 +290,7 @@ class TestFetchIdentityEntities:
 
         list(connector._fetch_identity_entities())
 
-        assert connector.context["most_recent_date_seen"] == "2025-01-03T10:00:00Z"
+        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-03T10:00:00Z"
 
     def test_fetch_identity_entities_no_checkpoint_update_when_no_new_data(self, connector):
         connector.context["user_assets_last_seen_timestamp"] = "2025-01-05T00:00:00Z"
@@ -303,7 +303,7 @@ class TestFetchIdentityEntities:
         result = list(connector._fetch_identity_entities())
 
         assert result == []
-        assert "most_recent_date_seen" not in connector.context
+        assert connector.context["user_assets_last_seen_timestamp"] == "2025-01-05T00:00:00Z"
 
 
 class TestGetAssets:
