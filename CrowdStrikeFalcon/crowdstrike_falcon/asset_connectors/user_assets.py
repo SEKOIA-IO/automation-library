@@ -68,6 +68,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
     PRODUCT_NAME: str = "Crowdstrike Falcon"
     PRODUCT_VERSION = "N/A"
     LIMIT: int = 100
+    CHECKPOINT_KEY = "user_assets_last_seen_timestamp"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,7 +78,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
     @property
     def most_recent_user_date(self) -> str | None:
         with self.context as cache:
-            return cache.get("user_assets_last_seen_timestamp", None)
+            return cache.get(self.CHECKPOINT_KEY, None)
 
     def update_checkpoint(self) -> None:
         """
@@ -92,7 +93,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
 
         try:
             with self.context as cache:
-                cache["most_recent_date_seen"] = self._latest_time
+                cache[self.CHECKPOINT_KEY] = self._latest_time
                 self.log(f"Checkpoint updated with date: {self._latest_time}", level="info")
         except Exception as e:
             self.log(f"Failed to update checkpoint: {str(e)}", level="error")

@@ -140,11 +140,11 @@ class ApiClient(requests.Session):
             data = content.get("data", {})
 
             # Extract nodes using data_path
-            nodes = data
+            extracted_data = data
             for key in data_path:
-                nodes = nodes.get(key, {}) if isinstance(nodes, dict) else {}
+                extracted_data = extracted_data.get(key, {}) if isinstance(extracted_data, dict) else {}
 
-            yield from nodes if isinstance(nodes, list) else []
+            yield from extracted_data if isinstance(extracted_data, list) else []
 
             # Extract pageInfo using page_info_path
             page_info = data
