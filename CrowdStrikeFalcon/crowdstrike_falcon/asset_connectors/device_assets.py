@@ -90,7 +90,6 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         """
         platform_name = device.get("platform_name")
         os_version = device.get("os_version")
-        kernel_version = device.get("kernel_version")
 
         if not platform_name:
             return OperatingSystem(
@@ -196,13 +195,26 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
     def get_groups(self, device: dict[str, Any]) -> list[Group] | None:
         """
-        Extract groups from device data.
+        Extract groups from device data and fetch details from API.
         """
         raw_groups = device.get("groups", [])
         if not raw_groups:
             return None
 
-        groups = [Group(uid=g) for g in raw_groups if g]
+        groups: list[Group] = []
+        try:
+            for group_info in self.client.get_host_groups(raw_groups):
+                groups.append(
+                    Group(
+                        uid=group_info.get("id"),
+                        name=group_info.get("name", "Unknown"),
+                        desc=group_info.get("description") or None,
+                    )
+                )
+        except Exception as e:
+            self.log(f"Failed to fetch group details: {e}", level="warning")
+            groups = [Group(uid=g, name=g) for g in raw_groups if g]
+
         return groups if groups else None
 
     def get_location(self, device: dict[str, Any]) -> GeoLocation | None:
@@ -221,9 +233,8 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         Uses CID and service provider account info.
         """
         cid = device.get("cid")
-        account_id = device.get("service_provider_account_id")
 
-        if cid or account_id:
+        if cid:
             return Organization(
                 uid=cid,
                 name=device.get("service_provider"),
@@ -263,11 +274,22 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
 
         return enrichments
 
-    def map_device_fields(self, device: dict[str, Any]) -> DeviceOCSFModel:
+    def map_device_fields(self, device: dict[str, Any]) -> DeviceOCSFModel | None:
         """
         Map Crowdstrike device fields to OCSF device model.
         Extracts maximum fields from CrowdStrike API response.
         """
+        device_id = device.get("device_id")
+        hostname = device.get("hostname")
+
+        if not device_id:
+            self.log(f"Skipping device: missing device_id. Data: {device}", level="warning")
+            return None
+
+        if not hostname:
+            self.log(f"Skipping device {device_id}: missing hostname", level="warning")
+            return None
+
         # Metadata
         product = Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION)
         metadata = Metadata(product=product, version=self.OCSF_VERSION)
@@ -285,8 +307,8 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         # Create Device object with all available fields
         crowdstrike_device = Device(
             # Required fields
-            uid=device.get("device_id", ""),
-            hostname=device.get("hostname", ""),
+            uid=device_id,
+            hostname=hostname,
             type_id=type_id,
             type=type_str,
             # Operating System
@@ -298,7 +320,7 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
             # Identity
             uid_alt=device.get("serial_number"),
             domain=device.get("machine_domain") or None,
-            name=device.get("hostname"),
+            name=hostname,
             # Timestamps
             first_seen_time=self.parse_timestamp(first_seen),
             last_seen_time=self.parse_timestamp(last_seen),
@@ -397,4 +419,6 @@ class CrowdstrikeDeviceAssetConnector(AssetConnector):
         """
         self.log("Start the getting assets generator !!", level="info")
         for device in self.next_devices():
-            yield self.map_device_fields(device)
+            mapped = self.map_device_fields(device)
+            if mapped is not None:
+                yield mapped

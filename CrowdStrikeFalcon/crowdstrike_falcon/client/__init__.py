@@ -278,6 +278,15 @@ class CrowdstrikeFalconClient(ApiClient):
             **kwargs,
         )
 
+    def get_host_groups(self, ids: list[str], **kwargs) -> Generator[dict[str, Any], None, None]:
+        """Fetch host group details by IDs."""
+        yield from self.request_endpoint(
+            "GET",
+            "/devices/entities/host-groups/v1",
+            params={"ids": ids},
+            **kwargs,
+        )
+
     def list_identity_entities(self, query: str, **kwargs) -> Generator[dict[str, Any], None, None]:
         """Fetch identity entities from GraphQL endpoint with pagination."""
         yield from self.request_graphql_endpoint(

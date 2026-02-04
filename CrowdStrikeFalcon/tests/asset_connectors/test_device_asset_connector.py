@@ -227,3 +227,102 @@ def test_get_assets_yields_mapped_models(monkeypatch, connector):
     assert results[1].device.uid == "d2"
     assert results[0].enrichments[0].data.Firewall_status == "Enabled"
     assert results[1].enrichments[0].data.Firewall_status == "Disabled"
+
+
+@pytest.mark.parametrize(
+    "ts,expected",
+    [
+        ("2024-01-15T10:30:00Z", 1705314600.0),
+        ("", None),
+        (None, None),
+        ("invalid-date", None),
+    ],
+)
+def test_parse_timestamp(ts, expected, connector):
+    result = connector.parse_timestamp(ts)
+    if expected is None:
+        assert result is None
+    else:
+        assert abs(result - expected) < 1
+
+
+@pytest.mark.parametrize(
+    "mac,expected",
+    [
+        ("00-1a-2b-3c-4d-5e", "00:1A:2B:3C:4D:5E"),
+        ("00:1a:2b:3c:4d:5e", "00:1A:2B:3C:4D:5E"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_normalize_mac_address(mac, expected, connector):
+    assert connector.normalize_mac_address(mac) == expected
+
+
+def test_get_network_interfaces(connector):
+    device = {
+        "local_ip": "192.168.1.10",
+        "mac_address": "00-1a-2b-3c-4d-5e",
+        "hostname": "host1",
+        "connection_ip": "10.0.0.1",
+    }
+    interfaces = connector.get_network_interfaces(device)
+    assert len(interfaces) == 2
+    assert interfaces[0].ip == "192.168.1.10"
+    assert interfaces[0].mac == "00:1A:2B:3C:4D:5E"
+
+
+def test_get_organization(connector):
+    device = {"cid": "org-123", "service_provider": "Acme Corp"}
+    org = connector.get_organization(device)
+    assert org.uid == "org-123"
+    assert org.name == "Acme Corp"
+
+
+def test_get_organization_missing_cid(connector):
+    device = {"service_provider": "Acme Corp"}
+    assert connector.get_organization(device) is None
+
+
+def test_get_groups(connector):
+    device = {"groups": ["group1", "group2"]}
+
+    mock_client = Mock()
+    mock_client.get_host_groups.return_value = [
+        {"id": "group1", "name": "Group One", "description": "First group", "group_type": "static"},
+        {"id": "group2", "name": "Group Two", "description": "", "group_type": "dynamic"},
+    ]
+    connector.client = mock_client
+
+    groups = connector.get_groups(device)
+
+    assert len(groups) == 2
+    assert groups[0].uid == "group1"
+    assert groups[0].name == "Group One"
+    assert groups[0].desc == "First group"
+    assert groups[1].name == "Group Two"
+    assert groups[1].desc is None
+
+
+def test_get_groups_api_failure_fallback(connector):
+    device = {"groups": ["group1"]}
+
+    mock_client = Mock()
+    mock_client.get_host_groups.side_effect = Exception("API error")
+    connector.client = mock_client
+
+    groups = connector.get_groups(device)
+
+    assert len(groups) == 1
+    assert groups[0].uid == "group1"
+    assert groups[0].name == "group1"  # Fallback
+
+
+def test_is_device_compliant(connector):
+    compliant = {"status": "normal", "reduced_functionality_mode": "no", "filesystem_containment_status": "normal"}
+    non_compliant = {"status": "contained", "reduced_functionality_mode": "yes",
+                     "filesystem_containment_status": "contained"}
+
+    assert connector.is_device_compliant(compliant) is True
+    assert connector.is_device_compliant(non_compliant) is False
+    assert connector.is_device_compliant({}) is None
