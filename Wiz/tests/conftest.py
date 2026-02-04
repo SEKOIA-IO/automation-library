@@ -302,6 +302,46 @@ def vulnerability_findings_response_with_next_page(session_faker: Faker) -> dict
     }
 
 
+@pytest.fixture
+def threat_detections_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "detections": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "createdAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": False,
+            },
+        }
+    }
+
+
+@pytest.fixture
+def threat_detections_response_with_next_page(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+    return {
+        "detections": {
+            "nodes": [
+                {
+                    **session_faker.pydict(allowed_types=[str, int, float, bool]),
+                    "createdAt": session_faker.date_time().isoformat(),
+                    "id": session_faker.uuid4(),
+                }
+                for _ in range(10)
+            ],
+            "pageInfo": {
+                "endCursor": session_faker.word(),
+                "hasNextPage": True,
+            },
+        }
+    }
+
+
 @pytest.fixture(scope="session")
 def mock_push_data_to_intakes() -> AsyncMock:
     """
