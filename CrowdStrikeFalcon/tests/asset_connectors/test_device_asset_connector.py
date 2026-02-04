@@ -320,8 +320,11 @@ def test_get_groups_api_failure_fallback(connector):
 
 def test_is_device_compliant(connector):
     compliant = {"status": "normal", "reduced_functionality_mode": "no", "filesystem_containment_status": "normal"}
-    non_compliant = {"status": "contained", "reduced_functionality_mode": "yes",
-                     "filesystem_containment_status": "contained"}
+    non_compliant = {
+        "status": "contained",
+        "reduced_functionality_mode": "yes",
+        "filesystem_containment_status": "contained",
+    }
 
     assert connector.is_device_compliant(compliant) is True
     assert connector.is_device_compliant(non_compliant) is False
