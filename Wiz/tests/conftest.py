@@ -303,7 +303,7 @@ def vulnerability_findings_response_with_next_page(session_faker: Faker) -> dict
 
 
 @pytest.fixture
-def threat_detections_response(session_faker: Faker) -> dict[str, dict[str, list[Any]]]:
+def threat_detections_response(session_faker: Faker) -> dict[str, dict[str, Any]]:
     return {
         "detections": {
             "nodes": [
