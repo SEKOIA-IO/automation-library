@@ -109,8 +109,8 @@ class EventCollector(Thread):
             difference = self.end_date - now
             difference_seconds = int(difference.total_seconds())
             logger.info(
-                "Timerange in the future. Waiting {difference_seconds} seconds for next batch.",
-                difference_seconds=difference_seconds,
+                "Timerange in the future. Waiting for next batch.",
+                wait_time=difference_seconds,
             )
             sleep(difference_seconds)
 
@@ -120,7 +120,7 @@ class EventCollector(Thread):
         :return: The response
         """
         logger.info(
-            "Querying SkyhighSWG API for events from {start_date} to {end_date}",
+            "Querying SkyhighSWG API for events",
             start_date=self.start_date.isoformat(),
             end_date=self.end_date.isoformat(),
         )
@@ -137,7 +137,7 @@ class EventCollector(Thread):
 
         time_elapsed = datetime.now(timezone.utc) - request_start_time
         logger.info(
-            "Skyhigh API response received in {time_elapsed_seconds} seconds.",
+            "Skyhigh API response received",
             time_elapsed_seconds=int(time_elapsed.total_seconds()),
         )
         COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
@@ -243,7 +243,7 @@ class Transformer(Worker):
                         if len(messages) > 0:
                             nb_events = len(messages)
                             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(nb_events)
-                            logger.info("Transformed {nb_events} events.", nb_events=nb_events)
+                            logger.info("Transformed events", nb_events=nb_events)
                             self.output_queue.put(list(messages))
 
                 except queue.Empty:
