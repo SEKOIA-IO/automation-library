@@ -1,8 +1,10 @@
 import csv
 import os
 import queue
+from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from itertools import batched
 from threading import Lock, Thread
 from time import sleep
 
@@ -205,25 +207,28 @@ class EventCollector(Thread):
 class Transformer(Worker):
     KIND = "transformer"
 
-    def __init__(self, connector: "SkyhighSecuritySWGTrigger", queue: queue.Queue, output_queue: queue.Queue):
+    def __init__(
+        self,
+        connector: "SkyhighSecuritySWGTrigger",
+        queue: queue.Queue,
+        output_queue: queue.Queue,
+        max_batch_size: int = 20000,
+    ):
         super().__init__()
         self.connector = connector
         self.configuration = connector.configuration
         self.queue = queue
         self.output_queue = output_queue
+        self.max_batch_size = max_batch_size
 
-    def _transform(self, response: str) -> list[str]:
+    def _transform(self, response: str) -> Generator[str, None, None]:
         """
         :param api_response:  events formatted as CSV
-        :return: events formatted as KV
+        :yield: events formatted as KV
         """
         reader = csv.DictReader(response.splitlines())
-        event_list: list[str] = []
         for event in reader:
-            event_kv = " ".join([f"{k}={v}" for k, v in event.items()])
-            event_list.append(event_kv)
-
-        return event_list
+            yield " ".join([f"{k}={v}" for k, v in event.items()])
 
     def run(self):
         logger.info("Starting Transformer worker thread.")
@@ -232,13 +237,15 @@ class Transformer(Worker):
             while self.is_running or self.queue.qsize() > 0:
                 try:
                     response = self.queue.get(block=True, timeout=0.5)
-                    messages = self._transform(response)
 
-                    if len(messages) > 0:
-                        INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
-                        self.output_queue.put(messages)
-                    else:
-                        logger.info("No messages to transform.")
+                    # The transformation is done in batches to avoid filling the memory if we have a lot of events
+                    for messages in batched(self._transform(response), self.max_batch_size):
+                        if len(messages) > 0:
+                            nb_events = len(messages)
+                            INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(nb_events)
+                            logger.info("Transformed {nb_events} events.", nb_events=nb_events)
+                            self.output_queue.put(list(messages))
+
                 except queue.Empty:
                     pass
         except Exception as ex:
@@ -321,7 +328,7 @@ class SkyhighSecuritySWGTrigger(Connector):
 
         # start the transformers
         transformers = Workers.create(
-            int(os.environ.get("NB_TRANSFORMERS", 1)), Transformer, self, collect_queue, forwarding_queue
+            int(os.environ.get("NB_TRANSFORMERS", 1)), Transformer, self, collect_queue, forwarding_queue, batch_size
         )
         transformers.start()
 
