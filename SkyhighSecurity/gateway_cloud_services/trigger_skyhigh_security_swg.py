@@ -3,7 +3,7 @@ import os
 import queue
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
-from threading import Thread, Lock
+from threading import Lock, Thread
 from time import sleep
 
 from dateutil.parser import isoparse
@@ -12,8 +12,8 @@ from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.connector.workers import Worker, Workers
 from sekoia_automation.storage import PersistentJSON
 
-from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 from gateway_cloud_services.client import ApiClient
+from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
 
 
 class SkyhighSWGConfig(DefaultConnectorConfiguration):
