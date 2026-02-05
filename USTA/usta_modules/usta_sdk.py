@@ -217,3 +217,22 @@ class UstaClient:
                 yield from results
 
             next_url = data.get("next")
+
+
+# ────────────────────────────────────────────────────────────────────
+# Example Usage
+# ────────────────────────────────────────────────────────────────────
+# if __name__ == "__main__":
+#     client = UstaClient(token="...")
+#     try:
+#         # Fetch a single page
+#         page1 = client.get_compromised_credentials(size=10, ordering=["-created"])
+#         print("Count:", page1["count"])
+#         print("First item:", page1["results"][0] if page1["results"] else "No results")
+#         # Iterate through all pages
+#         for item in client.iter_compromised_credentials(
+#             password_complexity_score=["very_weak", "weak"]
+#         ):
+#             print("User:", item["content"]["username"])
+#     except UstaAPIError as e:
+#         print("Error:", e)

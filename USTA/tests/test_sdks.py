@@ -47,7 +47,7 @@ def test_iter_compromised_credentials_pagination(usta_client: UstaClient) -> Non
 
 
 def test_request_errors(usta_client: UstaClient) -> None:
-    """Tests handling of standard HTTP error codes (401, 500) and malformed responses.
+    """Tests handling of standard HTTP error codes (401, 403, 500) and malformed responses.
 
     Args:
         usta_client (UstaClient): The SDK client fixture.
@@ -55,6 +55,11 @@ def test_request_errors(usta_client: UstaClient) -> None:
     with requests_mock.Mocker() as m:
         # Test 401 Authentication Error
         m.get(UstaClient.BASE_URL + "/test", status_code=401, json={"error": "unauthorized"})
+        with pytest.raises(UstaAuthenticationError):
+            usta_client._request("GET", "test")
+
+        # Test 403 Authentication Error
+        m.get(UstaClient.BASE_URL + "/test", status_code=403, json={"error": "unauthorized"})
         with pytest.raises(UstaAuthenticationError):
             usta_client._request("GET", "test")
 
