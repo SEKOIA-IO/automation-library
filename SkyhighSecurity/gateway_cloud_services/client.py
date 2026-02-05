@@ -1,7 +1,7 @@
 import requests
+from requests.auth import HTTPBasicAuth
 from requests_ratelimiter import LimiterAdapter
 from urllib3.util import Retry
-from requests.auth import HTTPBasicAuth
 
 
 class ApiClient(requests.Session):
