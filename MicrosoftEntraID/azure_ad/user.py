@@ -1,5 +1,3 @@
-import secrets
-import string
 from functools import cached_property
 
 from azure.identity import UsernamePasswordCredential
@@ -22,6 +20,7 @@ from .base import (
     RequiredTwoUserArguments,
     RequiredTwoUserArgumentsV2,
 )
+from .utils import generate_password
 
 
 class GetUserResults(BaseModel):
@@ -167,14 +166,6 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
         response.raise_for_status()
 
 
-PASSWORD_DEFAULT_LENGTH: int = 10  # Min length based on docs is 8
-PASSWORD_MIN_LOWER: int = 1
-PASSWORD_MIN_UPPER: int = 1
-PASSWORD_MIN_DIGITS: int = 1
-PASSWORD_MIN_SPECIALS: int = 1
-PASSWORD_SPECIALS: str = "!@#$%^&*()-_=+[]{}:,.?"
-
-
 class ResetUserPasswordActionV2(MicrosoftGraphAction):
     name = "Reset User Password Through Patching Password Profile"
     description = (
@@ -208,18 +199,14 @@ class ResetUserPasswordActionV2(MicrosoftGraphAction):
         force_change_password_next_sign_in: bool,
         force_change_password_next_sign_in_with_mfa: bool | None = None,
     ):
+        # https://learn.microsoft.com/en-us/graph/api/resources/passwordprofile?view=graph-rest-1.0
+        # Looks like `force_change_password_next_sign_in_with_mfa`
+        # works only if `force_change_password_next_sign_in` is true
         password_profile = PasswordProfile(
             password=new_password,
             force_change_password_next_sign_in=force_change_password_next_sign_in,
+            force_change_password_next_sign_in_with_mfa=force_change_password_next_sign_in_with_mfa,
         )
-
-        if force_change_password_next_sign_in and force_change_password_next_sign_in_with_mfa:
-            # https://learn.microsoft.com/en-us/graph/api/resources/passwordprofile?view=graph-rest-1.0
-            password_profile = PasswordProfile(
-                password=new_password,
-                force_change_password_next_sign_in=force_change_password_next_sign_in,
-                force_change_password_next_sign_in_with_mfa=True,
-            )
 
         body = User(password_profile=password_profile)
 
@@ -241,7 +228,7 @@ class ResetUserPasswordActionV2(MicrosoftGraphAction):
     async def run(self, arguments: RequiredTwoUserArgumentsV2) -> dict[str, str]:
         new_password = (arguments.userNewPassword or "").strip()
         if not new_password:
-            new_password = self.generate_password()
+            new_password = generate_password()
 
         user_id_or_upn = (arguments.id or arguments.userPrincipalName or "").strip()
         if not user_id_or_upn:
@@ -258,29 +245,3 @@ class ResetUserPasswordActionV2(MicrosoftGraphAction):
             "newPassword": new_password,
         }
 
-    @staticmethod
-    def generate_password() -> str:
-        """
-        Generates a password that satisfies common Entra password policies:
-        - at least one lower, upper, digit, special
-        - reasonable default length (20)
-
-        https://learn.microsoft.com/en-us/entra/identity/authentication/concept-password-ban-bad-combined-policy
-        """
-        rng = secrets.SystemRandom()
-
-        lower = [rng.choice(string.ascii_lowercase) for _ in range(PASSWORD_MIN_LOWER)]
-        upper = [rng.choice(string.ascii_uppercase) for _ in range(PASSWORD_MIN_UPPER)]
-        digits = [rng.choice(string.digits) for _ in range(PASSWORD_MIN_DIGITS)]
-        special = [rng.choice(PASSWORD_SPECIALS) for _ in range(PASSWORD_MIN_SPECIALS)]
-
-        remaining_len = PASSWORD_DEFAULT_LENGTH - (
-            PASSWORD_MIN_LOWER + PASSWORD_MIN_UPPER + PASSWORD_MIN_DIGITS + PASSWORD_MIN_SPECIALS
-        )
-        alphabet = string.ascii_letters + string.digits + PASSWORD_SPECIALS
-        remaining = [rng.choice(alphabet) for _ in range(remaining_len)]
-
-        password_chars = lower + upper + digits + special + remaining
-        rng.shuffle(password_chars)
-
-        return "".join(password_chars)
