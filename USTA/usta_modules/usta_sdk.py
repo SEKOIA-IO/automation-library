@@ -1,17 +1,23 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-import requests
-from requests.api import head
+from requests import RequestException
+from requests.adapters import HTTPAdapter
+from requests_ratelimiter import LimiterSession
+from urllib3.util.retry import Retry
 
 
 class UstaAPIError(Exception):
     """Raised when the USTA API returns an error."""
 
 
+class UstaAuthenticationError(UstaAPIError):
+    """Raised when the USTA API returns an authentication error."""
+
+
 class UstaClient:
     BASE_URL = "https://usta.prodaft.com/api/threat-stream/v4"
 
-    def __init__(self, token: str, timeout: int = 15):
+    def __init__(self, token: str, timeout: int = 15, per_second: int = 3):
         """
         Create a client instance.
 
@@ -24,7 +30,17 @@ class UstaClient:
 
         self.token = token
         self.timeout = timeout
-        self.session = requests.Session()
+        self.session = LimiterSession(per_second=per_second)
+
+        retry_strategy = Retry(
+            total=5,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+
         self.session.headers.update(
             {
                 "Authorization": f"Bearer {token}",
@@ -60,6 +76,10 @@ class UstaClient:
                 detail = response.json()
             except ValueError:
                 detail = response.text
+
+            if response in {401, 403}:
+                raise UstaAuthenticationError(f"Authentication failed ({response.status_code}): {detail}")
+
             raise UstaAPIError(f"Client error {response.status_code}: {detail}")
 
         # Ensure valid JSON response

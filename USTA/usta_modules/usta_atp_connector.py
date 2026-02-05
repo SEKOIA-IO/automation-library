@@ -3,10 +3,9 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from sekoia_automation.connector import Connector
-from sekoia_automation.storage import PersistentJSON
 
-from usta_modules.models import UstaATPModuleConfiguration, UstaModule
-from usta_modules.usta_sdk import UstaAPIError, UstaClient
+from .models import UstaATPConnectorConfiguration, UstaModule
+from .usta_sdk import UstaAPIError, UstaAuthenticationError, UstaClient
 
 
 class UstaAtpConnector(Connector):
@@ -19,29 +18,15 @@ class UstaAtpConnector(Connector):
     """
 
     module = UstaModule
-    configuration: UstaATPModuleConfiguration
+    configuration: UstaATPConnectorConfiguration
 
     # The run method is called by Sekoia when launching the connector
     def run(self) -> None:
         # The log method is used to trace logs in the Connector logs of the Sekoia interface
-        self.log(
-            message=f"Start fetching events - running={self.running}", level="info"
-        )
-
-        if (
-            self.module.configuration.api_key is None
-            or self.module.configuration.api_key == ""
-        ):
-            self.log(message="API key not initialized!", level="critical")
-            return
-        if self.configuration.polling_interval is None:
-            self.log(message="Polling interval not initialized!", level="critical")
-            return
+        self.log(message=f"Start fetching events - running={self.running}", level="info")
 
         usta_cli = UstaClient(token=self.module.configuration.api_key)
-        date_cursor = datetime.now(timezone.utc) - timedelta(
-            days=self.configuration.max_historical_days
-        )
+        date_cursor = datetime.now(timezone.utc) - timedelta(days=self.configuration.max_historical_days)
         # Iterate until the Connector is shut down by Sekoia
         while self.running:
             self.log(message="Polling USTA security intelligence API...", level="info")
@@ -49,10 +34,11 @@ class UstaAtpConnector(Connector):
             self.log(message=f"Polling events since: {date_cursor}", level="info")
 
             try:
-                for event in usta_cli.iter_compromised_credentials(
-                    start=date_cursor.isoformat()
-                ):
+                for event in usta_cli.iter_compromised_credentials(start=date_cursor.isoformat()):
                     collected_events.append(json.dumps(event))
+            except UstaAuthenticationError as e:
+                self.log(message=f"USTA Authentication Error: {str(e)}", level="critical")
+                raise e
             except UstaAPIError as e:
                 self.log(message=f"USTA-SDK Error: {e}", level="error")
 
@@ -68,4 +54,4 @@ class UstaAtpConnector(Connector):
             if len(collected_events) > 0:
                 self.push_events_to_intakes(events=collected_events)
                 self.log(message="Events pushed to intakes!", level="info")
-            time.sleep(self.configuration.polling_interval)
+            time.sleep(self.configuration.frequency)

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, PropertyMock
 import pytest
 from sekoia_automation.storage import PersistentJSON
 
-from usta_modules.models import UstaATPModuleConfiguration, UstaModule, UstaModuleConfig
+from usta_modules.models import UstaATPConnectorConfiguration, UstaModule, UstaModuleConfig
 from usta_modules.usta_atp_connector import UstaAtpConnector
 
 
@@ -17,8 +17,8 @@ def atp_connector(symphony_storage):
     connector = UstaAtpConnector()
     connector.module = UstaModule()
     connector.module.configuration = UstaModuleConfig(api_key="test_api_key")
-    connector.configuration = UstaATPModuleConfiguration(
-        intake_key="intake_key", polling_interval=60, max_historical_days=1
+    connector.configuration = UstaATPConnectorConfiguration(
+        intake_key="intake_key", frequency=60, max_historical_days=1
     )
     connector.log = MagicMock()
     connector.push_events_to_intakes = MagicMock()
