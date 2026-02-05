@@ -12,7 +12,7 @@ class AwsS3LogsConfiguration(AwsS3QueuedConfiguration):
 
     ignore_comments: bool = False
     skip_first: int = 0
-    separator: str
+    separator: str = "\n"
 
 
 class AwsS3LogsTrigger(AbstractAwsS3QueuedConnector):
