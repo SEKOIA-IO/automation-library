@@ -1,8 +1,9 @@
 import json
+import pytest
 from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
 
-from usta_modules.models import UstaATPModuleConfiguration, UstaModuleConfig
+from usta_modules.models import UstaATPConnectorConfiguration, UstaModuleConfig
 from usta_modules.usta_atp_connector import UstaAPIError, UstaAtpConnector
 
 
@@ -62,12 +63,8 @@ def test_happy_path(atp_connector: UstaAtpConnector):
         patch("time.sleep", side_effect=StopTest),
     ):
         mock_instance = mock_usta_client.return_value
-        mock_instance.iter_compromised_credentials.return_value = (
-            compromised_credentials_events
-        )
-        atp_connector.push_events_to_intakes(
-            events=[json.dumps(event) for event in compromised_credentials_events]
-        )
+        mock_instance.iter_compromised_credentials.return_value = compromised_credentials_events
+        atp_connector.push_events_to_intakes(events=[json.dumps(event) for event in compromised_credentials_events])
 
         # When
         try:
@@ -105,24 +102,9 @@ def test_missing_api_key(atp_connector: UstaAtpConnector):
     atp_connector.module.configuration.api_key = ""
 
     # When
-    atp_connector.run()
+    with pytest.raises(ValueError) as excinfo:
+        atp_connector.run()
 
     # Then
+    assert "Authorization token must be provided." in str(excinfo.value)
     atp_connector.push_events_to_intakes.assert_not_called()
-    atp_connector.log.assert_called_with(
-        message="API key not initialized!", level="critical"
-    )
-
-
-def test_missing_polling_interval(atp_connector: UstaAtpConnector):
-    # Given
-    atp_connector.configuration.polling_interval = None
-
-    # When
-    atp_connector.run()
-
-    # Then
-    atp_connector.push_events_to_intakes.assert_not_called()
-    atp_connector.log.assert_any_call(
-        message="Polling interval not initialized!", level="critical"
-    )

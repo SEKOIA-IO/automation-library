@@ -4,7 +4,7 @@
   "uuid": "122f2747-b303-531a-84b8-a2a5d9502c36",
   "docker_parameters": "UstaAtpConnector",
   "arguments": {
-    "title": "UstaATPModuleConfiguration",
+    "title": "UstaATPConnectorConfiguration",
     "type": "object",
     "properties": {
       "intake_server": {
@@ -15,8 +15,8 @@
         "title": "Intake Key",
         "type": "string"
       },
-      "polling_interval": {
-        "title": "Polling Frequency",
+      "frequency": {
+        "title": "Frequency",
         "default": 60,
         "type": "integer"
       },
@@ -26,6 +26,9 @@
         "type": "integer"
       }
     },
-    "required": ["intake_key"]
+    "required": [
+      "intake_key",
+      "frequency"
+    ]
   }
 }

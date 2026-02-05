@@ -6,7 +6,8 @@
     "properties": {
       "api_key": {
         "title": "Api Key",
-        "type": "string"
+        "type": "string",
+        "pattern": "^\\S+$"
       }
     },
     "required": [

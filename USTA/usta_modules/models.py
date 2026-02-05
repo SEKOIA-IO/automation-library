@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic.v1 import BaseModel
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.module import Module
@@ -16,9 +15,9 @@ class UstaModule(Module):
     configuration: UstaModuleConfig
 
 
-class UstaATPModuleConfiguration(DefaultConnectorConfiguration):
+class UstaATPConnectorConfiguration(DefaultConnectorConfiguration):
     # Run loop frequency (seconds)
-    polling_interval: Optional[int] = 300
+    frequency: float = 300.0
 
     # Max backfill on first run
     max_historical_days: int = 180
