@@ -16,6 +16,8 @@ pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
 mypy = "^1.19.1"
+types-requests = "^2.32.4.20260107"
+types-urllib3 = "^1.26.25.14"
 
 [build-system]
 requires = ["poetry-core"]
@@ -25,6 +27,18 @@ build-backend = "poetry.core.masonry.api"
 line-length = 119
 target-version = ['py310', 'py311']
 include = '\.pyi?$'
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
 
 [tool.isort]
 profile = "black"

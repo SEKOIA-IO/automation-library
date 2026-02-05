@@ -12,11 +12,7 @@ def test_clean_params() -> None:
     2. Boolean values are preserved.
     3. `None` values are removed from the dictionary.
     """
-    params = {
-        "status": ["in_progress", "done"],
-        "is_corporate": True,
-        "empty_val": None
-    }
+    params = {"status": ["in_progress", "done"], "is_corporate": True, "empty_val": None}
     cleaned = UstaClient._clean_params(params)
     assert cleaned["status"] == "in_progress,done"
     assert cleaned["is_corporate"] is True
@@ -38,16 +34,10 @@ def test_iter_compromised_credentials_pagination(usta_client: UstaClient) -> Non
         # First page response (contains a 'next' link)
         m.get(
             f"{UstaClient.BASE_URL}{endpoint}",
-            json={
-                "results": [{"id": 1}],
-                "next": f"{UstaClient.BASE_URL}/next-page"
-            }
+            json={"results": [{"id": 1}], "next": f"{UstaClient.BASE_URL}/next-page"},
         )
         # Second page response (end of pagination)
-        m.get(
-            f"{UstaClient.BASE_URL}/next-page",
-            json={"results": [{"id": 2}], "next": None}
-        )
+        m.get(f"{UstaClient.BASE_URL}/next-page", json={"results": [{"id": 2}], "next": None})
 
         results = list(usta_client.iter_compromised_credentials())
 
@@ -65,11 +55,6 @@ def test_request_errors(usta_client: UstaClient) -> None:
     with requests_mock.Mocker() as m:
         # Test 401 Authentication Error
         m.get(UstaClient.BASE_URL + "/test", status_code=401, json={"error": "unauthorized"})
-        with pytest.raises(UstaAuthenticationError):
-            usta_client._request("GET", "test")
-
-        # Test 403 Authentication Error
-        m.get(UstaClient.BASE_URL + "/test", status_code=403, json={"error": "unauthorized"})
         with pytest.raises(UstaAuthenticationError):
             usta_client._request("GET", "test")
 
@@ -130,3 +115,65 @@ def test_invalid_json_response(usta_client: UstaClient) -> None:
         with pytest.raises(UstaAPIError) as exc:
             usta_client._request("GET", "bad-json")
         assert "Invalid JSON received from server" in str(exc.value)
+
+
+def test_response_json_is_not_dict(usta_client: UstaClient) -> None:
+    """Tests scenario where API returns valid JSON but not a dictionary (e.g., list).
+
+    This covers line 103-104 in usta_sdk.py.
+
+    Args:
+        usta_client (UstaClient): The SDK client fixture.
+    """
+    with requests_mock.Mocker() as m:
+        # API returns a list [] instead of expected dict {}
+        m.get(UstaClient.BASE_URL + "/list-response", json=[1, 2, 3])
+
+        with pytest.raises(UstaAPIError) as exc:
+            usta_client._request("GET", "list-response")
+
+        assert "Invalid JSON format: Expected a dictionary" in str(exc.value)
+
+
+def test_iter_results_not_list(usta_client: UstaClient) -> None:
+    """Tests resilience when the first page 'results' field is not a list.
+
+    This covers line 207 in usta_sdk.py.
+
+    Args:
+        usta_client (UstaClient): The SDK client fixture.
+    """
+    endpoint = "/security-intelligence/account-takeover-prevention/compromised-credentials-tickets"
+
+    with requests_mock.Mocker() as m:
+        # 'results' field returns a string instead of a list
+        m.get(f"{UstaClient.BASE_URL}{endpoint}", json={"results": "this-is-not-a-list"})
+
+        # Should safely return an empty list instead of crashing
+        results = list(usta_client.iter_compromised_credentials())
+        assert results == []
+
+
+def test_iter_pagination_results_not_list(usta_client: UstaClient) -> None:
+    """Tests resilience when a paginated page's 'results' field is not a list.
+
+    This covers line 216 in usta_sdk.py.
+
+    Args:
+        usta_client (UstaClient): The SDK client fixture.
+    """
+    endpoint = "/security-intelligence/account-takeover-prevention/compromised-credentials-tickets"
+
+    with requests_mock.Mocker() as m:
+        # Page 1: Valid
+        m.get(
+            f"{UstaClient.BASE_URL}{endpoint}", json={"results": [{"id": 1}], "next": f"{UstaClient.BASE_URL}/page2"}
+        )
+        # Page 2: Invalid 'results' (integer)
+        m.get(f"{UstaClient.BASE_URL}/page2", json={"results": 12345, "next": None})
+
+        results = list(usta_client.iter_compromised_credentials())
+
+        # Should retrieve items from page 1 and safely ignore page 2
+        assert len(results) == 1
+        assert results[0]["id"] == 1

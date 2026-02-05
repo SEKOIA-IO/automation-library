@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, List, Dict
 from unittest.mock import patch, PropertyMock
 
 import pytest
@@ -10,10 +10,11 @@ from usta_modules.usta_sdk import UstaAuthenticationError
 
 class StopTest(Exception):
     """Custom exception used to break the infinite run loop during testing."""
+
     pass
 
 
-def test_happy_path(atp_connector: UstaAtpConnector, sample_events: list[dict[str, Any]]) -> None:
+def test_happy_path(atp_connector: UstaAtpConnector, sample_events: List[Dict[str, Any]]) -> None:
     """Tests the end-to-end success scenario.
 
     Verifies that the connector correctly fetches events from the API,
@@ -21,7 +22,7 @@ def test_happy_path(atp_connector: UstaAtpConnector, sample_events: list[dict[st
 
     Args:
         atp_connector (UstaAtpConnector): The connector instance fixture.
-        sample_events (list[dict[str, Any]]): The sample event data fixture.
+        sample_events (List[Dict[str, Any]]): The sample event data fixture.
     """
     expected_events = [json.dumps(event) for event in sample_events]
 
@@ -43,14 +44,8 @@ def test_happy_path(atp_connector: UstaAtpConnector, sample_events: list[dict[st
         )
 
         # Verify logs
-        atp_connector.log.assert_any_call(
-            message=f"{len(sample_events)} events collected",
-            level="info"
-        )
-        atp_connector.log.assert_any_call(
-            message="Events pushed to intakes!",
-            level="info"
-        )
+        atp_connector.log.assert_any_call(message=f"{len(sample_events)} events collected", level="info")
+        atp_connector.log.assert_any_call(message="Events pushed to intakes!", level="info")
 
 
 def test_forward_empty_list_of_events(atp_connector: UstaAtpConnector) -> None:
@@ -107,10 +102,7 @@ def test_connector_polling_logs(atp_connector: UstaAtpConnector) -> None:
         except StopTest:
             pass
 
-        atp_connector.log.assert_any_call(
-            message="Polling USTA security intelligence API...",
-            level="info"
-        )
+        atp_connector.log.assert_any_call(message="Polling USTA security intelligence API...", level="info")
 
 
 def test_connector_api_error_handling(atp_connector: UstaAtpConnector) -> None:
@@ -133,9 +125,7 @@ def test_connector_api_error_handling(atp_connector: UstaAtpConnector) -> None:
         except StopTest:
             pass
 
-        atp_connector.log.assert_any_call(
-            message="USTA-SDK Error: Connection Timeout", level="error"
-        )
+        atp_connector.log.assert_any_call(message="USTA-SDK Error: Connection Timeout", level="error")
         atp_connector.push_events_to_intakes.assert_not_called()
 
 
@@ -148,14 +138,14 @@ def test_connector_auth_error_raises(atp_connector: UstaAtpConnector) -> None:
         atp_connector (UstaAtpConnector): The connector instance fixture.
     """
     with patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client:
-        mock_usta_client.return_value.iter_compromised_credentials.side_effect = UstaAuthenticationError("Invalid API Key")
+        mock_usta_client.return_value.iter_compromised_credentials.side_effect = UstaAuthenticationError(
+            "Invalid API Key"
+        )
 
         with pytest.raises(UstaAuthenticationError):
             atp_connector.run()
 
-        atp_connector.log.assert_any_call(
-            message="USTA Authentication Error: Invalid API Key", level="critical"
-        )
+        atp_connector.log.assert_any_call(message="USTA Authentication Error: Invalid API Key", level="critical")
 
 
 def test_run_loop_exits_gracefully(atp_connector: UstaAtpConnector) -> None:

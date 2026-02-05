@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Dict
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
@@ -11,11 +11,11 @@ from usta_modules.usta_sdk import UstaClient
 
 
 @pytest.fixture
-def sample_events() -> list[dict[str, Any]]:
+def sample_events() -> List[Dict[str, Any]]:
     """Provides a standard dataset of USTA events for testing.
 
     Returns:
-        list[dict[str, Any]]: A list containing a representative compromised credential event.
+        List[Dict[str, Any]]: A list containing a representative compromised credential event.
     """
     return [
         {
