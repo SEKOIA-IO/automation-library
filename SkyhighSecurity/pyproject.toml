@@ -38,3 +38,16 @@ omit = ["tests/*", "main.py"]
 mypy = "^1.19.1"
 isort = "^7.0.0"
 black = "^26.1.0"
+
+[tool.mypy]
+python_version = 3.12
+strict = false
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
