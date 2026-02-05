@@ -1,85 +1,64 @@
 import json
-import pytest
-from unittest import mock
-from unittest.mock import ANY, MagicMock, patch
+from typing import Any
+from unittest.mock import patch, PropertyMock
 
-from usta_modules.models import UstaATPConnectorConfiguration, UstaModuleConfig
+import pytest
+
 from usta_modules.usta_atp_connector import UstaAPIError, UstaAtpConnector
+from usta_modules.usta_sdk import UstaAuthenticationError
 
 
 class StopTest(Exception):
+    """Custom exception used to break the infinite run loop during testing."""
     pass
 
 
-def test_happy_path(atp_connector: UstaAtpConnector):
-    compromised_credentials_events = [
-        {
-            "company": {"id": 0, "name": "string"},
-            "content": {
-                "is_corporate": True,
-                "password": "string",
-                "password_complexity": {
-                    "contains": {
-                        "lowercase": 0,
-                        "numbers": 0,
-                        "other": 0,
-                        "punctuation": 0,
-                        "separators": 0,
-                        "symbols": 0,
-                        "uppercase": 0,
-                    },
-                    "length": 0,
-                    "score": "very_weak",
-                },
-                "source": "malware",
-                "url": "http://example.com",
-                "username": "string",
-                "victim_detail": {
-                    "computer_name": "string",
-                    "country": "string",
-                    "cpu": "string",
-                    "gpu": "string",
-                    "infection_date": "string",
-                    "ip": "string",
-                    "language": "string",
-                    "malware": "string",
-                    "memory": "string",
-                    "phone_number": "string",
-                    "username": "string",
-                    "victim_os": "string",
-                    "victim_uid": "9eee4f4d-714d-402f-b9c1-17d4442e0901",
-                },
-            },
-            "content_type": "string",
-            "created": "2019-08-24T14:15:22Z",
-            "id": 0,
-            "status": "in_progress",
-            "status_timestamp": "2019-08-24T14:15:22Z",
-        }
-    ]
+def test_happy_path(atp_connector: UstaAtpConnector, sample_events: list[dict[str, Any]]) -> None:
+    """Tests the end-to-end success scenario.
+
+    Verifies that the connector correctly fetches events from the API,
+    logs the progress, and pushes the data to the Sekoia intake.
+
+    Args:
+        atp_connector (UstaAtpConnector): The connector instance fixture.
+        sample_events (list[dict[str, Any]]): The sample event data fixture.
+    """
+    expected_events = [json.dumps(event) for event in sample_events]
 
     with (
         patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
         patch("time.sleep", side_effect=StopTest),
     ):
         mock_instance = mock_usta_client.return_value
-        mock_instance.iter_compromised_credentials.return_value = compromised_credentials_events
-        atp_connector.push_events_to_intakes(events=[json.dumps(event) for event in compromised_credentials_events])
+        mock_instance.iter_compromised_credentials.return_value = sample_events
 
-        # When
         try:
             atp_connector.run()
         except StopTest:
             pass
 
-        # Then
+        # Verify events were pushed
         atp_connector.push_events_to_intakes.assert_called_once_with(
-            events=[json.dumps(event) for event in compromised_credentials_events],
+            events=expected_events,
+        )
+
+        # Verify logs
+        atp_connector.log.assert_any_call(
+            message=f"{len(sample_events)} events collected",
+            level="info"
+        )
+        atp_connector.log.assert_any_call(
+            message="Events pushed to intakes!",
+            level="info"
         )
 
 
-def test_forward_empty_list_of_events(atp_connector: UstaAtpConnector):
-    # Given
+def test_forward_empty_list_of_events(atp_connector: UstaAtpConnector) -> None:
+    """Tests that nothing is pushed when the API returns an empty list.
+
+    Args:
+        atp_connector (UstaAtpConnector): The connector instance fixture.
+    """
     with (
         patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
         patch("time.sleep", side_effect=StopTest),
@@ -87,24 +66,116 @@ def test_forward_empty_list_of_events(atp_connector: UstaAtpConnector):
         mock_instance = mock_usta_client.return_value
         mock_instance.iter_compromised_credentials.return_value = []
 
-        # When
         try:
             atp_connector.run()
         except StopTest:
             pass
 
-        # Then
         atp_connector.push_events_to_intakes.assert_not_called()
 
 
-def test_missing_api_key(atp_connector: UstaAtpConnector):
-    # Given
+def test_missing_api_key(atp_connector: UstaAtpConnector) -> None:
+    """Tests that a ValueError is raised when the API key is missing.
+
+    Args:
+        atp_connector (UstaAtpConnector): The connector instance fixture.
+    """
     atp_connector.module.configuration.api_key = ""
 
-    # When
     with pytest.raises(ValueError) as excinfo:
         atp_connector.run()
 
-    # Then
     assert "Authorization token must be provided." in str(excinfo.value)
     atp_connector.push_events_to_intakes.assert_not_called()
+
+
+def test_connector_polling_logs(atp_connector: UstaAtpConnector) -> None:
+    """Tests that the initial polling log messages are emitted correctly.
+
+    Args:
+        atp_connector (UstaAtpConnector): The connector instance fixture.
+    """
+    # Note: running=True is already set in conftest.py
+    with (
+        patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
+        patch("time.sleep", side_effect=StopTest),
+    ):
+        mock_usta_client.return_value.iter_compromised_credentials.return_value = []
+
+        try:
+            atp_connector.run()
+        except StopTest:
+            pass
+
+        atp_connector.log.assert_any_call(
+            message="Polling USTA security intelligence API...",
+            level="info"
+        )
+
+
+def test_connector_api_error_handling(atp_connector: UstaAtpConnector) -> None:
+    """Tests that the connector handles API errors gracefully without crashing.
+
+    Verifies that a `UstaAPIError` is logged as an error and the loop continues
+    (reaches time.sleep/StopTest) instead of raising an unhandled exception.
+
+    Args:
+        atp_connector (UstaAtpConnector): The connector instance fixture.
+    """
+    with (
+        patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client,
+        patch("time.sleep", side_effect=StopTest),
+    ):
+        mock_usta_client.return_value.iter_compromised_credentials.side_effect = UstaAPIError("Connection Timeout")
+
+        try:
+            atp_connector.run()
+        except StopTest:
+            pass
+
+        atp_connector.log.assert_any_call(
+            message="USTA-SDK Error: Connection Timeout", level="error"
+        )
+        atp_connector.push_events_to_intakes.assert_not_called()
+
+
+def test_connector_auth_error_raises(atp_connector: UstaAtpConnector) -> None:
+    """Tests that an Authentication Error raises an exception and stops the connector.
+
+    Authentication errors are considered critical and should not be retried silently.
+
+    Args:
+        atp_connector (UstaAtpConnector): The connector instance fixture.
+    """
+    with patch("usta_modules.usta_atp_connector.UstaClient") as mock_usta_client:
+        mock_usta_client.return_value.iter_compromised_credentials.side_effect = UstaAuthenticationError("Invalid API Key")
+
+        with pytest.raises(UstaAuthenticationError):
+            atp_connector.run()
+
+        atp_connector.log.assert_any_call(
+            message="USTA Authentication Error: Invalid API Key", level="critical"
+        )
+
+
+def test_run_loop_exits_gracefully(atp_connector: UstaAtpConnector) -> None:
+    """Tests that the connector exits the run loop gracefully when `running` becomes False.
+
+    This ensures 100% code coverage by verifying the loop termination logic.
+    We override the `running` property to simulate a sequence: [True, True, False].
+
+    Args:
+        atp_connector (UstaAtpConnector): The connector instance fixture.
+    """
+    with patch.object(UstaAtpConnector, "running", new_callable=PropertyMock) as mock_running:
+        # Sequence: [True (Log read), True (While check), False (While check exit)]
+        mock_running.side_effect = [True, True, False]
+
+        with (
+            patch("usta_modules.usta_atp_connector.UstaClient"),
+            patch("time.sleep") as mock_sleep,  # Do not raise exception, just pass
+        ):
+            atp_connector.run()
+
+            # The loop should execute once and then exit, calling sleep exactly once.
+            assert mock_sleep.call_count == 1

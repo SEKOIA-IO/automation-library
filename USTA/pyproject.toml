@@ -49,6 +49,6 @@ addopts = '''
   --cache-clear
   --cov-report=html
   --cov-report=term-missing:skip-covered
-  --cov-fail-under=5
+  --cov-fail-under=88
   --capture=sys
 '''
