@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-05- 1.5.1
+
+### Fixed
+
+- Error logging in connector run function
+
 ## 2025-06-04 - 1.5.0
 
 ### Changed
