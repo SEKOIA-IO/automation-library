@@ -13,7 +13,10 @@ from sekoia_automation.connector.workers import Worker, Workers
 from sekoia_automation.storage import PersistentJSON
 
 from gateway_cloud_services.client import ApiClient
+from gateway_cloud_services.logging import get_logger
 from gateway_cloud_services.metrics import COLLECT_EVENTS_DURATION, EVENTS_LAG, INCOMING_EVENTS, OUTCOMING_EVENTS
+
+logger = get_logger()
 
 
 class SkyhighSWGConfig(DefaultConnectorConfiguration):
@@ -102,22 +105,22 @@ class EventCollector(Thread):
 
         if self.end_date >= now:
             difference = self.end_date - now
-            self.log(
-                message=f"Timerange in the future. Waiting {difference.total_seconds()} seconds for next batch.",
-                level="info",
+            difference_seconds = int(difference.total_seconds())
+            logger.info(
+                "Timerange in the future. Waiting {difference_seconds} seconds for next batch.",
+                difference_seconds=difference_seconds,
             )
-            sleep(difference.total_seconds())
+            sleep(difference_seconds)
 
     def query_api(self) -> str | None:
         """
         Contact Skyhigh SWG API with appropriate filters and credentials
         :return: The response
         """
-        self.log(
-            message=f"Querying at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
-            f" messages associated with timerange {self.start_date.strftime('%Y-%m-%d %H:%M:%S')}"
-            f" to {self.end_date.strftime('%Y-%m-%d %H:%M:%S')}",
-            level="info",
+        logger.info(
+            "Querying SkyhighSWG API for events from {start_date} to {end_date}",
+            start_date=self.start_date.isoformat(),
+            end_date=self.end_date.isoformat(),
         )
 
         self.url = (
@@ -131,9 +134,9 @@ class EventCollector(Thread):
         response: Response = self.client.get(url=self.url, headers=self.headers, params=params, timeout=30)
 
         time_elapsed = datetime.now(timezone.utc) - request_start_time
-        self.log(
-            message=f"Skyhigh API took {time_elapsed} to answer our query",
-            level="info",
+        logger.info(
+            "Skyhigh API response received in {time_elapsed_seconds} seconds.",
+            time_elapsed_seconds=int(time_elapsed.total_seconds()),
         )
         COLLECT_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(
             int(time_elapsed.total_seconds())
@@ -190,13 +193,13 @@ class EventCollector(Thread):
             sleep(self.configuration.frequency)
 
     def run(self):  # pragma: no cover
-        self.log(message="The Event Collector has started", level="info")
+        logger.info("Starting Event Collector worker thread.")
         self._init_time_range()
 
         while not self._stop_event.is_set():
             self.next_batch()
 
-        self.log(message="The Event Collector has stopped", level="info")
+        logger.info("Event Collector worker thread has stopped.")
 
 
 class Transformer(Worker):
@@ -223,6 +226,8 @@ class Transformer(Worker):
         return event_list
 
     def run(self):
+        logger.info("Starting Transformer worker thread.")
+
         try:
             while self.is_running or self.queue.qsize() > 0:
                 try:
@@ -233,11 +238,13 @@ class Transformer(Worker):
                         INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc(len(messages))
                         self.output_queue.put(messages)
                     else:
-                        self.connector.log(message="No messages to forward", level="info")
+                        logger.info("No messages to transform.")
                 except queue.Empty:
                     pass
         except Exception as ex:
             self.connector.log_exception(ex, message="Unexpected error when converting data")
+
+        logger.info("Transformer worker thread has stopped.")
 
 
 class EventsForwarder(Worker):
@@ -268,6 +275,8 @@ class EventsForwarder(Worker):
         return events
 
     def run(self):
+        logger.info("Starting Events Forwarder worker thread.")
+
         try:
             while self.is_running or self.queue.qsize() > 0:
                 events = self.next_batch(self.max_batch_size)
@@ -281,6 +290,8 @@ class EventsForwarder(Worker):
                     self.connector.push_events_to_intakes(events=events)
         except Exception as ex:
             self.connector.log_exception(ex, message="Failed to forward events")
+
+        logger.info("Events Forwarder worker thread has stopped.")
 
 
 class SkyhighSecuritySWGTrigger(Connector):

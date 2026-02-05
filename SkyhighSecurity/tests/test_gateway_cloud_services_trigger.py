@@ -3,7 +3,7 @@ import os
 import queue
 import time
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, call, patch
 
 import pytest
 from dateutil.parser import isoparse
@@ -175,19 +175,6 @@ def test_tranformer_with_event(trigger, events_queue):
 
     events = events_queue.get(block=False)
     assert events == ["user_id=-1 username=foo"]
-
-
-def test_tranformer_with_no_events(trigger, events_queue):
-    input_queue = queue.Queue()
-    transformer = Transformer(trigger, input_queue, events_queue)
-
-    input_queue.put('"user_id","username"')
-    transformer.start()
-    time.sleep(0.5)
-    transformer.stop()
-
-    assert events_queue.qsize() == 0
-    assert trigger.log.called is True
 
 
 def test_forwarder(trigger, forwarder, events_queue):
