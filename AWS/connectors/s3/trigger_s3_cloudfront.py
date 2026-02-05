@@ -17,7 +17,7 @@ class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration):
     """AwsS3CloudFrontTrigger configuration."""
 
     skip_first: int = 0
-    separator: str
+    separator: str = "\n"
 
 
 class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
