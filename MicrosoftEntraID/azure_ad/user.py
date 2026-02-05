@@ -244,4 +244,3 @@ class ResetUserPasswordActionV2(MicrosoftGraphAction):
         return {
             "newPassword": new_password,
         }
-
