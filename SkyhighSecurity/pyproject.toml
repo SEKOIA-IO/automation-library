@@ -35,6 +35,6 @@ requests-mock = "*"
 omit = ["tests/*", "main.py"]
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^0.991"
-isort = "^5.10.1"
-black = "^22.10.0"
+mypy = "^1.19.1"
+isort = "^7.0.0"
+black = "^26.1.0"
