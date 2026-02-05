@@ -296,9 +296,10 @@ class SkyhighSecuritySWGTrigger(Connector):
         self.log(message="SkyhighSWG Trigger has started", level="info")
 
         # create the queues
-        queue_size = int(os.environ.get("QUEUE_SIZE", 10000))
-        collect_queue: queue.Queue = queue.Queue(maxsize=queue_size)
-        forwarding_queue: queue.Queue = queue.Queue(maxsize=queue_size)
+        collect_queue_size = int(os.environ.get("QUEUE_SIZE", 100))
+        collect_queue: queue.Queue = queue.Queue(maxsize=collect_queue_size)
+        forwarding_queue_size = int(os.environ.get("FORWARDING_QUEUE_SIZE", 10000))
+        forwarding_queue: queue.Queue = queue.Queue(maxsize=forwarding_queue_size)
 
         # start the event forwarder
         batch_size = int(os.environ.get("BATCH_SIZE", 10000))
