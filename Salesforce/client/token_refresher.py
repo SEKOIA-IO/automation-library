@@ -14,6 +14,10 @@ from yarl import URL
 from .schemas.token import HttpToken, SalesforceToken
 
 
+class RefreshTokenException(Exception):
+    pass
+
+
 class SalesforceTokenRefresher(object):
     """
     Contains access token refresher logic.
@@ -120,9 +124,13 @@ class SalesforceTokenRefresher(object):
                     ttl=self.token_ttl,
                 )
             except Exception as e:
-                logger.info(
-                    "Cannot get token. Response contains {0} status {1}".format(response_data, response.status)
-                )
+                message = "Cannot get token. Response contains {0} status {1}".format(response_data, response.status)
+                if response.status == 400:
+                    # Refresh token flow will fail due to wrong credentials with 400 HTTP status
+                    # https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_flow_errors.htm&type=5
+                    raise RefreshTokenException(message) from e
+
+                logger.info(message)
 
                 raise e
 

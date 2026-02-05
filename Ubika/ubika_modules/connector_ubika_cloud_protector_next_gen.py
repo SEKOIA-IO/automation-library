@@ -3,8 +3,8 @@ from collections.abc import Generator
 from datetime import timedelta
 from functools import cached_property
 
-import orjson
 import httpx
+import orjson
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
@@ -13,7 +13,7 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
-from .client.auth import AuthorizationError
+from .client.auth import AuthorizationError, AuthorizationTimeoutError
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
 
@@ -166,6 +166,9 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                     headers=headers,
                     timeout=60,
                 )
+            except AuthorizationTimeoutError as err:
+                self.log(f"Authorization timeout error: {err.args[1]}", level="error")
+                raise
 
             except AuthorizationError as err:
                 self.log(f"Authorization error: {err.args[1]}", level="critical")

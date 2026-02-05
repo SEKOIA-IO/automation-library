@@ -27,7 +27,6 @@
       }
     },
     "required": [
-      "base_url",
       "org_name"
     ],
     "secrets": [
@@ -39,7 +38,7 @@
   "name": "Github",
   "uuid": "7a951812-28a2-445a-a257-f26deae34d44",
   "slug": "github",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "categories": [
     "Collaboration Tools"
   ]

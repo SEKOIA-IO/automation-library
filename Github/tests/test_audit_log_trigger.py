@@ -80,6 +80,33 @@ def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake
     yield trigger
 
 
+@pytest.fixture
+def connector_with_api_key_no_base_url(symphony_storage, session_faker, intake_response):
+    """
+    Create a AuditLogConnector instance.
+
+    Args:
+        symphony_storage: str
+        session_faker: Faker
+        intake_response: list[str]
+    """
+    module = GithubModule()
+    module.configuration = {
+        "apikey": session_faker.word(),
+        "org_name": session_faker.word(),
+    }
+
+    trigger = AuditLogConnector(module=module, data_path=symphony_storage)
+    trigger.configuration = {
+        "intake_server": "https://intake.sekoia.io",
+        "intake_key": session_faker.word(),
+    }
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
+
+    yield trigger
+
+
 @pytest.mark.asyncio
 async def test_connector_get_github_client_instance(connector_with_api_key):
     """
@@ -166,3 +193,35 @@ async def test_next_batch_with_pem_file(connector_with_pem_file, github_response
         )
 
         await connector_with_pem_file.next_batch()
+
+
+@pytest.mark.asyncio
+async def test_next_batch_with_api_key_no_base_url(
+    connector_with_api_key_no_base_url, github_response, intake_response
+):
+    """
+    Test AuditLogConnector next_batch.
+
+    Args:
+        connector_with_api_key_no_base_url: AuditLogConnector
+        github_response: list[dict[str, Any]]
+    """
+    with aioresponses() as mocked_responses:
+        audit_logs_url = (
+            connector_with_api_key_no_base_url.github_client.audit_logs_url
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_api_key_no_base_url.last_ts)
+        )
+
+        mocked_responses.get(
+            audit_logs_url,
+            status=200,
+            payload=github_response,
+        )
+
+        mocked_responses.post(
+            urljoin(connector_with_api_key_no_base_url.configuration.intake_server, "batch"),
+            status=200,
+            payload=intake_response,
+        )
+
+        await connector_with_api_key_no_base_url.next_batch()

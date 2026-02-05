@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-29 - 1.0.9
+
+### Changed
+
+- Update asset connector name
+
+## 2026-01-23 - 1.0.8
+
+### Changed
+
+- Update internals field inside arguments of Tenable asset connectors
+
+## 2026-01-22 - 1.0.7
+
+### Changed
+
+- Added internals field to Tenable asset connectors
+
+## 2025-01-12 - 1.0.6
+
+### Fixed
+
+- Fix the way we handle CVE IDs
+
 ## 2025-01-08 - 1.0.5
 
 ### Changed

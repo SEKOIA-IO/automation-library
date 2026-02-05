@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-02 - 1.29.2
+
+### Fixed
+
+- Fix the way to save action results to a file
+
+## 2026-02-02 - 1.29.1
+
+### Fixed
+
+- add the `[DEPRECATED]` tag to deprecated actions
+
+## 2026-02-02 - 1.29.0
+
+### Changed
+
+- Change the flow for Job endpoints
+- Add new Get Processes and Get Pipes actions to return actual processes and pipes
+- Add option for Get Processes and Get Pipes to save processes/pipes data to file
+
+## 2026-01-29 - 1.28.17
+
+### Changed
+
+- Update asset connector name
+
+## 2026-01-23 - 1.28.16
+
+### Changed
+
+- Update internals field inside arguments of HarfangLab asset connectors
+
 ## 2025-10-28 - 1.28.15
 
 ### Added
