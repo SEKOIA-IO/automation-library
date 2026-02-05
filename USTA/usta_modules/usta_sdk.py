@@ -77,7 +77,7 @@ class UstaClient:
             except ValueError:
                 detail = response.text
 
-            if response in {401, 403}:
+            if response.status_code in {401, 403}:
                 raise UstaAuthenticationError(f"Authentication failed ({response.status_code}): {detail}")
 
             raise UstaAPIError(f"Client error {response.status_code}: {detail}")
