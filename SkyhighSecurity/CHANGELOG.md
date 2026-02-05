@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-10-08 - 1.16.0
+## 2026-02-05 - 1.16.0
 
 ### Changed
 
@@ -15,9 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Change the logging system
 - Split the queue size and decrease the default size of the queue for the API responses
 
-## Fixed
+### Fixed
 
-- Fix the transformer to forward the events by batch
+- Fix the transformer to forward the events in batches
 
 ## 2025-10-08 - 1.15.3
 
