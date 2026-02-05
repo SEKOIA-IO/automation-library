@@ -24,26 +24,26 @@ def test_timestepper_create(mock_connector):
         mock_connector,
         frequency=300,
         timedelta=10,
-        start_time=2,
+        initial_hours_ago=2,
     )
 
     assert stepper.connector == mock_connector
     assert stepper.frequency == datetime.timedelta(seconds=300)
     assert stepper.timedelta == datetime.timedelta(minutes=10)
 
-    # End should be ~2 hours ago
+    # End should be ~2 hours ago minus timedelta (10 minutes)
     now = datetime.datetime.now(timezone.utc)
-    expected_end = now - datetime.timedelta(hours=2)
+    expected_end = now - datetime.timedelta(hours=2) - datetime.timedelta(minutes=10)
     assert abs((stepper.end - expected_end).total_seconds()) < 5
 
 
-def test_timestepper_create_start_time_zero(mock_connector):
-    """Test TimeStepper.create() with start_time=0 (start from now)."""
+def test_timestepper_create_initial_hours_ago_zero(mock_connector):
+    """Test TimeStepper.create() with initial_hours_ago=0 (start from now)."""
     stepper = TimeStepper.create(
         mock_connector,
         frequency=600,
         timedelta=15,
-        start_time=0,
+        initial_hours_ago=0,
     )
 
     # End should be now minus timedelta
@@ -103,3 +103,23 @@ def test_timestepper_init(mock_connector):
     assert stepper.end == end
     assert stepper.frequency == frequency
     assert stepper.timedelta == timedelta
+    assert stepper.sleep_duration == 0.0
+
+
+def test_timestepper_sleep_duration(mock_connector):
+    """Test that sleep_duration is set when time range is in the future."""
+    # Set up a stepper where next_end will be in the future
+    now = datetime.datetime.now(timezone.utc)
+    start = now - datetime.timedelta(minutes=5)
+    end = now + datetime.timedelta(minutes=5)  # End is in the future
+    frequency = datetime.timedelta(minutes=10)
+    timedelta = datetime.timedelta(minutes=0)  # No lag offset
+
+    stepper = TimeStepper(mock_connector, start, end, frequency, timedelta)
+
+    ranges_gen = stepper.ranges()
+    next(ranges_gen)  # Get first range
+    next(ranges_gen)  # Get second range - this triggers the sleep_duration calculation from first iteration
+
+    # sleep_duration should be set since we're approaching real-time
+    assert stepper.sleep_duration > 0

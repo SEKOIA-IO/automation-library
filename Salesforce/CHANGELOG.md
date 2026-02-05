@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Timestepper for orchestrating event collection with configurable time windows
-- Log file ID cache to prevent re-processing duplicate files
-- New configuration parameters `hours_ago` and `timedelta`
+- Cached Timestepper for orchestrating event collection with configurable time windows
+- Provide Log file ID cache to prevent re-processing duplicate files
+- New configuration parameters `initial_hours_ago` and `timedelta`
 
 ### Changed
 

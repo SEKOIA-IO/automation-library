@@ -23,7 +23,7 @@
         "description": "Batch frequency in seconds (time window size)",
         "default": 600
       },
-      "hours_ago": {
+      "initial_hours_ago": {
         "type": "integer",
         "description": "Number of hours to go back for initial event collection",
         "default": 6

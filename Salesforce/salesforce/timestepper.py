@@ -1,7 +1,6 @@
 """Timestepper for orchestrating event collection with configurable time windows."""
 
 import datetime
-import time
 from collections.abc import Generator
 
 from sekoia_automation.aio.connector import AsyncConnector
@@ -39,6 +38,7 @@ class TimeStepper:
         self.end = end
         self.frequency = frequency
         self.timedelta = timedelta
+        self.sleep_duration: float = 0.0
 
     def ranges(
         self,
@@ -46,7 +46,8 @@ class TimeStepper:
         """
         Yield time windows for event collection.
 
-        Continuously yields (start, end) tuples, sleeping when approaching real-time.
+        Continuously yields (start, end) tuples, setting sleep_duration when approaching real-time.
+        The connector is responsible for sleeping based on sleep_duration.
 
         Yields:
             Tuple of (start, end) datetimes for each time window
@@ -55,17 +56,30 @@ class TimeStepper:
             # Return the current time range
             yield self.start, self.end
 
+            # Reset sleep duration for this iteration's computation
+            self.sleep_duration = 0.0
+
             # Compute the next time range
             next_end = self.end + self.frequency
             now = datetime.datetime.now(datetime.timezone.utc) - self.timedelta
 
             # Compute current lag
             current_lag = now - next_end
-            self.connector.log(
-                message=f"Current lag {int(current_lag.total_seconds())} seconds.",
-                level="info",
-            )
-            EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(int(current_lag.total_seconds()))
+            lag_seconds = int(current_lag.total_seconds())
+            if lag_seconds >= 0:
+                self.connector.log(
+                    message=f"Current lag: {lag_seconds} seconds behind real-time.",
+                    level="info",
+                )
+
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(lag_seconds)
+            else:
+                self.connector.log(
+                    message=f"Caught up: {abs(lag_seconds)} seconds ahead of real-time window.",
+                    level="info",
+                )
+
+                EVENTS_LAG.labels(intake_key=self.connector.configuration.intake_key).set(0)
 
             # If the next end is in the future
             if next_end > now:
@@ -78,7 +92,7 @@ class TimeStepper:
                     message=f"Timerange in the future. Waiting {max_difference} seconds for next batch.",
                     level="info",
                 )
-                time.sleep(max_difference)
+                self.sleep_duration = max_difference
 
             self.start = self.end
             self.end = next_end
@@ -89,7 +103,7 @@ class TimeStepper:
         connector: AsyncConnector,
         frequency: int = 600,
         timedelta: int = 15,
-        start_time: int = 6,
+        initial_hours_ago: int = 6,
     ) -> "TimeStepper":
         """
         Create a new TimeStepper for initial run.
@@ -98,7 +112,7 @@ class TimeStepper:
             connector: The connector instance
             frequency: Time window step in seconds (default: 600 = 10 minutes)
             timedelta: Event lag buffer in minutes (default: 15)
-            start_time: Hours ago to start collecting (default: 6), 0 means start from now
+            initial_hours_ago: Hours ago to start collecting (default: 6), 0 means start from now
 
         Returns:
             New TimeStepper instance
@@ -106,10 +120,14 @@ class TimeStepper:
         t_frequency = datetime.timedelta(seconds=frequency)
         t_timedelta = datetime.timedelta(minutes=timedelta)
 
-        if start_time == 0:
+        if initial_hours_ago == 0:
             end = datetime.datetime.now(datetime.timezone.utc) - t_timedelta
         else:
-            end = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=start_time)
+            end = (
+                datetime.datetime.now(datetime.timezone.utc)
+                - datetime.timedelta(hours=initial_hours_ago)
+                - t_timedelta
+            )
 
         start = end - t_frequency
 

@@ -133,6 +133,26 @@ async def test_salesforce_connector_stepper_new(connector):
 
 
 @pytest.mark.asyncio
+async def test_salesforce_connector_stepper_cached(connector):
+    """
+    Test stepper instance is cached and reused.
+
+    Args:
+        connector: SalesforceConnector
+    """
+    # Clear cache and _stepper
+    with connector.context as cache:
+        cache.clear()
+    connector._stepper = None
+
+    stepper1 = connector.stepper
+    stepper2 = connector.stepper
+
+    assert stepper1 is stepper2
+    assert connector._stepper is stepper1
+
+
+@pytest.mark.asyncio
 async def test_salesforce_connector_stepper_from_cache(connector):
     """
     Test stepper recovery from cache.

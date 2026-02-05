@@ -1,6 +1,7 @@
 """Contains connector, configuration and module."""
 
 import asyncio
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
@@ -25,7 +26,7 @@ class SalesforceConnectorConfig(DefaultConnectorConfiguration):
     """SalesforceConnector configuration."""
 
     frequency: int = 600
-    hours_ago: int = 6
+    initial_hours_ago: int = 6
     timedelta: int = 15
     fetch_daily_logs: bool = False
 
@@ -44,17 +45,22 @@ class SalesforceConnector(AsyncConnector):
     configuration: SalesforceConnectorConfig
 
     _salesforce_client: SalesforceHttpClient | None = None
+    _stepper: TimeStepper | None = None
 
     # Maximum history limit for recovery (in days)
     MAX_HISTORY_DAYS = 30
+
     # LRU cache size for processed log file IDs
-    LOG_FILE_CACHE_SIZE = 10_000
+    # 100 is more then enough because we persist log file ids and not event ids itself
+    LOG_FILE_CACHE_SIZE = 100
 
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         """Init SalesforceConnector."""
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.log_file_cache: Cache[str, bool] = self._load_log_file_cache()
+
+        log_file_cache_size = int(os.getenv("LOG_FILE_CACHE_SIZE", 100))
+        self.log_file_cache: Cache[str, bool] = self._load_log_file_cache(log_file_cache_size)
 
     @property
     def stepper(self) -> TimeStepper:
@@ -62,20 +68,26 @@ class SalesforceConnector(AsyncConnector):
         Get or create the timestepper.
 
         Recovers from cache if available, otherwise creates new with hours_ago lookback.
+        The instance is cached to prevent recreation on each access.
 
         Returns:
             TimeStepper instance
         """
+        if self._stepper is not None:
+            return self._stepper
+
         with self.context as cache:
             most_recent_date_str = cache.get("last_event_date")
 
         if most_recent_date_str is None:
-            return TimeStepper.create(
+            self._stepper = TimeStepper.create(
                 self,
                 self.configuration.frequency,
                 self.configuration.timedelta,
-                self.configuration.hours_ago,
+                self.configuration.initial_hours_ago,
             )
+
+            return self._stepper
 
         # Parse the most recent requested date
         most_recent_date = isoparse(most_recent_date_str)
@@ -86,12 +98,13 @@ class SalesforceConnector(AsyncConnector):
         if most_recent_date < max_history_date:
             most_recent_date = max_history_date
 
-        return TimeStepper.create_from_time(
+        self._stepper = TimeStepper.create_from_time(
             self,
             most_recent_date,
             self.configuration.frequency,
             self.configuration.timedelta,
         )
+        return self._stepper
 
     def update_stepper(self, recent_date: datetime) -> None:
         """
@@ -103,19 +116,20 @@ class SalesforceConnector(AsyncConnector):
         with self.context as cache:
             cache["last_event_date"] = recent_date.isoformat()
 
-    def _load_log_file_cache(self) -> Cache[str, bool]:
+    def _load_log_file_cache(self, cache_size: int = 100) -> Cache[str, bool]:
         """
         Load log file IDs from persistent storage into LRU cache.
 
         Returns:
             LRUCache with previously processed log file IDs
         """
-        result: Cache[str, bool] = LRUCache(maxsize=self.LOG_FILE_CACHE_SIZE)
+        result: Cache[str, bool] = LRUCache(maxsize=cache_size)
 
         with self.context as cache:
             log_file_ids = cache.get("processed_log_files", [])
 
-        for log_file_id in log_file_ids:
+        # Will keep latest files always in the cache
+        for log_file_id in reversed(log_file_ids):
             result[log_file_id] = True
 
         return result
@@ -261,6 +275,10 @@ class SalesforceConnector(AsyncConnector):
                     # Save progress after each window
                     self.update_stepper(end)
                     self._save_log_file_cache()
+
+                    # Sleep if the stepper indicates we need to wait
+                    if self.stepper.sleep_duration > 0:
+                        time.sleep(self.stepper.sleep_duration)
 
             except RefreshTokenException as error:
                 logger.error("Error while running Salesforce", error=error)
