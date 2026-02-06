@@ -75,7 +75,7 @@ class PemGithubTokenRefresher(object):
         Returns:
             PemGithubTokenRefresher:
         """
-        refresher_unique_key = str(frozenset({pem_file, organization}))
+        refresher_unique_key = str(frozenset({base_url, pem_file, organization}))
         if not cls._locks.get(refresher_unique_key):
             cls._locks[refresher_unique_key] = asyncio.Lock()
 
