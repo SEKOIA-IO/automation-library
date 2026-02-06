@@ -302,7 +302,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             ## Implement if there is more than one page of results
             while users is not None and users.odata_next_link is not None:
                 # Create a new config for pagination that preserves headers but NOT query params
-                pagination_config = RequestConfiguration()
+                pagination_config: RequestConfiguration = RequestConfiguration()
                 pagination_config.headers.add("ConsistencyLevel", "eventual")
                 users = await self.client.users.with_url(users.odata_next_link).get(
                     request_configuration=pagination_config
