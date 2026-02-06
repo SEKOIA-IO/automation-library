@@ -339,14 +339,15 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
     assert result[1] is mock_user_ocsf_model_2
 
 
-def test_update_checkpoint(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_update_checkpoint(test_entra_id_asset_connector):
     """Test that update_checkpoint correctly updates the most_recent_date_seen in context."""
     # Arrange
     test_timestamp = 1640995200.0  # 2022-01-01 00:00:00 UTC
     test_entra_id_asset_connector._latest_time = test_timestamp
 
     # Act
-    test_entra_id_asset_connector.update_checkpoint()
+    await test_entra_id_asset_connector.update_checkpoint()
 
     # Assert
     most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
@@ -354,14 +355,15 @@ def test_update_checkpoint(test_entra_id_asset_connector):
     assert most_recent_date == "2022-01-01T00:00:01+00:00"
 
 
-def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connector):
     """Test that update_checkpoint works with different timestamps."""
     # Arrange
     test_timestamp = 1672531200.0  # 2023-01-01 00:00:00 UTC
     test_entra_id_asset_connector._latest_time = test_timestamp
 
     # Act
-    test_entra_id_asset_connector.update_checkpoint()
+    await test_entra_id_asset_connector.update_checkpoint()
 
     # Assert
     most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
@@ -500,7 +502,7 @@ async def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
     """Test that get_assets uses most_recent_date_seen when available."""
     # Arrange
     test_entra_id_asset_connector._latest_time = 1640995200.0  # Set a timestamp
-    test_entra_id_asset_connector.update_checkpoint()  # Save it to context
+    await test_entra_id_asset_connector.update_checkpoint()  # Save it to context
 
     mock_user_ocsf_model = MagicMock()
     mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
