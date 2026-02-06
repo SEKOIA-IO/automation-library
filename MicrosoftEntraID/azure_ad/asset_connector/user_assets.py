@@ -281,7 +281,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 "officeLocation",
                 "isManagementRestricted",
             ],
-            filter=f"createdDateTime ge {last_run_date}" if last_run_date else None
+            filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
         )
 
         request_configuration = RequestConfiguration(
