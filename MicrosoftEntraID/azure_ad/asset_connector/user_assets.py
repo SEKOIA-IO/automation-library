@@ -37,10 +37,17 @@ from azure_ad.base import AzureADModule
 
 
 class EntraIDAssetConnector(AsyncAssetConnector):
+    """Asset connector for Microsoft Entra ID user inventory.
+    
+    Fetches user information, groups, MFA status, and admin roles from
+    Microsoft Entra ID (formerly Azure AD) and maps them to OCSF format.
+    """
+    
     module: AzureADModule
 
     PRODUCT_NAME = "Microsoft Entra ID"
     PRODUCT_VERSION = "1.0"
+    CHECKPOINT_TIME_OFFSET_SECONDS = 1
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -55,7 +62,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
 
             return most_recent_date_seen
 
-    @cached_property
+    @property
     def client(self) -> GraphServiceClient:
         if self._client is None:
             credentials = ClientSecretCredential(
@@ -66,22 +73,32 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             auth_provider = AzureIdentityAuthenticationProvider(credentials)
             adapter = GraphRequestAdapter(auth_provider)
             self._client = GraphServiceClient(request_adapter=adapter)
-
+        
         return self._client
+
+    @client.setter
+    def client(self, value: GraphServiceClient) -> None:
+        self._client = value
 
     def update_checkpoint(self) -> None:
         if self._latest_time is None:
             return
         with self.context as cache:
-            # We add 1 second to avoid fetching the same user again in the next run
+            # We add offset to avoid fetching the same user again in the next run
             cache["most_recent_date_seen"] = (
-                datetime.fromtimestamp(self._latest_time + 1, timezone.utc).replace(microsecond=0).isoformat()
+                datetime.fromtimestamp(
+                    self._latest_time + self.CHECKPOINT_TIME_OFFSET_SECONDS, timezone.utc
+                ).replace(microsecond=0).isoformat()
             )
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
-        """Map fields from UserCollectionResponse to UserOCSFModel.
+        """Map fields from User to UserOCSFModel.
+        
         Args:
-            user (UserCollectionResponse): The user data from Microsoft Graph API.
+            user: The user data from Microsoft Graph API.
+            has_mfa: Whether the user has MFA enabled.
+            groups: List of user groups.
+            is_admin: Whether the user has admin roles.
 
         Returns:
             UserOCSFModel: The mapped OCSF model.
@@ -180,7 +197,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             metadata=metadata,
             user=user_data,
             type_name="User Inventory",
-            enrichments=enrichments if enrichments else None,
+            enrichments=enrichments or None,
         )
         return user_ocsf_model
 
@@ -197,7 +214,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                     if isinstance(group, Group):
                         groups.append(UserOCSFGroup(name=group.display_name, uid=group.id))
 
-            ## Implement if there is more than one page of results
+            # Handle pagination for multiple pages of results
             while user_groups is not None and user_groups.odata_next_link is not None:
                 user_groups = (
                     await self.client.users.by_user_id(user_id).member_of.with_url(user_groups.odata_next_link).get()
@@ -209,7 +226,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
 
             return groups
         except Exception as e:
-            raise ValueError(f"Error fetching user groups: {e}")
+            raise ValueError(f"Error fetching user groups: {e}") from e
 
     async def fetch_user_admin_roles(self, user_id: str) -> bool:
         """
@@ -217,11 +234,9 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         """
         try:
             user_roles = await self.client.users.by_user_id(user_id).transitive_member_of.graph_directory_role.get()
-            if user_roles and user_roles.value and len(user_roles.value) > 0:
-                return True
-            return False
+            return bool(user_roles and user_roles.value)
         except Exception as e:
-            raise ValueError(f"Error fetching user admin roles: {e}")
+            raise ValueError(f"Error fetching user admin roles: {e}") from e
 
     async def fetch_user_mfa(self, user_id: str) -> bool:
         """
@@ -232,16 +247,16 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             has_mfa = False
             if user_mfa and user_mfa.value:
                 for method in user_mfa.value:
-                    if (
-                        isinstance(method, MicrosoftAuthenticatorAuthenticationMethod)
-                        or isinstance(method, SoftwareOathAuthenticationMethod)
-                        or isinstance(method, PhoneAuthenticationMethod)
-                    ):
+                    if isinstance(method, (
+                        MicrosoftAuthenticatorAuthenticationMethod,
+                        SoftwareOathAuthenticationMethod,
+                        PhoneAuthenticationMethod
+                    )):
                         has_mfa = True
                         break
             return has_mfa
         except Exception as e:
-            raise ValueError(f"Error fetching user MFA: {e}")
+            raise ValueError(f"Error fetching user MFA: {e}") from e
 
     async def fetch_user(self, user: User) -> UserOCSFModel:
         """
@@ -282,6 +297,8 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                 "isManagementRestricted",
             ],
             filter=f"createdDateTime ge {last_run_date}" if last_run_date else None,
+            orderby=["createdDateTime asc"],
+            count=True,
         )
 
         request_configuration = RequestConfiguration(
@@ -294,12 +311,12 @@ class EntraIDAssetConnector(AsyncAssetConnector):
 
             if users and users.value:
                 for user in users.value:
-                    ## Fetch MFA status of the user
+                    # Fetch user details including MFA status
                     new_user = await self.fetch_user(user)
                     yield new_user
                     self._latest_time = new_user.time
 
-            ## Implement if there is more than one page of results
+            # Handle pagination for multiple pages of results
             while users is not None and users.odata_next_link is not None:
                 # Create a new config for pagination that preserves headers but NOT query params
                 pagination_config: RequestConfiguration = RequestConfiguration()
@@ -313,10 +330,15 @@ class EntraIDAssetConnector(AsyncAssetConnector):
                         yield new_user
                         self._latest_time = new_user.time
         except Exception as e:
-            raise ValueError(f"Error fetching users: {e}")
+            raise ValueError(f"Error fetching users: {e}") from e
 
     async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
-        ### Fetch users from Microsoft Graph API
-        last_run_date: str | None = self.most_recent_date_seen if self.most_recent_date_seen else None
+        """Fetch user assets from Microsoft Graph API.
+        
+        Yields:
+            UserOCSFModel: OCSF-formatted user inventory data.
+        """
+        # Fetch users from Microsoft Graph API
+        last_run_date: str | None = self.most_recent_date_seen
         async for user in self.fetch_new_users(last_run_date=last_run_date):
             yield user
