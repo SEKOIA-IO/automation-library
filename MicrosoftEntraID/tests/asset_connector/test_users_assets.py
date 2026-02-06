@@ -281,7 +281,7 @@ async def test_fetch_new_users(test_entra_id_asset_connector):
     test_entra_id_asset_connector.fetch_user = AsyncMock(return_value=mock_user_ocsf_model)
 
     # Act
-    result = await test_entra_id_asset_connector.fetch_new_users()
+    result = [user async for user in test_entra_id_asset_connector.fetch_new_users()]
 
     # Assert
     assert len(result) == 2
@@ -328,7 +328,7 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
     test_entra_id_asset_connector.fetch_user = AsyncMock(side_effect=[mock_user_ocsf_model_1, mock_user_ocsf_model_2])
 
     # Act
-    result = await test_entra_id_asset_connector.fetch_new_users()
+    result = [user async for user in test_entra_id_asset_connector.fetch_new_users()]
 
     # Assert
     assert len(result) == 2
@@ -422,7 +422,8 @@ async def test_fetch_new_users_error_handling(test_entra_id_asset_connector):
 
     # Act & Assert
     with pytest.raises(ValueError, match="Error fetching users"):
-        await test_entra_id_asset_connector.fetch_new_users()
+        async for _ in test_entra_id_asset_connector.fetch_new_users():
+            pass
 
 
 @pytest.mark.asyncio
@@ -474,22 +475,28 @@ async def test_fetch_user_groups_with_pagination(test_entra_id_asset_connector):
     assert groups[1].uid == "group-2"
 
 
-def test_get_assets(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_get_assets(test_entra_id_asset_connector):
     """Test that get_assets yields UserOCSFModel objects."""
     # Arrange
     mock_user_ocsf_model = MagicMock()
     mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
-    test_entra_id_asset_connector.fetch_new_users = AsyncMock(return_value=[mock_user_ocsf_model])
+    
+    async def mock_fetch_new_users(last_run_date=None):
+        yield mock_user_ocsf_model
+    
+    test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
 
     # Act
-    assets = list(test_entra_id_asset_connector.get_assets())
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
 
     # Assert
     assert len(assets) == 1
     assert assets[0] is mock_user_ocsf_model
 
 
-def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
     """Test that get_assets uses most_recent_date_seen when available."""
     # Arrange
     test_entra_id_asset_connector._latest_time = 1640995200.0  # Set a timestamp
@@ -497,17 +504,23 @@ def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
 
     mock_user_ocsf_model = MagicMock()
     mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
-    test_entra_id_asset_connector.fetch_new_users = AsyncMock(return_value=[mock_user_ocsf_model])
+    
+    # Track calls to fetch_new_users
+    call_tracker = {'last_run_date': None}
+    
+    async def mock_fetch_new_users(last_run_date=None):
+        call_tracker['last_run_date'] = last_run_date
+        yield mock_user_ocsf_model
+    
+    test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
 
     # Act
-    assets = list(test_entra_id_asset_connector.get_assets())
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
 
     # Assert
     assert len(assets) == 1
-    test_entra_id_asset_connector.fetch_new_users.assert_called_once()
     # Verify that the last_run_date was passed
-    call_args = test_entra_id_asset_connector.fetch_new_users.call_args
-    assert call_args[1]["last_run_date"] is not None
+    assert call_tracker['last_run_date'] is not None
 
 
 def test_map_fields_with_none_values(test_entra_id_asset_connector):
