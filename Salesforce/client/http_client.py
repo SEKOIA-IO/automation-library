@@ -195,7 +195,7 @@ class SalesforceHttpClient(object):
         }
 
         return URL("{0}/services/data/v58.0/query".format(self.base_url)).with_query(
-            urlencode(params, safe=">+,'=:", encoding="utf-8")
+            urlencode(params, safe=">+,'=:<", encoding="utf-8")
         )
 
     async def _request_headers(self) -> Dict[str, str]:
