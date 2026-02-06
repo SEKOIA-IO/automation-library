@@ -80,7 +80,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
     def client(self, value: GraphServiceClient) -> None:
         self._client = value
 
-    def update_checkpoint(self) -> None:
+    async def update_checkpoint(self) -> None:
         if self._latest_time is None:
             return
         with self.context as cache:
