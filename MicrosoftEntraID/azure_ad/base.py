@@ -91,12 +91,37 @@ class RequiredSingleUserArguments(SingleUserArguments):
 class RequiredTwoUserArguments(SingleUserArguments):
     userNewPassword: str | None = Field(
         None,
-        description="New password, required to reset the old one of course.",
+        description="New password required to reset the old one of course.",
     )
 
     @root_validator
     def validate_two_arguments(cls, values):
         if not ((values.get("id") or values.get("userPrincipalName")) and values.get("userNewPassword")):
             raise ValueError("'userPrincipalName' and ('id' or 'userPrincipalName') should be specified")
+
+        return values
+
+
+class RequiredTwoUserArgumentsV2(SingleUserArguments):
+    userNewPassword: str | None = Field(
+        None,
+        description="New password. If not specified, it will be auto generated.",
+    )
+
+    forceChangePasswordNextSignIn: bool = Field(
+        True,
+        description="Force change password next sign in",
+    )
+
+    forceChangePasswordNextSignInWithMfa: bool | None = Field(
+        None,
+        description="Force change password next sign in with Mfa",
+    )
+
+    @root_validator
+    def validate_values(cls, values):
+        user_principal_name = values.get("id") or values.get("userPrincipalName")
+        if not user_principal_name:
+            raise ValueError("'id' or 'userPrincipalName' should be specified")
 
         return values
