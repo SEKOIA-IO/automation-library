@@ -11,6 +11,10 @@ from yarl import URL
 from github_modules.async_client.token_refresher import PemGithubTokenRefresher
 
 
+class BadCredentialsError(Exception):
+    pass
+
+
 class AsyncGithubClient(object):
     """Async Github client."""
 
@@ -41,7 +45,7 @@ class AsyncGithubClient(object):
         self.api_key = api_key
 
         self.pem_file = pem_file
-        self.base_url = f'https://{base_url.removeprefix("http://").removeprefix("https://")}'
+        self.base_url = f'https://{base_url.removeprefix("http://").removeprefix("https://").rstrip("/")}'
         self.organization = organization
         self.app_id = app_id
 
@@ -87,9 +91,10 @@ class AsyncGithubClient(object):
             raise ValueError("Pem file, organization and app id should be provided.")
 
         return await PemGithubTokenRefresher.instance(
-            self.pem_file,
-            self.organization,
-            self.app_id,
+            base_url=self.base_url,
+            pem_file=self.pem_file,
+            organization=self.organization,
+            app_id=self.app_id,
         )
 
     async def get_auth_headers(self, refresh_token: bool = False) -> dict[str, str]:
@@ -148,12 +153,16 @@ class AsyncGithubClient(object):
 
             async with session.get(request_url, params=params, headers=headers) as response:
                 if response.status != 200:
+                    if response.status == 401:
+                        raise BadCredentialsError("Bad credentials")
+
                     headers = await self.get_auth_headers(refresh_token=True)
 
                     async with session.get(request_url, params=params, headers=headers) as refreshed_response:
                         result = await refreshed_response.json()
                         links = refreshed_response.links.get("next", {})
                         next_link = str(links.get("url")) if links.get("url") else None
+
                 else:
                     result = await response.json()
                     links = response.links.get("next", {})

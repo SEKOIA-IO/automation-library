@@ -185,6 +185,11 @@ zjnahg4QbM6Yed3xgz94nkFpeKvkQz/5vPrKy041E/JMROGYF8/wbQ==
 
 
 @pytest.fixture
+def base_url() -> str:
+    return "https://api.github.com"
+
+
+@pytest.fixture
 def symphony_storage():
     """
     Yields temporary symphony storage.
