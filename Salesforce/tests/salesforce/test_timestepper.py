@@ -110,10 +110,10 @@ def test_timestepper_sleep_duration(mock_connector):
     """Test that sleep_duration is set when time range is in the future."""
     # Set up a stepper where next_end will be in the future
     now = datetime.datetime.now(timezone.utc)
-    start = now - datetime.timedelta(minutes=5)
-    end = now + datetime.timedelta(minutes=5)  # End is in the future
-    frequency = datetime.timedelta(minutes=10)
-    timedelta = datetime.timedelta(minutes=0)  # No lag offset
+    start = now - datetime.timedelta(seconds=5)
+    end = now + datetime.timedelta(seconds=5)  # End is in the future
+    frequency = datetime.timedelta(seconds=10)
+    timedelta = datetime.timedelta(seconds=0)  # No lag offset
 
     stepper = TimeStepper(mock_connector, start, end, frequency, timedelta)
 

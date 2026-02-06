@@ -276,10 +276,6 @@ class SalesforceConnector(AsyncConnector):
                     self.update_stepper(end)
                     self._save_log_file_cache()
 
-                    # Sleep if the stepper indicates we need to wait
-                    if self.stepper.sleep_duration > 0:
-                        time.sleep(self.stepper.sleep_duration)
-
             except RefreshTokenException as error:
                 logger.error("Error while running Salesforce", error=error)
                 self.log(message="Using refresh token failed. Please check the credentials", level="critical")

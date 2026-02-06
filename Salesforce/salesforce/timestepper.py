@@ -1,6 +1,7 @@
 """Timestepper for orchestrating event collection with configurable time windows."""
 
 import datetime
+import time
 from collections.abc import Generator
 
 from sekoia_automation.aio.connector import AsyncConnector
@@ -53,6 +54,10 @@ class TimeStepper:
             Tuple of (start, end) datetimes for each time window
         """
         while True:
+            # Sleep if the stepper indicates we need to wait
+            if self.sleep_duration > 0:
+                time.sleep(self.sleep_duration)
+
             # Return the current time range
             yield self.start, self.end
 
