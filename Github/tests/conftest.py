@@ -22,6 +22,11 @@ def last_timestamp() -> int:
 
 
 @pytest.fixture
+def github_bad_creds_response() -> dict:
+    return {"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest", "status": "401"}
+
+
+@pytest.fixture
 def github_response() -> list[dict[str, Any]]:
     """
     Github api mocked response.

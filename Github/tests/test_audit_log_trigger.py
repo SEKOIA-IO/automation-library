@@ -8,6 +8,7 @@ import pytest
 from aioresponses import aioresponses
 
 from github_modules import GithubModule, GithubModuleConfiguration
+from github_modules.async_client.http_client import BadCredentialsError
 from github_modules.audit_log_trigger import AuditLogConnector
 
 
@@ -225,3 +226,21 @@ async def test_next_batch_with_api_key_no_base_url(
         )
 
         await connector_with_api_key_no_base_url.next_batch()
+
+
+@pytest.mark.asyncio
+async def test_next_batch_with_incorrect_creds(connector_with_api_key, github_bad_creds_response):
+    with aioresponses() as mocked_responses:
+        audit_logs_url = (
+            connector_with_api_key.github_client.audit_logs_url
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_api_key.last_ts)
+        )
+
+        mocked_responses.get(
+            audit_logs_url,
+            status=401,
+            payload=github_bad_creds_response,
+        )
+
+        with pytest.raises(BadCredentialsError):
+            await connector_with_api_key.next_batch()
