@@ -38,11 +38,11 @@ from azure_ad.base import AzureADModule
 
 class EntraIDAssetConnector(AsyncAssetConnector):
     """Asset connector for Microsoft Entra ID user inventory.
-    
+
     Fetches user information, groups, MFA status, and admin roles from
     Microsoft Entra ID (formerly Azure AD) and maps them to OCSF format.
     """
-    
+
     module: AzureADModule
 
     PRODUCT_NAME = "Microsoft Entra ID"
@@ -73,7 +73,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             auth_provider = AzureIdentityAuthenticationProvider(credentials)
             adapter = GraphRequestAdapter(auth_provider)
             self._client = GraphServiceClient(request_adapter=adapter)
-        
+
         return self._client
 
     @client.setter
@@ -86,14 +86,14 @@ class EntraIDAssetConnector(AsyncAssetConnector):
         with self.context as cache:
             # We add offset to avoid fetching the same user again in the next run
             cache["most_recent_date_seen"] = (
-                datetime.fromtimestamp(
-                    self._latest_time + self.CHECKPOINT_TIME_OFFSET_SECONDS, timezone.utc
-                ).replace(microsecond=0).isoformat()
+                datetime.fromtimestamp(self._latest_time + self.CHECKPOINT_TIME_OFFSET_SECONDS, timezone.utc)
+                .replace(microsecond=0)
+                .isoformat()
             )
 
     def map_fields(self, user: User, has_mfa: bool, groups: list[UserOCSFGroup], is_admin: bool) -> UserOCSFModel:
         """Map fields from User to UserOCSFModel.
-        
+
         Args:
             user: The user data from Microsoft Graph API.
             has_mfa: Whether the user has MFA enabled.
@@ -247,11 +247,14 @@ class EntraIDAssetConnector(AsyncAssetConnector):
             has_mfa = False
             if user_mfa and user_mfa.value:
                 for method in user_mfa.value:
-                    if isinstance(method, (
-                        MicrosoftAuthenticatorAuthenticationMethod,
-                        SoftwareOathAuthenticationMethod,
-                        PhoneAuthenticationMethod
-                    )):
+                    if isinstance(
+                        method,
+                        (
+                            MicrosoftAuthenticatorAuthenticationMethod,
+                            SoftwareOathAuthenticationMethod,
+                            PhoneAuthenticationMethod,
+                        ),
+                    ):
                         has_mfa = True
                         break
             return has_mfa
@@ -334,7 +337,7 @@ class EntraIDAssetConnector(AsyncAssetConnector):
 
     async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
         """Fetch user assets from Microsoft Graph API.
-        
+
         Yields:
             UserOCSFModel: OCSF-formatted user inventory data.
         """

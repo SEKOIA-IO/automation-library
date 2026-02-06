@@ -481,10 +481,10 @@ async def test_get_assets(test_entra_id_asset_connector):
     # Arrange
     mock_user_ocsf_model = MagicMock()
     mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
-    
+
     async def mock_fetch_new_users(last_run_date=None):
         yield mock_user_ocsf_model
-    
+
     test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
 
     # Act
@@ -504,14 +504,14 @@ async def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
 
     mock_user_ocsf_model = MagicMock()
     mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
-    
+
     # Track calls to fetch_new_users
-    call_tracker = {'last_run_date': None}
-    
+    call_tracker = {"last_run_date": None}
+
     async def mock_fetch_new_users(last_run_date=None):
-        call_tracker['last_run_date'] = last_run_date
+        call_tracker["last_run_date"] = last_run_date
         yield mock_user_ocsf_model
-    
+
     test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
 
     # Act
@@ -520,7 +520,7 @@ async def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
     # Assert
     assert len(assets) == 1
     # Verify that the last_run_date was passed
-    assert call_tracker['last_run_date'] is not None
+    assert call_tracker["last_run_date"] is not None
 
 
 def test_map_fields_with_none_values(test_entra_id_asset_connector):
