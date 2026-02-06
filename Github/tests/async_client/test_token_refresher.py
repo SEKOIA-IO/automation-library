@@ -112,10 +112,12 @@ async def test_github_token_refresher_instance(base_url, session_faker, pem_cont
     app_id = session_faker.pyint()
     organization = session_faker.word()
     different_organization = session_faker.word()
+    other_base_url = "https://other.example.com"
 
     instance1 = await PemGithubTokenRefresher.instance(base_url, pem_content, organization, app_id)
     instance2 = await PemGithubTokenRefresher.instance(base_url, pem_content, organization, app_id)
     instance3 = await PemGithubTokenRefresher.instance(base_url, pem_content, different_organization, app_id)
+    instance4 = await PemGithubTokenRefresher.instance(other_base_url, pem_content, organization, app_id)
 
     assert instance1.base_url == base_url
     assert instance1.pem_file == pem_content
@@ -134,6 +136,12 @@ async def test_github_token_refresher_instance(base_url, session_faker, pem_cont
     assert instance3.app_id == instance1.app_id
     assert instance3.organization == different_organization
 
+    assert instance4 is not instance1
+    assert instance4.base_url == other_base_url
+    assert instance4.organization == organization
+    assert instance4.app_id == app_id
+
     await instance1.close()
     await instance2.close()
     await instance3.close()
+    await instance4.close()
