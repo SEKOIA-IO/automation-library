@@ -57,7 +57,7 @@ addopts = "  --strict-markers\n  --tb=short\n  --cov=graph_api\n  --cov=azure_ad
 omit = ["tests/*", "main.py"]
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.21.2"
+version = "^1.21.3"
 extras = ["all"]
 
 [tool.poetry.dev-dependencies.black]

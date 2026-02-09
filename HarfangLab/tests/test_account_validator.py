@@ -1,6 +1,6 @@
-import pytest
 from unittest.mock import Mock
 
+import pytest
 import requests
 from sekoia_automation.module import Module
 

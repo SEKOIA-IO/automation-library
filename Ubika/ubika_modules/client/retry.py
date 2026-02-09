@@ -4,15 +4,14 @@ import httpx
 from tenacity import (
     Retrying,
     TryAgain,
-    wait_random,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+    wait_random,
 )
 
 
 class ExponentialBackoffTransport(httpx.BaseTransport):
-
     def __init__(
         self,
         transport: httpx.BaseTransport,

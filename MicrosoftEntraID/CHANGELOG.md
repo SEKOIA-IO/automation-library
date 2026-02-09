@@ -7,11 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-01-29 - 2.11.0
+## 2026-02-09 - 2.10.13
 
 ### Added
 
 - New action in order to reset user password
+
+### Changed
+
+- Deprecate the old action to reset user password
+
+## 2026-02-06 - 2.10.12
+
+### Fixed
+
+- Fix code formatting and linting issues
+- Refactor asset connector implementation
+
+## 2026-02-06 - 2.10.11
+
+### Changed
+
+- Migrate EntraID asset connector from synchronous to asynchronous implementation
+- Update sekoia-automation-sdk dependency to version 1.21.3
 
 ## 2026-01-29 - 2.10.10
 
