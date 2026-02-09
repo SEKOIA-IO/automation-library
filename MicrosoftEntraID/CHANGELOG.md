@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-09 - 2.10.14
+
+### Fixed
+
+- Fix typo in the User Reset Password action manifest
+
 ## 2026-02-09 - 2.10.13
 
 ### Added
