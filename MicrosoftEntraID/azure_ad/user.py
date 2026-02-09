@@ -113,7 +113,7 @@ class EnableUserAction(MicrosoftGraphAction):
 
 class ResetUserPasswordAction(MicrosoftGraphAction):
     name = "Reset User Password [DEPRECATED]"
-    description = "Reset a user's password. You will need UserAuthenticationMethod.ReadWrite. All deleguated permission."  # noqa: E501
+    description = "Reset a user's password. You will need UserAuthenticationMethod.ReadWrite. All delegated permission."  # noqa: E501
 
     async def query_list_user_methods(self, user_param, req_conf):
         return await self.client.users.by_user_id(user_param).authentication.password_methods.get(
