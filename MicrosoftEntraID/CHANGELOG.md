@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-09 - 2.10.13
+
+### Added
+
+- New action in order to reset user password
+
+### Changed
+
+- Deprecate the old action to reset user password
+
 ## 2026-02-06 - 2.10.12
 
 ### Fixed
