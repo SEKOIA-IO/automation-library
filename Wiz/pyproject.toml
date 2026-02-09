@@ -32,9 +32,11 @@ exclude = ["tests/*", "resources/*", "main.py"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.21.1"
 orjson = "^3.7.7"
 cachetools = "^5.4.0"
 aiolimiter = "^1.1.0"
+loguru = "^0.7.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

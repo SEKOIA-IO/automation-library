@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-11-25 - 1.3.3
+
+### Fixed
+
+- Update Wiz SDK to 1.21.1
+
 ## 2025-09-05 - 1.3.2
 
 ### Changed
