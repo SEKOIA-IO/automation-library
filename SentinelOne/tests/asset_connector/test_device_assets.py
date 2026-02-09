@@ -788,6 +788,7 @@ def test_map_fields_boot_time(test_sentinelone_device_asset_connector, sample_ag
     assert isinstance(result.device.boot_time, int)
     # The expected timestamp for "2018-02-20T10:30:00.000000Z"
     from dateutil.parser import isoparse
+
     expected_timestamp = int(isoparse("2018-02-20T10:30:00.000000Z").timestamp())
     assert result.device.boot_time == expected_timestamp
 
