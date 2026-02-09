@@ -124,7 +124,7 @@ class ResetUserPasswordAction(MicrosoftGraphAction):
     def client(self):
         """
         Used client with preconfigured scopes for password reset action
-        It's a not a good practice to use. But the app permission not supported for this action
+        It's not a good practice to use. But the app permission is not supported for this action.
         More information about it here:
         https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.usernamepasswordcredential?view=azure-python
         """
