@@ -21,7 +21,7 @@ line_length = 119
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 ldap3 = "^2.9.1"
-sekoia-automation-sdk = "^v1.21.1"
+sekoia-automation-sdk = "^1.22.2"
 pytest = "^7.4.3"
 
 [tool.pytest.ini_options]

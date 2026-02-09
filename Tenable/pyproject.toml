@@ -23,7 +23,7 @@ line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.22.1"
+sekoia-automation-sdk = "^1.22.2"
 pydantic = "^2.11.7"
 pytenable = "^1.8.2"
 
