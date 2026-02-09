@@ -25,6 +25,7 @@ crowdstrike-falconpy = "^1.1.4"
 requests-ratelimiter = "^0.7.0"
 stix2-patterns = "^2.0.0"
 structlog = "^24.1.0"
+aiolimiter = "^1.2.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
