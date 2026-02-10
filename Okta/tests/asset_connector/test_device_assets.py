@@ -182,7 +182,7 @@ async def test_next_list_devices_success(test_okta_device_asset_connector):
         mock_fetch.return_value = ([mock_device1, mock_device2], mock_response)
 
         # Act
-        devices = await test_okta_device_asset_connector.next_list_devices()
+        devices = [device async for device in test_okta_device_asset_connector.next_list_devices()]
 
         # Assert
         assert len(devices) == 2
@@ -199,7 +199,9 @@ async def test_next_list_devices_failure(test_okta_device_asset_connector):
 
         # Act & Assert
         with pytest.raises(Exception):
-            await test_okta_device_asset_connector.next_list_devices()
+            # Need to consume the generator to trigger the exception
+            async for _ in test_okta_device_asset_connector.next_list_devices():
+                pass
 
 
 # ========================================
@@ -321,7 +323,8 @@ async def test_map_fields_failure_invalid_device(test_okta_device_asset_connecto
 # ========================================
 # Tests: get_assets method
 # ========================================
-def test_get_assets_success(test_okta_device_asset_connector):
+@pytest.mark.asyncio
+async def test_get_assets_success(test_okta_device_asset_connector):
 
     mock_device1 = OktaDevice(
         id="dev1",
@@ -364,11 +367,15 @@ def test_get_assets_success(test_okta_device_asset_connector):
     test_okta_device_asset_connector._data_path = MagicMock()
     test_okta_device_asset_connector._data_path.absolute.return_value = "/tmp/test"
 
+    # Create async generator for mocking
+    async def mock_next_list_devices():
+        yield mock_device1
+        yield mock_device2
+
     with (
-        patch.object(test_okta_device_asset_connector, "next_list_devices") as mock_next_list,
+        patch.object(test_okta_device_asset_connector, "next_list_devices", mock_next_list_devices),
         patch.object(test_okta_device_asset_connector, "map_fields") as mock_map,
     ):
-        mock_next_list.return_value = [mock_device1, mock_device2]
         mock_map.side_effect = [
             DeviceOCSFModel(
                 activity_id=2,
@@ -417,17 +424,17 @@ def test_get_assets_success(test_okta_device_asset_connector):
         ]
 
         # Act
-        assets = list(test_okta_device_asset_connector.get_assets())
+        assets = [asset async for asset in test_okta_device_asset_connector.get_assets()]
 
         # Assert
         assert len(assets) == 2
         assert assets[0].device.hostname == "Device 1"
         assert assets[1].device.hostname == "Device 2"
-        mock_next_list.assert_called_once()
         assert mock_map.call_count == 2
 
 
-def test_get_assets_failure_mapping_error(test_okta_device_asset_connector):
+@pytest.mark.asyncio
+async def test_get_assets_failure_mapping_error(test_okta_device_asset_connector):
     # Arrange
     mock_device = OktaDevice(
         id="dev1",
@@ -452,37 +459,42 @@ def test_get_assets_failure_mapping_error(test_okta_device_asset_connector):
     test_okta_device_asset_connector._data_path = MagicMock()
     test_okta_device_asset_connector._data_path.absolute.return_value = "/tmp/test"
 
+    # Create async generator for mocking
+    async def mock_next_list_devices():
+        yield mock_device
+
     with (
-        patch.object(test_okta_device_asset_connector, "next_list_devices") as mock_next_list,
+        patch.object(test_okta_device_asset_connector, "next_list_devices", mock_next_list_devices),
         patch.object(test_okta_device_asset_connector, "map_fields") as mock_map,
     ):
-        mock_next_list.return_value = [mock_device]
         mock_map.side_effect = Exception("Mapping error")
 
         # Act
-        assets = list(test_okta_device_asset_connector.get_assets())
+        assets = [asset async for asset in test_okta_device_asset_connector.get_assets()]
 
         # Assert
         assert len(assets) == 0  # Should skip the device with mapping error
-        mock_next_list.assert_called_once()
         mock_map.assert_called_once()
 
 
-def test_get_assets_failure_no_devices(test_okta_device_asset_connector):
+@pytest.mark.asyncio
+async def test_get_assets_failure_no_devices(test_okta_device_asset_connector):
     # Arrange
     # Mock the _data_path to have an absolute method
     test_okta_device_asset_connector._data_path = MagicMock()
     test_okta_device_asset_connector._data_path.absolute.return_value = "/tmp/test"
 
-    with patch.object(test_okta_device_asset_connector, "next_list_devices") as mock_next_list:
-        mock_next_list.return_value = []
+    # Create empty async generator for mocking
+    async def mock_next_list_devices():
+        if False:
+            yield None
 
+    with patch.object(test_okta_device_asset_connector, "next_list_devices", mock_next_list_devices):
         # Act
-        assets = list(test_okta_device_asset_connector.get_assets())
+        assets = [asset async for asset in test_okta_device_asset_connector.get_assets()]
 
         # Assert
         assert len(assets) == 0
-        mock_next_list.assert_called_once()
 
 
 # ========================================
@@ -600,7 +612,7 @@ async def test_next_list_devices_with_pagination(test_okta_device_asset_connecto
         ]
 
         # Act
-        devices = await test_okta_device_asset_connector.next_list_devices()
+        devices = [device async for device in test_okta_device_asset_connector.next_list_devices()]
 
         # Assert
         assert len(devices) == 2
@@ -661,61 +673,6 @@ async def test_map_fields_with_minimal_device(test_okta_device_asset_connector):
     assert result.metadata.product.name == "Okta"
     assert result.metadata.product.vendor_name == "Okta"
     assert result.severity == "Informational"
-
-
-def test_get_last_created_date(test_okta_device_asset_connector):
-    """Test get_last_created_date method."""
-    devices = [
-        OktaDevice(
-            id="dev1",
-            status="ACTIVE",
-            created="2023-01-01T00:00:00Z",
-            lastUpdated="2023-01-01T00:00:00Z",
-            profile=OktaDeviceProfile(
-                displayName="Device 1",
-                platform="windows",
-                registered=True,
-                secureHardwarePresent=True,
-                osVersion="10.0.19041",
-            ),
-        ),
-        OktaDevice(
-            id="dev2",
-            status="ACTIVE",
-            created="2023-01-03T00:00:00Z",
-            lastUpdated="2023-01-03T00:00:00Z",
-            profile=OktaDeviceProfile(
-                displayName="Device 2",
-                platform="macos",
-                registered=True,
-                secureHardwarePresent=True,
-                osVersion="13.0",
-            ),
-        ),
-        OktaDevice(
-            id="dev3",
-            status="ACTIVE",
-            created="2023-01-02T00:00:00Z",
-            lastUpdated="2023-01-02T00:00:00Z",
-            profile=OktaDeviceProfile(
-                displayName="Device 3",
-                platform="linux",
-                registered=True,
-                secureHardwarePresent=True,
-                osVersion="5.4.0",
-            ),
-        ),
-    ]
-
-    last_date = test_okta_device_asset_connector.get_last_created_date(devices)
-
-    assert last_date == "2023-01-03T00:00:00Z"
-
-
-def test_get_last_created_date_empty_list(test_okta_device_asset_connector):
-    """Test get_last_created_date with empty list raises ValueError."""
-    with pytest.raises(ValueError):
-        test_okta_device_asset_connector.get_last_created_date([])
 
 
 # ========================================

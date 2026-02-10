@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-04 - 1.4.0
+
+### Added
+
+- Add Wiz Threat Detections connector
+
 ## 2025-09-05 - 1.3.2
 
 ### Changed

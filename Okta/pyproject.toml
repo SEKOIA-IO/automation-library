@@ -36,12 +36,15 @@ orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
 requests-ratelimiter = "^0.7.0"
 structlog = "^22.3.0"
-sekoia-automation-sdk = "^1.21.2"
+sekoia-automation-sdk = "^1.22.2"
 urllib3 = "^2.0.7"
 okta = "^2.9.13"
 cachetools = "^6.2.1"
+aiolimiter = "^1.2.1"
+setuptools = "*" # Required for building flatdict from source (okta dependency)
+flatdict = "4.0.0" # Downgraded to 4.0.0 to avoid PEP517 build failure (pkg_resources) on Python 3.11+
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "*"
 pytest-cov = "*"
 pytest-asyncio = "*"
@@ -50,10 +53,7 @@ requests-mock = "*"
 isort = "^5.10.1"
 mypy = "^0.991"
 types-python-dateutil = "^2.8.19.13"
+black = { version = "^24.3.0", extras = ["colorama"] }
 
 [tool.coverage.run]
 omit = ["tests/*", "main.py"]
-
-[tool.poetry.dev-dependencies.black]
-version = "^24.3.0"
-extras = ["colorama"]

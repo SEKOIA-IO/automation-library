@@ -296,7 +296,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         created_time = timestamp
         first_seen_time = isoparse(agent.registeredAt).timestamp() if agent.registeredAt else None
         last_seen_time = isoparse(agent.lastActiveDate).timestamp() if agent.lastActiveDate else None
-        boot_time = agent.osStartTime  # Keep as ISO string
+        boot_time = int(isoparse(agent.osStartTime).timestamp()) if agent.osStartTime else None
 
         # Build groups list if available
         groups = None
