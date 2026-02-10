@@ -586,16 +586,16 @@ class WizGqlClient(object):
     async def get_threat_detections(self, start_date: datetime, after: str | None = None) -> WizResult:
         query = """
             query ListDetection(
-                $after: String, 
-                $startDateTime: DateTime, 
+                $after: String,
+                $startDateTime: DateTime,
                 $limit: Int = 100
             ) {
                 detections(
                     filterBy: {
                         createdAt: {after: $startDateTime}
                     } 
-                    first: $limit, 
-                    after: $after, 
+                    first: $limit,
+                    after: $after,
                     orderBy: {
                         field: CREATED_AT,
                         direction: ASC
