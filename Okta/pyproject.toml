@@ -42,7 +42,7 @@ okta = "^2.9.13"
 cachetools = "^6.2.1"
 aiolimiter = "^1.2.1"
 setuptools = "*" # Required for building flatdict from source (okta dependency)
-flatdict = "4.0.1"
+flatdict = "4.0.0" # Downgraded to 4.0.0 to avoid PEP517 build failure (pkg_resources) on Python 3.11+
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

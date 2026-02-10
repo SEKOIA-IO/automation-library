@@ -5,7 +5,7 @@ and format them according to OCSF standards.
 """
 
 import asyncio
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from functools import cached_property
 from typing import Any, Optional
 
@@ -14,7 +14,7 @@ from okta.client import Client as OktaClient
 from okta.models.user import User as OktaUser
 from okta.models.role import Role as OktaRole
 from okta.models.role_status import RoleStatus as OktaRoleStatus
-from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
@@ -31,7 +31,7 @@ from sekoia_automation.storage import PersistentJSON
 from okta_modules import OktaModule
 
 
-class OktaUserAssetConnector(AssetConnector):
+class OktaUserAssetConnector(AsyncAssetConnector):
     """Asset connector for collecting user data from Okta.
 
     This connector fetches user information from Okta and formats it
@@ -206,64 +206,39 @@ class OktaUserAssetConnector(AssetConnector):
 
         return list(roles)
 
-    async def next_list_users(self) -> list[OktaUser]:
+    async def next_list_users(self) -> AsyncGenerator[OktaUser, None]:
         """Fetch all users from Okta.
 
         Returns:
             List of user objects from Okta.
         """
-        all_users = []
         try:
             query_params = {}
             if self.most_recent_date_seen:
-                query_params = {"search": f'created gt "{self.most_recent_date_seen}"'}
+                query_params = {"search": f'created gt "{self.most_recent_date_seen}"', "sortBy": "created", "sortOrder": "asc"}
 
             users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
-                return []
-
-            if not users:
-                self.log("No users found", level="warning")
-                return []
-
-            all_users.extend(users)
+                return
+            
+            for user in users:
+                yield user
+                self.new_most_recent_date = user.created
 
             while resp.has_next():
                 users, resp, err = await resp.next()
                 if err:
                     self.log(f"Error while listing users: {err}", level="error")
-                    return all_users
-                all_users.extend(users)
+                    return
+                for user in users:
+                    yield user
+                    self.new_most_recent_date = user.created
 
-            # Only update checkpoint if we have users
-            if all_users:
-                self.new_most_recent_date = self.get_last_created_date(all_users)
         except Exception as e:
             self.log(f"Exception while listing users: {e}", level="error")
             self.log_exception(e)
-            return []
-
-        return all_users
-
-    def get_last_created_date(self, users: list[OktaUser]) -> str:
-        """Get the last created date from the list of users.
-
-        Args:
-            users: List of Okta users.
-
-        Returns:
-            The last created date as a string.
-
-        Raises:
-            ValueError: If the users list is empty.
-        """
-        if not users:
-            raise ValueError("Cannot get last created date from empty users list")
-
-        result: str = max(user.created for user in users)
-
-        return result
+            return
 
     async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
@@ -363,7 +338,7 @@ class OktaUserAssetConnector(AssetConnector):
             user=user,
         )
 
-    def get_assets(self) -> Generator[UserOCSFModel, None, None]:
+    async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
         """Generate user assets from Okta.
 
         Yields:
@@ -372,12 +347,9 @@ class OktaUserAssetConnector(AssetConnector):
         self.log("Starting Okta user assets generator", level="info")
         self.log(f"Data path: {self._data_path.absolute()}", level="info")
 
-        loop = asyncio.get_event_loop()
-        users = loop.run_until_complete(self.next_list_users())
-
-        for user in users:
+        async for user in self.next_list_users():
             try:
-                yield loop.run_until_complete(self.map_fields(user))
+                yield await self.map_fields(user)
             except Exception as e:
                 user_id = getattr(user, "id", "unknown")
                 self.log(f"Error while mapping user {user_id}: {e}", level="error")

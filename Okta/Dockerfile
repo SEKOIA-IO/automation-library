@@ -2,7 +2,7 @@ FROM python:3.11
 
 WORKDIR /app
 
-RUN pip install poetry setuptools
+RUN pip install poetry
 
 # Install dependencies
 COPY poetry.lock pyproject.toml /app/

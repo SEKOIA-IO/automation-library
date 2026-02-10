@@ -1089,13 +1089,13 @@ dotenv = ["python-dotenv"]
 
 [[package]]
 name = "flatdict"
-version = "4.0.1"
+version = "4.0.0"
 description = "Python module for interacting with nested dicts as a single level dict with delimited keys."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "flatdict-4.0.1.tar.gz", hash = "sha256:cd32f08fd31ed21eb09ebc76f06b6bd12046a24f77beb1fd0281917e47f26742"},
+    {file = "flatdict-4.0.0.tar.gz", hash = "sha256:214eb3904d932d0b1809223249ee46b74e3b31fd49ee1cbe81987a7b27733d02"},
 ]
 
 [[package]]
@@ -4111,4 +4111,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "5e54a134887a7142495ad1c6b74816d309686682bcfd6655178e2ddb6774f112"
+content-hash = "47635ed0a4e4d81842ba7e73f0b02385453ce66fb18aa5056ad67e2a8595828e"
