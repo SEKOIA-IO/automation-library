@@ -14,7 +14,7 @@ class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):
 
     ignore_comments: bool = False
     skip_first: int = 0
-    separator: str
+    separator: str = "\n"
 
 
 class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
