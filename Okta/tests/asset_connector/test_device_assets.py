@@ -486,8 +486,8 @@ async def test_get_assets_failure_no_devices(test_okta_device_asset_connector):
 
     # Create empty async generator for mocking
     async def mock_next_list_devices():
-        return
-        yield  # Make it a generator (unreachable)
+        if False:
+            yield None
 
     with patch.object(test_okta_device_asset_connector, "next_list_devices", mock_next_list_devices):
         # Act

@@ -4,7 +4,6 @@ This module provides functionality to collect device assets from Okta
 and format them according to OCSF standards.
 """
 
-import asyncio
 from collections.abc import AsyncGenerator
 from functools import cached_property
 from typing import Any, List, Optional

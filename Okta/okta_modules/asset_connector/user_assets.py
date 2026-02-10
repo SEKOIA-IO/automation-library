@@ -209,8 +209,8 @@ class OktaUserAssetConnector(AsyncAssetConnector):
     async def next_list_users(self) -> AsyncGenerator[OktaUser, None]:
         """Fetch all users from Okta.
 
-        Returns:
-            List of user objects from Okta.
+        Yields:
+            OktaUser objects from Okta, one user at a time.
         """
         try:
             query_params = {}
