@@ -215,13 +215,17 @@ class OktaUserAssetConnector(AsyncAssetConnector):
         try:
             query_params = {}
             if self.most_recent_date_seen:
-                query_params = {"search": f'created gt "{self.most_recent_date_seen}"', "sortBy": "created", "sortOrder": "asc"}
+                query_params = {
+                    "search": f'created gt "{self.most_recent_date_seen}"',
+                    "sortBy": "created",
+                    "sortOrder": "asc",
+                }
 
             users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
                 return
-            
+
             for user in users:
                 yield user
                 self.new_most_recent_date = user.created

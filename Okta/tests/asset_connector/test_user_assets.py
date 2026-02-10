@@ -367,11 +367,12 @@ class TestOktaUserAssetConnector:
     @pytest.mark.asyncio
     async def test_get_assets_success(self, mock_connector, sample_users_data):
         """Test successful asset generation."""
+
         # Setup
         async def mock_next_list_users():
             for user in sample_users_data:
                 yield user
-        
+
         mock_connector.next_list_users = mock_next_list_users
         mock_mapped_asset1 = MagicMock()
         mock_mapped_asset2 = MagicMock()
@@ -390,11 +391,12 @@ class TestOktaUserAssetConnector:
     @pytest.mark.asyncio
     async def test_get_assets_with_error(self, mock_connector, sample_users_data):
         """Test asset generation with mapping error."""
+
         # Setup
         async def mock_next_list_users():
             for user in sample_users_data:
                 yield user
-        
+
         mock_connector.next_list_users = mock_next_list_users
         mock_mapped_asset = MagicMock()
         # First call raises exception, second call succeeds
@@ -413,8 +415,6 @@ class TestOktaUserAssetConnector:
             if call[0][0].startswith("Error while mapping user") and "Mapping error" in call[0][0]
         ]
         assert len(error_calls) > 0
-
-
 
     def test_most_recent_date_seen_property(self, mock_connector):
         """Test the most_recent_date_seen property."""

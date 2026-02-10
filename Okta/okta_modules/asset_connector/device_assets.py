@@ -132,7 +132,11 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         try:
             query_params = {}
             if self.most_recent_date_seen:
-                query_params = {"search": f'created gt "{self.most_recent_date_seen}"', "sortBy": "created", "sortOrder": "asc"}
+                query_params = {
+                    "search": f'created gt "{self.most_recent_date_seen}"',
+                    "sortBy": "created",
+                    "sortOrder": "asc",
+                }
             if query_params:
                 encoded_query_params = urlencode(query_params)
                 url += f"/?{encoded_query_params}"
