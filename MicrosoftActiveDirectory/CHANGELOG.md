@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-02-11 - 1.4.6
+## 2026-02-11 - 1.4.7
 
 ### Added
 
 - Add asset connector mapping files for Microsoft Active Directory user assets
+
+## 2025-02-09 - 1.4.6
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
 
 ## 2026-01-29 - 1.4.5
 
