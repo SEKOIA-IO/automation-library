@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-11 - 1.21.6
+
+### Added
+
+- Add asset connector mapping files for SentinelOne device assets
+
 ## 2026-01-21 - 1.21.5
 
 ### Fixed
