@@ -33,6 +33,16 @@ def arguments_with_valid_for():
 
 
 @pytest.fixture
+def arguments_with_invalid_indicators():
+    return {
+        "indicators": "8.8.8.8",
+        "ioc_collection_id": "ioc-collection--00000000-0000-0000-0000-000000000000",
+        "indicator_type": "IP address",
+        "valid_for": "90",
+    }
+
+
+@pytest.fixture
 def arguments_invalid_type():
     return {
         "indicators": ["8.8.8.8"],
@@ -100,6 +110,14 @@ def test_add_ioc_with_validity(arguments_with_valid_for):
         assert mock.call_count == 2
         assert history[0].method == "POST"
         assert "valid_until" in history[0].text
+
+
+def test_add_ioc_should_raise_error_on_invalid_indicator(arguments_with_invalid_indicators):
+    action: AddIOCtoIOCCollectionAction = AddIOCtoIOCCollectionAction()
+    action.module.configuration = {"base_url": "http://fake.url/", "api_key": "fake_api_key"}
+
+    with pytest.raises(ValueError):
+        action.run(arguments_with_invalid_indicators)
 
 
 def test_add_ioc_incorrect_type(arguments_invalid_type):
