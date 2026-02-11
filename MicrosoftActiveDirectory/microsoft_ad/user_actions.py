@@ -11,7 +11,7 @@ class ResetUserPasswordAction(MicrosoftADAction):
     name = "Reset Password"
     description = "Reset password with an rdp connection with an admin account"
 
-    def _reset_password_for_user(self, user_dn: str, username: str, new_password: str) -> None:
+    def _reset_password_for_user(self, user_dn: str, username: str | None, new_password: str | None) -> None:
         try:
             self.client.extend.microsoft.modify_password(user_dn, new_password)
         except LDAPException as e:
@@ -65,7 +65,7 @@ class EnableUserAction(MicrosoftADAction):
     name = "Enable User"
     description = "Enable an Azure Active Directory user"
 
-    def _enable_user(self, user_dn: str, current_uac: int | None, username: str) -> None:
+    def _enable_user(self, user_dn: str, current_uac: int | None, username: str | None) -> None:
         uac_disabled = 2
         uac = current_uac if current_uac is not None else DEFAULT_UAC
         new_uac = uac & ~uac_disabled
@@ -125,7 +125,7 @@ class DisableUserAction(MicrosoftADAction):
     name = "Disable User"
     description = "Disable an Azure Active Directory user"
 
-    def _disable_user(self, user_dn: str, current_uac: int | None, username: str) -> None:
+    def _disable_user(self, user_dn: str, current_uac: int | None, username: str | None) -> None:
         uac_disabled = 2
         uac = current_uac if current_uac is not None else DEFAULT_UAC
         new_uac = uac | uac_disabled
