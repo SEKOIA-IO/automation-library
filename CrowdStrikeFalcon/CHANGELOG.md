@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-11 - 1.25.10
+
+### Added
+
+- Add asset connector mapping files for CrowdStrike Falcon device and user assets
+
 ## 2025-02-09 - 1.25.9
 
 ### Changed
