@@ -38,7 +38,7 @@ pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
 flake8 = "^4.0.1"
-pytest-clarity = "^1.0.1"
+pytest-clarity = "*"
 
 [tool.poetry.group.dev.dependencies.black]
 version = "^22.6.0"
