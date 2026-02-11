@@ -1,5 +1,5 @@
 # Import ldap3 exceptions
-from ldap3.core.exceptions import LDAPSocketOpenError, LDAPBindError
+from ldap3.core.exceptions import LDAPBindError, LDAPSocketOpenError
 
 # Import sekoia libraries
 from sekoia_automation.account_validator import AccountValidator

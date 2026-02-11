@@ -1,4 +1,5 @@
-from ldap3.core.exceptions import LDAPSocketOpenError, LDAPBindError
+from ldap3.core.exceptions import LDAPBindError, LDAPSocketOpenError
+
 from microsoft_ad.account_validator import MicrosoftADAccountValidator
 
 
