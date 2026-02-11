@@ -31,6 +31,7 @@ def arguments_with_valid_for():
         "valid_for": "90",
     }
 
+
 @pytest.fixture
 def arguments_with_invalid_indicators():
     return {
