@@ -92,8 +92,10 @@ class DeepVisibilityTrigger(Connector):
 
         else:
             try:
-                messages = self._process_events(message.value())
-                self.push_events_to_intakes(events=messages)
+                message_value = message.value()
+                if message_value is not None:
+                    messages = self._process_events(message_value)
+                    self.push_events_to_intakes(events=messages)
             except Exception as exp:
                 self.log_exception(exp, message="Failed to fetch events.")
                 raise exp

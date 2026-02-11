@@ -443,17 +443,17 @@ class AwsDeviceAssetConnector(AssetConnector):
             # Determine if managed (instances with IAM roles are considered managed)
             is_managed = instance.get("IamInstanceProfile") is not None
 
-            # Format boot time as ISO string if available
-            boot_time_str = None
+            # Convert boot time to timestamp if available
+            boot_time_timestamp = None
             if boot_time:
                 if boot_time.tzinfo is None:
                     boot_time = boot_time.replace(tzinfo=pytz.UTC)
                 elif boot_time.tzinfo != pytz.UTC:
                     boot_time = boot_time.astimezone(pytz.UTC)
-                boot_time_str = boot_time.isoformat()
+                boot_time_timestamp = int(boot_time.timestamp())
 
             # Convert created_time to timestamp for created_time field
-            created_timestamp = created_time.timestamp()
+            created_timestamp = int(created_time.timestamp())
 
             # Extract organization from owner ID
             org = self._extract_organization_from_owner_id(owner_id) if owner_id else None
@@ -476,7 +476,7 @@ class AwsDeviceAssetConnector(AssetConnector):
                 hypervisor=hypervisor,
                 vendor_name=vendor_name,
                 model=model,
-                boot_time=boot_time_str,
+                boot_time=boot_time_timestamp,
                 created_time=created_timestamp,
                 is_managed=is_managed,
                 autoscale_uid=autoscale_uid,

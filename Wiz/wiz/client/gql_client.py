@@ -50,6 +50,14 @@ class WizResult(BaseModel):
             result=response.get("vulnerabilityFindings", {}).get("nodes", []),
         )
 
+    @classmethod
+    def from_threat_detections_response(cls, response: dict[str, Any]) -> "WizResult":
+        return cls(
+            end_cursor=response.get("detections", {}).get("pageInfo", {}).get("endCursor"),
+            has_next_page=response.get("detections", {}).get("pageInfo", {}).get("hasNextPage", False),
+            result=response.get("detections", {}).get("nodes", []),
+        )
+
 
 class WizErrors(Exception):
 
@@ -574,3 +582,154 @@ class WizGqlClient(object):
             raise WizErrors.from_response(response)
 
         return WizResult.from_vulnerability_findings_response(response)
+
+    async def get_threat_detections(self, start_date: datetime, after: str | None = None) -> WizResult:
+        query = """
+            query ListDetection(
+                $after: String,
+                $startDateTime: DateTime,
+                $limit: Int = 100
+            ) {
+                detections(
+                    filterBy: {
+                        createdAt: {after: $startDateTime}
+                    } 
+                    first: $limit,
+                    after: $after,
+                    orderBy: {
+                        field: CREATED_AT,
+                        direction: ASC
+                    }
+                ) {
+                nodes {
+                    type
+                    origins
+                    actors {
+                      id
+                      name
+                      externalId
+                      providerUniqueId
+                      type
+                    }
+                    resources {
+                      id
+                      name
+                      externalId
+                      providerUniqueId
+                      type
+                    }
+                    cloudAccounts {
+                      id
+                      name
+                      externalId
+                      cloudProvider
+                    }
+                    cloudOrganizations {
+                      id
+                      name
+                      externalId
+                      cloudProvider
+                    }
+                    createdAt
+                    updatedAt
+                    id
+                    severity
+                    description(format: MARKDOWN)
+                    primaryResource {
+                      type
+                      name
+                      externalId
+                      region
+                      id
+                    }
+                    primaryActor {
+                      id
+                      name
+                      type
+                      nativeType
+                      email
+                      userAgent
+                      MFA
+                      federated
+                      friendlyName
+                      accessKeyId
+                      externalId
+                      providerUniqueId
+                      hasHighPrivileges
+                      hasAdminPrivileges
+                      hasHighKubernetesPrivileges
+                      hasAdminKubernetesPrivileges
+                      inactiveInLast90Days
+                      actingAs {
+                        id
+                        name
+                        type
+                        friendlyName
+                        accessKeyId
+                        externalId
+                        providerUniqueId
+                      }
+                      cloudAccount {
+                        id
+                        externalId
+                        name
+                        cloudProvider
+                      }
+                    }
+                    triggeringEvents(first: 50) {
+                      totalCount
+                      nodes {
+                        ... on CloudEvent {
+                          id
+                          description
+                          actorIP
+                          timestamp
+                          rawAuditLogRecord
+                          commandLine
+                          runtimeProgram {
+                            name
+                          }
+                          parentRuntimeProgram {
+                            name
+                          }
+                        }
+                      }
+                    }
+                    ruleMatch {
+                      rule {
+                        id
+                        name
+                        builtin
+                        securitySubCategories {
+                          id
+                          title
+                          category {
+                            id
+                            name
+                            framework {
+                              id
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                }
+            }
+        """
+
+        variable_values = {
+            "after": after,
+            "startDateTime": start_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        }
+
+        response = await self.request(query, variable_values=variable_values)
+
+        if response.get("errors") is not None:
+            raise WizErrors.from_response(response)
+
+        return WizResult.from_threat_detections_response(response)
