@@ -89,12 +89,12 @@ class NozomiVantageConnector(AsyncConnector):
                     self._lru_caches[event_type][event_id] = 1
 
     @cached_property
-    def _version(self):
-        return self.module.manifest.get("version")
+    def _version(self) -> Any:
+        return self.module.manifest.get("version", "1.0.0")
 
     @cached_property
-    def _slug(self):
-        return self.module.manifest.get("slug")
+    def _slug(self) -> Any:
+        return self.module.manifest.get("slug", "nozomi-vantage")
 
     def _get_cache(self, event_type: EventType) -> LRUCache[str, int]:
         """
@@ -148,7 +148,10 @@ class NozomiVantageConnector(AsyncConnector):
             NozomiClient: The Nozomi client instance.
         """
         if self._nozomi_client is None:
-            default_headers = {"nn-app": f"sekoiaio-connector/{self._slug}", "nn-app-version": self._version}
+            default_headers: dict[str, Any] = {
+                "nn-app": f"sekoiaio-connector/{self._slug}",
+                "nn-app-version": self._version,
+            }
             self._nozomi_client = NozomiClient(
                 **self.module.configuration.dict(),
                 page_size=self.configuration.page_size,
