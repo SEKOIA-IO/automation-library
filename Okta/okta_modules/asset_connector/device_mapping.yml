@@ -1,0 +1,422 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  version: "1.6.0"
+  description: "Okta device information"
+  source_name: "Okta"
+
+  samples:
+    - name: "Okta Managed Device"
+      description: "Okta managed device with active compliance status"
+      data: |
+        {
+          "id": "gooabc123defGHIJKL",
+          "status": "ACTIVE",
+          "created": "2023-06-04T10:00:00.000Z",
+          "lastUpdated": "2025-08-26T09:30:00.000Z",
+          "lastSeen": "2025-08-26T09:30:00.000Z",
+          "profile": {
+            "displayName": "LAPTOP-MARY-001",
+            "platform": "Windows",
+            "osVersion": "10.0.22621",
+            "serialNumber": "ABC123DEF456",
+            "imei": null,
+            "manufacturer": "Dell",
+            "model": "Latitude 5540",
+            "udid": null,
+            "registered": true,
+            "secureHardwarePresent": true,
+            "diskEncryptionType": "BitLocker",
+            "osUpdateTime": "2025-08-20T14:30:00.000Z"
+          },
+          "deviceType": "Computer",
+          "managed": true,
+          "complianceStatus": "COMPLIANT",
+          "userId": "00u1a2b3c4d5e6f7g8h9",
+          "_links": {
+            "self": [
+              {
+              [...]
+            ]
+          }
+        }
+
+    - name: "Okta Non-Compliant Device"
+      description: "Okta device with non-compliant status"
+      data: |
+        {
+          "id": "goodef456ghiJKLMNO",
+          "status": "ACTIVE",
+          "created": "2023-04-15T08:00:00.000Z",
+          "lastUpdated": "2025-08-26T09:30:00.000Z",
+          "lastSeen": "2025-08-26T09:30:00.000Z",
+          "profile": {
+            "displayName": "iPhone-ROBERT-001",
+            "platform": "iOS",
+            "osVersion": "17.5.1",
+            "serialNumber": "A2R4P7B9C1D2E3F4G5",
+            "imei": "356938035643809",
+            "manufacturer": "Apple",
+            "model": "iPhone 14 Pro",
+            "udid": "00008120-0015E40A2E59801E",
+            "registered": true,
+            "secureHardwarePresent": true,
+            "diskEncryptionType": "FileVault",
+            "osUpdateTime": "2025-08-01T10:00:00.000Z"
+          },
+          "deviceType": "MobileDevice",
+          "managed": true,
+          "complianceStatus": "NON_COMPLIANT",
+          "userId": "00u2c3d4e5f6g7h8i9j0",
+          "_links": {
+            "self": [
+              {
+              [...]
+            ]
+          }
+        }
+
+  fields:
+    # DEVICE IDENTIFICATION
+    - source: "id"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of Okta device ID"
+      description: "Okta device unique identifier"
+
+    - source: "profile.displayName"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of display name"
+      description: "Device display name"
+
+    - source: "profile.displayName"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of display name as hostname"
+      description: "Device hostname (from display name)"
+
+    # OPERATING SYSTEM INFORMATION
+    - source: "profile.platform"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping of platform (Windows, iOS, Android, MacOS)"
+      description: "Operating system platform"
+
+    - source: "profile.platform"
+      target: "device.os.type"
+      type: "string"
+      logic: "Map platform to OS type enum (Windows, AppleOS, Android, Linux)"
+      description: "Operating system type"
+
+    - source: "profile.osVersion"
+      target: "device.os.version"
+      type: "string"
+      logic: "Direct mapping of OS version"
+      description: "Operating system version"
+
+    # DEVICE HARDWARE INFORMATION
+    - source: "profile.serialNumber"
+      target: "device.serial_number"
+      type: "string"
+      logic: "Direct mapping of device serial number"
+      description: "Device serial number"
+
+    - source: "profile.manufacturer"
+      target: "device.manufacturer"
+      type: "string"
+      logic: "Direct mapping of device manufacturer"
+      description: "Device manufacturer (Dell, Apple, Samsung, etc.)"
+
+    - source: "profile.model"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping of device model"
+      description: "Device model"
+
+    - source: "profile.imei"
+      target: "device.imei"
+      type: "string"
+      logic: "Direct mapping of IMEI (for mobile devices)"
+      description: "International Mobile Equipment Identity"
+
+    - source: "profile.udid"
+      target: "device.udid"
+      type: "string"
+      logic: "Direct mapping of UDID (Apple devices)"
+      description: "Unique Device Identifier (iOS/MacOS)"
+
+    # DEVICE TYPE & STATUS
+    - source: "deviceType"
+      target: "device.type"
+      type: "string"
+      logic: "Direct mapping of device type (Computer, MobileDevice, etc.)"
+      description: "Device type classification"
+
+    - source: "status"
+      target: "device.is_enabled"
+      type: "boolean"
+      logic: "true if status is 'ACTIVE', false otherwise"
+      description: "Whether device is enabled (ACTIVE status)"
+
+    - source: "status"
+      target: "device.status"
+      type: "string"
+      logic: "Direct mapping of device status"
+      description: "Device status (ACTIVE, SUSPENDED, DEPROVISIONED)"
+
+    - source: "managed"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "Direct mapping of managed status"
+      description: "Whether device is managed by Okta"
+
+    # DEVICE SECURITY & COMPLIANCE
+    - source: "complianceStatus"
+      target: "device.compliance_status"
+      type: "string"
+      logic: "Direct mapping of compliance status"
+      description: "Device compliance status (COMPLIANT, NON_COMPLIANT, UNKNOWN)"
+
+    - source: "profile.secureHardwarePresent"
+      target: "device.has_secure_hardware"
+      type: "boolean"
+      logic: "Direct mapping of secure hardware presence"
+      description: "Whether device has secure hardware (TPM, Secure Enclave)"
+
+    - source: "profile.diskEncryptionType"
+      target: "device.encryption_type"
+      type: "string"
+      logic: "Direct mapping of disk encryption type"
+      description: "Disk encryption type (BitLocker, FileVault, etc.)"
+
+    - source: "profile.registered"
+      target: "device.is_registered"
+      type: "boolean"
+      logic: "Direct mapping of registered status"
+      description: "Whether device is registered with Okta"
+
+    # DEVICE ASSOCIATION
+    - source: "userId"
+      target: "device.user_uid"
+      type: "string"
+      logic: "Direct mapping of associated user ID"
+      description: "Okta user ID associated with device"
+
+    # TEMPORAL INFORMATION
+    - source: "created"
+      target: "device.created_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device creation timestamp (Unix epoch)"
+
+    - source: "lastUpdated"
+      target: "device.updated_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Last updated timestamp (Unix epoch)"
+
+    - source: "lastSeen"
+      target: "device.last_seen_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if never seen"
+      description: "Last seen timestamp (Unix epoch)"
+
+    - source: "profile.osUpdateTime"
+      target: "device.os_update_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if not available"
+      description: "Last OS update timestamp (Unix epoch)"
+
+    - source: "created"
+      target: "time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp (device discovery time)"
+
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID for inventory collection"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect'"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5001 for Device Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "computed: 500100 + activity_id"
+      target: "type_uid"
+      type: "integer"
+      logic: "Base 500100 + activity_id (2 = 500102)"
+      description: "OCSF type UID"
+
+    - source: "computed: class_name + ': ' + activity_name"
+      target: "type_name"
+      type: "string"
+      logic: "Concatenate 'Device Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity level"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+    # METADATA
+    - source: "static: Okta"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'Okta'"
+      description: "Source product name"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # OCSF ENRICHMENT - DEVICE SECURITY INFORMATION
+    - source: "complianceStatus"
+      target: "enrichments[0].data.compliance_status"
+      type: "string"
+      logic: "Direct mapping of compliance status"
+      description: "Device compliance status for security posture"
+
+    - source: "status"
+      target: "enrichments[0].data.is_enabled"
+      type: "boolean"
+      logic: "true if status is 'ACTIVE', false otherwise"
+      description: "Whether device is enabled"
+
+    - source: "managed"
+      target: "enrichments[0].data.is_managed"
+      type: "boolean"
+      logic: "Direct mapping of managed status"
+      description: "Whether device is managed by Okta"
+
+    - source: "profile.secureHardwarePresent"
+      target: "enrichments[0].data.has_secure_hardware"
+      type: "boolean"
+      logic: "Direct mapping of secure hardware presence"
+      description: "Whether device has secure hardware"
+
+    - source: "profile.diskEncryptionType"
+      target: "enrichments[0].data.encryption_type"
+      type: "string"
+      logic: "Direct mapping of disk encryption type"
+      description: "Disk encryption type for security compliance"
+
+    - source: "lastSeen"
+      target: "enrichments[0].data.last_seen"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix timestamp; null if never seen"
+      description: "Last seen timestamp (Unix epoch)"
+
+    - source: "static: device_security"
+      target: "enrichments[0].name"
+      type: "string"
+      logic: "Always 'device_security' for device enrichment type"
+      description: "Enrichment object name"
+
+    - source: "static: okta_device"
+      target: "enrichments[0].value"
+      type: "string"
+      logic: "Always 'okta_device' for Okta device security enrichment"
+      description: "Enrichment object value"
+
+  ocsf_samples:
+    - name: "Device Inventory Info: Collect"
+      description: "Transformed Okta device to OCSF Device Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1685854800,
+          "metadata": {
+            "product": {
+              "name": "Okta"
+            },
+            "version": "1.6.0"
+          },
+          "device": {
+            "uid": "gooabc123defGHIJKL",
+            "name": "LAPTOP-MARY-001",
+            "hostname": "LAPTOP-MARY-001",
+            "type": "Computer",
+            "serial_number": "ABC123DEF456",
+            "manufacturer": "Dell",
+            "model": "Latitude 5540",
+            "is_enabled": true,
+            "status": "ACTIVE",
+            "is_managed": true,
+            "is_registered": true,
+            "compliance_status": "COMPLIANT",
+            "has_secure_hardware": true,
+            "encryption_type": "BitLocker",
+            "user_uid": "00u1a2b3c4d5e6f7g8h9",
+            "created_time": 1685854800,
+            "updated_time": 1725184200,
+            "last_seen_time": 1725184200,
+            "os_update_time": 1724044200,
+            "os": {
+              "name": "Windows",
+              "type": "Windows",
+              "version": "10.0.22621"
+            }
+          },
+          "enrichments": [
+            {
+              "name": "device_security",
+              "value": "okta_device",
+              "data": {
+                "compliance_status": "COMPLIANT",
+                "is_enabled": true,
+                "is_managed": true,
+                "has_secure_hardware": true,
+                "encryption_type": "BitLocker",
+                "last_seen": 1725184200
+              }
+            }
+          ]
+        }

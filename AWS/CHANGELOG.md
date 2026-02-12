@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2026-02-12 - 1.33.12
+## 2026-02-12 - 1.33.14
 
 ### Added
 
 - Add the ability to define the SQS message visibility timeout through env variable
+
+## 2026-02-11 - 1.33.13
+
+### Added
+
+- Add asset connector mapping files for AWS device assets
+
+## 2025-02-09 - 1.33.12
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
 
 ## 2026-01-29 - 1.33.11
 

@@ -1,0 +1,444 @@
+mapping:
+  ocsf_class: "User Inventory Info"
+  class_uid: 5003
+  version: "1.6.0"
+
+  samples:
+    - name: "Okta Active User"
+      description: "Okta user with active status and group membership"
+      data: |
+        {
+          "id": "00oa1bcdefg2EXAMPLE",
+          "status": "ACTIVE",
+          "created": "2020-06-04T10:00:00.000Z",
+          "activated": "2020-06-04T10:15:00.000Z",
+          "statusChanged": "2025-08-26T09:30:00.000Z",
+          "lastLogin": "2025-08-26T09:30:00.000Z",
+          "lastUpdated": "2025-08-26T09:30:00.000Z",
+          "passwordChanged": "2025-01-10T11:00:00.000Z",
+          "profile": {
+            "firstName": "Mary",
+            "lastName": "Jones",
+            "email": "mary.jones@example.com",
+            "login": "mary.jones@example.com",
+            "mobilePhone": "+1-555-234-5678",
+            "primaryPhone": "+1-555-234-5678",
+            "department": "Finance",
+            "jobTitle": "Financial Analyst",
+            "employeeNumber": "EMP456",
+            "city": "New York",
+            "state": "NY",
+            "country": "USA"
+          },
+          "groupIds": [
+            "00gj3k4l5mnopqrst",
+            "00gh8i9j0klmnopq"
+          ],
+          "_links": {
+            "self": [
+              {
+                "href": "https://example.okta.com/api/v1/users/00oa1bcdefg2EXAMPLE"
+              }
+            ]
+          }
+        }
+
+    - name: "Okta Suspended User"
+      description: "Okta user with suspended status"
+      data: |
+        {
+          "id": "00oa2cdefgh3EXAMPLE",
+          "status": "SUSPENDED",
+          "created": "2020-06-04T10:00:00.000Z",
+          "activated": "2020-06-04T10:15:00.000Z",
+          "statusChanged": "2025-06-10T14:00:00.000Z",
+          "lastLogin": "2025-06-10T14:00:00.000Z",
+          "lastUpdated": "2025-06-10T14:00:00.000Z",
+          "passwordChanged": "2021-01-15T09:00:00.000Z",
+          "profile": {
+            "firstName": "Robert",
+            "lastName": "Smith",
+            "email": "robert.smith@example.com",
+            "login": "robert.smith@example.com",
+            "mobilePhone": "+1-555-345-6789",
+            "primaryPhone": "+1-555-345-6789",
+            "department": "Engineering",
+            "jobTitle": "Senior Software Engineer",
+            "employeeNumber": "EMP789",
+            "city": "San Francisco",
+            "state": "CA",
+            "country": "USA"
+          },
+          "groupIds": [
+            "00gj3k4l5mnopqrst"
+          ],
+          "_links": {
+            "self": [
+              {
+                "href": "https://example.okta.com/api/v1/users/00oa2cdefgh3EXAMPLE"
+              }
+            ]
+          }
+        }
+
+  fields:
+    # USER IDENTIFICATION
+    - source: "id"
+      target: "user.uid"
+      type: "string"
+      logic: "Direct mapping of Okta user ID"
+      description: "Okta user unique identifier"
+
+    - source: "profile.login"
+      target: "user.name"
+      type: "string"
+      logic: "Direct mapping of user login (email format)"
+      description: "User login/username (typically email)"
+
+    - source: "profile.firstName + ' ' + profile.lastName"
+      target: "user.full_name"
+      type: "string"
+      logic: "Concatenate first and last names"
+      description: "User full name"
+
+    - source: "profile.firstName"
+      target: "user.first_name"
+      type: "string"
+      logic: "Direct mapping of first name"
+      description: "User first name"
+
+    - source: "profile.lastName"
+      target: "user.last_name"
+      type: "string"
+      logic: "Direct mapping of last name"
+      description: "User last name"
+
+    # ACCOUNT INFORMATION
+    - source: "profile.login"
+      target: "user.account.uid"
+      type: "string"
+      logic: "Direct mapping of user login as account identifier"
+      description: "Okta account identifier (login/email)"
+
+    - source: "profile.login"
+      target: "user.account.name"
+      type: "string"
+      logic: "Direct mapping of user login"
+      description: "Account username (login)"
+
+    - source: "static: Okta"
+      target: "user.account.type"
+      type: "string"
+      logic: "Always 'Okta'"
+      description: "Account type identifier"
+
+    - source: "static: 42"
+      target: "user.account.type_id"
+      type: "integer"
+      logic: "Always 42 for Okta account type"
+      description: "OCSF account type ID"
+
+    # CONTACT INFORMATION
+    - source: "profile.email"
+      target: "user.email_addr"
+      type: "string"
+      logic: "Direct mapping of email address"
+      description: "User email address"
+
+    - source: "profile.mobilePhone"
+      target: "user.phone"
+      type: "string"
+      logic: "Direct mapping of mobile phone number"
+      description: "User mobile phone number"
+
+    - source: "profile.primaryPhone"
+      target: "user.work_phone"
+      type: "string"
+      logic: "Direct mapping of primary phone number"
+      description: "User primary/work phone number"
+
+    # ORGANIZATIONAL INFORMATION
+    - source: "profile.department"
+      target: "user.department"
+      type: "string"
+      logic: "Direct mapping of department attribute"
+      description: "User department"
+
+    - source: "profile.jobTitle"
+      target: "user.job_title"
+      type: "string"
+      logic: "Direct mapping of job title"
+      description: "User job title"
+
+    - source: "profile.employeeNumber"
+      target: "user.employee_id"
+      type: "string"
+      logic: "Direct mapping of employee number"
+      description: "Employee ID"
+
+    - source: "profile.city + ', ' + profile.state"
+      target: "user.office_location"
+      type: "string"
+      logic: "Concatenate city and state"
+      description: "Office location"
+
+    # USER STATUS & SECURITY
+    - source: "status"
+      target: "user.is_enabled"
+      type: "boolean"
+      logic: "true if status is 'ACTIVE', false otherwise"
+      description: "Whether user account is enabled (ACTIVE status)"
+
+    - source: "status"
+      target: "user.status"
+      type: "string"
+      logic: "Direct mapping of Okta user status"
+      description: "User account status (ACTIVE, SUSPENDED, DEPROVISIONED, LOCKED_OUT, PASSWORD_EXPIRED, PROVISIONED, STAGED)"
+
+    - source: "groupIds | length > 0"
+      target: "user.has_groups"
+      type: "boolean"
+      logic: "true if user belongs to any group, false otherwise"
+      description: "Whether user belongs to any groups"
+
+    - source: "groupIds"
+      target: "user.groups"
+      type: "array[object]"
+      logic: "Create Group objects with group ID as uid and name"
+      description: "Group memberships"
+
+    # TEMPORAL INFORMATION
+    - source: "created"
+      target: "user.created_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "User creation timestamp (Unix epoch)"
+
+    - source: "activated"
+      target: "user.activated_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if not activated"
+      description: "User activation timestamp (Unix epoch)"
+
+    - source: "lastLogin"
+      target: "user.last_login_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if never logged in"
+      description: "Last login timestamp (Unix epoch)"
+
+    - source: "passwordChanged"
+      target: "user.password_last_changed_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if never changed"
+      description: "Password last changed timestamp (Unix epoch)"
+
+    - source: "statusChanged"
+      target: "user.status_changed_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Status change timestamp (Unix epoch)"
+
+    - source: "lastUpdated"
+      target: "user.updated_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Last updated timestamp (Unix epoch)"
+
+    - source: "created"
+      target: "time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp (user discovery time)"
+
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID for inventory collection"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect'"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: User Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'User Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5003"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5003 for User Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "computed: 500300 + activity_id"
+      target: "type_uid"
+      type: "integer"
+      logic: "Base 500300 + activity_id (2 = 500302)"
+      description: "OCSF type UID"
+
+    - source: "computed: class_name + ': ' + activity_name"
+      target: "type_name"
+      type: "string"
+      logic: "Concatenate 'User Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity level"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+    # METADATA
+    - source: "static: Okta"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'Okta'"
+      description: "Source product name"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # OCSF ENRICHMENT - USER ACCESS INFORMATION
+    - source: "status"
+      target: "enrichments[0].data.user_status"
+      type: "string"
+      logic: "Direct mapping of Okta user status"
+      description: "Current user account status"
+
+    - source: "status"
+      target: "enrichments[0].data.is_enabled"
+      type: "boolean"
+      logic: "true if status is 'ACTIVE', false otherwise"
+      description: "Whether user account is enabled"
+
+    - source: "lastLogin"
+      target: "enrichments[0].data.last_login"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix timestamp; return null if never logged in"
+      description: "Last login timestamp (Unix epoch)"
+
+    - source: "passwordChanged"
+      target: "enrichments[0].data.password_last_changed"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix timestamp; return null if never changed"
+      description: "Password last changed timestamp (Unix epoch)"
+
+    - source: "groupIds | length"
+      target: "enrichments[0].data.groups_count"
+      type: "integer"
+      logic: "Count of group memberships"
+      description: "Number of groups user belongs to"
+
+    - source: "static: access_control"
+      target: "enrichments[0].name"
+      type: "string"
+      logic: "Always 'access_control' for Okta enrichment type"
+      description: "Enrichment object name"
+
+    - source: "static: okta"
+      target: "enrichments[0].value"
+      type: "string"
+      logic: "Always 'okta' for Okta user access enrichment"
+      description: "Enrichment object value"
+
+  ocsf_samples:
+    - name: "User Inventory Info: Collect"
+      description: "Transformed Okta user to OCSF User Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "User Inventory Info",
+          "class_uid": 5003,
+          "type_name": "User Inventory Info: Collect",
+          "type_uid": 500302,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1591234567,
+          "metadata": {
+            "product": {
+              "name": "Okta"
+            },
+            "version": "1.6.0"
+          },
+          "user": {
+            "uid": "00oa1bcdefg2EXAMPLE",
+            "name": "mary.jones@example.com",
+            "full_name": "Mary Jones",
+            "first_name": "Mary",
+            "last_name": "Jones",
+            "email_addr": "mary.jones@example.com",
+            "is_enabled": true,
+            "status": "ACTIVE",
+            "department": "Finance",
+            "job_title": "Financial Analyst",
+            "employee_id": "EMP456",
+            "office_location": "New York, NY",
+            "phone": "+1-555-234-5678",
+            "work_phone": "+1-555-234-5678",
+            "created_time": 1591234567,
+            "activated_time": 1591235100,
+            "last_login_time": 1691230000,
+            "password_last_changed_time": 1673346000,
+            "status_changed_time": 1691230000,
+            "updated_time": 1691230000,
+            "has_groups": true,
+            "account": {
+              "uid": "mary.jones@example.com",
+              "name": "mary.jones@example.com",
+              "type": "Okta",
+              "type_id": 42
+            },
+            "groups": [
+              {
+                "uid": "00gj3k4l5mnopqrst",
+                "name": "Finance Users"
+              },
+              {
+                "uid": "00gh8i9j0klmnopq",
+                "name": "All Users"
+              }
+            ]
+          },
+          "enrichments": [
+            {
+              "name": "access_control",
+              "value": "okta",
+              "data": {
+                "user_status": "ACTIVE",
+                "is_enabled": true,
+                "last_login": 1691230000,
+                "password_last_changed": 1673346000,
+                "groups_count": 2
+              }
+            }
+          ]
+        }

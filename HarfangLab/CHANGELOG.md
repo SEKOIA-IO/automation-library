@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-11 - 1.29.4
+
+### Added
+
+- Add asset connector mapping files for HarfangLab device assets
+
+## 2025-02-09 - 1.29.3
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
+
 ## 2026-02-02 - 1.29.2
 
 ### Fixed

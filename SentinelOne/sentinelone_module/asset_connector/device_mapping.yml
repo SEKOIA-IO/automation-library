@@ -1,0 +1,563 @@
+mapping:
+  ocsf_class: "device_inventory_info"
+  class_uid: 5001
+  version: "1.6.0"
+
+  samples:
+    - name: "SentinelOne Active Device"
+      description: "SentinelOne device with active status and protection enabled"
+      data: |
+        {
+          "id": "475482087580431375",
+          "name": "LAPTOP-JOHN-DEV",
+          "type": "computer",
+          "osType": "windows",
+          "osVersion": "Windows 10 Pro",
+          "osRevision": "22H2",
+          "machineType": "laptop",
+          "manufacturer": "Dell",
+          "modelName": "Latitude 5540",
+          "serialNumber": "ABC123DEF456GHI",
+          "processorCount": 8,
+          "coreCount": 8,
+          "memorySize": 16384,
+          "ipv4Addresses": [
+            "192.168.1.100",
+            "10.0.0.50"
+          ],
+          "ipv6Addresses": [
+            "fe80::1234:5678:90ab:cdef"
+          ],
+          "macAddresses": [
+            "00:1A:2B:3C:4D:5E"
+          ],
+          "isActive": true,
+          "isOnline": true,
+          "lastActiveDate": "2025-08-26T09:30:00.000Z",
+          "createdDate": "2023-06-04T10:00:00.000Z",
+          "updatedDate": "2025-08-26T09:30:00.000Z",
+          "agentVersion": "23.4.1.1001",
+          "agentStatus": "active",
+          "threatLevel": "good",
+          "encryptionEnabled": true,
+          "isFirewallEnabled": true,
+          "isTamperProtectionEnabled": true,
+          "lastIncidentDate": null,
+          "threatCount": 0,
+          "domain": "example.com",
+          "computerName": "LAPTOP-JOHN-DEV",
+          "userId": "u1234567890abcdef",
+          "userName": "john.developer@example.com",
+          "userFullName": "John Developer"
+        }
+
+    - name: "SentinelOne Inactive Device"
+      description: "SentinelOne device with inactive status"
+      data: |
+        {
+          "id": "475482087580431376",
+          "name": "SERVER-OLD-PROD",
+          "type": "server",
+          "osType": "linux",
+          "osVersion": "Ubuntu 18.04.6 LTS",
+          "osRevision": "5.4.0-42-generic",
+          "machineType": "server",
+          "manufacturer": "HP",
+          "modelName": "ProLiant DL380 Gen10",
+          "serialNumber": "SG12345678",
+          "processorCount": 16,
+          "coreCount": 32,
+          "memorySize": 131072,
+          "ipv4Addresses": [
+            "10.0.0.200"
+          ],
+          "ipv6Addresses": [],
+          "macAddresses": [
+            "00:30:48:2E:3A:A8"
+          ],
+          "isActive": false,
+          "isOnline": false,
+          "lastActiveDate": "2025-06-01T14:30:00.000Z",
+          "createdDate": "2021-03-15T08:00:00.000Z",
+          "updatedDate": "2025-08-26T09:30:00.000Z",
+          "agentVersion": "21.8.2.998",
+          "agentStatus": "inactive",
+          "threatLevel": "unknown",
+          "encryptionEnabled": false,
+          "isFirewallEnabled": true,
+          "isTamperProtectionEnabled": false,
+          "lastIncidentDate": "2025-05-20T10:00:00.000Z",
+          "threatCount": 0,
+          "domain": "example.com",
+          "computerName": "SERVER-OLD-PROD",
+          "userId": null,
+          "userName": null,
+          "userFullName": null
+        }
+
+  fields:
+    # DEVICE IDENTIFICATION
+    - source: "id"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of SentinelOne device ID"
+      description: "SentinelOne device unique identifier"
+
+    - source: "name"
+      target: "device.name"
+      type: "string"
+      logic: "Direct mapping of device name"
+      description: "Device display name"
+
+    - source: "computerName"
+      target: "device.hostname"
+      type: "string"
+      logic: "Direct mapping of computer name"
+      description: "Device hostname"
+
+    - source: "domain"
+      target: "device.domain"
+      type: "string"
+      logic: "Direct mapping of domain"
+      description: "Network domain name"
+
+    # OPERATING SYSTEM INFORMATION
+    - source: "osType"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping of OS type (windows, linux, macos)"
+      description: "Operating system type"
+
+    - source: "osType"
+      target: "device.os.type"
+      type: "string"
+      logic: "Map osType to OCSF OS type enum (Windows, AppleOS, Linux)"
+      description: "Operating system type enumeration"
+
+    - source: "osVersion"
+      target: "device.os.version"
+      type: "string"
+      logic: "Direct mapping of OS version"
+      description: "Operating system version"
+
+    - source: "osRevision"
+      target: "device.os.build"
+      type: "string"
+      logic: "Direct mapping of OS revision/build number"
+      description: "Operating system build/revision number"
+
+    # DEVICE HARDWARE INFORMATION
+    - source: "serialNumber"
+      target: "device.serial_number"
+      type: "string"
+      logic: "Direct mapping of device serial number"
+      description: "Device serial number"
+
+    - source: "manufacturer"
+      target: "device.manufacturer"
+      type: "string"
+      logic: "Direct mapping of device manufacturer"
+      description: "Device manufacturer"
+
+    - source: "modelName"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping of device model"
+      description: "Device model name"
+
+    - source: "processorCount"
+      target: "device.cpu_count"
+      type: "integer"
+      logic: "Direct mapping of processor count"
+      description: "Number of processors"
+
+    - source: "coreCount"
+      target: "device.core_count"
+      type: "integer"
+      logic: "Direct mapping of core count"
+      description: "Number of CPU cores"
+
+    - source: "memorySize"
+      target: "device.memory_size"
+      type: "integer"
+      logic: "Direct mapping of memory size in MB"
+      description: "Total memory size in megabytes"
+
+    # NETWORK INFORMATION
+    - source: "ipv4Addresses | first"
+      target: "device.ip"
+      type: "string"
+      logic: "Extract first IPv4 address"
+      description: "Primary IPv4 address"
+
+    - source: "ipv4Addresses"
+      target: "device.ipv4_addresses"
+      type: "array[string]"
+      logic: "Direct mapping of all IPv4 addresses"
+      description: "All IPv4 addresses associated with device"
+
+    - source: "ipv6Addresses"
+      target: "device.ipv6_addresses"
+      type: "array[string]"
+      logic: "Direct mapping of all IPv6 addresses"
+      description: "All IPv6 addresses associated with device"
+
+    - source: "macAddresses | first"
+      target: "device.mac_address"
+      type: "string"
+      logic: "Extract first MAC address"
+      description: "Primary MAC address"
+
+    - source: "macAddresses"
+      target: "device.mac_addresses"
+      type: "array[string]"
+      logic: "Direct mapping of all MAC addresses"
+      description: "All MAC addresses associated with device"
+
+    # DEVICE TYPE & STATUS
+    - source: "type"
+      target: "device.type"
+      type: "string"
+      logic: "Direct mapping of device type (computer, server, etc.)"
+      description: "Device type classification"
+
+    - source: "machineType"
+      target: "device.machine_type"
+      type: "string"
+      logic: "Direct mapping of machine type (laptop, desktop, server, etc.)"
+      description: "Machine type (laptop, desktop, server, etc.)"
+
+    - source: "isActive"
+      target: "device.is_enabled"
+      type: "boolean"
+      logic: "Direct mapping of active status"
+      description: "Whether device is active in SentinelOne"
+
+    - source: "isOnline"
+      target: "device.is_online"
+      type: "boolean"
+      logic: "Direct mapping of online status"
+      description: "Whether device is currently online"
+
+    - source: "agentStatus"
+      target: "device.agent_status"
+      type: "string"
+      logic: "Direct mapping of agent status (active, inactive, uninstalled)"
+      description: "SentinelOne agent status"
+
+    - source: "agentVersion"
+      target: "device.agent_version"
+      type: "string"
+      logic: "Direct mapping of agent version"
+      description: "SentinelOne agent version"
+
+    # DEVICE SECURITY & COMPLIANCE
+    - source: "threatLevel"
+      target: "device.threat_level"
+      type: "string"
+      logic: "Direct mapping of threat level (good, suspicious, bad, unknown)"
+      description: "Device threat level"
+
+    - source: "threatCount"
+      target: "device.threat_count"
+      type: "integer"
+      logic: "Direct mapping of threat count"
+      description: "Number of threats detected on device"
+
+    - source: "lastIncidentDate"
+      target: "device.last_incident_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if no incidents"
+      description: "Last incident timestamp (Unix epoch)"
+
+    - source: "encryptionEnabled"
+      target: "device.is_encrypted"
+      type: "boolean"
+      logic: "Direct mapping of encryption status"
+      description: "Whether disk encryption is enabled"
+
+    - source: "isFirewallEnabled"
+      target: "device.is_firewall_enabled"
+      type: "boolean"
+      logic: "Direct mapping of firewall status"
+      description: "Whether firewall is enabled"
+
+    - source: "isTamperProtectionEnabled"
+      target: "device.is_tamper_protected"
+      type: "boolean"
+      logic: "Direct mapping of tamper protection status"
+      description: "Whether tamper protection is enabled"
+
+    # USER ASSOCIATION
+    - source: "userId"
+      target: "device.user_uid"
+      type: "string"
+      logic: "Direct mapping of associated user ID; null if not applicable"
+      description: "Associated user ID"
+
+    - source: "userName"
+      target: "device.user_name"
+      type: "string"
+      logic: "Direct mapping of associated user name"
+      description: "Associated user name"
+
+    - source: "userFullName"
+      target: "device.user_full_name"
+      type: "string"
+      logic: "Direct mapping of associated user full name"
+      description: "Associated user full name"
+
+    # TEMPORAL INFORMATION
+    - source: "createdDate"
+      target: "device.created_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Device creation timestamp (Unix epoch)"
+
+    - source: "updatedDate"
+      target: "device.updated_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "Last updated timestamp (Unix epoch)"
+
+    - source: "lastActiveDate"
+      target: "device.last_seen_time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch; null if never active"
+      description: "Last active timestamp (Unix epoch)"
+
+    - source: "createdDate"
+      target: "time"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp (device discovery time)"
+
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID for inventory collection"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect'"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5001 for Device Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "computed: 500100 + activity_id"
+      target: "type_uid"
+      type: "integer"
+      logic: "Base 500100 + activity_id (2 = 500102)"
+      description: "OCSF type UID"
+
+    - source: "computed: class_name + ': ' + activity_name"
+      target: "type_name"
+      type: "string"
+      logic: "Concatenate 'Device Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity level"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+    # METADATA
+    - source: "static: SentinelOne"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'SentinelOne'"
+      description: "Source product name"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # OCSF ENRICHMENT - DEVICE SECURITY INFORMATION
+    - source: "threatLevel"
+      target: "enrichments[0].data.threat_level"
+      type: "string"
+      logic: "Direct mapping of threat level"
+      description: "Device threat level for security posture"
+
+    - source: "threatCount"
+      target: "enrichments[0].data.threat_count"
+      type: "integer"
+      logic: "Direct mapping of threat count"
+      description: "Number of active threats"
+
+    - source: "isActive"
+      target: "enrichments[0].data.is_enabled"
+      type: "boolean"
+      logic: "Direct mapping of active status"
+      description: "Whether device is active"
+
+    - source: "agentStatus"
+      target: "enrichments[0].data.agent_status"
+      type: "string"
+      logic: "Direct mapping of agent status"
+      description: "SentinelOne agent status"
+
+    - source: "agentVersion"
+      target: "enrichments[0].data.agent_version"
+      type: "string"
+      logic: "Direct mapping of agent version"
+      description: "SentinelOne agent version"
+
+    - source: "encryptionEnabled"
+      target: "enrichments[0].data.is_encrypted"
+      type: "boolean"
+      logic: "Direct mapping of encryption status"
+      description: "Whether device is encrypted"
+
+    - source: "isFirewallEnabled"
+      target: "enrichments[0].data.is_firewall_enabled"
+      type: "boolean"
+      logic: "Direct mapping of firewall status"
+      description: "Whether firewall is enabled"
+
+    - source: "isTamperProtectionEnabled"
+      target: "enrichments[0].data.is_tamper_protected"
+      type: "boolean"
+      logic: "Direct mapping of tamper protection status"
+      description: "Whether tamper protection is enabled"
+
+    - source: "lastActiveDate"
+      target: "enrichments[0].data.last_seen"
+      type: "integer"
+      logic: "Convert ISO 8601 to Unix timestamp; null if never active"
+      description: "Last active timestamp (Unix epoch)"
+
+    - source: "static: device_security"
+      target: "enrichments[0].name"
+      type: "string"
+      logic: "Always 'device_security' for device enrichment type"
+      description: "Enrichment object name"
+
+    - source: "static: sentinelone_device"
+      target: "enrichments[0].value"
+      type: "string"
+      logic: "Always 'sentinelone_device' for SentinelOne device security enrichment"
+      description: "Enrichment object value"
+
+  ocsf_samples:
+    - name: "Device Inventory Info: Collect"
+      description: "Transformed SentinelOne device to OCSF Device Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1685854800,
+          "metadata": {
+            "product": {
+              "name": "SentinelOne"
+            },
+            "version": "1.6.0"
+          },
+          "device": {
+            "uid": "475482087580431375",
+            "name": "LAPTOP-JOHN-DEV",
+            "hostname": "LAPTOP-JOHN-DEV",
+            "domain": "example.com",
+            "type": "computer",
+            "machine_type": "laptop",
+            "serial_number": "ABC123DEF456GHI",
+            "manufacturer": "Dell",
+            "model": "Latitude 5540",
+            "cpu_count": 8,
+            "core_count": 8,
+            "memory_size": 16384,
+            "ip": "192.168.1.100",
+            "ipv4_addresses": [
+              "192.168.1.100",
+              "10.0.0.50"
+            ],
+            "ipv6_addresses": [
+              "fe80::1234:5678:90ab:cdef"
+            ],
+            "mac_address": "00:1A:2B:3C:4D:5E",
+            "mac_addresses": [
+              "00:1A:2B:3C:4D:5E"
+            ],
+            "is_enabled": true,
+            "is_online": true,
+            "is_encrypted": true,
+            "is_firewall_enabled": true,
+            "is_tamper_protected": true,
+            "threat_level": "good",
+            "threat_count": 0,
+            "agent_status": "active",
+            "agent_version": "23.4.1.1001",
+            "user_uid": "u1234567890abcdef",
+            "user_name": "john.developer@example.com",
+            "user_full_name": "John Developer",
+            "created_time": 1685854800,
+            "updated_time": 1725184200,
+            "last_seen_time": 1725184200,
+            "last_incident_time": null,
+            "os": {
+              "name": "windows",
+              "type": "Windows",
+              "version": "Windows 10 Pro",
+              "build": "22H2"
+            }
+          },
+          "enrichments": [
+            {
+              "name": "device_security",
+              "value": "sentinelone_device",
+              "data": {
+                "threat_level": "good",
+                "threat_count": 0,
+                "is_enabled": true,
+                "agent_status": "active",
+                "agent_version": "23.4.1.1001",
+                "is_encrypted": true,
+                "is_firewall_enabled": true,
+                "is_tamper_protected": true,
+                "last_seen": 1725184200
+              }
+            }
+          ]
+        }

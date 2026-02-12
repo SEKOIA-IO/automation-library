@@ -29,7 +29,7 @@
   "description": "Nozomi Networks is a leader in industrial cybersecurity and operational visibility, specializing in protecting critical infrastructure and IoT environments. Their innovative solutions offer real-time threat detection, monitoring, and response, ensuring the security and resilience of operational technology (OT) systems. With a focus on enhancing safety and operational efficiency, Nozomi empowers organizations to safeguard their assets in an increasingly connected world.",
   "name": "Nozomi Networks",
   "uuid": "fca9d3d3-a252-467b-8735-0fd0ff17e07f",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "slug": "nozomi",
   "categories": [
     "Network"

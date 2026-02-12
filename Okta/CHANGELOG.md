@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-11 - 2.8.14
+
+### Added
+
+- Add asset connector mapping files for Okta device and user assets
+
+## 2025-02-09 - 2.8.13
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
+- Upgrade AssetConnector to Async
+
 ## 2026-01-29 - 2.8.12
 
 ### Changed
