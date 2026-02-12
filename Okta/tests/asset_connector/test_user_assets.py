@@ -237,7 +237,7 @@ class TestOktaUserAssetConnector:
         mock_okta_client.list_users.return_value = (sample_users_data, mock_response, None)
 
         # Execute
-        result = await mock_connector.next_list_users()
+        result = [user async for user in mock_connector.next_list_users()]
 
         # Verify
         assert len(result) == 2
@@ -270,7 +270,7 @@ class TestOktaUserAssetConnector:
         mock_okta_client.list_users.return_value = (sample_users_data, mock_response, None)
 
         # Execute
-        result = await mock_connector.next_list_users()
+        result = [user async for user in mock_connector.next_list_users()]
 
         # Verify
         assert len(result) == 3
@@ -286,7 +286,7 @@ class TestOktaUserAssetConnector:
         mock_okta_client.list_users.return_value = (None, None, "API Error")
 
         # Execute
-        result = await mock_connector.next_list_users()
+        result = [user async for user in mock_connector.next_list_users()]
 
         # Verify
         assert result == []
@@ -302,11 +302,10 @@ class TestOktaUserAssetConnector:
         mock_okta_client.list_users.return_value = ([], mock_response, None)
 
         # Execute
-        result = await mock_connector.next_list_users()
+        result = [user async for user in mock_connector.next_list_users()]
 
         # Verify
         assert result == []
-        mock_connector.log.assert_called_with("No users found", level="warning")
 
     @pytest.mark.asyncio
     async def test_map_fields_success(self, mock_connector, sample_user_data):
@@ -365,74 +364,57 @@ class TestOktaUserAssetConnector:
         assert result.user.domain == "example.com"
         assert result.user.uid_alt == "test.user@example.com"
 
-    def test_get_assets_success(self, mock_connector, sample_users_data):
+    @pytest.mark.asyncio
+    async def test_get_assets_success(self, mock_connector, sample_users_data):
         """Test successful asset generation."""
+
         # Setup
-        mock_connector.next_list_users = AsyncMock(return_value=sample_users_data)
-        mock_connector.map_fields = AsyncMock()
-        mock_connector.map_fields.return_value = MagicMock()
+        async def mock_next_list_users():
+            for user in sample_users_data:
+                yield user
 
-        # Mock the event loop
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_loop_instance = MagicMock()
-            mock_loop.return_value = mock_loop_instance
-            mock_loop_instance.run_until_complete.side_effect = [
-                sample_users_data,  # First call for next_list_users
-                MagicMock(),  # First call for map_fields
-                MagicMock(),  # Second call for map_fields
-            ]
+        mock_connector.next_list_users = mock_next_list_users
+        mock_mapped_asset1 = MagicMock()
+        mock_mapped_asset2 = MagicMock()
+        mock_connector.map_fields = AsyncMock(side_effect=[mock_mapped_asset1, mock_mapped_asset2])
 
-            # Execute
-            assets = list(mock_connector.get_assets())
-
-            # Verify
-            assert len(assets) == 2
-            mock_connector.log.assert_any_call("Starting Okta user assets generator", level="info")
-            mock_connector.log.assert_any_call("Data path: /test/path", level="info")
-
-    def test_get_assets_with_error(self, mock_connector, sample_users_data):
-        """Test asset generation with mapping error."""
-        # Setup
-        mock_connector.next_list_users = AsyncMock(return_value=sample_users_data)
-
-        # Mock the event loop to simulate an error during mapping
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_loop_instance = MagicMock()
-            mock_loop.return_value = mock_loop_instance
-
-            # First call returns users, second call raises exception, third call returns mock
-            mock_loop_instance.run_until_complete.side_effect = [
-                sample_users_data,  # First call for next_list_users
-                Exception("Mapping error"),  # First call for map_fields
-                MagicMock(),  # Second call for map_fields
-            ]
-
-            # Execute
-            assets = list(mock_connector.get_assets())
-
-            # Verify
-            assert len(assets) == 1  # Only one successful mapping
-            # Check that an error was logged
-            error_calls = [
-                call
-                for call in mock_connector.log.call_args_list
-                if call[0][0].startswith("Error while mapping user") and "Mapping error" in call[0][0]
-            ]
-            assert len(error_calls) > 0
-
-    def test_get_last_created_date(self, mock_connector, sample_users_data):
-        """Test getting the last created date from users."""
         # Execute
-        result = mock_connector.get_last_created_date(sample_users_data)
+        assets = [asset async for asset in mock_connector.get_assets()]
 
         # Verify
-        assert result == "2023-01-02T00:00:00.000Z"  # Latest date from sample data
+        assert len(assets) == 2
+        assert assets[0] == mock_mapped_asset1
+        assert assets[1] == mock_mapped_asset2
+        mock_connector.log.assert_any_call("Starting Okta user assets generator", level="info")
+        assert mock_connector.map_fields.call_count == 2
 
-    def test_get_last_created_date_empty_list(self, mock_connector):
-        """Test getting the last created date from empty user list."""
-        # Execute and verify it raises ValueError for empty list
-        with pytest.raises(ValueError):
-            mock_connector.get_last_created_date([])
+    @pytest.mark.asyncio
+    async def test_get_assets_with_error(self, mock_connector, sample_users_data):
+        """Test asset generation with mapping error."""
+
+        # Setup
+        async def mock_next_list_users():
+            for user in sample_users_data:
+                yield user
+
+        mock_connector.next_list_users = mock_next_list_users
+        mock_mapped_asset = MagicMock()
+        # First call raises exception, second call succeeds
+        mock_connector.map_fields = AsyncMock(side_effect=[Exception("Mapping error"), mock_mapped_asset])
+
+        # Execute
+        assets = [asset async for asset in mock_connector.get_assets()]
+
+        # Verify
+        assert len(assets) == 1  # Only one successful mapping
+        assert assets[0] == mock_mapped_asset
+        # Check that an error was logged
+        error_calls = [
+            call
+            for call in mock_connector.log.call_args_list
+            if call[0][0].startswith("Error while mapping user") and "Mapping error" in call[0][0]
+        ]
+        assert len(error_calls) > 0
 
     def test_most_recent_date_seen_property(self, mock_connector):
         """Test the most_recent_date_seen property."""

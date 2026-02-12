@@ -1,5 +1,5 @@
   {
-  "name": "Okta User",
+  "name": "Okta Users",
   "description": "Fetch Okta user assets",
   "uuid": "b2e2e2c7-1a3e-4b7a-9c2d-8e4f3a6b7c9d",
   "docker_parameters": "user_okta_asset_connector",
@@ -31,6 +31,7 @@
       }
     },
     "required": ["sekoia_api_key"],
-    "secrets": ["sekoia_api_key"]
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
   }
 }

@@ -1,9 +1,10 @@
 import json
 from typing import Any, Optional, Type
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import requests
+from kiota_abstractions.base_request_configuration import RequestConfiguration
 from kiota_abstractions.request_adapter import RequestAdapter
 from msgraph import GraphServiceClient
 
@@ -11,7 +12,13 @@ from azure_ad.base import AzureADModule, MicrosoftGraphAction
 from azure_ad.delete_app import DeleteApplicationAction
 from azure_ad.get_sign_ins import GetSignInsAction, RevokeSignInsSessionsAction
 from azure_ad.get_user_authentication_methods import GetUserAuthenticationMethodsAction
-from azure_ad.user import DisableUserAction, EnableUserAction, GetUserAction, ResetUserPasswordAction
+from azure_ad.user import (
+    DisableUserAction,
+    EnableUserAction,
+    GetUserAction,
+    ResetUserPasswordAction,
+    ResetUserPasswordActionV2,
+)
 
 
 def configured_action(action: Type[MicrosoftGraphAction]):
@@ -62,7 +69,7 @@ class CustomRequestAdapter(RequestAdapter):
 async def test_get_user():
     action = configured_action(GetUserAction)
     expected_user = {
-        "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
+        "id": "testUserId",
         "accountEnabled": True,
         "city": None,
         "companyName": None,
@@ -81,10 +88,10 @@ async def test_get_user():
             {
                 "signInType": "userPrincipalName",
                 "issuer": "test.onmicrosoft.com",
-                "issuerAssignedId": "jean.test@test.onmicrosoft.com",
+                "issuerAssignedId": "test@test.test",
             }
         ],
-        "userPrincipalName": "jean.test@test.onmicrosoft.com",
+        "userPrincipalName": "test@test.test",
     }
 
     response = requests.Response()
@@ -93,7 +100,7 @@ async def test_get_user():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.user.GetUserAction.query_get_user", side_effect=async_mock):
-        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+        results = await action.run({"userPrincipalName": "test@test.test"})
 
         assert results == expected_user
 
@@ -102,7 +109,7 @@ async def test_get_user():
 async def test_get_user_1():
     action = configured_action(GetUserAction)
     expected_user = {
-        "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
+        "id": "testUserId",
         "accountEnabled": True,
         "city": None,
         "companyName": None,
@@ -121,10 +128,10 @@ async def test_get_user_1():
             {
                 "signInType": "userPrincipalName",
                 "issuer": "test.onmicrosoft.com",
-                "issuerAssignedId": "jean.test@test.onmicrosoft.com",
+                "issuerAssignedId": "test@test.test",
             }
         ],
-        "userPrincipalName": "jean.test@test.onmicrosoft.com",
+        "userPrincipalName": "test@test.test",
     }
 
     response = requests.Response()
@@ -135,7 +142,7 @@ async def test_get_user_1():
     graph_client = GraphServiceClient(request_adapter=mocked_adapter)
     action._client = graph_client
 
-    results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+    results = await action.run({"userPrincipalName": "test@test.test"})
     assert results == expected_user
 
 
@@ -149,7 +156,7 @@ async def test_disable_user():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.user.DisableUserAction.query_disable_user", side_effect=async_mock):
-        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+        results = await action.run({"userPrincipalName": "test@test.test"})
 
         assert results is None
 
@@ -164,7 +171,7 @@ async def test_enable_user():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.user.EnableUserAction.query_enable_user", side_effect=async_mock):
-        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+        results = await action.run({"userPrincipalName": "test@test.test"})
 
         assert results is None
 
@@ -188,9 +195,7 @@ async def test_reset_user_password():
     reset_async_mock = AsyncMock(return_value=reset_response)
     with patch("azure_ad.user.ResetUserPasswordAction.query_list_user_methods", side_effect=methods_async_mock):
         with patch("azure_ad.user.ResetUserPasswordAction.query_reset_user_password", side_effect=reset_async_mock):
-            results = await action.run(
-                {"userPrincipalName": "jean.test@test.onmicrosoft.com", "userNewPassword": "justtotest"}
-            )
+            results = await action.run({"userPrincipalName": "test@test.test", "userNewPassword": "test_password"})
 
             assert results is None
 
@@ -203,8 +208,8 @@ async def test_get_user_authentication_methods():
         "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#reports/authenticationMethods/userRegistrationDetails",
         "value": [
             {
-                "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
-                "userPrincipalName": "jean.test@test.onmicrosoft.com",
+                "id": "testUserId",
+                "userPrincipalName": "test@test.test",
                 "userDisplayName": "Jean Test",
                 "isSsprRegistered": True,
                 "isSsprEnabled": False,
@@ -219,8 +224,8 @@ async def test_get_user_authentication_methods():
     }
     value_expected = [
         {
-            "id": "31c888e1-54d7-4cd5-86d5-a6fc32f397e7",
-            "userPrincipalName": "jean.test@test.onmicrosoft.com",
+            "id": "testUserId",
+            "userPrincipalName": "test@test.test",
             "userDisplayName": "Jean Test",
             "isSsprRegistered": True,
             "isSsprEnabled": False,
@@ -244,7 +249,7 @@ async def test_get_user_authentication_methods():
         "azure_ad.get_user_authentication_methods.GetUserAuthenticationMethodsAction.query_user_auth_methods",
         side_effect=async_mock,
     ):
-        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+        results = await action.run({"userPrincipalName": "test@test.test"})
 
         assert results == final_value_expected
 
@@ -460,7 +465,7 @@ async def test_get_signins():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.get_sign_ins.GetSignInsAction.query_get_user_signin", side_effect=async_mock):
-        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+        results = await action.run({"userPrincipalName": "test@test.test"})
 
         assert results == value_expected
 
@@ -476,7 +481,7 @@ async def test_revoke_signins():
 
     async_mock = AsyncMock(return_value=response)
     with patch("azure_ad.get_sign_ins.RevokeSignInsSessionsAction.query_revoke_signin", side_effect=async_mock):
-        results = await action.run({"userPrincipalName": "jean.test@test.onmicrosoft.com"})
+        results = await action.run({"userPrincipalName": "test@test.test"})
 
         assert results is None
 
@@ -494,3 +499,160 @@ async def test_delete_app():
         results = await action.run({"id": "1986123896DGAZ12938"})
 
         assert results is None
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_success_upn_builds_body_and_calls_patch():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    patch_mock = AsyncMock(return_value=None)
+
+    by_user_id_obj = MagicMock()
+    by_user_id_obj.patch = patch_mock
+
+    users_obj = MagicMock()
+    users_obj.by_user_id.return_value = by_user_id_obj
+
+    client_mock = MagicMock()
+    client_mock.users = users_obj
+
+    action.__dict__["client"] = client_mock
+
+    await action.run({"userPrincipalName": "test@test.test", "userNewPassword": "test_password"})
+
+    users_obj.by_user_id.assert_called_once_with("test@test.test")
+    patch_mock.assert_awaited_once()
+
+    kwargs = patch_mock.call_args.kwargs
+    assert "body" in kwargs
+    assert "request_configuration" in kwargs
+    assert isinstance(kwargs["request_configuration"], RequestConfiguration)
+
+    body = kwargs["body"]
+    assert body.password_profile.password == "test_password"
+    assert body.password_profile.force_change_password_next_sign_in is True
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_success_prefers_id_over_upn():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    patch_mock = AsyncMock(return_value=None)
+
+    by_user_id_obj = MagicMock()
+    by_user_id_obj.patch = patch_mock
+
+    users_obj = MagicMock()
+    users_obj.by_user_id.return_value = by_user_id_obj
+
+    client_mock = MagicMock()
+    client_mock.users = users_obj
+
+    action.__dict__["client"] = client_mock
+
+    result = await action.run(
+        {
+            "id": "testUserId",
+            "userPrincipalName": "testUserPrincipalName",
+            "userNewPassword": "test_password",
+        }
+    )
+
+    users_obj.by_user_id.assert_called_once_with("testUserId")
+    patch_mock.assert_awaited_once()
+
+    assert result["newPassword"] == "test_password"
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_missing_password_should_not_raise_error():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    patch_mock = AsyncMock(return_value=None)
+
+    by_user_id_obj = MagicMock()
+    by_user_id_obj.patch = patch_mock
+
+    users_obj = MagicMock()
+    users_obj.by_user_id.return_value = by_user_id_obj
+
+    client_mock = MagicMock()
+    client_mock.users = users_obj
+
+    action.__dict__["client"] = client_mock
+
+    result = await action.run({"userPrincipalName": "test@test.test"})
+
+    users_obj.by_user_id.assert_called_once_with("test@test.test")
+    patch_mock.assert_awaited_once()
+
+    assert result["newPassword"] != ""
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_missing_user_identifier_raises_1():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    with pytest.raises(ValueError):
+        await action.run({"userNewPassword": "test_password"})
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_missing_user_identifier_raises():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    patch_mock = AsyncMock(return_value=None)
+
+    by_user_id_obj = MagicMock()
+    by_user_id_obj.patch = patch_mock
+
+    users_obj = MagicMock()
+    users_obj.by_user_id.return_value = by_user_id_obj
+
+    client_mock = MagicMock()
+    client_mock.users = users_obj
+
+    action.__dict__["client"] = client_mock
+
+    result = await action.run({"userNewPassword": " ", "userPrincipalName": "test@test.test"})
+    users_obj.by_user_id.assert_called_once_with("test@test.test")
+    patch_mock.assert_awaited_once()
+
+    assert result["newPassword"] != ""
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_empty_user_identifier_raises_1():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    with pytest.raises(ValueError):
+        await action.run({"userNewPassword": "test_password", "userPrincipalName": " "})
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_empty_user_identifier_raises_2():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    with pytest.raises(ValueError):
+        await action.run({"userNewPassword": "test_password", "id": ""})
+
+
+@pytest.mark.asyncio
+async def test_reset_user_password_v2_propagates_graph_error():
+    action = configured_action(ResetUserPasswordActionV2)
+
+    patch_mock = AsyncMock(side_effect=RuntimeError("Graph says 403"))
+
+    by_user_id_obj = MagicMock()
+    by_user_id_obj.patch = patch_mock
+
+    users_obj = MagicMock()
+    users_obj.by_user_id.return_value = by_user_id_obj
+
+    client_mock = MagicMock()
+    client_mock.users = users_obj
+
+    action.__dict__["client"] = client_mock
+
+    with pytest.raises(RuntimeError, match="403"):
+        await action.run({"userPrincipalName": "test@test.test", "userNewPassword": "test_password"})

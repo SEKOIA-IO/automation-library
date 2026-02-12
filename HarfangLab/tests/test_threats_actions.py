@@ -5,7 +5,7 @@ from harfanglab.threat_actions import AddCommentToThreat, UpdateThreatStatus
 
 def test_add_comment_to_threat():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = AddCommentToThreat()
     action.module.configuration = {"url": instance_url, "api_token": api_token}
@@ -19,7 +19,7 @@ def test_add_comment_to_threat():
 
 def test_update_threat_status():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = UpdateThreatStatus()
     action.module.configuration = {"url": instance_url, "api_token": api_token}

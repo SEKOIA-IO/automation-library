@@ -1,8 +1,8 @@
 # coding: utf-8
 
 # natives
-from unittest.mock import MagicMock
 import os
+from unittest.mock import MagicMock
 
 # third parties
 import pytest
@@ -15,7 +15,7 @@ from harfanglab.models import JobAction, JobTarget, JobTriggerResult
 
 def test_with_one_target_group():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = GetProcessListAction()
     action.module.configuration = {"url": instance_url, "api_token": api_token}
@@ -63,7 +63,7 @@ def test_with_one_target_group():
 
 def test_with_two_target_groups():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = GetProcessListAction()
     action.module.configuration = {"url": instance_url, "api_token": api_token}
@@ -106,7 +106,7 @@ def test_with_two_target_groups():
 
 def test_with_one_target_agent():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = GetProcessListAction()
     action.module.configuration = {"url": instance_url, "api_token": api_token}

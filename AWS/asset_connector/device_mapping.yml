@@ -1,0 +1,482 @@
+mapping:
+  ocsf_class: "Device Inventory Info"
+  class_uid: 5001
+  ocsf_version: "1.6.0"
+
+  samples:
+    - name: "AWS EC2 Instance"
+      description: "EC2 instance with network interfaces, security groups, and organizational context"
+      data: |
+        {
+          "InstanceId": "i-0abcd1234efgh5678",
+          "InstanceType": "t3.medium",
+          "ImageId": "ami-0c55b159cbfafe1f0",
+          "State": {
+            "Name": "running",
+            "Code": 16
+          },
+          "PublicDnsName": "ec2-11-22-44-66.compute-1.amazonaws.com",
+          "PublicIpAddress": "1.2.3.4",
+          "PrivateDnsName": "ip-11-00-1-15.ec2.internal",
+          "PrivateIpAddress": "11.00.1.15",
+          "PlatformDetails": "Linux/UNIX",
+          "LaunchTime": "2025-08-26T14:34:38.000Z",
+          "Hypervisor": "xen",
+          "SubnetId": "subnet-0123abcd",
+          "VpcId": "vpc-12345678",
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "web-server-prod-01"
+            },
+            {
+              "Key": "aws:autoscaling:groupName",
+              "Value": "asg-web-servers"
+            }
+          ],
+          "SecurityGroups": [
+            {
+              "GroupId": "sg-0123abcd",
+              "GroupName": "web-sg"
+            },
+            {
+              "GroupId": "sg-0123efgh",
+              "GroupName": "default"
+            }
+          ],
+          "NetworkInterfaces": [
+            {
+              "NetworkInterfaceId": "eni-0123abcd",
+              "Description": "Primary network interface",
+              "MacAddress": "01:01:ac:00:01:96",
+              "PrivateIpAddress": "11.00.1.15",
+              "PrivateDnsName": "ip-11-00-1-15.ec2.internal"
+            }
+          ],
+          "IamInstanceProfile": {
+            "Arn": "arn:aws:iam::123456789012:instance-profile/ec2-role"
+          },
+          "BlockDeviceMappings": [
+            {
+              "DeviceName": "/dev/xvda",
+              "Ebs": {
+                "VolumeId": "vol-0123abcd",
+                "AttachTime": "2025-08-26T14:34:38.000Z",
+                "DeleteOnTermination": true,
+                "Status": "attached"
+              }
+            }
+          ]
+        }
+
+    - name: "AWS EC2 Instance Minimal"
+      description: "EC2 instance with minimal configuration"
+      data: |
+        {
+          "InstanceId": "i-1234567890abcdef0",
+          "InstanceType": "t2.micro",
+          "ImageId": "ami-12345678",
+          "State": {
+            "Name": "running"
+          },
+          "PrivateDnsName": "ip-2-3-0-1.ec2.internal",
+          "PrivateIpAddress": "2.3.0.1",
+          "PlatformDetails": "Linux/UNIX",
+          "LaunchTime": "2025-06-15T10:00:00.000Z",
+          "Hypervisor": "xen",
+          "SubnetId": "subnet-default",
+          "VpcId": "vpc-default",
+          "Tags": [],
+          "SecurityGroups": [
+            {
+              "GroupId": "sg-default",
+              "GroupName": "default"
+            }
+          ],
+          "NetworkInterfaces": [
+            {
+              "NetworkInterfaceId": "eni-default",
+              "MacAddress": "02:ab:cd:ef:12:34",
+              "PrivateIpAddress": "1.2.3.4",
+              "PrivateDnsName": "ip-1-2-3-4.ec2.internal"
+            }
+          ]
+        }
+
+  fields:
+    # DEVICE IDENTIFICATION
+    - source: "InstanceId"
+      target: "device.uid"
+      type: "string"
+      logic: "Direct mapping of EC2 instance ID"
+      description: "Unique EC2 instance identifier"
+
+    - source: "PublicDnsName || PrivateDnsName || InstanceId"
+      target: "device.hostname"
+      type: "string"
+      logic: "Fallback chain: PublicDnsName → PrivateDnsName → InstanceId; skip empty strings"
+      description: "Device hostname or DNS name"
+
+    - source: "Tags[Key='Name'].Value"
+      target: "device.name"
+      type: "string"
+      logic: "Extract 'Name' tag value; if absent, use InstanceId"
+      description: "Device name from tags"
+
+    - source: "static: Server"
+      target: "device.type"
+      type: "string"
+      logic: "Always 'Server' for EC2 instances"
+      description: "OCSF device type"
+
+    - source: "static: 1"
+      target: "device.type_id"
+      type: "integer"
+      logic: "Always 1 for Server type"
+      description: "OCSF device type ID"
+
+    # OPERATING SYSTEM
+    - source: "PlatformDetails"
+      target: "device.os.name"
+      type: "string"
+      logic: "Direct mapping (e.g., 'Linux/UNIX', 'Windows', 'macOS')"
+      description: "Operating system name"
+
+    - source: "PlatformDetails"
+      target: "device.os.type"
+      type: "string"
+      logic: "Parse OS: 'windows'→Windows, 'linux'/'unix'→Linux, 'mac'→macOS, else→Unknown"
+      description: "Operating system type"
+
+    - source: "PlatformDetails"
+      target: "device.os.type_id"
+      type: "integer"
+      logic: "Map OS type: Windows→100, Linux→200, macOS→300, Unknown→0"
+      description: "OCSF OS type ID"
+
+    # NETWORK INTERFACES
+    - source: "NetworkInterfaces[]"
+      target: "device.network_interfaces[]"
+      type: "object"
+      logic: "Iterate over network interfaces; map each field according to sub-mappings below"
+      description: "List of network interfaces attached to device"
+
+    - source: "NetworkInterfaces[].NetworkInterfaceId"
+      target: "device.network_interfaces[].uid"
+      type: "string"
+      logic: "Direct mapping of ENI ID"
+      description: "Network interface unique ID"
+
+    - source: "NetworkInterfaces[].Description"
+      target: "device.network_interfaces[].name"
+      type: "string"
+      logic: "Direct mapping; fallback to 'Primary network interface' if empty"
+      description: "Interface description or name"
+
+    - source: "NetworkInterfaces[].MacAddress"
+      target: "device.network_interfaces[].mac"
+      type: "string"
+      logic: "Direct mapping"
+      description: "MAC address"
+
+    - source: "NetworkInterfaces[].PrivateIpAddress"
+      target: "device.network_interfaces[].ip"
+      type: "ip"
+      logic: "Direct mapping of private IP"
+      description: "Network interface IP address"
+
+    - source: "NetworkInterfaces[].PrivateDnsName"
+      target: "device.network_interfaces[].hostname"
+      type: "string"
+      logic: "Direct mapping of private DNS name"
+      description: "Network interface hostname"
+
+    - source: "static: Wired"
+      target: "device.network_interfaces[].type"
+      type: "string"
+      logic: "Always 'Wired' for EC2 network interfaces"
+      description: "Interface type"
+
+    - source: "static: 1"
+      target: "device.network_interfaces[].type_id"
+      type: "integer"
+      logic: "Always 1 for Wired interface type"
+      description: "Interface type ID"
+
+    # PRIMARY IP ADDRESS
+    - source: "PublicIpAddress || PrivateIpAddress"
+      target: "device.ip"
+      type: "ip"
+      logic: "Prefer public IP; fallback to private IP"
+      description: "Primary device IP address"
+
+    # SECURITY GROUPS
+    - source: "SecurityGroups[]"
+      target: "device.groups[]"
+      type: "object"
+      logic: "Iterate over security groups; map according to sub-mappings below"
+      description: "Security groups associated with instance"
+
+    - source: "SecurityGroups[].GroupId"
+      target: "device.groups[].uid"
+      type: "string"
+      logic: "Direct mapping of security group ID"
+      description: "Security group unique ID"
+
+    - source: "SecurityGroups[].GroupName"
+      target: "device.groups[].name"
+      type: "string"
+      logic: "Direct mapping of security group name"
+      description: "Security group name"
+
+    # CLOUD INFRASTRUCTURE
+    - source: "Placement.AvailabilityZone || Placement"
+      target: "device.region"
+      type: "string"
+      logic: "Extract availability zone (e.g., 'us-east-1a')"
+      description: "AWS availability zone (region)"
+
+    - source: "SubnetId"
+      target: "device.subnet"
+      type: "string"
+      logic: "Direct mapping of subnet ID"
+      description: "VPC subnet ID"
+
+    - source: "VpcId"
+      target: "device.domain"
+      type: "string"
+      logic: "Direct mapping of VPC ID (mapped as domain)"
+      description: "VPC ID for network domain"
+
+    - source: "Hypervisor"
+      target: "device.hypervisor"
+      type: "string"
+      logic: "Direct mapping (e.g., 'xen', 'nitro')"
+      description: "Hypervisor type"
+
+    # INSTANCE DETAILS
+    - source: "InstanceType"
+      target: "device.model"
+      type: "string"
+      logic: "Direct mapping (e.g., 't3.medium', 'm5.large')"
+      description: "EC2 instance type"
+
+    - source: "ImageId"
+      target: "device.image_id"
+      type: "string"
+      logic: "Direct mapping of AMI ID"
+      description: "EC2 AMI (Amazon Machine Image) ID"
+
+    - source: "State.Name"
+      target: "device.state"
+      type: "string"
+      logic: "Direct mapping (running, stopped, terminated, etc.)"
+      description: "Instance state"
+
+    - source: "static: Amazon Web Services"
+      target: "device.vendor_name"
+      type: "string"
+      logic: "Always 'Amazon Web Services'"
+      description: "Device vendor name"
+
+    # TIMESTAMPS
+    - source: "LaunchTime"
+      target: "device.boot_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to string (ISO format preferred)"
+      description: "Instance launch/boot time"
+
+    - source: "BlockDeviceMappings[0].Ebs.AttachTime || LaunchTime"
+      target: "device.created_time"
+      type: "timestamp"
+      logic: "Use EBS attachment time if available; fallback to launch time; convert to Unix epoch"
+      description: "Device creation timestamp"
+
+    - source: "LaunchTime"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
+      description: "OCSF event timestamp"
+
+    # MANAGEMENT
+    - source: "IamInstanceProfile"
+      target: "device.is_managed"
+      type: "boolean"
+      logic: "true if IamInstanceProfile is present and not empty; false otherwise"
+      description: "Whether instance has IAM role (managed by policies)"
+
+    - source: "Tags[Key='aws:autoscaling:groupName'].Value"
+      target: "device.autoscale_uid"
+      type: "string"
+      logic: "Extract 'aws:autoscaling:groupName' tag value if present"
+      description: "Auto Scaling group name"
+
+    # ORGANIZATION
+    - source: "OwnerId"
+      target: "device.org.uid"
+      type: "string"
+      logic: "Direct mapping of AWS account ID"
+      description: "AWS account ID"
+
+    - source: "OwnerId"
+      target: "device.org.name"
+      type: "string"
+      logic: "Format as 'AWS Account <OwnerId>'"
+      description: "Organization/Account name"
+
+    # DESCRIPTION
+    - source: "ImageId + State.Name"
+      target: "device.desc"
+      type: "string"
+      logic: "Concatenate as 'AMI: <ImageId>, State: <State.Name>'"
+      description: "Device description with image and state"
+
+    # METADATA
+    - source: "static: AWS EC2"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'AWS EC2'"
+      description: "Product name"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect' for asset inventory"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: Device Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'Device Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5001"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5001 for Device Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "computed: 500100 + activity_id"
+      target: "type_uid"
+      type: "integer"
+      logic: "Base 500100 + activity_id (2 = 500102)"
+      description: "OCSF type UID"
+
+    - source: "computed: class_name + ': ' + activity_name"
+      target: "type_name"
+      type: "string"
+      logic: "Concatenate 'Device Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+  ocsf_samples:
+    - name: "Device Inventory Info: Collect"
+      description: "Transformed EC2 instance to OCSF Device Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "Device Inventory Info",
+          "class_uid": 5001,
+          "type_name": "Device Inventory Info: Collect",
+          "type_uid": 500102,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1725011678,
+          "metadata": {
+            "product": {
+              "name": "AWS EC2",
+              "version": "1.6.0"
+            },
+            "version": "1.6.0"
+          },
+          "device": {
+            "uid": "i-0abcd1234efgh5678",
+            "name": "web-server-prod-01",
+            "hostname": "ec2-11-22-44-66.compute-1.amazonaws.com",
+            "type": "Server",
+            "type_id": 1,
+            "vendor_name": "Amazon Web Services",
+            "ip": "1.2.3.4",
+            "model": "t3.medium",
+            "image_id": "ami-0c55b159cbfafe1f0",
+            "state": "running",
+            "region": "us-east-1a",
+            "subnet": "subnet-0123abcd",
+            "domain": "vpc-12345678",
+            "hypervisor": "xen",
+            "is_managed": true,
+            "autoscale_uid": "asg-web-servers",
+            "boot_time": "2025-08-26T14:34:38Z",
+            "created_time": 1725011678,
+            "os": {
+              "name": "Linux/UNIX",
+              "type": "Linux",
+              "type_id": 200
+            },
+            "network_interfaces": [
+              {
+                "uid": "eni-0123abcd",
+                "name": "Primary network interface",
+                "ip": "11.00.1.15",
+                "hostname": "ip-11-00-1-15.ec2.internal",
+                "mac": "01:01:ac:00:01:96",
+                "type": "Wired",
+                "type_id": 1
+              }
+            ],
+            "groups": [
+              {
+                "uid": "sg-0123abcd",
+                "name": "web-sg"
+              },
+              {
+                "uid": "sg-0123efgh",
+                "name": "default"
+              }
+            ],
+            "org": {
+              "uid": "123456789012",
+              "name": "AWS Account 123456789012"
+            },
+            "desc": "AMI: ami-0c55b159cbfafe1f0, State: running"
+          }
+        }

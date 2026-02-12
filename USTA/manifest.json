@@ -1,0 +1,25 @@
+{
+  "configuration": {
+    "title": "UstaModuleConfig",
+    "description": "Configuration for USTA.",
+    "type": "object",
+    "properties": {
+      "api_key": {
+        "title": "Api Key",
+        "type": "string",
+        "pattern": "^\\S+$"
+      }
+    },
+    "required": [
+      "api_key"
+    ]
+  },
+  "description": "USTA is a market-leading threat intelligence solution provided by PRODAFT specifically designed to combat ransomware, online fraud, and account takeover attempts. By collecting compromised credentials from stealer malware, USTA provides real-time insights and actionable intelligence to help organizations detect and mitigate threats, protecting their sensitive accounts and digital assets from malicious activity.",
+  "name": "USTA Threat Intel by PRODAFT",
+  "slug": "usta",
+  "categories": [
+    "Threat Intelligence"
+  ],
+  "uuid": "85b0e92e-14b3-4d61-a259-829e82e736a7",
+  "version": "1.0.0"
+}

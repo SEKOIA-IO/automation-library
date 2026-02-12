@@ -135,8 +135,8 @@ class SentinelOneAgent(BaseModel):
     tags: Optional[dict[str, list[Tag]]] = None
     showAlertIcon: Optional[bool] = None
     lastSuccessfulScanDate: Optional[str] = None
-    proxyStates: Optional[dict[str, bool]] = None
-    containerizedWorkloadCounts: Optional[dict[str, int]] = None
+    proxyStates: Optional[dict[str, Optional[bool]]] = None
+    containerizedWorkloadCounts: Optional[dict[str, Optional[int]]] = None
     hasContainerizedWorkload: Optional[bool] = None
     isAdConnector: Optional[bool] = None
     isHyperAutomate: Optional[bool] = None

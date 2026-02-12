@@ -3,12 +3,13 @@
 # natives
 
 # third parties
-from harfanglab.job_executor import JobExecutor
-from harfanglab.models import JobAction, JobTarget, JobTriggerResult
+from .job_executor import JobExecutor
+from .models import JobAction, JobTarget, JobTriggerResult
 
 
 class GetPipeListAction(JobExecutor):
     """
+    @deprecated
     Action to analyze an HarfangLab job that lists the named pipes
     """
 

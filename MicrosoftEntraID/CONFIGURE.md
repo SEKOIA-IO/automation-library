@@ -33,6 +33,7 @@
     3. `UserAuthenticationMethod.ReadWrite.All`
     4. `Directory.ReadWrite.All`
     5. `AuditLog.Read.All`
+    6. `User-PasswordProfile.ReadWrite.All`
 7. Click `Add permissions`
 8. In the `API permissions` page, click `Grant admin consent for TENANT_NAME`
 9. Click `Yes` in the `Grant admin consent confirmation` modal

@@ -37,7 +37,7 @@ exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.21.2"
+sekoia-automation-sdk = "^1.22.2"
 boto3 = ">=1.39.9"
 botocore = ">=1.39.9"
 aiobotocore = ">=2.24.0"
@@ -95,7 +95,7 @@ types-python-dateutil = "^2.8.19.13"
 poetry = "^1.5.1"
 
 [tool.poetry.group.dev.dependencies.black]
-version = "^24.3.0"
+version = "^26.1.0"
 extras = ["colorama"]
 
 [tool.poetry.group.dev.dependencies.poethepoet]
