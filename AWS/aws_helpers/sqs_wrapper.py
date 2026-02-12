@@ -73,7 +73,11 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
 
     @asynccontextmanager
     async def receive_messages(
-        self, frequency: int | None = None, max_messages: int = 10, delete_consumed_messages: bool | None = None
+        self,
+        frequency: int | None = None,
+        max_messages: int = 10,
+        delete_consumed_messages: bool | None = None,
+        timeout: int = 60,
     ) -> AsyncGenerator[list[tuple[str, int]], None]:
         """
         Receive SQS messages.
@@ -107,7 +111,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                     WaitTimeSeconds=frequency,
                     MessageAttributeNames=["All"],
                     MessageSystemAttributeNames=["All"],
-                    VisibilityTimeout=60,
+                    VisibilityTimeout=timeout,
                 )
 
             except Exception as e:  # pragma: no cover
