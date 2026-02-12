@@ -121,7 +121,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
         while continue_receiving:
             async with self.sqs_wrapper.receive_messages(
-                max_messages=self.sqs_max_messages, timeout=self.sqs_visibility_timeout
+                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
             ) as messages:
                 message_records = []
 
