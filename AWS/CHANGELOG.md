@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-12 - 1.33.12
+
+### Added
+
+- Add the ability to define the SQS message visibility timeout through env variable
+
 ## 2026-01-29 - 1.33.11
 
 ### Changed
