@@ -75,6 +75,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
 
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
@@ -162,7 +163,9 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
         continue_receiving = True
 
         while continue_receiving:
-            async with self.sqs_wrapper.receive_messages(max_messages=self.sqs_max_messages) as messages:
+            async with self.sqs_wrapper.receive_messages(
+                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+            ) as messages:
                 message_records = []
 
                 if not messages:

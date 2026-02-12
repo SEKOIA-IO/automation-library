@@ -73,7 +73,11 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
 
     @asynccontextmanager
     async def receive_messages(
-        self, frequency: int | None = None, max_messages: int = 10, delete_consumed_messages: bool | None = None
+        self,
+        frequency: int | None = None,
+        max_messages: int = 10,
+        delete_consumed_messages: bool | None = None,
+        visibility_timeout: int | None = None,
     ) -> AsyncGenerator[list[tuple[str, int]], None]:
         """
         Receive SQS messages.
@@ -88,6 +92,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             frequency: int
             max_messages: int
             delete_consumed_messages: int
+            visibility_timeout: int
 
         Yields:
             list[tuple[str, int]]: list of message content and message sent timestamp
@@ -99,6 +104,10 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         delete_consumed_messages = delete_consumed_messages or self._configuration.delete_consumed_messages
         queue_url = await self.queue_url()
 
+        # Ensure visibility timeout is a positive integer if it is provided
+        if visibility_timeout is not None and visibility_timeout < 0:
+            raise ValueError("timeout should be a positive integer")
+
         async with self.get_client("sqs") as sqs:
             try:
                 response = await sqs.receive_message(
@@ -107,7 +116,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
                     WaitTimeSeconds=frequency,
                     MessageAttributeNames=["All"],
                     MessageSystemAttributeNames=["All"],
-                    VisibilityTimeout=60,
+                    VisibilityTimeout=visibility_timeout,
                 )
 
             except Exception as e:  # pragma: no cover
