@@ -77,7 +77,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         frequency: int | None = None,
         max_messages: int = 10,
         delete_consumed_messages: bool | None = None,
-        timeout: int = 60,
+        timeout: int | None = None,
     ) -> AsyncGenerator[list[tuple[str, int]], None]:
         """
         Receive SQS messages.
@@ -92,6 +92,7 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
             frequency: int
             max_messages: int
             delete_consumed_messages: int
+            timeout: int
 
         Yields:
             list[tuple[str, int]]: list of message content and message sent timestamp
@@ -102,6 +103,10 @@ class SqsWrapper(AwsClient[SqsConfiguration]):
         frequency = frequency or self._configuration.frequency
         delete_consumed_messages = delete_consumed_messages or self._configuration.delete_consumed_messages
         queue_url = await self.queue_url()
+
+        # Ensure timeout is a positive integer if it is provided
+        if timeout is not None and timeout < 0:
+            raise ValueError("timeout should be a positive integer")
 
         async with self.get_client("sqs") as sqs:
             try:
