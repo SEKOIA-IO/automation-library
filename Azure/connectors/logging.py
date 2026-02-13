@@ -28,11 +28,11 @@ def set_log_level_from_env() -> None:
 
     # If AZURE_LOGGERS is set, use the specified loggers. Otherwise, use all loggers.
     if os.environ.get("AZURE_LOGGERS") is not None:
-        loggers = set(os.environ.get("AZURE_LOGGERS").split(","))
+        loggers = set(os.environ["AZURE_LOGGERS"].split(","))
 
     # If AZURE_LOGGERS is not set, use all loggers.
     if loggers is None:
         loggers = set(logging.root.manager.loggerDict.keys())
 
     # Set the log level for the specified loggers.
-    set_log_level(loggers, int(os.environ.get("AZURE_LOG_LEVEL")))
+    set_log_level(loggers, int(os.environ["AZURE_LOG_LEVEL"]))
