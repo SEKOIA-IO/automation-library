@@ -94,7 +94,12 @@ class PoDEventsConsumer(Thread):
         try:
             message = orjson.loads(event)
             message["type"] = self.configuration.type.value
-            self.most_recent_date_seen = message.get("ts")
+            timestamp = message.get("ts")
+
+            if isinstance(timestamp, str):
+                self.most_recent_date_seen = isoparse(timestamp)
+            else:
+                self.most_recent_date_seen = timestamp
 
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
             self.queue.put((self.most_recent_date_seen, message))
