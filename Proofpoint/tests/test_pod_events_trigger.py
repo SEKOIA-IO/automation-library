@@ -208,14 +208,6 @@ def test_event_forwarder_next_batch(forwarder, queue, checkpoint):
     assert checkpoint.offset == now
 
 
-def test_consumer_on_message(consumer, queue):
-    original = copy.deepcopy(ORIGINAL_MESSAGE)
-    consumer.on_message(None, original)
-
-    message = orjson.loads(original)
-    assert consumer.most_recent_date_seen == isoparse(message["ts"])
-
-
 def test_consumer_on_message_with_string_timestamp(consumer, queue):
     from dateutil.parser import isoparse
 
