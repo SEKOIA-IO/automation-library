@@ -151,7 +151,11 @@ class AnozrwayHistoricalConnector(AsyncConnector):
         """
         nom_fuite = cls._safe_str(event.get("nom_fuite")).strip().lower()
         ts = cls._extract_event_ts(event)
-        ts_s = ts.isoformat().replace("+00:00", "Z") if ts else ""
+        if ts:
+            ts_s = ts.isoformat().replace("+00:00", "Z")
+        else:
+            # fallback to raw timestamp string to avoid collapsing distinct events
+            ts_s = cls._safe_str(event.get("timestamp") or event.get("last_updated"))
 
         raw = "|".join(
             [
@@ -282,7 +286,8 @@ class AnozrwayHistoricalConnector(AsyncConnector):
         import asyncio
         import signal
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
         def handle_stop_signal():
             loop.create_task(self.shutdown())

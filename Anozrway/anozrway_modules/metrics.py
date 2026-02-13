@@ -1,22 +1,22 @@
 from prometheus_client import Counter, Gauge, Histogram
 
 events_collected = Counter(
-    "anozrway_historical_events_collected_total",
+    "anozrway_historical_events_collected",
     "Total number of Anozrway historical records collected",
 )
 
 events_forwarded = Counter(
-    "anozrway_historical_events_forwarded_total",
+    "anozrway_historical_events_forwarded",
     "Total number of Anozrway historical records forwarded to intake",
 )
 
 events_duplicated = Counter(
-    "anozrway_historical_events_duplicated_total",
+    "anozrway_historical_events_duplicated",
     "Total number of duplicate Anozrway historical records filtered",
 )
 
 api_requests = Counter(
-    "anozrway_api_requests_total",
+    "anozrway_api_requests",
     "Total number of Anozrway API requests",
     ["endpoint", "status_code"],
 )

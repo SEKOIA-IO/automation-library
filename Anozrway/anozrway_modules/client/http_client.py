@@ -86,34 +86,28 @@ class AnozrwayClient:
     def _to_iso(dt: datetime) -> str:
         return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
-    async def search_domain_v1(
+    async def _post_with_retry(
         self,
-        context: str,
-        domain: str,
-        start_date: datetime,
-        end_date: datetime,
+        path: str,
+        payload: Dict[str, Any],
+        *,
+        result_key: str,
+        unauthorized_msg: str,
+        generic_error_msg: str,
     ) -> List[Dict[str, Any]]:
         if not self._session:
             raise AnozrwayError("HTTP session not initialized")
 
         access_token = await self._get_access_token()
 
-        url = f"{self.base_url}/v1/domain/searches"
+        url = f"{self.base_url}{path}"
         headers = {
             "Content-Type": "application/json",
             "authorization": f"Bearer {access_token}",
         }
 
-        # optional header (spec)
         if self.x_restrict_access:
             headers["x-restrict-access"] = str(self.x_restrict_access)
-
-        payload: Dict[str, Any] = {
-            "context": context,
-            "domain": domain,
-            "start_date": self._to_iso(start_date),
-            "end_date": self._to_iso(end_date),
-        }
 
         max_attempts = 3
         attempt = 0
@@ -129,31 +123,50 @@ class AnozrwayClient:
                     status = resp.status
 
                     if status == 401:
-                        # drop token and retry once
                         self._access_token = None
                         self._token_expires_at = None
                         if attempt < max_attempts:
                             continue
-                        raise AnozrwayAuthError("Unauthorized when calling Anozrway v1 domain search")
+                        raise AnozrwayAuthError(unauthorized_msg)
 
                     if status == 429:
-                        # retry with simple backoff
                         await asyncio.sleep(60 * backoff)
                         backoff *= 2
                         continue
 
                     if status != 200:
                         text = await resp.text()
-                        raise AnozrwayError(f"v1 domain search failed ({status}): {text}")
+                        raise AnozrwayError(f"{generic_error_msg} ({status}): {text}")
 
                     data = await resp.json()
 
-            results = data.get("results") or []
+            results = data.get(result_key) or []
             if not isinstance(results, list):
                 return []
             return results
 
-        raise AnozrwayRateLimitError("Exceeded maximum retry attempts while calling Anozrway v1 domain search")
+        raise AnozrwayRateLimitError(f"Exceeded maximum retry attempts while calling {generic_error_msg}")
+
+    async def search_domain_v1(
+        self,
+        context: str,
+        domain: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> List[Dict[str, Any]]:
+        payload = {
+            "context": context,
+            "domain": domain,
+            "start_date": self._to_iso(start_date),
+            "end_date": self._to_iso(end_date),
+        }
+        return await self._post_with_retry(
+            "/v1/domain/searches",
+            payload,
+            result_key="results",
+            unauthorized_msg="Unauthorized when calling Anozrway v1 domain search",
+            generic_error_msg="v1 domain search failed",
+        )
 
     async def fetch_events(
         self,
@@ -163,69 +176,29 @@ class AnozrwayClient:
         end_date: datetime,
     ) -> List[Dict[str, Any]]:
         """Fetch leak detection events from the Balise Pipeline /events endpoint."""
-        if not self._session:
-            raise AnozrwayError("HTTP session not initialized")
-
-        access_token = await self._get_access_token()
-
-        url = f"{self.base_url}/events"
-        headers = {
-            "Content-Type": "application/json",
-            "authorization": f"Bearer {access_token}",
-        }
-
-        if self.x_restrict_access:
-            headers["x-restrict-access"] = str(self.x_restrict_access)
-
-        payload: Dict[str, Any] = {
+        payload = {
             "context": context,
             "domain": domain,
             "start_date": self._to_iso(start_date),
             "end_date": self._to_iso(end_date),
         }
-
-        max_attempts = 3
-        attempt = 0
-        backoff = 1
-
-        while attempt < max_attempts:
-            attempt += 1
-
-            async with self._rate_limiter:
-                async with self._session.post(
-                    url, json=payload, headers=headers, timeout=self.timeout, raise_for_status=False
-                ) as resp:
-                    status = resp.status
-
-                    if status == 401:
-                        self._access_token = None
-                        self._token_expires_at = None
-                        if attempt < max_attempts:
-                            continue
-                        raise AnozrwayAuthError("Unauthorized when calling Balise Pipeline /events")
-
-                    if status == 429:
-                        await asyncio.sleep(60 * backoff)
-                        backoff *= 2
-                        continue
-
-                    if status != 200:
-                        text = await resp.text()
-                        raise AnozrwayError(f"Balise Pipeline /events failed ({status}): {text}")
-
-                    data = await resp.json()
-
-            results = data.get("events") or []
-            if not isinstance(results, list):
-                return []
-            return results
-
-        raise AnozrwayRateLimitError("Exceeded maximum retry attempts while calling Balise Pipeline /events")
+        return await self._post_with_retry(
+            "/events",
+            payload,
+            result_key="events",
+            unauthorized_msg="Unauthorized when calling Balise Pipeline /events",
+            generic_error_msg="Balise Pipeline /events failed",
+        )
 
     async def __aenter__(self):
         self._session = aiohttp.ClientSession(trust_env=True)
-        # validate token once
-        await self._get_access_token()
+        try:
+            # validate token once
+            await self._get_access_token()
+        except Exception:
+            await self._session.close()
+            self._session = None
+            raise
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
