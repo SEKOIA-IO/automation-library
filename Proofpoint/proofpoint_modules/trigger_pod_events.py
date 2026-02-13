@@ -102,7 +102,11 @@ class PoDEventsConsumer(Thread):
                 self.most_recent_date_seen = timestamp
 
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
-            self.queue.put((self.most_recent_date_seen, message))
+
+            # we put the message in the queue with the most recent date seen as timestamp,
+            # so the forwarder can update the checkpoint and compute the lag
+            timestamp_iso = self.most_recent_date_seen.isoformat() if self.most_recent_date_seen else None
+            self.queue.put((timestamp_iso, message))
         except Exception as ex:
             self.connector.log_exception(ex, message="Failed to consume event")
 
