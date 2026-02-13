@@ -147,7 +147,7 @@ class EventsForwarder(Thread):
         most_recent_date_seen_str = None
         while self.is_running:
             try:
-                (timestamp_str, message) = self.queue.get(block=True, timeout=0.5)
+                timestamp_str, message = self.queue.get(block=True, timeout=0.5)
 
                 if message.get("type") == "message" and "msgParts" in message and "guid" in message:
                     events.extend(split_message(message))
