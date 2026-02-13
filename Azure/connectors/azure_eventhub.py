@@ -14,7 +14,11 @@ from azure.storage.blob.aio import BlobServiceClient
 from sekoia_automation.aio.connector import AsyncConnector
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 
+from .logging import set_log_level_from_env
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, MESSAGES_AGE, OUTCOMING_EVENTS
+
+# Initialize log level from environment variables
+set_log_level_from_env()
 
 
 class AzureEventsHubConfiguration(DefaultConnectorConfiguration):
