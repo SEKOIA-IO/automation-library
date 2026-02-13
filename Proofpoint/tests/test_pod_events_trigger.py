@@ -220,11 +220,7 @@ def test_consumer_on_message_with_string_timestamp(consumer, queue):
     from dateutil.parser import isoparse
 
     timestamp_str = "2024-01-15T10:30:45Z"
-    event = orjson.dumps({
-        "ts": timestamp_str,
-        "guid": "test-guid",
-        "msgParts": []
-    }).decode("utf-8")
+    event = orjson.dumps({"ts": timestamp_str, "guid": "test-guid", "msgParts": []}).decode("utf-8")
 
     consumer.on_message(None, event)
 
