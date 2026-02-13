@@ -8,8 +8,6 @@
   "name": "Microsoft Azure",
   "uuid": "525eecc0-9eee-484d-92bd-039117cf4dac",
   "slug": "azure",
-  "version": "2.9.2",
-  "categories": [
-    "Cloud Providers"
-  ]
+  "version": "2.9.3",
+  "categories": ["Cloud Providers"]
 }
