@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-13 - 2.9.3
+
+### Added
+
+- Add the ability to set log level for any loggers in the Azure EventHub connector
+
 ## 2025-12-10 - 2.9.2
 
 ### Fixed
