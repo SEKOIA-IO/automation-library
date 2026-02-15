@@ -1,0 +1,50 @@
+name: getSeries
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/v1/data'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+    asserts:
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Your query was not executed because you have exceeded your specified
+          rate limit.
+      error_500:
+        predicate: '{{response.status_code != 500}}'
+        fail: An unexpected error occurred when trying to execute your query. Try
+          again at a later time or contact us at [support@censys.io](mailto:support@censys.io)
+          if the problem persists.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: "> The Censys legacy v1 API contains API endpoints which are being maintained\
+  \ until replacement v2 endpoints are available. \n\nThe Get Series endpoint returns\
+  \ a data on the types of scans we regularly perform (series)."
+inputs:
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
