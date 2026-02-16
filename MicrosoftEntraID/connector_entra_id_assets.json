@@ -1,5 +1,5 @@
   {
-  "name": "Entra ID",
+  "name": "Microsoft Entra ID Users",
   "description": "Fetch Entra ID user asset",
   "uuid": "b6e2e2e2-4c3a-4b7a-9e2a-1f2c3d4e5f6a",
   "docker_parameters": "entra_id_asset_connector",
@@ -31,6 +31,7 @@
       }
     },
     "required": ["sekoia_api_key"],
-    "secrets": ["sekoia_api_key"]
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
   }
 }

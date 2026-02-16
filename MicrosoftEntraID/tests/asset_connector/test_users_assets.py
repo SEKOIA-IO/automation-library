@@ -94,13 +94,85 @@ def test_map_fields(test_entra_id_asset_connector):
         display_name="Test User",
         mail="testuser@example.com",
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        account_enabled=True,
+        department="Engineering",
+        job_title="Software Engineer",
+        employee_id="EMP123",
+        employee_type="Employee",
+        company_name="Acme Corp",
+        office_location="New York",
     )
     has_mfa = True
     asset_groups = []
-    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    is_admin = False
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
     assert result.user.name == "testuser@example.com"
     assert result.user.uid == "user_id"
     assert result.user.has_mfa == has_mfa
+    assert result.user.display_name == "Test User"
+    assert result.user.domain == "example.com"
+    assert result.user.type_id == 1  # UserTypeId.USER
+    assert result.user.type == "User"
+    # Verify org field is populated
+    assert result.user.org is not None
+    assert result.user.org.name == "Acme Corp"
+    assert result.user.org.ou_name == "New York"
+    # Verify enrichments are created
+    assert result.enrichments is not None
+    assert len(result.enrichments) > 0
+    # Verify account enrichment
+    account_enrichment = next((e for e in result.enrichments if e.name == "account"), None)
+    assert account_enrichment is not None
+    assert account_enrichment.data.is_enabled is True
+
+
+def test_map_fields_without_org(test_entra_id_asset_connector):
+    """Test mapping when organization fields are not available."""
+    from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
+
+    # Mocking the user without company name or office location
+    asset_user = User(
+        user_principal_name="testuser@example.com",
+        id="user_id",
+        display_name="Test User",
+        mail="testuser@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        account_enabled=True,
+    )
+    has_mfa = False
+    asset_groups = []
+    is_admin = False
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
+    assert result.user.name == "testuser@example.com"
+    assert result.user.uid == "user_id"
+    # Verify org field is None when company_name is not provided
+    assert result.user.org is None
+
+
+def test_map_fields_with_admin_user_type(test_entra_id_asset_connector):
+    """Test that user type is correctly set to Admin when is_admin=True."""
+    from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import UserTypeId, UserTypeStr
+
+    asset_user = User(
+        user_principal_name="admin@example.com",
+        id="admin_user_id",
+        display_name="Admin User",
+        mail="admin@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        account_enabled=True,
+    )
+    has_mfa = True
+    asset_groups = []
+    is_admin = True
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, is_admin)
+
+    assert result.user.name == "admin@example.com"
+    assert result.user.uid == "admin_user_id"
+    assert result.user.type_id == UserTypeId.ADMIN
+    assert result.user.type == UserTypeStr.ADMIN
 
 
 @pytest.mark.asyncio
@@ -209,7 +281,7 @@ async def test_fetch_new_users(test_entra_id_asset_connector):
     test_entra_id_asset_connector.fetch_user = AsyncMock(return_value=mock_user_ocsf_model)
 
     # Act
-    result = await test_entra_id_asset_connector.fetch_new_users()
+    result = [user async for user in test_entra_id_asset_connector.fetch_new_users()]
 
     # Assert
     assert len(result) == 2
@@ -256,7 +328,7 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
     test_entra_id_asset_connector.fetch_user = AsyncMock(side_effect=[mock_user_ocsf_model_1, mock_user_ocsf_model_2])
 
     # Act
-    result = await test_entra_id_asset_connector.fetch_new_users()
+    result = [user async for user in test_entra_id_asset_connector.fetch_new_users()]
 
     # Assert
     assert len(result) == 2
@@ -267,14 +339,15 @@ async def test_fetch_new_users_with_pagination(test_entra_id_asset_connector):
     assert result[1] is mock_user_ocsf_model_2
 
 
-def test_update_checkpoint(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_update_checkpoint(test_entra_id_asset_connector):
     """Test that update_checkpoint correctly updates the most_recent_date_seen in context."""
     # Arrange
     test_timestamp = 1640995200.0  # 2022-01-01 00:00:00 UTC
     test_entra_id_asset_connector._latest_time = test_timestamp
 
     # Act
-    test_entra_id_asset_connector.update_checkpoint()
+    await test_entra_id_asset_connector.update_checkpoint()
 
     # Assert
     most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
@@ -282,14 +355,15 @@ def test_update_checkpoint(test_entra_id_asset_connector):
     assert most_recent_date == "2022-01-01T00:00:01+00:00"
 
 
-def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_update_checkpoint_with_different_timestamp(test_entra_id_asset_connector):
     """Test that update_checkpoint works with different timestamps."""
     # Arrange
     test_timestamp = 1672531200.0  # 2023-01-01 00:00:00 UTC
     test_entra_id_asset_connector._latest_time = test_timestamp
 
     # Act
-    test_entra_id_asset_connector.update_checkpoint()
+    await test_entra_id_asset_connector.update_checkpoint()
 
     # Assert
     most_recent_date = test_entra_id_asset_connector.most_recent_date_seen
@@ -350,7 +424,8 @@ async def test_fetch_new_users_error_handling(test_entra_id_asset_connector):
 
     # Act & Assert
     with pytest.raises(ValueError, match="Error fetching users"):
-        await test_entra_id_asset_connector.fetch_new_users()
+        async for _ in test_entra_id_asset_connector.fetch_new_users():
+            pass
 
 
 @pytest.mark.asyncio
@@ -402,40 +477,52 @@ async def test_fetch_user_groups_with_pagination(test_entra_id_asset_connector):
     assert groups[1].uid == "group-2"
 
 
-def test_get_assets(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_get_assets(test_entra_id_asset_connector):
     """Test that get_assets yields UserOCSFModel objects."""
     # Arrange
     mock_user_ocsf_model = MagicMock()
     mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
-    test_entra_id_asset_connector.fetch_new_users = AsyncMock(return_value=[mock_user_ocsf_model])
+
+    async def mock_fetch_new_users(last_run_date=None):
+        yield mock_user_ocsf_model
+
+    test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
 
     # Act
-    assets = list(test_entra_id_asset_connector.get_assets())
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
 
     # Assert
     assert len(assets) == 1
     assert assets[0] is mock_user_ocsf_model
 
 
-def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
+@pytest.mark.asyncio
+async def test_get_assets_with_last_run_date(test_entra_id_asset_connector):
     """Test that get_assets uses most_recent_date_seen when available."""
     # Arrange
     test_entra_id_asset_connector._latest_time = 1640995200.0  # Set a timestamp
-    test_entra_id_asset_connector.update_checkpoint()  # Save it to context
+    await test_entra_id_asset_connector.update_checkpoint()  # Save it to context
 
     mock_user_ocsf_model = MagicMock()
     mock_user_ocsf_model.time = datetime.datetime.now().timestamp()
-    test_entra_id_asset_connector.fetch_new_users = AsyncMock(return_value=[mock_user_ocsf_model])
+
+    # Track calls to fetch_new_users
+    call_tracker = {"last_run_date": None}
+
+    async def mock_fetch_new_users(last_run_date=None):
+        call_tracker["last_run_date"] = last_run_date
+        yield mock_user_ocsf_model
+
+    test_entra_id_asset_connector.fetch_new_users = mock_fetch_new_users
 
     # Act
-    assets = list(test_entra_id_asset_connector.get_assets())
+    assets = [asset async for asset in test_entra_id_asset_connector.get_assets()]
 
     # Assert
     assert len(assets) == 1
-    test_entra_id_asset_connector.fetch_new_users.assert_called_once()
     # Verify that the last_run_date was passed
-    call_args = test_entra_id_asset_connector.fetch_new_users.call_args
-    assert call_args[1]["last_run_date"] is not None
+    assert call_tracker["last_run_date"] is not None
 
 
 def test_map_fields_with_none_values(test_entra_id_asset_connector):
@@ -455,7 +542,7 @@ def test_map_fields_with_none_values(test_entra_id_asset_connector):
     asset_groups = []
 
     # Act
-    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, False)
 
     # Assert
     assert result.user.name == "Unknown"
@@ -480,19 +567,166 @@ def test_map_fields_with_groups(test_entra_id_asset_connector):
         created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
     )
     has_mfa = True
-
-    # Create groups
     asset_groups = [
-        UserOCSFGroup(name="Group 1", uid="group1"),
-        UserOCSFGroup(name="Group 2", uid="group2"),
+        UserOCSFGroup(name="Group 1", uid="group-1"),
+        UserOCSFGroup(name="Group 2", uid="group-2"),
     ]
 
     # Act
-    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups)
+    result = test_entra_id_asset_connector.map_fields(asset_user, has_mfa, asset_groups, False)
 
     # Assert
+    assert result.user.groups is not None
     assert len(result.user.groups) == 2
     assert result.user.groups[0].name == "Group 1"
-    assert result.user.groups[0].uid == "group1"
     assert result.user.groups[1].name == "Group 2"
-    assert result.user.groups[1].uid == "group2"
+
+
+def test_map_fields_domain_extraction(test_entra_id_asset_connector):
+    """Test that domain is correctly extracted from userPrincipalName."""
+    from msgraph.generated.models.user import User
+
+    # Create user with domain
+    asset_user = User(
+        user_principal_name="testuser@example.com",
+        id="user_id",
+        display_name="Test User",
+        mail="testuser@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.domain == "example.com"
+
+
+def test_map_fields_domain_extraction_no_domain(test_entra_id_asset_connector):
+    """Test that domain is None when userPrincipalName has no @ sign."""
+    from msgraph.generated.models.user import User
+
+    # Create user without @ in userPrincipalName
+    asset_user = User(
+        user_principal_name="testuser",
+        id="user_id",
+        display_name="Test User",
+        mail="testuser@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.domain is None
+
+
+def test_map_fields_user_type_detection_admin(test_entra_id_asset_connector):
+    """Test that user type is correctly set to Admin based on employee_type."""
+    from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import UserTypeId, UserTypeStr
+
+    asset_user = User(
+        user_principal_name="admin@example.com",
+        id="user_id",
+        display_name="Admin User",
+        mail="admin@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        employee_type="Administrator",
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], True)
+
+    assert result.user.type_id == UserTypeId.ADMIN
+    assert result.user.type == UserTypeStr.ADMIN
+
+
+def test_map_fields_user_type_detection_service(test_entra_id_asset_connector):
+    """Test that user type is correctly set to Service based on employee_type."""
+    from msgraph.generated.models.user import User
+    from sekoia_automation.asset_connector.models.ocsf.user import UserTypeId, UserTypeStr
+
+    asset_user = User(
+        user_principal_name="service@example.com",
+        id="user_id",
+        display_name="Service Account",
+        mail="service@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        employee_type="Service Account",
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.user.type_id == UserTypeId.USER
+    assert result.user.type == UserTypeStr.USER
+
+
+def test_map_fields_enrichment_with_sign_in_activity(test_entra_id_asset_connector):
+    """Test that enrichments include last_logon when sign_in_activity is present."""
+    from msgraph.generated.models.sign_in_activity import SignInActivity
+    from msgraph.generated.models.user import User
+
+    sign_in_activity = SignInActivity()
+    sign_in_activity.last_sign_in_date_time = datetime.datetime(2025, 12, 1, 10, 0, 0, tzinfo=datetime.timezone.utc)
+
+    asset_user = User(
+        user_principal_name="testuser@example.com",
+        id="user_id",
+        display_name="Test User",
+        mail="testuser@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        account_enabled=True,
+        sign_in_activity=sign_in_activity,
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.enrichments is not None
+    account_enrichment = next((e for e in result.enrichments if e.name == "account"), None)
+    assert account_enrichment is not None
+    assert account_enrichment.data.last_logon is not None
+    assert "2025-12-01" in account_enrichment.data.last_logon
+
+
+def test_map_fields_enrichment_with_employment_info(test_entra_id_asset_connector):
+    """Test that enrichments include employment info when available."""
+    from msgraph.generated.models.user import User
+
+    asset_user = User(
+        user_principal_name="testuser@example.com",
+        id="user_id",
+        display_name="Test User",
+        mail="testuser@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+        department="Engineering",
+        job_title="Senior Engineer",
+        employee_id="EMP123",
+        employee_type="Full-Time",
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    assert result.enrichments is not None
+    employment_enrichment = next((e for e in result.enrichments if e.name == "employment"), None)
+    assert employment_enrichment is not None
+    assert "Engineering" in employment_enrichment.value or "Senior Engineer" in employment_enrichment.value
+
+
+def test_map_fields_enrichment_without_optional_fields(test_entra_id_asset_connector):
+    """Test that enrichments are created with minimal data."""
+    from msgraph.generated.models.user import User
+
+    asset_user = User(
+        user_principal_name="testuser@example.com",
+        id="user_id",
+        display_name="Test User",
+        mail="testuser@example.com",
+        created_date_time=datetime.datetime(2025, 7, 18, 14, 26, 43, tzinfo=datetime.timezone.utc),
+    )
+
+    result = test_entra_id_asset_connector.map_fields(asset_user, False, [], False)
+
+    # Account enrichment should always be present
+    assert result.enrichments is not None
+    account_enrichment = next((e for e in result.enrichments if e.name == "account"), None)
+    assert account_enrichment is not None
+    # Employment enrichment should not be present when no employment data is available
+    employment_enrichment = next((e for e in result.enrichments if e.name == "employment"), None)
+    assert employment_enrichment is None

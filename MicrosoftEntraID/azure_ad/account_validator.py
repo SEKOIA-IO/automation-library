@@ -1,9 +1,9 @@
 import asyncio
 
 from sekoia_automation.account_validator import AccountValidator
-from graph_api.client import GraphApi
 
 from azure_ad.base import AzureADModule
+from graph_api.client import GraphApi
 
 
 class AzureADAccountValidator(AccountValidator):
