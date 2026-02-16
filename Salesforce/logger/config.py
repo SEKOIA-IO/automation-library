@@ -2,9 +2,10 @@
 
 import logging
 import sys
+from typing import Any
 
 from loguru import logger
-from pydantic import BaseModel, validator
+from pydantic.v1 import BaseModel, validator
 
 from .formatters import format_record
 from .handlers import InterceptHandler
@@ -71,15 +72,15 @@ def init_logging(log_conf: LoggingConfig = LoggingConfig()) -> None:
         logging.getLogger(name).handlers = []
         logging.getLogger(name).propagate = True
 
-    logger.configure(
-        handlers=[
-            {
-                "sink": sys.stdout,
-                "serialize": log_conf.json_logs,
-                "format": lambda values: format_record(
-                    values,
-                    log_conf.loguru_format,
-                ),
-            },
-        ],
-    )
+    handlers_config: list[dict[str, Any]] = [
+        {
+            "sink": sys.stdout,
+            "serialize": log_conf.json_logs,
+            "format": lambda values: format_record(
+                values,
+                log_conf.loguru_format,
+            ),
+        }
+    ]
+
+    logger.configure(handlers=handlers_config)  # type: ignore

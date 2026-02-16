@@ -31,15 +31,16 @@ warn_return_any = true
 exclude = ["tests/*"]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.11,<3.12"
 orjson = "^3.7.7"
 python-dateutil = "^2.8.2"
-loguru = "^0.7.0"
+loguru = "^0.7.3"
 async-lru = "^2.0.2"
 aiohttp = "^3.8.5"
 aiofiles = "^23.1.0"
 aiolimiter = "^1.1.0"
 aiocsv = "^1.2.4"
+cachetools = "^6.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -51,8 +52,8 @@ pytest-flake8 = "*"
 Faker = "^13.12.0"
 aioresponses = "^0.7.4"
 autoflake = "^1.4"
-isort = "^5.10.1"
-mypy = "^0.991"
+isort = "*"
+mypy = "*"
 types-aiofiles = "^23.1.0.4"
 types-python-dateutil = "^2.8.19.13"
 poetry = "^1.5.1"
@@ -68,7 +69,7 @@ filterwarnings = [
 addopts = "  --strict-markers\n  --tb=short\n  --cov=salesforce\n  --cov=client\n  --cov=logger\n  --cov=utils\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=5\n  --numprocesses=auto\n  --asyncio-mode=auto\n"
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
-version = "^1.16.0"
+version = "^1.22.1"
 extras = ["all"]
 
 [tool.poetry.dev-dependencies.black]
