@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-06 - 1.8.1
+
+### Fixed
+
+- Update encode params
+
+## 2026-02-02 - 1.8.0
+
+### Added
+
+- Cached Timestepper for orchestrating event collection with configurable time windows
+- Provide Log file ID cache to prevent re-processing duplicate files
+- New configuration parameters `initial_hours_ago` and `timedelta`
+
+### Changed
+
+- Event collection now uses bounded time windows instead of open-ended queries
+- Improved lag monitoring with proper EVENTS_LAG metric calculation
+
+## 2026-01-19 - 1.7.4
+
+### Changed
+
+- Throw critical error if unable to use refresh token
+- Update sekoia-automation-sdk to 1.22.1
+
 ## 2025-12-22 - 1.7.3
 
 ### Fixed
