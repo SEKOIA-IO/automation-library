@@ -1,0 +1,61 @@
+{
+  "name": "Request",
+  "description": "Request",
+  "uuid": "7168ccd6-b7ca-5308-8379-79598797ffcd",
+  "docker_parameters": "Request",
+  "arguments": {
+    "title": "RequestArguments",
+    "type": "object",
+    "properties": {
+      "url": {
+        "title": "Url",
+        "minLength": 1,
+        "maxLength": 2083,
+        "format": "uri",
+        "type": "string"
+      },
+      "headers": {
+        "title": "Headers",
+        "type": "object"
+      },
+      "method": {
+        "title": "Method",
+        "enum": [
+          "get",
+          "post",
+          "put",
+          "patch",
+          "delete"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "url",
+      "method"
+    ]
+  },
+  "results": {
+    "title": "Response",
+    "type": "object",
+    "properties": {
+      "status_code": {
+        "title": "Status Code",
+        "type": "integer"
+      },
+      "headers": {
+        "title": "Headers",
+        "type": "object"
+      },
+      "text": {
+        "title": "Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status_code",
+      "headers",
+      "text"
+    ]
+  }
+}

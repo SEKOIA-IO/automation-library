@@ -1,0 +1,13 @@
+{
+  "configuration": {
+    "title": "Test_MehidineModuleConfiguration",
+    "type": "object",
+    "properties": {}
+  },
+  "description": "MCU TEST",
+  "name": "TEST_MEHIDINE",
+  "slug": "test_mehidine",
+  "categories": [],
+  "uuid": "936d7090-f5ed-4ba6-9157-cb276df41b3b",
+  "version": "0.1.0"
+}
