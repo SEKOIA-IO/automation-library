@@ -15,9 +15,9 @@
     "title": "Arguments",
     "type": "object"
   },
-  "description": "Get the list of named pipe on the systems",
+  "description": "Get the list of named pipe on the systems (deprecated)",
   "docker_parameters": "harfanglab_get_pipe_list",
-  "name": "List named pipes",
+  "name": "[DEPRECATED] List named pipes",
   "results": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
