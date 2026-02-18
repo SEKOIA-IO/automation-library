@@ -7,7 +7,7 @@ class SophosConfiguration(BaseModel):
     oauth2_authorization_url: str = Field(..., description="The url to the OAuth2 authorization")
     api_host: str = Field(
         ...,
-        description="API Url of the Sophos Central API (e.g. 'https://api-{dataRegion}.central.sophos.com')",
+        description="API Url of the Sophos Central API (e.g. 'https://api.central.sophos.com')",
     )
     client_id: str = Field(..., description="OAuth2 client identifier")
     client_secret: str = Field(secret=True, description="OAuth2 client secret")
