@@ -5,6 +5,7 @@ from itertools import islice
 
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AWSAccountProvider
 
 
 class AwsS3LogsConfiguration(AwsS3QueuedConfiguration):
@@ -15,7 +16,7 @@ class AwsS3LogsConfiguration(AwsS3QueuedConfiguration):
     separator: str
 
 
-class AwsS3LogsTrigger(AbstractAwsS3QueuedConnector):
+class BaseAwsS3LogsTrigger:
     """Implementation of AwsS3LogsTrigger."""
 
     configuration: AwsS3LogsConfiguration
@@ -40,3 +41,7 @@ class AwsS3LogsTrigger(AbstractAwsS3QueuedConnector):
 
         for record in list(islice(records, self.configuration.skip_first, None)):
             yield record
+
+
+class AwsS3LogsTrigger(BaseAwsS3LogsTrigger, AbstractAwsS3QueuedConnector, AWSAccountProvider):
+    """AWS S3 Logs Trigger connector."""

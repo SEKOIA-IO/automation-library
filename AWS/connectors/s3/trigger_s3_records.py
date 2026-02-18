@@ -7,9 +7,10 @@ import orjson
 
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector
+from connectors.s3.provider import AWSAccountProvider
 
 
-class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
+class BaseAwsS3RecordsTrigger:
     """Implementation of AwsS3RecordsTrigger."""
 
     name = "AWS S3 Records"
@@ -101,3 +102,7 @@ class AwsS3RecordsTrigger(AbstractAwsS3QueuedConnector):
             # https://github.com/SEKOIA-IO/automation-library/issues/346
             if len(data) > 0 and self.is_valid_payload(data):
                 yield orjson.dumps(data).decode("utf-8")
+
+
+class AwsS3RecordsTrigger(BaseAwsS3RecordsTrigger, AbstractAwsS3QueuedConnector, AWSAccountProvider):
+    """AWS S3 Records Trigger connector."""
