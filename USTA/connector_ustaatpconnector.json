@@ -1,7 +1,7 @@
 {
   "name": "UstaAtpConnector",
   "description": "UstaAtpConnector",
-  "uuid": "122f2747-b303-531a-84b8-a2a5d9502c36",
+  "uuid": "3299e7bc-3ff1-4b2b-a021-d97c8b802d7a",
   "docker_parameters": "UstaAtpConnector",
   "arguments": {
     "title": "UstaATPConnectorConfiguration",
