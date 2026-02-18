@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-18 - 2.8.15
+
+### Fixed
+
+- Fix async implementation of update_checkpoint method in asset connectors
+
 ## 2026-02-11 - 2.8.14
 
 ### Added
