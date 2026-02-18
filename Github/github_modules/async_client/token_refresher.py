@@ -17,7 +17,7 @@ class PemGithubTokenRefresher(object):
     _locks: dict[str, Lock] = {}
     _session: ClientSession | None = None
 
-    def __init__(self, pem_file: str, organization: str, app_id: int, token_ttl: int = 300):
+    def __init__(self, base_url: str, pem_file: str, organization: str, app_id: int, token_ttl: int = 300):
         """
         Initialize GithubTokenRefresher.
 
@@ -26,6 +26,7 @@ class PemGithubTokenRefresher(object):
             https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation
 
         Args:
+            base_url: str
             pem_file: str
             organization: str
             token_ttl: int
@@ -33,6 +34,7 @@ class PemGithubTokenRefresher(object):
         if token_ttl > 600:
             raise ValueError("Token ttl can't be more than 600 seconds ( 10 minutes ).")
 
+        self.base_url = base_url
         self.token_ttl = token_ttl
         self.pem_file = pem_file
         self.organization = organization
@@ -58,12 +60,13 @@ class PemGithubTokenRefresher(object):
 
     @classmethod
     async def instance(
-        cls, pem_file: str, organization: str, app_id: int, token_ttl: int = 300
+        cls, base_url: str, pem_file: str, organization: str, app_id: int, token_ttl: int = 300
     ) -> "PemGithubTokenRefresher":
         """
         Get singleton PemGithubTokenRefresher instance for specified input params.
 
         Args:
+            base_url: str
             pem_file: str
             organization: str
             app_id: int
@@ -72,7 +75,7 @@ class PemGithubTokenRefresher(object):
         Returns:
             PemGithubTokenRefresher:
         """
-        refresher_unique_key = str(frozenset({pem_file, organization}))
+        refresher_unique_key = str(frozenset({base_url, pem_file, organization}))
         if not cls._locks.get(refresher_unique_key):
             cls._locks[refresher_unique_key] = asyncio.Lock()
 
@@ -80,6 +83,7 @@ class PemGithubTokenRefresher(object):
             async with cls._locks[refresher_unique_key]:
                 if not cls._instances.get(refresher_unique_key):
                     cls._instances[refresher_unique_key] = PemGithubTokenRefresher(
+                        base_url,
                         pem_file,
                         organization,
                         app_id,
@@ -99,20 +103,7 @@ class PemGithubTokenRefresher(object):
         Returns:
             str:
         """
-        return "https://api.github.com/orgs/{0}/installation".format(self.organization)
-
-    @staticmethod
-    def access_token_for_installation_url(installation_id: int) -> str:
-        """
-        Gets url to get access token for installation.
-
-        Args:
-            installation_id: int
-
-        Returns:
-            str:
-        """
-        return "https://api.github.com/app/installations/{0}/access_tokens".format(installation_id)
+        return f"{self.base_url}/orgs/{self.organization}/installation"
 
     def _get_jwt(self) -> str:
         """

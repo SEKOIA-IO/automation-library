@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-06 - 1.11.2
+
+### Fixed
+
+- Fix PEM authentication with custom domain
+
+### Changed
+
+- Stop connector with incorrect credentials
+- Upgrade sekoia-automation-sdk to 1.22.2
+
 ## 2026-01-21 - 1.11.1
 
 ### Fixed

@@ -13,7 +13,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from github_modules import GithubModule
-from github_modules.async_client.http_client import AsyncGithubClient
+from github_modules.async_client.http_client import AsyncGithubClient, BadCredentialsError
 from github_modules.logging import get_logger
 from github_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -113,7 +113,12 @@ class AuditLogConnector(AsyncConnector):
         Args:
             last_ts: int
         """
-        return await self.github_client.get_audit_logs(start_from=last_ts)
+        try:
+            return await self.github_client.get_audit_logs(start_from=last_ts)
+
+        except BadCredentialsError as exc:
+            self.log(message=str(exc), level="critical")
+            raise
 
     def _refine_batch(self, batch: list[dict[str, Any]], batch_start_time: float) -> list[dict[str, Any]]:
         """
