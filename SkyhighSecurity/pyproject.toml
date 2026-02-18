@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation Module for Skyhigh Security Secure Web Gateway (SWG)"
 description = ""
@@ -5,11 +9,21 @@ version = "0.0"
 authors = []
 package-mode = false
 
+[tool.black]
+line-length = 119
+target-version = ["py312"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-sekoia-automation-sdk = "^1.13.0"
+python = ">=3.12,<3.13"
+sekoia-automation-sdk = "^1.22.1"
 orjson = "^3.7.7"
 requests-ratelimiter = "^0.7.0"
+structlog = "^25.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
@@ -17,26 +31,23 @@ pytest-cov = "*"
 requests = "*"
 requests-mock = "*"
 
-[tool.poetry.group.dev.dependencies]
-mypy = "^0.991"
-isort = "^5.10.1"
-black = "^22.10.0"
-
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py310']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.19.1"
+isort = "^7.0.0"
+black = "^26.1.0"
+
+[tool.mypy]
+python_version = 3.12
+strict = false
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+pretty = true
+show_error_codes = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = true
+exclude = ["tests/*"]
