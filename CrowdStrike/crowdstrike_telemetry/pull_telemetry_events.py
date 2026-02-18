@@ -10,6 +10,7 @@ from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
 from aws_helpers.utils import AsyncReader, normalize_s3_key
 from connectors.metrics import INCOMING_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AWSAccountProvider
 from pydantic.v1 import Field
 
 from crowdstrike_telemetry import CrowdStrikeTelemetryModule
@@ -62,7 +63,7 @@ class CrowdStrikeTelemetryConnectorConfig(AwsS3QueuedConfiguration):
     is_fifo: bool | None = None
 
 
-class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
+class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AWSAccountProvider):
     """Implementation of CrowdStrikeTelemetryConnector."""
 
     name = "CrowdStrikeTelemetryConnector"
