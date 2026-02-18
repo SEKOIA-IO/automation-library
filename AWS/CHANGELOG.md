@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-18 - 1.33.15
+
+### Changed
+
+- Change the way to provide the SQS client and the S3 client to the connector and trigger
+
 ## 2026-02-12 - 1.33.14
 
 ### Added
