@@ -11,10 +11,14 @@ class RequestArguments(BaseModel):
     method: Literal["get", "post", "put", "patch", "delete"]
 
 
+class ApiVersion(BaseModel):
+    label: str
+    url: str
+    version: str
+
+
 class Response(BaseModel):
-    status_code: int
-    headers: dict
-    text: str
+    api_versions: list[ApiVersion]
 
 
 class Request(Action):
@@ -37,8 +41,8 @@ class Request(Action):
             # Will end action as in error
             self.error(f"HTTP Request failed: {arguments.url} with {response.status_code}")
 
-        return Response(
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            text=response.text,
-        )
+        api_version = ApiVersion(label="test", url="test url", version="version")
+
+        self.log(message=f"End of action", level="info")
+
+        return Response(api_versions=[api_version])

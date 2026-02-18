@@ -39,23 +39,41 @@
     "title": "Response",
     "type": "object",
     "properties": {
-      "status_code": {
-        "title": "Status Code",
-        "type": "integer"
-      },
-      "headers": {
-        "title": "Headers",
-        "type": "object"
-      },
-      "text": {
-        "title": "Text",
-        "type": "string"
+      "api_versions": {
+        "title": "Api Versions",
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ApiVersion"
+        }
       }
     },
     "required": [
-      "status_code",
-      "headers",
-      "text"
-    ]
+      "api_versions"
+    ],
+    "definitions": {
+      "ApiVersion": {
+        "title": "ApiVersion",
+        "type": "object",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "url",
+          "version"
+        ]
+      }
+    }
   }
 }
