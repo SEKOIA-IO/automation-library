@@ -7,6 +7,7 @@ from itertools import islice
 from aws_helpers.utils import AsyncReader
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AWSAccountProvider
 
 
 class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):
@@ -17,7 +18,7 @@ class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):
     separator: str
 
 
-class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
+class BaseAwsS3FlowLogsTrigger:
     """Implementation of AwsS3FlowLogsTrigger."""
 
     configuration: AwsS3FlowLogsConfiguration
@@ -68,3 +69,7 @@ class AwsS3FlowLogsTrigger(AbstractAwsS3QueuedConnector):
 
         for record in list(islice(records, self.configuration.skip_first, None)):
             yield record
+
+
+class AwsS3FlowLogsTrigger(BaseAwsS3FlowLogsTrigger, AbstractAwsS3QueuedConnector, AWSAccountProvider):
+    """AWS S3 Flow Logs Trigger connector."""

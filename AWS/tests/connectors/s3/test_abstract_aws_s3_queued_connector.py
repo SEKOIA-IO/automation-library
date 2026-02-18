@@ -14,6 +14,7 @@ from aws_helpers.s3_wrapper import S3Wrapper
 from aws_helpers.sqs_wrapper import SqsWrapper
 from connectors import AwsModule
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AWSAccountProvider
 from tests.helpers import async_bytesIO
 
 
@@ -92,7 +93,8 @@ def abstract_queued_connector(
         AbstractAwsS3QueuedConnector:
     """
     os.environ["AWS_BATCH_SIZE"] = "1"
-    connector = AbstractAwsS3QueuedConnector(module=aws_module, data_path=symphony_storage)
+    klass = type("TestAbstractAwsS3QueuedConnector", (AbstractAwsS3QueuedConnector, AWSAccountProvider), {})
+    connector = klass(module=aws_module, data_path=symphony_storage)
 
     connector.configuration = aws_s3_queued_config
 

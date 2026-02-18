@@ -11,6 +11,7 @@ import pandas as pd
 
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AWSAccountProvider
 
 
 class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration):
@@ -20,7 +21,7 @@ class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration):
     separator: str
 
 
-class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
+class BaseAwsS3CloudFrontTrigger:
     """Implementation of AwsS3CloudFrontTrigger."""
 
     configuration: AwsS3CloudFrontConfiguration
@@ -153,3 +154,7 @@ class AwsS3CloudFrontTrigger(AbstractAwsS3QueuedConnector):
 
         for record in list(islice(self.logs_aggregation(kv_records), self.configuration.skip_first, None)):
             yield record
+
+
+class AwsS3CloudFrontTrigger(BaseAwsS3CloudFrontTrigger, AbstractAwsS3QueuedConnector, AWSAccountProvider):
+    """AWS S3 CloudFront Logs Trigger connector."""
