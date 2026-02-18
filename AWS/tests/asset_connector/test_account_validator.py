@@ -1,7 +1,7 @@
-import pytest
 from unittest.mock import Mock, patch
+
 from aws_helpers.account_validator import AwsAccountValidator
-from aws_helpers.base import AWSModule, AWSConfiguration
+from aws_helpers.base import AWSConfiguration, AWSModule
 
 
 class TestAwsAccountValidator:
