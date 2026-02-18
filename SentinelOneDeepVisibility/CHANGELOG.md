@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-18 - 1.1.7
+
+### Changed
+
+- Upgrade AWS dependency
+
 ## 2026-02-12 - 1.1.6
 
 ### Changed
