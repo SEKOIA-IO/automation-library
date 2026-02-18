@@ -1,12 +1,13 @@
-import pytest
 from unittest import mock
+
+import pytest
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
+from dateutil.parser import isoparse
 from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
 from sekoia_automation.module import Module
-from dateutil.parser import isoparse
-from botocore.exceptions import NoCredentialsError, ClientError, BotoCoreError
 
+from asset_connector.users_assets import AwsUser, AwsUsersAssetConnector
 from connectors import AwsModule, AwsModuleConfiguration
-from asset_connector.users_assets import AwsUsersAssetConnector, AwsUser
 
 
 @pytest.fixture
@@ -199,8 +200,9 @@ def test_update_checkpoint_integration(test_aws_users_asset_connector):
 # Test AwsUser class
 def test_aws_user_initialization():
     """Test AwsUser class initialization."""
-    from sekoia_automation.asset_connector.models.ocsf.user import User, Account, AccountTypeStr, AccountTypeId
     from datetime import datetime
+
+    from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr, User
 
     # Create a test user
     account = Account(

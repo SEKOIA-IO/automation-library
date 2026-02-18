@@ -26,6 +26,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
     UserTypeStr,
 )
 from sekoia_automation.storage import PersistentJSON
+
 from aws_helpers.base import AWSModule
 
 

@@ -1,27 +1,28 @@
-import pytest
-from unittest import mock
 from datetime import datetime
+from unittest import mock
+
+import pytest
 import pytz
 from botocore.exceptions import ClientError, NoCredentialsError
+from dateutil.parser import isoparse
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
     DeviceOCSFModel,
-    OperatingSystem,
-    OSTypeId,
-    OSTypeStr,
-    DeviceTypeStr,
     DeviceTypeId,
+    DeviceTypeStr,
     NetworkInterface,
     NetworkInterfaceTypeId,
     NetworkInterfaceTypeStr,
+    OperatingSystem,
+    OSTypeId,
+    OSTypeStr,
 )
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
 from sekoia_automation.module import Module
-from dateutil.parser import isoparse
 
+from asset_connector.device_assets import AwsDevice, AwsDeviceAssetConnector
 from connectors import AwsModule, AwsModuleConfiguration
-from asset_connector.device_assets import AwsDeviceAssetConnector, AwsDevice
 
 
 @pytest.fixture

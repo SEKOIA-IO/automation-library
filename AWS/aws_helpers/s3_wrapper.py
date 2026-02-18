@@ -11,7 +11,7 @@ from loguru import logger
 from pydantic.v1 import Field
 from sekoia_automation.aio.helpers.aws.client import AwsClient, AwsConfiguration
 
-from aws_helpers.utils import is_gzip_compressed, async_gzip_open, AsyncReader
+from aws_helpers.utils import AsyncReader, async_gzip_open, is_gzip_compressed
 
 
 class S3Configuration(AwsConfiguration):
