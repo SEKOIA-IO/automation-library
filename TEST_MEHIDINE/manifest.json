@@ -1,8 +1,33 @@
 {
   "configuration": {
-    "title": "Test_MehidineModuleConfiguration",
+    "title": "SalesforceCustomModuleConfiguration",
     "type": "object",
-    "properties": {}
+    "properties": {
+      "salesforce_domain": {
+        "title": "Salesforce Domain",
+        "description": "Salesforce domain name",
+        "type": "string"
+      },
+      "consumer_key": {
+        "title": "Consumer Key",
+        "description": "Consumer key of the External Client App",
+        "type": "string"
+      },
+      "consumer_secret": {
+        "title": "Consumer Secret",
+        "description": "Consumer secret of the External Client App",
+        "type": "string"
+      }
+    },
+    "required": [
+      "salesforce_domain",
+      "consumer_key",
+      "consumer_secret"
+    ],
+    "secrets": [
+      "consumer_key",
+      "consumer_secret"
+    ]
   },
   "description": "MCU TEST",
   "name": "TEST_MEHIDINE",
