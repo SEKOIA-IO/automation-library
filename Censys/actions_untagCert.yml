@@ -1,0 +1,45 @@
+name: untagCert
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: DELETE
+      url: '{{inputs.base_url}}/v2/certificates/{{inputs.fingerprint}}/tags/{{inputs.id}}'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+    asserts:
+      success:
+        predicate: '{{response.status_code == 204}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Removes a tag on the given certificate.
+
+  '
+inputs:
+  id:
+    type: string
+    description: The unique ID of the tag.
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  fingerprint:
+    type: string
+    description: The SHA-256 fingerprint of the requested certificate.
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'

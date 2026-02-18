@@ -1,0 +1,50 @@
+name: deleteCommentByCert
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: DELETE
+      url: '{{inputs.base_url}}/v2/certificates/{{inputs.fingerprint}}/comments/{{inputs.comment_id}}'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+    asserts:
+      error_404:
+        predicate: '{{response.status_code != 404}}'
+        fail: Not Found
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: 'Deletes a comment on the given certificate.
+
+  '
+inputs:
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  fingerprint:
+    type: string
+    description: The SHA-256 fingerprint of the requested certificate.
+  comment_id:
+    type: string
+    description: The ID of the requested comment.
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
