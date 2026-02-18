@@ -1,0 +1,34 @@
+{
+  "name": "UstaAtpConnector",
+  "description": "UstaAtpConnector",
+  "uuid": "3299e7bc-3ff1-4b2b-a021-d97c8b802d7a",
+  "docker_parameters": "UstaAtpConnector",
+  "arguments": {
+    "title": "UstaATPConnectorConfiguration",
+    "type": "object",
+    "properties": {
+      "intake_server": {
+        "title": "Intake Server",
+        "type": "string"
+      },
+      "intake_key": {
+        "title": "Intake Key",
+        "type": "string"
+      },
+      "frequency": {
+        "title": "Frequency",
+        "default": 60,
+        "type": "integer"
+      },
+      "max_historical_days": {
+        "title": "Max Historical Days",
+        "default": 180,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "intake_key",
+      "frequency"
+    ]
+  }
+}
