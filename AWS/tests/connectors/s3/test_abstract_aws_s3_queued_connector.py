@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import BinaryIO
 from unittest.mock import AsyncMock, MagicMock
 
-import io
 import orjson
 import pytest
 from faker import Faker
@@ -15,7 +14,7 @@ from aws_helpers.s3_wrapper import S3Wrapper
 from aws_helpers.sqs_wrapper import SqsWrapper
 from connectors import AwsModule
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
-from tests.helpers import async_bytesIO, async_list, async_temporary_file
+from tests.helpers import async_bytesIO
 
 
 @pytest.fixture
