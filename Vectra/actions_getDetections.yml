@@ -1,0 +1,75 @@
+name: getDetections
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/detections'
+      auth:
+        oauth2:
+          token_url: https://{{inputs.vectra_portal_url}}/oauth2/token
+          client_credentials:
+            client_id: '{{inputs.client_id}}'
+            client_secret: '{{inputs.client_secret}}'
+          scopes: []
+      params:
+        page: '{{inputs.page}}'
+        page_size: '{{inputs.page_size}}'
+        ordering: '{{inputs.ordering}}'
+        state: '{{inputs.state}}'
+        category: '{{inputs.category}}'
+        threat_gte: '{{inputs.threat_gte}}'
+        certainty_gte: '{{inputs.certainty_gte}}'
+        canonicalize: '{{inputs.canonicalize}}'
+    asserts:
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+inputs:
+  page:
+    type: integer
+    description: Page number for pagination
+  threat_gte:
+    type: integer
+  client_id:
+    type: string
+    description: The client ID for OAuth2 client credentials flow
+    default: '{{client_id}}'
+  certainty_gte:
+    type: integer
+  category:
+    type: string
+  client_secret:
+    type: string
+    description: The client secret for OAuth2 client credentials flow
+    default: '{{client_secret}}'
+  state:
+    type: string
+    description: Filter by entity activation state (either "active" or "inactive")
+  ordering:
+    type: string
+    description: Specifies the order of results, e.g., by urgency_score, last timestamp,
+      or last_modified_timestamp
+  vectra_portal_url:
+    type: string
+    default: platform.vectra.ai
+  canonicalize:
+    type: boolean
+    description: Ordering options by timestamp or score
+  page_size:
+    type: integer
+    description: Number of entities per page, with a maximum of 5000
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://{{inputs.vectra_portal_url}}/api/v3.3

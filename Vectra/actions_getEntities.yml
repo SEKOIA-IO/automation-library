@@ -1,0 +1,105 @@
+name: getEntities
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/entities'
+      auth:
+        oauth2:
+          token_url: https://{{inputs.vectra_portal_url}}/oauth2/token
+          client_credentials:
+            client_id: '{{inputs.client_id}}'
+            client_secret: '{{inputs.client_secret}}'
+          scopes: []
+      params:
+        type: '{{inputs.type}}'
+        is_prioritized: '{{inputs.is_prioritized}}'
+        ordering: '{{inputs.ordering}}'
+        last_detection_timestamp_gte: '{{inputs.last_detection_timestamp_gte}}'
+        last_detection_timestamp_lte: '{{inputs.last_detection_timestamp_lte}}'
+        last_modified_timestamp_gte: '{{inputs.last_modified_timestamp_gte}}'
+        last_modified_timestamp_lte: '{{inputs.last_modified_timestamp_lte}}'
+        name: '{{inputs.name}}'
+        note_modified_timestamp_gte: '{{inputs.note_modified_timestamp_gte}}'
+        page: '{{inputs.page}}'
+        page_size: '{{inputs.page_size}}'
+        state: '{{inputs.state}}'
+        tags: '{{inputs.tags}}'
+    asserts:
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+inputs:
+  name:
+    type: string
+    description: Filter by entity name
+  page:
+    type: integer
+    description: Page number for pagination
+  client_id:
+    type: string
+    description: The client ID for OAuth2 client credentials flow
+    default: '{{client_id}}'
+  last_detection_timestamp_gte:
+    type: string
+    description: Only entities with a last detection timestamp greater than or equal
+      to this time (inclusive, ISO-8601 format)
+  client_secret:
+    type: string
+    description: The client secret for OAuth2 client credentials flow
+    default: '{{client_secret}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://{{inputs.vectra_portal_url}}/api/v3.3
+  state:
+    type: string
+    description: Filter by entity activation state (either "active" or "inactive")
+  last_detection_timestamp_lte:
+    type: string
+    description: Only entities with a last detection timestamp less than or equal
+      to this time (inclusive, ISO-8601 format)
+  ordering:
+    type: string
+    description: Specifies the order of results, e.g., by urgency_score, last timestamp,
+      or last_modified_timestamp
+  is_prioritized:
+    type: boolean
+    description: Filter entities by priority (only entities above the configured priority
+      threshold)
+  vectra_portal_url:
+    type: string
+    default: platform.vectra.ai
+  tags:
+    type: string
+    description: Filter entities by tags (comma-separated list of tags, returns entities
+      with any specified tags)
+  type:
+    type: string
+    description: Specifies the type of entities to retrieve (e.g., "account" or "host")
+  page_size:
+    type: integer
+    description: Number of entities per page, with a maximum of 5000
+  note_modified_timestamp_gte:
+    type: string
+    description: Only entities with notes modified on or after this time (ISO-8601
+      format)
+  last_modified_timestamp_gte:
+    type: string
+    description: Only entities with a last modified timestamp greater than or equal
+      to this time (inclusive, ISO-8601 format)
+  last_modified_timestamp_lte:
+    type: string
+    description: Only entities with a last modified timestamp less than or equal to
+      this time (inclusive, ISO-8601 format)
