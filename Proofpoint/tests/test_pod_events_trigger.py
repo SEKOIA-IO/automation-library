@@ -1,6 +1,7 @@
 import copy
 import os
 import time
+from dateutil.parser import isoparse
 from datetime import datetime, timedelta, timezone
 from queue import Queue
 from threading import Thread
@@ -90,7 +91,7 @@ def test_consumer_on_message(consumer, queue):
     consumer.on_message(None, original)
 
     message = orjson.loads(original)
-    assert consumer.most_recent_date_seen == message["ts"]
+    assert consumer.most_recent_date_seen == isoparse(message["ts"])
 
 
 def test_consumer_on_error(consumer, trigger):
@@ -205,3 +206,14 @@ def test_event_forwarder_next_batch(forwarder, queue, checkpoint):
 
     # check that the forward update the checkpoint
     assert checkpoint.offset == now
+
+
+def test_consumer_on_message_with_string_timestamp(consumer, queue):
+    timestamp_str = "2024-01-15T10:30:45Z"
+    event = orjson.dumps({"ts": timestamp_str, "guid": "test-guid", "msgParts": []}).decode("utf-8")
+
+    consumer.on_message(None, event)
+
+    assert consumer.most_recent_date_seen == isoparse(timestamp_str)
+    assert isinstance(consumer.most_recent_date_seen, datetime)
+    assert queue.qsize() == 1
