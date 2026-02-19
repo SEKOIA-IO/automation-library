@@ -7,7 +7,7 @@ import orjson
 
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector
-from connectors.s3.provider import AWSAccountProvider
+from connectors.s3.provider import AwsAccountProvider
 
 
 class BaseAwsS3RecordsTrigger:
@@ -104,5 +104,5 @@ class BaseAwsS3RecordsTrigger:
                 yield orjson.dumps(data).decode("utf-8")
 
 
-class AwsS3RecordsTrigger(BaseAwsS3RecordsTrigger, AbstractAwsS3QueuedConnector, AWSAccountProvider):
+class AwsS3RecordsTrigger(BaseAwsS3RecordsTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider):
     """AWS S3 Records Trigger connector."""

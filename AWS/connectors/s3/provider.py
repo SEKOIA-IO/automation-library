@@ -7,7 +7,7 @@ from connectors import AwsModule
 from connectors.s3 import AwsS3QueuedConfiguration
 
 
-class AWSAccountProvider(AwsProvider):
+class AwsAccountProvider(AwsProvider):
     """
     AWS provider with access key and secret access key.
     """

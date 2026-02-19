@@ -11,7 +11,7 @@ import pandas
 from aws_helpers.utils import AsyncReader
 from connectors.metrics import DISCARDED_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
-from connectors.s3.provider import AWSAccountProvider
+from connectors.s3.provider import AwsAccountProvider
 
 
 class BaseAwsS3FlowLogsParquetRecordsTrigger:
@@ -66,6 +66,6 @@ class BaseAwsS3FlowLogsParquetRecordsTrigger:
 
 
 class AwsS3FlowLogsParquetRecordsTrigger(
-    BaseAwsS3FlowLogsParquetRecordsTrigger, AbstractAwsS3QueuedConnector, AWSAccountProvider
+    BaseAwsS3FlowLogsParquetRecordsTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider
 ):
     """AWS S3 Flow Logs Parquet Records Trigger connector."""
