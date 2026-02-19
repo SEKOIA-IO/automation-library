@@ -10,12 +10,14 @@ runs:
   using: "composite"
   steps:
     - name: Install Poetry
+      shell: bash
       run: |
         pip install poetry
         poetry config virtualenvs.in-project true
 
     - name: Install Dependencies
       id: install-dependencies
+      shell: bash
       run: |
         poetry install
       working-directory: ${{ inputs.module }}
@@ -27,6 +29,7 @@ runs:
         src: ./"${{ inputs.module }}"
 
     - name: Execute Mypy
+      shell: bash
       run: |
         poetry run pip install mypy
         mkdir -p .mypy_cache
@@ -35,6 +38,7 @@ runs:
 
     - name: Execute Python tests
       id: execute-tests
+      shell: bash
       run: |
         poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
       working-directory: "${{ inputs.module }}"
