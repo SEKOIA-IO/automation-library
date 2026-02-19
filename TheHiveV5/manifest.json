@@ -19,6 +19,11 @@
         "description": "Is the server certificate verified",
         "type": "boolean",
         "default": true
+      },
+      "ca_certificate": {
+        "title": "CA Certificate",
+        "description": "PEM-encoded CA certificate for TLS verification (optional, for internal PKI)",
+        "type": "string"
       }
     },
     "required": [
@@ -36,7 +41,7 @@
   "name": "The Hive V5",
   "uuid": "d6c96586-707c-451f-b9f6-d31b3291f87d",
   "slug": "thehivev5",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "categories": [
     "Collaboration Tools"
   ]
