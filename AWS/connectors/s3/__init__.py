@@ -4,14 +4,11 @@ import os
 from abc import ABCMeta
 from asyncio import BoundedSemaphore
 from collections.abc import AsyncGenerator
-from functools import cached_property
-from typing import Any, BinaryIO, Optional
+from typing import Any, Optional
 
 import orjson
 
-from aws_helpers.s3_wrapper import S3Configuration, S3Wrapper
-from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
-from aws_helpers.utils import normalize_s3_key, AsyncReader
+from aws_helpers.utils import AsyncReader, normalize_s3_key
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
 
@@ -39,41 +36,6 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
-
-    @cached_property
-    def s3_wrapper(self) -> S3Wrapper:
-        """
-        Get S3 wrapper.
-
-        Returns:
-            S3Wrapper:
-        """
-        config = S3Configuration(
-            aws_access_key_id=self.module.configuration.aws_access_key,
-            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
-            aws_region=self.module.configuration.aws_region_name,
-        )
-
-        return S3Wrapper(config)
-
-    @cached_property
-    def sqs_wrapper(self) -> SqsWrapper:
-        """
-        Get SQS wrapper.
-
-        Returns:
-            SqsWrapper:
-        """
-        config = SqsConfiguration(
-            frequency=self.configuration.sqs_frequency,
-            delete_consumed_messages=self.configuration.delete_consumed_messages,
-            queue_name=self.configuration.queue_name,
-            aws_access_key_id=self.module.configuration.aws_access_key,
-            aws_secret_access_key=self.module.configuration.aws_secret_access_key,
-            aws_region=self.module.configuration.aws_region_name,
-        )
-
-        return SqsWrapper(config)
 
     def _parse_content(self, stream: AsyncReader) -> AsyncGenerator[str, None]:  # pragma: no cover
         """
@@ -120,6 +82,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
         continue_receiving = True
 
         while continue_receiving:
+            messages: list[tuple[str, int]]
             async with self.sqs_wrapper.receive_messages(
                 max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
             ) as messages:
@@ -154,6 +117,7 @@ class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
 
                         normalized_key = normalize_s3_key(s3_key)
 
+                        stream: AsyncReader
                         async with (
                             self.s3_fetch_concurrency_sem,
                             self.s3_wrapper.read_key(bucket=s3_bucket, key=normalized_key) as stream,
