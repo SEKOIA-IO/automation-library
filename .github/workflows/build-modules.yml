@@ -60,8 +60,28 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Detect package manager
+        id: detect-pm
+        run: |
+          if [ -f "${MODULE_PATH}/uv.lock" ]; then
+            echo "package_manager=uv" >> $GITHUB_OUTPUT
+            echo "Detected uv project"
+          else
+            echo "package_manager=poetry" >> $GITHUB_OUTPUT
+            echo "Defaulting to Poetry"
+          fi
+        env:
+          MODULE_PATH: ${{ matrix.module }}
+
       - name: Test with Poetry
+        if: steps.detect-pm.outputs.package_manager == 'poetry'
         uses: ./.github/actions/test-with-poetry
+        with:
+          module: ${{ matrix.module }}
+
+      - name: Test with uv
+        if: steps.detect-pm.outputs.package_manager == 'uv'
+        uses: ./.github/actions/test-with-uv
         with:
           module: ${{ matrix.module }}
 
