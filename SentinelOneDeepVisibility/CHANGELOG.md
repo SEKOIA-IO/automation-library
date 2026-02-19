@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Upgrade AWS dependency
+- Upgrade dependencies (AWS automation module included)
 
 ## 2026-02-12 - 1.1.6
 
