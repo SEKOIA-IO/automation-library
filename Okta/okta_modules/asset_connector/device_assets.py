@@ -101,7 +101,7 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
 
         return result
 
-    def update_checkpoint(self) -> None:
+    async def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
 
         Raises:
