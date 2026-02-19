@@ -7,7 +7,6 @@ from aws_helpers.utils import AsyncReader
 
 
 class AwsS3Client(Protocol):
-    @abstractmethod
     def read_key(
         self, key: str, bucket: str | None = None, loop: asyncio.AbstractEventLoop | None = None
     ) -> AbstractAsyncContextManager[AsyncReader]:
@@ -25,7 +24,6 @@ class AwsS3Client(Protocol):
 
 
 class AwsSqsClient(Protocol):
-    @abstractmethod
     def receive_messages(
         self,
         frequency: int | None = None,
