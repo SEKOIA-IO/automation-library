@@ -8,7 +8,6 @@ from typing import Any, Optional
 
 import orjson
 
-from aws_helpers.provider import AwsProvider
 from aws_helpers.utils import AsyncReader, normalize_s3_key
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
@@ -23,7 +22,7 @@ class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
     queue_name: str
 
 
-class AbstractAwsS3QueuedConnector(AbstractAwsConnector, AwsProvider, metaclass=ABCMeta):
+class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):
     """All connectors that use SQS to trigger S3 events."""
 
     configuration: AwsS3QueuedConfiguration
