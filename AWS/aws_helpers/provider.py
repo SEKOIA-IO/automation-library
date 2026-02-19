@@ -12,13 +12,14 @@ class AwsS3Client(Protocol):
         self, key: str, bucket: str | None = None, loop: asyncio.AbstractEventLoop | None = None
     ) -> AbstractAsyncContextManager[AsyncReader]:
         """
-                Reads content from S3 object.
+        Reads content from S3 object.
 
         Args:
-                    key: str
-                    bucket: str | None: if not provided, then use default bucket from configuration
-                Yields:
-                    AsyncReader: The reader of the S3 object
+            key: str
+            bucket: str | None: if not provided, then use default bucket from configuration
+
+        Yields:
+            AsyncReader: The reader of the S3 object
         """
         raise NotImplementedError()
 
@@ -38,8 +39,10 @@ class AwsSqsClient(Protocol):
         After processing messages they will be deleted from queue if delete_consumed_messages is True.
 
         Example of usage:
-        with sqs.receive_messages() as messages:
-            # do something with messages
+        async def process_messages(sqs: AwsSqsClient) -> None:
+            async with sqs.receive_messages() as messages:
+                # do something with messages
+                ...
 
         Args:
             frequency: int
