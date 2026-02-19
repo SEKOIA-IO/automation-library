@@ -59,37 +59,12 @@ jobs:
         uses: actions/setup-python@v4
         id: setup-python
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install Poetry
-        run: |
-          pip install poetry
-          poetry config virtualenvs.in-project true
-
-      - name: Install Dependencies
-        id: install-dependencies
-        run: |
-          poetry install
-        working-directory: ${{ matrix.module }}
-
-      - name: Execute Black
-        uses: psf/black@stable
+      - name: Test with Poetry
+        uses: ./.github/actions/test-with-poetry
         with:
-          options: "--check --verbose"
-          src: ./"${{ matrix.module }}"
-
-      - name: Execute Mypy
-        run: |
-          poetry run pip install mypy
-          mkdir -p .mypy_cache
-          poetry run mypy  --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
-        working-directory: "${{ matrix.module }}"
-
-      - name: Execute Python tests
-        id: execute-tests
-        run: |
-          poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
-        working-directory: "${{ matrix.module }}"
+          module: ${{ matrix.module }}
 
       - name: Upload Event
         uses: actions/upload-artifact@v4
