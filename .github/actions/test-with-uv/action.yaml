@@ -1,0 +1,44 @@
+name: Test with uv
+description: Test an automation module with uv project manager
+
+inputs:
+  module:
+    description: "The module to test"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        activate-environment: true
+
+    - name: Install Dependencies
+      id: install-dependencies
+      shell: bash
+      run: |
+        uv sync
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Black
+      uses: psf/black@stable
+      with:
+        options: "--check --verbose"
+        src: ./"${{ inputs.module }}"
+
+    - name: Execute Mypy
+      shell: bash
+      run: |
+        uv pip install mypy
+        mkdir -p .mypy_cache
+        uv run mypy --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Python tests
+      id: execute-tests
+      shell: bash
+      run: |
+        uv run pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
+      working-directory: ${{ inputs.module }}
