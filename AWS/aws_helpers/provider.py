@@ -62,6 +62,7 @@ class AwsProvider(metaclass=ABCMeta):
     """
 
     @property
+    @abstractmethod
     def s3_wrapper(self) -> AwsS3Client:
         """
         Get S3 client
@@ -72,6 +73,7 @@ class AwsProvider(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @property
+    @abstractmethod
     def sqs_wrapper(self) -> AwsSqsClient:
         """
         Get SQS client.
