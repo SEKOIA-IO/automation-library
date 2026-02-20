@@ -114,13 +114,12 @@ class AnozrwayClient:
         context: str,
         domain: str,
         start_date: datetime,
-        end_date: datetime,
+        end_date: Optional[datetime] = None,
     ) -> List[Dict[str, Any]]:
         payload = {
             "context": context,
             "domain": domain,
             "start_date": self._to_iso(start_date),
-            "end_date": self._to_iso(end_date),
         }
         return await self._post_with_retry(
             "/v1/domain/searches",
