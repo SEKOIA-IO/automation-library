@@ -93,7 +93,7 @@ class WizGqlClient(object):
         self.client_secret = client_secret
         self.tenant_url = tenant_url
         self.token_refresher = token_refresher
-        self.timeout = timeout or 60  # default to 60s
+        self.timeout = 60 if timeout is None else timeout  # default to 60s, preserve explicit falsy values
 
     @classmethod
     def create(cls, client_id: str, client_secret: str, tenant_url: str, timeout: int | None = None) -> "WizGqlClient":
