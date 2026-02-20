@@ -44,13 +44,6 @@
         "default": 7,
         "minimum": 1,
         "maximum": 30
-      },
-      "window_seconds": {
-        "type": "integer",
-        "description": "Time window size per API request (seconds). Recommended: 3600 (1h).",
-        "default": 3600,
-        "minimum": 300,
-        "maximum": 21600
       }
     },
     "required": ["intake_key", "domains"]

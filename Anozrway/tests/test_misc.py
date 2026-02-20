@@ -23,13 +23,20 @@ def test_error_classes():
 
 
 def test_models_smoke():
-    assert AnozrwayModuleConfiguration() is not None
+    cfg = AnozrwayModuleConfiguration(
+        anozrway_client_id="cid",
+        anozrway_client_secret="secret",
+    )
+    assert cfg.anozrway_base_url == "https://balise.anozrway.com"
+    assert cfg.timeout_seconds == 30
 
 
 def test_metrics_smoke():
-    assert events_collected._name == "anozrway_historical_events_collected"
-    assert events_forwarded._name == "anozrway_historical_events_forwarded"
-    assert events_duplicated._name == "anozrway_historical_events_duplicated"
-    assert api_requests._name == "anozrway_api_requests"
-    assert api_request_duration._name == "anozrway_api_request_duration_seconds"
-    assert checkpoint_age._name == "anozrway_checkpoint_age_seconds"
+    # symphony_module_common counters: _name without namespace prefix
+    assert events_collected._name == "symphony_module_common_collected_messages"
+    assert events_forwarded._name == "symphony_module_common_forwarded_events"
+    assert events_duplicated._name == "symphony_module_common_duplicated_events"
+    assert api_request_duration._name == "symphony_module_common_forward_events_duration"
+    assert checkpoint_age._name == "symphony_module_common_events_lags"
+    # module-specific
+    assert api_requests._name == "symphony_module_anozrway_api_requests"

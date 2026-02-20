@@ -6,9 +6,11 @@ authors = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.10"
 sekoia-automation-sdk = "^1.22.1"
 aiolimiter = "^1.2.1"
+orjson = "^3.9"
+python-dateutil = "^2.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"

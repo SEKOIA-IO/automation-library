@@ -1,5 +1,6 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -26,124 +27,45 @@ def build_response(status, payload=None, text=""):
     return response
 
 
-def test_get_access_token_missing_session():
-    client = AnozrwayClient({})
-    with pytest.raises(AnozrwayError):
-        asyncio.run(client._get_access_token())
-
-
-def test_get_access_token_missing_credentials():
-    client = AnozrwayClient({"anozrway_token_url": "https://auth.anozrway.test/oauth2/token"})
-    client._session = MagicMock()
-    client._rate_limiter = DummyLimiter()
-
-    with pytest.raises(AnozrwayAuthError):
-        asyncio.run(client._get_access_token())
-
-
-def test_get_access_token_unauthorized():
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_token_url": "https://auth.anozrway.test/oauth2/token",
-        }
+def make_client(**kwargs):
+    defaults = dict(
+        base_url="https://balise.anozrway.test",
+        token_url="https://auth.anozrway.test/oauth2/token",
+        client_id="client-id",
+        client_secret="client-secret",
     )
-    client._session = MagicMock()
-    client._session.post.return_value = build_response(401, text="unauthorized")
-    client._rate_limiter = DummyLimiter()
-
-    with pytest.raises(AnozrwayAuthError):
-        asyncio.run(client._get_access_token())
+    defaults.update(kwargs)
+    return AnozrwayClient(**defaults)
 
 
-def test_get_access_token_status_error():
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_token_url": "https://auth.anozrway.test/oauth2/token",
-        }
-    )
-    client._session = MagicMock()
-    client._session.post.return_value = build_response(500, text="server error")
-    client._rate_limiter = DummyLimiter()
-
-    with pytest.raises(AnozrwayError):
-        asyncio.run(client._get_access_token())
+def patch_get_token(client, token="token"):
+    client._get_access_token = AsyncMock(return_value=token)
 
 
-def test_get_access_token_missing_token():
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_token_url": "https://auth.anozrway.test/oauth2/token",
-        }
-    )
-    client._session = MagicMock()
-    client._session.post.return_value = build_response(200, {"token_type": "bearer"})
-    client._rate_limiter = DummyLimiter()
-
-    with pytest.raises(AnozrwayError):
-        asyncio.run(client._get_access_token())
+# -------------------------------------------------------
+# _get_access_token delegates to token refresher
+# -------------------------------------------------------
 
 
-def test_get_access_token_cached():
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_token_url": "https://auth.anozrway.test/oauth2/token",
-        }
-    )
-    client._session = MagicMock()
-    client._rate_limiter = DummyLimiter()
-    client._access_token = "cached-token"
-    client._token_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+def test_get_access_token_delegates_to_refresher():
+    client = make_client()
+
+    refreshed = MagicMock()
+    refreshed.token.access_token = "delegated-token"
+
+    @asynccontextmanager
+    async def fake_with_access_token():
+        yield refreshed
+
+    client._token_refresher.with_access_token = fake_with_access_token
 
     token = asyncio.run(client._get_access_token())
-
-    assert token == "cached-token"
-    client._session.post.assert_not_called()
+    assert token == "delegated-token"
 
 
-def test_get_access_token_success():
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_token_url": "https://auth.anozrway.test/oauth2/token",
-        }
-    )
-    client._session = MagicMock()
-    client._session.post.return_value = build_response(200, {"access_token": "token", "expires_in": 120})
-    client._rate_limiter = DummyLimiter()
-
-    token = asyncio.run(client._get_access_token())
-
-    assert token == "token"
-    assert client._token_expires_at is not None
-    assert client._access_token == "token"
-
-
-def test_get_access_token_expired_token_triggers_refresh():
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_token_url": "https://auth.anozrway.test/oauth2/token",
-        }
-    )
-    client._session = MagicMock()
-    client._session.post.return_value = build_response(200, {"access_token": "new-token", "expires_in": 120})
-    client._rate_limiter = DummyLimiter()
-    client._access_token = "expired-token"
-    client._token_expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
-
-    token = asyncio.run(client._get_access_token())
-
-    assert token == "new-token"
+# -------------------------------------------------------
+# _to_iso
+# -------------------------------------------------------
 
 
 def test_to_iso():
@@ -151,57 +73,113 @@ def test_to_iso():
     assert AnozrwayClient._to_iso(dt) == "2024-01-01T12:00:00Z"
 
 
+# -------------------------------------------------------
+# __aenter__ / __aexit__
+# -------------------------------------------------------
+
+
 def test_aenter_aexit(monkeypatch):
     session = MagicMock()
     session.close = AsyncMock()
     monkeypatch.setattr("anozrway_modules.client.http_client.aiohttp.ClientSession", lambda trust_env=True: session)
 
-    client = AnozrwayClient({"anozrway_client_id": "client-id", "anozrway_client_secret": "client-secret"})
+    client = make_client()
     monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    monkeypatch.setattr(client._token_refresher, "close", AsyncMock())
 
     asyncio.run(client.__aenter__())
     assert client._session is session
 
     asyncio.run(client.__aexit__(None, None, None))
     session.close.assert_called_once()
+    client._token_refresher.close.assert_called_once()
 
 
 def test_aexit_without_session():
-    client = AnozrwayClient({})
+    client = make_client()
     client._session = None
 
-    asyncio.run(client.__aexit__(None, None, None))
+    async def run():
+        client._token_refresher.close = AsyncMock()
+        await client.__aexit__(None, None, None)
+
+    asyncio.run(run())
+
+
+def test_aenter_closes_session_on_token_failure(monkeypatch):
+    session = MagicMock()
+    session.close = AsyncMock()
+    monkeypatch.setattr("anozrway_modules.client.http_client.aiohttp.ClientSession", lambda trust_env=True: session)
+
+    client = make_client()
+    monkeypatch.setattr(client, "_get_access_token", AsyncMock(side_effect=AnozrwayAuthError("bad credentials")))
+
+    with pytest.raises(AnozrwayAuthError):
+        asyncio.run(client.__aenter__())
+
+    session.close.assert_called_once()
+    assert client._session is None
+
+
+# -------------------------------------------------------
+# log
+# -------------------------------------------------------
 
 
 def test_log_uses_trigger():
     trigger = MagicMock()
-    client = AnozrwayClient({}, trigger=trigger)
-
+    client = make_client(trigger=trigger)
     client.log("hello", "warning")
-
     trigger.log.assert_called_once_with(message="hello", level="warning")
 
 
 # -------------------------------------------------------
-# Tests for search_domain_v1 (/v1/domain/searches endpoint)
+# _post_with_retry – missing session
+# -------------------------------------------------------
+
+
+def test_post_with_retry_missing_session():
+    client = make_client()
+
+    with pytest.raises(AnozrwayError, match="session not initialized"):
+        asyncio.run(
+            client._post_with_retry(
+                "/events",
+                {},
+                result_key="events",
+                unauthorized_msg="unauthorized",
+                generic_error_msg="error",
+            )
+        )
+
+
+# -------------------------------------------------------
+# timeout type
+# -------------------------------------------------------
+
+
+def test_timeout_is_aiohttp_client_timeout():
+    import aiohttp
+
+    client = make_client(timeout_seconds=45)
+    assert isinstance(client.timeout, aiohttp.ClientTimeout)
+    assert client.timeout.total == 45
+
+
+# -------------------------------------------------------
+# search_domain_v1
 # -------------------------------------------------------
 
 
 def test_search_domain_v1_retries_on_unauthorized(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.side_effect = [
         build_response(401, text="unauthorized"),
         build_response(200, {"results": [{"id": 1}]}),
     ]
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     results = asyncio.run(
         client.search_domain_v1(
@@ -217,21 +195,11 @@ def test_search_domain_v1_retries_on_unauthorized(monkeypatch):
 
 
 def test_search_domain_v1_unauthorized_exhausted(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
-    client._session.post.side_effect = [
-        build_response(401, text="unauthorized"),
-        build_response(401, text="unauthorized"),
-        build_response(401, text="unauthorized"),
-    ]
+    client._session.post.side_effect = [build_response(401)] * 3
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     with pytest.raises(AnozrwayAuthError):
         asyncio.run(
@@ -245,18 +213,11 @@ def test_search_domain_v1_unauthorized_exhausted(monkeypatch):
 
 
 def test_search_domain_v1_includes_restrict_header(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-            "anozrway_x_restrict_access_token": "token-xyz",
-        }
-    )
+    client = make_client(x_restrict_access="token-xyz")
     client._session = MagicMock()
     client._session.post.return_value = build_response(200, {"results": []})
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     asyncio.run(
         client.search_domain_v1(
@@ -272,17 +233,11 @@ def test_search_domain_v1_includes_restrict_header(monkeypatch):
 
 
 def test_search_domain_v1_error_status(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.return_value = build_response(500, text="server error")
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     with pytest.raises(AnozrwayError):
         asyncio.run(
@@ -298,21 +253,11 @@ def test_search_domain_v1_error_status(monkeypatch):
 def test_search_domain_v1_rate_limit(monkeypatch):
     monkeypatch.setattr("anozrway_modules.client.http_client.asyncio.sleep", AsyncMock())
 
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
-    client._session.post.side_effect = [
-        build_response(429, text="rate limit"),
-        build_response(429, text="rate limit"),
-        build_response(429, text="rate limit"),
-    ]
+    client._session.post.side_effect = [build_response(429)] * 3
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     with pytest.raises(AnozrwayRateLimitError):
         asyncio.run(
@@ -326,17 +271,11 @@ def test_search_domain_v1_rate_limit(monkeypatch):
 
 
 def test_search_domain_v1_non_list_results(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.return_value = build_response(200, {"results": "nope"})
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     results = asyncio.run(
         client.search_domain_v1(
@@ -346,12 +285,11 @@ def test_search_domain_v1_non_list_results(monkeypatch):
             end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
         )
     )
-
     assert results == []
 
 
 def test_search_domain_v1_missing_session():
-    client = AnozrwayClient({})
+    client = make_client()
 
     with pytest.raises(AnozrwayError):
         asyncio.run(
@@ -365,24 +303,18 @@ def test_search_domain_v1_missing_session():
 
 
 # -------------------------------------------------------
-# Tests for fetch_events (Balise Pipeline /events endpoint)
+# fetch_events
 # -------------------------------------------------------
 
 
 def test_fetch_events_success(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.return_value = build_response(
         200, {"events": [{"nom_fuite": "leak-1", "timestamp": "2025-01-01T00:00:00Z"}]}
     )
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     results = asyncio.run(
         client.fetch_events(
@@ -399,20 +331,14 @@ def test_fetch_events_success(monkeypatch):
 
 
 def test_fetch_events_retries_on_unauthorized(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.side_effect = [
-        build_response(401, text="unauthorized"),
+        build_response(401),
         build_response(200, {"events": [{"nom_fuite": "leak-1"}]}),
     ]
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     results = asyncio.run(
         client.fetch_events(
@@ -428,21 +354,11 @@ def test_fetch_events_retries_on_unauthorized(monkeypatch):
 
 
 def test_fetch_events_unauthorized_exhausted(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
-    client._session.post.side_effect = [
-        build_response(401, text="unauthorized"),
-        build_response(401, text="unauthorized"),
-        build_response(401, text="unauthorized"),
-    ]
+    client._session.post.side_effect = [build_response(401)] * 3
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     with pytest.raises(AnozrwayAuthError):
         asyncio.run(
@@ -456,18 +372,11 @@ def test_fetch_events_unauthorized_exhausted(monkeypatch):
 
 
 def test_fetch_events_includes_restrict_header(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-            "anozrway_x_restrict_access_token": "token-xyz",
-        }
-    )
+    client = make_client(x_restrict_access="token-xyz")
     client._session = MagicMock()
     client._session.post.return_value = build_response(200, {"events": []})
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     asyncio.run(
         client.fetch_events(
@@ -483,17 +392,11 @@ def test_fetch_events_includes_restrict_header(monkeypatch):
 
 
 def test_fetch_events_error_status(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.return_value = build_response(500, text="server error")
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     with pytest.raises(AnozrwayError):
         asyncio.run(
@@ -509,21 +412,11 @@ def test_fetch_events_error_status(monkeypatch):
 def test_fetch_events_rate_limit(monkeypatch):
     monkeypatch.setattr("anozrway_modules.client.http_client.asyncio.sleep", AsyncMock())
 
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
-    client._session.post.side_effect = [
-        build_response(429, text="rate limit"),
-        build_response(429, text="rate limit"),
-        build_response(429, text="rate limit"),
-    ]
+    client._session.post.side_effect = [build_response(429)] * 3
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     with pytest.raises(AnozrwayRateLimitError):
         asyncio.run(
@@ -537,17 +430,11 @@ def test_fetch_events_rate_limit(monkeypatch):
 
 
 def test_fetch_events_non_list_results(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.return_value = build_response(200, {"events": "nope"})
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     results = asyncio.run(
         client.fetch_events(
@@ -557,12 +444,11 @@ def test_fetch_events_non_list_results(monkeypatch):
             end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
         )
     )
-
     assert results == []
 
 
 def test_fetch_events_missing_session():
-    client = AnozrwayClient({})
+    client = make_client()
 
     with pytest.raises(AnozrwayError):
         asyncio.run(
@@ -576,17 +462,11 @@ def test_fetch_events_missing_session():
 
 
 def test_fetch_events_empty_events(monkeypatch):
-    client = AnozrwayClient(
-        {
-            "anozrway_client_id": "client-id",
-            "anozrway_client_secret": "client-secret",
-            "anozrway_base_url": "https://balise.anozrway.test",
-        }
-    )
+    client = make_client()
     client._session = MagicMock()
     client._session.post.return_value = build_response(200, {"events": []})
     client._rate_limiter = DummyLimiter()
-    monkeypatch.setattr(client, "_get_access_token", AsyncMock(return_value="token"))
+    patch_get_token(client)
 
     results = asyncio.run(
         client.fetch_events(
@@ -596,5 +476,4 @@ def test_fetch_events_empty_events(monkeypatch):
             end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
         )
     )
-
     assert results == []

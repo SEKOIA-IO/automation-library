@@ -1,86 +1,49 @@
 from __future__ import annotations
 
 import asyncio
-import aiohttp
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+import aiohttp
 from aiolimiter import AsyncLimiter
-
 from sekoia_automation.trigger import Trigger
 
 from anozrway_modules.client.errors import AnozrwayAuthError, AnozrwayError, AnozrwayRateLimitError
+from anozrway_modules.client.token_refresher import AnozrwayTokenRefresher
 
 
 class AnozrwayClient:
-    def __init__(self, module_config: Dict[str, Any], trigger: Optional[Trigger] = None):
-        self.cfg = module_config
+    def __init__(
+        self,
+        base_url: str,
+        token_url: str,
+        client_id: str,
+        client_secret: str,
+        x_restrict_access: Optional[str] = None,
+        timeout_seconds: int = 30,
+        trigger: Optional[Trigger] = None,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.x_restrict_access = x_restrict_access
+        self.timeout = aiohttp.ClientTimeout(total=timeout_seconds)
         self.trigger = trigger
 
-        self.base_url = str(self.cfg.get("anozrway_base_url", "https://balise.anozrway.com")).rstrip("/")
-        self.token_url = str(self.cfg.get("anozrway_token_url", "https://auth.anozrway.com/oauth2/token"))
-        self.client_id = self.cfg.get("anozrway_client_id")
-        self.client_secret = self.cfg.get("anozrway_client_secret")
-        self.x_restrict_access = self.cfg.get("anozrway_x_restrict_access_token")  # may be None for now
-        self.timeout = int(self.cfg.get("timeout_seconds", 30))
-
         self._session: Optional[aiohttp.ClientSession] = None
-        self._access_token: Optional[str] = None
-        self._token_expires_at: Optional[datetime] = None
-
-        # spec recommends 1 req/sec
         self._rate_limiter = AsyncLimiter(max_rate=1, time_period=1)
+        self._token_refresher = AnozrwayTokenRefresher(
+            client_id=client_id,
+            client_secret=client_secret,
+            token_url=token_url,
+            timeout=timeout_seconds,
+        )
 
     def log(self, message: str, level: str = "info") -> None:
         if self.trigger:
             self.trigger.log(message=message, level=level)
 
     async def _get_access_token(self) -> str:
-        if not self._session:
-            raise AnozrwayError("HTTP session not initialized")
-
-        if self._access_token and self._token_expires_at:
-            now = datetime.now(timezone.utc)
-            if now < self._token_expires_at:
-                return self._access_token
-
-        if not self.client_id or not self.client_secret:
-            raise AnozrwayAuthError("Missing anozrway_client_id / anozrway_client_secret in module configuration")
-
-        data = {
-            "grant_type": "client_credentials",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-        }
-
-        async with self._rate_limiter:
-            async with self._session.post(
-                self.token_url,
-                data=data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=self.timeout,
-                raise_for_status=False,
-            ) as resp:
-                status = resp.status
-                text = await resp.text()
-
-                if status == 401:
-                    raise AnozrwayAuthError(f"Token exchange unauthorized: {text}")
-
-                if status != 200:
-                    raise AnozrwayError(f"Token request failed ({status}): {text}")
-
-                token_data = await resp.json()
-
-        token = token_data.get("access_token")
-        if not token:
-            raise AnozrwayError(f"OAuth2 response missing access_token: {token_data}")
-
-        expires_in = int(token_data.get("expires_in", 3600))
-        self._access_token = token
-        # refresh 5 min before
-        self._token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=max(60, expires_in - 300))
-        return token
+        async with self._token_refresher.with_access_token() as refreshed:
+            return refreshed.token.access_token
 
     @staticmethod
     def _to_iso(dt: datetime) -> str:
@@ -123,8 +86,7 @@ class AnozrwayClient:
                     status = resp.status
 
                     if status == 401:
-                        self._access_token = None
-                        self._token_expires_at = None
+                        self._token_refresher._token = None  # force token refresh on retry
                         if attempt < max_attempts:
                             continue
                         raise AnozrwayAuthError(unauthorized_msg)
@@ -190,10 +152,9 @@ class AnozrwayClient:
             generic_error_msg="Balise Pipeline /events failed",
         )
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "AnozrwayClient":
         self._session = aiohttp.ClientSession(trust_env=True)
         try:
-            # validate token once
             await self._get_access_token()
         except Exception:
             await self._session.close()
@@ -201,7 +162,8 @@ class AnozrwayClient:
             raise
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if self._session:
             await self._session.close()
             self._session = None
+        await self._token_refresher.close()

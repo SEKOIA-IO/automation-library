@@ -9,22 +9,22 @@ from anozrway_modules.historical_connector import (
     AnozrwayHistoricalConfiguration,
     AnozrwayHistoricalConnector,
 )
+from anozrway_modules.models import AnozrwayModuleConfiguration
 
 
 def configured_connector(symphony_storage):
     AnozrwayHistoricalConnector.__annotations__["configuration"] = AnozrwayHistoricalConfiguration
 
     module = AnozrwayModule()
-    module.configuration = {
-        "anozrway_client_id": "client-id",
-        "anozrway_client_secret": "client-secret",
-    }
+    module.configuration = AnozrwayModuleConfiguration(
+        anozrway_client_id="client-id",
+        anozrway_client_secret="client-secret",
+    )
 
     module_config = AnozrwayHistoricalConfiguration(
         intake_key="key",
         domains="example.com",
         lookback_days=1,
-        window_seconds=3600,
         chunk_size=2,
         frequency=60,
     )
@@ -72,6 +72,7 @@ def test_last_checkpoint_invalid_context_fallback(connector):
     after = datetime.now(timezone.utc)
 
     assert before <= result <= after
+    connector.log.assert_called()  # should warn about invalid timestamp
 
 
 def test_save_checkpoint_sets_context(monkeypatch, connector):
@@ -85,7 +86,8 @@ def test_save_checkpoint_sets_context(monkeypatch, connector):
         assert c["last_checkpoint"] == "2024-01-01T00:00:00Z"
         assert "last_successful_run" in c
 
-    gauge.set.assert_called_once()
+    gauge.labels.assert_called_once_with(intake_key="key")
+    gauge.labels.return_value.set.assert_called_once()
 
 
 def test_cleanup_event_cache(connector):
@@ -116,7 +118,8 @@ def test_is_new_event_and_duplicate(monkeypatch, connector):
     key = connector._compute_dedup_key("example.com", event)
     assert connector._is_new_event(key) is True
     assert connector._is_new_event(key) is False
-    duplicated.inc.assert_called_once()
+    duplicated.labels.assert_called_with(intake_key="key")
+    duplicated.labels.return_value.inc.assert_called_once()
 
 
 def test_extract_event_ts_priority(connector):
@@ -181,6 +184,7 @@ def test_fetch_events_checkpoint_up_to_date(connector):
         c["last_checkpoint"] = now
 
     client = MagicMock()
+
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
 
@@ -189,28 +193,26 @@ def test_fetch_events_checkpoint_up_to_date(connector):
     connector.log.assert_called_with(message="Checkpoint is up-to-date. No new data to collect.", level="info")
 
 
-def test_fetch_events_batches_and_checkpoint(connector):
+def test_fetch_events_batches_and_checkpoint(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
         c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
 
-    connector.configuration.domains = "example.com, test.com"
+    connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 1
 
     records = [
-        {
-            "nom_fuite": "leak-a",
-            "timestamp": "2024-01-01T00:00:00Z",
-            "status": "finished",
-        },
-        {
-            "nom_fuite": "leak-b",
-            "timestamp": "2024-01-01T00:00:01Z",
-            "status": "finished",
-        },
+        {"nom_fuite": "leak-a", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"},
+        {"nom_fuite": "leak-b", "timestamp": "2024-01-01T00:00:01Z", "status": "finished"},
     ]
+
+    # Patch metrics to avoid label issues in unit tests
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_collected", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+
     client = MagicMock()
-    client.fetch_events = AsyncMock(side_effect=[records, []])
+    client.fetch_events = AsyncMock(return_value=records)
 
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
@@ -237,13 +239,13 @@ def test_fetch_events_batches_and_checkpoint(connector):
             }
         ],
     ]
-    assert client.fetch_events.call_count == 2
+    assert client.fetch_events.call_count == 1  # one call per domain (no sub-windowing)
 
     with connector.context_store as c:
         assert "last_checkpoint" in c
 
 
-def test_fetch_events_continues_on_error(connector):
+def test_fetch_events_continues_on_error(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
         c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
@@ -251,17 +253,15 @@ def test_fetch_events_continues_on_error(connector):
     connector.configuration.domains = "fail.com, ok.com"
     connector.configuration.chunk_size = 10
 
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_collected", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+
     client = MagicMock()
     client.fetch_events = AsyncMock(
         side_effect=[
             RuntimeError("boom"),
-            [
-                {
-                    "nom_fuite": "ok-leak",
-                    "timestamp": "2024-01-01T00:00:00Z",
-                    "status": "finished",
-                }
-            ],
+            [{"nom_fuite": "ok-leak", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"}],
         ]
     )
 
@@ -284,12 +284,16 @@ def test_fetch_events_continues_on_error(connector):
     connector.log_exception.assert_called()
 
 
-def test_fetch_events_empty_records_no_checkpoint(connector):
+def test_fetch_events_empty_records_no_checkpoint(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
         c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "example.com"
+
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=[])
     connector.save_checkpoint = MagicMock()
@@ -303,7 +307,7 @@ def test_fetch_events_empty_records_no_checkpoint(connector):
     connector.save_checkpoint.assert_not_called()
 
 
-def test_fetch_events_invalid_added_date(connector):
+def test_fetch_events_invalid_added_date(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
         c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
@@ -311,15 +315,13 @@ def test_fetch_events_invalid_added_date(connector):
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
 
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_collected", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+
     client = MagicMock()
     client.fetch_events = AsyncMock(
-        return_value=[
-            {
-                "nom_fuite": "bad-leak",
-                "timestamp": "not-a-date",
-                "status": "finished",
-            },
-        ]
+        return_value=[{"nom_fuite": "bad-leak", "timestamp": "not-a-date", "status": "finished"}]
     )
 
     async def collect():
@@ -340,7 +342,7 @@ def test_fetch_events_invalid_added_date(connector):
     ]
 
 
-def test_fetch_events_same_added_date_no_max_update(connector):
+def test_fetch_events_same_added_date_no_max_update(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
         c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
@@ -348,17 +350,13 @@ def test_fetch_events_same_added_date_no_max_update(connector):
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
 
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_collected", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+
     records = [
-        {
-            "nom_fuite": "leak-a",
-            "timestamp": "2024-01-01T00:00:00Z",
-            "status": "finished",
-        },
-        {
-            "nom_fuite": "leak-b",
-            "timestamp": "2024-01-01T00:00:00Z",
-            "status": "finished",
-        },
+        {"nom_fuite": "leak-a", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"},
+        {"nom_fuite": "leak-b", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"},
     ]
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=records)
@@ -388,7 +386,7 @@ def test_fetch_events_same_added_date_no_max_update(connector):
     ]
 
 
-def test_fetch_events_skips_non_dict_and_duplicates(connector):
+def test_fetch_events_skips_non_dict_and_duplicates(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
         c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
@@ -396,18 +394,15 @@ def test_fetch_events_skips_non_dict_and_duplicates(connector):
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
 
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_collected", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_duplicated", MagicMock())
+
     records = [
         "not-a-dict",
-        {
-            "nom_fuite": "leak-a",
-            "timestamp": "2024-01-01T00:00:00Z",
-            "status": "finished",
-        },
-        {
-            "nom_fuite": "leak-a",
-            "timestamp": "2024-01-01T00:00:00Z",
-            "status": "finished",
-        },
+        {"nom_fuite": "leak-a", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"},
+        {"nom_fuite": "leak-a", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"},
     ]
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=records)
@@ -430,7 +425,7 @@ def test_fetch_events_skips_non_dict_and_duplicates(connector):
     ]
 
 
-def test_fetch_events_normalizes_download_links(connector):
+def test_fetch_events_normalizes_download_links(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
         c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
@@ -438,13 +433,17 @@ def test_fetch_events_normalizes_download_links(connector):
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
 
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_collected", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+
     records = [
         {
             "nom_fuite": "leak-a",
             "timestamp": "2024-01-01T00:00:00Z",
             "status": "finished",
             "download_links": ['"http://example.com/a"', "http://example.com/b", 123],
-        },
+        }
     ]
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=records)
@@ -492,12 +491,18 @@ def test_async_run_pushes_batches(monkeypatch, connector):
 
     monkeypatch.setattr(connector, "next_batch", fake_next_batch)
     monkeypatch.setattr("anozrway_modules.historical_connector.sleep", AsyncMock())
+
+    events_forwarded = MagicMock()
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_forwarded", events_forwarded)
+
     connector.push_data_to_intakes = AsyncMock()
     connector._stop_event.clear()
 
     asyncio.run(connector._async_run())
 
     connector.push_data_to_intakes.assert_called_once()
+    events_forwarded.labels.assert_called_with(intake_key="key")
+    events_forwarded.labels.return_value.inc.assert_called_once_with(1)
 
 
 def test_async_run_handles_error(monkeypatch, connector):
@@ -507,7 +512,6 @@ def test_async_run_handles_error(monkeypatch, connector):
 
     async def stop_sleep(_):
         connector._stop_event.set()
-        return None
 
     monkeypatch.setattr(connector, "next_batch", bad_next_batch)
     monkeypatch.setattr("anozrway_modules.historical_connector.sleep", stop_sleep)
