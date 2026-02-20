@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import hashlib
 from asyncio import sleep
 from datetime import datetime, timedelta, timezone
