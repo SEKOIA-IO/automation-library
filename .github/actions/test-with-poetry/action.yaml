@@ -1,0 +1,44 @@
+name: Test with poetry
+description: Test an automation module with Poetry project manager
+
+inputs:
+  module:
+    description: "The module to test"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Poetry
+      shell: bash
+      run: |
+        pip install poetry
+        poetry config virtualenvs.in-project true
+
+    - name: Install Dependencies
+      id: install-dependencies
+      shell: bash
+      run: |
+        poetry install
+      working-directory: ${{ inputs.module }}
+
+    - name: Execute Black
+      uses: psf/black@stable
+      with:
+        options: "--check --verbose"
+        src: ./"${{ inputs.module }}"
+
+    - name: Execute Mypy
+      shell: bash
+      run: |
+        poetry run pip install mypy
+        mkdir -p .mypy_cache
+        poetry run mypy  --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
+      working-directory: "${{ inputs.module }}"
+
+    - name: Execute Python tests
+      id: execute-tests
+      shell: bash
+      run: |
+        poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
+      working-directory: "${{ inputs.module }}"

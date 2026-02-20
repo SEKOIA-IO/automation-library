@@ -2,7 +2,7 @@ name: Build Modules
 
 on:
   pull_request:
-    types: [ opened, synchronize, reopened ]
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - main
@@ -15,7 +15,6 @@ env:
   IMAGE_PREFIX_NAME: sekoia-io
 
 jobs:
-
   find-modules:
     name: Find modules in repo
     runs-on: ubuntu-latest
@@ -59,37 +58,32 @@ jobs:
         uses: actions/setup-python@v4
         id: setup-python
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install Poetry
+      - name: Detect package manager
+        id: detect-pm
         run: |
-          pip install poetry
-          poetry config virtualenvs.in-project true
+          if [ -f "${MODULE_PATH}/uv.lock" ]; then
+            echo "package_manager=uv" >> $GITHUB_OUTPUT
+            echo "Detected uv project"
+          else
+            echo "package_manager=poetry" >> $GITHUB_OUTPUT
+            echo "Defaulting to Poetry"
+          fi
+        env:
+          MODULE_PATH: ${{ matrix.module }}
 
-      - name: Install Dependencies
-        id: install-dependencies
-        run: |
-          poetry install
-        working-directory: ${{ matrix.module }}
-
-      - name: Execute Black
-        uses: psf/black@stable
+      - name: Test with Poetry
+        if: steps.detect-pm.outputs.package_manager == 'poetry'
+        uses: ./.github/actions/test-with-poetry
         with:
-          options: "--check --verbose"
-          src: ./"${{ matrix.module }}"
+          module: ${{ matrix.module }}
 
-      - name: Execute Mypy
-        run: |
-          poetry run pip install mypy
-          mkdir -p .mypy_cache
-          poetry run mypy  --install-types --non-interactive --ignore-missing-imports --show-column-numbers --hide-error-context .
-        working-directory: "${{ matrix.module }}"
-
-      - name: Execute Python tests
-        id: execute-tests
-        run: |
-          poetry run python -m pytest --junit-xml=junit.xml --cov-report term --cov-report xml:coverage.xml --cov . --cov-config pyproject.toml
-        working-directory: "${{ matrix.module }}"
+      - name: Test with uv
+        if: steps.detect-pm.outputs.package_manager == 'uv'
+        uses: ./.github/actions/test-with-uv
+        with:
+          module: ${{ matrix.module }}
 
       - name: Upload Event
         uses: actions/upload-artifact@v4
@@ -192,13 +186,13 @@ jobs:
     if: always()
 
     steps:
-    - name: Success
-      if: ${{ !(contains(needs.*.result, 'failure')) || needs.find-modules.outputs.matrix == '[]' }}
-      run: exit 0
-    - name: Failure
-      if: ${{ contains(needs.*.result, 'failure') && needs.find-modules.outputs.matrix != '[]' }}
-      run: |
-        exit 1
+      - name: Success
+        if: ${{ !(contains(needs.*.result, 'failure')) || needs.find-modules.outputs.matrix == '[]' }}
+        run: exit 0
+      - name: Failure
+        if: ${{ contains(needs.*.result, 'failure') && needs.find-modules.outputs.matrix != '[]' }}
+        run: |
+          exit 1
 
   deploy-module:
     name: Deploy modules
