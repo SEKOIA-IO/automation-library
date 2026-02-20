@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-20 - 2.9.0
+
+### Added
+
+- Add get_device_type method to automatically classify devices as Desktop (Windows/macOS), Mobile (iOS/Android), or Other based on platform
+
 ## 2026-02-18 - 2.8.15
 
 ### Fixed
