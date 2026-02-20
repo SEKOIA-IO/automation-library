@@ -214,6 +214,23 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
                     type_id=OSTypeId.OTHER,
                 )
 
+    def get_device_type(self, platform: str) -> tuple[DeviceTypeStr, DeviceTypeId]:
+        """Get device type information based on platform.
+
+        Args:
+            platform: The device platform (windows, macos, linux, ios, android).
+
+        Returns:
+            Tuple of (DeviceTypeStr, DeviceTypeId) with mapped device type.
+        """
+        match platform.lower() if platform else "":
+            case "windows" | "macos":
+                return DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP
+            case "android" | "ios":
+                return DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE
+            case _:
+                return DeviceTypeStr.OTHER, DeviceTypeId.OTHER
+
     async def map_fields(self, okta_device: OktaDevice) -> DeviceOCSFModel:
         """Map Okta device data to OCSF format.
 
@@ -240,11 +257,14 @@ class OktaDeviceAssetConnector(AsyncAssetConnector):
         is_managed = okta_device.profile.registered
         is_compliant = okta_device.status == "ACTIVE" and okta_device.profile.registered
 
+        # Determine device type based on platform
+        device_type, device_type_id = self.get_device_type(okta_device.profile.platform)
+
         device = Device(
             hostname=okta_device.profile.displayName,
             uid=okta_device.id,
-            type_id=DeviceTypeId.OTHER,
-            type=DeviceTypeStr.OTHER,
+            type_id=device_type_id,
+            type=device_type,
             location=None,
             os=self.get_device_os(okta_device.profile.platform, okta_device.profile.osVersion),
             vendor_name=okta_device.profile.manufacturer,
