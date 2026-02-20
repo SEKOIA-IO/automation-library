@@ -57,15 +57,23 @@ def test_last_checkpoint_default(connector):
 
 def test_last_checkpoint_from_context(connector):
     with connector.context_store as c:
-        c["last_checkpoint"] = "2024-01-01T00:00:00Z"
+        c["last_checkpoint_events"] = "2024-01-01T00:00:00Z"
 
-    result = connector.last_checkpoint()
+    result = connector.last_checkpoint(source="events")
     assert result == datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+
+def test_last_checkpoint_from_context_searches(connector):
+    with connector.context_store as c:
+        c["last_checkpoint_searches"] = "2024-06-01T00:00:00Z"
+
+    result = connector.last_checkpoint(source="searches")
+    assert result == datetime(2024, 6, 1, tzinfo=timezone.utc)
 
 
 def test_last_checkpoint_invalid_context_fallback(connector):
     with connector.context_store as c:
-        c["last_checkpoint"] = "not-a-date"
+        c["last_checkpoint_events"] = "not-a-date"
 
     before = datetime.now(timezone.utc) - timedelta(days=1, seconds=5)
     result = connector.last_checkpoint()
@@ -80,14 +88,26 @@ def test_save_checkpoint_sets_context(monkeypatch, connector):
     monkeypatch.setattr("anozrway_modules.historical_connector.checkpoint_age", gauge)
 
     checkpoint = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    connector.save_checkpoint(checkpoint)
+    connector.save_checkpoint(checkpoint, source="events")
 
     with connector.context_store as c:
-        assert c["last_checkpoint"] == "2024-01-01T00:00:00Z"
-        assert "last_successful_run" in c
+        assert c["last_checkpoint_events"] == "2024-01-01T00:00:00Z"
+        assert "last_successful_run_events" in c
 
     gauge.labels.assert_called_once_with(intake_key="key")
     gauge.labels.return_value.set.assert_called_once()
+
+
+def test_save_checkpoint_sets_context_searches(monkeypatch, connector):
+    gauge = MagicMock()
+    monkeypatch.setattr("anozrway_modules.historical_connector.checkpoint_age", gauge)
+
+    checkpoint = datetime(2024, 6, 1, tzinfo=timezone.utc)
+    connector.save_checkpoint(checkpoint, source="searches")
+
+    with connector.context_store as c:
+        assert c["last_checkpoint_searches"] == "2024-06-01T00:00:00Z"
+        assert "last_successful_run_searches" in c
 
 
 def test_cleanup_event_cache(connector):
@@ -122,8 +142,23 @@ def test_is_new_event_and_duplicate(monkeypatch, connector):
     duplicated.labels.return_value.inc.assert_called_once()
 
 
+def test_compute_dedup_key_domain_search_includes_email(connector):
+    # Two people from the same breach must have different dedup keys
+    base = {"source": {"name": "leak-x", "detection_date": "2024-01-01T00:00:00Z"}}
+    event_a = {**base, "email": "alice@example.com"}
+    event_b = {**base, "email": "bob@example.com"}
+    assert connector._compute_dedup_key("example.com", event_a) != connector._compute_dedup_key("example.com", event_b)
+
+
+def test_compute_dedup_key_domain_search_same_person_is_stable(connector):
+    event = {"email": "alice@example.com", "source": {"name": "leak-x", "detection_date": "2024-01-01T00:00:00Z"}}
+    assert connector._compute_dedup_key("example.com", event) == connector._compute_dedup_key("example.com", event)
+
+
 def test_extract_event_ts_priority(connector):
+    # Balise: timestamp wins over last_updated
     event = {
+        "nom_fuite": "leak-x",
         "timestamp": "2024-01-02T00:00:00Z",
         "last_updated": "2024-01-01T00:00:00Z",
     }
@@ -132,9 +167,35 @@ def test_extract_event_ts_priority(connector):
 
 
 def test_extract_event_ts_fallback_to_last_updated(connector):
-    event = {"last_updated": "2024-01-01T00:00:00Z"}
+    # Balise: fallback to last_updated when no timestamp
+    event = {"nom_fuite": "leak-x", "last_updated": "2024-01-01T00:00:00Z"}
     ts = connector._extract_event_ts(event)
     assert ts == datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+
+def test_extract_event_ts_domain_search_detection_date(connector):
+    # Domain Search: uses source.detection_date
+    event = {
+        "email": "user@example.com",
+        "source": {
+            "name": "vietnamairlines.com",
+            "type": "LEAK",
+            "detection_date": "2026-02-17T09:45:13Z",
+            "date": "2025-10-11T09:23:00Z",
+        },
+    }
+    ts = connector._extract_event_ts(event)
+    assert ts == datetime(2026, 2, 17, 9, 45, 13, tzinfo=timezone.utc)
+
+
+def test_extract_event_ts_domain_search_fallback_to_date(connector):
+    # Domain Search: fallback to source.date when no detection_date
+    event = {
+        "email": "user@example.com",
+        "source": {"name": "leak.com", "type": "LEAK", "date": "2025-10-11T00:00:00Z"},
+    }
+    ts = connector._extract_event_ts(event)
+    assert ts == datetime(2025, 10, 11, tzinfo=timezone.utc)
 
 
 def test_extract_event_ts_missing(connector):
@@ -144,8 +205,15 @@ def test_extract_event_ts_missing(connector):
 
 
 def test_extract_entity_id_normalizes(connector):
+    # Balise Pipeline format
     event = {"nom_fuite": "  Leak-X  "}
     assert connector._extract_entity_id(event) == "leak-x"
+
+
+def test_extract_entity_id_domain_search(connector):
+    # Domain Search format
+    event = {"source": {"name": "  VietnamAirlines.com  "}}
+    assert connector._extract_entity_id(event) == "vietnamairlines.com"
 
 
 def test_safe_str_none(connector):
@@ -181,7 +249,8 @@ def test_fetch_events_no_domains(connector):
 def test_fetch_events_checkpoint_up_to_date(connector):
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     with connector.context_store as c:
-        c["last_checkpoint"] = now
+        c["last_checkpoint_events"] = now
+        c["last_checkpoint_searches"] = now
 
     client = MagicMock()
 
@@ -190,18 +259,20 @@ def test_fetch_events_checkpoint_up_to_date(connector):
 
     results = asyncio.run(collect())
     assert results == []
-    connector.log.assert_called_with(message="Checkpoint is up-to-date. No new data to collect.", level="info")
+    connector.log.assert_any_call(message="events checkpoint is up-to-date. No new data to collect.", level="info")
+    connector.log.assert_any_call(message="searches checkpoint is up-to-date. No new data to collect.", level="info")
 
 
 def test_fetch_events_batches_and_checkpoint(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
-        c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 1
 
-    records = [
+    balise_records = [
         {"nom_fuite": "leak-a", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"},
         {"nom_fuite": "leak-b", "timestamp": "2024-01-01T00:00:01Z", "status": "finished"},
     ]
@@ -212,7 +283,8 @@ def test_fetch_events_batches_and_checkpoint(monkeypatch, connector):
     monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
 
     client = MagicMock()
-    client.fetch_events = AsyncMock(return_value=records)
+    client.fetch_events = AsyncMock(return_value=balise_records)
+    client.search_domain_v1 = AsyncMock(return_value=[])
 
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
@@ -239,16 +311,18 @@ def test_fetch_events_batches_and_checkpoint(monkeypatch, connector):
             }
         ],
     ]
-    assert client.fetch_events.call_count == 1  # one call per domain (no sub-windowing)
+    assert client.fetch_events.call_count == 1
+    assert client.search_domain_v1.call_count == 1
 
     with connector.context_store as c:
-        assert "last_checkpoint" in c
+        assert "last_checkpoint_events" in c
 
 
 def test_fetch_events_continues_on_error(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
-        c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "fail.com, ok.com"
     connector.configuration.chunk_size = 10
@@ -264,6 +338,7 @@ def test_fetch_events_continues_on_error(monkeypatch, connector):
             [{"nom_fuite": "ok-leak", "timestamp": "2024-01-01T00:00:00Z", "status": "finished"}],
         ]
     )
+    client.search_domain_v1 = AsyncMock(return_value=[])
 
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
@@ -287,7 +362,8 @@ def test_fetch_events_continues_on_error(monkeypatch, connector):
 def test_fetch_events_empty_records_no_checkpoint(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
-        c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "example.com"
 
@@ -296,6 +372,7 @@ def test_fetch_events_empty_records_no_checkpoint(monkeypatch, connector):
 
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=[])
+    client.search_domain_v1 = AsyncMock(return_value=[])
     connector.save_checkpoint = MagicMock()
 
     async def collect():
@@ -310,7 +387,8 @@ def test_fetch_events_empty_records_no_checkpoint(monkeypatch, connector):
 def test_fetch_events_invalid_added_date(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
-        c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
@@ -323,6 +401,7 @@ def test_fetch_events_invalid_added_date(monkeypatch, connector):
     client.fetch_events = AsyncMock(
         return_value=[{"nom_fuite": "bad-leak", "timestamp": "not-a-date", "status": "finished"}]
     )
+    client.search_domain_v1 = AsyncMock(return_value=[])
 
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
@@ -345,7 +424,8 @@ def test_fetch_events_invalid_added_date(monkeypatch, connector):
 def test_fetch_events_same_added_date_no_max_update(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
-        c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
@@ -360,6 +440,7 @@ def test_fetch_events_same_added_date_no_max_update(monkeypatch, connector):
     ]
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=records)
+    client.search_domain_v1 = AsyncMock(return_value=[])
 
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
@@ -389,7 +470,8 @@ def test_fetch_events_same_added_date_no_max_update(monkeypatch, connector):
 def test_fetch_events_skips_non_dict_and_duplicates(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
-        c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
@@ -406,6 +488,7 @@ def test_fetch_events_skips_non_dict_and_duplicates(monkeypatch, connector):
     ]
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=records)
+    client.search_domain_v1 = AsyncMock(return_value=[])
 
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
@@ -428,7 +511,8 @@ def test_fetch_events_skips_non_dict_and_duplicates(monkeypatch, connector):
 def test_fetch_events_normalizes_download_links(monkeypatch, connector):
     start = datetime.now(timezone.utc) - timedelta(minutes=10)
     with connector.context_store as c:
-        c["last_checkpoint"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
 
     connector.configuration.domains = "example.com"
     connector.configuration.chunk_size = 10
@@ -447,6 +531,7 @@ def test_fetch_events_normalizes_download_links(monkeypatch, connector):
     ]
     client = MagicMock()
     client.fetch_events = AsyncMock(return_value=records)
+    client.search_domain_v1 = AsyncMock(return_value=[])
 
     async def collect():
         return [batch async for batch in connector.fetch_events(client)]
@@ -465,6 +550,52 @@ def test_fetch_events_normalizes_download_links(monkeypatch, connector):
             }
         ]
     ]
+
+
+def test_fetch_events_domain_search_batches_and_checkpoint(monkeypatch, connector):
+    start = datetime.now(timezone.utc) - timedelta(minutes=10)
+    with connector.context_store as c:
+        c["last_checkpoint_events"] = start.isoformat().replace("+00:00", "Z")
+        c["last_checkpoint_searches"] = start.isoformat().replace("+00:00", "Z")
+
+    connector.configuration.domains = "example.com"
+    connector.configuration.chunk_size = 10
+
+    search_records = [
+        {
+            "email": "alice@chu-rennes.fr",
+            "full_name": "alice dupont",
+            "source": {"name": "vietnamairlines.com", "type": "LEAK", "detection_date": "2026-02-17T09:45:13Z", "date": "2025-10-11T09:23:00Z"},
+        },
+        {
+            "email": "bob@chu-rennes.fr",
+            "full_name": "bob martin",
+            "source": {"name": "vietnamairlines.com", "type": "LEAK", "detection_date": "2026-02-17T09:45:13Z", "date": "2025-10-11T09:23:00Z"},
+        },
+    ]
+
+    monkeypatch.setattr("anozrway_modules.historical_connector.events_collected", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_requests", MagicMock())
+    monkeypatch.setattr("anozrway_modules.historical_connector.api_request_duration", MagicMock())
+
+    client = MagicMock()
+    client.fetch_events = AsyncMock(return_value=[])
+    client.search_domain_v1 = AsyncMock(return_value=search_records)
+
+    async def collect():
+        return [batch async for batch in connector.fetch_events(client)]
+
+    results = asyncio.run(collect())
+
+    assert len(results) == 1
+    assert len(results[0]) == 2
+    assert results[0][0]["email"] == "alice@chu-rennes.fr"
+    assert results[0][0]["_searched_domain"] == "example.com"
+    assert results[0][0]["_context"] == "demo"
+    assert results[0][1]["email"] == "bob@chu-rennes.fr"
+
+    with connector.context_store as c:
+        assert "last_checkpoint_searches" in c
 
 
 def test_next_batch_uses_client(monkeypatch, connector):
