@@ -23,7 +23,7 @@
   "name": "AWS",
   "uuid": "b4462429-6f0f-42b5-87b8-430111697d28",
   "slug": "aws",
-  "version": "1.33.15",
+  "version": "1.33.16",
   "categories": ["Cloud Providers"],
   "supports_validation": true
 }
