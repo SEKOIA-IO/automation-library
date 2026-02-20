@@ -296,7 +296,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
         created_time = timestamp
         first_seen_time = isoparse(agent.registeredAt).timestamp() if agent.registeredAt else None
         last_seen_time = isoparse(agent.lastActiveDate).timestamp() if agent.lastActiveDate else None
-        boot_time = int(isoparse(agent.osStartTime).timestamp()) if agent.osStartTime else None
+        boot_time = isoparse(agent.osStartTime).timestamp() if agent.osStartTime else None
 
         # Build groups list if available
         groups = None
@@ -328,7 +328,7 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             subnet=agent.groupIp,  # Network subnet/range (e.g., "31.155.5.x")
             network_interfaces=network_interfaces,
             model=agent.modelName,
-            vendor_name="SentinelOne",
+            vendor_name=agent.modelName,
             boot_time=boot_time,
             created_time=created_time,
             first_seen_time=first_seen_time,
