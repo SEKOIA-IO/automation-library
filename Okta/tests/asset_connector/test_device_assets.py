@@ -263,6 +263,58 @@ def test_get_device_os_case_insensitive(test_okta_device_asset_connector):
 
 
 # ========================================
+# Tests: get_device_type method
+# ========================================
+def test_get_device_type_windows_desktop(test_okta_device_asset_connector):
+    device_type, device_type_id = test_okta_device_asset_connector.get_device_type("windows")
+
+    assert device_type == DeviceTypeStr.DESKTOP
+    assert device_type_id == DeviceTypeId.DESKTOP
+
+
+def test_get_device_type_macos_desktop(test_okta_device_asset_connector):
+    device_type, device_type_id = test_okta_device_asset_connector.get_device_type("macos")
+
+    assert device_type == DeviceTypeStr.DESKTOP
+    assert device_type_id == DeviceTypeId.DESKTOP
+
+
+def test_get_device_type_ios_mobile(test_okta_device_asset_connector):
+    device_type, device_type_id = test_okta_device_asset_connector.get_device_type("ios")
+
+    assert device_type == DeviceTypeStr.MOBILE
+    assert device_type_id == DeviceTypeId.MOBILE
+
+
+def test_get_device_type_android_mobile(test_okta_device_asset_connector):
+    device_type, device_type_id = test_okta_device_asset_connector.get_device_type("android")
+
+    assert device_type == DeviceTypeStr.MOBILE
+    assert device_type_id == DeviceTypeId.MOBILE
+
+
+def test_get_device_type_linux_other(test_okta_device_asset_connector):
+    device_type, device_type_id = test_okta_device_asset_connector.get_device_type("linux")
+
+    assert device_type == DeviceTypeStr.OTHER
+    assert device_type_id == DeviceTypeId.OTHER
+
+
+def test_get_device_type_unknown_other(test_okta_device_asset_connector):
+    device_type, device_type_id = test_okta_device_asset_connector.get_device_type("unknown")
+
+    assert device_type == DeviceTypeStr.OTHER
+    assert device_type_id == DeviceTypeId.OTHER
+
+
+def test_get_device_type_case_insensitive(test_okta_device_asset_connector):
+    device_type, device_type_id = test_okta_device_asset_connector.get_device_type("WINDOWS")
+
+    assert device_type == DeviceTypeStr.DESKTOP
+    assert device_type_id == DeviceTypeId.DESKTOP
+
+
+# ========================================
 # Tests: map_fields method
 # ========================================
 @pytest.mark.asyncio
@@ -291,8 +343,8 @@ async def test_map_fields_success(test_okta_device_asset_connector):
     assert isinstance(result, DeviceOCSFModel)
     assert result.device.hostname == "Test Device"
     assert result.device.uid == "dev1"
-    assert result.device.type == DeviceTypeStr.OTHER
-    assert result.device.type_id == DeviceTypeId.OTHER
+    assert result.device.type == DeviceTypeStr.DESKTOP
+    assert result.device.type_id == DeviceTypeId.DESKTOP
     assert result.device.os.name == "Windows"
     assert result.device.vendor_name == "Dell"
     assert result.device.model == "Latitude 7420"
@@ -387,8 +439,8 @@ async def test_get_assets_success(test_okta_device_asset_connector):
                 device=Device(
                     hostname="Device 1",
                     uid="dev1",
-                    type_id=DeviceTypeId.OTHER,
-                    type=DeviceTypeStr.OTHER,
+                    type_id=DeviceTypeId.DESKTOP,
+                    type=DeviceTypeStr.DESKTOP,
                     location=None,
                     os=OperatingSystem(name="Windows", type=OSTypeStr.WINDOWS, type_id=OSTypeId.WINDOWS),
                 ),
@@ -409,8 +461,8 @@ async def test_get_assets_success(test_okta_device_asset_connector):
                 device=Device(
                     hostname="Device 2",
                     uid="dev2",
-                    type_id=DeviceTypeId.OTHER,
-                    type=DeviceTypeStr.OTHER,
+                    type_id=DeviceTypeId.DESKTOP,
+                    type=DeviceTypeStr.DESKTOP,
                     location=None,
                     os=OperatingSystem(name="macOS", type=OSTypeStr.MACOS, type_id=OSTypeId.MACOS),
                 ),
@@ -782,6 +834,8 @@ async def test_map_fields_all_encryption_types(test_okta_device_asset_connector)
 
     result = await test_okta_device_asset_connector.map_fields(device_user_encryption)
 
+    assert result.device.type == DeviceTypeStr.MOBILE
+    assert result.device.type_id == DeviceTypeId.MOBILE
     assert result.enrichments is not None
     assert len(result.enrichments) == 1
     assert "user" in result.enrichments[0].data.Storage_encryption.partitions
@@ -805,6 +859,8 @@ async def test_map_fields_all_encryption_types(test_okta_device_asset_connector)
 
     result = await test_okta_device_asset_connector.map_fields(device_full_encryption)
 
+    assert result.device.type == DeviceTypeStr.DESKTOP
+    assert result.device.type_id == DeviceTypeId.DESKTOP
     assert result.enrichments is not None
     assert len(result.enrichments) == 1
     assert "full" in result.enrichments[0].data.Storage_encryption.partitions
@@ -832,6 +888,8 @@ async def test_map_fields_with_hardware_enrichment(test_okta_device_asset_connec
 
     result = await test_okta_device_asset_connector.map_fields(device_with_hardware)
 
+    assert result.device.type == DeviceTypeStr.DESKTOP
+    assert result.device.type_id == DeviceTypeId.DESKTOP
     assert result.enrichments is not None
     assert len(result.enrichments) == 1
     assert result.enrichments[0].name == "device_info"
@@ -864,6 +922,8 @@ async def test_map_fields_with_combined_enrichment(test_okta_device_asset_connec
 
     result = await test_okta_device_asset_connector.map_fields(device_with_both)
 
+    assert result.device.type == DeviceTypeStr.DESKTOP
+    assert result.device.type_id == DeviceTypeId.DESKTOP
     assert result.enrichments is not None
     assert len(result.enrichments) == 1
 

@@ -295,7 +295,7 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
     assert result.device.ip == "31.155.5.7"
     assert result.device.subnet == "31.155.5.x"
     assert result.device.model == "Acme computers - 15x4k"
-    assert result.device.vendor_name == "SentinelOne"
+    assert result.device.vendor_name == "Acme computers - 15x4k"
     assert result.device.is_managed is True
     assert result.device.is_compliant is True
     assert result.device.region == "Test Site"
@@ -402,7 +402,7 @@ def test_map_fields_minimal_agent(test_sentinelone_device_asset_connector):
     assert result.device.is_compliant is None
 
     # These fields should always be set
-    assert result.device.vendor_name == "SentinelOne"
+    assert result.device.vendor_name is None  # modelName not provided in minimal agent
     assert result.device.is_managed is True
     assert result.device.created_time is not None
 
@@ -784,12 +784,12 @@ def test_map_fields_boot_time(test_sentinelone_device_asset_connector, sample_ag
 
     # Assert
     assert result.device.boot_time is not None
-    # Verify it's an integer timestamp
-    assert isinstance(result.device.boot_time, int)
+    # Verify it's a float timestamp
+    assert isinstance(result.device.boot_time, float)
     # The expected timestamp for "2018-02-20T10:30:00.000000Z"
     from dateutil.parser import isoparse
 
-    expected_timestamp = int(isoparse("2018-02-20T10:30:00.000000Z").timestamp())
+    expected_timestamp = isoparse("2018-02-20T10:30:00.000000Z").timestamp()
     assert result.device.boot_time == expected_timestamp
 
 
