@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-20 - 1.21.8
+
+### Fixed
+
+- Fix device asset boot_time field to use float timestamp instead of integer
+- Fix device asset vendor_name to use actual model name from agent data instead of hardcoded value
+
 ## 2026-02-11 - 1.21.7
 
 ### Added
