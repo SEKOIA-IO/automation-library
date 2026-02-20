@@ -96,11 +96,11 @@ class WizGqlClient(object):
         self.timeout = timeout or 60  # default to 60s
 
     @classmethod
-    def create(cls, client_id: str, client_secret: str, tenant_url: str) -> "WizGqlClient":
+    def create(cls, client_id: str, client_secret: str, tenant_url: str, timeout: int | None = None) -> "WizGqlClient":
         auth_url = WizTokenRefresher.create_url_from_tenant(tenant_url)
         token_refresher = WizTokenRefresher(client_id, client_secret, auth_url)
 
-        return cls(client_id, client_secret, tenant_url, token_refresher)
+        return cls(client_id, client_secret, tenant_url, token_refresher, timeout)
 
     async def close(self) -> None:
         if self.token_refresher is not None:
