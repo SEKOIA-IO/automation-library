@@ -87,18 +87,20 @@ class WizGqlClient(object):
         client_secret: str,
         tenant_url: str,
         token_refresher: WizTokenRefresher,
+        timeout: int | None = None,
     ) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
         self.tenant_url = tenant_url
         self.token_refresher = token_refresher
+        self.timeout = 60 if timeout is None else timeout  # default to 60s, preserve explicit falsy values
 
     @classmethod
-    def create(cls, client_id: str, client_secret: str, tenant_url: str) -> "WizGqlClient":
+    def create(cls, client_id: str, client_secret: str, tenant_url: str, timeout: int | None = None) -> "WizGqlClient":
         auth_url = WizTokenRefresher.create_url_from_tenant(tenant_url)
         token_refresher = WizTokenRefresher(client_id, client_secret, auth_url)
 
-        return cls(client_id, client_secret, tenant_url, token_refresher)
+        return cls(client_id, client_secret, tenant_url, token_refresher, timeout)
 
     async def close(self) -> None:
         if self.token_refresher is not None:
@@ -118,7 +120,7 @@ class WizGqlClient(object):
                     headers={"Authorization": f"Bearer {token.access_token}"},
                 )
 
-                yield Client(transport=transport)
+                yield Client(transport=transport, execute_timeout=self.timeout)
 
     async def request(self, query: str, variable_values: dict[str, str | None] | None = None) -> dict[str, Any]:
         async with self._session() as session:

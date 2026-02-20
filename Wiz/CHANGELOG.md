@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-19 - 1.4.1
+
+### Fixed
+
+- Add the ability to set the timeout on GraphQL queries
+
 ## 2026-02-04 - 1.4.0
 
 ### Added
