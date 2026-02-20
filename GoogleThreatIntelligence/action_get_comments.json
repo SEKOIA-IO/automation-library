@@ -1,0 +1,141 @@
+{
+  "uuid": "a8e3b5f1-3f4a-4b2d-8f7e-1b2f6c9d5e11",
+  "name": "Get Comments",
+  "description": "Retrieve recent comments associated with a domain or IP from Google Threat Intelligence",
+  "docker_parameters": "get_comments",
+  "arguments": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "ip": {
+        "type": "string",
+        "description": "IP address to query (e.g., 8.8.8.8)"
+      },
+      "domain": {
+        "type": "string",
+        "description": "Domain name to query (e.g., google.com)"
+      },
+      "url": {
+        "type": "string",
+        "description": "URL to query (e.g., https://example.com/path)"
+      },
+      "file_hash": {
+        "type": "string",
+        "description": "File hash to query (MD5, SHA1, or SHA256)"
+      }
+    },
+    "oneOf": [
+      {
+        "required": [
+          "ip"
+        ]
+      },
+      {
+        "required": [
+          "domain"
+        ]
+      },
+      {
+        "required": [
+          "url"
+        ]
+      },
+      {
+        "required": [
+          "file_hash"
+        ]
+      }
+    ]
+  },
+  "results": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Get Comments Results",
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "data": {
+        "type": "object",
+        "description": "Container for the comments data",
+        "properties": {
+          "comments_count": {
+            "type": "integer",
+            "description": "Total number of comments retrieved"
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity (domain, IP, URL, or file hash) that was queried"
+          },
+          "comments": {
+            "type": "array",
+            "description": "Array of comment objects",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Type of the object (always 'comment')",
+                  "enum": [
+                    "comment"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier for the comment"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The comment text content"
+                },
+                "date": {
+                  "type": [
+                    "integer",
+                    "string"
+                  ],
+                  "description": "Comment timestamp (Unix timestamp or ISO 8601 string)"
+                },
+                "votes": {
+                  "type": "object",
+                  "description": "Vote statistics for the comment",
+                  "properties": {
+                    "positive": {
+                      "type": "integer",
+                      "description": "Number of positive votes"
+                    },
+                    "negative": {
+                      "type": "integer",
+                      "description": "Number of negative votes"
+                    }
+                  },
+                  "required": [
+                    "positive",
+                    "negative"
+                  ]
+                },
+                "author": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Username of the comment author (may be null for anonymous)"
+                }
+              },
+              "required": [
+                "text",
+                "date",
+                "votes"
+              ]
+            }
+          }
+        },
+        "required": [
+          "comments_count",
+          "entity",
+          "comments"
+        ]
+      }
+    }
+  },
+  "slug": "get_comments_in_gti"
+}
