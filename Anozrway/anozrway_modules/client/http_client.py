@@ -47,7 +47,7 @@ class AnozrwayClient:
 
     @staticmethod
     def _to_iso(dt: datetime) -> str:
-        return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     async def _post_with_retry(
         self,
@@ -61,23 +61,21 @@ class AnozrwayClient:
         if not self._session:
             raise AnozrwayError("HTTP session not initialized")
 
-        access_token = await self._get_access_token()
-
         url = f"{self.base_url}{path}"
-        headers = {
-            "Content-Type": "application/json",
-            "authorization": f"Bearer {access_token}",
-        }
-
-        if self.x_restrict_access:
-            headers["x-restrict-access"] = str(self.x_restrict_access)
-
         max_attempts = 3
         attempt = 0
         backoff = 1
 
         while attempt < max_attempts:
             attempt += 1
+
+            access_token = await self._get_access_token()
+            headers = {
+                "Content-Type": "application/json",
+                "authorization": f"Bearer {access_token}",
+            }
+            if self.x_restrict_access:
+                headers["x-restrict-access"] = str(self.x_restrict_access)
 
             async with self._rate_limiter:
                 async with self._session.post(
@@ -86,7 +84,7 @@ class AnozrwayClient:
                     status = resp.status
 
                     if status == 401:
-                        self._token_refresher._token = None  # force token refresh on retry
+                        self._token_refresher._token = None  # force token refresh on next attempt
                         if attempt < max_attempts:
                             continue
                         raise AnozrwayAuthError(unauthorized_msg)
