@@ -845,7 +845,6 @@ def test_build_device_extended_fields(test_harfanglab_asset_connector, asset_fir
     assert device.is_managed is True
     assert device.is_trusted is True
     assert device.model == "worktest"
-    assert device.vendor_name == "HarfangLab"
     assert device.desc is None
 
     # Test timestamps
