@@ -51,10 +51,19 @@
         "watermarked_count": 8
       }
     },
+    "file": {
+      "name": "employees.csv"
+    },
     "observer": {
       "product": "Balise Pipeline",
       "type": "application",
-      "vendor": "Anozrway"
+      "vendor": "Anozrway",
+      "version": "1.0.0"
+    },
+    "related": {
+      "hosts": [
+        "example.com"
+      ]
     },
     "threat": {
       "indicator": {
@@ -65,6 +74,15 @@
         "provider": "anozrway",
         "type": "file"
       }
+    },
+    "url": {
+      "domain": "example.com",
+      "full": "https://example.com/dl1",
+      "path": "/dl1",
+      "port": 443,
+      "registered_domain": "example.com",
+      "scheme": "https",
+      "top_level_domain": "com"
     }
   }
 }

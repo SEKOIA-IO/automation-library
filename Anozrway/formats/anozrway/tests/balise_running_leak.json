@@ -40,7 +40,13 @@
     "observer": {
       "product": "Balise Pipeline",
       "type": "application",
-      "vendor": "Anozrway"
+      "vendor": "Anozrway",
+      "version": "1.0.0"
+    },
+    "related": {
+      "hosts": [
+        "example.org"
+      ]
     },
     "threat": {
       "indicator": {
@@ -49,6 +55,11 @@
         "last_seen": "2025-11-15T15:00:00Z",
         "name": "partial-leak-2025"
       }
+    },
+    "url": {
+      "domain": "example.org",
+      "registered_domain": "example.org",
+      "top_level_domain": "org"
     }
   }
 }

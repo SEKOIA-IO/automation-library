@@ -15,6 +15,7 @@ pipeline:
   - name: map_ecs_core
   - name: ecs_categorization
   - name: set_threat_indicator
+  - name: set_url_file_pivots
   - name: set_related
   - name: cleanup
 
@@ -295,14 +296,28 @@ stages:
 
   set_threat_indicator:
     actions:
-      # Balise Pipeline: file indicator (only when files are present)
+      # Balise Pipeline: file indicator (uploaded_files non-empty)
       - set:
           threat.indicator.type: "file"
           threat.indicator.provider: "anozrway"
         filter: >-
           {{ parsed_event.message.nom_fuite is defined and
              parsed_event.message.uploaded_files is defined and
+             parsed_event.message.uploaded_files is not none and
              parsed_event.message.uploaded_files | length > 0 }}
+
+      # Balise Pipeline: url indicator fallback (no files, but links present)
+      - set:
+          threat.indicator.type: "url"
+          threat.indicator.provider: "anozrway"
+        filter: >-
+          {{ parsed_event.message.nom_fuite is defined and
+             (parsed_event.message.uploaded_files is not defined or
+              parsed_event.message.uploaded_files is none or
+              parsed_event.message.uploaded_files | length == 0) and
+             parsed_event.message.download_links is defined and
+             parsed_event.message.download_links is not none and
+             parsed_event.message.download_links | length > 0 }}
 
       - set:
           threat.indicator.first_seen: "{{ parsed_event.message.timestamp }}"
@@ -331,6 +346,110 @@ stages:
              parsed_event.message.source.type is defined and
              parsed_event.message.source.detection_date is defined and
              parsed_event.message.source.detection_date is not none }}
+
+  set_url_file_pivots:
+    actions:
+      # ── A. url.full from download_links[0] ─────────────────────────────────
+      # Strip surrounding double-quotes that some links carry (e.g. "\"http://...\"")
+      - set:
+          url.full: >-
+            {%- set raw = parsed_event.message.download_links[0] -%}
+            {{ raw.strip('"') }}
+        filter: >-
+          {{ parsed_event.message.nom_fuite is defined and
+             parsed_event.message.download_links is defined and
+             parsed_event.message.download_links is not none and
+             parsed_event.message.download_links | length > 0 and
+             parsed_event.message.download_links[0] is not none and
+             parsed_event.message.download_links[0] is string }}
+
+      # ── A. url.domain for .onion hosts ─────────────────────────────────────
+      # Extract host from scheme://host[:port]/path — only when host ends in .onion
+      - set:
+          url.domain: >-
+            {%- set after = final['url.full'].split('://')[1] -%}
+            {%- set host_port = after.split('/')[0] -%}
+            {{ host_port.split(':')[0] if ':' in host_port else host_port }}
+        filter: >-
+          {{ final['url.full'] is defined and
+             '://' in final['url.full'] and
+             '.onion' in final['url.full'] }}
+
+      # ── A. related.hosts for .onion hosts ──────────────────────────────────
+      - set:
+          related.hosts: >-
+            {%- set after = final['url.full'].split('://')[1] -%}
+            {%- set host_port = after.split('/')[0] -%}
+            {%- set host = host_port.split(':')[0] if ':' in host_port else host_port -%}
+            {{ (final.related.hosts | default([])) + [host] }}
+        filter: >-
+          {{ final['url.full'] is defined and
+             '://' in final['url.full'] and
+             '.onion' in final['url.full'] }}
+
+      # ── A. related.ip for non-.onion hosts (IP-addressed URLs in context) ──
+      # Note: assumes non-.onion download links point to IP addresses (as per examples).
+      # If plain-domain URLs appear, extend this stage with explicit IP detection.
+      - set:
+          related.ip: >-
+            {%- set after = final['url.full'].split('://')[1] -%}
+            {%- set host_port = after.split('/')[0] -%}
+            {%- set host = host_port.split(':')[0] if ':' in host_port else host_port -%}
+            {{ (final.related.ip | default([])) + [host] }}
+        filter: >-
+          {{ final['url.full'] is defined and
+             '://' in final['url.full'] and
+             '.onion' not in final['url.full'] }}
+
+      # ── A. threat.indicator.url.full mirrors url.full ──────────────────────
+      - set:
+          threat.indicator.url.full: "{{ final['url.full'] }}"
+        filter: >-
+          {{ parsed_event.message.nom_fuite is defined and
+             final['url.full'] is defined }}
+
+      # ── B. file.name from uploaded_files[0].filename ───────────────────────
+      - set:
+          file.name: "{{ parsed_event.message.uploaded_files[0].filename }}"
+        filter: >-
+          {{ parsed_event.message.nom_fuite is defined and
+             parsed_event.message.uploaded_files is defined and
+             parsed_event.message.uploaded_files is not none and
+             parsed_event.message.uploaded_files | length > 0 and
+             parsed_event.message.uploaded_files[0].filename is defined and
+             parsed_event.message.uploaded_files[0].filename is not none }}
+
+      # ── B. file.extension derived from file.name (last token after '.') ────
+      - set:
+          file.extension: "{{ final['file.name'].split('.')[-1] | lower }}"
+        filter: >-
+          {{ final['file.name'] is defined and
+             '.' in final['file.name'] }}
+
+      # ── E. observer.version from Balise version field ──────────────────────
+      - set:
+          observer.version: "{{ parsed_event.message.version }}"
+        filter: >-
+          {{ parsed_event.message.nom_fuite is defined and
+             parsed_event.message.version is defined and
+             parsed_event.message.version is not none }}
+
+      # ── F. url.domain from _searched_domain (only when url.domain not set) ─
+      - set:
+          url.domain: "{{ parsed_event.message._searched_domain }}"
+        filter: >-
+          {{ parsed_event.message.nom_fuite is defined and
+             parsed_event.message._searched_domain is defined and
+             parsed_event.message._searched_domain is not none and
+             final['url.domain'] is not defined }}
+
+      # ── F. related.hosts from _searched_domain ─────────────────────────────
+      - set:
+          related.hosts: "{{ (final.related.hosts | default([])) + [parsed_event.message._searched_domain] }}"
+        filter: >-
+          {{ parsed_event.message.nom_fuite is defined and
+             parsed_event.message._searched_domain is defined and
+             parsed_event.message._searched_domain is not none }}
 
   set_related:
     actions:
