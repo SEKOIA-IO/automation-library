@@ -19,7 +19,7 @@ runs:
       id: install-dependencies
       shell: bash
       run: |
-        uv sync
+        uv sync --frozen
       working-directory: ${{ inputs.module }}
 
     - name: Execute Black
