@@ -75,10 +75,6 @@ anozrway.record.other_email:
   name: anozrway.record.other_email
   type: keyword
 
-anozrway.record.postal_code:
-  description: Postal code found in the breach record.
-  name: anozrway.record.postal_code
-  type: keyword
 
 anozrway.record.work:
   description: Job title or position found in the breach record.

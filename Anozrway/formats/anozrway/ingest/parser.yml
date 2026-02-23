@@ -163,7 +163,6 @@ stages:
       - set:
           anozrway.record.other_email: "{{ parsed_event.message.other_email }}"
           anozrway.record.work: "{{ parsed_event.message.work }}"
-          anozrway.record.postal_code: "{{ parsed_event.message.postal_code }}"
         filter: "{{ parsed_event.message.source is defined and parsed_event.message.source.type is defined }}"
 
       # NOT mapped on purpose: password, phone_number, physical_address, birthday
@@ -222,6 +221,10 @@ stages:
       - set:
           source.geo.country_name: "{{ parsed_event.message.country }}"
         filter: "{{ parsed_event.message.source is defined and parsed_event.message.country is defined }}"
+
+      - set:
+          source.geo.postal_code: "{{ parsed_event.message.postal_code }}"
+        filter: "{{ parsed_event.message.source is defined and parsed_event.message.postal_code is defined }}"
 
       - set:
           threat.indicator.type: "email-addr"

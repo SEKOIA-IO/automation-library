@@ -26,8 +26,7 @@
     "@timestamp": "2025-11-16T11:13:00Z",
     "anozrway": {
       "record": {
-        "other_email": "jane.doe@example.org",
-        "postal_code": "12345"
+        "other_email": "jane.doe@example.org"
       },
       "source": {
         "data": [
@@ -62,7 +61,8 @@
     },
     "source": {
       "geo": {
-        "city_name": "springfield"
+        "city_name": "springfield",
+        "postal_code": "12345"
       }
     },
     "threat": {
