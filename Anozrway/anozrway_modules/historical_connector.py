@@ -285,6 +285,11 @@ class AnozrwayHistoricalConnector(AsyncConnector):
 
             if batch:
                 yield batch
+            elif records:
+                self.log(
+                    message=f"All {len(records)} events already seen (deduplicated) for domain={domain} [{endpoint_label}]",
+                    level="info",
+                )
 
         if max_seen_ts:
             self.save_checkpoint(max_seen_ts + timedelta(seconds=1), source=source)
