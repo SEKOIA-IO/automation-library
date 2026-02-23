@@ -222,10 +222,15 @@ class AnozrwayHistoricalConnector(AsyncConnector):
                     end_date=end,
                 )
                 status = 200
+            except AnozrwayAuthError:
+                raise
             except Exception as e:
                 status = getattr(e, "status", None) or "error"
                 api_requests.labels(intake_key=intake_key, endpoint=endpoint_label, status_code=str(status)).inc()
-                self.log_exception(e, message=f"Error fetching {endpoint_label} events for domain={domain}")
+                self.log(
+                    message=f"Error fetching {endpoint_label} events for domain={domain}: {e}",
+                    level="warning",
+                )
                 continue
             finally:
                 api_request_duration.labels(intake_key=intake_key).observe(datetime.now().timestamp() - t0)

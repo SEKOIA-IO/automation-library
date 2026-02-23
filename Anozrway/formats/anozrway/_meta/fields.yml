@@ -70,16 +70,6 @@ anozrway.balise.watermarked_count:
   type: long
 
 # Domain Search fields (no ECS equivalent)
-anozrway.record.first_name:
-  description: First name found in the breach record.
-  name: anozrway.record.first_name
-  type: keyword
-
-anozrway.record.last_name:
-  description: Last name found in the breach record.
-  name: anozrway.record.last_name
-  type: keyword
-
 anozrway.record.other_email:
   description: Additional email address found in the breach record.
   name: anozrway.record.other_email
@@ -99,11 +89,6 @@ anozrway.source.data:
   description: List of field types present in the breach record.
   name: anozrway.source.data
   type: keyword
-
-anozrway.source.date:
-  description: Source publication date.
-  name: anozrway.source.date
-  type: date
 
 anozrway.source.detection_date:
   description: Detection date reported by Anozrway.

@@ -57,19 +57,7 @@ stages:
              parsed_event.message.last_updated is not none and
              parsed_event.message.last_updated is string }}
 
-      # Domain Search: detection_date (priority)
-      - set:
-          "@timestamp": >-
-            {%- set ts = parsed_event.message.source.detection_date -%}
-            {{ ts if '.' in ts else ts.replace('Z', '.000000Z') }}
-        filter: >-
-          {{ parsed_event.message.source is defined and
-             parsed_event.message.source.type is defined and
-             parsed_event.message.source.detection_date is defined and
-             parsed_event.message.source.detection_date is not none and
-             parsed_event.message.source.detection_date is string }}
-
-      # Domain Search: source.date fallback
+      # Domain Search: source.date (primary)
       - set:
           "@timestamp": >-
             {%- set ts = parsed_event.message.source.date -%}
@@ -77,11 +65,23 @@ stages:
         filter: >-
           {{ parsed_event.message.source is defined and
              parsed_event.message.source.type is defined and
-             (parsed_event.message.source.detection_date is not defined or
-              parsed_event.message.source.detection_date is none) and
              parsed_event.message.source.date is defined and
              parsed_event.message.source.date is not none and
              parsed_event.message.source.date is string }}
+
+      # Domain Search: detection_date fallback
+      - set:
+          "@timestamp": >-
+            {%- set ts = parsed_event.message.source.detection_date -%}
+            {{ ts if '.' in ts else ts.replace('Z', '.000000Z') }}
+        filter: >-
+          {{ parsed_event.message.source is defined and
+             parsed_event.message.source.type is defined and
+             (parsed_event.message.source.date is not defined or
+              parsed_event.message.source.date is none) and
+             parsed_event.message.source.detection_date is defined and
+             parsed_event.message.source.detection_date is not none and
+             parsed_event.message.source.detection_date is string }}
 
       # Global fallback: created_at
       - set:
@@ -155,14 +155,11 @@ stages:
       # --- Domain Search custom fields (no ECS equivalent) ---
       - set:
           anozrway.source.type: "{{ parsed_event.message.source.type }}"
-          anozrway.source.date: "{{ parsed_event.message.source.date }}"
           anozrway.source.detection_date: "{{ parsed_event.message.source.detection_date }}"
           anozrway.source.data: "{{ parsed_event.message.source.data }}"
         filter: "{{ parsed_event.message.source is defined and parsed_event.message.source.type is defined }}"
 
       - set:
-          anozrway.record.first_name: "{{ parsed_event.message.first_name }}"
-          anozrway.record.last_name: "{{ parsed_event.message.last_name }}"
           anozrway.record.other_email: "{{ parsed_event.message.other_email }}"
           anozrway.record.work: "{{ parsed_event.message.work }}"
           anozrway.record.postal_code: "{{ parsed_event.message.postal_code }}"
@@ -184,6 +181,34 @@ stages:
       - set:
           user.full_name: "{{ parsed_event.message.full_name }}"
         filter: "{{ parsed_event.message.source is defined and parsed_event.message.full_name is defined }}"
+
+      - set:
+          user.full_name: "{{ parsed_event.message.first_name ~ ' ' ~ parsed_event.message.last_name }}"
+        filter: >-
+          {{ parsed_event.message.source is defined and
+             final['user.full_name'] is not defined and
+             parsed_event.message.first_name is defined and
+             parsed_event.message.first_name is not none and
+             parsed_event.message.last_name is defined and
+             parsed_event.message.last_name is not none }}
+
+      - set:
+          user.full_name: "{{ parsed_event.message.first_name }}"
+        filter: >-
+          {{ parsed_event.message.source is defined and
+             final['user.full_name'] is not defined and
+             parsed_event.message.first_name is defined and
+             parsed_event.message.first_name is not none and
+             (parsed_event.message.last_name is not defined or parsed_event.message.last_name is none) }}
+
+      - set:
+          user.full_name: "{{ parsed_event.message.last_name }}"
+        filter: >-
+          {{ parsed_event.message.source is defined and
+             final['user.full_name'] is not defined and
+             parsed_event.message.last_name is defined and
+             parsed_event.message.last_name is not none and
+             (parsed_event.message.first_name is not defined or parsed_event.message.first_name is none) }}
 
       - set:
           organization.name: "{{ parsed_event.message.company }}"
@@ -297,6 +322,15 @@ stages:
           threat.indicator.name: "{{ parsed_event.message.nom_fuite }}"
           threat.indicator.description: "Data leak: {{ parsed_event.message.nom_fuite }}"
         filter: "{{ parsed_event.message.nom_fuite is defined }}"
+
+      # Domain Search: first_seen from source.detection_date
+      - set:
+          threat.indicator.first_seen: "{{ parsed_event.message.source.detection_date }}"
+        filter: >-
+          {{ parsed_event.message.source is defined and
+             parsed_event.message.source.type is defined and
+             parsed_event.message.source.detection_date is defined and
+             parsed_event.message.source.detection_date is not none }}
 
   set_related:
     actions:

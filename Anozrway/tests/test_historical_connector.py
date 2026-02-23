@@ -356,7 +356,7 @@ def test_fetch_events_continues_on_error(monkeypatch, connector):
             }
         ]
     ]
-    connector.log_exception.assert_called()
+    connector.log.assert_called()
 
 
 def test_fetch_events_empty_records_no_checkpoint(monkeypatch, connector):

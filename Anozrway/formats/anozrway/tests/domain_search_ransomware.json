@@ -29,7 +29,6 @@
         "data": [
           "email"
         ],
-        "date": "2026-01-06T09:25:03Z",
         "detection_date": "2026-01-06T09:25:03Z",
         "type": "RANSOMWARE"
       }
@@ -44,6 +43,7 @@
         "email": {
           "address": "john.smith@example.com"
         },
+        "first_seen": "2026-01-06T09:25:03Z",
         "type": "email-addr",
         "url": {
           "domain": "ransom-group.example.net"

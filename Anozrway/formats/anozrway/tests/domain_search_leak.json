@@ -23,11 +23,9 @@
         "indicator"
       ]
     },
-    "@timestamp": "2025-11-17T11:13:51Z",
+    "@timestamp": "2025-11-16T11:13:00Z",
     "anozrway": {
       "record": {
-        "first_name": "jane",
-        "last_name": "doe",
         "other_email": "jane.doe@example.org",
         "postal_code": "12345"
       },
@@ -45,7 +43,6 @@
           "postal_code",
           "username"
         ],
-        "date": "2025-11-16T11:13:00Z",
         "detection_date": "2025-11-17T11:13:51Z",
         "type": "LEAK"
       }
@@ -73,6 +70,7 @@
         "email": {
           "address": "jane.doe@example.com"
         },
+        "first_seen": "2025-11-17T11:13:51Z",
         "type": "email-addr",
         "url": {
           "domain": "leaked-site.example.org"
@@ -81,6 +79,7 @@
     },
     "user": {
       "email": "jane.doe@example.com",
+      "full_name": "jane doe",
       "name": "user1234"
     }
   }
