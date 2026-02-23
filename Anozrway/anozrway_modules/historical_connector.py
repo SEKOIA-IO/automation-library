@@ -238,6 +238,10 @@ class AnozrwayHistoricalConnector(AsyncConnector):
             api_requests.labels(intake_key=intake_key, endpoint=endpoint_label, status_code=str(status)).inc()
 
             if not records:
+                self.log(
+                    message=f"No new events found for domain={domain} [{endpoint_label}] (from {start.isoformat()} to {end.isoformat()})",
+                    level="info",
+                )
                 continue
 
             events_collected.labels(intake_key=intake_key).inc(len(records))
