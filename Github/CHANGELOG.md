@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-24 - 1.11.3
+
+### Changed
+
+- Change the way to handle the Bad Credentials exception
+
 ## 2026-02-06 - 1.11.2
 
 ### Fixed
