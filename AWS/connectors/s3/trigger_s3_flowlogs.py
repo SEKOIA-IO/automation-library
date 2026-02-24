@@ -4,18 +4,16 @@ import ipaddress
 from collections.abc import AsyncGenerator
 from itertools import islice
 
-from aws_helpers.utils import AsyncReader
+from aws_helpers.utils import AsyncReader, unescape_string
 from connectors.metrics import DISCARDED_EVENTS
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
 
 
-class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration):
+class AwsS3FlowLogsConfiguration(AwsS3QueuedConfiguration, AwsS3LogsBaseConfiguration):
     """AwsS3FlowLogsTrigger configuration."""
 
     ignore_comments: bool = False
-    skip_first: int = 0
-    separator: str
 
 
 class BaseAwsS3FlowLogsTrigger:
@@ -57,7 +55,7 @@ class BaseAwsS3FlowLogsTrigger:
         content = await stream.read()
 
         records: list[str] = []
-        for record in content.decode("utf-8").split(self.configuration.separator):
+        for record in content.decode("utf-8").split(self.configuration.sep):
             if len(record) > 0:
                 if not self.check_all_ips_are_private(record):
                     records.append(record)

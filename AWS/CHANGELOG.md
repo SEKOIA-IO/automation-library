@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-24 - 1.33.16
+
+### Changed
+
+- Accept human-readable separators (e.g. literal `\n` instead of new line in a field)
+
 ## 2026-02-18 - 1.33.15
 
 ### Changed
