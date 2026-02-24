@@ -113,12 +113,7 @@ class AuditLogConnector(AsyncConnector):
         Args:
             last_ts: int
         """
-        try:
-            return await self.github_client.get_audit_logs(start_from=last_ts)
-
-        except BadCredentialsError as exc:
-            self.log(message=str(exc), level="critical")
-            raise
+        return await self.github_client.get_audit_logs(start_from=last_ts)
 
     def _refine_batch(self, batch: list[dict[str, Any]], batch_start_time: float) -> list[dict[str, Any]]:
         """
@@ -203,6 +198,11 @@ class AuditLogConnector(AsyncConnector):
                 while self.running:
                     loop.run_until_complete(self.next_batch())
 
+            except BadCredentialsError as exc:
+                self.log(
+                    message="The authentication Failed. Please check you credendial. error=Bad credential status_code=401",
+                    level="critical",
+                )
             except Exception as error:
                 traceback.print_exc()
                 self.log_exception(error, message="Failed to forward events")
