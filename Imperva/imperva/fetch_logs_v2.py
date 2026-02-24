@@ -117,14 +117,14 @@ class ImpervaLogsConnector(Connector):
                 level="info",
             )
 
+            return HandlingFileResult(log_name=log_name, successful=True, last_timestamp=last_timestamp)
+
         except Exception as e:
             self.log(
                 message=f"Fail file decryption or handling : {str(e)}",
                 level="error",
             )
             return HandlingFileResult(log_name=log_name, successful=False)
-
-        return HandlingFileResult(log_name=log_name, successful=True, last_timestamp=last_timestamp)
 
     def handle_log_decrypted_content(self, decrypted_file: bytes) -> None:
         decrypted_file_text: str = decrypted_file.decode("utf-8")  # many lines
@@ -279,18 +279,18 @@ class ImpervaLogsConnector(Connector):
 
                     self.last_seen_log = max(self.processed)
                     self.cursor.offset = self.last_seen_log.get_filename()
-
-                # get the ending time and compute the duration to fetch the events
-                batch_end_time = time.time()
-                batch_duration = int(batch_end_time - batch_start_time)
-                self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
-                FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
             except Exception as e:
                 self.log_exception(e)
 
                 # Clear failed items - successful ones already removed in process_file
                 additions_set = set(additions)
                 self.in_progress = deque(item for item in self.in_progress if item not in additions_set)
+
+            # get the ending time and compute the duration to fetch the events
+            batch_end_time = time.time()
+            batch_duration = int(batch_end_time - batch_start_time)
+            self.log(f"Fetched and forwarded events in {batch_duration} seconds", level="info")
+            FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
             # compute the remaining sleeping time. If greater than 0, sleep
             delta_sleep = self.configuration.frequency - batch_duration
