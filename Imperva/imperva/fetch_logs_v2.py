@@ -8,9 +8,9 @@ from functools import cached_property
 from posixpath import join as urljoin
 
 import requests
+from cryptography.hazmat.primitives import padding as sym_padding
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import padding as sym_padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from pydantic.v1 import BaseModel
 from sekoia_automation.checkpoint import CheckpointCursor

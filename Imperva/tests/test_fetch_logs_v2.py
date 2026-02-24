@@ -152,18 +152,14 @@ def test_decrypt_file_with_encryption(trigger, encrypted_aes_key, aes_key, publi
     content_encrypted_sym_key = base64.b64encode(encrypted_aes_key)
     true_value = b"Event 1: 11232323423\nEvent2: 234234234234\nEvent 3: 23234234243\nEvent2: 234234234234\nEvent 3: 23234234243\nEvent2: 234234234234\nEvent 3: 23234234242\n"
 
-    header = (
-        b"""accountId:1
+    header = b"""accountId:1
 configId:2
 checksum:549c035bf2ffcaa0fe1b7644f8edf61b
 format:CEF
 startTime:1759413560916
 endTime:1759413775485
 publicKeyId:1
-key:"""
-        + content_encrypted_sym_key
-        + b"\n|==|\n"
-    )
+key:""" + content_encrypted_sym_key + b"\n|==|\n"
 
     encrypted_content = encrypt_with_aes(true_value, aes_key)
     encrypted_without_compression = header + encrypted_content
