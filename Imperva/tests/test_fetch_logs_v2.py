@@ -121,7 +121,9 @@ def test_handle_file(trigger, file_1):
         assert len(logs) == 1
 
         res = trigger.handle_file(logs[0])
-        assert res == HandlingFileResult(successful=True, log_name=logs[0], last_timestamp=1759413775485)
+        assert res == HandlingFileResult(
+            successful=True, log_name=logs[0], last_timestamp=1759413775485, nb_forwarded_events=0
+        )
 
         assert trigger.push_events_to_intakes.call_count == 1
 
