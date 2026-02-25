@@ -78,7 +78,7 @@ version = "^1.22.3"
 path = "sentinel-mgmt-sdk.tar.gz"
 
 [tool.poetry.dependencies.gql]
-extras = ["aiohttp"]
+extras = ["aiohttp", "requests"]
 version = "^3.5.0"
 
 [tool.poetry.dev-dependencies.black]
