@@ -54,7 +54,7 @@ def test_update_asset_with_tags_as_list(requests_mock):
     action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
     asset_uuid = uuid.uuid4()
     tags_list = ["tag1", "tag2", "tag3"]
-    arguments = {"uuid": str(asset_uuid), "tags": tags_list}
+    arguments = {"uuid": str(asset_uuid), "tags": list(tags_list)}
     response = {
         "uuid": "00000000-0000-0000-0000-000000000123",
         "entity_uuid": "00000000-0000-0000-0000-000000000000",
