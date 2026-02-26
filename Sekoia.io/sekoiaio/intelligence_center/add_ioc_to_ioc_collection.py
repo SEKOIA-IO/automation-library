@@ -1,9 +1,11 @@
-import requests
 import ipaddress
 from datetime import datetime, timedelta
 
-from .base import InThreatBaseAction
+import requests
+
 from sekoiaio.utils import datetime_to_str
+
+from .base import InThreatBaseAction
 
 
 class AddIOCtoIOCCollectionAction(InThreatBaseAction):
@@ -50,18 +52,21 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
             "hash": "file.hashes",
         }
 
-        indicators = self.json_argument("indicators", arguments)
+        indicators = self.json_argument("indicators", arguments, required=False)
+        single_indicator = arguments.get("indicator")
         ioc_collection_id = arguments.get("ioc_collection_id")
         indicator_type = arguments.get("indicator_type")
         valid_for = int(arguments.get("valid_for", 0))
 
-        if str(indicator_type) == "IP address":
-            if not isinstance(indicators, list):
-                raise ValueError("Indicators should be list type")
+        result_indicators = indicators or [single_indicator]
 
-            self.add_IP_action(indicators, ioc_collection_id, valid_for)
+        if str(indicator_type) == "IP address":
+            if not isinstance(indicators, list) and not single_indicator:
+                raise ValueError("Indicators should be list type, or you should provide a single indicator value")
+
+            self.add_IP_action(result_indicators, ioc_collection_id, valid_for)
         else:
             if _type := indicator_type_mapping.get(str(indicator_type)):
-                self.perform_request(indicators, ioc_collection_id, _type, valid_for)
+                self.perform_request(result_indicators, ioc_collection_id, _type, valid_for)
             else:
                 self.error(f"Improper indicator type {indicator_type}")
