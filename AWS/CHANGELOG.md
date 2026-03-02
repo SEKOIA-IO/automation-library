@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+## 2026-02-24 - 1.33.17
+
+### Changed
+
+- Accept human-readable separators (e.g. literal `\n` instead of new line in a field)
+
+## 2026-02-20 - 1.33.16
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.3
+
+## 2026-02-18 - 1.33.15
+
+### Changed
+
+- Change the way to provide the SQS client and the S3 client to the connector and trigger
+
+## 2026-02-12 - 1.33.14
+
+### Added
+
+- Add the ability to define the SQS message visibility timeout through env variable
+
 ## 2026-02-11 - 1.33.13
 
 ### Added

@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 import orjson
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AwsAccountProvider
 from deep_visibility.metrics import DISCARDED_EVENTS
 
 EXCLUDED_EVENT_TYPES = [
@@ -14,7 +15,7 @@ EXCLUDED_EVENT_TYPES = [
 ]
 
 
-class DeepVisibilityConnector(AbstractAwsS3QueuedConnector):
+class DeepVisibilityConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
     """Implementation of DeepVisibilityConnector."""
 
     configuration: AwsS3QueuedConfiguration

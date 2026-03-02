@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-11 - 1.1.1
+
+### Added
+
+- Add headers to identify the application when calling the API
+
 ## 2025-12-09 - 1.1.0
 
 ### Added

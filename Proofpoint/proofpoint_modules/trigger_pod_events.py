@@ -94,10 +94,19 @@ class PoDEventsConsumer(Thread):
         try:
             message = orjson.loads(event)
             message["type"] = self.configuration.type.value
-            self.most_recent_date_seen = message.get("ts")
+            timestamp = message.get("ts")
+
+            if isinstance(timestamp, str):
+                self.most_recent_date_seen = isoparse(timestamp)
+            else:
+                self.most_recent_date_seen = timestamp
 
             INCOMING_EVENTS.labels(intake_key=self.configuration.intake_key).inc()
-            self.queue.put((self.most_recent_date_seen, message))
+
+            # we put the message in the queue with the most recent date seen as timestamp,
+            # so the forwarder can update the checkpoint and compute the lag
+            timestamp_iso = self.most_recent_date_seen.isoformat() if self.most_recent_date_seen else None
+            self.queue.put((timestamp_iso, message))
         except Exception as ex:
             self.connector.log_exception(ex, message="Failed to consume event")
 
@@ -142,7 +151,7 @@ class EventsForwarder(Thread):
         most_recent_date_seen_str = None
         while self.is_running:
             try:
-                (timestamp_str, message) = self.queue.get(block=True, timeout=0.5)
+                timestamp_str, message = self.queue.get(block=True, timeout=0.5)
 
                 if message.get("type") == "message" and "msgParts" in message and "guid" in message:
                     events.extend(split_message(message))

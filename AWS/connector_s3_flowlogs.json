@@ -22,7 +22,7 @@
       "separator": {
         "type": "string",
         "description": "The separator used between each records (default: the linefeed character '\\n')",
-        "default": "\n"
+        "default": "\\n"
       },
       "skip_first": {
         "type": "integer",

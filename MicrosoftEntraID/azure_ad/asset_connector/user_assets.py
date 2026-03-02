@@ -1,6 +1,5 @@
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from functools import cached_property
 
 from azure.identity.aio import ClientSecretCredential  # async credentials only
 from kiota_abstractions.base_request_configuration import RequestConfiguration

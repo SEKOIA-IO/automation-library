@@ -2,7 +2,6 @@
 
 from prometheus_client import Counter
 
-
 prom_namespace = "symphony_module_sentinelone_dv"
 
 
