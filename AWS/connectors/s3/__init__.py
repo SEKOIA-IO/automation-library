@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator
 from typing import Any, Optional
 
 import orjson
-from pydantic.v1 import BaseModel
+from pydantic.v1 import BaseModel, Field
 
 from aws_helpers.utils import AsyncReader, normalize_s3_key, unescape_string
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
@@ -25,7 +25,7 @@ class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
 
 class AwsS3LogsBaseConfiguration(BaseModel):
     skip_first: int = 0
-    separator: str
+    separator: str = Field(min_length=1)
 
     @property
     def sep(self) -> str:
