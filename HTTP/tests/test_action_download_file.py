@@ -34,10 +34,22 @@ def test_download_file(symphony_storage, file_mock):
     result = action.run(dict(url=URL))
 
     assert "file_path" in result
-    path = symphony_storage / result["file_path"]
-    assert path.exists() is True
+    assert "file_relative_path" in result
 
-    with path.open("rb") as fp:
+    # file_path is absolute
+    abs_path = Path(result["file_path"])
+    assert abs_path.is_absolute()
+    assert abs_path.exists() is True
+
+    # file_relative_path is relative and resolves correctly under data_path
+    rel_path = Path(result["file_relative_path"])
+    assert not rel_path.is_absolute()
+    assert (symphony_storage / rel_path).exists() is True
+
+    # Both point to the same file
+    assert symphony_storage / rel_path == abs_path
+
+    with abs_path.open("rb") as fp:
         assert fp.read() == FILE
 
 
@@ -47,6 +59,7 @@ def test_download_file_arguments_headers(symphony_storage, file_mock):
     result = action.run(dict(url=URL, headers={"foo": "bar"}))
 
     assert "file_path" in result
+    assert "file_relative_path" in result
     assert "foo" in file_mock._adapter.last_request.headers
     assert file_mock._adapter.last_request.headers["foo"] == "bar"
 
@@ -57,6 +70,7 @@ def test_download_file_arguments_and_module_headers(symphony_storage, file_mock)
     result = action.run(dict(url=URL, headers={"foo": "baz"}))
 
     assert "file_path" in result
+    assert "file_relative_path" in result
     assert "foo" in file_mock._adapter.last_request.headers
     assert file_mock._adapter.last_request.headers["foo"] == "baz"  # The one used is the one from arguments
     assert file_mock._adapter.last_request.headers["other"] == "set"
@@ -68,4 +82,5 @@ def test_download_file_no_verify(symphony_storage, file_mock):
     result = action.run(dict(url=URL, verify_ssl=False))
 
     assert "file_path" in result
+    assert "file_relative_path" in result
     assert file_mock._adapter.last_request.verify is False

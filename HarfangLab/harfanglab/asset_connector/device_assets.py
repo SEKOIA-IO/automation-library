@@ -257,7 +257,6 @@ class HarfanglabAssetConnector(AssetConnector):
             hypervisor=None,
             region=None,
             model=asset.get("producttype"),
-            vendor_name="HarfangLab",
         )
 
     def build_enrichments(self, asset: dict[str, Any]) -> DeviceEnrichmentObject | None:
