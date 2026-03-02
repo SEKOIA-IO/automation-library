@@ -44,15 +44,19 @@ def trigger(symphony_storage):
 
     yield trigger
 
+@pytest.fixture
+def batch_status_queue():
+    return queue.Queue()
+
 
 @pytest.fixture
-def event_collector(trigger, events_queue):
-    return EventCollector(trigger, events_queue)
+def event_collector(trigger, events_queue, batch_status_queue):
+    return EventCollector(trigger, events_queue, batch_status_queue)
 
 
 @pytest.fixture
-def forwarder(trigger, events_queue):
-    return EventsForwarder(trigger, events_queue, 500)
+def forwarder(trigger, events_queue, batch_status_queue):
+    return EventsForwarder(trigger, events_queue, batch_status_queue, 500)
 
 
 def test_query_api_wrong_creds(trigger, event_collector, requests_mock):
@@ -166,25 +170,31 @@ def test_next_batch_error_should_wait(event_collector, requests_mock):
 
 def test_tranformer_with_event(trigger, events_queue):
     input_queue = queue.Queue()
-    transformer = Transformer(trigger, input_queue, events_queue)
+    batch_status_queue = queue.Queue()
+    transformer = Transformer(trigger, input_queue, events_queue, batch_status_queue)
 
-    input_queue.put('"user_id","username"\r\n"-1","foo"')
+    input_queue.put(("batch-1", '"user_id","username"\r\n"-1","foo"'))
     transformer.start()
     time.sleep(0.5)
     transformer.stop()
 
-    events = events_queue.get(block=False)
+    batch_ids, events = events_queue.get(block=False)
     assert events == ["user_id=-1 username=foo"]
+    assert "batch-1" in batch_ids
 
 
-def test_forwarder(trigger, forwarder, events_queue):
-    events_queue.put("message")
+def test_forwarder(trigger, forwarder, events_queue, batch_status_queue):
+    batch_id = "batch-test"
+    events = ["user_id=-1 username=foo"]
+    events_queue.put((batch_id, events))
+
     forwarder.start()
     time.sleep(1)
     forwarder.stop()
 
     assert trigger.push_events_to_intakes.called
-
+    confirmed_batch = batch_status_queue.get(block=False)
+    assert confirmed_batch == batch_id
 
 def test_sleep_until_next_batch(event_collector):
     end_date = datetime(2023, 3, 22, 11, 50, 46, tzinfo=timezone.utc)
