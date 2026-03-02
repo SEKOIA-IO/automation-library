@@ -55,10 +55,10 @@ class AddIOCtoIOCCollectionAction(InThreatBaseAction):
         indicator_type = arguments.get("indicator_type")
         valid_for = int(arguments.get("valid_for", 0))
 
-        if str(indicator_type) == "IP address":
-            if not isinstance(indicators, list):
-                raise ValueError("Indicators should be list type")
+        if not isinstance(indicators, list):
+            raise ValueError("Indicators should be list type")
 
+        if str(indicator_type) == "IP address":
             self.add_IP_action(indicators, ioc_collection_id, valid_for)
         else:
             if _type := indicator_type_mapping.get(str(indicator_type)):
