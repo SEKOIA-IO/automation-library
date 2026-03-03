@@ -9,9 +9,10 @@ import pandas
 
 from aws_helpers.utils import AsyncReader
 from connectors.s3 import AbstractAwsS3QueuedConnector
+from connectors.s3.provider import AwsAccountProvider
 
 
-class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
+class BaseAwsS3OcsfTrigger:
     """Implementation of AwsS3OcsfTrigger."""
 
     name = "AWS S3 OCSF records"
@@ -52,3 +53,7 @@ class AwsS3OcsfTrigger(AbstractAwsS3QueuedConnector):
         for record in records:
             if len(record) > 0:
                 yield orjson.dumps(record).decode("utf-8")
+
+
+class AwsS3OcsfTrigger(BaseAwsS3OcsfTrigger, AbstractAwsS3QueuedConnector, AwsAccountProvider):
+    """AWS S3 OCSF Trigger connector."""

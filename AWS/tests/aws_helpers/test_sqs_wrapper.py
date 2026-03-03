@@ -163,7 +163,7 @@ async def test_receive_messages(sqs_wrapper, sqs_wrapper_configuration, session_
 
         mock_client.return_value.__aenter__.return_value = mock_sqs
 
-        async with sqs_wrapper.receive_messages(max_messages=6) as messages:
+        async with sqs_wrapper.receive_messages(max_messages=6, visibility_timeout=60) as messages:
             assert messages == expected_messages
 
         mock_client.assert_has_calls([call("sqs")])

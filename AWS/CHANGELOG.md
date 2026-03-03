@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-24 - 1.33.17
+
+### Changed
+
+- Accept human-readable separators (e.g. literal `\n` instead of new line in a field)
+
+## 2026-02-20 - 1.33.16
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.3
+
+## 2026-02-18 - 1.33.15
+
+### Changed
+
+- Change the way to provide the SQS client and the S3 client to the connector and trigger
+
+## 2026-02-12 - 1.33.14
+
+### Added
+
+- Add the ability to define the SQS message visibility timeout through env variable
+
+## 2026-02-11 - 1.33.13
+
+### Added
+
+- Add asset connector mapping files for AWS device assets
+
+## 2025-02-09 - 1.33.12
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
+
+## 2026-01-29 - 1.33.11
+
+### Changed
+
+- Update asset connector name
+
+## 2026-01-23 - 1.33.10
+
+### Changed
+
+- Update internals field inside arguments of AWS asset connectors
+
+## 2026-01-22 - 1.33.9
+
+### Changed
+
+- Added internals field to AWS asset connectors
+
 ## 2025-12-11 - 1.33.8
 
 ### Changed
