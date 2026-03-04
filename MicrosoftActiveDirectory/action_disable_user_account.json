@@ -16,9 +16,56 @@
         "title": "BaseDN",
         "description": "The starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
         "type": "string"
+      },
+      "display_name": {
+        "title": "Display Name",
+        "description": "Filter by displayName attribute to narrow results when multiple users share the same email",
+        "type": "string"
+      },
+      "apply_to_all": {
+        "title": "Apply to All",
+        "description": "When true, apply action to all matching users instead of failing when multiple users are found",
+        "type": "boolean",
+        "default": false
       }
     }
   },
-  "results": {},
+  "results": {
+    "title": "Results",
+    "type": "object",
+    "properties": {
+      "affected_users": {
+        "title": "Affected Users",
+        "description": "List of users affected by the action (only when apply_to_all is true)",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "dn": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "error": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "total_found": {
+        "title": "Total Found",
+        "type": "integer"
+      },
+      "total_success": {
+        "title": "Total Success",
+        "type": "integer"
+      },
+      "total_failed": {
+        "title": "Total Failed",
+        "type": "integer"
+      }
+    }
+  },
   "slug": "disable_user"
 }

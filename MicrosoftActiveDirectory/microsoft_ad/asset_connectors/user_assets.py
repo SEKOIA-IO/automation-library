@@ -1,31 +1,24 @@
 import datetime
-
-from typing import Any
 from collections.abc import Generator
+from typing import Any
 
 from ldap3 import ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
-
-from sekoia_automation.storage import PersistentJSON
 from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.ocsf.base import (
-    Metadata,
-    Product,
-)
+from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.group import Group
+from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
+from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
 from sekoia_automation.asset_connector.models.ocsf.user import (
-    UserOCSFModel,
-    User as UserOCSF,
-    Account,
-    AccountTypeId,
-    AccountTypeStr,
-    UserEnrichmentObject,
     UserDataObject,
-    UserTypeStr,
+    UserEnrichmentObject,
+    UserOCSFModel,
     UserTypeId,
+    UserTypeStr,
 )
+from sekoia_automation.storage import PersistentJSON
 
 from microsoft_ad.client.ldap_client import LDAPClient
-from microsoft_ad.models.common_models import MicrosoftADModule, MicrosoftADConnectorConfiguration
+from microsoft_ad.models.common_models import MicrosoftADConnectorConfiguration, MicrosoftADModule
 
 
 class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):

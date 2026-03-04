@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-04 - 1.5.0
+
+### Added
+
+- Support for `display_name` parameter to narrow LDAP search when multiple users share the same email
+- Support for `apply_to_all` parameter to apply actions (disable, enable, reset password) to all matching users
 ## 2026-02-11 - 1.4.7
 
 ### Added
