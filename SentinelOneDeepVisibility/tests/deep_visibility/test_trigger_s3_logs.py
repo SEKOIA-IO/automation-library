@@ -21,9 +21,7 @@ def test_data() -> bytes:
 {"src.process.parent.isStorylineRoot":false,"event.category":"file","indicator.category":"InfoStealer","event.type":"File Scan"}
 2 111111111111 eni-0a479835a7588c9ca 188.114.116.1 172.31.39.167 123 44789 17 1 76 1645469669 1645469724 ACCEPT OK
 
-""".encode(
-        "utf-8"
-    )
+""".encode("utf-8")
 
 
 @pytest.fixture

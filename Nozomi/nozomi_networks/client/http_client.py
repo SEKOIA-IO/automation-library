@@ -21,6 +21,7 @@ class NozomiClient(object):
         key_token: str,
         base_url: str = "https://vantagetechalliancesinstance.customers.us1.vantage.nozominetworks.io",
         page_size: int = 25,
+        default_headers: dict[str, str] | None = None,
     ) -> None:
         """
         Initialize the NozomiClient with the provided credentials and base URL.
@@ -35,6 +36,7 @@ class NozomiClient(object):
         self.base_url = base_url
         self.page_size = page_size
         self._authorization: str | None = None
+        self._default_headers = default_headers or {}
 
         self._rate_limiter = AsyncLimiter(max_rate=60, time_period=60)  # 60 requests per minute
 
@@ -47,7 +49,7 @@ class NozomiClient(object):
             AsyncGenerator[ClientSession, None]:
         """
         if self._session is None:
-            self._session = ClientSession()
+            self._session = ClientSession(headers=self._default_headers)
 
         if self._rate_limiter:
             async with self._rate_limiter:

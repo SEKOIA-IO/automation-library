@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.12.4 - 2026-02-18
+
+### Changed
+
+- Upgrade AWS dependency
+
+## 1.12.3 - 2025-10-23
+
+### Added
+
+- Add the ability to define the SQS message visibility timeout through env variable
+
 ## 1.12.2 - 2025-10-23
 
 ### Fixed

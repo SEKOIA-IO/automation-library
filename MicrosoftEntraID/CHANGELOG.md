@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-20 - 2.10.17
+
+### Changed
+
+- Update sekoia-automation-sdk dependency to version 1.22.3
+- Update black dependency to version 26.1.0
+
+## 2026-02-23 - 2.10.16
+
+### Changed
+
+- Update field descriptions for "Reset User Password" actions
+
+## 2026-02-11 - 2.10.15
+
+### Added
+
+- Add asset connector mapping files for Microsoft Entra ID user assets
+
 ## 2026-02-09 - 2.10.14
 
 ### Fixed

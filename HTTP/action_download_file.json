@@ -30,12 +30,17 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
       "file_path": {
-        "description": "File path on disk",
+        "description": "Absolute file path on disk (legacy, prefer file_relative_path for chaining with other modules)",
+        "type": "string"
+      },
+      "file_relative_path": {
+        "description": "File path relative to the playbook data directory, suitable for use as input to other modules (e.g. Scan File)",
         "type": "string"
       }
     },
     "required": [
-      "file_path"
+      "file_path",
+      "file_relative_path"
     ],
     "title": "Results",
     "type": "object"

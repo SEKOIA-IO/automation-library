@@ -8,7 +8,7 @@ import aiofiles
 import pytest
 from faker import Faker
 
-from aws_helpers.utils import async_gzip_open, get_content, is_gzip_compressed, normalize_s3_key
+from aws_helpers.utils import async_gzip_open, get_content, is_gzip_compressed, normalize_s3_key, unescape_string
 
 
 def test_normalize_s3_key():
@@ -66,3 +66,12 @@ async def test_async_gzip_reader():
 
         reader = await async_gzip_open(io.BytesIO(await f.read()))
         assert await reader.read() == content
+
+
+def test_unescape_separator():
+    test_1 = "\\r\\n\\t,"
+    assert unescape_string(test_1) == "\r\n\t,"
+
+    # Need to be backward compatible - we had literal values before
+    test_2 = "\r\n\t,"
+    assert unescape_string(test_2) == "\r\n\t,"

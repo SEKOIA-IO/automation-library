@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-23 - 1.29.5
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.3
+
+### Fixed
+
+- Fix OCSF device field by removing vendor_name property
+
+## 2026-02-11 - 1.29.4
+
+### Added
+
+- Add asset connector mapping files for HarfangLab device assets
+
 ## 2025-02-09 - 1.29.3
 
 ### Changed

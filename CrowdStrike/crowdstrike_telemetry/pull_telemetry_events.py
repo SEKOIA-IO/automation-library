@@ -10,6 +10,7 @@ from aws_helpers.sqs_wrapper import SqsConfiguration, SqsWrapper
 from aws_helpers.utils import AsyncReader, normalize_s3_key
 from connectors.metrics import INCOMING_EVENTS
 from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from connectors.s3.provider import AwsAccountProvider
 from pydantic.v1 import Field
 
 from crowdstrike_telemetry import CrowdStrikeTelemetryModule
@@ -62,7 +63,7 @@ class CrowdStrikeTelemetryConnectorConfig(AwsS3QueuedConfiguration):
     is_fifo: bool | None = None
 
 
-class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
+class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector, AwsAccountProvider):
     """Implementation of CrowdStrikeTelemetryConnector."""
 
     name = "CrowdStrikeTelemetryConnector"
@@ -75,6 +76,7 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
 
         self.limit_of_events_to_push = int(os.getenv("AWS_BATCH_SIZE", 10000))
         self.sqs_max_messages = int(os.getenv("AWS_SQS_MAX_MESSAGES", 10))
+        self.sqs_visibility_timeout = int(os.getenv("AWS_SQS_VISIBILITY_TIMEOUT", 60))
         self.s3_max_fetch_concurrency = int(os.getenv("AWS_S3_MAX_CONCURRENCY_FETCH", 10000))
         self.s3_fetch_concurrency_sem = BoundedSemaphore(self.s3_max_fetch_concurrency)
 
@@ -162,7 +164,9 @@ class CrowdStrikeTelemetryConnector(AbstractAwsS3QueuedConnector):
         continue_receiving = True
 
         while continue_receiving:
-            async with self.sqs_wrapper.receive_messages(max_messages=self.sqs_max_messages) as messages:
+            async with self.sqs_wrapper.receive_messages(
+                max_messages=self.sqs_max_messages, visibility_timeout=self.sqs_visibility_timeout
+            ) as messages:
                 message_records = []
 
                 if not messages:

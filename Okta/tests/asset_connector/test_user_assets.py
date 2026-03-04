@@ -438,7 +438,8 @@ class TestOktaUserAssetConnector:
         # Verify
         assert result is None
 
-    def test_update_checkpoint_success(self, mock_connector):
+    @pytest.mark.asyncio
+    async def test_update_checkpoint_success(self, mock_connector):
         """Test successful checkpoint update."""
         # Setup
         mock_connector.new_most_recent_date = "2023-01-01T00:00:00.000Z"
@@ -446,26 +447,28 @@ class TestOktaUserAssetConnector:
         mock_connector.context.__enter__.return_value = mock_cache
 
         # Execute
-        mock_connector.update_checkpoint()
+        await mock_connector.update_checkpoint()
 
         # Verify
         assert mock_cache["most_recent_date_seen"] == "2023-01-01T00:00:00.000Z"
         mock_connector.log.assert_called_with("Checkpoint updated with date: 2023-01-01T00:00:00.000Z", level="info")
 
-    def test_update_checkpoint_none_date(self, mock_connector):
+    @pytest.mark.asyncio
+    async def test_update_checkpoint_none_date(self, mock_connector):
         """Test checkpoint update when new_most_recent_date is None."""
         # Setup
         mock_connector.new_most_recent_date = None
 
         # Execute
-        mock_connector.update_checkpoint()
+        await mock_connector.update_checkpoint()
 
         # Verify
         mock_connector.log.assert_called_with(
             "Warning: new_most_recent_date is None, skipping checkpoint update", level="warning"
         )
 
-    def test_update_checkpoint_error(self, mock_connector):
+    @pytest.mark.asyncio
+    async def test_update_checkpoint_error(self, mock_connector):
         """Test checkpoint update with error."""
         # Setup
         mock_connector.new_most_recent_date = "2023-01-01T00:00:00.000Z"
@@ -474,7 +477,7 @@ class TestOktaUserAssetConnector:
         mock_connector.log_exception = MagicMock()  # Mock log_exception method
 
         # Execute
-        mock_connector.update_checkpoint()
+        await mock_connector.update_checkpoint()
 
         # Verify
         # Check that log was called with the error message
