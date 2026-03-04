@@ -23,7 +23,7 @@ class ResetUserPasswordAction(MicrosoftADAction):
     def run(self, arguments: ResetPassUserArguments):
         self.log(f"Starting password reset for user: {arguments.username}", level="info")
 
-        user_query = self.search_userdn_query(arguments.username, arguments.basedn, arguments.display_name)
+        user_query = self.search_userdn_query(arguments.username, arguments.basedn, arguments.email)
 
         if len(user_query) == 0:
             raise Exception(f"User not found: {arguments.username}")
@@ -81,7 +81,7 @@ class EnableUserAction(MicrosoftADAction):
     def run(self, arguments: UserAccountArguments):
         self.log(f"Starting enabling user account: {arguments.username}", level="info")
 
-        user_query = self.search_userdn_query(arguments.username, arguments.basedn, arguments.display_name)
+        user_query = self.search_userdn_query(arguments.username, arguments.basedn, arguments.email)
 
         if len(user_query) == 0:
             raise Exception(f"User not found: {arguments.username}")
@@ -141,7 +141,7 @@ class DisableUserAction(MicrosoftADAction):
     def run(self, arguments: UserAccountArguments):
         self.log(f"Starting disable action for user: {arguments.username}", level="info")
 
-        user_query = self.search_userdn_query(arguments.username, arguments.basedn, arguments.display_name)
+        user_query = self.search_userdn_query(arguments.username, arguments.basedn, arguments.email)
 
         if len(user_query) == 0:
             raise Exception(f"User not found: {arguments.username}")
