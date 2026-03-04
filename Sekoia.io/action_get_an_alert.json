@@ -574,6 +574,48 @@
           }
         }
       },
+      "custom_status_uuid": {
+        "type": "string",
+        "format": "uuid",
+        "x-nullable": true,
+        "description": "UUID of the custom status associated to the alert"
+      },
+      "custom_status": {
+        "x-nullable": true,
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          }
+        }
+      },
+      "verdict": {
+        "x-nullable": true,
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          }
+        }
+      },
       "created_by": {
         "type": "string"
       },
