@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-04 - 1.5.1
+
+### Changed
+
+- Replace `display_name` filter parameter with `email` (mail attribute) for more precise user disambiguation across all user actions
+
+### Fixed
+
+- LDAP search filter incorrectly built when `username` is `None` or empty, causing the OR clause to match nothing (e.g. `(samaccountname=)`)
+- When only `email` is provided without `username`, the filter now correctly resolves to `(mail=<email>)` instead of the broken `(&(|(samaccountname=)...)(mail=<email>))`
+- Raise `ValueError` early when both `username` and `email` are missing
+
 ## 2026-03-04 - 1.5.0
 
 ### Added
