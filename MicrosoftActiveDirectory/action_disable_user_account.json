@@ -17,9 +17,9 @@
         "description": "The starting point an LDAP server uses when searching for users authentication within your Directory. (e.g DC=example-domain,DC=com)",
         "type": "string"
       },
-      "display_name": {
-        "title": "Display Name",
-        "description": "Filter by displayName attribute to narrow results when multiple users share the same email",
+      "email": {
+        "title": "Email",
+        "description": "Filter by email address (mail attribute) to narrow results when multiple users share the same name",
         "type": "string"
       },
       "apply_to_all": {

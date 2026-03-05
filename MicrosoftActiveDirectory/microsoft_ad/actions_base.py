@@ -26,15 +26,25 @@ class MicrosoftADAction(Action):
 
         return conn
 
-    def search_userdn_query(self, username, basedn, display_name=None):
-        safe_username = escape_filter_chars(username)
-        or_filter = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
+    def search_userdn_query(self, username, basedn, email=None):
+        has_username = bool(username)
+        has_email = bool(email)
 
-        if display_name is not None:
-            safe_display_name = escape_filter_chars(display_name)
-            search_filter = f"(&{or_filter}(displayName={safe_display_name}))"
-        else:
+        if not has_username and not has_email:
+            raise ValueError("At least one of 'username' or 'email' must be provided")
+
+        if has_username:
+            safe_username = escape_filter_chars(username)
+            or_filter = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
+
+        if has_username and has_email:
+            safe_email = escape_filter_chars(email)
+            search_filter = f"(&{or_filter}(mail={safe_email}))"
+        elif has_username:
             search_filter = or_filter
+        else:
+            safe_email = escape_filter_chars(email)
+            search_filter = f"(mail={safe_email})"
 
         self.log(f"Starting search in {basedn} for {username}", level="debug")
 

@@ -285,11 +285,11 @@ def test_disable_display_name_passed_to_search(one_user_dn):
                 {
                     "username": "test_username",
                     "basedn": "cn=test_basedn",
-                    "display_name": "Test User",
+                    "email": "test@example.com",
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "Test User")
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
 
 
 def test_enable_display_name_passed_to_search(one_user_dn):
@@ -307,11 +307,11 @@ def test_enable_display_name_passed_to_search(one_user_dn):
                 {
                     "username": "test_username",
                     "basedn": "cn=test_basedn",
-                    "display_name": "Test User",
+                    "email": "test@example.com",
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "Test User")
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
 
 
 def test_reset_password_display_name_passed_to_search(one_user_dn):
@@ -329,11 +329,11 @@ def test_reset_password_display_name_passed_to_search(one_user_dn):
                     "username": "test_username",
                     "basedn": "cn=test_basedn",
                     "new_password": "test_new_password",
-                    "display_name": "Test User",
+                    "email": "test@example.com",
                 }
             )
 
-            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "Test User")
+            mock_search.assert_called_once_with("test_username", "cn=test_basedn", "test@example.com")
 
 
 def test_enable_apply_to_all_total_failure(two_users_dn):
