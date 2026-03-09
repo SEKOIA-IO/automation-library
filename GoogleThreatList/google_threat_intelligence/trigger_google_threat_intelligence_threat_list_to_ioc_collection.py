@@ -184,17 +184,79 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
     def initialize_client(self) -> None:
         """Initialize HTTP session with authentication headers."""
+        # Step 1 — Validate API key presence
         if not self.api_key:
+            self.log(message="VirusTotal API key is missing", level="error")
             raise InvalidAPIKeyError("VirusTotal API key is required")
 
+        # Step 2 — Validate API key format (VT keys are 64 hex chars)
+        masked_key = f"{self.api_key[:4]}…{self.api_key[-4:]}"
         if len(self.api_key) < 64:
+            self.log(
+                message=f"VirusTotal API key format invalid (length={len(self.api_key)}, key={masked_key}). Expected 64 characters.",
+                level="error",
+            )
             raise InvalidAPIKeyError("Invalid VirusTotal API key format")
 
+        self.log(
+            message=f"VirusTotal API key format OK (key={masked_key})",
+            level="info",
+        )
+
+        # Step 3 — Build session
         self.session = requests.Session()
         self.session.headers.update(
             {"X-Apikey": self.api_key, "Accept": "application/json"}
         )
         self.session.verify = True
+
+        # Step 4 — Connectivity check against VT /users/current
+        connectivity_url = f"{self.BASE_URL}/users/current"
+        self.log(
+            message=f"Testing connectivity to VirusTotal API: {connectivity_url}",
+            level="info",
+        )
+        try:
+            resp = self.session.get(connectivity_url, timeout=10)
+            if resp.status_code == 200:
+                self.log(
+                    message="VirusTotal API authentication successful",
+                    level="info",
+                )
+            elif resp.status_code == 401:
+                self.log(
+                    message=f"VirusTotal API authentication failed: invalid or expired key (key={masked_key})",
+                    level="error",
+                )
+                raise InvalidAPIKeyError("Invalid or expired VirusTotal API key")
+            elif resp.status_code == 403:
+                self.log(
+                    message=f"VirusTotal API authentication failed: key lacks required permissions (key={masked_key})",
+                    level="error",
+                )
+                raise InvalidAPIKeyError("VirusTotal API key does not have required permissions")
+            elif resp.status_code == 429:
+                self.log(
+                    message="VirusTotal API rate limit hit during connectivity check",
+                    level="warning",
+                )
+            else:
+                self.log(
+                    message=f"VirusTotal API connectivity check returned unexpected status: {resp.status_code}",
+                    level="warning",
+                )
+        except requests.exceptions.ConnectionError as exc:
+            self.log(
+                message=f"VirusTotal API unreachable: {exc}",
+                level="error",
+            )
+            raise
+        except requests.exceptions.Timeout:
+            self.log(
+                message="VirusTotal API connectivity check timed out (10s)",
+                level="error",
+            )
+            raise
 
         self.log(message="VirusTotal client initialized", level="info")
 
@@ -275,7 +337,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
         # Add IOC types filter
         if self.ioc_types:
-            params["ioc_types"] = ",".join(self.ioc_types)
+            params["type"] = ",".join(self.ioc_types)
 
         # Add extra query params
         if self.extra_query_params:
@@ -337,7 +399,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         url = self.build_query_url(self.threat_list_id, cursor)
         response = self._make_request(url)
 
-        data = response.get("data", [])
+        data = response.get("iocs", [])
         self.log(message=f"Retrieved {len(data)} IoCs", level="info")
 
         return response
@@ -352,13 +414,14 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         Returns:
             Transformed IoC with normalized fields
         """
+        ioc = ioc.get("data", ioc)
         ioc_type = ioc.get("type", "unknown")
         ioc_id = ioc.get("id", "")
         attributes = ioc.get("attributes", {})
 
         # Determine the IOC value based on type
         if ioc_type == "file":
-            value = attributes.get("sha256", ioc_id)
+            value = ioc_id
         elif ioc_type == "url":
             value = attributes.get("url", ioc_id)
         elif ioc_type == "ip_address":
@@ -371,16 +434,23 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         # Create hash for deduplication
         ioc_hash = self._compute_ioc_hash(ioc_type, value)
 
+        gti_score = attributes.get("gti_assessment", {}).get("threat_score", {}).get("value")
+        relationships = ioc.get("relationships", {})
+        malware_families = [
+            item.get("attributes", {}).get("name")
+            for item in relationships.get("malware_families", {}).get("data", [])
+        ]
+
         return {
             "ioc_hash": ioc_hash,
             "type": ioc_type,
             "value": value,
-            "gti_score": attributes.get("gti_score"),
+            "gti_score": gti_score,
             "positives": attributes.get("positives"),
             "total_engines": attributes.get("total_engines"),
-            "malware_families": attributes.get("malware_families", []),
-            "campaigns": attributes.get("campaigns", []),
-            "threat_actors": attributes.get("threat_actors", []),
+            "malware_families": malware_families,
+            "campaigns": [],
+            "threat_actors": [],
             "raw": ioc,
         }
 
@@ -666,7 +736,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
             try:
                 # Fetch IoCs from VirusTotal
                 response = self.fetch_events(cursor)
-                raw_iocs = response.get("data", []) or []
+                raw_iocs = response.get("iocs", []) or []
 
                 # Step 4: page metrics + log
                 meta = response.get("meta", {}) or {}

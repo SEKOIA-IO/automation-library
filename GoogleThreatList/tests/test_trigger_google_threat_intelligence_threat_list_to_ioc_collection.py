@@ -19,6 +19,8 @@ from google_threat_intelligence.trigger_google_threat_intelligence_threat_list_t
     VALID_HAS_VALUES,
 )
 
+VT_USERS_CURRENT_URL = "https://www.virustotal.com/api/v3/users/current"
+
 
 class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     """Unit tests for GoogleThreatIntelligenceThreatListToIOCCollectionTrigger."""
@@ -58,33 +60,45 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         return trigger
 
     @pytest.fixture
+    def initialized_trigger(self, trigger, requests_mock):
+        """Create a trigger with initialize_client() already called (connectivity mocked)."""
+        requests_mock.get(VT_USERS_CURRENT_URL, json={}, status_code=200)
+        trigger.initialize_client()
+        return trigger
+
+    @pytest.fixture
     def sample_vt_response(self):
-        """Sample VirusTotal API response."""
+        """Sample VirusTotal API response matching real API structure."""
         return {
-            "data": [
+            "iocs": [
                 {
-                    "type": "file",
-                    "id": "abc123def456",
-                    "attributes": {
-                        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                        "md5": "d41d8cd98f00b204e9800998ecf8427e",
-                        "gti_score": 75,
-                        "positives": 12,
-                        "total_engines": 70,
-                        "malware_families": ["Emotet"],
-                        "campaigns": ["campaign-2024"],
-                        "threat_actors": ["APT29"],
-                    },
+                    "data": {
+                        "type": "file",
+                        "id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                        "attributes": {
+                            "md5": "d41d8cd98f00b204e9800998ecf8427e",
+                            "gti_assessment": {"threat_score": {"value": 75}},
+                            "positives": 12,
+                            "total_engines": 70,
+                        },
+                        "relationships": {
+                            "malware_families": {
+                                "data": [{"attributes": {"name": "Emotet"}}]
+                            }
+                        },
+                    }
                 },
                 {
-                    "type": "url",
-                    "id": "http://malicious.com/payload.exe",
-                    "attributes": {
-                        "url": "http://malicious.com/payload.exe",
-                        "gti_score": 82,
-                        "positives": 15,
-                        "total_engines": 80,
-                    },
+                    "data": {
+                        "type": "url",
+                        "id": "http://malicious.com/payload.exe",
+                        "attributes": {
+                            "url": "http://malicious.com/payload.exe",
+                            "gti_assessment": {"threat_score": {"value": 82}},
+                            "positives": 15,
+                            "total_engines": 80,
+                        },
+                    }
                 },
             ],
             "meta": {
@@ -139,7 +153,7 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         """Test invalid sleep_time falls back to default."""
         trigger.configuration["sleep_time"] = "invalid"
         assert trigger.sleep_time == 3600
-    
+
     def test_checkpoint_cursor_persisted(self, trigger):
         trigger.save_cursor("cursor123")
         assert trigger.load_cursor() == "cursor123"
@@ -189,7 +203,7 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         """Test extra_query_params property."""
         trigger.configuration["extra_query_params"] = "gti_score:60+"
         assert trigger.extra_query_params == "gti_score:60+"
-    
+
     def test_ioc_collection_properties_default(self, trigger):
         """Test default IOC collection properties."""
         assert trigger.ioc_collection_server == "https://api.sekoia.io"
@@ -203,8 +217,9 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     # Client Initialization Tests
     # =============================================================================
 
-    def test_initialize_client_success(self, trigger):
+    def test_initialize_client_success(self, trigger, requests_mock):
         """Test successful client initialization."""
+        requests_mock.get(VT_USERS_CURRENT_URL, json={}, status_code=200)
         trigger.initialize_client()
 
         assert trigger.session is not None
@@ -340,10 +355,10 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         assert "limit=1000" in url
 
     def test_build_query_url_with_ioc_types(self, trigger):
-        """Test URL with IOC types filter."""
+        """Test URL with IOC types filter uses 'type' parameter."""
         url = trigger.build_query_url("ransomware")
 
-        assert "ioc_types=file%2Curl" in url or "ioc_types=file,url" in url
+        assert "type=file%2Curl" in url or "type=file,url" in url
 
     def test_build_query_url_with_query(self, trigger):
         """Test URL with extra query params."""
@@ -362,94 +377,80 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     # HTTP Request Tests
     # =============================================================================
 
-    def test_make_request_success(self, trigger, sample_vt_response):
+    def test_make_request_success(self, initialized_trigger, sample_vt_response):
         """Test successful API request."""
-        trigger.initialize_client()
-
-        with patch.object(trigger.session, "get") as mock_get:
+        with patch.object(initialized_trigger.session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = sample_vt_response
             mock_get.return_value = mock_response
 
-            result = trigger._make_request("https://example.com/api")
+            result = initialized_trigger._make_request("https://example.com/api")
 
             assert result == sample_vt_response
 
-    def test_make_request_rate_limit(self, trigger):
+    def test_make_request_rate_limit(self, initialized_trigger):
         """Test rate limit handling (429)."""
-        trigger.initialize_client()
-
-        with patch.object(trigger.session, "get") as mock_get:
+        with patch.object(initialized_trigger.session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 429
             mock_get.return_value = mock_response
 
             with pytest.raises(QuotaExceededError):
-                trigger._make_request("https://example.com/api")
+                initialized_trigger._make_request("https://example.com/api")
 
-    def test_make_request_unauthorized(self, trigger):
+    def test_make_request_unauthorized(self, initialized_trigger):
         """Test unauthorized handling (401)."""
-        trigger.initialize_client()
-
-        with patch.object(trigger.session, "get") as mock_get:
+        with patch.object(initialized_trigger.session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 401
             mock_get.return_value = mock_response
 
             with pytest.raises(InvalidAPIKeyError):
-                trigger._make_request("https://example.com/api")
+                initialized_trigger._make_request("https://example.com/api")
 
-    def test_make_request_forbidden(self, trigger):
+    def test_make_request_forbidden(self, initialized_trigger):
         """Test forbidden handling (403)."""
-        trigger.initialize_client()
-
-        with patch.object(trigger.session, "get") as mock_get:
+        with patch.object(initialized_trigger.session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 403
             mock_get.return_value = mock_response
 
             with pytest.raises(InvalidAPIKeyError):
-                trigger._make_request("https://example.com/api")
+                initialized_trigger._make_request("https://example.com/api")
 
-    def test_make_request_not_found(self, trigger):
+    def test_make_request_not_found(self, initialized_trigger):
         """Test not found handling (404)."""
-        trigger.initialize_client()
-
-        with patch.object(trigger.session, "get") as mock_get:
+        with patch.object(initialized_trigger.session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 404
             mock_get.return_value = mock_response
 
             with pytest.raises(ThreatListNotFoundError):
-                trigger._make_request("https://example.com/api")
+                initialized_trigger._make_request("https://example.com/api")
 
-    def test_make_request_server_error(self, trigger):
+    def test_make_request_server_error(self, initialized_trigger):
         """Test server error handling (500+)."""
-        trigger.initialize_client()
-
-        with patch.object(trigger.session, "get") as mock_get:
+        with patch.object(initialized_trigger.session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 500
             mock_get.return_value = mock_response
 
             with pytest.raises(VirusTotalAPIError) as exc_info:
-                trigger._make_request("https://example.com/api")
+                initialized_trigger._make_request("https://example.com/api")
 
             assert "Server error" in str(exc_info.value)
 
-    def test_make_request_other_error(self, trigger):
+    def test_make_request_other_error(self, initialized_trigger):
         """Test other error handling."""
-        trigger.initialize_client()
-
-        with patch.object(trigger.session, "get") as mock_get:
+        with patch.object(initialized_trigger.session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 400
             mock_response.text = "Bad Request"
             mock_get.return_value = mock_response
 
             with pytest.raises(VirusTotalAPIError) as exc_info:
-                trigger._make_request("https://example.com/api")
+                initialized_trigger._make_request("https://example.com/api")
 
             assert "400" in str(exc_info.value)
 
@@ -457,83 +458,86 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     # Fetch Events Tests
     # =============================================================================
 
-    def test_fetch_events_success(self, trigger, sample_vt_response):
+    def test_fetch_events_success(self, initialized_trigger, sample_vt_response):
         """Test successful event fetching."""
-        trigger.initialize_client()
-
-        with patch.object(trigger, "_make_request") as mock_request:
+        with patch.object(initialized_trigger, "_make_request") as mock_request:
             mock_request.return_value = sample_vt_response
 
-            result = trigger.fetch_events()
+            result = initialized_trigger.fetch_events()
 
             assert result == sample_vt_response
-            assert len(result["data"]) == 2
-            trigger.log.assert_called()
+            assert len(result["iocs"]) == 2
+            initialized_trigger.log.assert_called()
 
-    def test_fetch_events_with_cursor(self, trigger, sample_vt_response):
+    def test_fetch_events_with_cursor(self, initialized_trigger, sample_vt_response):
         """Test event fetching with pagination cursor."""
-        trigger.initialize_client()
-
-        with patch.object(trigger, "_make_request") as mock_request:
+        with patch.object(initialized_trigger, "_make_request") as mock_request:
             mock_request.return_value = sample_vt_response
 
-            result = trigger.fetch_events(cursor="abc123")
+            result = initialized_trigger.fetch_events(cursor="abc123")
 
             # Verify cursor is passed to URL builder
             call_args = mock_request.call_args[0][0]
             assert "cursor=abc123" in call_args
 
-    def test_fetch_events_validates_threat_list(self, trigger):
+    def test_fetch_events_validates_threat_list(self, initialized_trigger):
         """Test fetch_events validates threat list ID."""
-        trigger.configuration["threat_list_id"] = "invalid-list"
-        trigger.initialize_client()
+        initialized_trigger.configuration["threat_list_id"] = "invalid-list"
 
         with pytest.raises(ThreatListNotFoundError):
-            trigger.fetch_events()
+            initialized_trigger.fetch_events()
 
-    def test_fetch_events_validates_query(self, trigger):
+    def test_fetch_events_validates_query(self, initialized_trigger):
         """Test fetch_events validates query syntax."""
-        trigger.configuration["extra_query_params"] = "invalid:query"
-        trigger.initialize_client()
+        initialized_trigger.configuration["extra_query_params"] = "invalid:query"
 
         with pytest.raises(QueryValidationError):
-            trigger.fetch_events()
+            initialized_trigger.fetch_events()
 
     # =============================================================================
     # IOC Transformation Tests
     # =============================================================================
 
     def test_transform_ioc_file(self, trigger):
-        """Test file IOC transformation."""
+        """Test file IOC transformation with nested API structure."""
         ioc = {
-            "type": "file",
-            "id": "abc123",
-            "attributes": {
-                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                "gti_score": 75,
-                "positives": 12,
-                "malware_families": ["Emotet"],
-            },
+            "data": {
+                "type": "file",
+                "id": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "attributes": {
+                    "md5": "d41d8cd98f00b204e9800998ecf8427e",
+                    "gti_assessment": {"threat_score": {"value": 75}},
+                    "positives": 12,
+                    "total_engines": 70,
+                },
+                "relationships": {
+                    "malware_families": {
+                        "data": [{"attributes": {"name": "Emotet"}}]
+                    }
+                },
+            }
         }
 
         result = trigger.transform_ioc(ioc)
 
         assert result["type"] == "file"
-        assert result["value"] == ioc["attributes"]["sha256"]
+        assert result["value"] == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         assert result["gti_score"] == 75
         assert result["positives"] == 12
         assert result["malware_families"] == ["Emotet"]
         assert "ioc_hash" in result
 
     def test_transform_ioc_url(self, trigger):
-        """Test URL IOC transformation."""
+        """Test URL IOC transformation with nested API structure."""
         ioc = {
-            "type": "url",
-            "id": "urlid",
-            "attributes": {
-                "url": "http://malicious.com/payload.exe",
-                "gti_score": 82,
-            },
+            "data": {
+                "type": "url",
+                "id": "urlid",
+                "attributes": {
+                    "url": "http://malicious.com/payload.exe",
+                    "gti_assessment": {"threat_score": {"value": 82}},
+                },
+            }
         }
 
         result = trigger.transform_ioc(ioc)
@@ -586,16 +590,18 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
         assert result["value"] == "some-id"
 
     def test_transform_ioc_preserves_raw(self, trigger):
-        """Test transform_ioc preserves raw IOC data."""
+        """Test transform_ioc preserves raw IOC data (inner dict after unwrapping)."""
         ioc = {
-            "type": "file",
-            "id": "abc",
-            "attributes": {"sha256": "hash123"},
+            "data": {
+                "type": "file",
+                "id": "abc",
+                "attributes": {},
+            }
         }
 
         result = trigger.transform_ioc(ioc)
 
-        assert result["raw"] == ioc
+        assert result["raw"] == ioc["data"]
 
     # =============================================================================
     # IOC Hash Computation Tests
@@ -808,28 +814,25 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
-    def test_run_logs_resume_from_cursor(self, mock_sleep, trigger):
+    def test_run_logs_resume_from_cursor(self, mock_sleep, initialized_trigger):
         """Test run method logs resume when cursor exists."""
-        trigger.initialize_client()
-        trigger.save_cursor("cursor123")
+        initialized_trigger.save_cursor("cursor123")
 
         with patch.object(
-            type(trigger),
+            type(initialized_trigger),
             "running",
             new_callable=lambda: property(lambda s: False),
         ):
-            trigger.run()
+            initialized_trigger.run()
 
-        assert any("resume_from_cursor" in str(call) for call in trigger.log.call_args_list)
+        assert any("resume_from_cursor" in str(call) for call in initialized_trigger.log.call_args_list)
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
-    def test_run_logs_nothing_to_push(self, mock_sleep, trigger):
+    def test_run_logs_nothing_to_push(self, mock_sleep, initialized_trigger):
         """Test run method logs when there is nothing to push."""
-        trigger.initialize_client()
-
-        response_no_data = {"data": [], "meta": {}}
+        response_no_data = {"iocs": [], "meta": {}}
 
         call_count = 0
 
@@ -838,24 +841,22 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             call_count += 1
             return call_count <= 1
 
-        with patch.object(trigger, "fetch_events") as mock_fetch:
+        with patch.object(initialized_trigger, "fetch_events") as mock_fetch:
             mock_fetch.return_value = response_no_data
             with patch.object(
-                type(trigger),
+                type(initialized_trigger),
                 "running",
                 new_callable=lambda: property(lambda s: mock_running()),
             ):
-                trigger.run()
+                initialized_trigger.run()
 
-        assert any("nothing_to_push" in str(call) for call in trigger.log.call_args_list)
+        assert any("nothing_to_push" in str(call) for call in initialized_trigger.log.call_args_list)
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
-    def test_run_loop_one_iteration(self, mock_sleep, trigger, sample_vt_response):
+    def test_run_loop_one_iteration(self, mock_sleep, initialized_trigger, sample_vt_response):
         """Test run method executes one iteration successfully."""
-        trigger.initialize_client()
-
         # Remove continuation cursor to exit after first fetch
         response_no_cursor = sample_vt_response.copy()
         response_no_cursor["meta"] = {"count": 2}
@@ -867,15 +868,15 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             call_count += 1
             return call_count <= 1
 
-        with patch.object(trigger, "_make_request") as mock_request:
+        with patch.object(initialized_trigger, "_make_request") as mock_request:
             mock_request.return_value = response_no_cursor
-            with patch.object(trigger, "push_to_sekoia") as mock_push:
+            with patch.object(initialized_trigger, "push_to_sekoia") as mock_push:
                 with patch.object(
-                    type(trigger),
+                    type(initialized_trigger),
                     "running",
                     new_callable=lambda: property(lambda s: mock_running()),
                 ):
-                    trigger.run()
+                    initialized_trigger.run()
 
         # Verify push_to_sekoia was called with IOC values
         assert mock_push.called
@@ -883,11 +884,9 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
-    def test_run_handles_fatal_error(self, mock_sleep, trigger):
+    def test_run_handles_fatal_error(self, mock_sleep, initialized_trigger):
         """Test run method handles fatal errors gracefully."""
-        trigger.initialize_client()
-
-        with patch.object(trigger, "fetch_events") as mock_fetch:
+        with patch.object(initialized_trigger, "fetch_events") as mock_fetch:
             mock_fetch.side_effect = InvalidAPIKeyError("Invalid key")
 
             call_count = 0
@@ -898,24 +897,22 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
                 return call_count <= 2
 
             with patch.object(
-                type(trigger),
+                type(initialized_trigger),
                 "running",
                 new_callable=lambda: property(lambda s: mock_running()),
             ):
-                trigger.run()
+                initialized_trigger.run()
 
         # Should log fatal error
-        assert any("Fatal error" in str(call) for call in trigger.log.call_args_list)
+        assert any("Fatal error" in str(call) for call in initialized_trigger.log.call_args_list)
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
     def test_run_handles_recoverable_error(
-        self, mock_sleep, trigger, sample_vt_response
+        self, mock_sleep, initialized_trigger, sample_vt_response
     ):
         """Test run method handles recoverable errors and continues."""
-        trigger.initialize_client()
-
         response_no_cursor = sample_vt_response.copy()
         response_no_cursor["meta"] = {}
 
@@ -926,30 +923,28 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             call_count += 1
             return call_count <= 2
 
-        with patch.object(trigger, "fetch_events") as mock_fetch:
+        with patch.object(initialized_trigger, "fetch_events") as mock_fetch:
             mock_fetch.side_effect = [
                 Exception("Temporary error"),
                 response_no_cursor,
             ]
             with patch.object(
-                type(trigger),
+                type(initialized_trigger),
                 "running",
                 new_callable=lambda: property(lambda s: mock_running()),
             ):
-                trigger.run()
+                initialized_trigger.run()
 
         # Should log error but continue
-        assert any("Error in loop" in str(call) for call in trigger.log.call_args_list)
+        assert any("Error in loop" in str(call) for call in initialized_trigger.log.call_args_list)
         # Sleep should be called for error recovery
         mock_sleep.assert_called()
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
-    def test_run_handles_keyboard_interrupt(self, mock_sleep, trigger):
+    def test_run_handles_keyboard_interrupt(self, mock_sleep, initialized_trigger):
         """Test run method handles KeyboardInterrupt."""
-        trigger.initialize_client()
-
         call_count = 0
 
         def mock_running():
@@ -957,24 +952,22 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             call_count += 1
             return call_count <= 1
 
-        with patch.object(trigger, "fetch_events") as mock_fetch:
+        with patch.object(initialized_trigger, "fetch_events") as mock_fetch:
             mock_fetch.side_effect = KeyboardInterrupt
             with patch.object(
-                type(trigger),
+                type(initialized_trigger),
                 "running",
                 new_callable=lambda: property(lambda s: mock_running()),
             ):
-                trigger.run()
+                initialized_trigger.run()
 
-        assert any("stopped_by_user" in str(call) for call in trigger.log.call_args_list)
+        assert any("stopped_by_user" in str(call) for call in initialized_trigger.log.call_args_list)
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
-    def test_run_handles_quota_exceeded(self, mock_sleep, trigger):
+    def test_run_handles_quota_exceeded(self, mock_sleep, initialized_trigger):
         """Test run method handles quota exceeded errors."""
-        trigger.initialize_client()
-
         call_count = 0
 
         def mock_running():
@@ -982,24 +975,22 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             call_count += 1
             return call_count <= 1
 
-        with patch.object(trigger, "fetch_events") as mock_fetch:
+        with patch.object(initialized_trigger, "fetch_events") as mock_fetch:
             mock_fetch.side_effect = QuotaExceededError("rate limit")
             with patch.object(
-                type(trigger),
+                type(initialized_trigger),
                 "running",
                 new_callable=lambda: property(lambda s: mock_running()),
             ):
-                trigger.run()
+                initialized_trigger.run()
 
-        assert any("quota_exceeded" in str(call) for call in trigger.log.call_args_list)
+        assert any("quota_exceeded" in str(call) for call in initialized_trigger.log.call_args_list)
 
     @patch(
         "google_threat_intelligence.trigger_google_threat_intelligence_threat_list_to_ioc_collection.time.sleep"
     )
-    def test_run_sends_events(self, mock_sleep, trigger, sample_vt_response):
+    def test_run_sends_events(self, mock_sleep, initialized_trigger, sample_vt_response):
         """Test run method pushes IOCs to Sekoia."""
-        trigger.initialize_client()
-
         response_no_cursor = sample_vt_response.copy()
         response_no_cursor["meta"] = {}
 
@@ -1010,15 +1001,15 @@ class TestGoogleThreatIntelligenceThreatListToIOCCollectionTrigger:
             call_count += 1
             return call_count <= 1
 
-        with patch.object(trigger, "_make_request") as mock_request:
+        with patch.object(initialized_trigger, "_make_request") as mock_request:
             mock_request.return_value = response_no_cursor
-            with patch.object(trigger, "push_to_sekoia") as mock_push:
+            with patch.object(initialized_trigger, "push_to_sekoia") as mock_push:
                 with patch.object(
-                    type(trigger),
+                    type(initialized_trigger),
                     "running",
                     new_callable=lambda: property(lambda s: mock_running()),
                 ):
-                    trigger.run()
+                    initialized_trigger.run()
 
         # Verify push_to_sekoia was called with IOC values (2 IOCs from sample response)
         assert mock_push.call_count == 1
