@@ -542,10 +542,8 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
                 },
             ]
         ),
-        headers={
-            "NextPageUri": f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/content\
-?contentType=content_types&nextPage=2015101900R022885001761"
-        },
+        headers={"NextPageUri": f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/content\
+?contentType=content_types&nextPage=2015101900R022885001761"},
     )
     mocked_responses.get(
         f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/content?contentType=content_types&nextPage=2015101900R022885001761",
