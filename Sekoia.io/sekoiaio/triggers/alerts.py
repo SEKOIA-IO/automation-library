@@ -82,6 +82,14 @@ class SecurityAlertsTrigger(_SEKOIANotificationBaseTrigger):
                 "name": alert.get("status", {}).get("name"),
                 "uuid": alert.get("status", {}).get("uuid"),
             },
+            "custom_status": {
+                "name": alert.get("custom_status", {}).get("label"),
+                "uuid": alert.get("custom_status", {}).get("uuid"),
+            },
+            "verdict": {
+                "name": alert.get("verdict", {}).get("label"),
+                "uuid": alert.get("verdict", {}).get("uuid"),
+            },
             "created_at": alert.get("created_at"),
             "urgency": alert.get("urgency", {}).get("current_value"),
             "entity": alert.get("entity", {}),
