@@ -7,6 +7,8 @@ class UserAccountArguments(BaseModel):
         None,
         description="",
     )
+    email: str | None = Field(None, description="Filter by email address (mail attribute) to narrow results")
+    apply_to_all: bool = Field(False, description="Apply action to all matching users instead of failing on multiple")
 
 
 class ResetPassUserArguments(UserAccountArguments):
