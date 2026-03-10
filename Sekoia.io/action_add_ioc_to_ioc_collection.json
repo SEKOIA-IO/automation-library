@@ -2,6 +2,10 @@
   "arguments": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
+      "indicator": {
+        "description": "Single indicator to add to an IOC collection.",
+        "type": "string"
+      },
       "indicators": {
         "description": "List of indicators to add to an IOC collection",
         "type": "array"
@@ -33,6 +37,11 @@
       }
     },
     "oneOf": [
+      {
+        "required": [
+          "indicator"
+        ]
+      },
       {
         "required": [
           "indicators"
