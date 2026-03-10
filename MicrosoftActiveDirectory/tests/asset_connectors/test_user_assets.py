@@ -1,9 +1,9 @@
-import pytest
 from datetime import datetime
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock, Mock
 
+import pytest
 from ldap3.core.timezone import OffsetTzInfo
-from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel, UserTypeStr, UserTypeId, AccountTypeId
+from sekoia_automation.asset_connector.models.ocsf.user import AccountTypeId, UserOCSFModel, UserTypeId, UserTypeStr
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 

@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import Mock
+
+import pytest
+
 from microsoft_ad.actions_base import MicrosoftADAction
 
 
@@ -137,12 +139,67 @@ class TestSearchUserdnQuery:
         mock_client.response = []
         action.client = mock_client
 
-        action.search_userdn_query("john.doe", "DC=test,DC=com")
+        action.search_userdn_query("test.test", "DC=test,DC=com")
 
         mock_client.search.assert_called_once()
         call_kwargs = mock_client.search.call_args
         assert call_kwargs[1]["search_base"] == "DC=test,DC=com"
-        assert "samaccountname=john.doe" in call_kwargs[1]["search_filter"]
+        assert "samaccountname=test.test" in call_kwargs[1]["search_filter"]
+
+    def test_search_builds_filter_with_email(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        mock_client = Mock()
+        mock_client.response = []
+        action.client = mock_client
+
+        action.search_userdn_query("test.test", "DC=test,DC=com", email="test@example.com")
+
+        mock_client.search.assert_called_once()
+        call_kwargs = mock_client.search.call_args
+        search_filter = call_kwargs[1]["search_filter"]
+        assert search_filter.startswith("(&")
+        assert "(mail=test@example.com)" in search_filter
+        assert "(|(samaccountname=test.test)" in search_filter
+
+    def test_search_builds_filter_with_email_only(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        mock_client = Mock()
+        mock_client.response = []
+        action.client = mock_client
+
+        action.search_userdn_query(None, "DC=test,DC=com", email="test.integration@integration.local")
+
+        mock_client.search.assert_called_once()
+        call_kwargs = mock_client.search.call_args
+        search_filter = call_kwargs[1]["search_filter"]
+        assert search_filter == "(mail=test.integration@integration.local)"
+
+    def test_search_raises_when_no_username_and_no_email(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        with pytest.raises(ValueError, match="At least one of"):
+            action.search_userdn_query(None, "DC=test,DC=com")
+
+    def test_search_builds_filter_without_email(self):
+        action = object.__new__(ConcreteMicrosoftADAction)
+        action.log = Mock()
+
+        mock_client = Mock()
+        mock_client.response = []
+        action.client = mock_client
+
+        action.search_userdn_query("test.test", "DC=test,DC=com", email=None)
+
+        mock_client.search.assert_called_once()
+        call_kwargs = mock_client.search.call_args
+        search_filter = call_kwargs[1]["search_filter"]
+        assert search_filter.startswith("(|")
+        assert not search_filter.startswith("(&")
 
     def test_search_returns_multiple_users(self):
         action = object.__new__(ConcreteMicrosoftADAction)
