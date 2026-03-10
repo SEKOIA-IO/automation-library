@@ -47,3 +47,35 @@ def test_update_asset_by_uuid_returns_none_if_http_error(requests_mock):
 
     results: dict = action.run(arguments)
     assert results is None
+
+
+def test_update_asset_with_tags_as_list(requests_mock):
+    action = UpdateAsset()
+    action.module.configuration = {"base_url": module_base_url, "api_key": apikey}
+    asset_uuid = uuid.uuid4()
+    tags_list = ["tag1", "tag2", "tag3"]
+    arguments = {"uuid": str(asset_uuid), "tags": list(tags_list)}
+    response = {
+        "uuid": "00000000-0000-0000-0000-000000000123",
+        "entity_uuid": "00000000-0000-0000-0000-000000000000",
+        "name": "test get asset",
+        "type": "network",
+        "criticality": 10,
+        "atoms": {
+            "cidrv6": [],
+            "cidrv4": ["10.100.100.0/24"],
+        },
+        "props": {
+            "asn": "13336",
+        },
+        "tags": tags_list,
+        "revoked": False,
+        "reviewed": False,
+        "description": "test get asset action",
+        "pending_recommendations": [],
+    }
+    requests_mock.put(base_url + str(asset_uuid), json=response)
+
+    results: dict = action.run(arguments)
+    assert results == response
+    assert requests_mock.last_request.json()["tags"] == tags_list

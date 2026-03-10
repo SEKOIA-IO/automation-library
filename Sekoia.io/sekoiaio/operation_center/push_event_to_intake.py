@@ -14,7 +14,6 @@ from tenacity import Retrying, stop_after_delay, wait_exponential, retry_if_exce
 from sekoiaio.utils import user_agent
 from sekoiaio.logging import get_logger
 
-
 logger = get_logger(__name__)
 
 
