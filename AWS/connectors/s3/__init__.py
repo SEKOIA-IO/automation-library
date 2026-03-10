@@ -7,8 +7,9 @@ from collections.abc import AsyncGenerator
 from typing import Any, Optional
 
 import orjson
+from pydantic.v1 import BaseModel, Field
 
-from aws_helpers.utils import AsyncReader, normalize_s3_key
+from aws_helpers.utils import AsyncReader, normalize_s3_key, unescape_string
 from connectors import AbstractAwsConnector, AbstractAwsConnectorConfiguration
 from connectors.metrics import INCOMING_EVENTS
 
@@ -20,6 +21,16 @@ class AwsS3QueuedConfiguration(AbstractAwsConnectorConfiguration):
     chunk_size: int = 10000
     delete_consumed_messages: bool = True
     queue_name: str
+
+
+class AwsS3LogsBaseConfiguration(BaseModel):
+    skip_first: int = 0
+    separator: str = Field(min_length=1)
+
+    @property
+    def sep(self) -> str:
+        # actual separator
+        return unescape_string(self.separator)
 
 
 class AbstractAwsS3QueuedConnector(AbstractAwsConnector, metaclass=ABCMeta):

@@ -9,16 +9,15 @@ from typing import Any
 import orjson
 import pandas as pd
 
-from aws_helpers.utils import AsyncReader
-from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3QueuedConfiguration
+from aws_helpers.utils import AsyncReader, unescape_string
+from connectors.s3 import AbstractAwsS3QueuedConnector, AwsS3LogsBaseConfiguration, AwsS3QueuedConfiguration
 from connectors.s3.provider import AwsAccountProvider
 
 
-class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration):
+class AwsS3CloudFrontConfiguration(AwsS3QueuedConfiguration, AwsS3LogsBaseConfiguration):
     """AwsS3CloudFrontTrigger configuration."""
 
-    skip_first: int = 0
-    separator: str
+    pass
 
 
 class BaseAwsS3CloudFrontTrigger:
@@ -143,7 +142,7 @@ class BaseAwsS3CloudFrontTrigger:
              Generator:
         """
         content = await stream.read()
-        records = [record for record in content.decode("utf-8").split(self.configuration.separator) if len(record) > 0]
+        records = [record for record in content.decode("utf-8").split(self.configuration.sep) if len(record) > 0]
 
         # return [] if there's no records
         if not records:

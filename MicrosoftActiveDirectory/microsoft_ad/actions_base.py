@@ -1,7 +1,7 @@
 from functools import cached_property
-from ldap3 import Server, Connection
-from ldap3.utils.conv import escape_filter_chars
 
+from ldap3 import Connection, Server
+from ldap3.utils.conv import escape_filter_chars
 from sekoia_automation.action import Action
 
 from microsoft_ad.models.common_models import MicrosoftADModule
@@ -26,9 +26,25 @@ class MicrosoftADAction(Action):
 
         return conn
 
-    def search_userdn_query(self, username, basedn):
-        safe_username = escape_filter_chars(username)
-        search_filter = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
+    def search_userdn_query(self, username, basedn, email=None):
+        has_username = bool(username)
+        has_email = bool(email)
+
+        if not has_username and not has_email:
+            raise ValueError("At least one of 'username' or 'email' must be provided")
+
+        if has_username:
+            safe_username = escape_filter_chars(username)
+            or_filter = f"(|(samaccountname={safe_username})(userPrincipalName={safe_username})(mail={safe_username})(givenName={safe_username}))"
+
+        if has_username and has_email:
+            safe_email = escape_filter_chars(email)
+            search_filter = f"(&{or_filter}(mail={safe_email}))"
+        elif has_username:
+            search_filter = or_filter
+        else:
+            safe_email = escape_filter_chars(email)
+            search_filter = f"(mail={safe_email})"
 
         self.log(f"Starting search in {basedn} for {username}", level="debug")
 
