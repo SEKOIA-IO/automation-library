@@ -97,6 +97,27 @@ def message_trace_report() -> dict:
 
 
 @pytest.fixture
+def message_trace_report_graph_api() -> dict:
+    return {
+        "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#admin/exchange/tracing/messageTraces",
+        "value": [
+            {
+                "id": "4451a062-48cb-e80d-e8c0-196330437ae6",
+                "senderAddress": "sender@contoso.com",
+                "recipientAddress": "recipient@contoso.com",
+                "messageId": "<d9683b4c-127b-413a-ae2e-fa7dfb32c69d@contoso.com>",
+                "receivedDateTime": "2025-06-13T10:30:00Z",
+                "subject": "Quarterly Report",
+                "size": 45678,
+                "fromIP": "192.168.1.100",
+                "toIP": "",
+                "status": "delivered",
+            }
+        ],
+    }
+
+
+@pytest.fixture
 def trigger_activation() -> datetime:
     return datetime.now(UTC)
 
