@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-11 - 1.0.13
+
+### Changed
+
+- Truncate plugin description to the first sentence and append "See more details on Tenable" to avoid database field overflow
+
 ## 2026-02-23 - 1.0.12
 
 ### Changed
