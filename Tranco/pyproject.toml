@@ -34,4 +34,4 @@ omit = ["tests/*", "main.py"]
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.991"
 isort = "^5.10.1"
-black = "^22.10.0"
+black = "^26.3.1"
