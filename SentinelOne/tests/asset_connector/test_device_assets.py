@@ -9,6 +9,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeStr,
     OSTypeId,
     OSTypeStr,
+    RiskLevelId,
+    RiskLevelStr,
 )
 from sekoia_automation.module import Module
 
@@ -249,8 +251,11 @@ def test_get_device_os(
     "machine_type,expected_type,expected_id",
     [
         ("desktop", DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP),
-        ("laptop", DeviceTypeStr.LAPTOP, DeviceTypeId.LAPTOP),
+        ("laptop", DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP),
         ("server", DeviceTypeStr.SERVER, DeviceTypeId.SERVER),
+        ("tablet", DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE),
+        ("mobile", DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE),
+        ("virtual", DeviceTypeStr.VIRTUAL, DeviceTypeId.VIRTUAL),
         ("unknown", DeviceTypeStr.OTHER, DeviceTypeId.OTHER),
         (None, DeviceTypeStr.OTHER, DeviceTypeId.OTHER),
     ],
@@ -291,6 +296,7 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
     assert result.metadata.product.version == "2.5.0.2417"
 
     # Enhanced fields
+    assert result.device.name == "JOHN-WIN-4125"
     assert result.device.domain == "mybusiness.net"
     assert result.device.ip == "31.155.5.7"
     assert result.device.subnet == "31.155.5.x"
@@ -304,6 +310,16 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
     assert result.device.last_seen_time is not None
     assert result.device.boot_time is not None
     assert result.device.uid_alt == "225494730938493804"
+
+    # Org (from SentinelOne account)
+    assert result.device.org is not None
+    assert result.device.org.name == "Test Account"
+    assert result.device.org.uid == "225494730938493804"
+
+    # Risk level (sample agent has activeThreats=0 and infected=False → INFO)
+    assert result.device.risk_level == RiskLevelStr.INFO
+    assert result.device.risk_level_id == RiskLevelId.INFO
+    assert result.device.risk_score == 0
 
     # Location
     assert result.device.location is not None
@@ -325,13 +341,19 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
 
     # Enrichments
     assert result.enrichments is not None
-    assert len(result.enrichments) == 5  # Firewall, Users, Update Status, Active Threats, Infection Status
+    assert len(result.enrichments) == 6  # Firewall, Domain, Users, Update Status, Active Threats, Infection Status
 
     # Firewall enrichment
     firewall_enrichment = next((e for e in result.enrichments if e.name == "Firewall"), None)
     assert firewall_enrichment is not None
     assert firewall_enrichment.value == "Enabled"
     assert firewall_enrichment.data.Firewall_status == "Enabled"
+
+    # Domain enrichment
+    domain_enrichment = next((e for e in result.enrichments if e.name == "Domain"), None)
+    assert domain_enrichment is not None
+    assert domain_enrichment.value == "mybusiness.net"
+    assert domain_enrichment.data.Full_qualified_domain_name == "mybusiness.net"
 
     # Users enrichment
     users_enrichment = next((e for e in result.enrichments if e.name == "Users"), None)
@@ -400,11 +422,17 @@ def test_map_fields_minimal_agent(test_sentinelone_device_asset_connector):
     assert result.device.first_seen_time is None
     assert result.device.last_seen_time is None
     assert result.device.is_compliant is None
+    assert result.device.eid is None
 
     # These fields should always be set
+    assert result.device.name == "MINIMAL-PC"
     assert result.device.vendor_name is None  # modelName not provided in minimal agent
     assert result.device.is_managed is True
     assert result.device.created_time is not None
+
+    # Risk level defaults to INFO when no threats and not infected
+    assert result.device.risk_level == RiskLevelStr.INFO
+    assert result.device.risk_level_id == RiskLevelId.INFO
 
 
 def test_map_fields_network_interfaces_multiple(test_sentinelone_device_asset_connector):
@@ -545,6 +573,62 @@ def test_map_fields_missing_required_fields(
 
     with pytest.raises(ValueError, match=error_match):
         test_sentinelone_device_asset_connector.map_fields(agent)
+
+
+@pytest.mark.parametrize(
+    "infected,active_threats,expected_level,expected_id",
+    [
+        (True, 3, RiskLevelStr.CRITICAL, RiskLevelId.CRITICAL),
+        (False, 5, RiskLevelStr.HIGH, RiskLevelId.HIGH),
+        (False, 0, RiskLevelStr.INFO, RiskLevelId.INFO),
+        (None, None, RiskLevelStr.INFO, RiskLevelId.INFO),
+    ],
+)
+def test_map_fields_risk_level(
+    test_sentinelone_device_asset_connector,
+    infected,
+    active_threats,
+    expected_level,
+    expected_id,
+):
+    """Test risk level derivation from infection state and active threats."""
+    agent = SentinelOneAgent(
+        id="123",
+        createdAt="2018-02-27T04:49:26.257525Z",
+        updatedAt="2018-02-27T04:49:26.257525Z",
+        accountId="456",
+        siteId="789",
+        uuid="abc-def-ghi",
+        computerName="RISK-PC",
+        infected=infected,
+        activeThreats=active_threats,
+    )
+    result = test_sentinelone_device_asset_connector.map_fields(agent)
+
+    assert result.device.risk_level == expected_level
+    assert result.device.risk_level_id == expected_id
+    assert result.device.risk_score == active_threats
+
+
+def test_map_fields_org_and_eid(test_sentinelone_device_asset_connector):
+    """Test that org is built from account fields and eid from externalId."""
+    agent = SentinelOneAgent(
+        id="123",
+        createdAt="2018-02-27T04:49:26.257525Z",
+        updatedAt="2018-02-27T04:49:26.257525Z",
+        accountId="acc-001",
+        accountName="Acme Corp",
+        siteId="789",
+        uuid="abc-def-ghi",
+        computerName="ORG-PC",
+        externalId="ext-9999",
+    )
+    result = test_sentinelone_device_asset_connector.map_fields(agent)
+
+    assert result.device.org is not None
+    assert result.device.org.name == "Acme Corp"
+    assert result.device.org.uid == "acc-001"
+    assert result.device.eid == "ext-9999"
 
 
 # Tests for get_assets method

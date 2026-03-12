@@ -26,8 +26,11 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     Group,
     NetworkInterface,
     OperatingSystem,
+    Organization,
     OSTypeId,
     OSTypeStr,
+    RiskLevelId,
+    RiskLevelStr,
 )
 from sekoia_automation.storage import PersistentJSON
 from sentinelone_module.client import SentinelOneClient
@@ -239,11 +242,11 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             case "desktop":
                 return DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP
             case "laptop":
-                return DeviceTypeStr.LAPTOP, DeviceTypeId.LAPTOP
+                return DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP
             case "server":
                 return DeviceTypeStr.SERVER, DeviceTypeId.SERVER
             case "tablet":
-                return DeviceTypeStr.TABLET, DeviceTypeId.TABLET
+                return DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE
             case "mobile":
                 return DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE
             case "virtual":
@@ -314,11 +317,29 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             # Use the first location's name as city
             location = GeoLocation(city=agent.locations[0].name)
 
+        # Determine risk level from infection state and active threats
+        if agent.infected:
+            risk_level: RiskLevelStr | None = RiskLevelStr.CRITICAL
+            risk_level_id: RiskLevelId | None = RiskLevelId.CRITICAL
+        elif agent.activeThreats:
+            risk_level = RiskLevelStr.HIGH
+            risk_level_id = RiskLevelId.HIGH
+        else:
+            risk_level = RiskLevelStr.INFO
+            risk_level_id = RiskLevelId.INFO
+
+        # Build org from SentinelOne account
+        org = None
+        if agent.accountName or agent.accountId:
+            org = Organization(name=agent.accountName or agent.accountId, uid=agent.accountId)
+
         # Create the device object with enhanced fields
         device = Device(
             hostname=agent.computerName,
+            name=agent.computerName,
             uid=agent.uuid or agent.id,
             uid_alt=agent.id if agent.uuid else None,  # Use ID as alternate UID when UUID is primary
+            eid=agent.externalId,
             type_id=device_type_id,
             type=device_type_str,
             os=self.get_device_os(agent.osType, agent.osName, agent.osRevision),
@@ -337,6 +358,10 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             is_compliant=agent.isUpToDate if agent.isUpToDate is not None else None,
             region=agent.siteName,  # Using site name as region
             groups=groups,
+            org=org,
+            risk_level=risk_level,
+            risk_level_id=risk_level_id,
+            risk_score=agent.activeThreats,
         )
 
         # Build enrichments for additional device information
@@ -350,6 +375,16 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
                     name="Firewall",
                     value=firewall_status,
                     data=DeviceDataObject(Firewall_status=firewall_status),
+                )
+            )
+
+        # Add domain if available
+        if agent.domain:
+            enrichments.append(
+                DeviceEnrichmentObject(
+                    name="Domain",
+                    value=agent.domain,
+                    data=DeviceDataObject(Full_qualified_domain_name=agent.domain),
                 )
             )
 
