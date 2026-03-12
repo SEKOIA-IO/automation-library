@@ -35,7 +35,7 @@ ignore_errors = true
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-orjson = "^3.9.10"
+orjson = "^3.11.6"
 async-lru = "^2.0.4"
 loguru = "^0.7.2"
 aiohttp = "*"
