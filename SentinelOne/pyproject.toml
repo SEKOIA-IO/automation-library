@@ -72,13 +72,13 @@ omit = ["tests/*", "main.py", "sentinelone_module/deep_visibility/*_pb2.py"]
 
 [tool.poetry.dependencies.sekoia-automation-sdk]
 extras = ["all"]
-version = "^1.22.0"
+version = "^1.22.3"
 
 [tool.poetry.dependencies.sentinelone-management-sdk]
 path = "sentinel-mgmt-sdk.tar.gz"
 
 [tool.poetry.dependencies.gql]
-extras = ["aiohttp"]
+extras = ["aiohttp", "requests"]
 version = "^3.5.0"
 
 [tool.poetry.dev-dependencies.black]
