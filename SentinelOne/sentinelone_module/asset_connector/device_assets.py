@@ -364,75 +364,44 @@ class SentinelOneDeviceAssetConnector(AssetConnector):
             risk_score=agent.activeThreats,
         )
 
-        # Build enrichments for additional device information
-        enrichments = []
+        # Build a single enrichment with all additional device information
+        enrichment_parts: list[str] = []
+        enrichment_data: dict[str, Any] = {}
 
-        # Add firewall status if available
         if agent.firewallEnabled is not None:
             firewall_status = "Enabled" if agent.firewallEnabled else "Disabled"
-            enrichments.append(
-                DeviceEnrichmentObject(
-                    name="Firewall",
-                    value=firewall_status,
-                    data=DeviceDataObject(Firewall_status=firewall_status),
-                )
-            )
+            enrichment_parts.append(f"Firewall: {firewall_status}")
+            enrichment_data["Firewall_status"] = firewall_status
 
-        # Add domain if available
         if agent.domain:
-            enrichments.append(
-                DeviceEnrichmentObject(
-                    name="Domain",
-                    value=agent.domain,
-                    data=DeviceDataObject(Full_qualified_domain_name=agent.domain),
-                )
-            )
+            enrichment_parts.append(f"Domain: {agent.domain}")
+            enrichment_data["Full_qualified_domain_name"] = agent.domain
 
-        # Add user information if available
         users = []
         if agent.lastLoggedInUserName:
             users.append(agent.lastLoggedInUserName)
         if agent.osUsername and agent.osUsername not in users:
             users.append(agent.osUsername)
-
         if users:
-            enrichments.append(
-                DeviceEnrichmentObject(
-                    name="Users",
-                    value=", ".join(users),
-                    data=DeviceDataObject(Users=users),
-                )
-            )
+            enrichment_parts.append(f"Users: {', '.join(users)}")
+            enrichment_data["Users"] = users
 
-        # Add update status if available
         if agent.isUpToDate is not None:
-            update_status = "Up to Date" if agent.isUpToDate else "Update Required"
-            enrichments.append(
-                DeviceEnrichmentObject(
-                    name="Update Status",
-                    value=update_status,
-                    data=DeviceDataObject(),
-                )
-            )
+            enrichment_parts.append(f"Update Status: {'Up to Date' if agent.isUpToDate else 'Update Required'}")
 
-        # Add active threats count if available
         if agent.activeThreats is not None:
-            enrichments.append(
-                DeviceEnrichmentObject(
-                    name="Active Threats",
-                    value=str(agent.activeThreats),
-                    data=DeviceDataObject(),
-                )
-            )
+            enrichment_parts.append(f"Active Threats: {agent.activeThreats}")
 
-        # Add infection status if available
         if agent.infected is not None:
-            infection_status = "Infected" if agent.infected else "Clean"
+            enrichment_parts.append(f"Infection Status: {'Infected' if agent.infected else 'Clean'}")
+
+        enrichments: list[DeviceEnrichmentObject] = []
+        if enrichment_parts:
             enrichments.append(
                 DeviceEnrichmentObject(
-                    name="Infection Status",
-                    value=infection_status,
-                    data=DeviceDataObject(),
+                    name="Device Details",
+                    value=", ".join(enrichment_parts),
+                    data=DeviceDataObject(**enrichment_data) if enrichment_data else None,
                 )
             )
 
