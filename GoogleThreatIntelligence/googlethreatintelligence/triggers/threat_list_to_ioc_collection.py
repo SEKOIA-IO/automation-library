@@ -92,12 +92,19 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
     and forward them to a SEKOIA.IO IOC Collection.
     """
 
-    BASE_URL = "https://www.virustotal.com/api/v3"
+    DEFAULT_BASE_URL = "https://www.virustotal.com/api/v3"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.session = None
         self.processed_events = TTLCache(maxsize=10000, ttl=604800)  # 7 days TTL
+
+    @property
+    def base_url(self) -> str:
+        """Get VirusTotal API base URL from module configuration."""
+        return self.module.configuration.get(
+            "google_threat_list_url", self.DEFAULT_BASE_URL
+        )
 
     @property
     def polling_frequency_hours(self) -> int:
@@ -145,7 +152,11 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
     @property
     def max_iocs(self) -> int:
         """Get maximum number of IoCs per request."""
-        return min(int(self.configuration.get("max_iocs", 4000)), 4000)
+        try:
+            value = int(self.configuration.get("max_iocs", 4000))
+        except (TypeError, ValueError):
+            return 4000
+        return min(value, 4000)
 
     @property
     def extra_query_params(self) -> str:
@@ -213,7 +224,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         self.session.verify = True
 
         # Step 4 — Connectivity check against VT /users/current
-        connectivity_url = f"{self.BASE_URL}/users/current"
+        connectivity_url = f"{self.base_url}/users/current"
         self.log(
             message=f"Testing connectivity to {connectivity_url}",
             level="info",
@@ -333,7 +344,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
     def build_query_url(self, threat_list_id: str, cursor: str | None = None) -> str:
         """Build the API URL with query parameters."""
-        endpoint = f"{self.BASE_URL}/threat_lists/{threat_list_id}/latest"
+        endpoint = f"{self.base_url}/threat_lists/{threat_list_id}/latest"
 
         params: dict[str, str | int] = {"limit": self.max_iocs}
 
@@ -587,7 +598,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                         url, json=payload, headers=headers, timeout=30
                     )
 
-                    if response.status_code == 200:
+                    if 200 <= response.status_code < 300:
                         result = response.json()
                         self.log(
                             message=f"Batch {batch_num}/{total_batches} pushed successfully: "
@@ -831,7 +842,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                 self.log_kv("info", "stopped_by_user")
                 break
 
-            except (InvalidAPIKeyError, ThreatListNotFoundError) as error:
+            except (InvalidAPIKeyError, ThreatListNotFoundError, QueryValidationError) as error:
                 self.inc_metric("errors", 1)
                 self.log(message=f"Fatal error: {error}", level="error")
                 self.log_kv("error", "fatal_error", error=str(error))

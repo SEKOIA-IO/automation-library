@@ -15,6 +15,11 @@
       "sekoia_api_key": {
         "description": "Sekoia.io API key with write permissions to the IOC Collection (required for Threat List trigger)",
         "type": "string"
+      },
+      "google_threat_list_url": {
+        "description": "Google Threat Intelligence API base URL",
+        "type": "string",
+        "default": "https://www.virustotal.com/api/v3"
       }
     },
     "required": [
