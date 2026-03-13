@@ -3,7 +3,6 @@ from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any, Optional
-from urllib.parse import urlencode
 
 import orjson
 import requests
@@ -84,6 +83,16 @@ class SecurityEventsConnector(Connector):
 
         return response
 
+    def __flatten_form_data(self, data: dict[str, Any]) -> list[tuple[str, Any]]:
+        flattened_data = []
+        for key, value in data.items():
+            if isinstance(value, list):
+                for item in value:
+                    flattened_data.append((key, item))
+            else:
+                flattened_data.append((key, value))
+        return flattened_data
+
     def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         """
         Fetch all the events that occurred after the specified from date
@@ -102,16 +111,8 @@ class SecurityEventsConnector(Connector):
 
         headers = {"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
 
-        # Flatten engineGroup array for form-urlencoded format
-        flattened_data = []
-        for key, value in data.items():
-            if isinstance(value, list):
-                for item in value:
-                    flattened_data.append((key, item))
-            else:
-                flattened_data.append((key, value))
-
         try:
+            flattened_data = self.__flatten_form_data(data)
             response = self.__get_events(data=flattened_data, headers=headers)
             response.raise_for_status()
 
@@ -146,7 +147,8 @@ class SecurityEventsConnector(Connector):
                 return
             data["anchor"] = anchor
             try:
-                response = self.__get_events(data=data, headers=headers)
+                flattened_data = self.__flatten_form_data(data)
+                response = self.__get_events(data=flattened_data, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
             except Exception as any_exception:
