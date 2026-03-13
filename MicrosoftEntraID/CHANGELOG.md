@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-13 - 2.10.18
+
+### Added
+
+- Add `uid_alt` (on-premises SAM account name) and `last_time_password_change` fields to the asset connector user mapping, leveraging new SDK fields
+
+### Fixed
+
+- Fix `user_mapping.yml` to match actual OCSF SDK model fields and real implementation values (account type, enrichment names, removed non-existent fields)
+
 ## 2026-02-20 - 2.10.17
 
 ### Changed
