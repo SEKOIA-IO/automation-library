@@ -1,9 +1,18 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation Module for OSINTCollector"
 description = ""
 version = "0.0"
 authors = []
 package-mode = false
+
+[tool.black]
+line-length = 119
+target-version = ["py38"]
+include = "\\.pyi?$"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
@@ -18,17 +27,5 @@ pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
 
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py38']
-include = '\.pyi?$'
-
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]

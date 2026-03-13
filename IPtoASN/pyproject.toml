@@ -1,9 +1,22 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation Module for IPtoASN"
 description = ""
 version = "0.0"
 authors = []
 package-mode = false
+
+[tool.black]
+line-length = 119
+target-version = ["py38"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
@@ -17,26 +30,10 @@ pytest-cov = "*"
 requests-mock = "*"
 pytest-mock = "*"
 
+[tool.coverage.run]
+omit = ["tests/*", "main.py"]
+
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.991"
 isort = "^5.10.1"
 black = "^22.10.0"
-
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py38']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
-[tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]

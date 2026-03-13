@@ -22,6 +22,11 @@ def last_timestamp() -> int:
 
 
 @pytest.fixture
+def github_bad_creds_response() -> dict:
+    return {"message": "Bad credentials", "documentation_url": "https://docs.github.com/rest", "status": "401"}
+
+
+@pytest.fixture
 def github_response() -> list[dict[str, Any]]:
     """
     Github api mocked response.
@@ -182,6 +187,19 @@ iHDR6QKBgQDVOfatHeay6vylPUUEw/ACckjsWMnyG7Itk801SIYQdpenpdUtQXXX
 zjnahg4QbM6Yed3xgz94nkFpeKvkQz/5vPrKy041E/JMROGYF8/wbQ==
 -----END RSA PRIVATE KEY-----
         """
+
+
+@pytest.fixture(
+    params=[
+        "https://api.github.com",  # canonical
+        "https://api.github.com/",  # trailing slash
+        "api.github.com",  # no scheme
+        "api.example.ghe.com",  # GHES-style host without scheme
+        "https://api.example.ghe.com/",  # GHES-style host with scheme and slash
+    ]
+)
+def base_url(request) -> str:
+    return request.param
 
 
 @pytest.fixture

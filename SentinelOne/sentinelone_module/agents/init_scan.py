@@ -1,5 +1,5 @@
 from management.mgmtsdk_v2_1.services.agent_actions import AgentActionsFilter
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 from sentinelone_module.base import SentinelOneAction
 from sentinelone_module.filters import BaseFilters

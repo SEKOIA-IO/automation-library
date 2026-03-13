@@ -95,6 +95,39 @@ async def test_salesforce_http_client_log_files_query_2():
 
 
 @pytest.mark.asyncio
+async def test_salesforce_http_client_log_files_query_with_end_at():
+    """Test SalesforceHttpClient._log_files_query with end_at parameter."""
+    query = SalesforceHttpClient._log_files_query(
+        start_from=datetime.datetime.strptime("2023-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
+        end_at=datetime.datetime.strptime("2023-01-01T01:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
+        log_type=LogType.HOURLY,
+    )
+
+    expected_query = (
+        "SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength "
+        "FROM EventLogFile WHERE Interval = 'Hourly' AND CreatedDate > 2023-01-01T00:00:00Z "
+        "AND CreatedDate <= 2023-01-01T01:00:00Z"
+    )
+
+    assert query == expected_query
+
+
+@pytest.mark.asyncio
+async def test_salesforce_http_client_log_files_query_with_only_end_at():
+    """Test SalesforceHttpClient._log_files_query with only end_at parameter."""
+    query = SalesforceHttpClient._log_files_query(
+        end_at=datetime.datetime.strptime("2023-01-01T01:00:00Z", "%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+    expected_query = (
+        "SELECT Id, EventType, LogFile, LogDate, CreatedDate, LogFileLength "
+        "FROM EventLogFile WHERE CreatedDate <= 2023-01-01T01:00:00Z"
+    )
+
+    assert query == expected_query
+
+
+@pytest.mark.asyncio
 async def test_salesforce_http_client_request_url_with_query(session_faker):
     """
     Test SalesforceHttpClient._request_url_with_query.

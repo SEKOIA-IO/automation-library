@@ -8,6 +8,7 @@ import pytest
 from aioresponses import aioresponses
 
 from github_modules import GithubModule, GithubModuleConfiguration
+from github_modules.async_client.http_client import BadCredentialsError
 from github_modules.audit_log_trigger import AuditLogConnector
 
 
@@ -33,21 +34,19 @@ def connector_with_api_key(symphony_storage, session_faker, intake_response):
         intake_response: list[str]
     """
     module = GithubModule()
+    module.configuration = {
+        "base_url": "https://api.github.com",
+        "apikey": session_faker.word(),
+        "org_name": session_faker.word(),
+    }
+
     trigger = AuditLogConnector(module=module, data_path=symphony_storage)
-
-    trigger.log = MagicMock()
-    trigger.log_exception = MagicMock()
-    trigger.module.configuration = GithubModuleConfiguration(
-        **{
-            "apikey": session_faker.word(),
-            "org_name": session_faker.word(),
-        }
-    )
-
     trigger.configuration = {
         "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
     }
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
 
     yield trigger
 
@@ -64,22 +63,47 @@ def connector_with_pem_file(symphony_storage, pem_content, session_faker, intake
         intake_response: list[str]
     """
     module = GithubModule()
-    trigger = AuditLogConnector(module=module, data_path=symphony_storage)
+    module.configuration = {
+        "base_url": "https://api.github.com",
+        "org_name": session_faker.word(),
+        "pem_file": pem_content,
+        "app_id": session_faker.pyint(),
+    }
 
+    trigger = AuditLogConnector(module=module, data_path=symphony_storage)
     trigger.log = MagicMock()
     trigger.log_exception = MagicMock()
-    trigger.module.configuration = GithubModuleConfiguration(
-        **{
-            "org_name": session_faker.word(),
-            "pem_file": pem_content,
-            "app_id": session_faker.pyint(),
-        }
-    )
-
     trigger.configuration = {
         "intake_server": "https://intake.sekoia.io",
         "intake_key": session_faker.word(),
     }
+
+    yield trigger
+
+
+@pytest.fixture
+def connector_with_api_key_no_base_url(symphony_storage, session_faker, intake_response):
+    """
+    Create a AuditLogConnector instance.
+
+    Args:
+        symphony_storage: str
+        session_faker: Faker
+        intake_response: list[str]
+    """
+    module = GithubModule()
+    module.configuration = {
+        "apikey": session_faker.word(),
+        "org_name": session_faker.word(),
+    }
+
+    trigger = AuditLogConnector(module=module, data_path=symphony_storage)
+    trigger.configuration = {
+        "intake_server": "https://intake.sekoia.io",
+        "intake_key": session_faker.word(),
+    }
+    trigger.log = MagicMock()
+    trigger.log_exception = MagicMock()
 
     yield trigger
 
@@ -170,3 +194,53 @@ async def test_next_batch_with_pem_file(connector_with_pem_file, github_response
         )
 
         await connector_with_pem_file.next_batch()
+
+
+@pytest.mark.asyncio
+async def test_next_batch_with_api_key_no_base_url(
+    connector_with_api_key_no_base_url, github_response, intake_response
+):
+    """
+    Test AuditLogConnector next_batch.
+
+    Args:
+        connector_with_api_key_no_base_url: AuditLogConnector
+        github_response: list[dict[str, Any]]
+    """
+    with aioresponses() as mocked_responses:
+        audit_logs_url = (
+            connector_with_api_key_no_base_url.github_client.audit_logs_url
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_api_key_no_base_url.last_ts)
+        )
+
+        mocked_responses.get(
+            audit_logs_url,
+            status=200,
+            payload=github_response,
+        )
+
+        mocked_responses.post(
+            urljoin(connector_with_api_key_no_base_url.configuration.intake_server, "batch"),
+            status=200,
+            payload=intake_response,
+        )
+
+        await connector_with_api_key_no_base_url.next_batch()
+
+
+@pytest.mark.asyncio
+async def test_next_batch_with_incorrect_creds(connector_with_api_key, github_bad_creds_response):
+    with aioresponses() as mocked_responses:
+        audit_logs_url = (
+            connector_with_api_key.github_client.audit_logs_url
+            + "?order=asc&per_page=100&phrase=created%253A%253E{0}".format(connector_with_api_key.last_ts)
+        )
+
+        mocked_responses.get(
+            audit_logs_url,
+            status=401,
+            payload=github_bad_creds_response,
+        )
+
+        with pytest.raises(BadCredentialsError):
+            await connector_with_api_key.next_batch()

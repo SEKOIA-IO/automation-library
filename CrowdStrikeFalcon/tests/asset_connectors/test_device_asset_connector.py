@@ -43,53 +43,67 @@ def connector():
 
 
 @pytest.mark.parametrize(
-    "input_value,expected_name,expected_type,expected_type_id",
+    "device_data,expected_name,expected_type,expected_type_id",
     [
-        ("Windows 11 Pro", "Windows", OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
-        ("linux kernel 6", "Linux", OSTypeStr.LINUX, OSTypeId.LINUX),
-        ("UNIX Solaris", "Linux", OSTypeStr.LINUX, OSTypeId.LINUX),
-        ("macOS Ventura", "MacOS", OSTypeStr.MACOS, OSTypeId.MACOS),
-        ("Darwin kernel", "Darwin kernel", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
-        ("", "Unknown", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
-        ("CustomOS 1.0", "CustomOS 1.0", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
+        (
+            {"platform_name": "Windows", "os_version": "Windows 11 Pro"},
+            "Windows 11 Pro",
+            OSTypeStr.WINDOWS,
+            OSTypeId.WINDOWS,
+        ),
+        ({"platform_name": "Linux", "os_version": "Ubuntu 22.04"}, "Ubuntu 22.04", OSTypeStr.LINUX, OSTypeId.LINUX),
+        ({"platform_name": "Mac", "os_version": "macOS Ventura"}, "macOS Ventura", OSTypeStr.MACOS, OSTypeId.MACOS),
+        ({"platform_name": "macOS", "os_version": "macOS Sonoma"}, "macOS Sonoma", OSTypeStr.MACOS, OSTypeId.MACOS),
+        ({"platform_name": "iOS", "os_version": "iOS 17"}, "iOS 17", OSTypeStr.IOS, OSTypeId.IOS),
+        ({"platform_name": "Android", "os_version": "Android 14"}, "Android 14", OSTypeStr.ANDROID, OSTypeId.ANDROID),
+        ({"platform_name": "Windows"}, "Windows", OSTypeStr.WINDOWS, OSTypeId.WINDOWS),
+        (
+            {"platform_name": "CustomOS", "os_version": "CustomOS 1.0"},
+            "CustomOS 1.0",
+            OSTypeStr.UNKNOWN,
+            OSTypeId.UNKNOWN,
+        ),
+        ({"os_version": "Unknown OS"}, "Unknown OS", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
+        ({}, "Unknown", OSTypeStr.UNKNOWN, OSTypeId.UNKNOWN),
     ],
 )
-def test_device_os_detection(input_value, expected_name, expected_type, expected_type_id, connector):
-    os_obj = connector.get_device_os(input_value)
+def test_device_os_detection(device_data, expected_name, expected_type, expected_type_id, connector):
+    os_obj = connector.get_device_os(device_data)
     assert os_obj.name == expected_name
     assert os_obj.type == expected_type
     assert os_obj.type_id == expected_type_id
 
 
 @pytest.mark.parametrize(
-    "input_value,expected_type_id,expected_type_str",
+    "device_data,expected_type_id,expected_type_str",
     [
-        ("Desktop", DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
-        ("laptop", DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
-        ("Workstation", DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
-        ("server", DeviceTypeId.SERVER, DeviceTypeStr.SERVER),
-        ("mobile", DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
-        ("Tablet", DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
-        ("Phone", DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
-        ("Appliance", DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
-        ("", DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
-        (None, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
+        ({"product_type_desc": "Desktop"}, DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
+        ({"product_type_desc": "Workstation"}, DeviceTypeId.DESKTOP, DeviceTypeStr.DESKTOP),
+        ({"product_type_desc": "Laptop"}, DeviceTypeId.LAPTOP, DeviceTypeStr.LAPTOP),
+        ({"product_type_desc": "Server"}, DeviceTypeId.SERVER, DeviceTypeStr.SERVER),
+        ({"product_type_desc": "Mobile"}, DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
+        ({"product_type_desc": "Phone"}, DeviceTypeId.MOBILE, DeviceTypeStr.MOBILE),
+        ({"product_type_desc": "Tablet"}, DeviceTypeId.TABLET, DeviceTypeStr.TABLET),
+        ({"product_type_desc": "Virtual"}, DeviceTypeId.VIRTUAL, DeviceTypeStr.VIRTUAL),
+        ({"product_type_desc": "Appliance"}, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
+        ({"product_type_desc": ""}, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
+        ({}, DeviceTypeId.UNKNOWN, DeviceTypeStr.UNKNOWN),
     ],
 )
-def test_device_type_mapping(input_value, expected_type_id, expected_type_str, connector):
-    type_id, type_str = connector.get_device_type(input_value)
+def test_device_type_mapping(device_data, expected_type_id, expected_type_str, connector):
+    type_id, type_str = connector.get_device_type(device_data)
     assert type_id == expected_type_id
     assert type_str == expected_type_str
 
 
-def test_get_firwall_status_enabled(connector):
-    device = {"device_policies": {"Firewall": {"applied": True}}}
+def test_get_firewall_status_enabled(connector):
+    device = {"device_policies": {"firewall": {"applied": True}}}
     status = connector.get_firewall_status(device)
     assert status == "Enabled"
 
 
 def test_get_firewall_status_disabled(connector):
-    device = {"device_policies": {"Firewall": {"applied": False}}}
+    device = {"device_policies": {"firewall": {"applied": False}}}
     status = connector.get_firewall_status(device)
     assert status == "Disabled"
 
@@ -104,9 +118,10 @@ def test_map_device_fields_firewall_enabled(connector):
     device = {
         "device_id": "dev1",
         "hostname": "host1",
-        "platform_name": "Windows 10",
+        "platform_name": "Windows",
+        "os_version": "Windows 10",
         "product_type_desc": "Desktop",
-        "device_policies": {"Firewall": {"applied": True}},
+        "device_policies": {"firewall": {"applied": True}},
     }
     model = connector.map_device_fields(device)
     assert model.device.uid == "dev1"
@@ -121,7 +136,7 @@ def test_map_device_fields_firewall_disabled_and_unknown_type(connector):
         "hostname": "host2",
         "platform_name": "AlienOS",
         "product_type_desc": "Blender",
-        "device_policies": {"Firewall": {"applied": False}},
+        "device_policies": {"firewall": {"applied": False}},
     }
     model = connector.map_device_fields(device)
     assert model.device.os.type_id == OSTypeId.UNKNOWN
@@ -172,7 +187,6 @@ def test_next_devices_batches_and_stops_on_checkpoint(connector):
 
 def test_next_devices_multiple_batches_and_flush_last(connector):
     connector.LIMIT = 2
-    # No checkpoint -> all consumed
     client = Mock()
     client.list_devices_uuids.return_value = ["u5", "u4", "u3"]
 
@@ -196,14 +210,14 @@ def test_get_assets_yields_mapped_models(monkeypatch, connector):
             "hostname": "h1",
             "platform_name": "Linux",
             "product_type_desc": "Server",
-            "device_policies": {"Firewall": {"applied": True}},
+            "device_policies": {"firewall": {"applied": True}},
         },
         {
             "device_id": "d2",
             "hostname": "h2",
-            "platform_name": "macOS",
+            "platform_name": "Mac",
             "product_type_desc": "Laptop",
-            "device_policies": {"Firewall": {"applied": False}},
+            "device_policies": {"firewall": {"applied": False}},
         },
     ]
     monkeypatch.setattr(connector, "next_devices", lambda: iter(sample_devices))
@@ -213,3 +227,105 @@ def test_get_assets_yields_mapped_models(monkeypatch, connector):
     assert results[1].device.uid == "d2"
     assert results[0].enrichments[0].data.Firewall_status == "Enabled"
     assert results[1].enrichments[0].data.Firewall_status == "Disabled"
+
+
+@pytest.mark.parametrize(
+    "ts,expected",
+    [
+        ("2024-01-15T10:30:00Z", 1705314600.0),
+        ("", None),
+        (None, None),
+        ("invalid-date", None),
+    ],
+)
+def test_parse_timestamp(ts, expected, connector):
+    result = connector.parse_timestamp(ts)
+    if expected is None:
+        assert result is None
+    else:
+        assert abs(result - expected) < 1
+
+
+@pytest.mark.parametrize(
+    "mac,expected",
+    [
+        ("00-1a-2b-3c-4d-5e", "00:1A:2B:3C:4D:5E"),
+        ("00:1a:2b:3c:4d:5e", "00:1A:2B:3C:4D:5E"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_normalize_mac_address(mac, expected, connector):
+    assert connector.normalize_mac_address(mac) == expected
+
+
+def test_get_network_interfaces(connector):
+    device = {
+        "local_ip": "192.168.1.10",
+        "mac_address": "00-1a-2b-3c-4d-5e",
+        "hostname": "host1",
+        "connection_ip": "10.0.0.1",
+    }
+    interfaces = connector.get_network_interfaces(device)
+    assert len(interfaces) == 2
+    assert interfaces[0].ip == "192.168.1.10"
+    assert interfaces[0].mac == "00:1A:2B:3C:4D:5E"
+
+
+def test_get_organization(connector):
+    device = {"cid": "org-123", "service_provider": "Acme Corp"}
+    org = connector.get_organization(device)
+    assert org.uid == "org-123"
+    assert org.name == "Acme Corp"
+
+
+def test_get_organization_missing_cid(connector):
+    device = {"service_provider": "Acme Corp"}
+    assert connector.get_organization(device) is None
+
+
+def test_get_groups(connector):
+    device = {"groups": ["group1", "group2"]}
+
+    mock_client = Mock()
+    mock_client.get_host_groups.return_value = [
+        {"id": "group1", "name": "Group One", "description": "First group", "group_type": "static"},
+        {"id": "group2", "name": "Group Two", "description": "", "group_type": "dynamic"},
+    ]
+    connector.client = mock_client
+
+    groups = connector.get_groups(device)
+
+    assert len(groups) == 2
+    assert groups[0].uid == "group1"
+    assert groups[0].name == "Group One"
+    assert groups[0].desc == "First group"
+    assert groups[1].name == "Group Two"
+    assert groups[1].desc is None
+
+
+def test_get_groups_api_failure_fallback(connector):
+    device = {"groups": ["group1"]}
+
+    mock_client = Mock()
+    mock_client.get_host_groups.side_effect = Exception("API error")
+    connector.client = mock_client
+
+    groups = connector.get_groups(device)
+
+    assert len(groups) == 1
+    assert groups[0].uid == "group1"
+    assert groups[0].name == "group1"  # Fallback
+
+
+def test_is_device_compliant(connector):
+    compliant = {"status": "normal", "reduced_functionality_mode": "no", "filesystem_containment_status": "normal"}
+    non_compliant = {
+        "status": "contained",
+        "reduced_functionality_mode": "yes",
+        "filesystem_containment_status": "contained",
+    }
+
+    assert connector.is_device_compliant(compliant) is True
+    assert connector.is_device_compliant(non_compliant) is False
+    assert connector.is_device_compliant({}) is None

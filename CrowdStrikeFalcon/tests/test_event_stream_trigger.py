@@ -706,7 +706,6 @@ def test_verticles_collector_property_disabled_by_env_var(trigger):
 def test_verticles_collector_property_enabled_by_env_var(trigger):
     """Test verticles_collector property creates collector when enabled by environment variable"""
     with patch.dict(os.environ, {"ACTIVATE_VERTICLES_COLLECTION": "true"}), requests_mock.Mocker() as mock:
-
         mock.register_uri(
             "POST",
             "https://my.fake.sekoia/oauth2/token",

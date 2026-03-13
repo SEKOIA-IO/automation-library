@@ -1,3 +1,4 @@
+import orjson
 import pytest
 import requests_mock
 
@@ -15,19 +16,53 @@ def new_relic_module():
 @pytest.fixture
 def arguments():
     return NRQLQueryActionArguments(
-        account_ids=[123456], query="SELECT count(*) FROM InfrastructureEvent SINCE 10 DAYS AGO"
+        account_ids=[123456], query="SELECT count(*) FROM InfrastructureEvent SINCE 10 DAYS AGO", save_to_file=False
     )
 
 
 @pytest.fixture
-def response_count():
-    return {"data": {"actor": {"nrql": {"results": [{"count": 255}]}}}}
+def arguments_file():
+    return NRQLQueryActionArguments(
+        account_ids=[123456], query="SELECT count(*) FROM InfrastructureEvent SINCE 10 DAYS AGO", save_to_file=True
+    )
 
 
-def test_query(data_storage, new_relic_module, arguments, response_count):
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"data": {"actor": {"nrql": {"results": [{"count": 255}]}}}},
+        {"data": {"actor": {}}},
+        {"data": {"actor": {"nrql": {"results": []}}}},
+    ],
+)
+def test_query(data_storage, new_relic_module, arguments, response):
     with requests_mock.Mocker() as mock_requests:
-        mock_requests.post("https://api.newrelic.com/graphql", json=response_count)
+        mock_requests.post("https://api.newrelic.com/graphql", json=response)
         action = NRQLQueryAction(module=new_relic_module, data_path=data_storage)
         result = action.run(arguments)
 
-        assert result == response_count
+        assert result["results"] == response.get("data", {}).get("actor", {}).get("nrql", {}).get("results", [])
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"data": {"actor": {"nrql": {"results": [{"count": 255}]}}}},
+        {"data": {"actor": {}}},
+        {"data": {"actor": {"nrql": {"results": []}}}},
+    ],
+)
+def test_query_results_saved_in_file(data_storage, new_relic_module, arguments_file, response):
+    results = [{"count": 123}]
+    response = {"data": {"actor": {"nrql": {"results": results}}}}
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.post("https://api.newrelic.com/graphql", json=response)
+        action = NRQLQueryAction(module=new_relic_module, data_path=data_storage)
+        result = action.run(arguments_file)
+
+    assert "file_path" in result
+    path = data_storage / result["file_path"]
+    assert path.exists() is True
+
+    with path.open("rb") as fp:
+        assert orjson.loads(fp.read()) == response.get("data", {}).get("actor", {}).get("nrql", {}).get("results", [])

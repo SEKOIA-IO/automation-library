@@ -1,8 +1,8 @@
 # coding: utf-8
 
 # natives
-from unittest.mock import MagicMock
 import os
+from unittest.mock import MagicMock
 
 # third parties
 import pytest
@@ -14,7 +14,7 @@ from harfanglab.models import JobAction, JobTarget, JobTriggerResult
 
 def test_trigger_job():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = GetPipeListAction()
     action.module.configuration = {"url": instance_url, "api_token": api_token}

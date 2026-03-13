@@ -123,3 +123,32 @@ def test_fetch_events_face_error(trigger, sessions_list_xml_with_one, session_xm
         events = trigger.fetch_events()
 
         assert list(events) == []
+
+
+def test_fetch_events_xml_error_with_attributes(trigger, error_response_xml):
+    """Test that error responses containing <error> tags with XML attributes are properly detected and logged."""
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.register_uri(
+            "POST",
+            f"https://tenant.beyondtrustcloud.com/oauth2/token",
+            json={
+                "access_token": "foo-token",
+                "token_type": "bearer",
+                "expires_in": 1799,
+            },
+        )
+
+        mock_requests.register_uri(
+            "POST",
+            "https://tenant.beyondtrustcloud.com/api/reporting",
+            status_code=200,
+            content=error_response_xml,
+        )
+
+        trigger.from_date = 1732810704
+        events = trigger.fetch_events()
+
+        assert list(events) == []
+        # Verify that the error was logged with the expected format
+        expected_error_msg = f"An error occurred. response: {error_response_xml.decode('utf-8')}"
+        trigger.log.assert_any_call(expected_error_msg, level="error")

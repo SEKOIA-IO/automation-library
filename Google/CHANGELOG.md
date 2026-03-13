@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-01-09 - 1.22.0
+
+### Added
+
+- Added university domain field
+
 ## 2025-08-05 - 1.21.6
 
 ### Changed

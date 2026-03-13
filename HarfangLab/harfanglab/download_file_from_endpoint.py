@@ -12,8 +12,8 @@ import requests
 import tenacity
 from tenacity import retry_if_exception_message, stop_after_delay, wait_exponential
 
-from harfanglab.job_executor import JobExecutor
-from harfanglab.models import JobAction, JobTarget
+from .job_executor import JobExecutor
+from .models import JobAction, JobTarget
 
 StrOrUUID4: TypeAlias = str | uuid.UUID
 
@@ -23,32 +23,15 @@ class DownloadFileFromEndpointAction(JobExecutor):
     Action to download a single file from an HarfangLab endpoint
     """
 
-    _artefact_info: dict[str, Any] | None = None
-    _artefact_info_fetched: bool = False
-
-    @property
-    def artefact_sha256(self) -> str:
-        if not self._artefact_info_fetched:
-            raise RuntimeError("DownloadFileFromEndpointAction.fetch_artefact_info() not called")
-        if self._artefact_info is None:
-            # Note: This raise is mostly for semantic/mypy purpose and should never
-            # happen in real life (an error will always raise before).
-            raise RuntimeError(
-                "DownloadFileFromEndpointAction.fetch_artefact_info() has been called, "
-                "but '_artifact_info' is still None - Something really strange and wrong happen"
-            )
-        return self._artefact_info["sha256"]
-
     @tenacity.retry(
         stop=stop_after_delay(30),  # Aggregation can take some time.
         wait=wait_exponential(min=0.5, max=5),
         retry=retry_if_exception_message(match="No artefact info available for job"),
         reraise=True,
     )
-    def fetch_artefact_info(self, job_id: StrOrUUID4, agent_id: StrOrUUID4) -> None:
-
+    def fetch_artefact_info(self, job_id: StrOrUUID4, agent_id: StrOrUUID4) -> dict[str, Any]:
         artefact_info_endpoint: str = urllib.parse.urljoin(
-            base=self.instance_url,
+            base=self.client.instance_url,
             url="/api/data/investigation/artefact/Artefact/",
         )
 
@@ -57,7 +40,7 @@ class DownloadFileFromEndpointAction(JobExecutor):
             "agent_id": str(agent_id),
         }
 
-        response: requests.Response = requests.get(artefact_info_endpoint, params=params, headers=self.auth_headers)
+        response: requests.Response = self.client.get(artefact_info_endpoint, params=params)
         response.raise_for_status()
 
         results_count: int = response.json()["count"]
@@ -91,20 +74,22 @@ class DownloadFileFromEndpointAction(JobExecutor):
                 f"Does the targeted file exist on endpoint {agent_id}?"
             )
 
-        self._artefact_info = artefact_info
-        self._artefact_info_fetched = True
+        return artefact_info
 
-    def fetch_artefact_data(self, verify_digest: bool = False) -> io.IOBase:
+    def fetch_artefact_data(self, artefact_info: dict[str, Any], verify_digest: bool = False) -> io.IOBase:
+        artefact_sha256 = artefact_info.get("sha256")
+        if not artefact_sha256 or not isinstance(artefact_sha256, str):
+            raise RuntimeError("Missing or invalid 'sha256' in artefact_info when fetching artefact data")
 
         artefact_download_endpoint: str = urllib.parse.urljoin(
-            base=self.instance_url,
-            url=f"/api/data/telemetry/Binary/download/{self.artefact_sha256}/",
+            base=self.client.instance_url,
+            url=f"/api/data/telemetry/Binary/download/{artefact_sha256}/",
         )
 
-        response: requests.Response = requests.get(artefact_download_endpoint, headers=self.auth_headers, stream=True)
+        response: requests.Response = self.client.get(artefact_download_endpoint, stream=True)
         response.raise_for_status()
 
-        buffer = tempfile.SpooledTemporaryFile(max_size=50_000_000)  # 50MiB max. into memory
+        buffer = tempfile.SpooledTemporaryFile(max_size=50_000_000)  # 50MB max. into memory
         chunk: bytes
 
         for chunk in response.iter_content(chunk_size=None):
@@ -119,10 +104,10 @@ class DownloadFileFromEndpointAction(JobExecutor):
             while chunk := buffer.read(io.DEFAULT_BUFFER_SIZE):
                 hasher.update(chunk)
 
-            if hasher.hexdigest() != self.artefact_sha256:
+            if hasher.hexdigest() != artefact_sha256:
                 raise ValueError(
                     f"Computed sha256 digest and the one in the fetched artefact info missmatch "
-                    f"(expected '{self.artefact_sha256}', got '{hasher.hexdigest()}')"
+                    f"(expected '{artefact_sha256}', got '{hasher.hexdigest()}')"
                 )
 
             buffer.seek(0)
@@ -144,14 +129,14 @@ class DownloadFileFromEndpointAction(JobExecutor):
             ],
         )
 
-        self.trigger_job(target=job_target, job=job_action)
-        self.wait_for_job_completion()
+        job_trigger_result = self.trigger_job(target=job_target, job=job_action)
+        self.wait_for_job_completion(job_id=job_trigger_result.id)
 
-        self.fetch_artefact_info(self.job_id, agent_id)
+        artifact_info = self.fetch_artefact_info(job_id=job_trigger_result.id, agent_id=agent_id)
 
-        binary_data: io.IOBase = self.fetch_artefact_data(verify_digest=True)
+        binary_data: io.IOBase = self.fetch_artefact_data(artefact_info=artifact_info, verify_digest=True)
 
-        output_fp: pathlib.Path = self._data_path / self.artefact_sha256
+        output_fp: pathlib.Path = self._data_path / artifact_info["sha256"]
         output_fp.parent.mkdir(parents=True, exist_ok=True)
 
         with binary_data as fd1, output_fp.open("wb") as fd2:

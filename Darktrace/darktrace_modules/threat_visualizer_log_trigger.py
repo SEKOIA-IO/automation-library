@@ -79,7 +79,7 @@ class ThreatVisualizerLogConsumer(Thread):
             return ts
 
     @last_ts.setter
-    def last_ts(self, last_ts: str):
+    def last_ts(self, last_ts: int):
         with self.context as cache:
             cache["last_ts"] = last_ts
 
@@ -112,7 +112,7 @@ class ThreatVisualizerLogConsumer(Thread):
         # update last_ts with
         for item in response:
             if item.get(self.time_field) > self.last_ts:
-                self.last_ts = item[self.time_field]
+                self.last_ts = int(item[self.time_field])
 
     def next_batch(self):
         logger.debug(f"New batch")

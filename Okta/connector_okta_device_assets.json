@@ -1,5 +1,5 @@
   {
-  "name": "Okta Device",
+  "name": "Okta Devices",
   "description": "Fetch Okta device assets",
   "uuid": "b6e2c8a2-4f3b-4e7a-8c1d-2e4f3a6b7c9d",
   "docker_parameters": "device_okta_asset_connector",
@@ -31,6 +31,7 @@
       }
     },
     "required": ["sekoia_api_key"],
-    "secrets": ["sekoia_api_key"]
+    "secrets": ["sekoia_api_key"],
+    "internal": ["sekoia_base_url", "sekoia_api_key", "frequency", "batch_size"]
   }
 }

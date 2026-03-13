@@ -1,5 +1,5 @@
 from management.common.query_filter import QueryFilter
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 from sentinelone_module.helpers import camelize
 

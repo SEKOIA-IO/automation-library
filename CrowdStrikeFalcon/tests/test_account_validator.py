@@ -10,7 +10,6 @@ from crowdstrike_falcon.account_validator import CrowdstrikeFalconAccountValidat
 
 @pytest.fixture
 def crowdstrike_account_validator():
-
     module = CrowdStrikeFalconModule()
     module.configuration = {
         "base_url": "https://my.fake.sekoia",

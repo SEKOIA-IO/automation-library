@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-04 - 1.5.1
+
+### Changed
+
+- Replace `display_name` filter parameter with `email` (mail attribute) for more precise user disambiguation across all user actions
+
+### Fixed
+
+- LDAP search filter incorrectly built when `username` is `None` or empty, causing the OR clause to match nothing (e.g. `(samaccountname=)`)
+- When only `email` is provided without `username`, the filter now correctly resolves to `(mail=<email>)` instead of the broken `(&(|(samaccountname=)...)(mail=<email>))`
+- Raise `ValueError` early when both `username` and `email` are missing
+
+## 2026-03-04 - 1.5.0
+
+### Added
+
+- Support for `display_name` parameter to narrow LDAP search when multiple users share the same email
+- Support for `apply_to_all` parameter to apply actions (disable, enable, reset password) to all matching users
+## 2026-02-11 - 1.4.7
+
+### Added
+
+- Add asset connector mapping files for Microsoft Active Directory user assets
+
+## 2025-02-09 - 1.4.6
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
+
+## 2026-01-29 - 1.4.5
+
+### Changed
+
+- Update asset connector name
+
+## 2026-01-23 - 1.4.4
+
+### Changed
+
+- Update internals field inside arguments of Microsoft AD asset connectors
+
+## 2026-01-14 - 1.4.2
+
+### Fixed
+
+- Fixed handling of the userAccountControl attribute when returned as a list from LDAP queries
+- Added some more logs for debugging
+
+
 ## 2025-11-20 - 1.4.1
 
 ### Fixed

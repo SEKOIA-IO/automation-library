@@ -249,6 +249,8 @@ def create_and_run_connector(data_storage, is_quick: bool = True) -> None:
         }
     )
 
+    connector._initialize_checkpoint_store = AsyncMock()
+
     connector.run()
 
 

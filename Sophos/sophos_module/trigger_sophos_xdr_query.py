@@ -1,11 +1,12 @@
 import time
+from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any, Optional
 
 import orjson
-from dateutil.parser import isoparse
 from requests.exceptions import HTTPError
+from sekoia_automation.checkpoint import CheckpointDatetime
 from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 from urllib3.exceptions import HTTPError as BaseHTTPError
@@ -24,10 +25,10 @@ class SophosXDRQueryConfiguration(DefaultConnectorConfiguration):
 
 class SophosXDRQueryTrigger(SophosConnector):
     """
-    The Sophos XDR Qyery reads the messages exposed after quering the Sophos Data Lake
+    The Sophos XDR Query reads the messages exposed after querying the Sophos Data Lake
     API and forward it to the playbook run.
 
-    Good to know : This's the parent class for all other query classes
+    Good to know : This is the parent class for all other query classes
     """
 
     configuration: SophosXDRQueryConfiguration
@@ -35,31 +36,30 @@ class SophosXDRQueryTrigger(SophosConnector):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self.query: dict[str, Any] = {}
-        self.from_date = self.most_recent_date_seen
+        self.cursor = CheckpointDatetime(
+            path=self.data_path, start_at=timedelta(days=1), ignore_older_than=timedelta(days=30)
+        )
+        self._from_date: datetime = self.cursor.offset
         self.events_sum = 0
 
     @property
-    def most_recent_date_seen(self) -> datetime:
-        now = datetime.now(timezone.utc)
+    def from_date(self) -> datetime:
+        # Enforce 30-day limit on every request
+        too_old: datetime = datetime.now(timezone.utc) - self.cursor._ignore_older_than
+        if self._from_date < too_old:
+            return too_old
 
-        with self.context as cache:
-            most_recent_date_seen_str = cache.get("most_recent_date_seen")
+        return self._from_date
 
-            # if undefined, retrieve events from the last minute
-            if most_recent_date_seen_str is None:
-                return now - timedelta(days=1)
+    @from_date.setter
+    def from_date(self, value: datetime) -> None:
+        self._from_date = value
 
-            # parse the most recent date seen
-            most_recent_date_seen = isoparse(most_recent_date_seen_str)
-
-            # We don't retrieve messages older than 1 month according to documentation
-            # https://developer.sophos.com/reference/edr/Querying-the-Data-Lake
-            one_month_ago = now - timedelta(days=30)
-            if most_recent_date_seen < one_month_ago:
-                most_recent_date_seen = one_month_ago
-
-            return most_recent_date_seen
+    @property
+    @abstractmethod
+    def query(self) -> dict[str, Any]:
+        """Return the Sophos XDR query definition."""
+        raise NotImplementedError
 
     @cached_property
     def pagination_limit(self) -> int:
@@ -218,8 +218,7 @@ class SophosXDRQueryTrigger(SophosConnector):
 
                 most_recent_date_seen = now
                 self.from_date = most_recent_date_seen
-                with self.context as cache:
-                    cache["most_recent_date_seen"] = most_recent_date_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.cursor.offset = most_recent_date_seen
 
             else:
                 self.log(message="No messages to forward", level="info")
@@ -230,7 +229,9 @@ class SophosXDRIOCQuery(SophosXDRQueryTrigger):
     def __init__(self, *args: Any, **kwargs: Optional[Any]) -> None:
         super().__init__(*args, **kwargs)
 
-        self.query = {
+    @property
+    def query(self) -> dict[str, Any]:
+        return {
             "adHocQuery": {"template": "SELECT * FROM xdr_ioc_view WHERE ioc_detection_weight > 3"},
             "from": self.from_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }

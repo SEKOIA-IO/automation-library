@@ -52,7 +52,6 @@ def is_a_supported_stix_indicator(stix_object):
 
 
 def stix_to_indicators(stix_object, supported_types_map):
-
     if not is_a_supported_stix_indicator(stix_object):
         return []
 

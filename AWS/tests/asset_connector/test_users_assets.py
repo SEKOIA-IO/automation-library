@@ -1,12 +1,12 @@
-import pytest
 from unittest import mock
-from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
-from sekoia_automation.module import Module
-from dateutil.parser import isoparse
-from botocore.exceptions import NoCredentialsError, ClientError, BotoCoreError
 
+import pytest
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
+from dateutil.parser import isoparse
+from sekoia_automation.asset_connector.models.ocsf.user import UserOCSFModel
+
+from asset_connector.users_assets import AwsUser, AwsUsersAssetConnector
 from connectors import AwsModule, AwsModuleConfiguration
-from asset_connector.users_assets import AwsUsersAssetConnector, AwsUser
 
 
 @pytest.fixture
@@ -56,6 +56,17 @@ def get_paginator_side_effect(operation_name):
                         "Arn": "arn:aws:iam::123456789012:group/testgroup",
                         "CreateDate": isoparse("2023-10-01T12:00:00Z"),
                         "Tags": [{"Key": "Name", "Value": "Test Group"}],
+                    }
+                ]
+            }
+        ]
+    elif operation_name == "list_attached_group_policies":
+        mock_paginator.paginate.return_value = [
+            {
+                "AttachedPolicies": [
+                    {
+                        "PolicyName": "ReadOnlyAccess",
+                        "PolicyArn": "arn:aws:iam::aws:policy/ReadOnlyAccess",
                     }
                 ]
             }
@@ -188,8 +199,9 @@ def test_update_checkpoint_integration(test_aws_users_asset_connector):
 # Test AwsUser class
 def test_aws_user_initialization():
     """Test AwsUser class initialization."""
-    from sekoia_automation.asset_connector.models.ocsf.user import User, Account, AccountTypeStr, AccountTypeId
     from datetime import datetime
+
+    from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr, User
 
     # Create a test user
     account = Account(
@@ -249,6 +261,59 @@ def test_client_general_exception(test_aws_users_asset_connector):
         test_aws_users_asset_connector.log_exception.assert_called_once()
 
 
+def test_extract_organization_from_arn_success(test_aws_users_asset_connector):
+    """Test successful extraction of organization from ARN."""
+    arn = "arn:aws:iam::123456789012:user/testuser"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(arn)
+
+    assert org is not None
+    assert org.uid == "123456789012"
+    assert org.name == "AWS Account 123456789012"
+
+
+def test_extract_organization_from_arn_empty(test_aws_users_asset_connector):
+    """Test organization extraction with empty ARN."""
+    org = test_aws_users_asset_connector._extract_organization_from_arn("")
+    assert org is None
+
+
+def test_extract_organization_from_arn_none(test_aws_users_asset_connector):
+    """Test organization extraction with None ARN."""
+    org = test_aws_users_asset_connector._extract_organization_from_arn(None)
+    assert org is None
+
+
+def test_extract_organization_from_arn_invalid_format(test_aws_users_asset_connector):
+    """Test organization extraction with invalid ARN format."""
+    invalid_arn = "invalid:arn:format"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(invalid_arn)
+
+    # Should return None for invalid format (not enough parts)
+    assert org is None
+
+
+def test_extract_organization_from_arn_different_service(test_aws_users_asset_connector):
+    """Test organization extraction from ARN of different AWS service."""
+    arn = "arn:aws:s3::123456789012:bucket/mybucket"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(arn)
+
+    assert org is not None
+    assert org.uid == "123456789012"
+
+
+def test_extract_organization_from_arn_no_account_id(test_aws_users_asset_connector):
+    """Test organization extraction when account ID is empty."""
+    arn = "arn:aws:iam:::user/testuser"
+
+    org = test_aws_users_asset_connector._extract_organization_from_arn(arn)
+
+    # Should return None when account ID is empty
+    assert org is None
+
+
 # Test most_recent_date_seen property
 def test_most_recent_date_seen_success(test_aws_users_asset_connector):
     """Test successful retrieval of most_recent_date_seen."""
@@ -306,6 +371,112 @@ def test_most_recent_date_seen_exception(test_aws_users_asset_connector):
     test_aws_users_asset_connector.log_exception.assert_called_once()
 
 
+# Test group_privileges method
+def test_group_privileges_success(test_aws_users_asset_connector):
+    """Test successful group privileges retrieval."""
+    mock_client = mock.MagicMock()
+    mock_paginator = mock.MagicMock()
+    mock_client.get_paginator.return_value = mock_paginator
+
+    mock_paginator.paginate.return_value = [
+        {
+            "AttachedPolicies": [
+                {"PolicyName": "AdminAccess", "PolicyArn": "arn:aws:iam::aws:policy/AdminAccess"},
+                {"PolicyName": "ReadOnlyAccess", "PolicyArn": "arn:aws:iam::aws:policy/ReadOnlyAccess"},
+            ]
+        }
+    ]
+
+    test_aws_users_asset_connector.client = mock.MagicMock(return_value=mock_client)
+
+    policies = test_aws_users_asset_connector.group_privileges("testgroup")
+
+    assert len(policies) == 2
+    assert "AdminAccess" in policies
+    assert "ReadOnlyAccess" in policies
+
+
+def test_group_privileges_empty_group_name(test_aws_users_asset_connector):
+    """Test group_privileges with empty group name."""
+    policies = test_aws_users_asset_connector.group_privileges("")
+
+    assert policies == []
+    test_aws_users_asset_connector.log.assert_called_with(
+        "Empty group name provided, returning False for admin status", level="warning"
+    )
+
+
+def test_group_privileges_client_error(test_aws_users_asset_connector):
+    """Test group_privileges with ClientError."""
+    mock_client = mock.MagicMock()
+    mock_client.get_paginator.side_effect = ClientError(
+        error_response={"Error": {"Code": "AccessDenied", "Message": "Access denied"}},
+        operation_name="ListAttachedGroupPolicies",
+    )
+
+    test_aws_users_asset_connector.client = mock.MagicMock(return_value=mock_client)
+
+    with pytest.raises(ClientError):
+        test_aws_users_asset_connector.group_privileges("testgroup")
+
+
+def test_user_has_admin_policy_true(test_aws_users_asset_connector):
+    """Test user_has_admin_policy returns True for admin user."""
+    from sekoia_automation.asset_connector.models.ocsf.user import Group
+
+    groups = [Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["AdminAccess"])]
+
+    is_admin = test_aws_users_asset_connector.user_has_admin_policy(groups)
+
+    assert is_admin is True
+
+
+def test_user_has_admin_policy_false(test_aws_users_asset_connector):
+    """Test user_has_admin_policy returns False for non-admin user."""
+    from sekoia_automation.asset_connector.models.ocsf.user import Group
+
+    groups = [Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["ReadOnlyAccess"])]
+
+    is_admin = test_aws_users_asset_connector.user_has_admin_policy(groups)
+
+    assert is_admin is False
+
+
+def test_user_has_admin_policy_administrator(test_aws_users_asset_connector):
+    """Test user_has_admin_policy recognizes 'administrator' pattern."""
+    from sekoia_automation.asset_connector.models.ocsf.user import Group
+
+    groups = [
+        Group(
+            name="testgroup",
+            uid="arn:aws:iam::123456789012:group/testgroup",
+            privileges=["AdministratorAccess"],
+        )
+    ]
+
+    is_admin = test_aws_users_asset_connector.user_has_admin_policy(groups)
+
+    assert is_admin is True
+
+
+def test_user_has_admin_policy_poweruser(test_aws_users_asset_connector):
+    """Test user_has_admin_policy recognizes 'poweruser' pattern."""
+    from sekoia_automation.asset_connector.models.ocsf.user import Group
+
+    groups = [Group(name="testgroup", uid="arn:aws:iam::123456789012:group/testgroup", privileges=["PowerUserAccess"])]
+
+    is_admin = test_aws_users_asset_connector.user_has_admin_policy(groups)
+
+    assert is_admin is True
+
+
+def test_user_has_admin_policy_empty_groups(test_aws_users_asset_connector):
+    """Test user_has_admin_policy with empty groups list."""
+    is_admin = test_aws_users_asset_connector.user_has_admin_policy([])
+
+    assert is_admin is False
+
+
 # Test get_groups_for_user method
 def test_get_groups_for_user_success(test_aws_users_asset_connector):
     """Test successful group retrieval for a user."""
@@ -323,14 +494,17 @@ def test_get_groups_for_user_success(test_aws_users_asset_connector):
     ]
 
     test_aws_users_asset_connector.client = mock.MagicMock(return_value=mock_client)
+    test_aws_users_asset_connector.group_privileges = mock.MagicMock(return_value=["ReadOnlyAccess"])
 
     groups = test_aws_users_asset_connector.get_groups_for_user("testuser")
 
     assert len(groups) == 2
     assert groups[0].name == "testgroup1"
     assert groups[0].uid == "arn:aws:iam::123456789012:group/testgroup1"
+    assert groups[0].privileges == ["ReadOnlyAccess"]
     assert groups[1].name == "testgroup2"
     assert groups[1].uid == "arn:aws:iam::123456789012:group/testgroup2"
+    assert groups[1].privileges == ["ReadOnlyAccess"]
 
 
 def test_get_groups_for_user_empty_user(test_aws_users_asset_connector):
@@ -526,6 +700,7 @@ def test_get_aws_users_success(test_aws_users_asset_connector):
     test_aws_users_asset_connector.client = mock.MagicMock(return_value=mock_client)
     test_aws_users_asset_connector.get_groups_for_user = mock.MagicMock(return_value=[])
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(return_value=True)
+    test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
     users = list(test_aws_users_asset_connector.get_aws_users())
 
@@ -664,6 +839,7 @@ def test_extract_user_from_iam_user_success(test_aws_users_asset_connector):
 
     test_aws_users_asset_connector.get_groups_for_user = mock.MagicMock(return_value=[])
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(return_value=True)
+    test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
     aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
 
@@ -672,6 +848,10 @@ def test_extract_user_from_iam_user_success(test_aws_users_asset_connector):
     assert aws_user.user.uid == "arn:aws:iam::123456789012:user/testuser"
     assert aws_user.user.has_mfa is True
     assert aws_user.date == isoparse("2023-10-01T12:00:00Z")
+    # Verify organization is extracted from ARN
+    assert aws_user.user.org is not None
+    assert aws_user.user.org.uid == "123456789012"
+    assert aws_user.user.org.name == "AWS Account 123456789012"
 
 
 def test_extract_user_from_iam_user_missing_username(test_aws_users_asset_connector):
@@ -746,6 +926,7 @@ def test_extract_user_from_iam_user_groups_error(test_aws_users_asset_connector)
 
     test_aws_users_asset_connector.get_groups_for_user = mock.MagicMock(side_effect=Exception("Groups error"))
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(return_value=True)
+    test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
     aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
 
@@ -766,6 +947,7 @@ def test_extract_user_from_iam_user_mfa_error(test_aws_users_asset_connector):
 
     test_aws_users_asset_connector.get_groups_for_user = mock.MagicMock(return_value=[])
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(side_effect=Exception("MFA error"))
+    test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
     aws_user = test_aws_users_asset_connector._extract_user_from_iam_user(user_data, None)
 
@@ -820,6 +1002,7 @@ def test_get_assets_comprehensive(test_aws_users_asset_connector):
     test_aws_users_asset_connector.client = mock.MagicMock(return_value=mock_client)
     test_aws_users_asset_connector.get_groups_for_user = mock.MagicMock(return_value=[])
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(return_value=True)
+    test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
     assets = list(test_aws_users_asset_connector.get_assets())
 
@@ -864,6 +1047,7 @@ def test_get_assets_with_exception(test_aws_users_asset_connector):
     test_aws_users_asset_connector.client = mock.MagicMock(return_value=mock_client)
     test_aws_users_asset_connector.get_groups_for_user = mock.MagicMock(return_value=[])
     test_aws_users_asset_connector.get_mfa_status_for_user = mock.MagicMock(return_value=True)
+    test_aws_users_asset_connector.user_has_admin_policy = mock.MagicMock(return_value=False)
 
     # Mock UserOCSFModel to raise an exception
     with mock.patch("asset_connector.users_assets.UserOCSFModel") as mock_ocsf:

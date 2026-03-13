@@ -1,17 +1,18 @@
 import os
-import pytest
 from unittest.mock import patch
 
-from glimps.retrieve_analysis_action import RetrieveAnalysis
-from glimps.submit_file_to_be_analysed_action import SubmitFile
+import pytest
+from gdetect import BadUUIDError
+
 from glimps.models import (
+    AnalysisResponse,
+    GetAnalysisByUUIDArgument,
+    GLIMPSConfiguration,
     SubmitArgument,
     SubmitResponse,
-    AnalysisResponse,
-    GLIMPSConfiguration,
-    GetAnalysisByUUIDArgument,
 )
-from gdetect import BadUUIDError
+from glimps.retrieve_analysis_action import RetrieveAnalysis
+from glimps.submit_file_to_be_analysed_action import SubmitFile
 
 
 @pytest.mark.skipif("{'GLIMPS_API_KEY', 'GLIMPS_API_URL'}.issubset(os.environ.keys()) == False")

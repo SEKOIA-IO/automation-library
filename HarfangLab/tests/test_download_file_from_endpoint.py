@@ -1,7 +1,6 @@
 import contextlib
 import os
 import pathlib
-import re
 import unittest.mock
 from collections.abc import Iterator
 from typing import Any, Optional, Type, TypeAlias
@@ -10,13 +9,13 @@ import pytest
 import requests_mock
 
 from harfanglab.download_file_from_endpoint import DownloadFileFromEndpointAction
-from harfanglab.job_executor import JobExecutor
 
 JSONResponse: TypeAlias = dict[str, Any]
 
 _fake_instance_url: str = "http://non-existant.local"
 _fake_api_token: str = "<--the-fake-api-token-->"
 _fake_agent_id: str = "<--the-fake-agent-id-->"
+_fake_task_id: str = "<--the-fake-task-id-->"
 _fake_job_id: str = "<--the-fake-job-id-->"
 _fake_sha256_digest: str = "<--the-fake-sha256-digest-->"
 _fake_artefact_content: bytes = b"\x13\x37"
@@ -84,6 +83,59 @@ class _fake_response:
         ],
     }
 
+    job_batched: JSONResponse = {
+        "id": _fake_job_id,
+        "title": None,
+        "description": None,
+        "creationtime": "2026-01-23T11:56:58.733422Z",
+        "creator": {"id": 1, "username": "User"},
+        "source_type": None,
+        "source_id": None,
+        "template": None,
+        "archived": None,
+        "agent_count": 1,
+        "jobs": ["getProcessList"],
+    }
+
+    job_status_done: JSONResponse = {
+        "id": _fake_job_id,
+        "title": None,
+        "description": None,
+        "creationtime": "2026-01-26T10:40:06.844865Z",
+        "creator": {"id": 1, "username": "Admin"},
+        "source_type": None,
+        "source_id": None,
+        "template": None,
+        "archived": False,
+        "agent_count": 1,
+        "tasks": [
+            {
+                "id": _fake_task_id,
+                "task_id": 0,
+                "action": {
+                    "getProcessList": {
+                        "auto_download_new_files": False,
+                        "maxsize_files_download": 104857600,
+                        "getConnectionsList": False,
+                        "getHandlesList": False,
+                        "getSignaturesInfo": False,
+                    }
+                },
+                "status": {
+                    "total": 1,
+                    "done": 1,
+                    "waiting": 0,
+                    "running": 0,
+                    "canceled": 0,
+                    "injecting": 0,
+                    "error": 0,
+                },
+                "can_read_action": True,
+            }
+        ],
+        "status": {"total": 1, "done": 1, "waiting": 0, "running": 0, "canceled": 0, "injecting": 0, "error": 0},
+    }
+
 
 def _run_action(
     *,
@@ -120,31 +172,6 @@ def _run_action(
 
 
 @contextlib.contextmanager
-def job_executor_mock() -> Iterator[None]:
-    """Mock for JobExecutor."""
-
-    def trigger_job_side_effect(*_, **__) -> None:
-        JobExecutor._job_id = _fake_job_id
-        JobExecutor._job_is_running = True
-
-    def wait_for_job_completion_side_effect(*_, **__) -> None:
-        JobExecutor._job_is_running = False
-
-    with (
-        unittest.mock.patch.object(JobExecutor, "trigger_job") as mock1,
-        unittest.mock.patch.object(JobExecutor, "wait_for_job_completion") as mock2,
-    ):
-        mock1.side_effect = trigger_job_side_effect
-        mock2.side_effect = wait_for_job_completion_side_effect
-        yield None
-        mock1.assert_called_once()
-        mock2.assert_called_once()
-
-    JobExecutor._job_id = None
-    JobExecutor._job_is_running = None
-
-
-@contextlib.contextmanager
 def hashlib_sha256_mock() -> Iterator[None]:
     """Mock for hashlib.sha256."""
     with unittest.mock.patch("hashlib.sha256") as mock:
@@ -154,11 +181,16 @@ def hashlib_sha256_mock() -> Iterator[None]:
 
 def test_download_file_from_endpoint_success(symphony_storage) -> None:
     """Test scenario - Successful execution."""
-    with (
-        requests_mock.Mocker() as requests_mocker,
-        job_executor_mock(),
-        hashlib_sha256_mock(),
-    ):
+    with requests_mock.Mocker() as requests_mocker, hashlib_sha256_mock():
+        requests_mocker.post(
+            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_fake_response.job_batched
+        )
+        requests_mocker.get(
+            f"{_fake_instance_url}/api/data/job/batch/{_fake_job_id}/",
+            status_code=200,
+            json=_fake_response.job_status_done,
+        )
+
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/investigation/artefact/Artefact/?job_id={_fake_job_id}&agent_id={_fake_agent_id}",
             status_code=200,
@@ -216,10 +248,15 @@ def test_fetch_artefact_info_fail(
 ) -> None:
     """Test scenario - Misc fail scenario on artefact info fetching."""
 
-    with (
-        requests_mock.Mocker() as requests_mocker,
-        job_executor_mock(),
-    ):
+    with requests_mock.Mocker() as requests_mocker:
+        requests_mocker.post(
+            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_fake_response.job_batched
+        )
+        requests_mocker.get(
+            f"{_fake_instance_url}/api/data/job/batch/{_fake_job_id}/",
+            status_code=200,
+            json=_fake_response.job_status_done,
+        )
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/investigation/artefact/Artefact/?job_id={_fake_job_id}&agent_id={_fake_agent_id}",
             status_code=200,
@@ -230,56 +267,19 @@ def test_fetch_artefact_info_fail(
             _run_action()
 
 
-def test_fetch_artefact_data_runtime_error_fetch_artefact_info_not_called() -> None:
-    """Test runtime error when fetching the artefact data and info wasn't fetched first.
-    Should never happen in real life, that mostly a developer watchdog."""
-    with (
-        job_executor_mock(),
-        # Mock the fetch_artefact_info method to simulate the "it was never called".
-        unittest.mock.patch.object(
-            target=DownloadFileFromEndpointAction,
-            attribute="fetch_artefact_info",
-        ),
-        pytest.raises(
-            expected_exception=RuntimeError,
-            match=".+?" + re.escape(".fetch_artefact_info() not called"),
-        ),
-    ):
-        _run_action()
-
-
-def test_fetch_artefact_data_runtime_error_fetch_artefact_info_called() -> None:
-    """Test runtime error when fetching the artefact data and info wasn't fetched first.
-    Should never happen in real life, that mostly a semantic issue."""
-
-    def fetch_artefact_info_side_effect(*_, **__) -> None:
-        DownloadFileFromEndpointAction._artefact_info = None
-        DownloadFileFromEndpointAction._artefact_info_fetched = True
-
-    with (
-        job_executor_mock(),
-        unittest.mock.patch.object(
-            target=DownloadFileFromEndpointAction,
-            attribute="fetch_artefact_info",
-            side_effect=fetch_artefact_info_side_effect,
-        ),
-        pytest.raises(
-            expected_exception=RuntimeError,
-            match=".+?" + re.escape(".fetch_artefact_info() has been called"),
-        ),
-    ):
-        _run_action()
-
-    DownloadFileFromEndpointAction._artefact_info = None
-    DownloadFileFromEndpointAction._artefact_info_fetched = False
-
-
 def test_fetch_artefact_data_digest_missmatch() -> None:
     """Test scenario - Digest from downloaded file and the one from EDR missmatch."""
-    with (
-        requests_mock.Mocker() as requests_mocker,
-        job_executor_mock(),
-    ):
+    with requests_mock.Mocker() as requests_mocker:
+        requests_mocker.post(
+            f"{_fake_instance_url}/api/data/job/batch/", status_code=201, json=_fake_response.job_batched
+        )
+
+        requests_mocker.get(
+            f"{_fake_instance_url}/api/data/job/batch/{_fake_job_id}/",
+            status_code=200,
+            json=_fake_response.job_status_done,
+        )
+
         requests_mocker.get(
             f"{_fake_instance_url}/api/data/investigation/artefact/Artefact/?job_id={_fake_job_id}&agent_id={_fake_agent_id}",
             status_code=200,

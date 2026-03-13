@@ -1,5 +1,5 @@
 {
-  "uuid": "3b3ab2df-8b4f-49ce-ae69-560722b1b14a",
+  "uuid": "5d651e49-b0b8-44c8-aaef-8f02cb833a82",
   "name": "Add observables in The Hive v5",
   "description": "Action to add a list of observables in The Hive v5",
   "docker_parameters": "thehive_add_observable",

@@ -1,18 +1,13 @@
-import pytest
-from glimps.models import (
-    GLIMPSConfiguration,
-    ExportSubmissionArguments,
-)
-from glimps.export_action import ExportSubmission
-from unittest.mock import patch
-from gdetect import GDetectError
-from pydantic.error_wrappers import ValidationError
 import os
-from glimps.submit_file_to_be_analysed_action import (
-    WaitForFile,
-    WaitForResultArgument,
-    AnalysisResponse,
-)
+from unittest.mock import patch
+
+import pytest
+from gdetect import GDetectError
+from pydantic.v1.error_wrappers import ValidationError
+
+from glimps.export_action import ExportSubmission
+from glimps.models import ExportSubmissionArguments, GLIMPSConfiguration
+from glimps.submit_file_to_be_analysed_action import AnalysisResponse, WaitForFile, WaitForResultArgument
 
 test_base_url = "https://gmalware.ggp.glimps.re"
 

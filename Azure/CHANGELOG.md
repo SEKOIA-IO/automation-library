@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-10 - 2.9.2
+
+### Fixed
+
+- Fix resource not found exception
+- Add checkpoint store initialization to prevent 404 errors when creating ownership blobs
+
 ## 2025-11-04 - 2.9.1
 
 ### Fixed

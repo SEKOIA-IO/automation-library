@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-20 - 2.9.0
+
+### Added
+
+- Add get_device_type method to automatically classify devices as Desktop (Windows/macOS), Mobile (iOS/Android), or Other based on platform
+
+## 2026-02-18 - 2.8.15
+
+### Fixed
+
+- Fix async implementation of update_checkpoint method in asset connectors
+
+## 2026-02-11 - 2.8.14
+
+### Added
+
+- Add asset connector mapping files for Okta device and user assets
+
+## 2025-02-09 - 2.8.13
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
+- Upgrade AssetConnector to Async
+
+## 2026-01-29 - 2.8.12
+
+### Changed
+
+- Update asset connector name
+
+## 2026-01-23 - 2.8.11
+
+### Changed
+
+- Update internals field inside arguments of Okta asset connectors
+
+## 2026-01-22 - 2.8.10
+
+### Changed
+
+- Added internals field to Okta asset connectors
+
+## 2025-12-15 - 2.8.9
+
+### Changed
+
+- Update user type detection to use Okta roles instead of userType profile field
+- Add group privileges to user asset connector groups
+
+## 2025-12-08 - 2.8.8
+
+### Changed
+
+- Add checkpoint from SDK
+
 ## 2025-12-01 - 2.8.7
 
 ### Changed

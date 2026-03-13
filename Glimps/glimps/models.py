@@ -2,10 +2,10 @@
 Data models of the Glimps module
 """
 
-from pydantic import BaseModel, Field, validator
-from sekoia_automation.module import Module
-from typing_extensions import TypedDict, NotRequired
 from gdetect.consts import EXPORT_FORMATS, EXPORT_LAYOUTS
+from pydantic.v1 import BaseModel, Field, validator
+from sekoia_automation.module import Module
+from typing_extensions import NotRequired, TypedDict
 
 
 class GLIMPSConfiguration(BaseModel):

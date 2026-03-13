@@ -8,11 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## 2025-12-09 - 1.0.4
+## 2025-12-09 - 1.0.8
 
 ### Added
 
 - Add timestepper to avoid timeouts on large data fetches
+- 
+## 2026-02-03 - 1.0.7
+
+### Fixed
+
+- Decrease the level of the error when facing a timeout with the authentication API
+
+## 2026-01-30 - 1.0.6
+
+### Changed
+
+- Update token sooner (60s instead of 30s)
+- Use retries for authentication timeout
+
+## 2026-01-07 - 1.0.5
+
+### Changed
+
+- Remove beta flag from Ubika Cloud Protector Next Gen connector and trigger
+
+## 2025-12-11 - 1.0.4
+
+### Changed
+
+- Replace `requests` library by `httpx`, with the HTTP/2.0 support, for making HTTP requests
+- Deprecate the old connectors
 
 ## 2025-11-28 - 1.0.3
 

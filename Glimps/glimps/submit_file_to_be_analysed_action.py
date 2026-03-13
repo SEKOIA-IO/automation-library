@@ -1,6 +1,5 @@
 from glimps.base import GLIMPSAction
-from glimps.models import SubmitArgument, SubmitResponse
-from glimps.models import WaitForResultArgument, AnalysisDetails, AnalysisResponse
+from glimps.models import AnalysisDetails, AnalysisResponse, SubmitArgument, SubmitResponse, WaitForResultArgument
 
 
 class SubmitFile(GLIMPSAction):
@@ -12,14 +11,16 @@ class SubmitFile(GLIMPSAction):
 
     def run(self, arguments: SubmitArgument) -> SubmitResponse:
         # send the request to Glimps
-        uuid = self.gdetect_client.push(
-            self._data_path.joinpath(arguments.file_name),
-            bypass_cache=arguments.bypass_cache,
-            tags=arguments.user_tags,
-            timeout=arguments.push_timeout,
-            description=arguments.description,
-            archive_password=arguments.archive_pwd,
-        )
+        with self.data_path.joinpath(arguments.file_name).open("rb") as reader:
+            uuid = self.gdetect_client.push_reader(
+                filename=arguments.file_name,
+                reader=reader,
+                bypass_cache=arguments.bypass_cache,
+                tags=arguments.user_tags,
+                timeout=arguments.push_timeout,
+                description=arguments.description,
+                archive_password=arguments.archive_pwd,
+            )
         response = SubmitResponse(status=True, uuid=uuid)
         return response
 
@@ -32,17 +33,18 @@ class WaitForFile(GLIMPSAction):
     results_model = AnalysisResponse
 
     def run(self, arguments: WaitForResultArgument) -> AnalysisResponse:
-        raw_analysis = self.gdetect_client.waitfor_reader(
-            arguments.file_name,
-            self._data_path.joinpath(arguments.file_name).open("rb"),
-            bypass_cache=arguments.bypass_cache,
-            pull_time=arguments.pull_time,
-            push_timeout=arguments.push_timeout,
-            timeout=arguments.timeout,
-            tags=arguments.user_tags,
-            description=arguments.description,
-            archive_password=arguments.archive_pwd,
-        )
+        with self.data_path.joinpath(arguments.file_name).open("rb") as reader:
+            raw_analysis = self.gdetect_client.waitfor_reader(
+                filename=arguments.file_name,
+                reader=reader,
+                bypass_cache=arguments.bypass_cache,
+                pull_time=arguments.pull_time,
+                push_timeout=arguments.push_timeout,
+                timeout=arguments.timeout,
+                tags=arguments.user_tags,
+                description=arguments.description,
+                archive_password=arguments.archive_pwd,
+            )
         details = AnalysisDetails.parse_obj(raw_analysis)
         view_token: str = self._get_token_view_url(raw_analysis)
 

@@ -6,8 +6,8 @@ from typing import Any
 
 from dateutil.parser import isoparse
 
+import httpx
 import orjson
-import requests
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
 from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
@@ -16,8 +16,9 @@ from sekoia_automation.storage import PersistentJSON
 
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
-from .client.auth import AuthorizationError
-from .metrics import FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+
+from .client.auth import AuthorizationError, AuthorizationTimeoutError
+from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 from .timestepper import TimeStepper
 
 
@@ -139,12 +140,19 @@ class UbikaCloudProtectorNextGenConnector(Connector):
     def client(self) -> UbikaCloudProtectorNextGenApiClient:
         return UbikaCloudProtectorNextGenApiClient(refresh_token=self.configuration.refresh_token)
 
-    def _handle_response_error(self, response: requests.Response) -> None:
-        if not response.ok:
-            message = (
-                f"Request on {self.NAME} API to fetch events failed with status "
-                f"{response.status_code} - {response.reason} on {response.request.url}"
-            )
+    def _handle_response_error(self, response: httpx.Response) -> None:
+        if not response.is_success:
+            try:
+                error_data = response.json()
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {error_data} on {response.request.url}"
+                )
+            except (ValueError, KeyError):
+                message = (
+                    f"Request on {self.NAME} API to fetch events failed with status "
+                    f"{response.status_code} - {response.text} on {response.request.url}"
+                )
 
             raise FetchEventsException(message)
 
@@ -204,6 +212,9 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                     headers=headers,
                     timeout=60,
                 )
+            except AuthorizationTimeoutError as err:
+                self.log(f"Authorization timeout error: {err.args[1]}", level="error")
+                raise
 
             except AuthorizationError as err:
                 self.log(f"Authorization error: {err.args[1] if len(err.args) > 1 else str(err)}", level="critical")
@@ -260,5 +271,9 @@ class UbikaCloudProtectorNextGenConnector(Connector):
             finally:
                 with self.context as cache:
                     cache["most_recent_date_seen"] = end.isoformat()
+
+        # Close the client connection
+        if hasattr(self, "_client"):
+            self.client.close()
 
         self.save_events_cache()

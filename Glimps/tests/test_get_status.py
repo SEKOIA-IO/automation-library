@@ -1,10 +1,12 @@
-import pytest
-import os
 import json
-from glimps.models import GLIMPSConfiguration, ProfileStatus
-from glimps.get_status_action import GetStatus
+import os
 from unittest.mock import patch
+
+import pytest
 import requests
+
+from glimps.get_status_action import GetStatus
+from glimps.models import GLIMPSConfiguration, ProfileStatus
 
 
 @pytest.mark.skipif("{'GLIMPS_API_KEY', 'GLIMPS_API_URL'}.issubset(os.environ.keys()) == False")

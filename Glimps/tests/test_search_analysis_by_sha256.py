@@ -1,17 +1,18 @@
 import os
-import pytest
 from unittest.mock import patch
 
-from glimps.search_analysis_by_sha256_action import SearchPreviousAnalysis
-from glimps.submit_file_to_be_analysed_action import SubmitFile
+import pytest
+from gdetect import BadSHA256Error
+
 from glimps.models import (
-    SubmitArgument,
-    SubmitResponse,
     AnalysisResponse,
     GLIMPSConfiguration,
     SearchAnalysisBySha256Argument,
+    SubmitArgument,
+    SubmitResponse,
 )
-from gdetect import BadSHA256Error
+from glimps.search_analysis_by_sha256_action import SearchPreviousAnalysis
+from glimps.submit_file_to_be_analysed_action import SubmitFile
 
 
 @pytest.mark.skipif("{'GLIMPS_API_KEY', 'GLIMPS_API_URL'}.issubset(os.environ.keys()) == False")

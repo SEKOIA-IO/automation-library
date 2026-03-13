@@ -1,23 +1,24 @@
 from datetime import datetime, timedelta
-from http.client import responses
 
-import requests
-from requests.auth import AuthBase
-from requests_ratelimiter import LimiterAdapter
-from urllib3.util.retry import Retry
+import httpx
+from httpx import Auth, Request, Response
 
 
 class AuthorizationError(Exception):
     pass
 
 
-class ApiKeyAuthentication(AuthBase):
+class AuthorizationTimeoutError(Exception):
+    pass
+
+
+class ApiKeyAuthentication(Auth):
     def __init__(self, token: str):
         self.__token = token
 
-    def __call__(self, request):
+    def auth_flow(self, request: Request):
         request.headers["Authorization"] = f"Bearer {self.__token}"
-        return request
+        yield request
 
 
 class UbikaCloudProtectorNextGenCredentials:
@@ -30,35 +31,26 @@ class UbikaCloudProtectorNextGenCredentials:
         return f"{self.token_type.title()} {self.access_token}"
 
 
-class UbikaCloudProtectorNextGenAuthentication(AuthBase):
-    def __init__(
-        self,
-        refresh_token: str,
-        ratelimit_per_minute: int = 20,
-    ) -> None:
+class UbikaCloudProtectorNextGenAuthentication(Auth):
+    def __init__(self, refresh_token: str, transport: httpx.BaseTransport) -> None:
         self.__authorization_url = "https://login.ubika.io/auth/realms/main/protocol/openid-connect/token"
         self.__refresh_token = refresh_token
         self.__api_credentials: UbikaCloudProtectorNextGenCredentials | None = None
 
-        self.__http_session = requests.Session()
-        self.__http_session.mount(
-            "https://",
-            LimiterAdapter(
-                per_minute=ratelimit_per_minute,
-                max_retries=Retry(
-                    total=5,
-                    backoff_factor=1,
-                ),
-            ),
+        # Configure HTTPX client with rate limiting and http2 support
+        self.__http_client = httpx.Client(
+            http2=True,
+            transport=transport,
+            timeout=300.0,
         )
 
     def get_credentials(self) -> UbikaCloudProtectorNextGenCredentials:
         current_dt = datetime.utcnow()
 
-        if self.__api_credentials is None or current_dt + timedelta(seconds=30) >= self.__api_credentials.expires_at:
-            response: requests.Response | None = None
+        if self.__api_credentials is None or current_dt + timedelta(seconds=60) >= self.__api_credentials.expires_at:
+            response: Response | None = None
             try:
-                response = self.__http_session.post(
+                response = self.__http_client.post(
                     url=self.__authorization_url,
                     data={
                         "grant_type": "refresh_token",
@@ -68,19 +60,23 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
                     },
-                    # Increased timeout for token requests to 5 minutes
-                    timeout=300,
                 )
-
                 response.raise_for_status()
-            except requests.exceptions.Timeout as timeout_exc:
-                raise AuthorizationError(
+
+            except httpx.TimeoutException as timeout_exc:
+                raise AuthorizationTimeoutError(
                     "timeout_error", "The request to obtain a new access token timed out."
                 ) from timeout_exc
-            except requests.exceptions.RequestException as e:
-                if response is not None:
-                    raw = response.json()
-                    raise AuthorizationError(raw["error"], raw["error_description"]) from e
+
+            except httpx.HTTPStatusError as e:
+                if response is None:
+                    raise AuthorizationError(
+                        "no_response", "No response received when requesting a new access token."
+                    ) from e
+                raw = response.json()
+                raise AuthorizationError(raw["error"], raw["error_description"]) from e
+
+            except httpx.RequestError as e:
                 raise AuthorizationError(
                     "request_error", f"An error occurred while requesting a new access token : {e}"
                 ) from e
@@ -95,6 +91,15 @@ class UbikaCloudProtectorNextGenAuthentication(AuthBase):
 
         return self.__api_credentials
 
-    def __call__(self, request):
+    def auth_flow(self, request: Request):
         request.headers["Authorization"] = self.get_credentials().authorization
-        return request
+        yield request
+
+    def close(self):
+        self.__http_client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

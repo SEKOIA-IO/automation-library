@@ -211,3 +211,108 @@ def test_request_with_params(symphony_storage, params):
         del result["elapsed"]
         json.dumps(result)
         assert result["url"] == "https://api.sekoia.io/?param1=value1&param2=value2"
+
+
+def test_basic_auth(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            status_code=202,
+            reason="Accepted",
+            headers={"h1": "foo", "h2": "bar"},
+        )
+
+        result = action.run(
+            {
+                "method": "get",
+                "url": "https://api.sekoia.io",
+                "auth_type": "Basic",
+                "auth_username": "user",
+                "auth_password": "pass",
+            }
+        )
+        assert result["status_code"] == 202
+        assert mock.request_history[0].headers.get("Authorization", "").startswith("Basic ")
+
+
+def test_basic_auth_miss_credentials(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with pytest.raises(ValueError):
+        action.run({"method": "get", "url": "https://api.sekoia.io", "auth_type": "Basic"})
+
+
+def test_digest_auth(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            [
+                # Simulate the Challenge and Response on the first request with no authentication
+                {
+                    "status_code": 401,
+                    "reason": "Unauthorized",
+                    "headers": {
+                        "www-authenticate": 'digest realm="api.sekoia.io",qop="auth",nonce="abcdef",opaque="12345"'
+                    },
+                },
+                {
+                    "status_code": 202,
+                    "reason": "Accepted",
+                    "headers": {"h1": "foo", "h2": "bar"},
+                },
+            ],
+        )
+
+        result = action.run(
+            {
+                "method": "get",
+                "url": "https://api.sekoia.io",
+                "auth_type": "Digest",
+                "auth_username": "user",
+                "auth_password": "pass",
+            }
+        )
+        assert result["status_code"] == 202
+        assert mock.request_history[1].headers.get("Authorization", "").startswith("Digest ")
+
+
+def test_digest_auth_miss_credentials(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with pytest.raises(ValueError):
+        action.run({"method": "get", "url": "https://api.sekoia.io", "auth_type": "Digest"})
+
+
+def test_bearer_auth(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with requests_mock.Mocker() as mock:
+        mock.get(
+            "https://api.sekoia.io",
+            status_code=202,
+            reason="Accepted",
+            headers={"h1": "foo", "h2": "bar"},
+        )
+
+        result = action.run(
+            {"method": "get", "url": "https://api.sekoia.io", "auth_type": "Bearer", "auth_token": "my_token"}
+        )
+        assert result["status_code"] == 202
+        assert mock.request_history[0].headers.get("Authorization", "").startswith("Bearer ")
+
+
+def test_bearer_auth_miss_credentials(symphony_storage):
+    action = RequestAction(data_path=symphony_storage)
+    action.module.configuration = {}
+
+    with pytest.raises(ValueError):
+        action.run({"method": "get", "url": "https://api.sekoia.io", "auth_type": "Bearer"})

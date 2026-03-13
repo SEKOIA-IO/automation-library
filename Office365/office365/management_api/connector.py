@@ -13,7 +13,7 @@ from office365.metrics import FORWARD_EVENTS_DURATION, OUTCOMING_EVENTS
 
 from .checkpoint import Checkpoint
 from .configuration import Office365Configuration
-from .errors import FailedToActivateO365Subscription, ApplicationAuthenticationFailed
+from .errors import ApplicationAuthenticationFailed, FailedToActivateO365Subscription
 from .helpers import split_date_range
 from .office365_client import Office365API
 
@@ -24,7 +24,7 @@ class Office365Connector(AsyncConnector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.limit_of_events_to_push = int(os.getenv("OFFICE365_BATCH_SIZE", 10000))
-        self.frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
+        self._frequency = int(os.getenv("OFFICE365_PULL_FREQUENCY", 60))
         self.time_range_interval = int(os.getenv("OFFICE365_TIME_RANGE_INTERVAL", 30))
 
     async def shutdown(self) -> None:
@@ -76,6 +76,18 @@ class Office365Connector(AsyncConnector):
                 content_type, start_time=start_date, end_time=end_date
             ):
                 for content in contents:
+                    # https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference
+                    content_expiration = content.get("contentExpiration")
+
+                    if content_expiration:
+                        now = datetime.now(UTC)
+                        parsed_expiration = datetime.strptime(content_expiration, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+                            tzinfo=UTC
+                        )
+
+                        if now > parsed_expiration:
+                            continue
+
                     events = await self.client.get_content(content["contentUri"])
                     for event in events:
                         pulled_events.append(json.dumps(event))
@@ -143,13 +155,13 @@ class Office365Connector(AsyncConnector):
                 end_time = time.time()
                 batch_duration = end_time - start_time
                 # compute the remaining sleeping time. If greater than 0, sleep
-                delta_sleep = self.frequency - batch_duration
+                delta_sleep = self._frequency - batch_duration
                 if delta_sleep > 0:
                     await asyncio.sleep(delta_sleep)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")
                 # Continue the loop to retry after logging
-                await asyncio.sleep(self.frequency)
+                await asyncio.sleep(self._frequency)
 
     async def collect_events(self):
         checkpoint = Checkpoint(self._data_path, self.configuration.intake_key)

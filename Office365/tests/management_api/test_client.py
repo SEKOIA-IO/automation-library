@@ -499,7 +499,7 @@ audit/492638008028$492638008028$f28ab78ad40140608012736e373933ebspo2015043022$4a
         {"contentType": content_type, "endTime": end_time.isoformat("T"), "startTime": start_time.isoformat("T")}
     )
     url = f"https://manage.office.com/api/v1.0/{tenant_id}/activity/feed/subscriptions/content?{query_string}"
-    mocked_responses.assert_called_with(url)
+    mocked_responses.assert_called_with(url, headers={"Authorization": "Bearer access_token"})
     with pytest.raises(StopAsyncIteration):
         await anext(gen)
 

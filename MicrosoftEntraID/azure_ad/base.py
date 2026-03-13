@@ -62,21 +62,6 @@ class MicrosoftGraphAction(AsyncAction):
 
         return self._client
 
-    @cached_property
-    def delegated_client(self):
-        """
-        Used for password reset action
-        It's a not a good practice to use. but we app permission
-        not supported for this action
-        """
-        credentials = UsernamePasswordCredential(
-            client_id=self.module.configuration.client_id,
-            username=self.module.configuration.username,
-            password=self.module.configuration.password,
-        )
-
-        return GraphServiceClient(credentials=credentials)
-
 
 class ApplicationArguments(BaseModel):
     objectId: str | None = Field(None, description="ID object of the app. you can find it in the app overview.")
@@ -106,12 +91,37 @@ class RequiredSingleUserArguments(SingleUserArguments):
 class RequiredTwoUserArguments(SingleUserArguments):
     userNewPassword: str | None = Field(
         None,
-        description="New password, required to reset the old one of course.",
+        description="New password required to reset the old one of course.",
     )
 
     @root_validator
     def validate_two_arguments(cls, values):
         if not ((values.get("id") or values.get("userPrincipalName")) and values.get("userNewPassword")):
             raise ValueError("'userPrincipalName' and ('id' or 'userPrincipalName') should be specified")
+
+        return values
+
+
+class RequiredTwoUserArgumentsV2(SingleUserArguments):
+    userNewPassword: str | None = Field(
+        None,
+        description="New password. If not specified, it will be auto generated.",
+    )
+
+    forceChangePasswordNextSignIn: bool = Field(
+        True,
+        description="Force change password next sign in",
+    )
+
+    forceChangePasswordNextSignInWithMfa: bool | None = Field(
+        None,
+        description="Force change password next sign in with Mfa",
+    )
+
+    @root_validator
+    def validate_values(cls, values):
+        user_principal_name = values.get("id") or values.get("userPrincipalName")
+        if not user_principal_name:
+            raise ValueError("'id' or 'userPrincipalName' should be specified")
 
         return values

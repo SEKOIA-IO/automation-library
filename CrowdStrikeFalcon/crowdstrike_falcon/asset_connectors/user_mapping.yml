@@ -1,0 +1,354 @@
+mapping:
+  ocsf_class: "User Inventory Info"
+  class_uid: 5003
+  ocsf_version: "1.6.0"
+
+  samples:
+    - name: "CrowdStrike Active Directory Administrator"
+      description: "Built-in administrator account from Active Directory with admin role"
+      data: |
+        {
+          "entityId": "1c08759a-e6be-4858-8174-b308855541e9",
+          "type": "USER",
+          "primaryDisplayName": "administrateur",
+          "secondaryDisplayName": "EXAMPLE.COM\\administrateur",
+          "creationTime": "2024-10-21T09:19:20.000Z",
+          "riskScore": 0.66,
+          "riskScoreSeverity": "MEDIUM",
+          "hasRole": true,
+          "learned": false,
+          "accounts": [
+            {
+              "dataSource": "ACTIVE_DIRECTORY",
+              "domain": "EXAMPLE.COM",
+              "samAccountName": "administrateur",
+              "objectSid": "S-1-5-21-947947667-100116589-3603791262-500",
+              "objectGuid": "1c08759a-e6be-4858-8174-b308855541e9",
+              "enabled": true,
+              "cn": "administrateur",
+              "consistencyGuid": null,
+              "description": "Built-in account for administering the computer/domain",
+              "department": null,
+              "title": null
+            }
+          ],
+          "emailAddresses": [],
+          "roles": [
+            {
+              "type": "BuiltinAdministratorRole"
+            },
+            {
+              "type": "ProgrammaticUserAccountRole"
+            }
+          ]
+        }
+
+  fields:
+    # USER IDENTIFICATION
+    - source: "entityId"
+      target: "user.uid"
+      type: "string"
+      logic: "Direct mapping of CrowdStrike entity unique ID"
+      description: "User unique identifier from CrowdStrike Identity Protection"
+
+    - source: "primaryDisplayName"
+      target: "user.name"
+      type: "string"
+      logic: "Direct mapping of primary display name"
+      description: "User display name (username)"
+
+    - source: "primaryDisplayName + secondaryDisplayName"
+      target: "user.full_name"
+      type: "string"
+      logic: "Concatenate primaryDisplayName and secondaryDisplayName with space; trim whitespace; fallback to primaryDisplayName if secondaryDisplayName is empty"
+      description: "User full name"
+
+    # EMAIL ADDRESSES
+    - source: "emailAddresses[0]"
+      target: "user.email_addr"
+      type: "string"
+      logic: "Extract first email from emailAddresses array; null if empty or array is missing"
+      description: "Primary email address"
+
+    - source: "emailAddresses[]"
+      target: "user.email_addresses"
+      type: "array[string]"
+      logic: "Direct mapping of all email addresses; empty array if none or field missing"
+      description: "All email addresses associated with user"
+
+    # ACCOUNT INFORMATION - PRIMARY ACCOUNT
+    - source: "accounts[0]"
+      target: "user.account"
+      type: "object"
+      logic: "Map primary account (first entry in accounts array); use sub-mappings below for account fields"
+      description: "Primary user account"
+
+    - source: "accounts[0].samAccountName || primaryDisplayName"
+      target: "user.account.name"
+      type: "string"
+      logic: "Direct mapping of SAM account name; fallback to primaryDisplayName if empty or missing"
+      description: "Account username (SAM account name)"
+
+    - source: "accounts[0].objectSid || accounts[0].objectGuid || entityId"
+      target: "user.account.uid"
+      type: "string"
+      logic: "Fallback chain: objectSid → objectGuid → entityId"
+      description: "Account unique identifier (SID or GUID)"
+
+    - source: "accounts[0].domain"
+      target: "user.account.domain"
+      type: "string"
+      logic: "Direct mapping of domain/realm name"
+      description: "Account domain or realm"
+
+    - source: "accounts[0].dataSource"
+      target: "user.account.type"
+      type: "string"
+      logic: "Map dataSource: 'ACTIVE_DIRECTORY'→'LDAP Account', 'AZURE_AD'→'Azure AD Account', else→'Other'"
+      description: "Account type (LDAP, Azure AD, etc.)"
+
+    - source: "accounts[0].dataSource"
+      target: "user.account.type_id"
+      type: "integer"
+      logic: "Map account type to OCSF ID: LDAP→11, AzureAD→12, Other→15"
+      description: "OCSF account type ID"
+
+    - source: "accounts[0].enabled"
+      target: "user.is_enabled"
+      type: "boolean"
+      logic: "Direct mapping; default to true if not specified"
+      description: "Whether account is enabled/active"
+
+    # ACCOUNT DESCRIPTION
+    - source: "accounts[0].description"
+      target: "user.account.desc"
+      type: "string"
+      logic: "Direct mapping of account description field; null if empty or missing"
+      description: "Account description or notes"
+
+    # ACCOUNT DETAILS - AD SPECIFIC
+    - source: "accounts[0].cn"
+      target: "user.cn"
+      type: "string"
+      logic: "Direct mapping of Distinguished Name common name (AD specific); null if missing"
+      description: "Active Directory common name"
+
+    - source: "accounts[0].title"
+      target: "user.title"
+      type: "string"
+      logic: "Direct mapping of job title; null if empty or missing"
+      description: "User job title (from AD attributes)"
+
+    - source: "accounts[0].department"
+      target: "user.department"
+      type: "string"
+      logic: "Direct mapping of department; null if empty or missing"
+      description: "User department (from AD attributes)"
+
+    # USER ROLES & TYPE
+    - source: "roles[]"
+      target: "user.roles"
+      type: "array[string]"
+      logic: "Extract all role types from roles array (e.g., 'BuiltinAdministratorRole', 'ProgrammaticUserAccountRole')"
+      description: "User roles and group memberships"
+
+    - source: "roles[] | filter(ADMIN)"
+      target: "user.type"
+      type: "string"
+      logic: "If any role contains 'ADMIN' (case-insensitive), type='Admin'; else type='User'"
+      description: "User type (Admin or regular User)"
+
+    - source: "roles[] | filter(ADMIN)"
+      target: "user.type_id"
+      type: "integer"
+      logic: "If any role contains 'ADMIN', type_id=1; else type_id=2 (OCSF User type mapping)"
+      description: "OCSF user type ID"
+
+    # RISK INFORMATION
+    - source: "riskScore"
+      target: "user.risk_score"
+      type: "integer"
+      logic: "Multiply riskScore (0-1 decimal) by 100 to get 0-100 scale; round to nearest integer"
+      description: "Risk score for user (0-100 scale)"
+
+    - source: "riskScoreSeverity"
+      target: "user.risk_level"
+      type: "string"
+      logic: "Direct mapping: 'CRITICAL'→'Critical', 'HIGH'→'High', 'MEDIUM'→'Medium', 'LOW'→'Low', 'INFO'→'Info'"
+      description: "Risk severity level"
+
+    - source: "riskScoreSeverity"
+      target: "user.risk_level_id"
+      type: "integer"
+      logic: "Map severity to OCSF RiskLevelId: Critical→1, High→2, Medium→3, Low→4, Info→5"
+      description: "OCSF risk level ID"
+
+    # USER LEARNING & ROLE STATUS
+    - source: "learned"
+      target: "user.learned"
+      type: "boolean"
+      logic: "Direct mapping; indicates if user was auto-discovered or manually defined"
+      description: "Whether user was learned by Identity Protection"
+
+    - source: "hasRole"
+      target: "user.has_role"
+      type: "boolean"
+      logic: "Direct mapping; indicates if user has assigned roles"
+      description: "Whether user has assigned roles"
+
+    # TEMPORAL INFORMATION
+    - source: "creationTime"
+      target: "user.created_time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch"
+      description: "User creation timestamp"
+
+    - source: "creationTime"
+      target: "time"
+      type: "timestamp"
+      logic: "Convert ISO 8601 to Unix epoch; use for OCSF event timestamp"
+      description: "OCSF event timestamp"
+
+    # DESCRIPTION
+    - source: "primaryDisplayName + riskScoreSeverity"
+      target: "user.desc"
+      type: "string"
+      logic: "Concatenate as '<primaryDisplayName> - Risk: <riskScoreSeverity>' (e.g., 'administrateur - Risk: MEDIUM')"
+      description: "User description with risk information"
+
+    # METADATA
+    - source: "static: CrowdStrike Falcon"
+      target: "metadata.product.name"
+      type: "string"
+      logic: "Always 'CrowdStrike Falcon'"
+      description: "Source product name"
+
+    - source: "static: Identity Protection"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Always 'Identity Protection' (module version)"
+      description: "Product module version"
+
+    - source: "static: 1.6.0"
+      target: "metadata.version"
+      type: "string"
+      logic: "Fixed OCSF schema version"
+      description: "OCSF schema version"
+
+    # OCSF EVENT CLASSIFICATION
+    - source: "static: 2"
+      target: "activity_id"
+      type: "integer"
+      logic: "Always 2 for 'Collect' activity"
+      description: "OCSF activity ID for inventory collection"
+
+    - source: "static: Collect"
+      target: "activity_name"
+      type: "string"
+      logic: "Always 'Collect'"
+      description: "OCSF activity name"
+
+    - source: "static: Discovery"
+      target: "category_name"
+      type: "string"
+      logic: "Always 'Discovery'"
+      description: "OCSF category name"
+
+    - source: "static: 5"
+      target: "category_uid"
+      type: "integer"
+      logic: "Always 5 for Discovery category"
+      description: "OCSF category UID"
+
+    - source: "static: User Inventory Info"
+      target: "class_name"
+      type: "string"
+      logic: "Always 'User Inventory Info'"
+      description: "OCSF class name"
+
+    - source: "static: 5003"
+      target: "class_uid"
+      type: "integer"
+      logic: "Always 5003 for User Inventory Info"
+      description: "OCSF class UID"
+
+    - source: "computed: 500300 + activity_id"
+      target: "type_uid"
+      type: "integer"
+      logic: "Base 500300 + activity_id (2 = 500302)"
+      description: "OCSF type UID"
+
+    - source: "computed: class_name + ': ' + activity_name"
+      target: "type_name"
+      type: "string"
+      logic: "Concatenate 'User Inventory Info: Collect'"
+      description: "OCSF type name"
+
+    - source: "static: Informational"
+      target: "severity"
+      type: "string"
+      logic: "Always 'Informational' for inventory events"
+      description: "Event severity level"
+
+    - source: "static: 1"
+      target: "severity_id"
+      type: "integer"
+      logic: "Always 1 for Informational severity"
+      description: "OCSF severity ID"
+
+  ocsf_samples:
+    - name: "User Inventory Info: Collect"
+      description: "Transformed CrowdStrike Active Directory administrator to OCSF User Inventory Info event"
+      data: |
+        {
+          "activity_id": 2,
+          "activity_name": "Collect",
+          "category_name": "Discovery",
+          "category_uid": 5,
+          "class_name": "User Inventory Info",
+          "class_uid": 5003,
+          "type_name": "User Inventory Info: Collect",
+          "type_uid": 500302,
+          "severity": "Informational",
+          "severity_id": 1,
+          "time": 1729509560,
+          "metadata": {
+            "product": {
+              "name": "CrowdStrike Falcon",
+              "version": "Identity Protection"
+            },
+            "version": "1.6.0"
+          },
+          "user": {
+            "uid": "1c08759a-e6be-4858-8174-b308855541e9",
+            "name": "administrateur",
+            "full_name": "administrateur EXAMPLE.COM\\administrateur",
+            "email_addr": null,
+            "email_addresses": [],
+            "type": "Admin",
+            "type_id": 1,
+            "risk_score": 66,
+            "risk_level": "Medium",
+            "risk_level_id": 3,
+            "is_enabled": true,
+            "learned": false,
+            "has_role": true,
+            "cn": "administrateur",
+            "title": null,
+            "department": null,
+            "roles": [
+              "BuiltinAdministratorRole",
+              "ProgrammaticUserAccountRole"
+            ],
+            "desc": "administrateur - Risk: MEDIUM",
+            "created_time": 1729509560,
+            "account": {
+              "uid": "S-1-5-21-947947667-100116589-3603791262-500",
+              "name": "administrateur",
+              "domain": "EXAMPLE.COM",
+              "type": "LDAP Account",
+              "type_id": 11,
+              "desc": "Built-in account for administering the computer/domain"
+            }
+          }
+        }

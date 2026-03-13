@@ -13,6 +13,7 @@ class TheHiveCreateAlertV5(Action):
             self.module.configuration["base_url"],
             self.module.configuration["apikey"],
             organisation=self.module.configuration["organisation"],
+            verify=self.module.configuration.get("verify_certificate", True),
         )
 
         arg_sekoia_server = arguments.get("sekoia_base_url", "https://app.sekoia.io")

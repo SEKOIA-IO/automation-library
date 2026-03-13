@@ -1,13 +1,14 @@
+import hashlib
+import io
 from pathlib import Path
 from shutil import rmtree
 from tempfile import mkdtemp
-import hashlib
-import io
+
 import pytest
 from sekoia_automation import constants
+
+from glimps.models import GLIMPSConfiguration, GLIMPSModule
 from glimps.submit_file_to_be_analysed_action import WaitForFile
-from glimps.models import GLIMPSConfiguration
-from glimps.models import GLIMPSModule
 
 
 @pytest.fixture(scope="session")

@@ -11,19 +11,41 @@
         "title": "Account IDs",
         "description": "Account identifiers to use",
         "type": "array",
-        "items": { "type": "integer" },
+        "items": {
+          "type": "integer"
+        },
         "minItems": 1
       },
       "query": {
         "title": "Query",
         "description": "The NRQL to execute",
         "type": "string"
+      },
+      "save_to_file": {
+        "title": "Save output to file",
+        "description": "Whether to save response as a file",
+        "type": "boolean"
       }
     },
-    "required": [
-      "account_ids",
-      "query"
-    ]
+    "required": ["account_ids", "query"]
   },
-  "results": {}
+  "results": {
+    "title": "NRQLQueryActionResults",
+    "type": "object",
+    "properties": {
+      "results": {
+        "title": "Results",
+        "description": "The results of the NRQL query",
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "file_path": {
+        "description": "Path of the file with results of the NRQL query",
+        "type": "string"
+      }
+    },
+    "oneOf": [{ "required": ["results"] }, { "required": ["file_path"] }]
+  }
 }

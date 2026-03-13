@@ -7,7 +7,6 @@ from crowdstrike_falcon.client.auth import CrowdStrikeFalconApiAuthentication
 
 
 class CrowdstrikeFalconAccountValidator(AccountValidator):
-
     @cached_property
     def _http_default_headers(self) -> dict[str, str]:
         return {

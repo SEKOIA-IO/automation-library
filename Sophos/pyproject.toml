@@ -1,3 +1,7 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Automation Module for Sophos"
 description = ""
@@ -5,34 +9,10 @@ version = "0.0"
 authors = []
 package-mode = false
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-sekoia-automation-sdk = "^1.21.1"
-requests-ratelimiter = "^0.7.0"
-structlog = "^23.1.0"
-requests = "*"
-tenacity = "^9.1.2"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-cov = "*"
-pytest-xdist = "*"
-pytest-env = "*"
-requests-mock = "*"
-mypy = "^0.991"
-autoflake = "^1.4"
-isort = "^5.10.1"
-black = { version = "^24.4.2", extras = ["colorama"] }
-poethepoet = { version = "^0.16.5", extras = ["poetry_plugin"] }
-
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
 [tool.black]
 line-length = 119
-target-version = ['py310']
-include = '\.pyi?$'
+target-version = ["py310"]
+include = "\\.pyi?$"
 
 [tool.isort]
 profile = "black"
@@ -50,37 +30,55 @@ allow_untyped_decorators = true
 warn_return_any = true
 exclude = ["tests/*"]
 
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+sekoia-automation-sdk = "^1.21.2"
+requests-ratelimiter = "^0.7.0"
+structlog = "^23.1.0"
+requests = "^2.32.5"
+tenacity = "^9.1.2"
+
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
 filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore:.*unclosed.*:ResourceWarning",
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore:.*unclosed.*:ResourceWarning",
 ]
-addopts = '''
-  --strict-markers
-  --tb=short
-  --cov=sophos_module
-  --cov-branch
-  --cache-clear
-  --cov-report=html
-  --cov-report=term-missing:skip-covered
-  --cov-fail-under=90
-  --numprocesses=auto
-'''
+addopts = "  --strict-markers\n  --tb=short\n  --cov=sophos_module\n  --cov-branch\n  --cache-clear\n  --cov-report=html\n  --cov-report=term-missing:skip-covered\n  --cov-fail-under=90\n  --numprocesses=auto\n"
 
 [tool.poe.tasks.lint]
-sequence = [
-    { cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py" },
-    { cmd = "poetry run black ." },
-    { cmd = "poetry run isort ." },
-    { cmd = "poetry run mypy ." },
-]
 help = "Make code linting and formatting."
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run autoflake --in-place --remove-all-unused-imports --remove-duplicate-keys --remove-unused-variables */**/*.py"
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run black ."
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run isort ."
+
+[[tool.poe.tasks.lint.sequence]]
+cmd = "poetry run mypy ."
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-env = "*"
+requests-mock = "*"
+mypy = "^0.991"
+autoflake = "^1.4"
+isort = "^5.10.1"
+
+[tool.poetry.group.dev.dependencies.black]
+version = "^24.4.2"
+extras = ["colorama"]
+
+[tool.poetry.group.dev.dependencies.poethepoet]
+version = "^0.16.5"
+extras = ["poetry_plugin"]

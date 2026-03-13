@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from dateutil.parser import isoparse
@@ -11,7 +11,7 @@ class Checkpoint:
 
     @property
     def offset(self) -> datetime:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         if self._most_recent_date_seen is None:
 

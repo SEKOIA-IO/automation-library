@@ -134,5 +134,6 @@ class CheckpointHarmonyMobileConnector(AsyncConnector):
                         loop.close()
 
             except Exception as e:
-                logger.error(f"Error while running Checkpoint Harmony: {e}", error=e)
+                logger.error("Error while running Checkpoint Harmony: {error}", error=e)
+
                 self.log_exception(e)

@@ -1,9 +1,22 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "Git Automation module"
 description = ""
 version = "0.0"
 authors = []
 package-mode = false
+
+[tool.black]
+line-length = 119
+target-version = ["py38"]
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -16,31 +29,11 @@ pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
 
-[build-system]
-requires = [ "poetry-core>=1.0.0",]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 119
-target-version = ['py38']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 119
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra"
-testpaths = [
-    "tests",
-]
-markers = [
-    "connected"
-]
+testpaths = ["tests"]
+markers = ["connected"]
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-    "main.py",
-]
+omit = ["tests/*", "main.py"]

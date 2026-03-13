@@ -5,14 +5,16 @@ and format them according to OCSF standards.
 """
 
 import asyncio
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from functools import cached_property
 from typing import Any, Optional
 
 from dateutil.parser import isoparse
 from okta.client import Client as OktaClient
 from okta.models.user import User as OktaUser
-from sekoia_automation.asset_connector import AssetConnector
+from okta.models.role import Role as OktaRole
+from okta.models.role_status import RoleStatus as OktaRoleStatus
+from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.user import (
     Account,
@@ -29,7 +31,7 @@ from sekoia_automation.storage import PersistentJSON
 from okta_modules import OktaModule
 
 
-class OktaUserAssetConnector(AssetConnector):
+class OktaUserAssetConnector(AsyncAssetConnector):
     """Asset connector for collecting user data from Okta.
 
     This connector fetches user information from Okta and formats it
@@ -61,7 +63,7 @@ class OktaUserAssetConnector(AssetConnector):
 
         return result
 
-    def update_checkpoint(self) -> None:
+    async def update_checkpoint(self) -> None:
         """Update the checkpoint with the most recent date seen.
 
         Raises:
@@ -76,7 +78,7 @@ class OktaUserAssetConnector(AssetConnector):
                 cache["most_recent_date_seen"] = self.new_most_recent_date
                 self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
         except Exception as e:
-            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
+            self.log(f"Failed to update checkpoint: {str(e)}", level="warning")
             self.log_exception(e)
 
     @cached_property
@@ -92,6 +94,30 @@ class OktaUserAssetConnector(AssetConnector):
         }
         return OktaClient(config)
 
+    async def get_group_privileges(self, group_id: str) -> list[str]:
+        """Get privileges for a specific group.
+
+        Args:
+            group_id: The unique identifier of the group.
+        Returns:
+            List of privilege names associated with the group.
+        """
+        privileges, _, err = await self.client.list_group_assigned_roles(group_id)
+        if err:
+            self.log(f"Error while fetching privileges for group {group_id}: {err}", level="warning")
+            return []
+
+        if not privileges:
+            self.log(f"No privileges found for group {group_id}", level="debug")
+            return []
+
+        privilege_names = []
+        for privilege in privileges:
+            if privilege.status == OktaRoleStatus.ACTIVE:
+                privilege_names.append(privilege.label)
+
+        return privilege_names
+
     async def get_user_groups(self, user_id: str) -> list[Group]:
         """Get all groups for a specific user.
 
@@ -103,7 +129,7 @@ class OktaUserAssetConnector(AssetConnector):
         """
         groups, resp, err = await self.client.list_user_groups(user_id)
         if err:
-            self.log(f"Error while fetching groups for user {user_id}: {err}", level="error")
+            self.log(f"Error while fetching groups for user {user_id}: {err}", level="warning")
             return []
 
         if not groups:
@@ -116,6 +142,7 @@ class OktaUserAssetConnector(AssetConnector):
                 name=group.profile.name,
                 uid=group.id,
                 desc=group.profile.description,
+                privileges=await self.get_group_privileges(group.id),
             )
             for group in groups
         ]
@@ -123,7 +150,7 @@ class OktaUserAssetConnector(AssetConnector):
         while resp.has_next():
             groups, resp, err = await resp.next()
             if err:
-                self.log(f"Error while fetching groups for user {user_id}: {err}", level="error")
+                self.log(f"Error while fetching groups for user {user_id}: {err}", level="warning")
                 return group_list
 
             # Use extend with list comprehension for better performance
@@ -151,7 +178,7 @@ class OktaUserAssetConnector(AssetConnector):
         """
         factors, _, err = await self.client.list_factors(user_id)
         if err:
-            self.log(f"Error while fetching MFA status for user {user_id}: {err}", level="error")
+            self.log(f"Error while fetching MFA status for user {user_id}: {err}", level="warning")
             return False
 
         if not factors:
@@ -160,64 +187,62 @@ class OktaUserAssetConnector(AssetConnector):
 
         return True
 
-    async def next_list_users(self) -> list[OktaUser]:
+    async def get_user_roles(self, user_id: str) -> list[OktaRole]:
+        """Get all roles for a specific user.
+
+        Args:
+            user_id: The unique identifier of the user.
+        Returns:
+            List of role names associated with the user.
+        """
+        roles, _, err = await self.client.list_assigned_roles_for_user(user_id)
+        if err:
+            self.log(f"Error while fetching roles for user {user_id}: {err}", level="warning")
+            return []
+
+        if not roles:
+            self.log(f"No roles found for user {user_id}", level="debug")
+            return []
+
+        return list(roles)
+
+    async def next_list_users(self) -> AsyncGenerator[OktaUser, None]:
         """Fetch all users from Okta.
 
-        Returns:
-            List of user objects from Okta.
+        Yields:
+            OktaUser objects from Okta, one user at a time.
         """
-        all_users = []
         try:
             query_params = {}
             if self.most_recent_date_seen:
-                query_params = {"search": f'created gt "{self.most_recent_date_seen}"'}
+                query_params = {
+                    "search": f'created gt "{self.most_recent_date_seen}"',
+                    "sortBy": "created",
+                    "sortOrder": "asc",
+                }
 
             users, resp, err = await self.client.list_users(query_params)
             if err:
                 self.log(f"Error while listing users: {err}", level="error")
-                return []
+                return
 
-            if not users:
-                self.log("No users found", level="warning")
-                return []
-
-            all_users.extend(users)
+            for user in users:
+                yield user
+                self.new_most_recent_date = user.created
 
             while resp.has_next():
                 users, resp, err = await resp.next()
                 if err:
                     self.log(f"Error while listing users: {err}", level="error")
-                    return all_users
-                all_users.extend(users)
+                    return
+                for user in users:
+                    yield user
+                    self.new_most_recent_date = user.created
 
-            # Only update checkpoint if we have users
-            if all_users:
-                self.new_most_recent_date = self.get_last_created_date(all_users)
         except Exception as e:
             self.log(f"Exception while listing users: {e}", level="error")
             self.log_exception(e)
-            return []
-
-        return all_users
-
-    def get_last_created_date(self, users: list[OktaUser]) -> str:
-        """Get the last created date from the list of users.
-
-        Args:
-            users: List of Okta users.
-
-        Returns:
-            The last created date as a string.
-
-        Raises:
-            ValueError: If the users list is empty.
-        """
-        if not users:
-            raise ValueError("Cannot get last created date from empty users list")
-
-        result: str = max(user.created for user in users)
-
-        return result
+            return
 
     async def map_fields(self, okta_user: OktaUser) -> UserOCSFModel:
         """Map Okta user data to OCSF format.
@@ -252,9 +277,11 @@ class OktaUserAssetConnector(AssetConnector):
         # Fetch user groups and MFA status concurrently
         groups_task = asyncio.create_task(self.get_user_groups(okta_user.id))
         mfa_task = asyncio.create_task(self.get_user_mfa(okta_user.id))
+        roles_task = asyncio.create_task(self.get_user_roles(okta_user.id))
 
         groups = await groups_task
         has_mfa = await mfa_task
+        roles = await roles_task
 
         # Extract domain from email address
         domain = None
@@ -271,20 +298,11 @@ class OktaUserAssetConnector(AssetConnector):
         # Determine user type based on userType field if available
         user_type_id = None
         user_type = None
-        if hasattr(okta_user.profile, "userType") and okta_user.profile.userType:
-            user_type_str = okta_user.profile.userType.lower()
-            if "admin" in user_type_str:
+        for role in roles:
+            if role.status == OktaRoleStatus.ACTIVE and "admin" in role.type.lower():
                 user_type_id = UserTypeId.ADMIN
                 user_type = UserTypeStr.ADMIN
-            elif "service" in user_type_str:
-                user_type_id = UserTypeId.SERVICE
-                user_type = UserTypeStr.SERVICE
-            elif "system" in user_type_str:
-                user_type_id = UserTypeId.SYSTEM
-                user_type = UserTypeStr.SYSTEM
-            else:
-                user_type_id = UserTypeId.USER
-                user_type = UserTypeStr.USER
+                break
 
         user = User(
             uid=okta_user.id,
@@ -324,7 +342,7 @@ class OktaUserAssetConnector(AssetConnector):
             user=user,
         )
 
-    def get_assets(self) -> Generator[UserOCSFModel, None, None]:
+    async def get_assets(self) -> AsyncGenerator[UserOCSFModel, None]:
         """Generate user assets from Okta.
 
         Yields:
@@ -333,12 +351,9 @@ class OktaUserAssetConnector(AssetConnector):
         self.log("Starting Okta user assets generator", level="info")
         self.log(f"Data path: {self._data_path.absolute()}", level="info")
 
-        loop = asyncio.get_event_loop()
-        users = loop.run_until_complete(self.next_list_users())
-
-        for user in users:
+        async for user in self.next_list_users():
             try:
-                yield loop.run_until_complete(self.map_fields(user))
+                yield await self.map_fields(user)
             except Exception as e:
                 user_id = getattr(user, "id", "unknown")
                 self.log(f"Error while mapping user {user_id}: {e}", level="error")

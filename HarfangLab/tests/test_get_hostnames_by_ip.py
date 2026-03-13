@@ -14,7 +14,7 @@ from harfanglab.models import HostnameEntry, HostnamesResult
 
 def test_get_hostnames_by_ip():
     instance_url = "https://test.hurukau.io"
-    api_token = "117a15380a4f434c94fbe1ea7052904e"
+    api_token = "11111111111111111111111111111111"
 
     action = GetHostnamesByIP()
     action.module.configuration = {"url": instance_url, "api_token": api_token}

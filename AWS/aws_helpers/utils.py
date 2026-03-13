@@ -1,5 +1,5 @@
 import asyncio
-import io
+import codecs
 import gzip
 from abc import abstractmethod
 from concurrent.futures import Executor
@@ -55,8 +55,21 @@ def normalize_s3_key(key: str) -> str:
     return unquote(key)
 
 
-class AsyncReader(Protocol):
+def unescape_string(escaped_str: str) -> str:
+    """
+    Converts literal escape sequences (like '\\n')
+    into actual special characters.
 
+    Args:
+        escaped_str: str
+
+    Returns:
+        str:
+    """
+    return codecs.decode(escaped_str.encode("utf-8"), "unicode_escape")
+
+
+class AsyncReader(Protocol):
     @abstractmethod
     async def read(self, size: int = -1, /) -> Any:
         return NotImplemented

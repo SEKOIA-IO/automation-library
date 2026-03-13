@@ -1,7 +1,7 @@
 import enum
 
 from management.mgmtsdk_v2.exceptions import raise_from_response
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from tenacity import Retrying, stop_after_delay, wait_exponential
 
 from sentinelone_module.base import SentinelOneAction

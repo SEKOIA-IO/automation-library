@@ -44,13 +44,25 @@ async def async_generator(iterable):
 @pytest.mark.asyncio
 async def test_pull_content(connector, event):
     connector.client.list_subscriptions.return_value = ["json"]
-    connector.client.get_subscription_contents.return_value = async_generator([[{"contentUri": " foo://example.com"}]])
+    content_skipped = {"contentUri": " foo://example.com", "contentExpiration": "2015-05-30T17:35:00.000Z"}
+
+    content_not_skipped_1 = {
+        "contentUri": " foo://example.com",
+    }
+    content_not_skipped_2 = {
+        "contentUri": " foo://example.com",
+        "contentExpiration": (datetime.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    }
+
+    connector.client.get_subscription_contents.return_value = async_generator(
+        [[content_skipped, content_not_skipped_1, content_not_skipped_2]]
+    )
     connector.client.get_content.return_value = [event, event]
 
     gen = connector.pull_content(datetime.now() - timedelta(minutes=10), datetime.now())
     result = [item async for item in gen]
     assert len(result) == 1
-    assert [json.loads(event) for event in result[0]] == [event, event]
+    assert [json.loads(event) for event in result[0]] == [event, event, event, event]
 
 
 @pytest.mark.asyncio

@@ -1,12 +1,13 @@
-from typing import Any
 from posixpath import join as urljoin
+from typing import Any
 
 import requests
 
 from cybereason_modules.connector_pull_events import CybereasonEventConnector
 from cybereason_modules.constants import MALOP_GET_ALL_ENDPOINT
+from cybereason_modules.exceptions import GenericRequestError, InvalidResponse
+from cybereason_modules.helpers import RETRY_ON_STATUS
 from cybereason_modules.logging import get_logger
-from cybereason_modules.exceptions import InvalidResponse
 
 logger = get_logger()
 
@@ -44,39 +45,64 @@ class CybereasonEventConnectorNew(CybereasonEventConnector):
         url = urljoin(self.module.configuration.base_url, MALOP_GET_ALL_ENDPOINT)
 
         try:
-            response = self.client.post(url, json=params, timeout=60)
+            for attempt in self.retry:
+                with attempt:
+                    response = self.client.post(url, json=params, timeout=60)
 
-            if not response.ok:
-                logger.error(
-                    "Failed to fetch events from the Cybereason API",
-                    status_code=response.status_code,
-                    reason=response.reason,
-                    error=response.content,
-                )
-                self.log(
-                    message=(
-                        f"Request on Cybereason API to fetch events failed with status {response.status_code}"
-                        f" - {response.reason}"
-                    ),
-                    level="error",
-                )
-                return []
+                    if not response.ok:
+                        logger.error(
+                            "Failed to fetch events from the Cybereason API",
+                            status_code=response.status_code,
+                            reason=response.reason,
+                            error=response.content,
+                        )
+                        self.log(
+                            message=(
+                                f"Request on Cybereason API to fetch events failed with status {response.status_code}"
+                                f" - {response.reason}"
+                            ),
+                            level="error",
+                        )
 
-            else:
-                content = self.parse_response_content(response)
-                malops = content.get("data", {}).get("data")
+                        # Raise for retryable status codes
+                        if response.status_code in RETRY_ON_STATUS:
+                            response.raise_for_status()
 
-                if malops is None:
-                    raise InvalidResponse(response)
+                        return []
 
-                # Change back fields names to use the same code
-                malops = adapt_malops_to_legacy(malops)
+                    else:
+                        content = self.parse_response_content(response)
+                        malops = content.get("data", {}).get("data")
 
-                self.log(
-                    message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
-                    level="debug",
-                )
-                return malops
+                        if malops is None:
+                            raise InvalidResponse(response)
+
+                        # Change back fields names to use the same code
+                        malops = adapt_malops_to_legacy(malops)
+
+                        self.log(
+                            message=f"Retrieved {len(malops)} events from Cybereason API with status {response.status_code}",
+                            level="debug",
+                        )
+                        return malops
 
         except requests.Timeout as error:
+            logger.error(
+                "Timeout error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
             raise TimeoutError(url) from error
+        except requests.ConnectionError as error:
+            logger.error(
+                "Connection error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
+            raise ConnectionError(url) from error
+        except requests.RequestException as error:
+            logger.error(
+                "General error when trying to fetch events from the Cybereason API",
+                url=url,
+            )
+            raise GenericRequestError(url, error) from error
+
+        return []

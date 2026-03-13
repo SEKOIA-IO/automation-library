@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-02-23 - 1.0.12
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.3
+
+## 2026-02-06 - 1.0.11
+
+### Changed
+
+- Add for the first time the vulnerability mapping yml file
+
+## 2025-02-09 - 1.0.10
+
+### Changed
+
+- Upgrade sekoia-automation-sdk to 1.22.2
+
+## 2026-01-29 - 1.0.9
+
+### Changed
+
+- Update asset connector name
+
+## 2026-01-23 - 1.0.8
+
+### Changed
+
+- Update internals field inside arguments of Tenable asset connectors
+
+## 2026-01-22 - 1.0.7
+
+### Changed
+
+- Added internals field to Tenable asset connectors
+
+## 2025-01-12 - 1.0.6
+
+### Fixed
+
+- Fix the way we handle CVE IDs
+
+## 2025-01-08 - 1.0.5
+
+### Changed
+
+- Update hostname field
+
+## 2025-12-18 - 1.0.4
+
+### Changed
+
+- Add device to asset mapping
+- Add some extra fields
+- Update sdk version to 1.22.0
+- Add exceptions to the connector
+
 ## 2025-10-06 - 1.0.3
 
 ### Changed

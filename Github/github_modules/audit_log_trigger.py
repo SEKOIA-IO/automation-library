@@ -13,7 +13,7 @@ from sekoia_automation.connector import DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from github_modules import GithubModule
-from github_modules.async_client.http_client import AsyncGithubClient
+from github_modules.async_client.http_client import AsyncGithubClient, BadCredentialsError
 from github_modules.logging import get_logger
 from github_modules.metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
 
@@ -66,6 +66,7 @@ class AuditLogConnector(AsyncConnector):
         rate_limiter = AsyncLimiter(self.configuration.ratelimit_per_minute)
 
         self._github_client = AsyncGithubClient(
+            base_url=self.module.configuration.base_url,
             organization=self.module.configuration.org_name,
             api_key=self.module.configuration.apikey,
             pem_file=self.module.configuration.pem_file,
@@ -197,6 +198,11 @@ class AuditLogConnector(AsyncConnector):
                 while self.running:
                     loop.run_until_complete(self.next_batch())
 
+            except BadCredentialsError as exc:
+                self.log(
+                    message="The authentication Failed. Please check you credendial. error=Bad credential status_code=401",
+                    level="critical",
+                )
             except Exception as error:
                 traceback.print_exc()
                 self.log_exception(error, message="Failed to forward events")

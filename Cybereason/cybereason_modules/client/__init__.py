@@ -10,6 +10,13 @@ class ApiClient(requests.Session):
         self.mount(
             "https://",
             HTTPAdapter(
-                max_retries=Retry(total=nb_retries, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+                max_retries=Retry(
+                    total=nb_retries,
+                    backoff_factor=1,
+                    status_forcelist=[429, 500, 502, 503, 504],
+                    connect=5,
+                    read=5,
+                    allowed_methods=["GET", "POST"],
+                )
             ),
         )

@@ -9,7 +9,6 @@ from tenable_conn.account_validator import TenableAccountValidator
 
 @pytest.fixture
 def tenable_account_validator():
-
     module = TenableModule()
     module.configuration = {
         "base_url": "http://example.com",

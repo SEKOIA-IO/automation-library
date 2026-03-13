@@ -1,5 +1,5 @@
 from management.mgmtsdk_v2_1.services.threat_notes import ThreatNoteQueryFilter
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 from sentinelone_module.base import SentinelOneAction
 from sentinelone_module.filters import BaseFilters
