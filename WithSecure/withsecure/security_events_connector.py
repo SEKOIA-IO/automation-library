@@ -70,7 +70,7 @@ class SecurityEventsConnector(Connector):
             log_cb=self.log,
         )
 
-    def __get_events(self, data: dict[str, Any], headers: dict[str, str]) -> requests.Response:
+    def __get_events(self, data: list[tuple[str, Any]], headers: dict[str, str]) -> requests.Response:
         for attempt in Retrying(
             stop=stop_after_attempt(5),
             wait=wait_exponential(multiplier=1, min=1, max=10),
@@ -82,6 +82,16 @@ class SecurityEventsConnector(Connector):
                 )
 
         return response
+
+    def __flatten_form_data(self, data: dict[str, Any]) -> list[tuple[str, Any]]:
+        flattened_data = []
+        for key, value in data.items():
+            if isinstance(value, list):
+                for item in value:
+                    flattened_data.append((key, item))
+            else:
+                flattened_data.append((key, value))
+        return flattened_data
 
     def __fetch_next_events(self, from_date: datetime) -> Generator[list[dict[str, Any]], None, None]:
         """
@@ -102,7 +112,8 @@ class SecurityEventsConnector(Connector):
         headers = {"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
 
         try:
-            response = self.__get_events(data=data, headers=headers)
+            flattened_data = self.__flatten_form_data(data)
+            response = self.__get_events(data=flattened_data, headers=headers)
             response.raise_for_status()
 
             # Remove null bytes if any
@@ -136,7 +147,8 @@ class SecurityEventsConnector(Connector):
                 return
             data["anchor"] = anchor
             try:
-                response = self.__get_events(data=data, headers=headers)
+                flattened_data = self.__flatten_form_data(data)
+                response = self.__get_events(data=flattened_data, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
             except Exception as any_exception:
