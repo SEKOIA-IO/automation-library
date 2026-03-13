@@ -10,7 +10,6 @@ import httpx
 import orjson
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
-from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
@@ -232,7 +231,7 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                 if most_recent_event_timestamp is None or last_event_timestamp > most_recent_event_timestamp:
                     most_recent_event_timestamp = last_event_timestamp
 
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.filter_processed_events(events)]
+            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_events]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
@@ -280,6 +279,7 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                 self.next_batch(start, end)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")  # pragma: no cover
+                break
 
         # Close the client connection
         if "client" in self.__dict__:
