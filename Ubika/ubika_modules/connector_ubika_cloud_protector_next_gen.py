@@ -1,20 +1,24 @@
 import time
 from collections.abc import Generator
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from functools import cached_property
+from typing import Any
+
+from dateutil.parser import isoparse
 
 import httpx
 import orjson
 from cachetools import Cache, LRUCache
 from pydantic.v1 import Field
-from sekoia_automation.checkpoint import CheckpointTimestamp, TimeUnit
 from sekoia_automation.connector import Connector, DefaultConnectorConfiguration
 from sekoia_automation.storage import PersistentJSON
 
 from . import UbikaModule
 from .client import UbikaCloudProtectorNextGenApiClient
+
 from .client.auth import AuthorizationError, AuthorizationTimeoutError
 from .metrics import EVENTS_LAG, FORWARD_EVENTS_DURATION, INCOMING_MESSAGES, OUTCOMING_EVENTS
+from .timestepper import TimeStepper
 
 
 class FetchEventsException(Exception):
@@ -26,7 +30,11 @@ class UbikaCloudProtectorNextGenConnectorConfiguration(DefaultConnectorConfigura
     refresh_token: str = Field(..., description="API refresh token", secret=True)
 
     frequency: int = 60
+
     chunk_size: int = 200
+    # Time stepper settings
+    timedelta: int = 1
+    start_time: int = 1
 
 
 class UbikaCloudProtectorNextGenConnector(Connector):
@@ -38,17 +46,43 @@ class UbikaCloudProtectorNextGenConnector(Connector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.cursor = CheckpointTimestamp(
-            path=self.data_path,
-            time_unit=TimeUnit.MILLISECOND,
-            start_at=timedelta(days=30),
-            ignore_older_than=timedelta(days=7),
-        )
-        self.from_timestamp = self.cursor.offset
-
+        self.context = PersistentJSON("context.json", self.data_path)
         self.cache_context = PersistentJSON("cache.json", self.data_path)
         self.cache_size = 1000
         self.events_cache: Cache = self.load_events_cache()
+
+    @cached_property
+    def stepper(self):
+        # Read the most recent date seen from the context
+        with self.context as cache:
+            most_recent_date_str = cache.get("most_recent_date_seen")
+
+            # if not defined, create a new time stepper from the configuration
+            if most_recent_date_str is None:
+                return TimeStepper.create(
+                    self,
+                    self.configuration.frequency,
+                    self.configuration.timedelta,
+                    self.configuration.start_time,
+                )
+
+            # parse the most recent requested date
+            most_recent_date = isoparse(most_recent_date_str)
+
+            # Ensure we don't go back more than one month
+            now = datetime.now(UTC)
+            one_month_ago = now - timedelta(days=30)
+            # if the most recent date is older than one month, set it to one month ago
+            if most_recent_date < one_month_ago:
+                most_recent_date = one_month_ago
+
+            # create a time stepper from the most recent date seen
+            return TimeStepper.create_from_time(
+                self,
+                most_recent_date,
+                self.configuration.frequency,
+                self.configuration.timedelta,
+            )
 
     def load_events_cache(self) -> Cache:
         """
@@ -113,12 +147,15 @@ class UbikaCloudProtectorNextGenConnector(Connector):
 
             raise FetchEventsException(message)
 
-    def __fetch_next_events(self, from_timestamp: int) -> Generator[list, None, None]:
+    def __fetch_next_events(
+        self, start_timestamp: int, end_timestamp: int
+    ) -> Generator[list[dict[str, Any]], None, None]:
         # get the first page of events
         headers = {"Content-Type": "application/json"}
         url = f"https://api.ubika.io/rest/logs.ubika.io/v1/ns/{self.configuration.namespace}/security-events"
         params = {
-            "filters.fromDate": from_timestamp,
+            "filters.fromDate": start_timestamp,
+            "filters.toDate": end_timestamp,
             "pagination.realtime": True,
             "pagination.pageSize": self.configuration.chunk_size,
         }
@@ -171,43 +208,30 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                 raise
 
             except AuthorizationError as err:
-                self.log(f"Authorization error: {err.args[1]}", level="critical")
+                self.log(f"Authorization error: {err.args[1] if len(err.args) > 1 else str(err)}", level="critical")
                 raise
 
-    def fetch_events(self) -> Generator[list, None, None]:
-        most_recent_date_seen = self.from_timestamp
-        current_lag: int = 0
-
-        try:
-            for next_events in self.__fetch_next_events(most_recent_date_seen):
-                if next_events:
-                    # save the greatest date ever seen
-                    last_event = max(next_events, key=lambda x: int(x["timestamp"]))
-                    last_event_timestamp = int(last_event["timestamp"])
-
-                    if last_event_timestamp > most_recent_date_seen:
-                        most_recent_date_seen = last_event_timestamp
-
-                    yield next_events
-        finally:
-            # save the most recent date
-            if most_recent_date_seen > self.from_timestamp:
-                self.from_timestamp = most_recent_date_seen
-
-                # save in context the most recent date seen
-                self.cursor.offset = self.from_timestamp
-
-                current_lag = time.time() - most_recent_date_seen
-
-        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
-
-    def next_batch(self) -> None:
+    def next_batch(self, start: datetime, end: datetime) -> None:
         # save the starting time
         batch_start_time = time.time()
+        start_timestamp = int(start.timestamp() * 1000)
+        end_timestamp = int(end.timestamp() * 1000)
+
+        most_recent_event_timestamp: int | None = None
+        current_lag: float = 0
 
         # Fetch next batch
-        for events in self.fetch_events():
-            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.filter_processed_events(events)]
+        for events in self.__fetch_next_events(start_timestamp, end_timestamp):
+            filtered_events = self.filter_processed_events(events)
+
+            if filtered_events:
+                last_event = max(filtered_events, key=lambda x: int(x["timestamp"]))
+                last_event_timestamp = int(last_event["timestamp"])
+
+                if most_recent_event_timestamp is None or last_event_timestamp > most_recent_event_timestamp:
+                    most_recent_event_timestamp = last_event_timestamp
+
+            batch_of_events = [orjson.dumps(event).decode("utf-8") for event in filtered_events]
 
             # if the batch is full, push it
             if len(batch_of_events) > 0:
@@ -223,8 +247,16 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                     level="info",
                 )  # pragma: no cover
 
+        if most_recent_event_timestamp is not None:
+            current_lag = time.time() - (most_recent_event_timestamp / 1000)
+
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+
         # just in case
         self.save_events_cache()
+
+        with self.context as cache:
+            cache["most_recent_date_seen"] = end.isoformat()
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -235,26 +267,22 @@ class UbikaCloudProtectorNextGenConnector(Connector):
         )  # pragma: no cover
         FORWARD_EVENTS_DURATION.labels(intake_key=self.configuration.intake_key).observe(batch_duration)
 
-        # compute the remaining sleeping time. If greater than 0, sleep
-        delta_sleep = self.configuration.frequency - batch_duration
-        if delta_sleep > 0:
-            self.log(
-                message=f"Next batch in the future. Waiting {delta_sleep} seconds",
-                level="debug",
-            )  # pragma: no cover
-            time.sleep(delta_sleep)
-
     def run(self) -> None:
         self.log(message=f"Start fetching {self.NAME} events", level="info")  # pragma: no cover
 
-        while self.running:
+        for start, end in self.stepper.ranges():
+            # Check if we need to stop
+            if self._stop_event.is_set():
+                break
+
             try:
-                self.next_batch()
+                self.next_batch(start, end)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")  # pragma: no cover
+                break
 
         # Close the client connection
-        if hasattr(self, "_client"):
+        if "client" in self.__dict__:
             self.client.close()
 
         self.save_events_cache()

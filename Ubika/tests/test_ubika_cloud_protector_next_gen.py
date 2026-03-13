@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
 
 import httpx
 import pytest
@@ -157,7 +158,7 @@ def test_fetch_events_with_pagination(respx_mock: MockRouter, trigger, message1,
         ).mock(return_value=httpx.Response(200, json=message2))
 
         trigger.from_timestamp = 1747326567845
-        events = trigger.fetch_events()
+        events = trigger._UbikaCloudProtectorNextGenConnector__fetch_next_events(1747326567845, 1747326667845)
 
         assert list(events) == [message1["spec"]["items"]]
 
@@ -178,10 +179,17 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
             )
         )
 
+        start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+        end = datetime.fromtimestamp(1747326660, tz=timezone.utc)
+
+        start_ms = int(start.timestamp() * 1000)
+        end_ms = int(end.timestamp() * 1000)
+
         respx_mock.get(
             "https://api.ubika.io/rest/logs.ubika.io/v1/ns/sekoia/security-events",
             params={
-                "filters.fromDate": "1747326567845",
+                "filters.fromDate": str(start_ms),
+                "filters.toDate": str(end_ms),
                 "pagination.realtime": "true",
                 "pagination.pageSize": "100",
             },
@@ -196,14 +204,13 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
             },
         ).mock(return_value=httpx.Response(200, json=message2))
 
-        trigger.from_timestamp = 1747326567845
-
         batch_duration = trigger.configuration.frequency + 20
         start_time = 1747326560
         end_time = start_time + batch_duration
         mock_time.time.side_effect = [start_time, end_time, end_time]
 
-        trigger.next_batch()
+
+        trigger.next_batch(start, end)
 
         assert trigger.push_events_to_intakes.call_count == 1
         assert mock_time.sleep.call_count == 0
@@ -219,8 +226,11 @@ def test_authorization_http_error_without_retry(respx_mock: MockRouter, trigger)
         )
     )
 
+    start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+    end = datetime.fromtimestamp(1747326660, tz=timezone.utc)
+
     with patch("time.sleep"), pytest.raises(AuthorizationError):
-        trigger.next_batch()
+        trigger.next_batch(start=start, end=end)
 
     assert route.call_count == 1
 
@@ -235,8 +245,11 @@ def test_authorization_http_error_with_retry(respx_mock: MockRouter, trigger):
         )
     )
 
+    start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+    end = datetime.fromtimestamp(1747326660, tz=timezone.utc)
+
     with patch("time.sleep"), pytest.raises(AuthorizationError):
-        trigger.next_batch()
+        trigger.next_batch(start=start, end=end)
 
     assert route.call_count == 5
 
@@ -246,7 +259,10 @@ def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
     route = respx_mock.post("/auth/realms/main/protocol/openid-connect/token")
     route.side_effect = httpx.TimeoutException("Timeout")
 
+    start = datetime.fromtimestamp(1747326560, tz=timezone.utc)
+    end = datetime.fromtimestamp(1747326660, tz=timezone.utc)
+
     with patch("time.sleep"), pytest.raises(AuthorizationTimeoutError):
-        trigger.next_batch()
+        trigger.next_batch(start=start, end=end)
 
     assert route.call_count == 5

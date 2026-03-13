@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2025-12-09 - 1.0.8
+
+### Added
+
+- Add timestepper to avoid timeouts on large data fetches
+- 
 ## 2026-02-03 - 1.0.7
 
 ### Fixed
