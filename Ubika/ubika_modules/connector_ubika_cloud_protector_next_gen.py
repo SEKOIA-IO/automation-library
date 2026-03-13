@@ -47,14 +47,6 @@ class UbikaCloudProtectorNextGenConnector(Connector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.cursor = CheckpointTimestamp(
-            path=self.data_path,
-            time_unit=TimeUnit.MILLISECOND,
-            start_at=timedelta(days=30),
-            ignore_older_than=timedelta(days=7),
-        )
-        self.from_timestamp = self.cursor.offset
-
         self.context = PersistentJSON("context.json", self.data_path)
         self.cache_context = PersistentJSON("cache.json", self.data_path)
         self.cache_size = 1000
@@ -226,8 +218,20 @@ class UbikaCloudProtectorNextGenConnector(Connector):
         start_timestamp = int(start.timestamp() * 1000)
         end_timestamp = int(end.timestamp() * 1000)
 
+        most_recent_event_timestamp: int | None = None
+        current_lag: float = 0
+
         # Fetch next batch
         for events in self.__fetch_next_events(start_timestamp, end_timestamp):
+            filtered_events = self.filter_processed_events(events)
+
+            if filtered_events:
+                last_event = max(filtered_events, key=lambda x: int(x["timestamp"]))
+                last_event_timestamp = int(last_event["timestamp"])
+
+                if most_recent_event_timestamp is None or last_event_timestamp > most_recent_event_timestamp:
+                    most_recent_event_timestamp = last_event_timestamp
+
             batch_of_events = [orjson.dumps(event).decode("utf-8") for event in self.filter_processed_events(events)]
 
             # if the batch is full, push it
@@ -244,8 +248,16 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                     level="info",
                 )  # pragma: no cover
 
+        if most_recent_event_timestamp is not None:
+            current_lag = time.time() - (most_recent_event_timestamp / 1000)
+
+        EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(current_lag)
+
         # just in case
         self.save_events_cache()
+
+        with self.context as cache:
+            cache["most_recent_date_seen"] = end.isoformat()
 
         # get the ending time and compute the duration to fetch the events
         batch_end_time = time.time()
@@ -268,12 +280,9 @@ class UbikaCloudProtectorNextGenConnector(Connector):
                 self.next_batch(start, end)
             except Exception as error:
                 self.log_exception(error, message="Failed to forward events")  # pragma: no cover
-            finally:
-                with self.context as cache:
-                    cache["most_recent_date_seen"] = end.isoformat()
 
         # Close the client connection
-        if hasattr(self, "_client"):
+        if "client" in self.__dict__:
             self.client.close()
 
         self.save_events_cache()
