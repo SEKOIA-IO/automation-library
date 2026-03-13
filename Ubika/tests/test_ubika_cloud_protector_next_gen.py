@@ -197,7 +197,6 @@ def test_next_batch_sleep_until_next_round(respx_mock: MockRouter, trigger, mess
             },
         ).mock(return_value=httpx.Response(200, json=message2))
 
-
         trigger.from_timestamp = 1747326567845
 
         batch_duration = trigger.configuration.frequency + 20
@@ -259,5 +258,5 @@ def test_authorization_timeout_error(respx_mock: MockRouter, trigger):
 
         with pytest.raises(AuthorizationError):
             trigger.next_batch(start=start, end=end)
-          
+
     assert route.call_count == 5
