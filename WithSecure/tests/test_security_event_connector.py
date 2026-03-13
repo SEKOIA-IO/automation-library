@@ -349,4 +349,3 @@ def test_next_batch_with_form_urlencoded_format(trigger, message1, message2):
         trigger.next_batch()
         assert len(trigger.push_events_to_intakes.mock_calls) == 1
         assert len(trigger.push_events_to_intakes.mock_calls[0][2]["events"]) == 2
-
