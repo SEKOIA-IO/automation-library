@@ -3,6 +3,7 @@ from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from typing import Any, Optional
+from urllib.parse import urlencode
 
 import orjson
 import requests
@@ -70,7 +71,7 @@ class SecurityEventsConnector(Connector):
             log_cb=self.log,
         )
 
-    def __get_events(self, data: dict[str, Any], headers: dict[str, str]) -> requests.Response:
+    def __get_events(self, data: list[tuple[str, Any]], headers: dict[str, str]) -> requests.Response:
         for attempt in Retrying(
             stop=stop_after_attempt(5),
             wait=wait_exponential(multiplier=1, min=1, max=10),
@@ -101,8 +102,17 @@ class SecurityEventsConnector(Connector):
 
         headers = {"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
 
+        # Flatten engineGroup array for form-urlencoded format
+        flattened_data = []
+        for key, value in data.items():
+            if isinstance(value, list):
+                for item in value:
+                    flattened_data.append((key, item))
+            else:
+                flattened_data.append((key, value))
+
         try:
-            response = self.__get_events(data=data, headers=headers)
+            response = self.__get_events(data=flattened_data, headers=headers)
             response.raise_for_status()
 
             # Remove null bytes if any

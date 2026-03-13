@@ -313,3 +313,40 @@ def test_load_recent_date_seen(trigger):
         c["most_recent_date_seen"] = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
 
     assert trigger.most_recent_date_seen < datetime.now(timezone.utc) - timedelta(days=3)
+
+
+def test_next_batch_with_form_urlencoded_format(trigger, message1, message2):
+    """Test that engineGroup parameters are correctly repeated in form-urlencoded format"""
+
+    def custom_matcher(request: requests.PreparedRequest):
+        if request.url == API_AUTHENTICATION_URL:
+            resp = requests.Response()
+            resp._content = json.dumps(
+                {
+                    "access_token": "dummy-test-token",
+                    "token_type": "Bearer",
+                    "expires_in": 1799,
+                }
+            ).encode()
+            resp.status_code = 200
+            return resp
+        elif request.url.startswith(API_SECURITY_EVENTS_URL):
+            # Verify that engineGroup is repeated in the request body
+            assert "engineGroup=epp" in request.body
+            assert "engineGroup=edr" in request.body
+            assert "engineGroup=ecp" in request.body
+            assert "Content-Type" in request.headers
+            assert request.headers["Content-Type"] == "application/x-www-form-urlencoded"
+
+            resp = requests.Response()
+            resp._content = json.dumps({"items": [message1, message2]}).encode()
+            resp.status_code = 200
+            return resp
+        return None
+
+    with requests_mock.Mocker() as mock_requests:
+        mock_requests.add_matcher(custom_matcher)
+        trigger.next_batch()
+        assert len(trigger.push_events_to_intakes.mock_calls) == 1
+        assert len(trigger.push_events_to_intakes.mock_calls[0][2]["events"]) == 2
+
