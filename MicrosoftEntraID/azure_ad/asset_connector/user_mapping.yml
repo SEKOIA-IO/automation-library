@@ -11,29 +11,23 @@ mapping:
           "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
           "userPrincipalName": "mary.jones@example.com",
           "displayName": "Mary Jones",
-          "givenName": "Mary",
-          "surname": "Jones",
           "mail": "mary.jones@example.com",
           "jobTitle": "Financial Analyst",
           "department": "Finance",
           "officeLocation": "New York, NY",
-          "mobilePhone": "+1-555-234-5678",
-          "businessPhones": ["+1-555-234-5678"],
+          "companyName": "Example Corp",
           "createdDateTime": "2020-06-04T10:00:00Z",
-          "lastSignInDateTime": "2025-08-26T09:30:00Z",
+          "signInActivity": {
+            "lastSignInDateTime": "2025-08-26T09:30:00Z"
+          },
           "accountEnabled": true,
-          "userType": "Member",
           "employeeId": "EMP456",
-          "onPremisesUserPrincipalName": "mary.jones@example.com",
-          "onPremisesSyncEnabled": true,
+          "employeeType": "Employee",
+          "onPremisesSamAccountName": "mary.jones",
+          "lastPasswordChangeDateTime": "2025-01-15T08:00:00Z",
           "memberOf": [
-            "Finance Users",
-            "All Users"
-          ],
-          "assignedLicenses": [
-            {
-              "skuId": "6fd2c87f-bc8f-4e6d-8d55-d453c968c64f"
-            }
+            { "id": "g1", "displayName": "Finance Users" },
+            { "id": "g2", "displayName": "All Users" }
           ]
         }
 
@@ -44,25 +38,22 @@ mapping:
           "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
           "userPrincipalName": "robert.smith@example.com",
           "displayName": "Robert Smith",
-          "givenName": "Robert",
-          "surname": "Smith",
           "mail": "robert.smith@example.com",
           "jobTitle": "Senior Software Engineer",
           "department": "Engineering",
           "officeLocation": "San Francisco, CA",
-          "mobilePhone": "+1-555-345-6789",
-          "businessPhones": ["+1-555-345-6789"],
+          "companyName": "Example Corp",
           "createdDateTime": "2020-06-04T10:00:00Z",
-          "lastSignInDateTime": "2025-06-10T14:00:00Z",
+          "signInActivity": {
+            "lastSignInDateTime": "2025-06-10T14:00:00Z"
+          },
           "accountEnabled": false,
-          "userType": "Member",
           "employeeId": "EMP789",
-          "onPremisesUserPrincipalName": "robert.smith@example.com",
-          "onPremisesSyncEnabled": true,
+          "onPremisesSamAccountName": "robert.smith",
+          "lastPasswordChangeDateTime": "2024-11-01T12:00:00Z",
           "memberOf": [
-            "Engineering Users"
-          ],
-          "assignedLicenses": []
+            { "id": "g3", "displayName": "Engineering Users" }
+          ]
         }
 
   fields:
@@ -83,14 +74,52 @@ mapping:
       target: "user.full_name"
       type: "string"
       logic: "Direct mapping of display name"
+      description: "User display name (\"Unknown\" if absent)"
+
+    - source: "displayName"
+      target: "user.display_name"
+      type: "string"
+      logic: "Direct mapping of display name"
       description: "User display name"
 
+    - source: "userPrincipalName | split('@') | last"
+      target: "user.domain"
+      type: "string"
+      logic: "Extract domain from UPN (part after @)"
+      description: "User domain derived from UPN"
+
+    - source: "onPremisesSamAccountName"
+      target: "user.uid_alt"
+      type: "string"
+      logic: "Direct mapping of on-premises SAM account name"
+      description: "Alternate user identifier (on-premises SAM account name)"
+
+    # MFA STATUS (fetched via /users/{id}/authentication/methods)
+    - source: "api: authentication/methods"
+      target: "user.has_mfa"
+      type: "boolean"
+      logic: "true if any MicrosoftAuthenticator, SoftwareOath, or Phone method is registered"
+      description: "Whether the user has MFA configured"
+
+    # USER TYPE (computed from directory role membership)
+    - source: "api: transitiveMemberOf/microsoft.graph.directoryRole"
+      target: "user.type_id"
+      type: "integer"
+      logic: "2 (Admin) if user has directory roles, otherwise 1 (User)"
+      description: "OCSF user type ID"
+
+    - source: "api: transitiveMemberOf/microsoft.graph.directoryRole"
+      target: "user.type"
+      type: "string"
+      logic: "\"Admin\" if user has directory roles, otherwise \"User\""
+      description: "OCSF user type string"
+
     # ACCOUNT INFORMATION
-    - source: "userPrincipalName"
+    - source: "id"
       target: "user.account.uid"
       type: "string"
-      logic: "Direct mapping of user principal name"
-      description: "Entra ID account identifier (UPN)"
+      logic: "Direct mapping of Entra ID object UUID"
+      description: "Entra ID account unique identifier (UUID)"
 
     - source: "userPrincipalName"
       target: "user.account.name"
@@ -98,124 +127,51 @@ mapping:
       logic: "Direct mapping of user principal name"
       description: "Account username (UPN)"
 
-    - source: "static: Entra ID"
+    - source: "static: Azure AD Account"
       target: "user.account.type"
       type: "string"
-      logic: "Always 'Entra ID'"
-      description: "Account type identifier"
+      logic: "Always 'Azure AD Account' (AccountTypeStr.AZURE_AD_ACCOUNT)"
+      description: "OCSF account type string"
 
-    - source: "static: 41"
+    - source: "static: 6"
       target: "user.account.type_id"
       type: "integer"
-      logic: "Always 41 for Entra ID account type"
+      logic: "Always 6 for Azure AD Account (AccountTypeId.AZURE_AD_ACCOUNT)"
       description: "OCSF account type ID"
 
     # CONTACT INFORMATION
     - source: "mail"
       target: "user.email_addr"
       type: "string"
-      logic: "Direct mapping of email address"
+      logic: "Direct mapping of email address (\"Unknown\" if absent)"
       description: "User email address"
 
-    - source: "mobilePhone"
-      target: "user.phone"
-      type: "string"
-      logic: "Direct mapping of mobile phone"
-      description: "Mobile phone number"
-
-    - source: "businessPhones | first"
-      target: "user.work_phone"
-      type: "string"
-      logic: "Extract first business phone number"
-      description: "Work phone number"
-
-    # ORGANIZATIONAL INFORMATION
-    - source: "department"
-      target: "user.department"
-      type: "string"
-      logic: "Direct mapping of department attribute"
-      description: "User department"
-
-    - source: "jobTitle"
-      target: "user.job_title"
-      type: "string"
-      logic: "Direct mapping of job title"
-      description: "User job title"
-
-    - source: "employeeId"
-      target: "user.employee_id"
-      type: "string"
-      logic: "Direct mapping of employee ID"
-      description: "Employee ID"
-
-    - source: "officeLocation"
-      target: "user.office_location"
-      type: "string"
-      logic: "Direct mapping of office location"
-      description: "Office location"
-
-    # USER STATUS & SECURITY
-    - source: "accountEnabled"
-      target: "user.is_enabled"
-      type: "boolean"
-      logic: "Direct mapping of account enabled status"
-      description: "Whether user account is enabled"
-
-    - source: "memberOf | length > 0"
-      target: "user.has_groups"
-      type: "boolean"
-      logic: "true if user is member of any group, false otherwise"
-      description: "Whether user belongs to any groups"
-
-    - source: "memberOf"
+    # GROUPS (fetched via /users/{id}/memberOf)
+    - source: "api: memberOf"
       target: "user.groups"
       type: "array[object]"
-      logic: "Create Group objects with group name as uid and name"
-      description: "Group memberships"
+      logic: "Create Group objects with group displayName as name and id as uid"
+      description: "Group memberships (paginated)"
 
-    - source: "assignedLicenses | length > 0"
-      target: "user.has_licenses"
-      type: "boolean"
-      logic: "true if user has assigned licenses, false otherwise"
-      description: "Whether user has assigned licenses"
-
-    - source: "assignedLicenses | length"
-      target: "user.licenses_count"
-      type: "integer"
-      logic: "Count of assigned licenses"
-      description: "Number of assigned licenses"
-
-    # ON-PREMISES INFORMATION
-    - source: "onPremisesUserPrincipalName"
-      target: "user.on_premises_upn"
+    # ORGANIZATIONAL INFORMATION
+    - source: "companyName"
+      target: "user.org.name"
       type: "string"
-      logic: "Direct mapping of on-premises UPN"
-      description: "On-premises user principal name"
+      logic: "Present only when companyName is non-null"
+      description: "User's company/organization name"
 
-    - source: "onPremisesSyncEnabled"
-      target: "user.is_synced"
-      type: "boolean"
-      logic: "Direct mapping of on-premises sync status"
-      description: "Whether user is synced from on-premises"
+    - source: "officeLocation"
+      target: "user.org.ou_name"
+      type: "string"
+      logic: "Mapped as organizational unit name within the org object"
+      description: "Office location (organizational unit)"
 
     # TEMPORAL INFORMATION
     - source: "createdDateTime"
-      target: "user.created_time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch"
-      description: "User creation timestamp (Unix epoch)"
-
-    - source: "lastSignInDateTime"
-      target: "user.last_login_time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch; null if never signed in"
-      description: "Last sign-in timestamp (Unix epoch)"
-
-    - source: "createdDateTime"
       target: "time"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp"
-      description: "OCSF event timestamp (user discovery time)"
+      type: "float"
+      logic: "Convert ISO 8601 to Unix epoch for OCSF event timestamp (0 if absent)"
+      description: "OCSF event timestamp (user creation time as Unix epoch)"
 
     # OCSF EVENT CLASSIFICATION
     - source: "static: 2"
@@ -254,16 +210,16 @@ mapping:
       logic: "Always 5003 for User Inventory Info"
       description: "OCSF class UID"
 
-    - source: "computed: 500300 + activity_id"
+    - source: "static: 500302"
       target: "type_uid"
       type: "integer"
-      logic: "Base 500300 + activity_id (2 = 500302)"
+      logic: "500300 + activity_id (2) = 500302"
       description: "OCSF type UID"
 
-    - source: "computed: class_name + ': ' + activity_name"
+    - source: "static: User Inventory"
       target: "type_name"
       type: "string"
-      logic: "Concatenate 'User Inventory Info: Collect'"
+      logic: "Always 'User Inventory'"
       description: "OCSF type name"
 
     - source: "static: Informational"
@@ -285,48 +241,61 @@ mapping:
       logic: "Always 'Microsoft Entra ID'"
       description: "Source product name"
 
+    - source: "static: 1.0"
+      target: "metadata.product.version"
+      type: "string"
+      logic: "Always '1.0'"
+      description: "Source product version"
+
     - source: "static: 1.6.0"
       target: "metadata.version"
       type: "string"
       logic: "Fixed OCSF schema version"
       description: "OCSF schema version"
 
-    # OCSF ENRICHMENT - USER ACCESS INFORMATION
+    # OCSF ENRICHMENT [0] - ACCOUNT STATUS
+    - source: "static: account"
+      target: "enrichments[0].name"
+      type: "string"
+      logic: "Always 'account'"
+      description: "Enrichment object name"
+
+    - source: "static: status"
+      target: "enrichments[0].value"
+      type: "string"
+      logic: "Always 'status'"
+      description: "Enrichment object value"
+
     - source: "accountEnabled"
       target: "enrichments[0].data.is_enabled"
       type: "boolean"
       logic: "Direct mapping of account enabled status"
-      description: "Whether user account is enabled"
+      description: "Whether the user account is enabled"
 
-    - source: "lastSignInDateTime"
-      target: "enrichments[0].data.last_sign_in"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix timestamp; return null if never signed in"
-      description: "Last sign-in timestamp (Unix epoch)"
-
-    - source: "userType"
-      target: "enrichments[0].data.user_type"
+    - source: "signInActivity.lastSignInDateTime"
+      target: "enrichments[0].data.last_logon"
       type: "string"
-      logic: "Direct mapping of user type (Member, Guest, etc.)"
-      description: "User type classification"
+      logic: "ISO 8601 datetime of last sign-in; null if no sign-in recorded"
+      description: "Last sign-in datetime (ISO 8601)"
 
-    - source: "assignedLicenses | length"
-      target: "enrichments[0].data.assigned_licenses_count"
-      type: "integer"
-      logic: "Count of assigned licenses"
-      description: "Number of assigned Microsoft 365 licenses"
+    - source: "lastPasswordChangeDateTime"
+      target: "enrichments[0].data.last_time_password_change"
+      type: "float"
+      logic: "Convert ISO 8601 to Unix timestamp; null if absent"
+      description: "Last password change timestamp (Unix epoch)"
 
-    - source: "static: access_control"
-      target: "enrichments[0].name"
+    # OCSF ENRICHMENT [1] - EMPLOYMENT INFO (conditional)
+    - source: "static: employment"
+      target: "enrichments[1].name"
       type: "string"
-      logic: "Always 'access_control' for Entra ID enrichment type"
-      description: "Enrichment object name"
+      logic: "Present only when at least one of department, jobTitle, employeeId, or employeeType is non-null"
+      description: "Enrichment object name for employment info"
 
-    - source: "static: entra_id"
-      target: "enrichments[0].value"
+    - source: "computed: \"{department} - {jobTitle}\".strip(\" -\") or \"info\""
+      target: "enrichments[1].value"
       type: "string"
-      logic: "Always 'entra_id' for Entra ID user access enrichment"
-      description: "Enrichment object value"
+      logic: "Concatenates department and jobTitle separated by ' - '; falls back to 'info'"
+      description: "Human-readable employment summary"
 
   ocsf_samples:
     - name: "User Inventory Info: Collect"
@@ -339,14 +308,15 @@ mapping:
           "category_uid": 5,
           "class_name": "User Inventory Info",
           "class_uid": 5003,
-          "type_name": "User Inventory Info: Collect",
+          "type_name": "User Inventory",
           "type_uid": 500302,
           "severity": "Informational",
           "severity_id": 1,
-          "time": 1591234567,
+          "time": 1591254000.0,
           "metadata": {
             "product": {
-              "name": "Microsoft Entra ID"
+              "name": "Microsoft Entra ID",
+              "version": "1.0"
             },
             "version": "1.6.0"
           },
@@ -354,48 +324,48 @@ mapping:
             "uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "name": "mary.jones@example.com",
             "full_name": "Mary Jones",
+            "display_name": "Mary Jones",
             "email_addr": "mary.jones@example.com",
-            "is_enabled": true,
-            "department": "Finance",
-            "job_title": "Financial Analyst",
-            "employee_id": "EMP456",
-            "office_location": "New York, NY",
-            "phone": "+1-555-234-5678",
-            "work_phone": "+1-555-234-5678",
-            "is_synced": true,
-            "on_premises_upn": "mary.jones@example.com",
-            "created_time": 1591234567,
-            "last_login_time": 1691230000,
-            "has_groups": true,
-            "has_licenses": true,
-            "licenses_count": 2,
+            "domain": "example.com",
+            "uid_alt": "mary.jones",
+            "has_mfa": true,
+            "type_id": 1,
+            "type": "User",
             "account": {
-              "uid": "mary.jones@example.com",
+              "uid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
               "name": "mary.jones@example.com",
-              "type": "Entra ID",
-              "type_id": 41
+              "type": "Azure AD Account",
+              "type_id": 6
             },
             "groups": [
               {
-                "uid": "Finance Users",
+                "uid": "g1",
                 "name": "Finance Users"
               },
               {
-                "uid": "All Users",
+                "uid": "g2",
                 "name": "All Users"
               }
-            ]
+            ],
+            "org": {
+              "name": "Example Corp",
+              "ou_name": "New York, NY"
+            }
           },
           "enrichments": [
             {
-              "name": "access_control",
-              "value": "entra_id",
+              "name": "account",
+              "value": "status",
               "data": {
                 "is_enabled": true,
-                "last_sign_in": 1691230000,
-                "user_type": "Member",
-                "assigned_licenses_count": 2
+                "last_logon": "2025-08-26T09:30:00+00:00",
+                "last_time_password_change": 1736928000.0
               }
+            },
+            {
+              "name": "employment",
+              "value": "Finance - Financial Analyst",
+              "data": {}
             }
           ]
         }

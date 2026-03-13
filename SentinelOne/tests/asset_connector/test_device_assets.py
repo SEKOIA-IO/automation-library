@@ -9,6 +9,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
     DeviceTypeStr,
     OSTypeId,
     OSTypeStr,
+    RiskLevelId,
+    RiskLevelStr,
 )
 from sekoia_automation.module import Module
 
@@ -249,8 +251,11 @@ def test_get_device_os(
     "machine_type,expected_type,expected_id",
     [
         ("desktop", DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP),
-        ("laptop", DeviceTypeStr.LAPTOP, DeviceTypeId.LAPTOP),
+        ("laptop", DeviceTypeStr.DESKTOP, DeviceTypeId.DESKTOP),
         ("server", DeviceTypeStr.SERVER, DeviceTypeId.SERVER),
+        ("tablet", DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE),
+        ("mobile", DeviceTypeStr.MOBILE, DeviceTypeId.MOBILE),
+        ("virtual", DeviceTypeStr.VIRTUAL, DeviceTypeId.VIRTUAL),
         ("unknown", DeviceTypeStr.OTHER, DeviceTypeId.OTHER),
         (None, DeviceTypeStr.OTHER, DeviceTypeId.OTHER),
     ],
@@ -291,6 +296,7 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
     assert result.metadata.product.version == "2.5.0.2417"
 
     # Enhanced fields
+    assert result.device.name == "JOHN-WIN-4125"
     assert result.device.domain == "mybusiness.net"
     assert result.device.ip == "31.155.5.7"
     assert result.device.subnet == "31.155.5.x"
@@ -304,6 +310,16 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
     assert result.device.last_seen_time is not None
     assert result.device.boot_time is not None
     assert result.device.uid_alt == "225494730938493804"
+
+    # Org (from SentinelOne account)
+    assert result.device.org is not None
+    assert result.device.org.name == "Test Account"
+    assert result.device.org.uid == "225494730938493804"
+
+    # Risk level (sample agent has activeThreats=0 and infected=False → INFO)
+    assert result.device.risk_level == RiskLevelStr.INFO
+    assert result.device.risk_level_id == RiskLevelId.INFO
+    assert result.device.risk_score == 0
 
     # Location
     assert result.device.location is not None
@@ -323,37 +339,33 @@ def test_map_fields_success(test_sentinelone_device_asset_connector, sample_agen
     assert result.device.network_interfaces[0].ip == "192.168.1.100"
     assert result.device.network_interfaces[0].uid == "1"
 
-    # Enrichments
+    # Enrichments - all merged into single "Device Details" enrichment
     assert result.enrichments is not None
-    assert len(result.enrichments) == 5  # Firewall, Users, Update Status, Active Threats, Infection Status
+    assert len(result.enrichments) == 1
+    details_enrichment = result.enrichments[0]
+    assert details_enrichment.name == "Device Details"
 
     # Firewall enrichment
-    firewall_enrichment = next((e for e in result.enrichments if e.name == "Firewall"), None)
-    assert firewall_enrichment is not None
-    assert firewall_enrichment.value == "Enabled"
-    assert firewall_enrichment.data.Firewall_status == "Enabled"
+    assert "Firewall: Enabled" in details_enrichment.value
+    assert details_enrichment.data.Firewall_status == "Enabled"
+
+    # Domain enrichment
+    assert "Domain: mybusiness.net" in details_enrichment.value
+    assert details_enrichment.data.Full_qualified_domain_name == "mybusiness.net"
 
     # Users enrichment
-    users_enrichment = next((e for e in result.enrichments if e.name == "Users"), None)
-    assert users_enrichment is not None
-    assert "janedoe3" in users_enrichment.value
-    assert "john.doe" in users_enrichment.value
-    assert users_enrichment.data.Users == ["janedoe3", "john.doe"]
+    assert "janedoe3" in details_enrichment.value
+    assert "john.doe" in details_enrichment.value
+    assert details_enrichment.data.Users == ["janedoe3", "john.doe"]
 
     # Update Status enrichment
-    update_enrichment = next((e for e in result.enrichments if e.name == "Update Status"), None)
-    assert update_enrichment is not None
-    assert update_enrichment.value == "Up to Date"
+    assert "Update Status: Up to Date" in details_enrichment.value
 
     # Active Threats enrichment
-    threats_enrichment = next((e for e in result.enrichments if e.name == "Active Threats"), None)
-    assert threats_enrichment is not None
-    assert threats_enrichment.value == "0"
+    assert "Active Threats: 0" in details_enrichment.value
 
     # Infection Status enrichment
-    infection_enrichment = next((e for e in result.enrichments if e.name == "Infection Status"), None)
-    assert infection_enrichment is not None
-    assert infection_enrichment.value == "Clean"
+    assert "Infection Status: Clean" in details_enrichment.value
 
 
 def test_map_fields_no_network_interface(test_sentinelone_device_asset_connector, sample_agent):
@@ -400,11 +412,17 @@ def test_map_fields_minimal_agent(test_sentinelone_device_asset_connector):
     assert result.device.first_seen_time is None
     assert result.device.last_seen_time is None
     assert result.device.is_compliant is None
+    assert result.device.eid is None
 
     # These fields should always be set
+    assert result.device.name == "MINIMAL-PC"
     assert result.device.vendor_name is None  # modelName not provided in minimal agent
     assert result.device.is_managed is True
     assert result.device.created_time is not None
+
+    # Risk level defaults to INFO when no threats and not infected
+    assert result.device.risk_level == RiskLevelStr.INFO
+    assert result.device.risk_level_id == RiskLevelId.INFO
 
 
 def test_map_fields_network_interfaces_multiple(test_sentinelone_device_asset_connector):
@@ -545,6 +563,62 @@ def test_map_fields_missing_required_fields(
 
     with pytest.raises(ValueError, match=error_match):
         test_sentinelone_device_asset_connector.map_fields(agent)
+
+
+@pytest.mark.parametrize(
+    "infected,active_threats,expected_level,expected_id",
+    [
+        (True, 3, RiskLevelStr.CRITICAL, RiskLevelId.CRITICAL),
+        (False, 5, RiskLevelStr.HIGH, RiskLevelId.HIGH),
+        (False, 0, RiskLevelStr.INFO, RiskLevelId.INFO),
+        (None, None, RiskLevelStr.INFO, RiskLevelId.INFO),
+    ],
+)
+def test_map_fields_risk_level(
+    test_sentinelone_device_asset_connector,
+    infected,
+    active_threats,
+    expected_level,
+    expected_id,
+):
+    """Test risk level derivation from infection state and active threats."""
+    agent = SentinelOneAgent(
+        id="123",
+        createdAt="2018-02-27T04:49:26.257525Z",
+        updatedAt="2018-02-27T04:49:26.257525Z",
+        accountId="456",
+        siteId="789",
+        uuid="abc-def-ghi",
+        computerName="RISK-PC",
+        infected=infected,
+        activeThreats=active_threats,
+    )
+    result = test_sentinelone_device_asset_connector.map_fields(agent)
+
+    assert result.device.risk_level == expected_level
+    assert result.device.risk_level_id == expected_id
+    assert result.device.risk_score == active_threats
+
+
+def test_map_fields_org_and_eid(test_sentinelone_device_asset_connector):
+    """Test that org is built from account fields and eid from externalId."""
+    agent = SentinelOneAgent(
+        id="123",
+        createdAt="2018-02-27T04:49:26.257525Z",
+        updatedAt="2018-02-27T04:49:26.257525Z",
+        accountId="acc-001",
+        accountName="Acme Corp",
+        siteId="789",
+        uuid="abc-def-ghi",
+        computerName="ORG-PC",
+        externalId="ext-9999",
+    )
+    result = test_sentinelone_device_asset_connector.map_fields(agent)
+
+    assert result.device.org is not None
+    assert result.device.org.name == "Acme Corp"
+    assert result.device.org.uid == "acc-001"
+    assert result.device.eid == "ext-9999"
 
 
 # Tests for get_assets method
@@ -728,14 +802,14 @@ def test_map_fields_firewall_enrichment(
     result = test_sentinelone_device_asset_connector.map_fields(agent)
 
     # Assert
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
     if expected_enrichments:
-        firewall_enrichment = next((e for e in result.enrichments if e.name == "Firewall"), None)
-        assert firewall_enrichment is not None
-        assert firewall_enrichment.value == expected_status
-        assert firewall_enrichment.data.Firewall_status == expected_status
+        assert details_enrichment is not None
+        assert f"Firewall: {expected_status}" in details_enrichment.value
+        assert details_enrichment.data.Firewall_status == expected_status
     else:
-        firewall_enrichment = next((e for e in result.enrichments if e.name == "Firewall"), None)
-        assert firewall_enrichment is None
+        if details_enrichment:
+            assert "Firewall:" not in details_enrichment.value
 
 
 def test_map_fields_groups(test_sentinelone_device_asset_connector, sample_agent):
@@ -811,13 +885,13 @@ def test_map_fields_users_enrichment(test_sentinelone_device_asset_connector, sa
     result = test_sentinelone_device_asset_connector.map_fields(sample_agent)
 
     # Assert
-    users_enrichment = next((e for e in result.enrichments if e.name == "Users"), None)
-    assert users_enrichment is not None
-    assert "janedoe3" in users_enrichment.value
-    assert "john.doe" in users_enrichment.value
-    assert len(users_enrichment.data.Users) == 2
-    assert "janedoe3" in users_enrichment.data.Users
-    assert "john.doe" in users_enrichment.data.Users
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "janedoe3" in details_enrichment.value
+    assert "john.doe" in details_enrichment.value
+    assert len(details_enrichment.data.Users) == 2
+    assert "janedoe3" in details_enrichment.data.Users
+    assert "john.doe" in details_enrichment.data.Users
 
 
 def test_map_fields_users_enrichment_no_duplicates(test_sentinelone_device_asset_connector, sample_agent):
@@ -829,11 +903,11 @@ def test_map_fields_users_enrichment_no_duplicates(test_sentinelone_device_asset
     result = test_sentinelone_device_asset_connector.map_fields(agent)
 
     # Assert
-    users_enrichment = next((e for e in result.enrichments if e.name == "Users"), None)
-    assert users_enrichment is not None
-    assert users_enrichment.value == "john.doe"
-    assert len(users_enrichment.data.Users) == 1
-    assert users_enrichment.data.Users[0] == "john.doe"
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "Users: john.doe" in details_enrichment.value
+    assert len(details_enrichment.data.Users) == 1
+    assert details_enrichment.data.Users[0] == "john.doe"
 
 
 def test_map_fields_no_users_enrichment(test_sentinelone_device_asset_connector, sample_agent):
@@ -942,9 +1016,9 @@ def test_map_fields_update_status_enrichment(test_sentinelone_device_asset_conne
     result = test_sentinelone_device_asset_connector.map_fields(sample_agent)
 
     # Assert
-    update_enrichment = next((e for e in result.enrichments if e.name == "Update Status"), None)
-    assert update_enrichment is not None
-    assert update_enrichment.value == "Up to Date"
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "Update Status: Up to Date" in details_enrichment.value
 
 
 def test_map_fields_update_status_required(test_sentinelone_device_asset_connector, sample_agent):
@@ -956,9 +1030,9 @@ def test_map_fields_update_status_required(test_sentinelone_device_asset_connect
     result = test_sentinelone_device_asset_connector.map_fields(agent)
 
     # Assert
-    update_enrichment = next((e for e in result.enrichments if e.name == "Update Status"), None)
-    assert update_enrichment is not None
-    assert update_enrichment.value == "Update Required"
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "Update Status: Update Required" in details_enrichment.value
 
 
 def test_map_fields_active_threats_enrichment(test_sentinelone_device_asset_connector, sample_agent):
@@ -967,9 +1041,9 @@ def test_map_fields_active_threats_enrichment(test_sentinelone_device_asset_conn
     result = test_sentinelone_device_asset_connector.map_fields(sample_agent)
 
     # Assert
-    threats_enrichment = next((e for e in result.enrichments if e.name == "Active Threats"), None)
-    assert threats_enrichment is not None
-    assert threats_enrichment.value == "0"
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "Active Threats: 0" in details_enrichment.value
 
 
 def test_map_fields_active_threats_with_count(test_sentinelone_device_asset_connector, sample_agent):
@@ -981,9 +1055,9 @@ def test_map_fields_active_threats_with_count(test_sentinelone_device_asset_conn
     result = test_sentinelone_device_asset_connector.map_fields(agent)
 
     # Assert
-    threats_enrichment = next((e for e in result.enrichments if e.name == "Active Threats"), None)
-    assert threats_enrichment is not None
-    assert threats_enrichment.value == "3"
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "Active Threats: 3" in details_enrichment.value
 
 
 def test_map_fields_infection_status_clean(test_sentinelone_device_asset_connector, sample_agent):
@@ -992,9 +1066,9 @@ def test_map_fields_infection_status_clean(test_sentinelone_device_asset_connect
     result = test_sentinelone_device_asset_connector.map_fields(sample_agent)
 
     # Assert
-    infection_enrichment = next((e for e in result.enrichments if e.name == "Infection Status"), None)
-    assert infection_enrichment is not None
-    assert infection_enrichment.value == "Clean"
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "Infection Status: Clean" in details_enrichment.value
 
 
 def test_map_fields_infection_status_infected(test_sentinelone_device_asset_connector, sample_agent):
@@ -1006,9 +1080,9 @@ def test_map_fields_infection_status_infected(test_sentinelone_device_asset_conn
     result = test_sentinelone_device_asset_connector.map_fields(agent)
 
     # Assert
-    infection_enrichment = next((e for e in result.enrichments if e.name == "Infection Status"), None)
-    assert infection_enrichment is not None
-    assert infection_enrichment.value == "Infected"
+    details_enrichment = next((e for e in result.enrichments if e.name == "Device Details"), None)
+    assert details_enrichment is not None
+    assert "Infection Status: Infected" in details_enrichment.value
 
 
 def test_map_fields_no_threat_enrichments(test_sentinelone_device_asset_connector, sample_agent):
