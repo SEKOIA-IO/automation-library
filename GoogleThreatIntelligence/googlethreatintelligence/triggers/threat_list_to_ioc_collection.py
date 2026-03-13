@@ -1,14 +1,14 @@
 """
-GoogleThreatIntelligenceThreatListToIOCCollectionTrigger - GTI Threat List Connector
+Threat List to IOC Collection Trigger
 
-Retrieves IoCs from Google Threat Intelligence via VirusTotal API
+Retrieves IoCs from VirusTotal Threat Lists API
 and forwards them to a SEKOIA.IO IOC Collection.
-
-Based on GOOGLE_THREAT_LIST_SOW_SPEC.md specification.
 """
 
 import hashlib
+import re
 import time
+from datetime import datetime, timezone
 from traceback import format_exc
 from typing import Any
 from urllib.parse import urlencode
@@ -23,7 +23,7 @@ from tenacity import (
     wait_exponential,
 )
 
-# Valid threat list IDs per specification
+# Valid threat list IDs
 VALID_THREAT_LIST_IDS = [
     "ransomware",
     "malicious-network-infrastructure",
@@ -41,11 +41,19 @@ VALID_THREAT_LIST_IDS = [
     "infostealer",
 ]
 
-# Valid IOC types per specification
+# Valid IOC types
 VALID_IOC_TYPES = ["file", "url", "ip_address", "domain"]
 
-# Valid has: filter values per specification
+# Valid has: filter values
 VALID_HAS_VALUES = ["malware_families", "campaigns", "reports", "threat_actors"]
+
+# VT IoC type → STIX observable type for Sekoia IOC Collection
+VT_TYPE_TO_STIX = {
+    "file": "file.hashes.'SHA-256'",
+    "url": "url.value",
+    "ip_address": "ipv4-addr.value",
+    "domain": "domain-name.value",
+}
 
 
 class VirusTotalAPIError(Exception):
@@ -92,28 +100,18 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         self.processed_events = TTLCache(maxsize=10000, ttl=604800)  # 7 days TTL
 
     @property
-    def polling_frequency_hours(self) -> int | None:
-        """Get polling frequency in hours.
-
-        SOW expects `polling_frequency_hours` (1-24). We keep backward
-        compatibility with the legacy `sleep_time` option.
-
-        Returns:
-            An int in [1, 24] if provided, otherwise None.
-        """
-        if "polling_frequency_hours" not in self.configuration:
-            return None
-
+    def polling_frequency_hours(self) -> int:
+        """Get polling frequency in hours (1-24, default 1)."""
         raw = self.configuration.get("polling_frequency_hours")
         if raw is None or raw == "":
-            return None
+            return 1
 
         try:
             hours = int(raw)
         except (TypeError, ValueError):
-            return None
+            return 1
 
-        # Clamp to SOW bounds
+        # Clamp to bounds
         if hours < 1:
             hours = 1
         elif hours > 24:
@@ -123,26 +121,13 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
     @property
     def sleep_time(self) -> int:
-        """Get sleep time between polls in seconds.
-
-        Priority order:
-          1) polling_frequency_hours
-          2) sleep_time (legacy)
-          3) default = 1 hour (default)
-        """
-        hours = self.polling_frequency_hours
-        if hours is not None:
-            return hours * 3600
-
-        try:
-            return int(self.configuration.get("sleep_time", 3600))
-        except (TypeError, ValueError):
-            return 3600
+        """Get sleep time between polls in seconds."""
+        return self.polling_frequency_hours * 3600
 
     @property
     def api_key(self) -> str:
         """Get VirusTotal API key from module configuration."""
-        return self.module.configuration.get("virustotal_api_key", "")
+        return self.module.configuration.get("api_key", "")
 
     @property
     def threat_list_id(self) -> str:
@@ -183,17 +168,34 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         return self.module.configuration.get("sekoia_api_key", "")
 
     def initialize_client(self) -> None:
-        """Initialize HTTP session with authentication headers."""
+        """Initialize HTTP session with authentication headers.
+
+        Validates the API key format, builds an authenticated session,
+        and performs a connectivity check against the VirusTotal API.
+        Logs detailed diagnostics at each step to ease troubleshooting.
+        """
         # Step 1 — Validate API key presence
         if not self.api_key:
-            self.log(message="VirusTotal API key is missing", level="error")
+            self.log(message="VirusTotal API key is missing — set 'api_key' in module configuration", level="error")
             raise InvalidAPIKeyError("VirusTotal API key is required")
 
         # Step 2 — Validate API key format (VT keys are 64 hex chars)
-        masked_key = f"{self.api_key[:4]}…{self.api_key[-4:]}"
-        if len(self.api_key) < 64:
+        masked_key = f"{self.api_key[:4]}...{self.api_key[-4:]}"
+        key_length = len(self.api_key)
+
+        if key_length != 64:
             self.log(
-                message=f"VirusTotal API key format invalid (length={len(self.api_key)}, key={masked_key}). Expected 64 characters.",
+                message=(
+                    f"VirusTotal API key format invalid: expected 64 characters, "
+                    f"got {key_length} (key={masked_key})"
+                ),
+                level="error",
+            )
+            raise InvalidAPIKeyError("Invalid VirusTotal API key format")
+
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", self.api_key):
+            self.log(
+                message=f"VirusTotal API key contains non-hex characters (key={masked_key})",
                 level="error",
             )
             raise InvalidAPIKeyError("Invalid VirusTotal API key format")
@@ -213,7 +215,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         # Step 4 — Connectivity check against VT /users/current
         connectivity_url = f"{self.BASE_URL}/users/current"
         self.log(
-            message=f"Testing connectivity to VirusTotal API: {connectivity_url}",
+            message=f"Testing connectivity to {connectivity_url}",
             level="info",
         )
         try:
@@ -225,40 +227,40 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                 )
             elif resp.status_code == 401:
                 self.log(
-                    message=f"VirusTotal API authentication failed: invalid or expired key (key={masked_key})",
+                    message=f"VirusTotal API authentication failed (HTTP 401): invalid or expired key (key={masked_key})",
                     level="error",
                 )
                 raise InvalidAPIKeyError("Invalid or expired VirusTotal API key")
             elif resp.status_code == 403:
                 self.log(
-                    message=f"VirusTotal API authentication failed: key lacks required permissions (key={masked_key})",
+                    message=f"VirusTotal API authentication failed (HTTP 403): key lacks required permissions (key={masked_key})",
                     level="error",
                 )
                 raise InvalidAPIKeyError("VirusTotal API key does not have required permissions")
             elif resp.status_code == 429:
                 self.log(
-                    message="VirusTotal API rate limit hit during connectivity check",
+                    message="VirusTotal API rate limit hit during connectivity check — proceeding, will retry on next request",
                     level="warning",
                 )
             else:
                 self.log(
-                    message=f"VirusTotal API connectivity check returned unexpected status: {resp.status_code}",
+                    message=f"VirusTotal API connectivity check returned unexpected HTTP {resp.status_code}",
                     level="warning",
                 )
         except requests.exceptions.ConnectionError as exc:
             self.log(
-                message=f"VirusTotal API unreachable: {exc}",
+                message=f"VirusTotal API unreachable (ConnectionError): {exc}",
                 level="error",
             )
             raise
         except requests.exceptions.Timeout:
             self.log(
-                message="VirusTotal API connectivity check timed out (10s)",
+                message=f"VirusTotal API connectivity check timed out after 10s ({connectivity_url})",
                 level="error",
             )
             raise
 
-        self.log(message="VirusTotal client initialized", level="info")
+        self.log(message="VirusTotal client initialized successfully", level="info")
 
     def validate_threat_list_id(self, threat_list_id: str) -> bool:
         """Validate threat list ID against allowed values."""
@@ -271,7 +273,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
     def validate_query(self, query: str) -> bool:
         """
-        Validate GTI query syntax.
+        Validate query syntax.
 
         Returns:
             True if valid, raises QueryValidationError if invalid
@@ -441,6 +443,17 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
             for item in relationships.get("malware_families", {}).get("data", [])
         ]
 
+        # Extract first_submission_date (Unix timestamp) → ISO 8601 for valid_from
+        valid_from = None
+        first_submission = attributes.get("first_submission_date")
+        if first_submission is not None:
+            try:
+                valid_from = datetime.fromtimestamp(
+                    int(first_submission), tz=timezone.utc
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+            except (TypeError, ValueError, OSError):
+                pass
+
         return {
             "ioc_hash": ioc_hash,
             "type": ioc_type,
@@ -451,6 +464,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
             "malware_families": malware_families,
             "campaigns": [],
             "threat_actors": [],
+            "valid_from": valid_from,
             "raw": ioc,
         }
 
@@ -484,14 +498,32 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         )
         return new_events
 
-    def push_to_sekoia(self, ioc_values: list[str]) -> None:
+    @staticmethod
+    def _build_indicator(ioc: dict[str, Any]) -> dict[str, Any]:
+        """Build a Sekoia indicator object from a transformed IoC.
+
+        Maps VT type to STIX observable type and includes ``valid_from``
+        when ``first_submission_date`` was available in the VT response.
         """
-        Push batch of IOCs to Sekoia IOC Collection.
+        stix_type = VT_TYPE_TO_STIX.get(ioc.get("type", ""), "file.hashes.'SHA-256'")
+        indicator: dict[str, Any] = {
+            "value": ioc["value"],
+            "type": stix_type,
+        }
+        if ioc.get("valid_from"):
+            indicator["valid_from"] = ioc["valid_from"]
+        return indicator
+
+    def push_to_sekoia(self, iocs: list[dict[str, Any]]) -> None:
+        """
+        Push batch of IOCs to Sekoia IOC Collection using the enriched
+        ``/indicators`` endpoint so that per-indicator metadata
+        (``valid_from``) is preserved.
 
         Args:
-            ioc_values: List of IOC value strings
+            iocs: List of transformed IoC dicts (output of transform_ioc)
         """
-        if not ioc_values:
+        if not iocs:
             self.log(
                 message="No IOC values to push",
                 level="info",
@@ -515,21 +547,26 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
         # Batch into chunks of 1000
         batch_size = 1000
-        total_batches = (len(ioc_values) + batch_size - 1) // batch_size
+        total_batches = (len(iocs) + batch_size - 1) // batch_size
 
         self.log(
-            message=f"Pushing {len(ioc_values)} IOCs in {total_batches} batch(es)",
+            message=f"Pushing {len(iocs)} IOCs in {total_batches} batch(es)",
             level="info",
         )
 
-        for batch_num, i in enumerate(range(0, len(ioc_values), batch_size), 1):
-            batch = ioc_values[i : i + batch_size]
-            indicators_text = "\n".join(batch)
+        # Bypass proxy for internal Sekoia API calls (pod → API, not via internet)
+        sekoia_session = requests.Session()
+        sekoia_session.verify = False
+        sekoia_session.trust_env = False
 
-            # Prepare request
+        for batch_num, i in enumerate(range(0, len(iocs), batch_size), 1):
+            batch = iocs[i : i + batch_size]
+            indicators = [self._build_indicator(ioc) for ioc in batch]
+
+            # Enriched endpoint (not /indicators/text)
             url = (
                 f"{self.ioc_collection_server}/v2/inthreat/ioc-collections/"
-                f"{self.ioc_collection_uuid}/indicators/text"
+                f"{self.ioc_collection_uuid}/indicators"
             )
 
             headers = {
@@ -537,7 +574,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                 "Authorization": f"Bearer {self.sekoia_api_key}",
             }
 
-            payload = {"indicators": indicators_text, "format": "one_per_line"}
+            payload = {"indicators": indicators}
 
             # Send request with retry logic
             retry_count = 0
@@ -546,7 +583,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
             while retry_count < max_retries and not success:
                 try:
-                    response = requests.post(
+                    response = sekoia_session.post(
                         url, json=payload, headers=headers, timeout=30
                     )
 
@@ -641,7 +678,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
         store = getattr(self, "context", None)
         if store is None:
             if not hasattr(self, "_local_context"):
-                self._local_context = {}
+                self._local_context: dict[str, Any] = {}
             store = self._local_context
         return store
 
@@ -706,7 +743,7 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
 
     def run(self) -> None:
         """Main trigger loop."""
-        self.log(message="Starting GTI Threat List trigger", level="info")
+        self.log(message="Starting Threat List trigger", level="info")
 
         try:
             self.initialize_client()
@@ -767,13 +804,13 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                 )
 
                 if new_iocs:
-                    # Extract IOC values and push to Sekoia IOC Collection
-                    ioc_values = [ioc.get("value") for ioc in new_iocs if ioc.get("value")]
+                    # Filter out IoCs without a value
+                    pushable = [ioc for ioc in new_iocs if ioc.get("value")]
 
-                    if ioc_values:
-                        self.push_to_sekoia(ioc_values)
-                        self.inc_metric("iocs_pushed", len(ioc_values))
-                        self.log_kv("info", "batch_pushed", pushed=len(ioc_values))
+                    if pushable:
+                        self.push_to_sekoia(pushable)
+                        self.inc_metric("iocs_pushed", len(pushable))
+                        self.log_kv("info", "batch_pushed", pushed=len(pushable))
                     else:
                         self.log_kv("warning", "batch_empty_values", deduped=len(new_iocs))
                 else:
@@ -818,4 +855,4 @@ class GoogleThreatIntelligenceThreatListToIOCCollectionTrigger(Trigger):
                 time.sleep(60)
 
         self.log_kv("info", "trigger_stopped")
-        self.log(message="GTI Threat List trigger stopped", level="info")
+        self.log(message="Threat List trigger stopped", level="info")
