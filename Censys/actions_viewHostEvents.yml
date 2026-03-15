@@ -1,0 +1,105 @@
+name: viewHostEvents
+pipeline:
+- name: http
+- name: output
+stages:
+  http:
+    kind: http
+    properties:
+      method: GET
+      url: '{{inputs.base_url}}/v2/experimental/hosts/{{inputs.ip}}/events'
+      auth:
+        basic:
+          username: '{{inputs.username}}'
+          password: '{{inputs.password}}'
+      params:
+        start_time: '{{inputs.start_time}}'
+        end_time: '{{inputs.end_time}}'
+        per_page: '{{inputs.per_page}}'
+        cursor: '{{inputs.cursor}}'
+        reversed: '{{inputs.reversed}}'
+    asserts:
+      error_401:
+        predicate: '{{response.status_code != 401}}'
+        fail: You must authenticate with a valid API ID and secret.
+      error_422:
+        predicate: '{{response.status_code != 422}}'
+        fail: Invalid IP address.
+      error_429:
+        predicate: '{{response.status_code != 429}}'
+        fail: Too many requests.
+      success:
+        predicate: '{{response.status_code == 200}}'
+        fail: Expected a successful (2xx) status code, got {{response.status_code}}
+    captures:
+      result: '{{response.json}}'
+  output:
+    kind: output
+    properties:
+      result: '{{http.result}}'
+description: "Fetches a list of events for the host with the specified IP address.\n\
+  \n**Cursor Pagination**\n\nThis endpoint relies on using cursors for efficient pagination.\
+  \ Each result may\nreturn a `next` cursor value which can be used to fetch additional\
+  \ pages of results.\nThis endpoint only support forward-pagination.\n\n```json\n\
+  {\n  \"links\": {\n    \"next\": \"nextCursorToken\"\n  },\n  [Rest of Response]\n\
+  }\n```\nThe returned cursor token values can be added to the endpoint as a `cursor`\n\
+  parameter to fetch the next page of results.\nThe entire set of results can be iterated\
+  \ page-by-page using returned\ncursors. If no cursor is given, the first page will\
+  \ be returned.\n"
+inputs:
+  per_page:
+    type: integer
+    description: The maximum number of hits to return in each response (minimum of
+      1, maximum of 100).
+  end_time:
+    type: string
+    description: 'An optional RFC3339 timestamp which represents the ending
+
+      chronological point-in-time (exclusive) from which events
+
+      are returned. This must always be later than start_time.
+
+      Precision up to *nanoseconds* is observed and recommended.
+
+
+      If not provided, this is assumed to be now.
+
+      '
+  ip:
+    type: string
+    description: The IP Address of the requested host.
+  start_time:
+    type: string
+    description: 'An optional RFC3339 timestamp which represents the beginning
+
+      chronological point-in-time (inclusive) from which events
+
+      are returned. This must always be earlier than end_time.
+
+      Precision up to *nanoseconds* is observed and recommended.
+
+
+      If not provided, this is assumed to be the historical API maximum.
+
+      '
+  username:
+    type: string
+    description: The username for basic authentication
+    default: '{{username}}'
+  password:
+    type: string
+    description: The password for basic authentication
+    default: '{{password}}'
+  base_url:
+    type: string
+    description: Base URL for the API
+    enum:
+    - https://search.censys.io/api
+  cursor:
+    type: string
+    description: Cursor token from the API response, which fetches the next or previous
+      page of hits when added to the endpoint URL.
+  reversed:
+    type: boolean
+    description: Reverse the order of the return events, that is, return events in
+      reversed chronological order.
