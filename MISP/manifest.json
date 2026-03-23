@@ -23,7 +23,7 @@
       },
       "https_proxy": {
         "type": "string",
-        "description": "HTTPS proxy URL (e.g., http://proxy:8080)"
+        "description": "HTTPS proxy URL (e.g., https://proxy:8080)"
       }
     },
     "required": [
