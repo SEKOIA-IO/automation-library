@@ -1,0 +1,66 @@
+{
+  "name": "Execute a query",
+  "description": "Execute a saved query in Sekoia and retrieve the results.",
+  "uuid": "f821c462-028b-5432-b863-109b89c6d2be",
+  "docker_parameters": "ExecuteAQuery",
+  "arguments": {
+    "title": "ExecuteAQueryArguments",
+    "type": "object",
+    "properties": {
+      "query_name": {
+        "title": "Query Name",
+        "type": "string",
+        "description": "Name of the saved query to execute. Either 'query_name' or 'query_uuid' must be provided."
+      },
+      "query_uuid": {
+        "title": "Query Uuid",
+        "type": "string",
+        "format": "uuid",
+        "description": "UUID of the saved query to execute. Either 'query_uuid' or 'query_name' must be provided."
+      },
+      "parameters": {
+        "title": "Parameters",
+        "type": "object",
+        "description": "Query parameters for the query execution."
+      },
+      "result_format": {
+        "title": "Result Format",
+        "enum": [
+          "jsonl",
+          "csv"
+        ],
+        "type": "string",
+        "description": "Format of the query result to download. Supported formats are 'jsonl' and 'csv'."
+      }
+    },
+    "required": [
+      "result_format"
+    ],
+    "oneOf": [
+      {
+        "required": [
+          "query_name"
+        ]
+      },
+      {
+        "required": [
+          "query_uuid"
+        ]
+      }
+    ]
+  },
+  "results": {
+    "title": "ExecuteAQueryResults",
+    "type": "object",
+    "properties": {
+      "query_result": {
+        "title": "Query Result",
+        "type": "string",
+        "description": "The result of the query execution."
+      }
+    },
+    "required": [
+      "query_result"
+    ]
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "name": "ListQueries",
+  "description": "ListQueries",
+  "uuid": "febc7464-2584-54f6-af5f-2d183cc82385",
+  "docker_parameters": "ListQueries",
+  "arguments": {
+    "title": "ListQueriesArguments",
+    "type": "object",
+    "properties": {
+      "community_uuid": {
+        "title": "Community Uuid",
+        "type": "string",
+        "format": "uuid"
+      }
+    }
+  },
+  "results": {
+    "title": "ListQueriesResults",
+    "type": "object",
+    "properties": {
+      "queries": {
+        "title": "Queries",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "title": "Uuid",
+              "type": "string",
+              "format": "uuid"
+            },
+            "community_uuid": {
+              "title": "Community Uuid",
+              "type": "string",
+              "format": "uuid"
+            },
+            "shared_with": {
+              "title": "Shared With",
+              "type": "array",
+              "description": "List of community UUIDs the query is shared with.",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "created_by": {
+              "title": "Created By",
+              "type": "string",
+              "format": "uuid"
+            },
+            "created_by_type": {
+              "title": "Created By Type",
+              "type": "string"
+            },
+            "created_at": {
+              "title": "Created At",
+              "type": "string"
+            },
+            "updated_at": {
+              "title": "Updated At",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "descibed_by_ai": {
+              "title": "Descibed By AI",
+              "type": "boolean"
+            },
+            "definition": {
+              "title": "Definition",
+              "type": "object",
+              "description": "The definition of the query."
+            },
+            "visualization": {
+              "title": "Visualization",
+              "type": "string",
+              "enum": [
+                "number",
+                "boolean",
+                "table",
+                "pie",
+                "horizontal_bar",
+                "vertical_bar",
+                "line"
+              ],
+              "description": "The visualization type for the query results."
+            },
+            "visualization_params": {
+              "title": "Visualization Params",
+              "type": "object",
+              "description": "Additional parameters for the visualization, such as which fields to use for axes in a bar chart."
+            },
+            "last_run_uuid": {
+              "title": "Last Run Uuid",
+              "type": "string",
+              "format": "uuid",
+              "description": "uuid of the query's last run"
+            },
+            "parameters": {
+              "title": "Parameters",
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "The query parameters of the query."
+            },
+            "datasets": {
+              "title": "Datasets",
+              "type": "array",
+              "description": "Datasets present in the query",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "queries"
+        ]
+      }
+    }
+  }
+}
