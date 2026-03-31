@@ -140,44 +140,48 @@ class ExecuteAQuery(Action):
         :raises QueryListingError: If multiple queries match the given name and community
         """
         results: list[dict[str, Any]] = []
-        limit = 100
-        total = None
-        offset = 0
 
-        while total is None or total > offset:
-            response_list_query = self.http_session.get(
-                url=self.query_api_path,
-                params={
-                    "match[name]": query_name,
-                    "limit": limit,
-                    "offset": offset,
-                },
-                timeout=20,
+
+        response_list_query = self.http_session.get(
+            url=self.query_api_path,
+            params={
+                "match[name]": query_name,
+                "limit": 100,
+                "offset": 0,
+            },
+            timeout=20,
+        )
+        try:
+            response_list_query.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            self.log(
+                f"HTTP error when retrieving existing queries matching '{query_name}': {e}. Response status: {response_list_query.status_code}, Response text: {response_list_query.text}",
+                level="error",
             )
-            try:
-                response_list_query.raise_for_status()
-            except requests.exceptions.HTTPError as e:
+            raise
+        response_content = response_list_query.json()
+
+        if not response_content["items"]:
+            num_results = len(results)
+            if num_results < response_content["total"]:
                 self.log(
-                    f"HTTP error when retrieving existing queries matching '{query_name}': {e}. Response status: {response_list_query.status_code}, Response text: {response_list_query.text}",
+                    "Number of fetched results doesn't match total",
                     level="error",
+                    num_results=num_results,
+                    total=response_content["total"],
                 )
-                raise
-            response_content = response_list_query.json()
+                raise QueryListingError
 
-            if not response_content["items"]:
-                num_results = len(results)
-                if num_results < response_content["total"] and num_results < limit:
-                    self.log(
-                        "Number of fetched results doesn't match total",
-                        level="error",
-                        num_results=num_results,
-                        total=response_content["total"],
-                    )
-                break
-            results += response_content["items"]
-            total = min(response_content["total"], limit)
+        results += response_content["items"]
 
-            offset += limit
+
+        if not results:
+            self.log(
+                f"No query found with name '{query_name}'",
+                level="error",
+                query_name=query_name,
+            )
+            raise QueryListingError
 
         if len(results) > 1:
             self.log(

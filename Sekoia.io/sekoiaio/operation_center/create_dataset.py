@@ -38,6 +38,8 @@ class CreateDataset(Action):
     http_session: Session
     dataset_api_path: str
 
+    results_model = CreateDatasetResults
+
     def configure_http_session(self) -> None:
         """Set up the dataset API base path and configure the HTTP session with retry and auth headers."""
         self.dataset_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/datasets")
@@ -129,7 +131,9 @@ class CreateDataset(Action):
         try:
             return dataset.encode("utf-8")
         except UnicodeEncodeError as e:
-            self.log(f"Error encoding dataset: {e}")
+            self.log(f"Error encoding dataset: {e}",
+            level="error",
+            )
             raise
 
     def run(self, arguments: CreateDatasetArguments) -> CreateDatasetResults:
@@ -146,3 +150,4 @@ class CreateDataset(Action):
         self.validate_dataset(encoded_dataset, arguments.name)
         # Create the dataset
         self.create_dataset(encoded_dataset, arguments.name)
+        return CreateDatasetResults()

@@ -153,7 +153,7 @@ def test_get_query_by_name_multiple_results_raises(requests_mock):
 
 
 def test_get_query_by_name_empty_results_raises(requests_mock):
-    """When no query matches, results[0] raises IndexError."""
+
     action = make_action()
     action.configure_http_session()
 
@@ -162,8 +162,13 @@ def test_get_query_by_name_empty_results_raises(requests_mock):
         json={"items": [], "total": 0},
     )
 
-    with pytest.raises(IndexError):
+    with pytest.raises(QueryListingError):
         action.get_query_by_name("nonexistent_query")
+    assert len(action._logs) == 1
+    assert action._logs[0]["level"] == "error"
+    assert "No query found with name 'nonexistent_query'" in action._logs[0]["message"]
+
+    
 
 
 def test_get_query_by_name_http_error(requests_mock):

@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 import pytest
 import requests
 
-from sekoiaio.operation_center.delete_dataset import DeleteDataset
+from sekoiaio.operation_center.delete_dataset import DeleteDataset, DeleteDatasetResults
 
 BASE_URL = "https://fake.url/"
 API_KEY = "fake_api_key"
@@ -165,10 +165,10 @@ def test_delete_dataset_success(requests_mock):
 
     requests_mock.delete(f"{DATASETS_URL}/{DATASET_UUID}", status_code=204)
 
-    action.delete_dataset(DATASET_UUID)
+    result = action.delete_dataset(DATASET_UUID)
 
     assert len(action._logs) == 0
-
+    assert result is None
 
 def test_delete_dataset_http_error(requests_mock):
     action = make_action()

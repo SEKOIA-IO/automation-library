@@ -38,6 +38,8 @@ class DeleteDataset(Action):
     http_session: Session
     dataset_api_path: str
 
+    results_model = DeleteDatasetResults
+
     def configure_http_session(self) -> None:
         """Set up the dataset API base path and configure the HTTP session with retry and auth headers."""
         self.dataset_api_path = urljoin(self.module.configuration["base_url"], "api/v1/notebooks/datasets")
@@ -136,7 +138,7 @@ class DeleteDataset(Action):
             )
             raise
 
-    def run(self, arguments: DeleteDatasetArguments) -> None:
+    def run(self, arguments: DeleteDatasetArguments) -> DeleteDatasetResults:
         """Resolve and delete a dataset by name from the Sekoia notebooks API.
 
         :param arguments: Action input arguments (dataset name and community UUID)
@@ -145,3 +147,5 @@ class DeleteDataset(Action):
         # Resolve the dataset UUID from its name before deleting
         dataset_uuid = self.get_dataset_uuid(arguments.name)
         self.delete_dataset(dataset_uuid)
+        # return empty DeleteDatasetResults on success
+        return DeleteDatasetResults()
