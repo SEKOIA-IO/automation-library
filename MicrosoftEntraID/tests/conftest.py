@@ -12,8 +12,10 @@ import pytest
 from faker import Faker
 from msgraph.generated.models.audit_activity_initiator import AuditActivityInitiator
 from msgraph.generated.models.directory_audit import DirectoryAudit
+from msgraph.generated.models.modified_property import ModifiedProperty
 from msgraph.generated.models.sign_in import SignIn
 from msgraph.generated.models.sign_in_status import SignInStatus
+from msgraph.generated.models.target_resource import TargetResource
 from msgraph.generated.models.user_identity import UserIdentity
 from sekoia_automation import constants
 
@@ -219,4 +221,40 @@ def directory_audits_page_2() -> SimpleNamespace:
             ),
         ],
         odata_next_link=None,
+    )
+
+
+@pytest.fixture
+def directory_audit_with_modified_properties() -> DirectoryAudit:
+    """DirectoryAudit event simulating a Conditional Access Policy update."""
+    import json
+
+    return DirectoryAudit(
+        id="ca-policy-1",
+        activity_date_time=datetime.fromisoformat("2025-09-01T00:00:00Z"),
+        activity_display_name="Update conditional access policy",
+        initiated_by=AuditActivityInitiator(user=UserIdentity(display_name="Admin")),
+        target_resources=[
+            TargetResource(
+                id="policy-id-123",
+                display_name="Block Legacy Auth",
+                type="Policy",
+                modified_properties=[
+                    ModifiedProperty(
+                        display_name="ConditionalAccessPolicy",
+                        old_value=json.dumps(
+                            {"State": "Disabled", "Conditions": {"Applications": {"IncludeApplications": ["All"]}}}
+                        ),
+                        new_value=json.dumps(
+                            {"State": "Enabled", "Conditions": {"Applications": {"IncludeApplications": ["All"]}}}
+                        ),
+                    ),
+                    ModifiedProperty(
+                        display_name="DisplayName",
+                        old_value='"Old Policy Name"',
+                        new_value='"New Policy Name"',
+                    ),
+                ],
+            )
+        ],
     )

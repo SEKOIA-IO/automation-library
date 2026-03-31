@@ -1,5 +1,6 @@
+import json
 from datetime import datetime, timezone
-from typing import AsyncGenerator, Iterable
+from typing import Any, AsyncGenerator, Iterable
 
 from azure.identity.aio import ClientSecretCredential
 from kiota_abstractions.base_request_configuration import RequestConfiguration
@@ -126,8 +127,20 @@ class GraphApi(object):
     def encode_log(value: Parsable) -> str:
         writer = _factory.get_serialization_writer("application/json")
         writer.write_object_value(None, value)
+        raw = writer.get_serialized_content().decode("utf-8")
 
-        return writer.get_serialized_content().decode("utf-8")
+        parsed = json.loads(raw)
+        for resource in parsed.get("targetResources") or []:
+            for prop in resource.get("modifiedProperties") or []:
+                for key in ("oldValue", "newValue"):
+                    val = prop.get(key)
+                    if isinstance(val, str):
+                        try:
+                            prop[key] = json.loads(val)
+                        except (json.JSONDecodeError, ValueError):
+                            pass
+
+        return json.dumps(parsed)
 
     async def close(self) -> None:  # pragma: no cover
         if self._client:

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 2026-03-30 - 2.11.0
+
+### Added
+
+- Parse `oldValue` and `newValue` JSON strings in `modifiedProperties` of directory audit events into structured objects for easier detection rule development (e.g., Conditional Access Policy updates)
+
 ## 2026-02-20 - 2.10.17
 
 ### Changed

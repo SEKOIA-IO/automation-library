@@ -1,6 +1,8 @@
+import json
 from datetime import datetime, timezone
 
 import pytest
+from msgraph.generated.models.directory_audit import DirectoryAudit
 
 from graph_api.client import GraphApi
 
@@ -101,3 +103,34 @@ async def test_client_get_directory_audits_empty_1(graph_api_client: GraphApi, d
 
     assert [i.id for i in items] == ["3"]
     assert items[0].activity_display_name == "Add user"
+
+
+def test_encode_log_parses_modified_properties(
+    directory_audit_with_modified_properties: DirectoryAudit,
+) -> None:
+    result = json.loads(GraphApi.encode_log(directory_audit_with_modified_properties))
+
+    modified_props = result["targetResources"][0]["modifiedProperties"]
+
+    # ConditionalAccessPolicy: oldValue/newValue should be parsed into dicts
+    ca_prop = modified_props[0]
+    assert ca_prop["displayName"] == "ConditionalAccessPolicy"
+    assert isinstance(ca_prop["oldValue"], dict)
+    assert ca_prop["oldValue"]["State"] == "Disabled"
+    assert isinstance(ca_prop["newValue"], dict)
+    assert ca_prop["newValue"]["State"] == "Enabled"
+
+    # DisplayName: simple quoted strings should be parsed into plain strings
+    name_prop = modified_props[1]
+    assert name_prop["oldValue"] == "Old Policy Name"
+    assert name_prop["newValue"] == "New Policy Name"
+
+
+def test_encode_log_leaves_non_json_values_as_strings(
+    directory_audits_page_1: object,
+) -> None:
+    """Events without modifiedProperties should serialize without errors."""
+    audit = directory_audits_page_1.value[0]  # type: ignore[attr-defined]
+    result = json.loads(GraphApi.encode_log(audit))
+
+    assert result["activityDisplayName"] == "Add user"

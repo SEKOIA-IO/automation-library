@@ -16,11 +16,7 @@ from msgraph.generated.users.users_request_builder import UsersRequestBuilder
 from sekoia_automation.asset_connector import AsyncAssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
-from sekoia_automation.asset_connector.models.ocsf.user import (
-    Account,
-    AccountTypeId,
-    AccountTypeStr,
-)
+from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
 from sekoia_automation.asset_connector.models.ocsf.user import Group as UserOCSFGroup
 from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
 from sekoia_automation.asset_connector.models.ocsf.user import (
