@@ -1,5 +1,6 @@
 import pytest
 import requests
+from uuid import uuid4
 
 from sekoiaio.operation_center.list_queries import ListQueries
 
@@ -9,9 +10,28 @@ QUERIES_URL = "https://fake.url/api/v1/notebooks/queries"
 
 
 SAMPLE_QUERY = {
-    "uuid": "11111111-1111-1111-1111-111111111111",
-    "name": "my_query",
-    "definition": "SELECT * FROM events",
+    "uuid": str(uuid4()),
+    "community_uuid": str(uuid4()),
+    "shared_with": None,
+    "created_by": str(uuid4()),
+    "created_by_type": "user",
+    "created_at": "1970-01-01T00:00:00.000000Z",
+    "updated_at": "1970-01-01T00:00:00.000000Z",
+    "name": "sample query",
+    "description": "",
+    "described_by_ai": None,
+    "definition": {
+        "ql_query": "events\n| where timestamp between (?time.start .. ?time.end)\n| limit 100",
+        "community_uuids": [],
+        "intake_uuids": None,
+        "parent_community_uuid": None,
+        "is_shared_run": False,
+    },
+    "visualization": "table",
+    "visualization_params": {"x": None, "y": None, "breakdown": None, "stacked": None, "unit": None, "columns": None},
+    "last_run_uuid": None,
+    "parameters": ["time"],
+    "datasets": [],
 }
 
 
@@ -36,7 +56,7 @@ def test_list_queries_success(requests_mock):
 
     result = action.run({})
 
-    assert result["queries"] == [SAMPLE_QUERY]
+    assert result["queries"][0] == SAMPLE_QUERY
 
 
 def test_list_queries_empty(requests_mock):
@@ -51,19 +71,6 @@ def test_list_queries_empty(requests_mock):
 
     assert result["queries"] == []
     assert len(action._logs) == 0
-
-
-def test_list_queries_with_community_uuid(requests_mock):
-    action = make_action()
-
-    requests_mock.get(
-        QUERIES_URL,
-        json={"items": [SAMPLE_QUERY], "total": 1},
-    )
-
-    result = action.run({})
-
-    assert result["queries"] == [SAMPLE_QUERY]
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +101,9 @@ def test_list_queries_pagination(requests_mock):
     result = action.get_queries()
 
     assert len(result) == 100
-    assert result[0]["uuid"] == "query-0"
+    for i in range(100):
+        assert result[i]["uuid"] == f"query-{i}"
+        assert result[i]["name"] == f"q{i}"
 
 
 def test_list_queries_empty_with_nonzero_total_logs_error(requests_mock):

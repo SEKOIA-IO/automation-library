@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 import requests
@@ -11,13 +11,34 @@ API_KEY = "fake_api_key"
 QUERIES_URL = "https://fake.url/api/v1/notebooks/queries"
 QUERY_RUNS_URL = "https://fake.url/api/v1/notebooks/queries/runs"
 
-QUERY_UUID = "11111111-1111-1111-1111-111111111111"
-RUN_UUID = "33333333-3333-3333-3333-333333333333"
+SAMPLE_QUERY_RUN = {
+    "task_id": str(uuid4()),
+    "uuid": str(uuid4()),
+}
 
 SAMPLE_QUERY = {
-    "uuid": QUERY_UUID,
-    "name": "my_query",
-    "definition": "SELECT * FROM events",
+    "uuid": str(uuid4()),
+    "community_uuid": str(uuid4()),
+    "shared_with": None,
+    "created_by": str(uuid4()),
+    "created_by_type": "user",
+    "created_at": "1970-01-01T00:00:00.000000Z",
+    "updated_at": "1970-01-01T00:00:00.000000Z",
+    "name": "sample query",
+    "description": "",
+    "described_by_ai": None,
+    "definition": {
+        "ql_query": "events\n| where timestamp between (?time.start .. ?time.end)\n| limit 2",
+        "community_uuids": [],
+        "intake_uuids": None,
+        "parent_community_uuid": None,
+        "is_shared_run": False,
+    },
+    "visualization": "table",
+    "visualization_params": {"x": None, "y": None, "breakdown": None, "stacked": None, "unit": None, "columns": None},
+    "last_run_uuid": None,
+    "parameters": ["time"],
+    "datasets": [],
 }
 
 
@@ -35,43 +56,43 @@ def make_action() -> ExecuteAQuery:
 def test_execute_query_by_uuid_success(requests_mock):
     action = make_action()
 
-    requests_mock.get(f"{QUERIES_URL}/{QUERY_UUID}", json=SAMPLE_QUERY)
-    requests_mock.post(QUERY_RUNS_URL, json={"uuid": RUN_UUID})
-    requests_mock.get(f"{QUERY_RUNS_URL}/{RUN_UUID}", json={"status": "done"})
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
+    requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}/download",
-        text='{"event": "login"}\n',
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        text='{"event.action": "login"}\n{"event.action": "logout"}\n',
     )
 
     result = action.run(
         {
-            "query_uuid": QUERY_UUID,
+            "query_uuid": SAMPLE_QUERY["uuid"],
             "result_format": "jsonl",
         }
     )
 
-    assert result["query_result"] == '{"event": "login"}\n'
+    assert result["query_result"] == '{"event.action": "login"}\n{"event.action": "logout"}\n'
 
 
 def test_execute_query_by_uuid_csv_format(requests_mock):
     action = make_action()
 
-    requests_mock.get(f"{QUERIES_URL}/{QUERY_UUID}", json=SAMPLE_QUERY)
-    requests_mock.post(QUERY_RUNS_URL, json={"uuid": RUN_UUID})
-    requests_mock.get(f"{QUERY_RUNS_URL}/{RUN_UUID}", json={"status": "done"})
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
+    requests_mock.post(QUERY_RUNS_URL, json=SAMPLE_QUERY_RUN)
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}/download",
-        text="event\nlogin\n",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
+        text="event.action\nlogin\nlogout\n",
     )
 
     result = action.run(
         {
-            "query_uuid": QUERY_UUID,
+            "query_uuid": SAMPLE_QUERY["uuid"],
             "result_format": "csv",
         }
     )
 
-    assert result["query_result"] == "event\nlogin\n"
+    assert result["query_result"] == "event.action\nlogin\nlogout\n"
     assert requests_mock.last_request.qs["download_format"] == ["csv"]
 
 
@@ -87,10 +108,10 @@ def test_execute_query_by_name_success(requests_mock):
         QUERIES_URL,
         json={"items": [SAMPLE_QUERY], "total": 1},
     )
-    requests_mock.post(QUERY_RUNS_URL, json={"uuid": RUN_UUID})
-    requests_mock.get(f"{QUERY_RUNS_URL}/{RUN_UUID}", json={"status": "done"})
+    requests_mock.post(QUERY_RUNS_URL, json={"uuid": SAMPLE_QUERY_RUN["uuid"]})
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", json={"status": "done"})
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}/download",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
         text="result_data",
     )
 
@@ -117,18 +138,18 @@ def test_get_query_by_name_multiple_results_raises(requests_mock):
     requests_mock.get(
         QUERIES_URL,
         json={
-            "items": [SAMPLE_QUERY, {**SAMPLE_QUERY, "uuid": "44444444-4444-4444-4444-444444444444"}],
+            "items": [SAMPLE_QUERY, {**SAMPLE_QUERY, "uuid": str(uuid4())}],
             "total": 2,
         },
     )
 
     with pytest.raises(QueryListingError):
-        action.get_query_by_name("my_query")
+        action.get_query_by_name("sample query")
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"
     assert "found 2 queries" in action._logs[0]["message"]
-    assert "my_query" in action._logs[0]["message"]
+    assert "sample query" in action._logs[0]["message"]
 
 
 def test_get_query_by_name_empty_results_raises(requests_mock):
@@ -169,10 +190,10 @@ def test_get_query_by_uuid_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
 
-    requests_mock.get(f"{QUERIES_URL}/{QUERY_UUID}", status_code=404, text="Not Found")
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", status_code=404, text="Not Found")
 
     with pytest.raises(requests.exceptions.HTTPError):
-        action.get_query_by_uuid(UUID(QUERY_UUID))
+        action.get_query_by_uuid(UUID(SAMPLE_QUERY["uuid"]))
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"
@@ -193,7 +214,7 @@ def test_trigger_query_execution_http_error(requests_mock):
 
     with pytest.raises(requests.exceptions.HTTPError):
         action.trigger_query_execution(
-            query_uuid=UUID(QUERY_UUID),
+            query_uuid=UUID(SAMPLE_QUERY["uuid"]),
             query_definition="SELECT * FROM events",
             query_parameters=None,
         )
@@ -214,12 +235,14 @@ def test_wait_for_query_completion_error_status_raises(requests_mock):
     action.configure_http_session()
 
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
         json={"status": "error", "error": "query syntax error"},
     )
 
     with pytest.raises(QueryExecutionError):
-        action._wait_for_query_completion_step(RUN_UUID, lambda status: status == "pending", timeout=60)
+        action._wait_for_query_completion_step(
+            SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
+        )
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"
@@ -231,10 +254,12 @@ def test_wait_for_query_completion_step_http_error_raises(requests_mock):
     action = make_action()
     action.configure_http_session()
 
-    requests_mock.get(f"{QUERY_RUNS_URL}/{RUN_UUID}", status_code=500, text="Server Error")
+    requests_mock.get(f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}", status_code=500, text="Server Error")
 
     with pytest.raises(QueryExecutionError):
-        action._wait_for_query_completion_step(RUN_UUID, lambda status: status == "pending", timeout=60)
+        action._wait_for_query_completion_step(
+            SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
+        )
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"
@@ -248,7 +273,7 @@ def test_wait_for_query_completion_polls_until_done(requests_mock):
     action.configure_http_session()
 
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
         [
             {"json": {"status": "pending"}},
             {"json": {"status": "done"}},
@@ -256,7 +281,9 @@ def test_wait_for_query_completion_polls_until_done(requests_mock):
     )
 
     with patch("sekoiaio.operation_center.execute_a_query.time.sleep"):
-        action._wait_for_query_completion_step(RUN_UUID, lambda status: status == "pending", timeout=60)
+        action._wait_for_query_completion_step(
+            SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
+        )
 
     assert requests_mock.call_count == 2
 
@@ -267,7 +294,7 @@ def test_wait_for_query_completion_error_in_loop(requests_mock):
     action.configure_http_session()
 
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
         [
             {"json": {"status": "pending"}},
             {"json": {"status": "error", "error": "timeout in cluster"}},
@@ -276,7 +303,9 @@ def test_wait_for_query_completion_error_in_loop(requests_mock):
 
     with patch("sekoiaio.operation_center.execute_a_query.time.sleep"):
         with pytest.raises(QueryExecutionError):
-            action._wait_for_query_completion_step(RUN_UUID, lambda status: status == "pending", timeout=60)
+            action._wait_for_query_completion_step(
+                SAMPLE_QUERY_RUN["uuid"], lambda status: status == "pending", timeout=60
+            )
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"
@@ -293,13 +322,13 @@ def test_download_query_result_http_error(requests_mock):
     action.configure_http_session()
 
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}/download",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
         status_code=410,
         text="Gone: result expired",
     )
 
     with pytest.raises(requests.exceptions.HTTPError):
-        action.download_query_result(RUN_UUID, "jsonl")
+        action.download_query_result(SAMPLE_QUERY_RUN["uuid"], "jsonl")
 
     assert len(action._logs) == 1
     assert action._logs[0]["level"] == "error"
@@ -317,10 +346,10 @@ def test_execute_query_full_polling_cycle(requests_mock):
     """Verify wait_for_query_completion handles pending → running → done transitions."""
     action = make_action()
 
-    requests_mock.get(f"{QUERIES_URL}/{QUERY_UUID}", json=SAMPLE_QUERY)
-    requests_mock.post(QUERY_RUNS_URL, json={"uuid": RUN_UUID})
+    requests_mock.get(f"{QUERIES_URL}/{SAMPLE_QUERY['uuid']}", json=SAMPLE_QUERY)
+    requests_mock.post(QUERY_RUNS_URL, json={"uuid": SAMPLE_QUERY_RUN["uuid"]})
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}",
         [
             {"json": {"status": "pending"}},  # _wait_for_query_completion_step #1 initial
             {"json": {"status": "running"}},  # _wait_for_query_completion_step #1 loop exit
@@ -329,14 +358,14 @@ def test_execute_query_full_polling_cycle(requests_mock):
         ],
     )
     requests_mock.get(
-        f"{QUERY_RUNS_URL}/{RUN_UUID}/download",
+        f"{QUERY_RUNS_URL}/{SAMPLE_QUERY_RUN['uuid']}/download",
         text="final_result",
     )
 
     with patch("sekoiaio.operation_center.execute_a_query.time.sleep"):
         result = action.run(
             {
-                "query_uuid": QUERY_UUID,
+                "query_uuid": SAMPLE_QUERY["uuid"],
                 "result_format": "jsonl",
             }
         )

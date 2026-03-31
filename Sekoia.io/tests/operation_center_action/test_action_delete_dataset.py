@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 import requests
@@ -9,7 +9,9 @@ BASE_URL = "https://fake.url/"
 API_KEY = "fake_api_key"
 DATASETS_URL = "https://fake.url/api/v1/notebooks/datasets"
 
-DATASET_UUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+DATASET_UUID = str(uuid4())
+COMMUNITY_UUID = str(uuid4())
+CREATED_BY_UUID = str(uuid4())
 
 # NOTE: DeleteDataset.run() contains a bug: it calls `arguments.dataset` but
 # the DeleteDatasetArguments model only defines `name`. This raises AttributeError
@@ -31,9 +33,27 @@ def test_get_dataset_uuid_success(requests_mock):
     action = make_action()
     action.configure_http_session()
 
+    mock_list_response = {
+        "uuid": DATASET_UUID,
+        "community_uuid": COMMUNITY_UUID,
+        "name": "my_dataset",
+        "size": 0.0,
+        "created_by": CREATED_BY_UUID,
+        "created_by_type": "user",
+        "created_at": "1970-01-01T00:00:00.000000Z",
+        "fields": [
+            {
+                "name": "column1",
+            },
+            {
+                "name": "column2",
+            },
+        ],
+    }
+
     requests_mock.get(
         DATASETS_URL,
-        json={"items": [{"uuid": DATASET_UUID}], "total": 1},
+        json={"items": [mock_list_response], "total": 1},
     )
 
     result = action.get_dataset_uuid("my_dataset")
@@ -64,12 +84,47 @@ def test_get_dataset_uuid_multiple_found(requests_mock):
     action = make_action()
     action.configure_http_session()
 
+    mock_list_response_1 = {
+        "uuid": DATASET_UUID,
+        "community_uuid": COMMUNITY_UUID,
+        "name": "my_dataset",
+        "size": 0.0,
+        "created_by": CREATED_BY_UUID,
+        "created_by_type": "user",
+        "created_at": "1970-01-01T00:00:00.000000Z",
+        "fields": [
+            {
+                "name": "column1",
+            },
+            {
+                "name": "column2",
+            },
+        ],
+    }
+    mock_list_response_2 = {
+        "uuid": DATASET_UUID,
+        "community_uuid": COMMUNITY_UUID,
+        "name": "my_dataset",
+        "size": 0.0,
+        "created_by": CREATED_BY_UUID,
+        "created_by_type": "user",
+        "created_at": "1970-01-01T00:00:00.000000Z",
+        "fields": [
+            {
+                "name": "column1",
+            },
+            {
+                "name": "column2",
+            },
+        ],
+    }
+
     requests_mock.get(
         DATASETS_URL,
         json={
             "items": [
-                {"uuid": DATASET_UUID},
-                {"uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"},
+                mock_list_response_1,
+                mock_list_response_2,
             ],
             "total": 2,
         },
@@ -139,10 +194,12 @@ def test_delete_dataset_not_found(requests_mock):
     action = make_action()
     action.configure_http_session()
 
+    mock_not_found_response = {"detail": {"message": "Dataset does not exist", "code": "DATASET_NOT_FOUND"}}
+
     requests_mock.delete(
         f"{DATASETS_URL}/{DATASET_UUID}",
         status_code=404,
-        text="Not Found",
+        json=mock_not_found_response,
     )
 
     with pytest.raises(requests.exceptions.HTTPError):

@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 import requests
@@ -10,6 +10,10 @@ BASE_URL = "https://fake.url/"
 API_KEY = "fake_api_key"
 DATASETS_URL = "https://fake.url/api/v1/notebooks/datasets"
 VALIDATE_URL = "https://fake.url/api/v1/notebooks/datasets/validate"
+
+DATASET_UUID = str(uuid4())
+COMMUNITY_UUID = str(uuid4())
+CREATED_BY_UUID = str(uuid4())
 
 
 def make_action() -> CreateDataset:
@@ -27,22 +31,22 @@ def test_create_dataset_success(requests_mock):
     action = make_action()
 
     mock_created_response = {
-    "uuid": "aaaaaaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-    "community_uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-    "name": "mock_dataset",
-    "size": 0.0,
-    "created_by": "cccccccc-cccc-cccc-cccc-cccccccccccc",
-    "created_by_type": "user",
-    "created_at": "1970-01-01T00:00:00.000000Z",
-    "fields": [
-        {
-            "name": "column1",
-        },
-        {
-            "name": "column2",
-        }
-    ]
-}
+        "uuid": DATASET_UUID,
+        "community_uuid": COMMUNITY_UUID,
+        "name": "my_dataset",
+        "size": 0.0,
+        "created_by": CREATED_BY_UUID,
+        "created_by_type": "user",
+        "created_at": "1970-01-01T00:00:00.000000Z",
+        "fields": [
+            {
+                "name": "column1",
+            },
+            {
+                "name": "column2",
+            },
+        ],
+    }
     requests_mock.post(VALIDATE_URL, status_code=200, json=mock_created_response)
     requests_mock.post(DATASETS_URL, status_code=201, json=mock_created_response)
 
@@ -68,11 +72,8 @@ def test_validate_dataset_http_error(requests_mock):
     action.configure_http_session()
 
     mock_validate_response = {
-    "detail": {
-        "message": "Row has 1 columns but expected 2 columns",
-        "code": "DATASET_VALIDATION_ERROR"
+        "detail": {"message": "Row has 1 columns but expected 2 columns", "code": "DATASET_VALIDATION_ERROR"}
     }
-}
 
     requests_mock.post(VALIDATE_URL, status_code=422, json=mock_validate_response)
 
@@ -108,14 +109,12 @@ def test_create_dataset_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()
 
-
-
     mock_create_response = {
-    "detail": {
-        "message": "A dataset with this name already exists in the community",
-        "code": "DATASET_VALIDATION_ERROR"
+        "detail": {
+            "message": "A dataset with this name already exists in the community",
+            "code": "DATASET_VALIDATION_ERROR",
+        }
     }
-}
 
     requests_mock.post(DATASETS_URL, status_code=422, json=mock_create_response)
 
