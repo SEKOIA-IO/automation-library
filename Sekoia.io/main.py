@@ -155,11 +155,10 @@ if __name__ == "__main__":
     module.register(GetCustomStatus, "get-custom-status")
     module.register(GetCustomPriority, "get-custom-priority")
     module.register(GetCustomVerdict, "get-custom-verdict")
-
-    module.register(CreateDataset, "CreateDataset")
-    module.register(ListQueries, "ListQueries")
-    module.register(ExecuteAQuery, "ExecuteAQuery")
-    module.register(DeleteDataset, "DeleteDataset")
+    module.register(CreateDataset, "create-dataset")
+    module.register(ListQueries, "list-queries")
+    module.register(ExecuteAQuery, "execute-a-query")
+    module.register(DeleteDataset, "delete-dataset")
 
     # Operation Center Triggers
     module.register(SecurityAlertsTrigger, "security_alerts_trigger")

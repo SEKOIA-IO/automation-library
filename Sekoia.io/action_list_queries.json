@@ -1,17 +1,12 @@
 {
-  "name": "ListQueries",
-  "description": "ListQueries",
+  "name": "List Queries",
+  "description": "List the existing saved SOL queries.",
   "uuid": "febc7464-2584-54f6-af5f-2d183cc82385",
-  "docker_parameters": "ListQueries",
+  "docker_parameters": "list-queries",
   "arguments": {
     "title": "ListQueriesArguments",
     "type": "object",
     "properties": {
-      "community_uuid": {
-        "title": "Community Uuid",
-        "type": "string",
-        "format": "uuid"
-      }
     }
   },
   "results": {
@@ -27,12 +22,14 @@
             "uuid": {
               "title": "Uuid",
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "The UUID of the query."
             },
             "community_uuid": {
               "title": "Community Uuid",
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "The UUID of the community the query belongs to."
             },
             "shared_with": {
               "title": "Shared With",
@@ -46,36 +43,43 @@
             "created_by": {
               "title": "Created By",
               "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "description": "The UUID of the user who created the query."
             },
             "created_by_type": {
               "title": "Created By Type",
-              "type": "string"
+              "type": "string",
+              "description": "Identity type that created the query."
             },
             "created_at": {
               "title": "Created At",
-              "type": "string"
+              "type": "string",
+              "description": "The creation date of the query."
             },
             "updated_at": {
               "title": "Updated At",
-              "type": "string"
+              "type": "string",
+              "description": "The date the query was last updated."
             },
             "name": {
               "title": "Name",
-              "type": "string"
+              "type": "string",
+              "description": "Name of the query."
             },
             "description": {
               "title": "Description",
-              "type": "string"
+              "type": "string",
+              "description": "Description of the query."
             },
             "descibed_by_ai": {
               "title": "Descibed By AI",
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Indicates if the query is described by AI."
             },
             "definition": {
               "title": "Definition",
               "type": "object",
-              "description": "The definition of the query."
+              "description": "The definition of the query in SOL language."
             },
             "visualization": {
               "title": "Visualization",
