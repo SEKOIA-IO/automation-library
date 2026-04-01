@@ -131,8 +131,9 @@ class CreateDataset(Action):
         try:
             return dataset.encode("utf-8")
         except UnicodeEncodeError as e:
-            self.log(f"Error encoding dataset: {e}",
-            level="error",
+            self.log(
+                f"Error encoding dataset: {e}",
+                level="error",
             )
             raise
 

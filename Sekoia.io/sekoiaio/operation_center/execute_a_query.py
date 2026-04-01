@@ -141,7 +141,6 @@ class ExecuteAQuery(Action):
         """
         results: list[dict[str, Any]] = []
 
-
         response_list_query = self.http_session.get(
             url=self.query_api_path,
             params={
@@ -173,7 +172,6 @@ class ExecuteAQuery(Action):
                 raise QueryListingError
 
         results += response_content["items"]
-
 
         if not results:
             self.log(

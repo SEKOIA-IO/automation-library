@@ -170,6 +170,7 @@ def test_delete_dataset_success(requests_mock):
     assert len(action._logs) == 0
     assert result is None
 
+
 def test_delete_dataset_http_error(requests_mock):
     action = make_action()
     action.configure_http_session()

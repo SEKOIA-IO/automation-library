@@ -168,8 +168,6 @@ def test_get_query_by_name_empty_results_raises(requests_mock):
     assert action._logs[0]["level"] == "error"
     assert "No query found with name 'nonexistent_query'" in action._logs[0]["message"]
 
-    
-
 
 def test_get_query_by_name_http_error(requests_mock):
     action = make_action()
