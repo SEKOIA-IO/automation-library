@@ -34,14 +34,40 @@ class IlertTriggerAlertAction(Action):
             base_url=arguments["base_url"],
         )
 
+        payload = dict(alert_info)
+        payload["status"] = self._map_status(alert_info)
+
         integration_key = self.module.configuration["integration_key"]
         base_events_url = self.module.configuration.get("integration_url", DEFAULT_EVENTS_URL)
         url = f"{base_events_url}/{integration_key}"
 
         response: Response = requests_retry_session().post(
             url,
-            json=alert_info,
+            json=payload,
         )
         response.raise_for_status()
 
-        return alert_info
+        return payload
+
+    @staticmethod
+    def _map_status(alert_info: dict) -> str:
+        """
+        Map the Sekoia.io alert status to the value expected by ilert's
+        SekoiaEventConverter (resolved | closed | acknowledged | <anything else>).
+        """
+
+        status = alert_info.get("status")
+        if isinstance(status, dict):
+            status_name = status.get("name", "")
+        else:
+            status_name = status or ""
+
+        normalized = status_name.lower()
+
+        if normalized in ("closed", "rejected"):
+            return "closed"
+        if normalized == "acknowledged":
+            return "acknowledged"
+        if normalized == "resolved":
+            return "resolved"
+        return normalized or "open"
