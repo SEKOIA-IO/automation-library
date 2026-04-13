@@ -1,9 +1,14 @@
-from datetime import datetime
-from unittest.mock import MagicMock, Mock
-
 import pytest
+from datetime import datetime
+from unittest.mock import Mock, MagicMock
+
 from ldap3.core.timezone import OffsetTzInfo
-from sekoia_automation.asset_connector.models.ocsf.user import AccountTypeId, UserOCSFModel, UserTypeId, UserTypeStr
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    UserOCSFModel,
+    UserTypeStr,
+    UserTypeId,
+    AccountTypeId,
+)
 
 from microsoft_ad.asset_connectors.user_assets import MicrosoftADUserAssetConnector
 
@@ -97,7 +102,12 @@ def test_convert_last_logon_to_timestamp(connector):
 
 def test_enrich_metadata(connector):
     last_logon = datetime(2024, 1, 1, 12, 0, 0, tzinfo=OffsetTzInfo(offset=0, name="UTC"))
-    user_attr = {"userAccountControl": 512, "lastLogon": last_logon, "badPwdCount": 0, "logonCount": 10}
+    user_attr = {
+        "userAccountControl": 512,
+        "lastLogon": last_logon,
+        "badPwdCount": 0,
+        "logonCount": 10,
+    }
 
     enrichments = connector.enrich_metadata(user_attr)
 
@@ -190,7 +200,10 @@ def test_map_user_fields(connector):
 def test_get_users_generator(connector):
     mock_entry = {
         "dn": "CN=Test User,DC=example,DC=com",
-        "attributes": {"userPrincipalName": "test@example.com", "whenCreated": datetime(2024, 1, 1, 12, 0, 0)},
+        "attributes": {
+            "userPrincipalName": "test@example.com",
+            "whenCreated": datetime(2024, 1, 1, 12, 0, 0),
+        },
     }
 
     connector.ldap_client.extend.standard.paged_search.return_value = iter([mock_entry])

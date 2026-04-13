@@ -1,24 +1,34 @@
 import datetime
-from collections.abc import Generator
+
 from typing import Any
+from collections.abc import Generator
 
 from ldap3 import ALL_ATTRIBUTES, ALL_OPERATIONAL_ATTRIBUTES
-from sekoia_automation.asset_connector import AssetConnector
-from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
-from sekoia_automation.asset_connector.models.ocsf.group import Group
-from sekoia_automation.asset_connector.models.ocsf.user import Account, AccountTypeId, AccountTypeStr
-from sekoia_automation.asset_connector.models.ocsf.user import User as UserOCSF
-from sekoia_automation.asset_connector.models.ocsf.user import (
-    UserDataObject,
-    UserEnrichmentObject,
-    UserOCSFModel,
-    UserTypeId,
-    UserTypeStr,
-)
+
 from sekoia_automation.storage import PersistentJSON
+from sekoia_automation.asset_connector import AssetConnector
+from sekoia_automation.asset_connector.models.ocsf.base import (
+    Metadata,
+    Product,
+)
+from sekoia_automation.asset_connector.models.ocsf.group import Group
+from sekoia_automation.asset_connector.models.ocsf.user import (
+    UserOCSFModel,
+    User as UserOCSF,
+    Account,
+    AccountTypeId,
+    AccountTypeStr,
+    UserEnrichmentObject,
+    UserDataObject,
+    UserTypeStr,
+    UserTypeId,
+)
 
 from microsoft_ad.client.ldap_client import LDAPClient
-from microsoft_ad.models.common_models import MicrosoftADConnectorConfiguration, MicrosoftADModule
+from microsoft_ad.models.common_models import (
+    MicrosoftADModule,
+    MicrosoftADConnectorConfiguration,
+)
 
 
 class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
@@ -270,7 +280,10 @@ class MicrosoftADUserAssetConnector(AssetConnector, LDAPClient):
             yield entry
 
             user_created_at = user_attributes.get("whenCreated")
-            self.log(f"Start updating checkpoint with the new date {user_created_at}", level="debug")
+            self.log(
+                f"Start updating checkpoint with the new date {user_created_at}",
+                level="debug",
+            )
 
             # Update latest time for checkpointing
             if user_created_at:

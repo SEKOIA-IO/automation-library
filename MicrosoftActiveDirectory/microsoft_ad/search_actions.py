@@ -1,14 +1,12 @@
-from datetime import datetime
-from pathlib import Path
+from .actions_base import MicrosoftADAction
+from pydantic.v1 import BaseModel
 from typing import List
-from uuid import uuid4
-
-import orjson
 from ldap3 import ALL_ATTRIBUTES
 from ldap3.core.timezone import OffsetTzInfo
-from pydantic.v1 import BaseModel
-
-from .actions_base import MicrosoftADAction
+from datetime import datetime
+from uuid import uuid4
+import orjson
+from pathlib import Path
 
 
 class SearchArguments(BaseModel):
@@ -51,7 +49,9 @@ class SearchAction(MicrosoftADAction):
         attributes = arguments.attributes or ALL_ATTRIBUTES
         try:
             self.client.search(
-                search_base=arguments.basedn, search_filter=arguments.search_filter, attributes=attributes
+                search_base=arguments.basedn,
+                search_filter=arguments.search_filter,
+                attributes=attributes,
             )
         except:
             raise Exception(f"Failed to search in this base {arguments.basedn}")

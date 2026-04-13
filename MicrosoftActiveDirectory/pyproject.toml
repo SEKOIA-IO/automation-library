@@ -11,7 +11,7 @@ package-mode = false
 
 [tool.black]
 line-length = 119
-target-version = ["py311"]
+target-version = ["py38"]
 include = "\\.pyi?$"
 
 [tool.isort]
@@ -21,9 +21,9 @@ line_length = 119
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 ldap3 = "^2.9.1"
-sekoia-automation-sdk = "^1.22.2"
+sekoia-automation-sdk = "^v1.21.1"
 pytest = "^7.4.3"
-aiolimiter = "^1.2.1"
+mypy = "^1.19.1"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -38,7 +38,7 @@ pytest = "*"
 pytest-cov = "*"
 requests-mock = "*"
 flake8 = "^4.0.1"
-pytest-clarity = "*"
+pytest-clarity = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies.black]
 version = "^22.6.0"

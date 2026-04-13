@@ -17,6 +17,28 @@
         "title": "Password account",
         "description": "The dedicated password of the account",
         "type": "string"
+      },
+      "ca_certificate": {
+        "title": "CA Certificate",
+        "description": "PEM-encoded CA certificate for TLS verification (optional, for internal PKI)",
+        "type": "string"
+      },
+      "skip_tls_verify": {
+        "title": "Skip TLS Verification",
+        "description": "Skip TLS certificate verification (insecure, use only for testing)",
+        "type": "boolean",
+        "default": false
+      },
+      "port": {
+        "title": "LDAPS Port",
+        "description": "LDAPS port number (default: 636)",
+        "type": "integer",
+        "default": 636
+      },
+      "tls_ciphers": {
+        "title": "TLS Ciphers",
+        "description": "OpenSSL cipher string to force a specific cipher suite (e.g. 'AES256-GCM-SHA384'). Leave empty for automatic negotiation.",
+        "type": "string"
       }
     },
     "required": [
@@ -25,14 +47,15 @@
       "admin_password"
     ],
     "secrets": [
-      "admin_password"
+      "admin_password",
+      "ca_certificate"
     ]
   },
   "description": "Microsoft Active Directory (Microsoft AD), is a directory service developed by Microsoft for Windows domain networks. It is a centralized system that stores information about networked resources and makes these resources easily accessible to users and administrators. Active Directory provides services for authentication and authorization, organizing and managing resources, such as users, computers, and devices, in a networked environment.",
   "name": "Microsoft Active Directory",
   "uuid": "b2d96259-af89-4f7a-ae6e-a0af2d2400f3",
   "slug": "microsoft-ad",
-  "version": "1.5.1",
+  "version": "1.5.6",
   "categories": [
     "IAM"
   ],

@@ -5,49 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 2026-03-23 - 1.5.6
 
-## 2026-03-04 - 1.5.1
+### Added
+
+- Extend test coverage on account validator, base and search files
+
+## 2026-03-02 - 1.5.5
+
+### Added
+
+- Add optional `port` configuration parameter to support non-standard LDAPS ports (default: 636)
+- Add optional `tls_ciphers` configuration parameter to force a specific OpenSSL cipher suite (e.g. `AES256-GCM-SHA384`) for environments with strict PKI requirements
 
 ### Changed
 
-- Replace `display_name` filter parameter with `email` (mail attribute) for more precise user disambiguation across all user actions
+- Consolidate TLS connection logic into a single `_build_tls()` method in `LDAPClient` — `actions_base.py` and `connector_debug.py` now delegate to `LDAPClient` instead of duplicating the TLS setup
+- Force `ssl.PROTOCOL_TLS` in all `Tls()` configurations to ensure compatibility with AD servers requiring TLS 1.2+
+- Fix temporary CA certificate file lifecycle: file is now created once (cached) and cleaned up after the bind attempt, preventing premature deletion before ldap3 uses it
+
+## 2026-02-27 - 1.5.3
+
+### Added
+
+- Add debug-level observability logs across the full connection path to facilitate production troubleshooting.
+
+## 2026-02-26 - 1.5.2
 
 ### Fixed
 
-- LDAP search filter incorrectly built when `username` is `None` or empty, causing the OR clause to match nothing (e.g. `(samaccountname=)`)
-- When only `email` is provided without `username`, the filter now correctly resolves to `(mail=<email>)` instead of the broken `(&(|(samaccountname=)...)(mail=<email>))`
-- Raise `ValueError` early when both `username` and `email` are missing
+- Fix bug in `actions_base.py` generating ssl/tls alert handshake failure
 
-## 2026-03-04 - 1.5.0
+## 2026-01-23 - 1.5.0
 
 ### Added
 
-- Support for `display_name` parameter to narrow LDAP search when multiple users share the same email
-- Support for `apply_to_all` parameter to apply actions (disable, enable, reset password) to all matching users
-## 2026-02-11 - 1.4.7
+- Add optional `ca_certificate` secret configuration parameter for custom PKI/internal CA support in TLS connections
+- Add optional `skip_tls_verify` configuration parameter to explicitly disable TLS verification (for testing only)
 
-### Added
+### Fixed
 
-- Add asset connector mapping files for Microsoft Active Directory user assets
+- Fix temporary CA certificate file leak by cleaning up after connection establishment
 
-## 2025-02-09 - 1.4.6
-
-### Changed
-
-- Upgrade sekoia-automation-sdk to 1.22.2
-
-## 2026-01-29 - 1.4.5
+## 2026-01-22 - 1.4.3
 
 ### Changed
 
-- Update asset connector name
-
-## 2026-01-23 - 1.4.4
-
-### Changed
-
-- Update internals field inside arguments of Microsoft AD asset connectors
+- Added internals field to Microsoft Active Directory asset connectors
 
 ## 2026-01-14 - 1.4.2
 
