@@ -394,7 +394,7 @@ mapping:
       description: "OCSF schema version"
 
     # DEVICE ATTRIBUTES
-    - source: "Static: 2"
+    - source: "static: 2"
       target: "device.type_id"
       type: "integer"
       logic: "Direct mapping of type to desktop type ID"
