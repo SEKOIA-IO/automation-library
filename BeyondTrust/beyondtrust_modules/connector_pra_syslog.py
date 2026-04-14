@@ -50,7 +50,7 @@ class BeyondTrustPRASyslogConnector(BeyondTrustBaseConnector):
             return None
 
         # For XML error responses, check Content-Type before saving binary
-        content_type = response.headers.get("Content-Type", "")
+        content_type = response.headers.get("Content-Type", "").lower()
         if "xml" in content_type or "text" in content_type:
             if self._check_xml_error(response):
                 EVENTS_LAG.labels(intake_key=self.configuration.intake_key).set(0)
