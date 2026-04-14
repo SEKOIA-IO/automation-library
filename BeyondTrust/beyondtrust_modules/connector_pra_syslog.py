@@ -59,8 +59,12 @@ class BeyondTrustPRASyslogConnector(BeyondTrustBaseConnector):
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_file:
             tmp_path = Path(tmp_file.name)
-            for chunk in response.iter_content(chunk_size=8192):
-                tmp_file.write(chunk)
+            try:
+                for chunk in response.iter_content(chunk_size=8192):
+                    tmp_file.write(chunk)
+            except Exception:
+                tmp_path.unlink(missing_ok=True)
+                raise
 
             return tmp_path
 
