@@ -21,7 +21,7 @@ line_length = 119
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 sekoia-automation-sdk = "^1.18.2"
-requests = "^2.32.3"
+requests = "^2.33.0"
 requests-ratelimiter = "^0.7.0"
 python-dateutil = "^2.9.0.post0"
 orjson = "^3.10.3"
