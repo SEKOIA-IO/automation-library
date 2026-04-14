@@ -10,9 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import boto3
 import pytz
-from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
+from botocore.exceptions import BotoCoreError, ClientError
 from dateutil.parser import isoparse
-from sekoia_automation.asset_connector import AssetConnector
 from sekoia_automation.asset_connector.models.ocsf.base import Metadata, Product
 from sekoia_automation.asset_connector.models.ocsf.device import (
     Device,
@@ -28,9 +27,8 @@ from sekoia_automation.asset_connector.models.ocsf.device import (
 )
 from sekoia_automation.asset_connector.models.ocsf.group import Group
 from sekoia_automation.asset_connector.models.ocsf.organization import Organization
-from sekoia_automation.storage import PersistentJSON
 
-from aws_helpers.base import AWSModule
+from asset_connector.aws_assets import AwsAssetsConnector
 
 
 class AwsDevice:
@@ -52,63 +50,16 @@ class AwsDevice:
         self.date = date
 
 
-class AwsDeviceAssetConnector(AssetConnector):
+class AwsDeviceAssetConnector(AwsAssetsConnector):
     """Asset connector for collecting AWS EC2 instance information.
 
     This connector fetches EC2 instance data from AWS and converts it to OCSF
     Device Inventory format for asset management and security monitoring.
     """
 
-    module: AWSModule
-
     PRODUCT_NAME: str = "AWS EC2"
     OCSF_VERSION: str = "1.6.0"
     PRODUCT_VERSION: str = "N/A"
-
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        """Initialize the AWS Device Asset Connector.
-
-        Args:
-            *args: Variable length argument list
-            **kwargs: Arbitrary keyword arguments
-        """
-        super().__init__(*args, **kwargs)
-        self.context = PersistentJSON("context.json", self._data_path)
-        self.new_most_recent_date: Optional[str] = None
-
-    @property
-    def most_recent_date_seen(self) -> Optional[str]:
-        """Get the most recent date seen from the checkpoint.
-
-        Returns:
-            The most recent date as ISO string, or None if not set
-        """
-        try:
-            with self.context as cache:
-                value = cache.get("most_recent_date_seen")
-                return value if value is None or isinstance(value, str) else str(value)
-        except Exception as e:
-            self.log(f"Failed to retrieve checkpoint: {str(e)}", level="error")
-            self.log_exception(e)
-            return None
-
-    def update_checkpoint(self) -> None:
-        """Update the checkpoint with the most recent date.
-
-        This method updates the persistent storage with the latest processed date
-        to enable incremental data collection.
-        """
-        if self.new_most_recent_date is None:
-            self.log("Warning: new_most_recent_date is None, skipping checkpoint update", level="warning")
-            return
-
-        try:
-            with self.context as cache:
-                cache["most_recent_date_seen"] = self.new_most_recent_date
-                self.log(f"Checkpoint updated with date: {self.new_most_recent_date}", level="info")
-        except Exception as e:
-            self.log(f"Failed to update checkpoint: {str(e)}", level="error")
-            self.log_exception(e)
 
     def client(self) -> boto3.client:
         """Create and return a configured AWS EC2 client.
@@ -120,21 +71,7 @@ class AwsDeviceAssetConnector(AssetConnector):
             NoCredentialsError: If AWS credentials are not configured
             ClientError: If there's an error creating the client
         """
-        try:
-            session = boto3.Session(
-                aws_access_key_id=self.module.configuration.aws_access_key,
-                aws_secret_access_key=self.module.configuration.aws_secret_access_key,
-                region_name=self.module.configuration.aws_region_name,
-            )
-            return session.client("ec2")
-        except NoCredentialsError as e:
-            self.log("AWS credentials not found or invalid", level="error")
-            self.log_exception(e)
-            raise
-        except Exception as e:
-            self.log(f"Failed to create AWS client: {str(e)}", level="error")
-            self.log_exception(e)
-            raise
+        return self.get_client("ec2")
 
     def _extract_network_interfaces(self, interfaces: List[Dict[str, Any]]) -> List[NetworkInterface]:
         """Extract network interface information from EC2 instance data.
