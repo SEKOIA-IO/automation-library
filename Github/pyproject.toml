@@ -37,7 +37,7 @@ python = ">=3.11,<3.12"
 sekoia-automation-sdk = "^1.22.2"
 structlog = "^25.5.0"
 orjson = "^3.11.7"
-aiohttp = "^3.13.3"
+aiohttp = "^3.13.4"
 aiolimiter = "^1.2.1"
 jwt = "^1.4.0"
 
