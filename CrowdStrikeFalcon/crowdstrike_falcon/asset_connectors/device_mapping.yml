@@ -57,9 +57,20 @@ mapping:
               "assigned_date": "2025-09-08T12:47:56.934516164Z",
               "applied_date": "2025-09-08T12:49:50.129791663Z",
               "rule_groups": []
+              "firewall": "enabled"
             }
           },
-          "groups": [],
+          "groups": [
+          {,
+              "id": "default",
+              "name": "default",
+              "description": "Default group for all devices"
+            },
+            {
+              "id": "managed-endpoints",
+              "name": "managed-endpoints"
+            }
+          ],
           "group_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
           "product_type_desc": "Server",
           "serial_number": "ec2c0000-0000-0000-0000-70de1a9d92c7",
@@ -292,12 +303,6 @@ mapping:
       logic: "Transform first_seen to timestamp"
       description: "First seen timestamp for device"
 
-    - source: "first_seen"
-      target: "device.first_seen_time"
-      type: "timestamp"
-      logic: "Transform first_seen to timestamp"
-      description: "First seen timestamp for device"
-
     - source: "last_seen"
       target: "device.last_seen_time"
       type: "timestamp"
@@ -310,7 +315,7 @@ mapping:
       logic: "Use first_seen as device created_time; convert to timestamp"
       description: "Device creation timestamp"
 
-    - source : "agent_local_time"
+    - source: "agent_local_time"
       target: "device.boot_time"
       type: "timestamp"
       logic: "Use agent_local_time as proxy for device boot time; convert to timestamp"
@@ -396,19 +401,19 @@ mapping:
 
     # ENRICHMENT
     - source : "static: compliance"
-      target: "device.enrichment[].name"
+      target: "enrichment[].name"
       type: "string"
       logic: "Always 'compliance' for this enrichment type"
       description: "Enrichement compliance name"
 
     - source: "static: hygiene"
-      target: "device.enrichment[].value"
+      target: "enrichment[].value"
       type: "string"
       logic: "Always 'hygiene' for this enrichment value"
       description: "Enrichement compliance value"
 
-    - source: "firewall"
-      target: "device.enrichment[].data.Firwall_status"
+    - source: "device_policies.firewall"
+      target: "enrichment[].data.Firwall_status"
       type: "string"
       logic: "If firwall is enabled, set to 'enabled'; if disabled, set to 'disabled''"
       description: "Enrichement data value"

@@ -174,7 +174,7 @@ mapping:
     - source: "roles[] | filter(ADMIN)"
       target: "user.type_id"
       type: "integer"
-      logic: "If any role type contains 'ADMIN', type_id=1; else type_id=2 (OCSF User type mapping)"
+      logic: "If any role type contains 'ADMIN', type_id=2; else type_id=1 (OCSF User type mapping)"
       description: "OCSF user type ID"
 
     # RISK INFORMATION
