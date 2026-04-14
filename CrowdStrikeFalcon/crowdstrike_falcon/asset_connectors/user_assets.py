@@ -1,6 +1,5 @@
 from functools import cached_property
 from collections.abc import Generator
-from typing import Any
 from datetime import datetime
 
 from sekoia_automation.asset_connector import AssetConnector
@@ -19,6 +18,7 @@ from sekoia_automation.asset_connector.models.ocsf.user import (
 from sekoia_automation.asset_connector.models.ocsf.risk_level import RiskLevelId, RiskLevelStr
 from sekoia_automation.storage import PersistentJSON
 
+from crowdstrike_falcon.asset_connectors.crowdstrike_user import CrowdStrikeUser, CrowdStrikeUserAccount
 from crowdstrike_falcon.client import CrowdstrikeFalconClient
 
 IDENTITY_ENTITIES_QUERY = """
@@ -73,7 +73,6 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context = PersistentJSON("context.json", self._data_path)
-        self._latest_time = None
 
     @property
     def most_recent_user_date(self) -> str | None:
@@ -154,84 +153,83 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         }
         return mapping.get(severity.upper(), (None, None))
 
-    def _determine_account_type(self, account: dict[str, Any]) -> tuple[AccountTypeId, AccountTypeStr]:
+    def _determine_account_type(self, account: CrowdStrikeUserAccount) -> tuple[AccountTypeId, AccountTypeStr]:
         """
         Account type determination based on data source and attributes.
         Args:
-            account (dict[str, Any]): The account data from Crowdstrike.
+            account (CrowdStrikeUserAccount): The account data from Crowdstrike.
         Returns:
             tuple[AccountTypeId, AccountTypeStr]: Corresponding OCSF account type ID and string.
         """
-        data_source = account.get("dataSource", "").upper()
-        if "ACTIVE_DIRECTORY" in data_source or "objectSid" in account:
+        data_source = (account.dataSource or "").upper()
+        if "ACTIVE_DIRECTORY" in data_source or account.objectSid is not None:
             return AccountTypeId.LDAP_ACCOUNT, AccountTypeStr.LDAP_ACCOUNT
         if "AZURE" in data_source:
             return AccountTypeId.AZURE_AD_ACCOUNT, AccountTypeStr.AZURE_AD_ACCOUNT
         return AccountTypeId.OTHER, AccountTypeStr.OTHER
 
-    def _determine_user_type(self, entity: dict[str, Any]) -> tuple[UserTypeId, UserTypeStr]:
+    def _determine_user_type(self, entity: CrowdStrikeUser) -> tuple[UserTypeId, UserTypeStr]:
         """
         Determine user type based on roles.
         Args:
-            entity (dict[str, Any]): The user entity data from Crowdstrike.
+            entity (CrowdStrikeUser): The user entity data from Crowdstrike.
         Returns:
             tuple[UserTypeId, UserTypeStr]: Corresponding OCSF user type ID and string.
         """
-        for role in entity.get("roles", []):
-            if "ADMIN" in role.get("type", "").upper():
+        for role in entity.roles:
+            if "ADMIN" in (role.type or "").upper():
                 return UserTypeId.ADMIN, UserTypeStr.ADMIN
         return UserTypeId.USER, UserTypeStr.USER
 
-    def map_identity_entity_fields(self, entity: dict[str, Any]) -> UserOCSFModel:
+    def map_identity_entity_fields(self, entity: CrowdStrikeUser) -> UserOCSFModel:
         """Map fields from Crowdstrike identity entity to OCSF User model."""
 
         metadata = Metadata(product=Product(name=self.PRODUCT_NAME, version=self.PRODUCT_VERSION), version="1.6.0")
 
-        entity_id = entity.get("entityId", "Unknown")
-        primary_name = entity.get("primaryDisplayName", "")
-        email_addresses = entity.get("emailAddresses", [])
+        entity_id = entity.entityId or "Unknown"
+        primary_name = entity.primaryDisplayName or ""
+        email_addresses = entity.emailAddresses
 
-        accounts = entity.get("accounts", [])
         account_data, domain, enrichments = None, None, []
 
-        if accounts:
-            acc = accounts[0]
+        if entity.accounts:
+            acc = entity.accounts[0]
             account_type_id, account_type_str = self._determine_account_type(acc)
-            domain = acc.get("domain")
+            domain = acc.domain
 
             account_data = Account(
-                name=acc.get("samAccountName") or primary_name,
+                name=acc.samAccountName or primary_name,
                 type_id=account_type_id,
                 type=account_type_str,
-                uid=acc.get("objectSid") or acc.get("objectGuid") or entity_id,
+                uid=acc.objectSid or acc.objectGuid or entity_id,
             )
 
             enrichments.append(
                 UserEnrichmentObject(
                     name="account_details",
                     value=account_type_str.value,
-                    data=UserDataObject(is_enabled=acc.get("enabled")),
+                    data=UserDataObject(is_enabled=acc.enabled),
                 )
             )
 
-        risk_level_id, risk_level_str = self._map_risk_level(entity.get("riskScoreSeverity"))
+        risk_level_id, risk_level_str = self._map_risk_level(entity.riskScoreSeverity)
         user_type_id, user_type_str = self._determine_user_type(entity)
 
         user_ocsf = UserOCSF(
             name=primary_name,
             uid=entity_id,
             account=account_data,
-            full_name=f"{primary_name} {entity.get('secondaryDisplayName', '')}".strip() or None,
+            full_name=f"{primary_name} {entity.secondaryDisplayName or ''}".strip() or None,
             email_addr=email_addresses[0] if email_addresses else None,
             domain=domain,
             risk_level=risk_level_str,
             risk_level_id=risk_level_id,
-            risk_score=int((entity.get("riskScore") or 0) * 100),
+            risk_score=int((entity.riskScore or 0) * 100),
             type_id=user_type_id,
             type=user_type_str,
         )
 
-        time_value = self._parse_timestamp(entity.get("creationTime"))
+        time_value = self._parse_timestamp(entity.creationTime)
 
         return UserOCSFModel(
             activity_id=2,
@@ -250,7 +248,7 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
             enrichments=enrichments or None,
         )
 
-    def _fetch_identity_entities(self) -> Generator[dict[str, Any], None, None]:
+    def _fetch_identity_entities(self) -> Generator[CrowdStrikeUser, None, None]:
         """
         Fetch identity entities from Crowdstrike with checkpointing.
         """
@@ -260,8 +258,9 @@ class CrowdstrikeUserAssetConnector(AssetConnector):
         if checkpoint:
             self.log(f"Resuming from checkpoint: {checkpoint}", level="info")
 
-        for entity in self.client.list_identity_entities(IDENTITY_ENTITIES_QUERY):
-            asset_date = entity.get("creationTime")
+        for raw_entity in self.client.list_identity_entities(IDENTITY_ENTITIES_QUERY):
+            entity = CrowdStrikeUser.model_validate(raw_entity)
+            asset_date = entity.creationTime
 
             if checkpoint and asset_date and asset_date <= checkpoint:
                 continue
