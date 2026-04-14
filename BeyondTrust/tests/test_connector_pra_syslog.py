@@ -1,5 +1,7 @@
 import io
+import tempfile
 import zipfile
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -231,11 +233,22 @@ def test_next_batch_pushes_raw_strings(trigger):
             assert "site=" in event or "event=" in event
 
 
-def test_zip_cleanup(trigger, data_storage):
+def test_zip_cleanup(trigger):
     """Verify temp ZIP file is deleted after processing."""
     zip_bytes = _make_syslog_zip(SYSLOG_LINES)
 
-    with requests_mock.Mocker() as mock_requests:
+    created_paths: list[Path] = []
+    real_named_temp = tempfile.NamedTemporaryFile
+
+    def tracking_named_temp(*args, **kwargs):
+        f = real_named_temp(*args, **kwargs)
+        created_paths.append(Path(f.name))
+        return f
+
+    with patch(
+        "beyondtrust_modules.connector_pra_syslog.tempfile.NamedTemporaryFile",
+        side_effect=tracking_named_temp,
+    ), requests_mock.Mocker() as mock_requests:
         _mock_oauth(mock_requests)
         mock_requests.register_uri(
             "POST",
@@ -247,18 +260,26 @@ def test_zip_cleanup(trigger, data_storage):
         trigger.from_date = 0
         list(trigger.fetch_events())
 
-        # Check no .zip files remain in data_storage
-        import os
-
-        remaining_zips = [f for f in os.listdir(data_storage) if f.endswith(".zip")]
-        assert remaining_zips == []
+        assert len(created_paths) == 1
+        assert not created_paths[0].exists()
 
 
-def test_fetch_events_handles_non_zip_content(trigger, data_storage):
+def test_fetch_events_handles_non_zip_content(trigger):
     """When the API returns non-ZIP content, log a warning and yield no events."""
     plain_text = b"This is not a ZIP archive"
 
-    with requests_mock.Mocker() as mock_requests:
+    created_paths: list[Path] = []
+    real_named_temp = tempfile.NamedTemporaryFile
+
+    def tracking_named_temp(*args, **kwargs):
+        f = real_named_temp(*args, **kwargs)
+        created_paths.append(Path(f.name))
+        return f
+
+    with patch(
+        "beyondtrust_modules.connector_pra_syslog.tempfile.NamedTemporaryFile",
+        side_effect=tracking_named_temp,
+    ), requests_mock.Mocker() as mock_requests:
         _mock_oauth(mock_requests)
         mock_requests.register_uri(
             "POST",
@@ -277,10 +298,8 @@ def test_fetch_events_handles_non_zip_content(trigger, data_storage):
         )
 
         # Verify temp file cleanup still happens
-        import os
-
-        remaining_zips = [f for f in os.listdir(data_storage) if f.endswith(".zip")]
-        assert remaining_zips == []
+        assert len(created_paths) == 1
+        assert not created_paths[0].exists()
 
 
 def test_fetch_events_no_events_after_checkpoint(trigger):
