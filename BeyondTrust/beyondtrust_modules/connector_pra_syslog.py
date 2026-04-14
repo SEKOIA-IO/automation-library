@@ -47,6 +47,8 @@ class BeyondTrustPRASyslogConnector(BeyondTrustBaseConnector):
         response = self.client.get_syslog()
 
         if self._handle_response_error(response):
+            # Ensure that the connection is released
+            response.close()
             return None
 
         # For XML error responses, check Content-Type before saving binary
