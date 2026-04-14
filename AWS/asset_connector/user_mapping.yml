@@ -121,10 +121,10 @@ mapping:
       logic: "Always 500301 for User Inventory Info: Collect type"
       description: "OCSF type UID"
 
-    - source: "static: User Inventory Info - Collect"
+    - source: "static: 'User Inventory Info: Collect'"
       target: "type_name"
       type: "string"
-      logic: "Always 'User Inventory Info - Collect'"
+      logic: "Always 'User Inventory Info: Collect'"
       description: "OCSF type name"
 
     # TIMESTAMP
