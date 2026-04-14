@@ -193,16 +193,16 @@ mapping:
       logic: "Direct mapping of user principal name"
       description: "Account username (UPN)"
 
-    - source: "static: Entra ID"
+    - source: "static: Azure AD Account"
       target: "user.account.type"
       type: "string"
-      logic: "Always 'Entra ID'"
-      description: "Account type identifier"
+      logic: "Always 'Azure AD Account'"
+      description: "OCSF Azure AD account type identifier"
 
-    - source: "static: 41"
+    - source: "static: 6"
       target: "user.account.type_id"
       type: "integer"
-      logic: "Always 41 for Entra ID account type"
+      logic: "Always 6 for Azure AD Account account type"
       description: "OCSF account type ID"
 
     - source: "displayName"
@@ -260,11 +260,17 @@ mapping:
       logic: "Direct mapping of account enabled status"
       description: "Whether the user account is enabled"
 
-    - source: "lastSignInDateTime"
-      target: "enrichments[0].data.last_sign_in"
-      type: "integer"
-      logic: "Convert ISO 8601 to Unix timestamp; return null if never signed in"
-      description: "Last sign-in timestamp (Unix epoch)"
+    - source: "signInActivity.lastSignInDateTime"
+      target: "enrichments[0].data.last_logon"
+      type: "string"
+      logic: "Direct mapping of ISO 8601 last sign-in datetime; return null if never signed in"
+      description: "Last logon datetime in ISO 8601 format"
+
+    - source: "lastPasswordChangeDateTime"
+      target: "enrichments[0].data.last_time_password_change"
+      type: "string"
+      logic: "If lastPasswordChangeDateTime is available, convert to Unix epoch; otherwise return null"
+      description: "Last time password was changed as Unix epoch timestamp"
 
   ocsf_samples:
     - name: "User Inventory Info: Collect"
