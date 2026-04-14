@@ -185,7 +185,7 @@ mapping:
       target: "user.account.uid"
       type: "string"
       logic: "Direct mapping of the 'id' field as the unique identifier for the Entra ID account"
-      description: "Entra ID account identifier (UPN)"
+      description: "Microsoft Entra ID account unique identifier (UUID)"
 
     - source: "userPrincipalName"
       target: "user.account.name"
@@ -211,37 +211,49 @@ mapping:
       logic: "Direct mapping of display name"
       description: "User display name"
 
-    - source: "UserPrincipalName"
+    - source: "userPrincipalName"
       target: "user.domain"
       type: "string"
       logic: "Extract domain from userPrincipalName"
       description: "Domain of the user account"
 
-    - source: "Calculated: userType"
+    - source: "computed: userType"
       target: "user.type_id"
       type: "integer"
       logic: "If user is admin so type_id is 2, otherwise 1"
       description: "User type id classification"
 
-    - source: "Calculated: userTypeID"
+    - source: "computed: userTypeID"
       target: "user.type"
       type: "string"
       logic: "If user is admin so type_id is ADMIN, otherwise USER"
       description: "User type classification"
 
-    - source: "CompanyName"
+    - source: "companyName"
       target: "user.org.name"
       type: "string"
       logic: "Direct mapping of organization name"
       description: "Organization name"
 
-    - source: "OfficeLocation"
+    - source: "officeLocation"
       target: "user.org.ou_name"
       type: "string"
       logic: "Direct mapping of office location"
       description: "Office location as organizational unit"
 
     # OCSF ENRICHMENT - USER ACCESS INFORMATION
+    - source: "static: account"
+      target: "enrichments[0].name"
+      type: "string"
+      logic: "Always 'account' for user access information enrichment"
+      description: "Enrichment name for user access information"
+
+    - source: "static: status"
+      target: "enrichments[0].value"
+      type: "string"
+      logic: "Always 'status' for user access information enrichment"
+      description: "Enrichment value for user access information"
+
     - source: "accountEnabled"
       target: "enrichments[0].data.is_enabled"
       type: "boolean"
