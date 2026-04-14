@@ -14,7 +14,7 @@ jobs:
     permissions:
       contents: read  # for actions/checkout to fetch code
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Check-out the repo under $GITHUB_WORKSPACE
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
