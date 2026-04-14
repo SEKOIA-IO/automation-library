@@ -30,7 +30,7 @@ orjson = "^3.11.7"
 tenacity = "^9.1.4"
 msal = "^1.35.0"
 python-dateutil = "^2.9.0.post0"
-aiohttp = "^3.13.3"
+aiohttp = "^3.13.4"
 structlog = "^25.5.0"
 cachetools = "^7.0.4"
 
